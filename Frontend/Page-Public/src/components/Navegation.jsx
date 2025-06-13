@@ -46,10 +46,10 @@ const Navegation = () => {
           <ul className="flex flex-col md:flex-row md:space-x-12 mt-4 md:mt-0 w-full md:w-auto">
             <li>
               <a
-                href="/"
+                href="/Ficha"
                 className="block text-center md:text-left text-green-700 hover:text-green-800 transition duration-200 text-base font-medium py-2"
               >
-                Quienes somos
+                Ficha Historica
               </a>
             </li>
             <li>
