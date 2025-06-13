@@ -54,10 +54,10 @@ const Navegation = () => {
             </li>
             <li>
               <a
-                href="/que-hacemos"
+                href="/Dedicacion"
                 className="block text-center md:text-left text-green-700 hover:text-green-800 transition duration-200 text-base font-medium py-2"
               >
-                Qué hacen
+                Nuestra Dedicación
               </a>
             </li>
             <li>
