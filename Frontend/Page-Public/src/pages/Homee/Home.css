@@ -1,0 +1,387 @@
+/* EmpresaPage.css */
+
+.empresa-page {
+  font-family: Arial, sans-serif;
+  line-height: 1.6;
+  color: #333;
+}
+
+/* Sección de introducción con carrusel */
+.empresa-intro {
+  padding: 2rem 1rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.carousel-container {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 2rem;
+}
+
+.carousel-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1.5rem;
+  width: 100%;
+  max-width: 800px;
+}
+
+.carousel-side-image {
+  width: 200px;
+  height: 140px;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+  transition: all 0.5s ease-in-out;
+  cursor: pointer;
+}
+
+.carousel-main-image {
+  width: 320px;
+  height: 200px;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+  transition: all 0.5s ease-in-out;
+  z-index: 2;
+}
+
+.carousel-side-image img,
+.carousel-main-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.carousel-side-image:hover {
+  transform: scale(1.05);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.25);
+}
+
+.carousel-dots {
+  position: absolute;
+  bottom: -35px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 10px;
+}
+
+.carousel-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: none;
+  background-color: rgba(74, 144, 164, 0.4);
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.carousel-dot.active {
+  background-color: #4a90a4;
+  transform: scale(1.2);
+}
+
+.carousel-dot:hover {
+  background-color: rgba(74, 144, 164, 0.7);
+  transform: scale(1.1);
+}
+
+.intro-content {
+  display: flex;
+  align-items: center;
+  gap: 3rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.intro-text-section {
+  flex: 1;
+  text-align: left;
+}
+
+.intro-image-section {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+}
+
+.intro-image-section img {
+  width: 100%;
+  max-width: 400px;
+  height: 300px;
+  object-fit: cover;
+  border-radius: 12px;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+}
+
+.intro-title {
+  color: #4a90a4;
+  font-size: 1.8rem;
+  font-weight: bold;
+  margin-bottom: 1rem;
+  line-height: 1.3;
+}
+
+.intro-text {
+  color: #666;
+  font-size: 0.95rem;
+  line-height: 1.6;
+  text-align: justify;
+}
+
+/* Sección del CEO */
+.ceo-section {
+  background: linear-gradient(135deg, #4a90a4 0%, #6ba3b7 100%);
+  color: white;
+  padding: 2.5rem 1rem;
+  margin: 2rem 0;
+}
+
+.ceo-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+}
+
+.ceo-image {
+  flex-shrink: 0;
+  width: 200px;
+  height: 150px;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.ceo-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.ceo-text {
+  flex: 1;
+}
+
+.ceo-title {
+  color: white;
+  font-size: 1.6rem;
+  font-weight: bold;
+  margin-bottom: 1rem;
+  line-height: 1.3;
+}
+
+.ceo-description {
+  color: white;
+  font-size: 0.9rem;
+  line-height: 1.6;
+  text-align: justify;
+  margin-bottom: 0;
+}
+
+.ceo-footer {
+  max-width: 1200px;
+  margin: 3rem auto 0;
+  text-align: center;
+  padding: 2rem 1rem;
+  position: relative;
+}
+
+.ceo-footer-text {
+  color: white;
+  font-size: 1.8rem;
+  font-weight: 600;
+  line-height: 1.4;
+  margin: 0;
+  font-style: italic;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+  letter-spacing: 0.5px;
+}
+
+.quote-mark {
+  font-size: 2.5rem;
+  font-weight: bold;
+  opacity: 0.8;
+  position: relative;
+  top: 8px;
+}
+
+/* Sección ¿Quiénes somos? */
+.quienes-somos {
+  padding: 2rem 1rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.quienes-content {
+  display: flex;
+  align-items: center;
+  gap: 3rem;
+}
+
+.quienes-text-section {
+  flex: 1;
+  text-align: left;
+}
+
+.quienes-image-section {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+}
+
+.quienes-image-section img {
+  width: 100%;
+  max-width: 400px;
+  height: 300px;
+  object-fit: cover;
+  border-radius: 12px;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+}
+
+.quienes-title {
+  color: #4a90a4;
+  font-size: 1.5rem;
+  font-weight: bold;
+  margin-bottom: 1rem;
+}
+
+.quienes-text {
+  color: #666;
+  font-size: 0.95rem;
+  line-height: 1.6;
+  text-align: justify;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .carousel-wrapper {
+    flex-direction: column;
+    gap: 0.8rem;
+    max-width: 350px;
+  }
+  
+  .carousel-side-image,
+  .carousel-main-image {
+    width: 320px;
+    height: 200px;
+  }
+  
+  .carousel-dots {
+    bottom: -30px;
+  }
+  
+  .intro-content,
+  .quienes-content {
+    flex-direction: column;
+    gap: 2rem;
+    text-align: center;
+  }
+  
+  .intro-image-section img,
+  .quienes-image-section img {
+    max-width: 320px;
+    height: 250px;
+  }
+  
+  .intro-title {
+    font-size: 1.5rem;
+    text-align: center;
+  }
+  
+  .intro-text {
+    font-size: 0.9rem;
+  }
+  
+  .ceo-content {
+    flex-direction: column;
+    text-align: center;
+  }
+  
+  .ceo-image {
+    width: 250px;
+    height: 180px;
+    margin: 0 auto;
+  }
+  
+  .ceo-title {
+    font-size: 1.4rem;
+  }
+  
+  .ceo-description {
+    font-size: 0.85rem;
+  }
+  
+  .ceo-footer-text {
+    font-size: 1.4rem;
+  }
+  
+  .quote-mark {
+    font-size: 2rem;
+    top: 6px;
+  }
+  
+  .quienes-title {
+    font-size: 1.3rem;
+    text-align: center;
+  }
+  
+  .quienes-text {
+    font-size: 0.9rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .carousel-wrapper {
+    max-width: 300px;
+  }
+  
+  .carousel-side-image,
+  .carousel-main-image {
+    width: 280px;
+    height: 180px;
+  }
+  
+  .intro-content,
+  .quienes-content {
+    gap: 1.5rem;
+  }
+  
+  .intro-image-section img,
+  .quienes-image-section img {
+    max-width: 280px;
+    height: 220px;
+  }
+  
+  .empresa-intro,
+  .ceo-section,
+  .quienes-somos {
+    padding: 1.5rem 0.5rem;
+  }
+  
+  .intro-title,
+  .ceo-title {
+    font-size: 1.2rem;
+  }
+  
+  .ceo-footer-text {
+    font-size: 1.2rem;
+  }
+  
+  .quote-mark {
+    font-size: 1.8rem;
+    top: 4px;
+  }
+  
+  .intro-text,
+  .ceo-description,
+  .quienes-text {
+    font-size: 0.85rem;
+  }
+}
