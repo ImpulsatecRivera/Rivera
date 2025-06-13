@@ -1,0 +1,455 @@
+/* FichaHistorica.css */
+
+.ficha-historica-page {
+  font-family: 'Arial', sans-serif;
+  line-height: 1.6;
+  color: #333;
+}
+
+/* Hero Section */
+.ficha-hero-section {
+  position: relative;
+  height: 60vh;
+  min-height: 400px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ficha-hero-image {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: 1;
+}
+
+.ficha-hero-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, rgba(74, 144, 164, 0.9) 0%, rgba(107, 163, 183, 0.8) 100%);
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ficha-hero-content {
+  text-align: center;
+  color: white;
+  max-width: 800px;
+  padding: 0 2rem;
+}
+
+.ficha-hero-title {
+  font-size: 3.5rem;
+  font-weight: bold;
+  margin-bottom: 1.5rem;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.ficha-hero-subtitle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  font-size: 1.3rem;
+  font-weight: 500;
+}
+
+.ficha-calendar-icon {
+  width: 1.5rem;
+  height: 1.5rem;
+}
+
+/* Container */
+.ficha-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 2rem;
+}
+
+.ficha-content-section {
+  padding: 4rem 0;
+}
+
+/* Section Titles */
+.ficha-section-title {
+  font-size: 2.5rem;
+  font-weight: bold;
+  color: #4a90a4;
+  margin-bottom: 2rem;
+  position: relative;
+}
+
+.ficha-section-title.ficha-centered {
+  text-align: center;
+}
+
+.ficha-section-title::after {
+  content: '';
+  position: absolute;
+  bottom: -0.5rem;
+  left: 0;
+  width: 60px;
+  height: 4px;
+  background: linear-gradient(90deg, #4a90a4, #6ba3b7);
+  border-radius: 2px;
+}
+
+.ficha-section-title.ficha-centered::after {
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+/* Intro Section */
+.ficha-intro-section {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 3rem;
+  align-items: center;
+  margin-bottom: 5rem;
+}
+
+.ficha-intro-paragraph {
+  font-size: 1.1rem;
+  line-height: 1.8;
+  color: #555;
+  text-align: justify;
+}
+
+.ficha-intro-image {
+  position: relative;
+}
+
+.ficha-founder-image {
+  width: 100%;
+  height: 300px;
+  object-fit: cover;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+}
+
+.ficha-image-caption {
+  position: absolute;
+  bottom: -10px;
+  left: 20px;
+  background: white;
+  padding: 1rem 1.5rem;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  font-size: 0.9rem;
+  color: #333;
+}
+
+/* Timeline */
+.ficha-timeline-section {
+  margin: 5rem 0;
+}
+
+.ficha-timeline {
+  position: relative;
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 2rem 0;
+}
+
+.ficha-timeline::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: linear-gradient(180deg, #4a90a4, #6ba3b7);
+  transform: translateX(-50%);
+}
+
+.ficha-timeline-item {
+  position: relative;
+  margin: 3rem 0;
+  display: flex;
+  align-items: center;
+}
+
+.ficha-timeline-item:nth-child(odd) {
+  flex-direction: row;
+}
+
+.ficha-timeline-item:nth-child(even) {
+  flex-direction: row-reverse;
+}
+
+.ficha-timeline-marker {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 60px;
+  height: 60px;
+  background: white;
+  border: 4px solid #4a90a4;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+}
+
+.ficha-timeline-icon {
+  width: 24px;
+  height: 24px;
+  color: #4a90a4;
+}
+
+.ficha-timeline-content {
+  width: 45%;
+  background: white;
+  padding: 2rem;
+  border-radius: 12px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.ficha-timeline-content:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+}
+
+.ficha-timeline-content h3 {
+  color: #4a90a4;
+  font-size: 1.3rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.ficha-timeline-content p {
+  color: #666;
+  line-height: 1.6;
+}
+
+/* Achievements Grid */
+.ficha-achievements-section {
+  margin: 5rem 0;
+  padding: 3rem 0;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border-radius: 20px;
+}
+
+.ficha-achievements-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 2rem;
+  margin-top: 3rem;
+}
+
+.ficha-achievement-card {
+  background: white;
+  padding: 2.5rem 2rem;
+  border-radius: 15px;
+  text-align: center;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.ficha-achievement-card:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.15);
+}
+
+.ficha-achievement-icon {
+  width: 80px;
+  height: 80px;
+  background: linear-gradient(135deg, #4a90a4, #6ba3b7);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 1.5rem;
+}
+
+.ficha-achievement-icon svg {
+  width: 40px;
+  height: 40px;
+  color: white;
+}
+
+.ficha-achievement-card h3 {
+  font-size: 1.8rem;
+  font-weight: bold;
+  color: #4a90a4;
+  margin-bottom: 0.5rem;
+}
+
+.ficha-achievement-card p {
+  color: #666;
+  font-size: 1rem;
+}
+
+/* History Detail */
+.ficha-history-detail {
+  margin: 5rem 0;
+}
+
+.ficha-history-content {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 3rem;
+  align-items: start;
+}
+
+.ficha-history-paragraphs p {
+  font-size: 1.1rem;
+  line-height: 1.8;
+  color: #555;
+  margin-bottom: 1.5rem;
+  text-align: justify;
+}
+
+.ficha-history-images {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.ficha-history-img {
+  width: 100%;
+  height: 200px;
+  object-fit: cover;
+  border-radius: 12px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s ease;
+}
+
+.ficha-history-img:hover {
+  transform: scale(1.05);
+}
+
+/* Impact Section */
+.ficha-impact-section {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 3rem;
+  align-items: center;
+  margin: 5rem 0;
+  padding: 2.5rem 0;
+  background: linear-gradient(135deg, #4a90a4 0%, #6ba3b7 100%);
+  border-radius: 15px;
+  color: white;
+}
+
+.ficha-impact-content {
+  padding: 0 2rem;
+}
+
+.ficha-impact-section .ficha-section-title {
+  color: white;
+  font-size: 2rem;
+}
+
+.ficha-impact-section .ficha-section-title::after {
+  background: white;
+}
+
+.ficha-impact-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  margin-top: 1.5rem;
+}
+
+.ficha-impact-item {
+  text-align: center;
+}
+
+.ficha-impact-number {
+  font-size: 2.5rem;
+  font-weight: bold;
+  color: white;
+  margin-bottom: 0.5rem;
+}
+
+.ficha-impact-label {
+  font-size: 0.9rem;
+  opacity: 0.9;
+}
+
+.ficha-impact-img {
+  width: 100%;
+  height: 300px;
+  object-fit: cover;
+  border-radius: 12px;
+  margin: 0 1.5rem;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .ficha-hero-title {
+    font-size: 2.5rem;
+  }
+  
+  .ficha-hero-subtitle {
+    font-size: 1.1rem;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .ficha-container {
+    padding: 0 1rem;
+  }
+  
+  .ficha-intro-section,
+  .ficha-history-content,
+  .ficha-impact-section {
+    grid-template-columns: 1fr;
+    gap: 2rem;
+  }
+  
+  .ficha-timeline::before {
+    left: 30px;
+  }
+  
+  .ficha-timeline-item {
+    flex-direction: row !important;
+    padding-left: 80px;
+  }
+  
+  .ficha-timeline-marker {
+    left: 30px;
+    transform: none;
+  }
+  
+  .ficha-timeline-content {
+    width: 100%;
+  }
+  
+  .ficha-achievements-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .ficha-section-title {
+    font-size: 2rem;
+  }
+  
+  .ficha-impact-content {
+    padding: 0 1rem;
+  }
+  
+  .ficha-impact-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  
+  .ficha-history-images {
+    flex-direction: row;
+  }
+  
+  .ficha-history-img {
+    height: 150px;
+  }
+}

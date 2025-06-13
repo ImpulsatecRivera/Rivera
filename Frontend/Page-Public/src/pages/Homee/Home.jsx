@@ -193,7 +193,7 @@ const EmpresaPage = () => {
                   </li>
                   <li>
                     <a href="/que-hacen" className="hover:text-teal-600 transition-colors">
-                      Que hacen
+                      Nuestra Dedicación
                     </a>
                   </li>
                   <li>
