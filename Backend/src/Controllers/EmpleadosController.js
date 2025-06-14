@@ -1,5 +1,5 @@
-import { BiMessage } from "react-icons/bi";
 import empleadosModel from "../Models/Empleados.js";
+import bcryptjs from "bcryptjs"; 
 
 const empleadosCon = {};
 
@@ -10,13 +10,26 @@ empleadosCon.get = async (req , res) => {
 
 empleadosCon.post = async (req, res) => {
     const {name,lastName,email,id,birthDate,password,phone,address}=req.body;
-    const newEmpleado = new empleadosModel({name,lastName,email,id,birthDate,password,phone,address})
+
+      const validarEmpleado = await empleadosModel.findOne({email})
+        if(validarEmpleado){
+            return res.status(400).json({message: "Empleado ya registrado"});
+        };
+
+        const encriptarContraHash = await bcryptjs.hash(password,10);
+
+
+    const newEmpleado = new empleadosModel({name,lastName,email,id,birthDate,password:encriptarContraHash,phone,address})
+
     await newEmpleado.save();
     res.status(200).json({Message:"Empleado agregado correctamente"});
 }
 
 empleadosCon.put = async (req,res) => {
     const {name,lastName,email,id,birthDate,password,phone,address}=req.body;
+
+    const encriptarContraHash = await bcryptjs.hash(password,10);
+
     await empleadosModel.findByIdAndUpdate(
         req.params.id,{
             name,
@@ -24,7 +37,7 @@ empleadosCon.put = async (req,res) => {
             email,
             id,
             birthDate,
-            password,
+            password:encriptarContraHash,
             phone,
             address
         },{new:true}

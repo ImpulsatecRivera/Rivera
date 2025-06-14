@@ -1,5 +1,6 @@
 import { json } from "express";
 import motoristalModel from "../Models/Motorista.js";
+import bcryptjs from "bcryptjs"; 
 
 const motoristasCon={};
 
@@ -9,9 +10,16 @@ motoristasCon.get = async (req , res) =>{
 };
 
 motoristasCon.post = async ( req ,res) => {
-    const {name,lastName,id,birthDate,password,phone,address,circulationCard} = req.body;
+    const {name,lastName,id,birthDate,email,password,phone,address,circulationCard} = req.body;
+     
+     const validarMotorista = await motoristalModel.findOne({email})
+            if(validarMotorista){
+                return res.status(400).json({message: "Motorista ya registrado"});
+            };
 
-    const newmotorista = new motoristalModel({name,lastName,id,birthDate,password,phone,address,circulationCard});
+            const contraHash = await bcryptjs.hash(password,10)
+
+    const newmotorista = new motoristalModel({name,lastName,email,id,birthDate,password:contraHash,phone,address,circulationCard});
     await newmotorista.save();
 
     res.status(200).json({Message:"Motorista agregado correctamente"});
@@ -19,8 +27,10 @@ motoristasCon.post = async ( req ,res) => {
 
 motoristasCon.put = async ( req ,res) =>{
     const {name,lastName,id,birthDate,password,phone,address,circulationCard}=req.body;
+                const contraHash = await bcryptjs.hash(password,10)
+
     await motoristalModel.findByIdAndUpdate(req.params.id,{
-        name,lastName,id,birthDate,password,phone,address,circulationCard
+        name,lastName,id,birthDate,password:contraHash,phone,address,circulationCard
     },
 {new:true});
 
