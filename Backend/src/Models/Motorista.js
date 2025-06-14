@@ -35,7 +35,8 @@ const motoristaSchema = new Schema({
     }
 }, {
     timestamps:true,
-    strict:false
+    strict:false,
+    collection: "Motorista"
 });
 
 export default model ("Motorista",motoristaSchema);
