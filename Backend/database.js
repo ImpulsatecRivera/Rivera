@@ -1,11 +1,14 @@
-import mongoose from "mongoose";
 import dotenv from 'dotenv';
+dotenv.config();
+import mongoose from "mongoose";
 import {config} from "./src/config.js";
 
 
-dotenv.config();
 
-const URI=config.db.URI;
+
+const URI=config.db.URI
+
+console.log("🧪 Conectando a MongoDB URI:", URI);
 
 mongoose.connect(URI);
 

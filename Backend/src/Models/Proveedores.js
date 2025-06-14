@@ -19,7 +19,8 @@ const proveedoreSchema = new Schema({
     }
 },{
     timestamps:true,
-    strict:false
+    strict:false,
+    collection: "Proveedores"
 });
 
 export default model ("Proveedores",proveedoreSchema);
