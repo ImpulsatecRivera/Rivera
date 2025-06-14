@@ -26,7 +26,7 @@ if(req.file){
     imgUrl = resul.secure_url;
 }
 
-const newCamion = new camionesMod({name,brand,model,State,gasolineLevel,age,ciculatioCard,licensePlate,description,supplierId,driverId,imgUrl})
+const newCamion = new camionesMod({name,brand,model,State,gasolineLevel,age,ciculatioCard,licensePlate,description,supplierId,driverId,img:imgUrl})
 await newCamion.save();
 res.status(200).json({Message: "Camion agregado correctamente"});
 };
@@ -54,7 +54,7 @@ await camionesMod.findByIdAndUpdate(req.params.id,{
     description,
     supplierId,
     driverId,
-    imgUrl
+    img:imgUrl
 },
 {new:true}
 );

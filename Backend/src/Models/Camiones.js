@@ -53,7 +53,8 @@ const camioneSchema = new Schema({
   }
 }, {
   strict: false,
-  timestamps: true
+  timestamps: true,
+  collection: "Camiones" // fuerza el uso exacto del nombre sino se jode
 });
 
 export default model("Camiones", camioneSchema);
