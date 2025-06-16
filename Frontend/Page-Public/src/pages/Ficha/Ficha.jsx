@@ -2,6 +2,10 @@ import React from 'react';
 import { Mail, Phone, MapPin, Facebook, Instagram, Linkedin, Twitter, Calendar, Award, Users, TrendingUp, Building } from 'lucide-react';
 import './Ficha.css';
 import logo from '../../assets/image.png';
+import Ceo from "../../Images/Imagen4.jpg";
+import Equipo from "../../Images/Imagen1.jpg";
+import Imagen11 from "../../Images/Images11.jpg"
+import Imagen13 from "../../Images/Imagen13.jpg"
 
 const FichaHistorica = () => {
   return (
@@ -18,7 +22,7 @@ const FichaHistorica = () => {
           </div>
         </div>
         <img 
-          src="/path/to/hero-transport-image.jpg" 
+          src={Equipo}
           alt="Historia de Rivera Transporte" 
           className="ficha-hero-image"
         />
@@ -42,7 +46,7 @@ const FichaHistorica = () => {
             </div>
             <div className="ficha-intro-image">
               <img 
-                src="/path/to/yanira-rivera-founder.jpg" 
+                src={Ceo}
                 alt="Yanira Rivera - Fundadora" 
                 className="ficha-founder-image"
               />
@@ -161,7 +165,7 @@ const FichaHistorica = () => {
               
               <div className="ficha-history-images">
                 <img 
-                  src="/path/to/company-evolution.jpg" 
+                  src={Imagen11}
                   alt="Evolución de la empresa" 
                   className="ficha-history-img"
                 />
@@ -190,7 +194,7 @@ const FichaHistorica = () => {
             </div>
             <div className="ficha-impact-image">
               <img 
-                src="/path/to/company-impact.jpg" 
+                src={Imagen13}
                 alt="Impacto de Rivera Transporte" 
                 className="ficha-impact-img"
               />
