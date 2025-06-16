@@ -2,6 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { Mail, Phone, MapPin, Facebook, Instagram, Linkedin, Twitter } from 'lucide-react';
 import './Home.css';
 import logo from '../../assets/image.png';
+import Equipo from "../../Images/Imagen1.jpg";
+import Nosotros from "../../Images/Imagen2.jpg";
+import Ceo from "../../Images/Imagen4.jpg";
+import Conoce from "../../Images/Imagen6.jpg";
+
 
 const EmpresaPage = () => {
   const [currentSlide, setCurrentSlide] = useState(0);
@@ -17,12 +22,12 @@ const EmpresaPage = () => {
   const [submitStatus, setSubmitStatus] = useState('');
   
   const images = [
-    '/path/to/image1.jpg',
-    '/path/to/image2.jpg',
-    '/path/to/image3.jpg',
-    '/path/to/image4.jpg',
-    '/path/to/image5.jpg',
-    '/path/to/image6.jpg'
+    Equipo,
+    Equipo,
+    Equipo,
+    Equipo,
+    Equipo,
+    Equipo
   ];
 
   useEffect(() => {
@@ -122,7 +127,7 @@ const EmpresaPage = () => {
             </p>
           </div>
           <div className="intro-image-section">
-            <img src="/path/to/intro-image.jpg" alt="Nuestra empresa" />
+            <img src={Conoce} alt="Nuestra empresa" />
           </div>
         </div>
       </section>
@@ -131,7 +136,7 @@ const EmpresaPage = () => {
       <section className="ceo-section">
         <div className="ceo-content">
           <div className="ceo-image">
-            <img src="/path/to/ceo-image.jpg" alt="CEO Yanira Rivera" />
+            <img src={Ceo} alt="CEO Yanira Rivera" />
           </div>
           <div className="ceo-text">
             <h2 className="ceo-title">
@@ -157,7 +162,7 @@ const EmpresaPage = () => {
       <section className="quienes-somos">
         <div className="quienes-content">
           <div className="quienes-image-section">
-            <img src="/path/to/quienes-image.jpg" alt="Quiénes somos" />
+            <img src={Nosotros} alt="Quiénes somos" />
           </div>
           <div className="quienes-text-section">
             <h2 className="quienes-title">¿Quiénes somos?</h2>

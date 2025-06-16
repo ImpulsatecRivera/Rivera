@@ -2,6 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { Target, Eye, Truck, Leaf, Shield, Users, Award, CheckCircle, MapPin, Mail, Phone, Facebook, Instagram } from 'lucide-react';
 import './Mision-Vision.css';
 import logo from '../../assets/image.png';
+import camion1 from "../../Images/Imagen9.png"
+import camion2 from "../../Images/Imagen7.jpg"
+import mision from "../../Images/Imagen10.png"
 
 const MisionVision = () => {
   const [activeSection, setActiveSection] = useState('mision');
@@ -78,7 +81,7 @@ const MisionVision = () => {
           <div className="mv-hero-image">
             <div className="mv-truck-container">
               <img 
-                src="/path/to/truck-hero.png" 
+                src={camion1}
                 alt="Camión Rivera Transporte" 
                 className="mv-truck-img"
               />
@@ -170,7 +173,7 @@ const MisionVision = () => {
                     </div>
                   </div>
                   <img 
-                    src="/path/to/mission-image.jpg" 
+                    src={mision}
                     alt="Misión Rivera Transporte" 
                     className="mv-mission-img"
                   />
@@ -288,7 +291,7 @@ const MisionVision = () => {
             
             <div className="mv-impact-visual">
               <img 
-                src="/path/to/impact-image.jpg" 
+                src={camion2}
                 alt="Impacto Rivera Transporte" 
                 className="mv-impact-img"
               />
