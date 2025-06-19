@@ -1,15 +1,23 @@
 // src/pages/VerificationInput.jsx
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import illustration from "../images/verification-box.png";
 import Title from "../components/RecoverPassword/Title";
+import Button from "../components/Login/Button";
 
 const VerificationInput = () => {
   const [counter, setCounter] = useState(60);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const timer = counter > 0 && setInterval(() => setCounter(counter - 1), 1000);
     return () => clearInterval(timer);
   }, [counter]);
+
+  const handleVerify = () => {
+    // Aquí puedes validar el código si fuera necesario
+    navigate("/reset-password");
+  };
 
   return (
     <div className="min-h-screen flex flex-col lg:flex-row">
@@ -39,8 +47,16 @@ const VerificationInput = () => {
 
         {/* Timer */}
         <p className="text-xs text-white mt-4">
-          Espera 00:{counter.toString().padStart(2, "0")} <span className="text-purple-400 cursor-pointer hover:underline">Enviar nuevo código</span>
+          Espera 00:{counter.toString().padStart(2, "0")}{" "}
+          <span className="text-purple-400 cursor-pointer hover:underline">
+            Enviar nuevo código
+          </span>
         </p>
+
+        {/* Botón de confirmar */}
+        <Button onClick={handleVerify} className="bg-[#a100f2] hover:bg-[#7d00c1]">
+          Confirmar
+        </Button>
       </div>
     </div>
   );
