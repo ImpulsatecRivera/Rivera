@@ -1,4 +1,3 @@
-// src/pages/VerificationInput.jsx
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import illustration from "../images/verification-box.png";
