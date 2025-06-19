@@ -1,26 +1,25 @@
+import { useNavigate } from "react-router-dom";
 import Input from "../components/Login/Input";
 import Button from "../components/Login/Button";
+import ilustracion from "../images/verification.png";
 import Title from "../components/RecoverPassword/Title";
-import verificationImg from "../images/verification.png"; // la imagen con el teléfono y el código
 
 const VerificationCode = () => {
+  const navigate = useNavigate();
+
+  const handleVerify = () => {
+    navigate("/verification-input");
+  };
+
   return (
     <div className="min-h-screen flex flex-col lg:flex-row">
-      
-      {/* Imagen izquierda */}
       <div className="w-full lg:w-1/2 bg-white flex items-center justify-center p-10">
-        <img
-          src={verificationImg}
-          alt="Ilustración de verificación"
-          className="max-w-xs w-full"
-        />
+        <img src={ilustracion} alt="Ilustración" className="max-w-xs w-full" />
       </div>
 
-      {/* Formulario */}
       <div className="w-full lg:w-1/2 bg-[#2c2c34] text-white flex flex-col justify-center items-center p-10 space-y-6">
         <Title className="text-white">INGRESE SU CORREO</Title>
-
-        <p className="text-center text-white text-sm max-w-sm">
+        <p className="text-center text-sm max-w-sm">
           INGRESA TU CORREO ELECTRÓNICO PARA ENVIARTE EL CÓDIGO DE VERIFICACIÓN.
         </p>
 
@@ -29,7 +28,13 @@ const VerificationCode = () => {
             type="text"
             placeholder="Introduce tu código de verificación"
           />
-          <Button className="bg-[#a100f2] hover:bg-[#7d00c1]">
+          <Button
+            onClick={(e) => {
+              e.preventDefault();
+              handleVerify();
+            }}
+            className="bg-[#a100f2] hover:bg-[#7d00c1]"
+          >
             Verificar código
           </Button>
         </form>
