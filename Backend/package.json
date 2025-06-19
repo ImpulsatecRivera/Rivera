@@ -1,7 +1,7 @@
 {
   "dependencies": {
     "bcryptjs": "^3.0.2",
-    "cloudinary": "^2.6.1",
+    "cloudinary": "^2.7.0",
     "cookie-parser": "^1.4.7",
     "crypto": "^1.0.1",
     "dotenv": "^16.5.0",
@@ -9,6 +9,7 @@
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.15.2",
     "multer": "^2.0.1",
-    "multer-storage-cloudinary": "^4.0.0"
+    "multer-storage-cloudinary": "^4.0.0",
+    "nodemailer": "^7.0.3"
   }
 }
