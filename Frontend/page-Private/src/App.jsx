@@ -1,10 +1,13 @@
-import React from 'react';
-import Login from './pages/Login'; // Asegúrate que Login.jsx esté en src/pages/Login.jsx
-import './App.css';
+import { Routes, Route } from "react-router-dom";
+import Login from "./pages/Login";
+import RecoverPassword from "./pages/RecoverPassword";
 
 function App() {
   return (
-    <Login />
+    <Routes>
+      <Route path="/" element={<Login />} />
+      <Route path="/recuperar" element={<RecoverPassword />} />
+    </Routes>
   );
 }
 
