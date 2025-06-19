@@ -13,16 +13,27 @@ const Login = () => {
         <Avatar />
         <Title className="text-gray-800">¡Bienvenido de vuelta!</Title>
 
-        <form className="w-full max-w-md space-y-4">
-          <Input label="Correo" type="email" placeholder="ejemplo@email.com" />
-          <Input label="Contraseña" type="password" placeholder="Al menos 8 caracteres" />
-          <div className="text-right text-sm">
-            <Link to="/recuperar" className="text-blue-600 hover:underline">
-              ¿Olvidaste tu contraseña?
-            </Link>
-          </div>
-          <Button>Iniciar sesión</Button>
-        </form>
+   <form className="w-full max-w-md space-y-4">
+  <Input
+    label="Correo"
+    labelClassName="text-gray-700"
+    type="email"
+    placeholder="ejemplo@email.com"
+  />
+  <Input
+    label="Contraseña"
+    labelClassName="text-gray-700"
+    type="password"
+    placeholder="Al menos 8 caracteres"
+  />
+  <div className="text-right text-sm">
+    <Link to="/recuperar" className="text-blue-600 hover:underline">
+      ¿Olvidaste tu contraseña?
+    </Link>
+  </div>
+  <Button>Iniciar sesión</Button>
+</form>
+
       </div>
 
       {/* Imagen lateral */}
