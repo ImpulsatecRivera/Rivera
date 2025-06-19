@@ -1,4 +1,3 @@
-// src/pages/ResetPassword.jsx
 import Input from "../components/Login/Input";
 import Button from "../components/Login/Button";
 import Title from "../components/RecoverPassword/Title";

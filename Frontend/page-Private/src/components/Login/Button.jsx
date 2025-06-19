@@ -1,4 +1,3 @@
-// src/components/Login/Button.jsx
 const Button = ({ children, onClick, className = "" }) => (
   <button
     onClick={onClick}

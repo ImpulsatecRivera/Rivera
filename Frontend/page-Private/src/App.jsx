@@ -1,4 +1,4 @@
-// ✅ App.jsx corregido
+
 import { Routes, Route } from "react-router-dom";
 import Login from "./pages/Login";
 import RecoverPassword from "./pages/RecoverPassword";
