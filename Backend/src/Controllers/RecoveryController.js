@@ -53,13 +53,13 @@ RecoveryPass.verifyCode = async (req, res) => {
       
       const token = req.cookies.tokenRecoveryCode;
    
-      const decoded = jsonwebtoken.verify(token, config.JWT.secret);
+      const decoded = jwt.verify(token, config.JWT.secret);
    
       if (decoded.code !== code) {
         return res.json({ message: "Invalid code" });
       }
    
-      const newToken = jsonwebtoken.sign(
+      const newToken = jwt.sign(
         {
           email: decoded.email,
           code: decoded.code,
@@ -84,7 +84,7 @@ RecoveryPass.newPassword = async (req, res) => {
     try {
       const token = req.cookies.tokenRecoveryCode;
    
-      const decoded = jsonwebtoken.verify(token, config.JWT.secret);
+      const decoded = jwt.verify(token, config.JWT.secret);
    
       if (!decoded.verified) {
         return res.json({ message: "Code not verified" });
@@ -96,8 +96,8 @@ RecoveryPass.newPassword = async (req, res) => {
    
       let updatedUser;
    
-      if (userType === "Empleados") {
-        updatedUser = await employeesModel.findOneAndUpdate(
+      if (userType === "Empleado") {
+        updatedUser = await EmpleadosModel.findOneAndUpdate(
             { email },
             { password: hashedPassword },
             { new: true }
