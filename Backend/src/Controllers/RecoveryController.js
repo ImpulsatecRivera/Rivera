@@ -46,4 +46,70 @@ RecoveryPass.requestCode = async (req,res) => {
     }
 };
 
+RecoveryPass.verifyCode = async (req, res) => {
+    const { code } = req.body;
+   
+    try {
+      
+      const token = req.cookies.tokenRecoveryCode;
+   
+      const decoded = jsonwebtoken.verify(token, config.JWT.secret);
+   
+      if (decoded.code !== code) {
+        return res.json({ message: "Invalid code" });
+      }
+   
+      const newToken = jsonwebtoken.sign(
+        {
+          email: decoded.email,
+          code: decoded.code,
+          userType: decoded.userType,
+          verified: true,
+        },
+        config.JWT.secret,
+        { expiresIn: "20m" }
+      );
+   
+      res.cookie("tokenRecoveryCode", newToken, { maxAge: 20 * 60 * 1000 });
+   
+      res.json({ message: "Code verified successfully" });
+    } catch (error) {
+      console.log("error" + error);
+    }
+  };
+
+RecoveryPass.newPassword = async (req, res) => {
+    const { newPassword } = req.body;
+   
+    try {
+      const token = req.cookies.tokenRecoveryCode;
+   
+      const decoded = jsonwebtoken.verify(token, config.JWT.secret);
+   
+      if (!decoded.verified) {
+        return res.json({ message: "Code not verified" });
+      }
+   
+      const { email, userType } = decoded;
+   
+      const hashedPassword = await bcryptjs.hash(newPassword, 10);
+   
+      let updatedUser;
+   
+      if (userType === "Empleados") {
+        updatedUser = await employeesModel.findOneAndUpdate(
+            { email },
+            { password: hashedPassword },
+            { new: true }
+          );
+      }
+   
+      res.clearCookie("tokenRecoveryCode");
+   
+      res.json({ message: "Password updated" });
+    } catch (error) {
+      console.log("error" + error);
+    }
+  };
+
 export default RecoveryPass;
