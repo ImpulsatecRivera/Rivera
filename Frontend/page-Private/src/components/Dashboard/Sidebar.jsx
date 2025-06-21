@@ -1,38 +1,45 @@
-import avatar from "../../images/avatarDashboard.png";
+import React from 'react';
+import { LogOut } from 'lucide-react';
+import avatarImg from '../../images/avatarDashboard.png';
 
 const Sidebar = () => {
-  const menuItems = [
-    "Inicio",
-    "Viajes",
-    "Cotizaciones",
-    "Empleados",
-    "Motoristas",
-    "Proveedores",
-    "Camiones"
+  const sidebarItems = [
+    { label: 'Inicio', active: true },
+    { label: 'Viajes' },
+    { label: 'Cotizaciones' },
+    { label: 'Empleados' },
+    { label: 'Motoristas' },
+    { label: 'Proveedores' },
+    { label: 'Camiones' }
   ];
 
   return (
-    <nav className="bg-[#1A1D23] text-white w-64 p-6 flex flex-col justify-between h-screen">
-      <div>
-        <div className="flex justify-center mb-6">
-          <img src={avatar} alt="Avatar" className="h-20 object-contain" />
-        </div>
-        <ul className="space-y-4">
-          {menuItems.map((item) => (
-            <li
-              key={item}
-              className="hover:text-purple-400 text-sm font-medium cursor-pointer"
-            >
-              {item}
-            </li>
-          ))}
-        </ul>
+    <div className="w-48 min-h-screen flex flex-col p-4 bg-[#34353A]">
+      <img
+        src={avatarImg}
+        alt="Avatar"
+        className="w-24 h-24 rounded-full object-cover mx-auto"
+      />
+      <nav className="space-y-1 flex-1">
+        {sidebarItems.map((item, index) => (
+          <a
+            key={index}
+            href="#"
+            className={`block px-0 py-1.5 text-xs font-medium transition-colors ${
+              item.active ? 'text-white' : 'text-gray-400 hover:text-white'
+            }`}
+          >
+            {item.label}
+          </a>
+        ))}
+      </nav>
+      <div className="mt-auto">
+        <button className="flex items-center space-x-2 text-gray-400 hover:text-white text-xs">
+          <LogOut size={14} />
+          <span>Cerrar Sesión</span>
+        </button>
       </div>
-
-      <div className="mt-10 text-sm text-gray-400 hover:text-white cursor-pointer">
-        <span className="inline-block mr-2">⎋</span> Cerrar sesión
-      </div>
-    </nav>
+    </div>
   );
 };
 

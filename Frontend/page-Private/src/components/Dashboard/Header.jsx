@@ -1,11 +1,16 @@
-const Header = () => (
-  <div className="p-6 border-b border-gray-200">
-    <h2 className="text-lg font-semibold">Actividad de viajes</h2>
-    <select className="ml-4 p-1 text-sm rounded border">
-      <option>Mensual</option>
-      <option>Semanal</option>
-    </select>
-  </div>
-);
+import React from 'react';
+
+const Header = () => {
+  return (
+    <div className="flex justify-between items-start mb-4">
+      <div>
+        <h1 className="text-lg font-semibold text-gray-900 mb-1">
+          ¡Bienvenido, es un gusto tenerte con nosotros
+        </h1>
+        <p className="text-gray-600 text-xs">Actividad de viajes</p>
+      </div>
+    </div>
+  );
+};
 
 export default Header;
