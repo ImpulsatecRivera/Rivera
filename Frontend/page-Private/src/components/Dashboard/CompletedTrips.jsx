@@ -13,12 +13,12 @@ const CompletedTrips = () => {
   ];
 
   return (
-    <div>
+    <div className="flex flex-col h-full">
       <div className="flex justify-between items-center mb-3">
         <h3 className="text-sm font-medium text-gray-900">Viajes finalizados</h3>
         <button className="text-xs text-blue-600 hover:text-blue-800 hover:underline">Ver todos</button>
       </div>
-      <div className="bg-gray-50 rounded-lg p-2 max-h-64 overflow-y-auto">
+      <div className="bg-gray-50 rounded-lg p-2 flex-1 overflow-auto">
         <div className="space-y-2">
           {completedTrips.map((trip) => (
             <div key={trip.id} className="flex items-center justify-between p-2 bg-white rounded-lg hover:bg-gray-100 cursor-pointer transition-colors border border-gray-100">
