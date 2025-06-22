@@ -4,7 +4,7 @@ import { Clock, TrendingDown } from "lucide-react";
 const BottomMetrics = () => {
   return (
     <div className="grid grid-cols-2 gap-4">
-      <div className="bg-white p-4 rounded-lg shadow flex flex-col items-start">
+      <div className="bg-white p-4 rounded-lg shadow min-h-[120px]">
         <div className="text-sm font-semibold text-gray-600">Tiempo promedio</div>
         <div className="flex items-center gap-2 mt-2">
           <Clock className="text-blue-500" size={16} />
@@ -12,7 +12,7 @@ const BottomMetrics = () => {
         </div>
         <span className="text-xs text-gray-500">Por viaje</span>
       </div>
-      <div className="bg-white p-4 rounded-lg shadow flex flex-col items-start">
+      <div className="bg-white p-4 rounded-lg shadow min-h-[120px]">
         <div className="text-sm font-semibold text-gray-600">Disminución mensual</div>
         <div className="flex items-center gap-2 mt-2">
           <TrendingDown className="text-red-500" size={16} />
