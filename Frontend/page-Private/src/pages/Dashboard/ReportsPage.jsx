@@ -11,30 +11,26 @@ import BottomMetrics from '../../components/ReportsPage/BottomMetrics';
 
 const ReportsPage = () => {
   return (
-    <div className="flex h-screen bg-[#34353A] overflow-hidden">
+    <div className="flex w-full h-screen overflow-hidden bg-[#34353A]">
       <Sidebar currentPage="informes" />
-      
-      {/* Contenedor derecho con scroll interno */}
-      <div className="flex-1 h-screen overflow-hidden p-4">
-        <div className="bg-white rounded-lg h-full p-4 flex flex-col overflow-hidden">
+
+      <div className="flex-1 p-6 overflow-hidden">
+        <div className="bg-white rounded-lg h-full p-4 flex flex-col">
           <ReportsHeader />
 
-          {/* Scroll solo en esta parte */}
-          <div className="flex-1 overflow-y-auto mt-4">
-            <div className="grid grid-cols-3 gap-6">
-              {/* Columna izquierda */}
-              <div className="col-span-2 space-y-4">
-                <FunctionalGroups />
-                <TripsChartStatic />
-                <BottomMetrics />
-              </div>
+          <div className="grid grid-cols-3 gap-4 flex-grow overflow-hidden">
+            {/* Columna izquierda */}
+            <div className="col-span-2 flex flex-col gap-4 overflow-hidden">
+              <FunctionalGroups />
+              <TripsChartStatic />
+              <BottomMetrics />
+            </div>
 
-              {/* Columna derecha */}
-              <div className="space-y-4">
-                <MainMetrics />
-                <MetricCard icon={FiClock} value="02:36" sublabel="Por viaje" />
-                <MetricCard icon={FiTrendingDown} value="-4.5%" sublabel="Comparado con el mes anterior" />
-              </div>
+            {/* Columna derecha */}
+            <div className="flex flex-col gap-4 overflow-hidden">
+              <MainMetrics />
+              <MetricCard icon={FiClock} value="02:36" sublabel="Por viaje" />
+              <MetricCard icon={FiTrendingDown} value="-4.5%" sublabel="Comparado con el mes anterior" />
             </div>
           </div>
         </div>
