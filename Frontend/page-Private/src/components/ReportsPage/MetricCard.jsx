@@ -9,7 +9,7 @@ const MetricCard = ({ icon: Icon, value, sublabel, color = 'green' }) => {
   };
 
   return (
-    <div className="bg-white p-4 rounded-lg border border-gray-100 text-center hover:shadow-md transition-shadow">
+    <div className="bg-white p-4 rounded-lg border border-gray-100 text-center min-h-[120px]">
       {Icon && (
         <div className="flex items-center justify-center mb-2">
           <div className={`w-8 h-8 rounded-full flex items-center justify-center ${colorClasses[color]}`}>
