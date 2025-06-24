@@ -8,6 +8,7 @@ import Dashboard from "./pages/Dashboard/Dashboard";
 import ReportsPage from "./pages/Dashboard/ReportsPage";
 import ClientManagementInterface from "./pages/VerClientes";
 
+
 function App() {
   return (
     <Routes>
