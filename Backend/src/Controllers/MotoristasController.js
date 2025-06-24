@@ -16,8 +16,7 @@ const generarEmail = async (name,lastName) => {
     let email = `${base}@${dominio}`;
     let contador = 1
 
-    while (await 
-        motoristalModel.findOne({email})){
+    while (await motoristalModel.findOne({email})){
         email = `${base}${contador}@${dominio}`;
         contador ++;
     }

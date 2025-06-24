@@ -24,7 +24,7 @@ LoginController.Login = async (req, res) => {
       userFound = await EmpleadoModel.findOne({ email });
 
       if (!userFound) {
-        return res.status(200).json({ message: "Usuario no encontrado" });
+        return res.status(400).json({ message: "Usuario no encontrado" });
       }
 
       const isMatch = await bcryptjs.compare(password, userFound.password);
