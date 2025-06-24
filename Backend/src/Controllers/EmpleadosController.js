@@ -8,8 +8,26 @@ empleadosCon.get = async (req , res) => {
     res.status(200).json(newEmpleado);
 };
 
+//Funcion para crear el email automaticamente a partit del primer nombre y primer apellido
+const generarEmail = async (name,lastName) => {
+    const dominio = "rivera.com";
+    let base = `${name.toLowerCase()}.${lastName.toLowerCase()}`;
+    let email = `${base}@${dominio}`;
+    let contador = 1
+
+    while (await empleadosModel.findOne({email})){
+        email = `${base}${contador}@${dominio}`;
+        contador ++;
+    }
+
+
+    return email;
+};
+
 empleadosCon.post = async (req, res) => {
-    const {name,lastName,email,id,birthDate,password,phone,address}=req.body;
+    const {name,lastName,id,birthDate,password,phone,address}=req.body;
+
+    const email = await generarEmail(name,lastName);
 
       const validarEmpleado = await empleadosModel.findOne({email})
         if(validarEmpleado){

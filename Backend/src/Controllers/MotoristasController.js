@@ -9,8 +9,27 @@ motoristasCon.get = async (req , res) =>{
     res.status(200).json(newMotorista);
 };
 
+//Funcion para crear el email automaticamente a partit del primer nombre y primer apellido
+const generarEmail = async (name,lastName) => {
+    const dominio = "rivera.com";
+    let base = `${name.toLowerCase()}.${lastName.toLowerCase()}`;
+    let email = `${base}@${dominio}`;
+    let contador = 1
+
+    while (await 
+        motoristalModel.findOne({email})){
+        email = `${base}${contador}@${dominio}`;
+        contador ++;
+    }
+
+
+    return email;
+};
+
 motoristasCon.post = async ( req ,res) => {
-    const {name,lastName,id,birthDate,email,password,phone,address,circulationCard} = req.body;
+    const {name,lastName,id,birthDate,password,phone,address,circulationCard} = req.body;
+     
+     const email = await generarEmail(name,lastName);
      
      const validarMotorista = await motoristalModel.findOne({email})
             if(validarMotorista){
