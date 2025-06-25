@@ -4,8 +4,12 @@ import bcryptjs from "bcryptjs";
 const empleadosCon = {};
 
 empleadosCon.get = async (req , res) => {
-    const newEmpleado= await empleadosModel.find();
+    try {
+          const newEmpleado= await empleadosModel.find();
     res.status(200).json(newEmpleado);
+    } catch (error) {
+        res.status(500).json({ message: "Error al obtener empleados", error: error.message });
+    }
 };
 
 //Funcion para crear el email automaticamente a partit del primer nombre y primer apellido
@@ -25,7 +29,8 @@ const generarEmail = async (name,lastName) => {
 };
 
 empleadosCon.post = async (req, res) => {
-    const {name,lastName,id,birthDate,password,phone,address}=req.body;
+    try {
+         const {name,lastName,id,birthDate,password,phone,address}=req.body;
 
     const email = await generarEmail(name,lastName);
 
@@ -41,10 +46,14 @@ empleadosCon.post = async (req, res) => {
 
     await newEmpleado.save();
     res.status(200).json({Message:"Empleado agregado correctamente"});
+    } catch (error) {
+        res.status(500).json({ message: "Error al registrar empleados", error: error.message });
+    }
 }
 
 empleadosCon.put = async (req,res) => {
-    const {name,lastName,email,id,birthDate,password,phone,address}=req.body;
+    try {
+        const {name,lastName,email,id,birthDate,password,phone,address}=req.body;
 
     const encriptarContraHash = await bcryptjs.hash(password,10);
 
@@ -61,14 +70,21 @@ empleadosCon.put = async (req,res) => {
         },{new:true}
     )
     res.status(200).json({Message: "Empleado actualizado correctamente"})
+    } catch (error) {
+        res.status(500).json({ message: "Error al actualizar empleado", error: error.message });
+    }
 };
 
 empleadosCon.delete = async (req ,res) => {
-    const deleteEmpleado = await empleadosModel.findByIdAndDelete(req.params.id);
+    try {
+        const deleteEmpleado = await empleadosModel.findByIdAndDelete(req.params.id);
     if(!deleteEmpleado){
        return  res.status(200).json({Message: "Empleado no localizaco"})
     }
     res.status(200).json({Message: "Empleado eliminado correctamente"});
+    } catch (error) {
+        res.status(500).json({ message: "Error al eliminar el empleado", error: error.message });
+    }
 }
 
 
