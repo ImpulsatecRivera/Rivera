@@ -7,6 +7,7 @@ import ResetPassword from "./pages/ResetPassword";
 import Dashboard from "./pages/Dashboard/Dashboard";
 import ReportsPage from "./pages/Dashboard/ReportsPage";
 import ClientManagementInterface from "./pages/VerClientes";
+import Employee from "./pages/Employees/Employee";
 import SidebarNav from "./components/Nav/Nav";
 
 function App() {
@@ -44,6 +45,7 @@ function App() {
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/informes" element={<ReportsPage />} />
           <Route path="/clientes" element={<ClientManagementInterface />} />
+          <Route path="/empleados" element={<Employee/>} />
         </Routes>
       </div>
     </div>
