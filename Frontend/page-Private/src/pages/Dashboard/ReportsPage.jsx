@@ -1,7 +1,5 @@
 import React from 'react';
 import { FiClock, FiTrendingDown } from 'react-icons/fi';
-
-import Sidebar from '../../components/Dashboard/Sidebar';
 import ReportsHeader from '../../components/ReportsPage/ReportsHeader';
 import MainMetrics from '../../components/ReportsPage/MainMetrics';
 import MetricCard from '../../components/ReportsPage/MetricCard';
@@ -11,13 +9,11 @@ import BottomMetrics from '../../components/ReportsPage/BottomMetrics';
 
 const ReportsPage = () => {
   return (
-    <div className="flex w-full h-screen overflow-hidden bg-[#34353A]">
-      <Sidebar currentPage="informes" />
-
+    <div className="w-full h-screen overflow-hidden bg-[#34353A]">
       <div className="flex-1 p-6 overflow-hidden">
         <div className="bg-white rounded-lg h-full p-4 flex flex-col">
           <ReportsHeader />
-
+          
           <div className="grid grid-cols-3 gap-4 flex-grow overflow-hidden">
             {/* Columna izquierda */}
             <div className="col-span-2 flex flex-col gap-4 overflow-hidden">
@@ -25,7 +21,7 @@ const ReportsPage = () => {
               <TripsChartStatic />
               <BottomMetrics />
             </div>
-
+            
             {/* Columna derecha */}
             <div className="flex flex-col gap-4 overflow-hidden">
               <MainMetrics />
