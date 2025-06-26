@@ -2,8 +2,17 @@ import Input from "../components/Login/Input";
 import Button from "../components/Login/Button";
 import Title from "../components/RecoverPassword/Title";
 import resetImage from "../images/reset-password.png";
+import { useNavigate } from "react-router-dom";
+
 
 const ResetPassword = () => {
+  const navigate = useNavigate();
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    navigate("/");
+  };
+
   return (
     <div className="min-h-screen flex flex-col lg:flex-row">
       {/* Imagen lateral izquierda */}
@@ -21,7 +30,7 @@ const ResetPassword = () => {
         <form className="w-full max-w-sm space-y-4">
           <Input label="Nueva Contraseña" type="password" placeholder="Nueva Contraseña" />
           <Input label="Confirma tu contraseña" type="password" placeholder="Confirma tu contraseña" />
-          <Button className="bg-[#a100f2] hover:bg-[#7d00c1]">Confirmar</Button>
+          <Button onClick={handleSubmit} className="bg-[#a100f2] hover:bg-[#7d00c1]">Confirmar</Button>
         </form>
       </div>
     </div>
