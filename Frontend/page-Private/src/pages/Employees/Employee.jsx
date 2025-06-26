@@ -1,30 +1,39 @@
-import React, { useState } from 'react';
-import { Search, Phone, Mail, User, ArrowLeft, ArrowRight, Plus } from 'lucide-react';
+import React, { useState,useEffect } from 'react';
+import { Search, Phone, Mail, User, ChevronDown,ArrowLeft, ArrowRight, Plus } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import axios from "axios"
+
 
 const EmployeeManagementInterface = () => {
-  const [selectedEmployee, setSelectedEmployee] = useState(null);
+  const [empleados, setEmpleados] = useState([]);
+  const [selectedEmpleados, setSelectedEmpleados] = useState(null);
   const [showDetailView, setShowDetailView] = useState(false);
-   const navigate = useNavigate();
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [sortBy, setSortBy] = useState('Newest');
+  const navigate = useNavigate();
 
-  const employees = [
-    { name: 'Jane Cooper', email: 'fl@gmail.com', dui: '07659231-8', birthDate: '03/24/1999', phone: '7556-9709', address: 'United States', license: '07659231-8' },
-    { name: 'Floyd Miles', email: 'fl@gmail.com', dui: '07659231-8', birthDate: '03/24/1999', phone: '7556-9709', address: 'United States', license: '07659231-8' },
-    { name: 'Ronald Richards', email: 'fl@gmail.com', dui: '07659231-8', birthDate: '03/24/1999', phone: '7556-9709', address: 'United States', license: '07659231-8' },
-    { name: 'Marvin McKinney', email: 'fl@gmail.com', dui: '07659231-8', birthDate: '03/24/1999', phone: '7556-9709', address: 'United States', license: '07659231-8' },
-    { name: 'Jerome Bell', email: 'fl@gmail.com', dui: '07659231-8', birthDate: '03/24/1999', phone: '7556-9709', address: 'United States', license: '07659231-8' },
-    { name: 'Kathryn Murphy', email: 'fl@gmail.com', dui: '07659231-8', birthDate: '03/24/1999', phone: '7556-9709', address: 'United States', license: '07659231-8' },
-    { name: 'Jacob Jones', email: 'fl@gmail.com', dui: '07659231-8', birthDate: '03/24/1999', phone: '7556-9709', address: 'United States', license: '07659231-8' },
-    { name: 'Kristin Watson', email: 'fl@gmail.com', dui: '07659231-8', birthDate: '03/24/1999', phone: '7556-9709', address: 'United States', license: '07659231-8' },
-    { name: 'Devon Lane', email: 'fl@gmail.com', dui: '07659231-8', birthDate: '03/24/1999', phone: '7556-9709', address: 'United States', license: '07659231-8' },
-    { name: 'Courtney Henry', email: 'fl@gmail.com', dui: '07659231-8', birthDate: '03/24/1999', phone: '7556-9709', address: 'United States', license: '07659231-8' },
-    { name: 'Theresa Webb', email: 'fl@gmail.com', dui: '07659231-8', birthDate: '03/24/1999', phone: '7556-9709', address: 'United States', license: '07659231-8' },
-    { name: 'Darrell Steward', email: 'fl@gmail.com', dui: '07659231-8', birthDate: '03/24/1999', phone: '7556-9709', address: 'United States', license: '07659231-8' },
-    { name: 'Brooklyn Simmons', email: 'fl@gmail.com', dui: '07659231-8', birthDate: '03/24/1999', phone: '7556-9709', address: 'United States', license: '07659231-8' },
-    { name: 'Eleanor Pena', email: 'fl@gmail.com', dui: '07659231-8', birthDate: '03/24/1999', phone: '7556-9709', address: 'United States', license: '07659231-8' },
-    { name: 'Cameron Williamson', email: 'fl@gmail.com', dui: '07659231-8', birthDate: '03/24/1999', phone: '7556-9709', address: 'United States', license: '07659231-8' },
-    { name: 'Savannah Nguyen', email: 'fl@gmail.com', dui: '07659231-8', birthDate: '03/24/1999', phone: '7556-9709', address: 'United States', license: '07659231-8' }
-  ];
+  useEffect(() => {
+    const fetchEmpleados = async () =>{
+      try {
+        const response = await axios.get('http://localhost:4000/api/empleados')
+        setEmpleados(response.data);
+      } catch (error) {
+        setError("Error al cargar los clientes");
+      }finally{
+        setLoading(false);
+      }
+    };
+    fetchEmpleados();
+  }, []);
+
+  const filterEmpleados = empleados.filter((empleado) => 
+  [empleado.name,empleado.lastName,empleado.id,empleado.email]
+  .join(' ')
+  .toLowerCase()
+  .includes(searchTerm.toLowerCase())
+  );
 
   const handleContinue = (e) => {
     e.preventDefault();
@@ -53,12 +62,26 @@ const EmployeeManagementInterface = () => {
                   <input 
                     type="text" 
                     placeholder="Buscar" 
+                    onChange={(e) => setSearchTerm(e.target.value)}
                     className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
                   />
                 </div>
                 <div className="flex items-center space-x-3 ml-4">
                   <div className="text-sm text-gray-500">
                     Sort by: <span className="text-gray-700 font-medium">Newest</span>
+                    <div className="relative">
+                  <select
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value)}
+                    className="appearance-none bg-white border border-gray-300 rounded-lg px-3 py-2 pr-8 text-sm focus:outline-none focus:border-teal-500"
+                  >
+                    <option value="Newest">Newest</option>
+                    <option value="Oldest">Oldest</option>
+                    <option value="Name">Name</option>
+                    <option value="Email">Email</option>
+                  </select>
+                  <ChevronDown className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4 pointer-events-none" />
+                </div>
                   </div>
                 </div>
               </div>
@@ -82,29 +105,37 @@ const EmployeeManagementInterface = () => {
           {/* Scrollable Content */}
           <div className="flex-1 overflow-y-auto px-8">
             <div className="space-y-2 py-4">
-              {employees.map((employee, index) => (
-                <div 
-                  key={index}
-                  className={`grid ${showDetailView ? 'grid-cols-4' : 'grid-cols-6'} gap-4 py-3 rounded-lg cursor-pointer transition-colors ${
-                    selectedEmployee && selectedEmployee.name === employee.name ? 'bg-teal-100' : 'hover:bg-gray-50'
-                  }`}
-                  onClick={() => {
-                    setSelectedEmployee(employee);
-                    setShowDetailView(true);
-                  }}
-                >
-                  <div className="font-medium">{employee.name}</div>
-                  <div className="text-gray-600">{employee.email}</div>
-                  <div className="text-gray-600">{employee.dui}</div>
-                  <div className="text-gray-600">{employee.birthDate}</div>
-                  {!showDetailView && (
-                    <>
-                      <div className="text-gray-600">{employee.phone}</div>
-                      <div className="text-gray-600">{employee.address}</div>
-                    </>
-                  )}
-                </div>
-              ))}
+              {loading ? (
+                <p className="text-gray-500">Cargando empleados...</p>
+              ) : error ? (
+                <p className="text-red-500">{error}</p>
+              ) : filterEmpleados.length === 0 ? (
+                <p className="text-gray-500">No se encontraron resultados.</p>
+              ) : (
+                filterEmpleados.map((empleado, index) => (
+                  <div
+                    key={empleado._id || index}
+                    className={`grid ${showDetailView ? 'grid-cols-4' : 'grid-cols-6'} gap-4 py-3 px-2 rounded-lg cursor-pointer transition-colors ${
+                      selectedEmpleados && selectedEmpleados._id === empleado._id ? 'bg-teal-100' : 'hover:bg-gray-50'
+                    }`}
+                    onClick={() => {
+                      setSelectedEmpleados(empleado);
+                      setShowDetailView(true);
+                    }}
+                  >
+                    <div className="font-medium truncate">{empleado.name} {empleado.lastName}</div>
+                    <div className="text-gray-600 truncate">{empleado.email}</div>
+                    <div className="text-gray-600 truncate">{empleado.dui}</div>
+                    <div className="text-gray-600 truncate">{new Date(empleado.birthDate).toLocaleDateString()}</div>
+                    {!showDetailView && (
+                      <>
+                        <div className="text-gray-600 truncate">{empleado.phone ? empleado.phone.toString() : 'No disponible'}</div>
+                        <div className="text-gray-600 truncate">{empleado.address}</div>
+                      </>
+                    )}
+                  </div>
+                ))
+              )}
             </div>
           </div>
 
@@ -143,14 +174,14 @@ const EmployeeManagementInterface = () => {
         </div>
 
         {/* Employee Info Panel */}
-        {showDetailView && selectedEmployee && (
+        {showDetailView && selectedEmpleados && (
           <div className="w-80 bg-white text-gray-900 rounded-r-3xl mr-4 my-4 p-6">
             <div className="flex items-center mb-6">
-              <button 
+              <button
                 className="p-2 hover:bg-gray-100 rounded-full mr-3"
                 onClick={() => {
                   setShowDetailView(false);
-                  setSelectedEmployee(null);
+                  setSelectedEmpleados(null);
                 }}
               >
                 <ArrowLeft className="w-5 h-5 text-gray-600" />
@@ -158,14 +189,13 @@ const EmployeeManagementInterface = () => {
               <h2 className="text-lg font-semibold">Información del Empleado</h2>
             </div>
 
-            {/* Avatar and Contact */}
             <div className="text-center mb-8">
               <div className="w-20 h-20 bg-orange-400 rounded-full mx-auto mb-4 flex items-center justify-center">
                 <div className="w-16 h-16 bg-orange-300 rounded-full flex items-center justify-center">
                   <User className="w-10 h-10 text-white" />
                 </div>
               </div>
-              <h3 className="font-semibold text-lg mb-2">{selectedEmployee.name}</h3>
+              <h3 className="font-semibold text-lg mb-2">{selectedEmpleados.name} {selectedEmpleados.lastName}</h3>
               <div className="flex justify-center space-x-3">
                 <button className="p-2 bg-gray-100 rounded-full hover:bg-gray-200">
                   <Phone className="w-4 h-4 text-gray-600" />
@@ -176,39 +206,38 @@ const EmployeeManagementInterface = () => {
               </div>
             </div>
 
-            {/* Personal Information */}
             <div className="space-y-6">
               <div className="flex items-center space-x-2">
                 <User className="w-4 h-4 text-gray-400" />
                 <span className="font-medium">Información Personal</span>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4">
                 <div>
                   <div className="text-sm text-gray-500 mb-1">Correo electrónico</div>
-                  <div className="text-sm text-gray-400">{selectedEmployee.email}</div>
+                  <div className="text-sm text-gray-400 break-words">{selectedEmpleados.email}</div>
                 </div>
                 <div>
                   <div className="text-sm text-gray-500 mb-1">DUI</div>
-                  <div className="text-sm text-gray-400">{selectedEmployee.dui}</div>
+                  <div className="text-sm text-gray-400">{selectedEmpleados.dui}</div>
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4">
                 <div>
                   <div className="text-sm text-gray-500 mb-1">Fecha de nacimiento</div>
-                  <div className="text-sm text-gray-400">{selectedEmployee.birthDate}</div>
+                  <div className="text-sm text-gray-400">{new Date(selectedEmpleados.birthDate).toLocaleDateString()}</div>
                 </div>
                 <div>
                   <div className="text-sm text-gray-500 mb-1">Teléfono</div>
-                  <div className="text-sm text-gray-400">{selectedEmployee.phone}</div>
+                  <div className="text-sm text-gray-400">{selectedEmpleados.phone ? selectedEmpleados.phone.toString() : 'No disponible'}</div>
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4">
                 <div>
                   <div className="text-sm text-gray-500 mb-1">Dirección</div>
-                  <div className="text-sm text-gray-400">{selectedEmployee.address}</div>
+                  <div className="text-sm text-gray-400 break-words">{selectedEmpleados.address}</div>
                 </div>
               </div>
             </div>
