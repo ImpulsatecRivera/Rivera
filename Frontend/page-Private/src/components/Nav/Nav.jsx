@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
 import { User, LogOut } from 'lucide-react';
 import avatarImg from '../../images/avatarDashboard.png';
-import { NavLink } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 
 const SidebarNav = () => {
   const [activeItem, setActiveItem] = useState('Inicio');
   const [isAnimating, setIsAnimating] = useState(false);
   const [animatingItem, setAnimatingItem] = useState('');
+
+  const navigate = useNavigate();
 
   // SVG del camión de reparto
   const TruckIcon = () => (
@@ -91,9 +93,18 @@ const SidebarNav = () => {
     console.log(`Navegando a: ${itemName}`);
   };
 
-  const handleLogout = () => {
-    console.log('Cerrando sesión...');
-  };
+ const handleLogout = () => {
+  console.log('Cerrando sesión...');
+  setIsAnimating(true);  // Iniciar animación
+  setAnimatingItem('Cerrar sesión');  // Asignar nombre al item de animación
+
+  // Animación de 2 segundos antes de redirigir
+  setTimeout(() => {
+    navigate('/');  // Redirigir al login
+  }, 1000);  // El retraso de 2 segundos coincide con la animación
+};
+
+  
 
   return (
     <div className="w-64 h-screen text-white flex flex-col" style={{ backgroundColor: '#34353A' }}>
