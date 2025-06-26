@@ -3,13 +3,13 @@ import express from "express";
 
 const router = express.Router();
 
+// Rutas para empleados
 router.route("/")
-.get(empleadosCon.get)
-.post(empleadosCon.post);
+    .get(empleadosCon.get)
+    .post(empleadosCon.post);
 
 router.route("/:id")
-.put(empleadosCon.put)
-.delete(empleadosCon.delete);
-
+    .put(empleadosCon.put)
+    .delete(empleadosCon.delete);
 
 export default router;
