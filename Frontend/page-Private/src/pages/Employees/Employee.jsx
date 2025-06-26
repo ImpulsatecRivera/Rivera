@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import { Search, Phone, Mail, User, ArrowLeft, ArrowRight, Plus } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 const EmployeeManagementInterface = () => {
   const [selectedEmployee, setSelectedEmployee] = useState(null);
   const [showDetailView, setShowDetailView] = useState(false);
+   const navigate = useNavigate();
 
   const employees = [
     { name: 'Jane Cooper', email: 'fl@gmail.com', dui: '07659231-8', birthDate: '03/24/1999', phone: '7556-9709', address: 'United States', license: '07659231-8' },
@@ -23,6 +25,11 @@ const EmployeeManagementInterface = () => {
     { name: 'Cameron Williamson', email: 'fl@gmail.com', dui: '07659231-8', birthDate: '03/24/1999', phone: '7556-9709', address: 'United States', license: '07659231-8' },
     { name: 'Savannah Nguyen', email: 'fl@gmail.com', dui: '07659231-8', birthDate: '03/24/1999', phone: '7556-9709', address: 'United States', license: '07659231-8' }
   ];
+
+  const handleContinue = (e) => {
+    e.preventDefault();
+    navigate('/empleados/agregarEmployee');
+  };
 
   return (
     <div className="flex h-screen text-white" style={{backgroundColor: '#34353A'}}>
@@ -127,7 +134,7 @@ const EmployeeManagementInterface = () => {
             
             {/* Add Employee Button */}
             <div className="mt-4">
-              <button className="flex items-center space-x-2 text-gray-600 hover:text-gray-800 transition-colors">
+              <button onClick={handleContinue} className="flex items-center space-x-2 text-gray-600 hover:text-gray-800 transition-colors">
                 <Plus className="w-5 h-5" />
                 <span className="font-medium">Agregar empleado</span>
               </button>
@@ -202,10 +209,6 @@ const EmployeeManagementInterface = () => {
                 <div>
                   <div className="text-sm text-gray-500 mb-1">Dirección</div>
                   <div className="text-sm text-gray-400">{selectedEmployee.address}</div>
-                </div>
-                <div>
-                  <div className="text-sm text-gray-500 mb-1">Licencia</div>
-                  <div className="text-sm text-gray-400">{selectedEmployee.license}</div>
                 </div>
               </div>
             </div>
