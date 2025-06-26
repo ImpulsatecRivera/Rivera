@@ -16,7 +16,7 @@ empleadosCon.get = async (req, res) => {
 
 // Función para crear el email automáticamente
 const generarEmail = async (name, lastName) => {
-    const dominio = "rivera.com";
+    const dominio = "gmail.com";
     let base = `${name.toLowerCase()}.${lastName.toLowerCase()}`;
     let email = `${base}@${dominio}`;
     let contador = 1;
