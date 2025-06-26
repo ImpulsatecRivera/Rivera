@@ -12,12 +12,12 @@ const empleadoSchema = new Schema({
     email: {
         type: String,
         required: true,
-        unique: true // Asegurar que el email sea único
+        unique: true
     },
-    dui: { // Cambiar de 'id' a 'dui' para evitar conflictos
+    dui: {
         type: String,
         required: true,
-        unique: true // Asegurar que el DUI sea único
+        unique: true
     },
     birthDate: {
         type: Date,
@@ -39,6 +39,14 @@ const empleadoSchema = new Schema({
     timestamps: true,
     strict: false,
     collection: "Empleados"
+});
+
+// IMPORTANTE: Eliminar datos anteriores si hay conflictos
+empleadoSchema.pre('save', function() {
+    // Eliminar el campo 'id' si existe para evitar conflictos
+    if (this.id && this.id !== this._id) {
+        delete this.id;
+    }
 });
 
 export default model("Empleados", empleadoSchema);
