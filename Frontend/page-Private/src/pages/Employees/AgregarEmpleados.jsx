@@ -1,21 +1,25 @@
-import React, { useState } from 'react';
-import { ArrowLeft, User, Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { ArrowLeft, User, Calendar, ChevronLeft, ChevronRight, ChevronUp, ChevronDown } from 'lucide-react';
+import axios from 'axios';
 
-const AddDriverForm = () => {
+const AddEmployeeForm = () => {
   const [formData, setFormData] = useState({
-    nombre: '',
-    apellido: '',
-    email: '',
-    dui: '',
-    fechaNacimiento: '',
-    contraseña: '',
-    telefono: '',
-    direccion: ''
+    name: '',
+    lastName: '',
+    email: '', // Solo para mostrar, no se envía al backend
+    dui: '', // CAMBIO: usar 'dui' en lugar de 'id'
+    birthDate: '',
+    password: '',
+    phone: '',
+    address: ''
   });
 
   const [showCalendar, setShowCalendar] = useState(false);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(null);
+  const [errors, setErrors] = useState({});
+  const [loading, setLoading] = useState(false);
+  const [showYearSelector, setShowYearSelector] = useState(false);
 
   const months = [
     'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
@@ -24,6 +28,22 @@ const AddDriverForm = () => {
 
   const daysOfWeek = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
 
+  // Generar email automáticamente cuando cambien nombre o apellido (solo para mostrar)
+  useEffect(() => {
+    if (formData.name && formData.lastName) {
+      const emailGenerated = `${formData.name.toLowerCase()}.${formData.lastName.toLowerCase()}@rivera.com`;
+      setFormData(prev => ({
+        ...prev,
+        email: emailGenerated
+      }));
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        email: ''
+      }));
+    }
+  }, [formData.name, formData.lastName]);
+
   const getDaysInMonth = (date) => {
     const year = date.getFullYear();
     const month = date.getMonth();
@@ -31,15 +51,15 @@ const AddDriverForm = () => {
     const lastDay = new Date(year, month + 1, 0);
     const startDate = new Date(firstDay);
     startDate.setDate(startDate.getDate() - firstDay.getDay());
-    
+
     const days = [];
     const currentDate = new Date(startDate);
-    
+
     for (let i = 0; i < 42; i++) {
       days.push(new Date(currentDate));
       currentDate.setDate(currentDate.getDate() + 1);
     }
-    
+
     return days;
   };
 
@@ -64,7 +84,7 @@ const AddDriverForm = () => {
     setSelectedDate(date);
     setFormData(prev => ({
       ...prev,
-      fechaNacimiento: formatDate(date)
+      birthDate: formatDate(date)
     }));
     setShowCalendar(false);
   };
@@ -77,15 +97,26 @@ const AddDriverForm = () => {
     });
   };
 
+  const navigateYear = (direction) => {
+    setCurrentDate(prev => {
+      const newDate = new Date(prev);
+      newDate.setFullYear(newDate.getFullYear() + direction);
+      return newDate;
+    });
+  };
+
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     let formattedValue = value;
 
-    // Formatear teléfono: 1234-5678
-    if (name === 'telefono') {
-      // Remover todo excepto números
+    // No permitir editar el email ya que se genera automáticamente
+    if (name === 'email') {
+      return;
+    }
+
+    // Validación y formateo de teléfono
+    if (name === 'phone') {
       const numbers = value.replace(/\D/g, '');
-      // Agregar guión después de 4 dígitos
       if (numbers.length > 4) {
         formattedValue = numbers.slice(0, 4) + '-' + numbers.slice(4, 8);
       } else {
@@ -93,11 +124,9 @@ const AddDriverForm = () => {
       }
     }
 
-    // Formatear DUI: 12345678-9
+    // Validación y formateo de DUI (CAMBIO: usar 'dui' en lugar de 'id')
     if (name === 'dui') {
-      // Remover todo excepto números
       const numbers = value.replace(/\D/g, '');
-      // Agregar guión después de 8 dígitos
       if (numbers.length > 8) {
         formattedValue = numbers.slice(0, 8) + '-' + numbers.slice(8, 9);
       } else {
@@ -111,19 +140,159 @@ const AddDriverForm = () => {
     }));
   };
 
-  const handleSubmit = (e) => {
+  const validateForm = () => {
+    const newErrors = {};
+    if (!formData.name) newErrors.name = "El nombre es obligatorio";
+    if (!formData.lastName) newErrors.lastName = "El apellido es obligatorio";
+    if (!formData.dui) newErrors.dui = "El DUI es obligatorio"; // CAMBIO: usar 'dui'
+    if (formData.dui && formData.dui.replace(/\D/g, '').length !== 9) {
+      newErrors.dui = "El DUI debe tener exactamente 9 dígitos"; // CAMBIO: usar 'dui'
+    }
+    if (!formData.birthDate) newErrors.birthDate = "La fecha de nacimiento es obligatoria";
+    if (!formData.password) newErrors.password = "La contraseña es obligatoria";
+    if (!formData.phone) newErrors.phone = "El teléfono es obligatorio";
+    if (formData.phone && formData.phone.replace(/\D/g, '').length !== 8) {
+      newErrors.phone = "El teléfono debe tener exactamente 8 dígitos";
+    }
+    if (!formData.address) newErrors.address = "La dirección es obligatoria";
+
+    return newErrors;
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log('Datos del formulario:', formData);
-    // Aquí iría la lógica para enviar los datos
+    console.log('=== INICIO DEL SUBMIT ===');
+    
+    const formErrors = validateForm();
+    console.log('Errores de validación:', formErrors);
+    setErrors(formErrors);
+
+    if (Object.keys(formErrors).length === 0) {
+      try {
+        setLoading(true);
+        console.log('Estado de loading activado');
+        
+        // Preparar los datos para enviar (sin email, se genera en el backend)
+        const dataToSend = {
+          name: formData.name.trim(),
+          lastName: formData.lastName.trim(),
+          dui: formData.dui.trim(), // CAMBIO: usar formData.dui directamente
+          birthDate: formData.birthDate,
+          password: formData.password,
+          phone: formData.phone.trim(),
+          address: formData.address.trim()
+        };
+
+        console.log('=== DATOS A ENVIAR ===');
+        console.log('Datos completos:', dataToSend);
+        console.log('DUI específicamente:', dataToSend.dui);
+        console.log('Fecha de nacimiento:', dataToSend.birthDate);
+        
+        // Verificar que todos los campos estén presentes
+        const camposVacios = Object.entries(dataToSend).filter(([key, value]) => !value);
+        if (camposVacios.length > 0) {
+          console.error('Campos vacíos detectados:', camposVacios);
+          alert('Todos los campos son obligatorios');
+          setLoading(false);
+          return;
+        }
+
+        console.log('=== ENVIANDO PETICIÓN ===');
+        console.log('URL:', 'http://localhost:4000/api/empleados');
+        
+        // Llamada a la API con axios
+        const response = await axios.post('http://localhost:4000/api/empleados', dataToSend, {
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          timeout: 10000, // 10 segundos de timeout
+        });
+        
+        console.log('=== RESPUESTA RECIBIDA ===');
+        console.log('Status:', response.status);
+        console.log('Respuesta del servidor:', response.data);
+        
+        // Si la respuesta es exitosa
+        if (response.status === 200 || response.status === 201) {
+          console.log('¡Empleado creado exitosamente!');
+          alert('¡Empleado agregado exitosamente!');
+          
+          // Limpiar formulario
+          setFormData({
+            name: '',
+            lastName: '',
+            email: '',
+            dui: '', // CAMBIO: usar 'dui'
+            birthDate: '',
+            password: '',
+            phone: '',
+            address: ''
+          });
+          setSelectedDate(null);
+          setErrors({});
+        }
+        
+      } catch (error) {
+        console.error('=== ERROR CAPTURADO ===');
+        console.error('Error completo:', error);
+        console.log('Error response:', error.response);
+        
+        // Manejo de diferentes tipos de errores
+        if (error.response) {
+          // El servidor respondió con un código de error
+          const statusCode = error.response.status;
+          const errorMessage = error.response.data?.message || error.response.data?.error || 'Error del servidor';
+          
+          console.log('Status Code:', statusCode);
+          console.log('Error Message:', errorMessage);
+          console.log('Full Response Data:', error.response.data);
+          
+          switch (statusCode) {
+            case 400:
+              alert(`Error de validación: ${errorMessage}`);
+              break;
+            case 401:
+              alert('No autorizado. Verifica tus credenciales.');
+              break;
+            case 403:
+              alert('No tienes permisos para realizar esta acción.');
+              break;
+            case 404:
+              alert('Endpoint no encontrado. Verifica la URL de la API.');
+              break;
+            case 409:
+              alert(`Conflicto: ${errorMessage}`);
+              break;
+            case 500:
+              alert(`Error interno del servidor: ${errorMessage}`);
+              break;
+            default:
+              alert(`Error del servidor: ${errorMessage}`);
+          }
+        } else if (error.request) {
+          // La petición fue hecha pero no hubo respuesta
+          console.error('No hubo respuesta del servidor');
+          console.error('Request:', error.request);
+          alert('No se pudo conectar con el servidor. Verifica tu conexión a internet.');
+        } else {
+          // Error en la configuración de la petición
+          console.error('Error en la configuración:', error.message);
+          alert('Error al configurar la petición. Contacta al administrador.');
+        }
+      } finally {
+        console.log('=== FINALIZANDO ===');
+        setLoading(false);
+      }
+    } else {
+      console.log('Formulario tiene errores, no se envía');
+    }
   };
 
   const handleBackToMenu = () => {
-    // Simular navegación hacia atrás
     if (window.history.length > 1) {
       window.history.back();
     } else {
       console.log('Navegar a la página anterior');
-      // En tu aplicación real, aquí puedes usar tu sistema de navegación
     }
   };
 
@@ -133,6 +302,16 @@ const AddDriverForm = () => {
 
   const handleBlur = (e) => {
     e.target.style.borderColor = '#d1d5db';
+  };
+
+  // Generar años para el selector
+  const generateYears = () => {
+    const currentYear = new Date().getFullYear();
+    const years = [];
+    for (let year = currentYear - 100; year <= currentYear; year++) {
+      years.push(year);
+    }
+    return years.reverse();
   };
 
   return (
@@ -148,7 +327,7 @@ const AddDriverForm = () => {
         </button>
       </div>
 
-      {/* Main Content - Ocupa casi toda la pantalla */}
+      {/* Main Content */}
       <div className="px-8 pb-8" style={{ height: 'calc(100vh - 80px)' }}>
         <div className="bg-white rounded-2xl p-8 h-full max-w-none mx-0">
           {/* Title Section */}
@@ -163,265 +342,229 @@ const AddDriverForm = () => {
               onClick={handleSubmit}
               className="text-white px-8 py-3 rounded-lg text-sm font-medium transition-colors hover:opacity-90"
               style={{ backgroundColor: '#375E27' }}
+              disabled={loading}
             >
-              Agregar
+              {loading ? 'Cargando...' : 'Agregar'}
             </button>
           </div>
 
           {/* Form */}
-          <div className="space-y-8 max-w-6xl">
-            {/* First Row */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Nombre
-                </label>
-                <input
-                  type="text"
-                  name="nombre"
-                  value={formData.nombre}
-                  onChange={handleInputChange}
-                  placeholder="Introduce el nombre del empleado"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none text-sm text-gray-700 placeholder-gray-400"
-                  onFocus={handleFocus}
-                  onBlur={handleBlur}
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Apellido
-                </label>
-                <input
-                  type="text"
-                  name="apellido"
-                  value={formData.apellido}
-                  onChange={handleInputChange}
-                  placeholder="Introduce el apellido del empleado"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none text-sm text-gray-700 placeholder-gray-400"
-                  onFocus={handleFocus}
-                  onBlur={handleBlur}
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Email
-                </label>
-                <input
-                  type="email"
-                  name="email"
-                  value={formData.email}
-                  onChange={handleInputChange}
-                  placeholder="Introduce el camión asignado"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none text-sm text-gray-700 placeholder-gray-400"
-                  onFocus={handleFocus}
-                  onBlur={handleBlur}
-                />
-              </div>
-            </div>
-
-            {/* Second Row */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Dui
-                </label>
-                <input
-                  type="text"
-                  name="dui"
-                  value={formData.dui}
-                  onChange={handleInputChange}
-                  placeholder="Introduce el dui del empleado"
-                  maxLength="10"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none text-sm text-gray-700 placeholder-gray-400"
-                  onFocus={handleFocus}
-                  onBlur={handleBlur}
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Fecha de nacimiento
-                </label>
-                <div className="relative">
+          <form onSubmit={handleSubmit}>
+            <div className="space-y-8 max-w-6xl">
+              {/* First Row */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Nombre</label>
                   <input
                     type="text"
-                    name="fechaNacimiento"
-                    value={formData.fechaNacimiento ? new Date(formData.fechaNacimiento).toLocaleDateString('es-ES') : ''}
-                    readOnly
-                    onClick={() => setShowCalendar(!showCalendar)}
-                    placeholder="Selecciona la fecha de nacimiento"
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none text-sm text-gray-700 placeholder-gray-400 pr-12 cursor-pointer"
+                    name="name"
+                    value={formData.name}
+                    onChange={handleInputChange}
+                    placeholder="Introduce el nombre del empleado"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none text-sm text-gray-700 placeholder-gray-400"
                     onFocus={handleFocus}
                     onBlur={handleBlur}
                   />
-                  <Calendar 
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400 cursor-pointer" 
-                    onClick={() => setShowCalendar(!showCalendar)}
+                  {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name}</p>}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Apellido</label>
+                  <input
+                    type="text"
+                    name="lastName"
+                    value={formData.lastName}
+                    onChange={handleInputChange}
+                    placeholder="Introduce el apellido del empleado"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none text-sm text-gray-700 placeholder-gray-400"
+                    onFocus={handleFocus}
+                    onBlur={handleBlur}
                   />
-                  
-                  {/* Custom Calendar */}
+                  {errors.lastName && <p className="text-red-500 text-xs mt-1">{errors.lastName}</p>}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">DUI</label>
+                  <input
+                    type="text"
+                    name="dui"
+                    value={formData.dui}
+                    onChange={handleInputChange}
+                    placeholder="12345678-9"
+                    maxLength="10"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none text-sm text-gray-700 placeholder-gray-400"
+                    onFocus={handleFocus}
+                    onBlur={handleBlur}
+                  />
+                  {errors.dui && <p className="text-red-500 text-xs mt-1">{errors.dui}</p>}
+                </div>
+              </div>
+
+              {/* Second Row */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Email (generado automáticamente)
+                  </label>
+                  <input
+                    type="text"
+                    name="email"
+                    value={formData.email}
+                    readOnly
+                    placeholder="Se generará automáticamente"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-gray-50 text-sm text-gray-500 cursor-not-allowed"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">El email se genera automáticamente basado en el nombre y apellido</p>
+                </div>
+
+                <div className="relative">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Fecha de Nacimiento</label>
+                  <div
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg text-sm text-gray-700 cursor-pointer flex items-center justify-between"
+                    onClick={() => setShowCalendar(!showCalendar)}
+                  >
+                    <span>{formData.birthDate ? formData.birthDate : 'Selecciona una fecha'}</span>
+                    <Calendar className="w-4 h-4 text-gray-400" />
+                  </div>
                   {showCalendar && (
-                    <div className="absolute top-full left-0 mt-2 bg-white border border-gray-200 rounded-lg shadow-xl z-50 p-4 w-80">
-                      {/* Calendar Header with Year Selector */}
-                      <div className="flex items-center justify-between mb-4">
-                        <button
-                          type="button"
-                          onClick={() => navigateMonth(-1)}
-                          className="p-2 hover:bg-gray-100 rounded transition-colors"
-                        >
-                          <ChevronLeft className="w-5 h-5 text-gray-600" />
+                    <div className="absolute mt-2 z-50 p-4 bg-white shadow-xl rounded-lg border">
+                      {/* Header del calendario */}
+                      <div className="flex justify-between items-center mb-4">
+                        <button type="button" onClick={() => navigateMonth(-1)} className="p-1 hover:bg-gray-100 rounded">
+                          <ChevronLeft className="w-5 h-5 text-gray-700" />
                         </button>
                         
                         <div className="flex items-center space-x-2">
-                          <select
-                            value={currentDate.getMonth()}
-                            onChange={(e) => setCurrentDate(new Date(currentDate.getFullYear(), parseInt(e.target.value), 1))}
-                            className="text-sm font-medium text-gray-900 bg-transparent border-none focus:outline-none cursor-pointer"
-                          >
-                            {months.map((month, index) => (
-                              <option key={index} value={index}>{month}</option>
-                            ))}
-                          </select>
-                          
-                          <select
-                            value={currentDate.getFullYear()}
-                            onChange={(e) => setCurrentDate(new Date(parseInt(e.target.value), currentDate.getMonth(), 1))}
-                            className="text-sm font-medium text-gray-900 bg-transparent border-none focus:outline-none cursor-pointer"
-                          >
-                            {Array.from({length: 100}, (_, i) => new Date().getFullYear() - 80 + i).map(year => (
-                              <option key={year} value={year}>{year}</option>
-                            ))}
-                          </select>
+                          <span className="text-sm font-semibold">
+                            {months[currentDate.getMonth()]}
+                          </span>
+                          <div className="relative">
+                            <button 
+                              type="button"
+                              onClick={() => setShowYearSelector(!showYearSelector)}
+                              className="flex items-center space-x-1 text-sm font-semibold hover:bg-gray-100 px-2 py-1 rounded"
+                            >
+                              <span>{currentDate.getFullYear()}</span>
+                              <ChevronDown className="w-3 h-3" />
+                            </button>
+                            
+                            {showYearSelector && (
+                              <div className="absolute top-full left-0 mt-1 bg-white border shadow-lg rounded max-h-40 overflow-y-auto z-60">
+                                {generateYears().map(year => (
+                                  <button
+                                    key={year}
+                                    type="button"
+                                    onClick={() => {
+                                      setCurrentDate(prev => {
+                                        const newDate = new Date(prev);
+                                        newDate.setFullYear(year);
+                                        return newDate;
+                                      });
+                                      setShowYearSelector(false);
+                                    }}
+                                    className="block w-full text-left px-4 py-2 text-sm hover:bg-gray-100"
+                                  >
+                                    {year}
+                                  </button>
+                                ))}
+                              </div>
+                            )}
+                          </div>
                         </div>
                         
-                        <button
-                          type="button"
-                          onClick={() => navigateMonth(1)}
-                          className="p-2 hover:bg-gray-100 rounded transition-colors"
-                        >
-                          <ChevronRight className="w-5 h-5 text-gray-600" />
+                        <button type="button" onClick={() => navigateMonth(1)} className="p-1 hover:bg-gray-100 rounded">
+                          <ChevronRight className="w-5 h-5 text-gray-700" />
                         </button>
                       </div>
-
-                      {/* Days of Week */}
+                      
+                      {/* Días de la semana */}
                       <div className="grid grid-cols-7 gap-1 mb-2">
-                        {daysOfWeek.map(day => (
-                          <div key={day} className="text-center text-xs font-medium text-gray-500 py-2">
+                        {daysOfWeek.map((day) => (
+                          <div key={day} className="text-xs text-center font-semibold text-gray-600 py-2">
                             {day}
                           </div>
                         ))}
                       </div>
-
-                      {/* Calendar Days */}
+                      
+                      {/* Días del mes */}
                       <div className="grid grid-cols-7 gap-1">
-                        {getDaysInMonth(currentDate).map((date, index) => (
+                        {getDaysInMonth(currentDate).map((day, index) => (
                           <button
                             key={index}
                             type="button"
-                            onClick={() => handleDateSelect(date)}
+                            onClick={() => isCurrentMonth(day) && handleDateSelect(day)}
+                            disabled={!isCurrentMonth(day)}
                             className={`
-                              p-2 text-sm rounded transition-all duration-200 hover:scale-105
-                              ${!isCurrentMonth(date) 
-                                ? 'text-gray-300 hover:bg-gray-50' 
-                                : isSelected(date)
-                                  ? 'text-white shadow-md transform scale-105'
-                                  : isToday(date)
-                                    ? 'bg-blue-100 text-blue-600 font-semibold hover:bg-blue-200'
-                                    : 'text-gray-700 hover:bg-gray-100'
-                              }
+                              text-xs text-center py-2 rounded-full transition-colors
+                              ${!isCurrentMonth(day) ? 'text-gray-300 cursor-not-allowed' : 'hover:bg-gray-100'}
+                              ${isToday(day) ? 'bg-blue-500 text-white hover:bg-blue-600' : ''}
+                              ${isSelected(day) ? 'bg-green-500 text-white hover:bg-green-600' : ''}
                             `}
-                            style={isSelected(date) ? { backgroundColor: '#375E27' } : {}}
                           >
-                            {date.getDate()}
+                            {day.getDate()}
                           </button>
                         ))}
                       </div>
-
-                      {/* Calendar Footer */}
-                      <div className="flex justify-between items-center mt-4 pt-3 border-t border-gray-200">
-                        <button
-                          type="button"
-                          onClick={() => setShowCalendar(false)}
-                          className="text-sm text-gray-500 hover:text-gray-700 transition-colors"
-                        >
-                          Cancelar
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const today = new Date();
-                            handleDateSelect(today);
-                          }}
-                          className="text-sm font-medium text-white px-3 py-1 rounded transition-colors hover:opacity-90"
-                          style={{ backgroundColor: '#375E27' }}
-                        >
-                          Hoy
-                        </button>
-                      </div>
                     </div>
                   )}
+                  {errors.birthDate && <p className="text-red-500 text-xs mt-1">{errors.birthDate}</p>}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Contraseña</label>
+                  <input
+                    type="password"
+                    name="password"
+                    value={formData.password}
+                    onChange={handleInputChange}
+                    placeholder="Introduce la contraseña"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none text-sm text-gray-700 placeholder-gray-400"
+                    onFocus={handleFocus}
+                    onBlur={handleBlur}
+                  />
+                  {errors.password && <p className="text-red-500 text-xs mt-1">{errors.password}</p>}
                 </div>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Contraseña
-                </label>
-                <input
-                  type="password"
-                  name="contraseña"
-                  value={formData.contraseña}
-                  onChange={handleInputChange}
-                  placeholder="Introduce la contraseña del empleado"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none text-sm text-gray-700 placeholder-gray-400"
-                  onFocus={handleFocus}
-                  onBlur={handleBlur}
-                />
+              {/* Third Row */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Teléfono</label>
+                  <input
+                    type="text"
+                    name="phone"
+                    value={formData.phone}
+                    onChange={handleInputChange}
+                    placeholder="1234-5678"
+                    maxLength="9"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none text-sm text-gray-700 placeholder-gray-400"
+                    onFocus={handleFocus}
+                    onBlur={handleBlur}
+                  />
+                  {errors.phone && <p className="text-red-500 text-xs mt-1">{errors.phone}</p>}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Dirección</label>
+                  <input
+                    type="text"
+                    name="address"
+                    value={formData.address}
+                    onChange={handleInputChange}
+                    placeholder="Introduce la dirección"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none text-sm text-gray-700 placeholder-gray-400"
+                    onFocus={handleFocus}
+                    onBlur={handleBlur}
+                  />
+                  {errors.address && <p className="text-red-500 text-xs mt-1">{errors.address}</p>}
+                </div>
               </div>
             </div>
-
-            {/* Third Row */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Teléfono
-                </label>
-                <input
-                  type="text"
-                  name="telefono"
-                  value={formData.telefono}
-                  onChange={handleInputChange}
-                  placeholder="Introduce el teléfono del empleado"
-                  maxLength="9"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none text-sm text-gray-700 placeholder-gray-400"
-                  onFocus={handleFocus}
-                  onBlur={handleBlur}
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Dirección
-                </label>
-                <textarea
-                  name="direccion"
-                  value={formData.direccion}
-                  onChange={handleInputChange}
-                  placeholder="Introduce la dirección del empleado"
-                  rows="4"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none text-sm text-gray-700 placeholder-gray-400 resize-none"
-                  onFocus={handleFocus}
-                  onBlur={handleBlur}
-                />
-              </div>
-            </div>
-          </div>
+          </form>
         </div>
       </div>
     </div>
   );
 };
 
-export default AddDriverForm;
+export default AddEmployeeForm;
