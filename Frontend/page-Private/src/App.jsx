@@ -6,23 +6,25 @@ import VerificationInput from "./pages/VerificationInput";
 import ResetPassword from "./pages/ResetPassword";
 import Dashboard from "./pages/Dashboard/Dashboard";
 import ReportsPage from "./pages/Dashboard/ReportsPage";
-import ClientManagementInterface from "./pages/VerClientes";
+import ClientManagementInterface from "./pages/Clientes";
 import Employee from "./pages/Employees/Employee";
 import SidebarNav from "./components/Nav/Nav";
+import AddEmployeeForm from "./pages/Employees/AgregarEmpleados";
 
 function App() {
   const location = useLocation();
   
-  // Lista de rutas donde NO debe aparecer el menú (solo rutas de autenticación)
+  // Lista de rutas donde NO debe aparecer el menú
   const authRoutes = [
     "/",
     "/recuperar",
     "/verification-code",
     "/verification-input",
-    "/reset-password"
+    "/reset-password",
+    "/empleados/agregarEmployee" // 👈 AGREGAR ESTA LÍNEA
   ];
   
-  // El menú aparece en todas las rutas EXCEPTO en las de autenticación
+  // El menú aparece en todas las rutas EXCEPTO en las de la lista
   const shouldShowMenu = !authRoutes.includes(location.pathname);
 
   return (
@@ -46,6 +48,7 @@ function App() {
           <Route path="/informes" element={<ReportsPage />} />
           <Route path="/clientes" element={<ClientManagementInterface />} />
           <Route path="/empleados" element={<Employee/>} />
+          <Route path="/empleados/agregarEmployee" element={<AddEmployeeForm/>} />
         </Routes>
       </div>
     </div>
