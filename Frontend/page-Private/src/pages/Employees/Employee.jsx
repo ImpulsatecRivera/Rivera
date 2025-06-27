@@ -356,7 +356,7 @@ const EditEmployeeAlert = ({ isOpen, onClose, onSave, employee }) => {
         address: '',
         password: ''
       });
-      setShowPassword(false); // Reset password visibility when opening
+      setShowPassword(false);
     }
   }, [employee, isOpen]);
 
@@ -649,10 +649,8 @@ const EmployeeManagementInterface = () => {
 
   const handleSaveEdit = async (formData) => {
     try {
-      // Solo enviar los campos que han cambiado o que tienen valor
       const updatedData = {};
       
-      // Solo incluir campos que no estén vacíos
       if (formData.name && formData.name.trim()) {
         updatedData.name = formData.name;
       }
@@ -671,14 +669,12 @@ const EmployeeManagementInterface = () => {
 
       const response = await axios.put(`http://localhost:4000/api/empleados/${selectedEmpleados._id}`, updatedData);
       
-      // Actualizar solo los campos que se modificaron, mantener los demás
       setEmpleados(empleados.map(emp => 
         emp._id === selectedEmpleados._id 
           ? { ...emp, ...updatedData }
           : emp
       ));
       
-      // Actualizar el empleado seleccionado solo con los campos modificados
       setSelectedEmpleados({ ...selectedEmpleados, ...updatedData });
       
       console.log("Empleado actualizado:", response.data);

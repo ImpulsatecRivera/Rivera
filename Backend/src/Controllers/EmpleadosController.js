@@ -137,20 +137,24 @@ empleadosCon.put = async (req, res) => {
     try {
         const { name, lastName, email, dui, birthDate, password, phone, address } = req.body;
 
-        const encriptarContraHash = await bcryptjs.hash(password, 10);
+        const datosActualizados = {
+            name,
+            lastName,
+            email,
+            dui,
+            birthDate,
+            phone,
+            address
+        };
+
+        // Solo encriptar y actualizar la contraseña si fue enviada
+        if (password) {
+            datosActualizados.password = await bcryptjs.hash(password, 10);
+        }
 
         const empleadoActualizado = await empleadosModel.findByIdAndUpdate(
             req.params.id,
-            {
-                name,
-                lastName,
-                email,
-                dui,
-                birthDate,
-                password: encriptarContraHash,
-                phone,
-                address
-            },
+            datosActualizados,
             { new: true }
         );
 

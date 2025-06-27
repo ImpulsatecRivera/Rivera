@@ -276,7 +276,7 @@ const VerificationInput = () => {
 
         {/* Link para volver */}
         <button
-          onClick={() => navigate("/recover-password")}
+          onClick={() => navigate("/recuperar")}
           className="text-sm text-gray-400 hover:text-white underline transition-colors duration-200"
         >
           ¿Email incorrecto? Cambiar email
