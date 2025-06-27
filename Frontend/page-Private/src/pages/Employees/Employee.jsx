@@ -4,6 +4,8 @@ import { useNavigate } from 'react-router-dom';
 import axios from "axios";
 
 // Sweet Alert Component
+
+// Sweet Alert Component
 const SweetAlert = ({ isOpen, onClose, onEdit, onDelete }) => {
   if (!isOpen) return null;
 
@@ -43,7 +45,7 @@ const SweetAlert = ({ isOpen, onClose, onEdit, onDelete }) => {
               animation: isOpen ? 'fadeInUp 0.5s ease-out 0.3s both' : 'none'
             }}
           >
-            ¿Deseas eliminar o actualizar un empleado?
+            ¿Deseas eliminar o actualizar un motorista?
           </h3>
           <p 
             className="text-gray-600 mb-6 transition-all duration-300"
@@ -120,7 +122,7 @@ const SweetAlert = ({ isOpen, onClose, onEdit, onDelete }) => {
 };
 
 // Confirmation Delete Alert Component
-const ConfirmDeleteAlert = ({ isOpen, onClose, onConfirm, employeeName }) => {
+const ConfirmDeleteAlert = ({ isOpen, onClose, onConfirm, motoristaName }) => {
   if (!isOpen) return null;
 
   return (
@@ -152,7 +154,7 @@ const ConfirmDeleteAlert = ({ isOpen, onClose, onConfirm, employeeName }) => {
               animation: isOpen ? 'fadeInUp 0.5s ease-out 0.3s both' : 'none'
             }}
           >
-            ¿Está seguro de que desea eliminar a este empleado?
+            ¿Está seguro de que desea eliminar a este motorista?
           </h3>
           <p 
             className="text-gray-600 mb-6 transition-all duration-300"
@@ -160,7 +162,7 @@ const ConfirmDeleteAlert = ({ isOpen, onClose, onConfirm, employeeName }) => {
               animation: isOpen ? 'fadeInUp 0.5s ease-out 0.4s both' : 'none'
             }}
           >
-            El empleado se eliminará con esta acción
+            El motorista se eliminará con esta acción
           </p>
           <div 
             className="flex space-x-3"
@@ -265,7 +267,7 @@ const SuccessAlert = ({ isOpen, onClose, type = 'delete' }) => {
               animation: isOpen ? 'fadeInUp 0.5s ease-out 0.3s both' : 'none'
             }}
           >
-            {isEdit ? 'Empleado actualizado con éxito' : 'Empleado eliminado con éxito'}
+            {isEdit ? 'Motorista actualizado con éxito' : 'Motorista eliminado con éxito'}
           </h3>
           <p 
             className="text-gray-600 mb-6 transition-all duration-300"
@@ -273,7 +275,7 @@ const SuccessAlert = ({ isOpen, onClose, type = 'delete' }) => {
               animation: isOpen ? 'fadeInUp 0.5s ease-out 0.4s both' : 'none'
             }}
           >
-            {isEdit ? 'Empleado actualizado correctamente' : 'Empleado eliminado correctamente'}
+            {isEdit ? 'Motorista actualizado correctamente' : 'Motorista eliminado correctamente'}
           </p>
           <div 
             className="flex justify-center"
@@ -335,36 +337,55 @@ const SuccessAlert = ({ isOpen, onClose, type = 'delete' }) => {
   );
 };
 
-// Edit Employee Alert Component
-const EditEmployeeAlert = ({ isOpen, onClose, onSave, employee }) => {
+// Edit Motorista Alert Component
+const EditMotoristaAlert = ({ isOpen, onClose, onSave, motorista }) => {
   const [formData, setFormData] = useState({
     name: '',
     lastName: '',
     phone: '',
     address: '',
-    password: ''
+    password: '',
+    circulationCard: ''
   });
 
   const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
-    if (employee && isOpen) {
+    if (motorista && isOpen) {
       setFormData({
         name: '',
         lastName: '',
         phone: '',
         address: '',
-        password: ''
+        password: '',
+        circulationCard: ''
       });
-      setShowPassword(false); // Reset password visibility when opening
+      setShowPassword(false);
     }
-  }, [employee, isOpen]);
+  }, [motorista, isOpen]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
+    let formattedValue = value;
+
+    // Formateo para tarjeta de circulación
+    if (name === 'circulationCard') {
+      formattedValue = value.replace(/[^a-zA-Z0-9-]/g, '').toUpperCase();
+    }
+
+    // Formateo para teléfono
+    if (name === 'phone') {
+      const numbers = value.replace(/\D/g, '');
+      if (numbers.length > 4) {
+        formattedValue = numbers.slice(0, 4) + '-' + numbers.slice(4, 8);
+      } else {
+        formattedValue = numbers;
+      }
+    }
+
     setFormData(prev => ({
       ...prev,
-      [name]: value
+      [name]: formattedValue
     }));
   };
 
@@ -402,7 +423,7 @@ const EditEmployeeAlert = ({ isOpen, onClose, onSave, employee }) => {
               animation: isOpen ? 'fadeInUp 0.5s ease-out 0.2s both' : 'none'
             }}
           >
-            Editar Empleado
+            Editar Motorista
           </h3>
         </div>
 
@@ -428,7 +449,7 @@ const EditEmployeeAlert = ({ isOpen, onClose, onSave, employee }) => {
               <label className="block text-sm font-medium text-gray-700 mb-2">Fecha de nacimiento</label>
               <input
                 type="text"
-                value={employee ? new Date(employee.birthDate).toLocaleDateString() : ''}
+                value={motorista ? new Date(motorista.birthDate).toLocaleDateString() : ''}
                 disabled
                 className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg bg-gray-100 text-gray-600 cursor-not-allowed text-base"
                 placeholder="25/6/2025"
@@ -479,10 +500,10 @@ const EditEmployeeAlert = ({ isOpen, onClose, onSave, employee }) => {
               <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
               <input
                 type="email"
-                value={employee ? employee.email : ''}
+                value={motorista ? motorista.email : ''}
                 disabled
                 className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg bg-gray-100 text-gray-600 cursor-not-allowed text-base"
-                placeholder="prueba 1.prueba1@rivera.co"
+                placeholder="prueba1.prueba1@rivera.com"
               />
             </div>
             <div>
@@ -498,15 +519,29 @@ const EditEmployeeAlert = ({ isOpen, onClose, onSave, employee }) => {
             </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">DUI</label>
-            <input
-              type="text"
-              value={employee ? employee.dui : ''}
-              disabled
-              className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg bg-gray-100 text-gray-600 cursor-not-allowed text-base"
-              placeholder="22223366-6"
-            />
+          <div className="grid grid-cols-2 gap-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">DUI</label>
+              <input
+                type="text"
+                value={motorista ? motorista.id : ''}
+                disabled
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg bg-gray-100 text-gray-600 cursor-not-allowed text-base"
+                placeholder="22223366-6"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Tarjeta de Circulación</label>
+              <input
+                type="text"
+                name="circulationCard"
+                value={formData.circulationCard}
+                onChange={handleInputChange}
+                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 text-base text-gray-900 bg-white"
+                placeholder="ABC123-DEF"
+                maxLength="15"
+              />
+            </div>
           </div>
 
           <div>
