@@ -335,8 +335,13 @@ const SuccessAlert = ({ isOpen, onClose, type = 'delete' }) => {
   );
 };
 
+<<<<<<< HEAD
 // Edit Employee Alert Component
 const EditEmployeeAlert = ({ isOpen, onClose, onSave, employee }) => {
+=======
+// Edit Motorista Alert Component
+const EditEmployeeAlert = ({ isOpen, onClose, onSave, motorista }) => {
+>>>>>>> master
   const [formData, setFormData] = useState({
     name: '',
     lastName: '',
