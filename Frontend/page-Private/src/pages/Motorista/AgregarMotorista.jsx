@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, User, Calendar, ChevronLeft, ChevronRight, ChevronDown } from 'lucide-react';
+import Swal from 'sweetalert2';
 
 const AddMotoristaForm = () => {
   const [formData, setFormData] = useState({
@@ -27,6 +28,66 @@ const AddMotoristaForm = () => {
   ];
 
   const daysOfWeek = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+
+  // Configuración personalizada de SweetAlert2
+  const showSuccessAlert = () => {
+    Swal.fire({
+      title: '¡Motorista agregado con éxito!',
+      text: 'Motorista agregado correctamente',
+      icon: 'success',
+      confirmButtonText: 'Continuar',
+      confirmButtonColor: '#22c55e',
+      allowOutsideClick: false,
+      customClass: {
+        popup: 'animated bounceIn'
+      }
+    }).then((result) => {
+      // Cuando el usuario hace clic en "Continuar"
+      if (result.isConfirmed) {
+        handleBackToMenu(); // Volver a la pantalla anterior
+      }
+    });
+  };
+
+  const showErrorAlert = (message) => {
+    Swal.fire({
+      title: 'Error al agregar motorista',
+      text: message || 'Hubo un error al procesar la solicitud',
+      icon: 'error',
+      confirmButtonText: 'Intentar de nuevo',
+      confirmButtonColor: '#ef4444',
+      allowOutsideClick: false,
+      customClass: {
+        popup: 'animated shakeX'
+      }
+    });
+  };
+
+  const showLoadingAlert = () => {
+    Swal.fire({
+      title: 'Agregando motorista...',
+      text: 'Por favor espera mientras procesamos la información',
+      allowOutsideClick: false,
+      allowEscapeKey: false,
+      showConfirmButton: false,
+      didOpen: () => {
+        Swal.showLoading();
+      }
+    });
+  };
+
+  const showValidationAlert = () => {
+    Swal.fire({
+      title: 'Formulario incompleto',
+      text: 'Por favor, completa todos los campos obligatorios',
+      icon: 'warning',
+      confirmButtonText: 'Entendido',
+      confirmButtonColor: '#f59e0b',
+      customClass: {
+        popup: 'animated pulse'
+      }
+    });
+  };
 
   // Generar email automáticamente cuando cambien nombre o apellido
   useEffect(() => {
@@ -177,60 +238,90 @@ const AddMotoristaForm = () => {
     console.log('Errores de validación:', formErrors);
     setErrors(formErrors);
 
-    if (Object.keys(formErrors).length === 0) {
-      try {
-        setLoading(true);
-        console.log('Estado de loading activado');
-        
-        // Preparar los datos para enviar (sin email, se genera en el backend)
-        const dataToSend = {
-          name: formData.name.trim(),
-          lastName: formData.lastName.trim(),
-          id: formData.id.trim(), // DUI según el modelo
-          birthDate: formData.birthDate,
-          password: formData.password,
-          phone: formData.phone.trim(),
-          address: formData.address.trim(),
-          circulationCard: formData.circulationCard.trim() // Tarjeta de circulación
+    // Si hay errores de validación, mostrar alerta específica
+    if (Object.keys(formErrors).length > 0) {
+      console.log('Formulario tiene errores, no se envía');
+      
+      // Crear lista de campos faltantes
+      const camposFaltantes = Object.keys(formErrors).map(field => {
+        const fieldNames = {
+          name: 'Nombre',
+          lastName: 'Apellido', 
+          id: 'DUI',
+          birthDate: 'Fecha de nacimiento',
+          password: 'Contraseña',
+          phone: 'Teléfono',
+          address: 'Dirección',
+          circulationCard: 'Tarjeta de circulación'
         };
+        return fieldNames[field] || field;
+      });
 
-        console.log('=== DATOS A ENVIAR ===');
-        console.log('Datos completos:', dataToSend);
-        
-        // Verificar que todos los campos estén presentes
-        const camposVacios = Object.entries(dataToSend).filter(([key, value]) => !value);
-        if (camposVacios.length > 0) {
-          console.error('Campos vacíos detectados:', camposVacios);
-          alert('Todos los campos son obligatorios');
-          setLoading(false);
-          return;
+      Swal.fire({
+        title: '⚠️ Formulario incompleto',
+        html: `
+          <p style="margin-bottom: 15px;">Los siguientes campos son obligatorios:</p>
+          <ul style="text-align: left; color: #dc2626; font-weight: 500;">
+            ${camposFaltantes.map(campo => `<li>• ${campo}</li>`).join('')}
+          </ul>
+        `,
+        icon: 'warning',
+        confirmButtonText: 'Entendido',
+        confirmButtonColor: '#f59e0b',
+        allowOutsideClick: false,
+        customClass: {
+          popup: 'animated pulse'
         }
+      });
+      return;
+    }
 
-        console.log('=== ENVIANDO PETICIÓN ===');
-        console.log('URL:', 'http://localhost:4000/api/motoristas');
-        
-        // Llamada a la API con fetch
-        const response = await fetch('http://localhost:4000/api/motoristas', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(dataToSend),
-        });
-        
-        console.log('=== RESPUESTA RECIBIDA ===');
-        console.log('Status:', response.status);
-        
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
-        }
-        
+    // Si no hay errores de validación, proceder con el envío
+    try {
+      // Mostrar loading
+      showLoadingAlert();
+      setLoading(true);
+      console.log('Estado de loading activado');
+      
+      // Preparar los datos para enviar (sin email, se genera en el backend)
+      const dataToSend = {
+        name: formData.name.trim(),
+        lastName: formData.lastName.trim(),
+        id: formData.id.trim(), // DUI según el modelo
+        birthDate: formData.birthDate,
+        password: formData.password,
+        phone: formData.phone.trim(),
+        address: formData.address.trim(),
+        circulationCard: formData.circulationCard.trim() // Tarjeta de circulación
+      };
+
+      console.log('=== DATOS A ENVIAR ===');
+      console.log('Datos completos:', dataToSend);
+      
+      console.log('=== ENVIANDO PETICIÓN ===');
+      console.log('URL:', 'http://localhost:4000/api/motoristas');
+      
+      // Llamada a la API con fetch
+      const response = await fetch('http://localhost:4000/api/motoristas', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(dataToSend),
+      });
+      
+      console.log('=== RESPUESTA RECIBIDA ===');
+      console.log('Status:', response.status);
+      
+      // Si la respuesta es exitosa
+      if (response.ok) {
         const responseData = await response.json();
         console.log('Respuesta del servidor:', responseData);
-        
         console.log('¡Motorista creado exitosamente!');
-        alert('¡Motorista agregado exitosamente!');
+        
+        // Cerrar loading y mostrar éxito
+        Swal.close();
+        showSuccessAlert();
         
         // Limpiar formulario
         setFormData({
@@ -246,51 +337,81 @@ const AddMotoristaForm = () => {
         });
         setSelectedDate(null);
         setErrors({});
-        
-      } catch (error) {
-        console.error('=== ERROR CAPTURADO ===');
-        console.error('Error completo:', error);
-        
-        // Manejo de diferentes tipos de errores
-        if (error.message.includes('HTTP error!')) {
-          const statusCode = error.message.match(/\d+/);
-          if (statusCode) {
-            switch (parseInt(statusCode[0])) {
-              case 400:
-                alert(`Error de validación: ${error.message}`);
-                break;
-              case 401:
-                alert('No autorizado. Verifica tus credenciales.');
-                break;
-              case 403:
-                alert('No tienes permisos para realizar esta acción.');
-                break;
-              case 404:
-                alert('Endpoint no encontrado. Verifica la URL de la API.');
-                break;
-              case 409:
-                alert(`Conflicto: ${error.message}`);
-                break;
-              case 500:
-                alert(`Error interno del servidor: ${error.message}`);
-                break;
-              default:
-                alert(`Error del servidor: ${error.message}`);
-            }
-          } else {
-            alert(`Error: ${error.message}`);
-          }
-        } else if (error.name === 'TypeError' && error.message.includes('fetch')) {
-          alert('No se pudo conectar con el servidor. Verifica tu conexión a internet.');
-        } else {
-          alert('Error al agregar el motorista. Contacta al administrador.');
-        }
-      } finally {
-        console.log('=== FINALIZANDO ===');
-        setLoading(false);
+      } else {
+        const errorData = await response.json();
+        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
       }
-    } else {
-      console.log('Formulario tiene errores, no se envía');
+      
+    } catch (error) {
+      console.error('=== ERROR CAPTURADO ===');
+      console.error('Error completo:', error);
+      
+      // Cerrar loading
+      Swal.close();
+      
+      let errorMsg = 'Error desconocido';
+      let errorTitle = '❌ Error al agregar motorista';
+      
+      // Manejo de diferentes tipos de errores
+      if (error.message.includes('HTTP error!')) {
+        const statusCode = error.message.match(/\d+/);
+        if (statusCode) {
+          switch (parseInt(statusCode[0])) {
+            case 400:
+              errorTitle = '❌ Error de validación';
+              errorMsg = 'Los datos enviados no son válidos. Verifica la información.';
+              break;
+            case 401:
+              errorTitle = '🔒 No autorizado';
+              errorMsg = 'No tienes permisos para realizar esta acción. Verifica tus credenciales.';
+              break;
+            case 403:
+              errorTitle = '⛔ Acceso denegado';
+              errorMsg = 'No tienes permisos suficientes para agregar motoristas.';
+              break;
+            case 404:
+              errorTitle = '🔍 Servicio no encontrado';
+              errorMsg = 'El servicio no está disponible. Contacta al administrador.';
+              break;
+            case 409:
+              errorTitle = '⚠️ Conflicto de datos';
+              errorMsg = 'Ya existe un motorista con estos datos. Verifica el DUI o tarjeta de circulación.';
+              break;
+            case 500:
+              errorTitle = '🔥 Error del servidor';
+              errorMsg = 'Error interno del servidor. Inténtalo más tarde.';
+              break;
+            default:
+              errorTitle = '❌ Error inesperado';
+              errorMsg = `Error del servidor (${statusCode[0]}). Contacta al administrador.`;
+          }
+        } else {
+          errorMsg = error.message;
+        }
+      } else if (error.name === 'TypeError' && error.message.includes('fetch')) {
+        errorTitle = '🌐 Sin conexión';
+        errorMsg = 'No se pudo conectar con el servidor. Verifica tu conexión a internet.';
+      } else {
+        errorTitle = '⚙️ Error de configuración';
+        errorMsg = 'Error al configurar la petición. Contacta al administrador.';
+      }
+      
+      // Mostrar error específico
+      Swal.fire({
+        title: errorTitle,
+        text: errorMsg,
+        icon: 'error',
+        confirmButtonText: 'Intentar de nuevo',
+        confirmButtonColor: '#ef4444',
+        allowOutsideClick: false,
+        customClass: {
+          popup: 'animated shakeX'
+        }
+      });
+      
+    } finally {
+      console.log('=== FINALIZANDO ===');
+      setLoading(false);
     }
   };
 
@@ -391,29 +512,30 @@ const AddMotoristaForm = () => {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Email
+                    Email (generado automáticamente)
                   </label>
                   <input
                     type="text"
                     name="email"
                     value={formData.email}
                     readOnly
-                    placeholder="Introduce el camion asignado"
+                    placeholder="Se generará automáticamente"
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-gray-50 text-sm text-gray-500 cursor-not-allowed"
                   />
+                  <p className="text-xs text-gray-500 mt-1">El email se genera automáticamente basado en el nombre y apellido</p>
                 </div>
               </div>
 
               {/* Second Row */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Dui</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">DUI</label>
                   <input
                     type="text"
                     name="id"
                     value={formData.id}
                     onChange={handleInputChange}
-                    placeholder="Introduce el dui del motorista"
+                    placeholder="12345678-9"
                     maxLength="10"
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none text-sm text-gray-700 placeholder-gray-400"
                     onFocus={handleFocus}
@@ -423,12 +545,12 @@ const AddMotoristaForm = () => {
                 </div>
 
                 <div className="relative">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Fecha de nacimiento</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Fecha de Nacimiento</label>
                   <div
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg text-sm text-gray-700 cursor-pointer flex items-center justify-between"
                     onClick={() => setShowCalendar(!showCalendar)}
                   >
-                    <span className="text-gray-400">{formData.birthDate ? formData.birthDate : 'Selecciona la fecha de nacimiento'}</span>
+                    <span>{formData.birthDate ? formData.birthDate : 'Selecciona una fecha'}</span>
                     <Calendar className="w-4 h-4 text-gray-400" />
                   </div>
                   {showCalendar && (
@@ -522,7 +644,7 @@ const AddMotoristaForm = () => {
                     name="password"
                     value={formData.password}
                     onChange={handleInputChange}
-                    placeholder="Introduce la contraseña del motorista"
+                    placeholder="Introduce la contraseña"
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none text-sm text-gray-700 placeholder-gray-400"
                     onFocus={handleFocus}
                     onBlur={handleBlur}
@@ -540,7 +662,7 @@ const AddMotoristaForm = () => {
                     name="phone"
                     value={formData.phone}
                     onChange={handleInputChange}
-                    placeholder="Introduce el teléfono del motorista"
+                    placeholder="1234-5678"
                     maxLength="9"
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none text-sm text-gray-700 placeholder-gray-400"
                     onFocus={handleFocus}
@@ -555,7 +677,7 @@ const AddMotoristaForm = () => {
                     name="address"
                     value={formData.address}
                     onChange={handleInputChange}
-                    placeholder="Introduce la dirección del motorista"
+                    placeholder="Introduce la dirección"
                     rows={3}
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none text-sm text-gray-700 placeholder-gray-400 resize-none"
                     onFocus={handleFocus}
