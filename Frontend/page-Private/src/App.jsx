@@ -11,6 +11,9 @@ import MotoristaManagementInterface from "./pages/Motorista/Motorista";
 import AddMotoristaForm from "./pages/Motorista/AgregarMotorista"; 
 import SidebarNav from "./components/Nav/Nav";
 import AddEmployeeForm from "./pages/Employees/AgregarEmpleados";
+import Camiones from "./pages/Camiones/Camiones";
+import TruckDetailScreen from "./pages/Camiones/DetalleCamionenv";
+import TruckFormScreen from "./pages/Camiones/FormAggCamion";
 
 function App() {
   const location = useLocation();
@@ -52,10 +55,17 @@ function App() {
           <Route path="/empleados/agregarEmployee" element={<AddEmployeeForm/>} />
           <Route path="/motoristas" element={<MotoristaManagementInterface/>} />
           <Route path="/motoristas/agregarMotorista" element={<AddMotoristaForm/>} />
+          <Route path="/Camiones" element={<Camiones/>} />
+          <Route path="/Camiones/verCamion" element={<TruckDetailScreen/>} />
+          <Route path="/camiones/aggCamion" element={<TruckFormScreen/>} />
+
+
         </Routes>
       </div>
     </div>
   );
 }
+
+
 
 export default App;
