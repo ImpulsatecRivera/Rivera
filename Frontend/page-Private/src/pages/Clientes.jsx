@@ -1,36 +1,22 @@
-import React, { useState, useEffect } from 'react';
-import axios from "axios";
+import React from 'react';
 import { Search, Phone, Mail, User, ArrowLeft, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
+import useClients from '../components/Clientes/hooks/useDataCliente'; // Ajusta la ruta según tu estructura
 
 const ClientManagementInterface = () => {
-  const [clients, setClients] = useState([]);
-  const [selectedClient, setSelectedClient] = useState(null);
-  const [showDetailView, setShowDetailView] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [sortBy, setSortBy] = useState('Newest');
-
-  useEffect(() => {
-    const fetchClientes = async () => {
-      try {
-        const response = await axios.get('http://localhost:4000/api/clientes');
-        setClients(response.data);
-      } catch (error) {
-        setError("Error al cargar los clientes");
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchClientes();
-  }, []);
-
-  const filteredClients = clients.filter((client) =>
-    [client.firstName, client.lastName, client.idNumber, client.email]
-      .join(' ')
-      .toLowerCase()
-      .includes(searchTerm.toLowerCase())
-  );
+  const {
+    clients,
+    selectedClient,
+    showDetailView,
+    loading,
+    error,
+    searchTerm,
+    sortBy,
+    setSearchTerm,
+    setSortBy,
+    selectClient,
+    closeDetailView,
+    stats
+  } = useClients();
 
   return (
     <div className="flex h-screen text-white" style={{ backgroundColor: '#34353A' }}>
@@ -44,7 +30,9 @@ const ClientManagementInterface = () => {
             {/* Listado de clientes section */}
             <div className="mb-6">
               <h2 className="text-xl font-semibold text-gray-900 mb-2">Listado de clientes</h2>
-              <p className="text-sm text-teal-600 font-medium">Clientes registrados</p>
+              <p className="text-sm text-teal-600 font-medium">
+                {stats.total > 0 ? `${stats.total} clientes registrados` : 'Clientes registrados'}
+              </p>
             </div>
 
             {/* Search and Sort Section */}
@@ -97,31 +85,56 @@ const ClientManagementInterface = () => {
           <div className="flex-1 overflow-y-auto px-8">
             <div className="space-y-2 py-4">
               {loading ? (
-                <p className="text-gray-500">Cargando clientes...</p>
+                <div className="text-center py-8">
+                  <p className="text-gray-500">Cargando clientes...</p>
+                </div>
               ) : error ? (
-                <p className="text-red-500">{error}</p>
-              ) : filteredClients.length === 0 ? (
-                <p className="text-gray-500">No se encontraron resultados.</p>
+                <div className="text-center py-8">
+                  <p className="text-red-500">{error}</p>
+                  <button 
+                    onClick={() => window.location.reload()} 
+                    className="mt-2 px-4 py-2 bg-teal-500 text-white rounded-lg hover:bg-teal-600 transition-colors"
+                  >
+                    Reintentar
+                  </button>
+                </div>
+              ) : !stats.hasResults ? (
+                <div className="text-center py-8">
+                  <p className="text-gray-500">
+                    {searchTerm ? 'No se encontraron resultados para tu búsqueda.' : 'No hay clientes registrados.'}
+                  </p>
+                  {searchTerm && (
+                    <button 
+                      onClick={() => setSearchTerm('')}
+                      className="mt-2 text-teal-600 hover:text-teal-700 text-sm underline"
+                    >
+                      Limpiar búsqueda
+                    </button>
+                  )}
+                </div>
               ) : (
-                filteredClients.map((client, index) => (
+                clients.map((client, index) => (
                   <div
                     key={client._id || index}
                     className={`grid ${showDetailView ? 'grid-cols-4' : 'grid-cols-6'} gap-4 py-3 px-2 rounded-lg cursor-pointer transition-colors ${
                       selectedClient && selectedClient._id === client._id ? 'bg-teal-100' : 'hover:bg-gray-50'
                     }`}
-                    onClick={() => {
-                      setSelectedClient(client);
-                      setShowDetailView(true);
-                    }}
+                    onClick={() => selectClient(client)}
                   >
                     <div className="font-medium truncate">{client.firstName} {client.lastName}</div>
                     <div className="text-gray-600 truncate">{client.email}</div>
                     <div className="text-gray-600 truncate">{client.idNumber}</div>
-                    <div className="text-gray-600 truncate">{new Date(client.birthDate).toLocaleDateString()}</div>
+                    <div className="text-gray-600 truncate">
+                      {client.birthDate ? new Date(client.birthDate).toLocaleDateString() : 'No disponible'}
+                    </div>
                     {!showDetailView && (
                       <>
-                        <div className="text-gray-600 truncate">{client.phone ? client.phone.toString() : 'No disponible'}</div>
-                        <div className="text-gray-600 truncate">{client.address}</div>
+                        <div className="text-gray-600 truncate">
+                          {client.phone ? client.phone.toString() : 'No disponible'}
+                        </div>
+                        <div className="text-gray-600 truncate">
+                          {client.address || 'No disponible'}
+                        </div>
                       </>
                     )}
                   </div>
@@ -133,7 +146,8 @@ const ClientManagementInterface = () => {
           {/* Pagination Section */}
           <div className="flex items-center justify-between px-8 py-4 border-t border-gray-200 flex-shrink-0">
             <div className="text-sm text-gray-500">
-              Showing data 1 to 8 of 256k entries
+              Mostrando {Math.min(stats.filtered, 8)} de {stats.filtered} clientes
+              {searchTerm && ` (filtrado de ${stats.total} total)`}
             </div>
             
             <div className="flex items-center space-x-2">
@@ -144,7 +158,7 @@ const ClientManagementInterface = () => {
               
               {/* Page Numbers */}
               <div className="flex items-center space-x-1">
-                <button className="w-8 h-8 flex items-center justify-center text-white bg-blue-600 rounded-lg text-sm font-medium">
+                <button className="w-8 h-8 flex items-center justify-center text-white bg-teal-500 rounded-lg text-sm font-medium">
                   1
                 </button>
                 <button className="w-8 h-8 flex items-center justify-center text-gray-600 hover:bg-gray-100 rounded-lg text-sm font-medium transition-colors">
@@ -175,11 +189,8 @@ const ClientManagementInterface = () => {
           <div className="w-80 bg-white text-gray-900 rounded-r-3xl mr-4 my-4 p-6">
             <div className="flex items-center mb-6">
               <button
-                className="p-2 hover:bg-gray-100 rounded-full mr-3"
-                onClick={() => {
-                  setShowDetailView(false);
-                  setSelectedClient(null);
-                }}
+                className="p-2 hover:bg-gray-100 rounded-full mr-3 transition-colors"
+                onClick={closeDetailView}
               >
                 <ArrowLeft className="w-5 h-5 text-gray-600" />
               </button>
@@ -192,12 +203,15 @@ const ClientManagementInterface = () => {
                   <User className="w-10 h-10 text-white" />
                 </div>
               </div>
-              <h3 className="font-semibold text-lg mb-2">{selectedClient.firstName} {selectedClient.lastName}</h3>
+              <h3 className="font-semibold text-lg mb-2">
+                {selectedClient.firstName} {selectedClient.lastName}
+              </h3>
+              <div className="text-sm text-gray-500 mb-4">Cliente</div>
               <div className="flex justify-center space-x-3">
-                <button className="p-2 bg-gray-100 rounded-full hover:bg-gray-200">
+                <button className="p-2 bg-gray-100 rounded-full hover:bg-gray-200 transition-colors">
                   <Phone className="w-4 h-4 text-gray-600" />
                 </button>
-                <button className="p-2 bg-gray-100 rounded-full hover:bg-gray-200">
+                <button className="p-2 bg-gray-100 rounded-full hover:bg-gray-200 transition-colors">
                   <Mail className="w-4 h-4 text-gray-600" />
                 </button>
               </div>
@@ -223,18 +237,27 @@ const ClientManagementInterface = () => {
               <div className="grid grid-cols-1 gap-4">
                 <div>
                   <div className="text-sm text-gray-500 mb-1">Fecha de nacimiento</div>
-                  <div className="text-sm text-gray-400">{new Date(selectedClient.birthDate).toLocaleDateString()}</div>
+                  <div className="text-sm text-gray-400">
+                    {selectedClient.birthDate ? 
+                      new Date(selectedClient.birthDate).toLocaleDateString() : 
+                      'No disponible'
+                    }
+                  </div>
                 </div>
                 <div>
                   <div className="text-sm text-gray-500 mb-1">Teléfono</div>
-                  <div className="text-sm text-gray-400">{selectedClient.phone ? selectedClient.phone.toString() : 'No disponible'}</div>
+                  <div className="text-sm text-gray-400">
+                    {selectedClient.phone ? selectedClient.phone.toString() : 'No disponible'}
+                  </div>
                 </div>
               </div>
 
               <div className="grid grid-cols-1 gap-4">
                 <div>
                   <div className="text-sm text-gray-500 mb-1">Dirección</div>
-                  <div className="text-sm text-gray-400 break-words">{selectedClient.address}</div>
+                  <div className="text-sm text-gray-400 break-words">
+                    {selectedClient.address || 'No disponible'}
+                  </div>
                 </div>
               </div>
             </div>
