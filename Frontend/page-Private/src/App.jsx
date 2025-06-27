@@ -12,6 +12,7 @@ import AddMotoristaForm from "./pages/Motorista/AgregarMotorista";
 import SidebarNav from "./components/Nav/Nav";
 import AddEmployeeForm from "./pages/Employees/AgregarEmpleados";
 import ProviderManagementInterface from "./pages/Provedores/Prooveedores";
+import AddProveedorForm from "./pages/Provedores/AgregarProovedor";
 
 function App() {
   const location = useLocation();
@@ -24,7 +25,8 @@ function App() {
     "/verification-input",
     "/reset-password",
     "/empleados/agregarEmployee",
-    "/motoristas/agregarMotorista"
+    "/motoristas/agregarMotorista",
+    "/proveedores/agregarProveedor"
   ];
   
   // El menú aparece en todas las rutas EXCEPTO en las de la lista
@@ -54,6 +56,7 @@ function App() {
           <Route path="/motoristas" element={<MotoristaManagementInterface/>} />
           <Route path="/motoristas/agregarMotorista" element={<AddMotoristaForm/>} />
           <Route path="/proveedores"element={<ProviderManagementInterface/>} />
+          <Route path="/proveedores/agregarProveedor" element={<AddProveedorForm/>} />
         </Routes>
       </div>
     </div>
