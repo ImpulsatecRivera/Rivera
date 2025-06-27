@@ -11,12 +11,17 @@ cloudinary.config({
   });
 
 camionesController.get= async (req,res) =>{
-    const newCamion = await camionesMod.find();
+    try {
+           const newCamion = await camionesMod.find();
     res.json(newCamion);
+    } catch (error) {
+         res.status(500).json({ message: "Error al obtener camiones", error: error.message });
+    }
 }
 
 camionesController.post = async(req,res) => {
-const {name,brand,model,State,gasolineLevel,age,ciculatioCard,licensePlate,description,supplierId,driverId} = req.body;
+    try {
+        const {name,brand,model,State,gasolineLevel,age,ciculatioCard,licensePlate,description,supplierId,driverId} = req.body;
 let imgUrl= "";
 if(req.file){
     const resul = await cloudinary.uploader.upload(req.file.path, {
@@ -29,10 +34,15 @@ if(req.file){
 const newCamion = new camionesMod({name,brand,model,State,gasolineLevel,age,ciculatioCard,licensePlate,description,supplierId,driverId,img:imgUrl})
 await newCamion.save();
 res.status(200).json({Message: "Camion agregado correctamente"});
+    } catch (error) {
+        res.status(500).json({ message: "Error al agregar camion", error: error.message });
+    }
+
 };
 
 camionesController.put = async (req,res) =>{
-const {name,brand,model,State,gasolineLevel,age,ciculatioCard,licensePlate,description,supplierId,driverId} = req.body;
+    try {
+        const {name,brand,model,State,gasolineLevel,age,ciculatioCard,licensePlate,description,supplierId,driverId} = req.body;
 let imgUrl= "";
 if(req.file){
     const resul = await cloudinary.uploader.upload(req.file.path, {
@@ -59,14 +69,22 @@ await camionesMod.findByIdAndUpdate(req.params.id,{
 {new:true}
 );
 res.status(200).json({Message: "Camion actualizado correctamente"})
+    } catch (error) {
+        res.status(500).json({ message: "Error al actualizar camion", error: error.message });
+    }
+
 };
 
 camionesController.delete = async (req,res) => {
-    const deleteCamion = await camionesMod.findByIdAndDelete(req.params.id);
+    try {
+         const deleteCamion = await camionesMod.findByIdAndDelete(req.params.id);
     if(!deleteCamion){
         return res.status(404).json({Message: "Camion no encontrado"});
     }
     res.status(200).json({Message: "Camion eliminado correctamente"})
+    } catch (error) {
+        res.status(500).json({ message: "Error al eliminar camion", error: error.message });
+    }
 };
 
 

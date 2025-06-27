@@ -7,11 +7,20 @@ import ClientesRoutes from "./src/Routes/clienteRoutes.js"
 import LoginRoutes from "./src/Routes/LoginRoutes.js"
 import cookieParser from "cookie-parser"
 import Logout from "./src/Routes/Logout.js"
+import RecoveryRoutes from "./src/Routes/Recovery.js"
+import cors from "cors";
 
 
 const app = express();
 app.use(express.json());
 app.use(cookieParser());
+
+app.use(
+    cors({
+      origin: "http://localhost:5173", 
+      credentials: true, 
+    })
+  );
 
 
 app.use("/api/camiones",camionesRoutes);
@@ -21,5 +30,6 @@ app.use("/api/proveedores",proveedoresRoutes);
 app.use("/api/clientes",ClientesRoutes);
 app.use("/api/Login",LoginRoutes);
 app.use("/api/Logout",Logout);
+app.use("/api/recovery",RecoveryRoutes);
 
 export default app;
