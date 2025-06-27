@@ -11,6 +11,7 @@ import MotoristaManagementInterface from "./pages/Motorista/Motorista";
 import AddMotoristaForm from "./pages/Motorista/AgregarMotorista"; 
 import SidebarNav from "./components/Nav/Nav";
 import AddEmployeeForm from "./pages/Employees/AgregarEmpleados";
+import ProviderManagementInterface from "./pages/Provedores/Prooveedores";
 
 function App() {
   const location = useLocation();
@@ -52,6 +53,7 @@ function App() {
           <Route path="/empleados/agregarEmployee" element={<AddEmployeeForm/>} />
           <Route path="/motoristas" element={<MotoristaManagementInterface/>} />
           <Route path="/motoristas/agregarMotorista" element={<AddMotoristaForm/>} />
+          <Route path="/proveedores"element={<ProviderManagementInterface/>} />
         </Routes>
       </div>
     </div>
