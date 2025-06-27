@@ -1,5 +1,5 @@
 import nodemailer from "nodemailer"
-import  {config} from "../config.js"
+import { config } from "../config.js"
 
 const trans = nodemailer.createTransport({
     host: "smtp.gmail.com",
@@ -18,14 +18,15 @@ const EnviarEmail = async (to, subject, body, html) => {
             to,
             subject,
             text: body,   
-            html          
+            html
+            // Removido: attachments con la imagen
         });
         return info;
     } catch (error) {
         console.log("Error al enviar el correo: " + error);
+        throw error;
     }
 };
-
 
 const html = (codigo) => {
     return `
@@ -58,28 +59,23 @@ const html = (codigo) => {
             background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
             border-bottom: 3px solid #2e8bc0;
         }
-        .logo-container {
-            display: inline-flex;
-            align-items: center;
-            gap: 15px;
+        
+        /* Logo texto en lugar de imagen */
+        .logo-text {
+            font-size: 36px;
+            font-weight: 900;
+            color: #2e8bc0;
             margin-bottom: 10px;
+            letter-spacing: 3px;
+            text-shadow: 2px 2px 4px rgba(46, 139, 192, 0.1);
         }
         
-        /* Logo RIVERA real */
-        .logo-rivera {
-            width: 200px;
-            height: 120px;
-            position: relative;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin: 0 auto;
-        }
-        
-        .logo-image {
-            max-width: 100%;
-            max-height: 100%;
-            object-fit: contain;
+        .company-subtitle {
+            font-size: 14px;
+            color: #6c757d;
+            font-weight: 600;
+            letter-spacing: 1px;
+            text-transform: uppercase;
         }
         
         .content {
@@ -276,9 +272,8 @@ const html = (codigo) => {
                 padding: 30px 20px;
             }
             
-            .logo-rivera {
-                width: 150px;
-                height: 90px;
+            .logo-text {
+                font-size: 28px;
             }
             
             .content {
@@ -296,12 +291,9 @@ const html = (codigo) => {
 <body>
     <div class="container">
         <div class="header">
-            <div class="logo-rivera">
-                <!-- Aquí va tu logo. Reemplaza esta URL con la ruta de tu imagen -->
-                <img src="../../../Frontend/Page-Public/src/assets/image.png" alt="RIVERA Distribuidora y Transporte" class="logo-image" />
-            </div>
+            <div class="logo-text">🚛 RIVERA 🚛</div>
+            <div class="company-subtitle">Distribuidora y Transporte</div>
         </div>
-        
         <div class="content">
             <h2>🔐 Código de Recuperación de Cuenta</h2>
             
@@ -373,4 +365,4 @@ const html = (codigo) => {
     `
 }
 
-export {EnviarEmail,html};
+export {EnviarEmail, html};
