@@ -34,6 +34,10 @@ const empleadoSchema = new Schema({
     address: {
         type: String,
         required: true 
+    },
+    img:{
+        type: String,
+        required: true 
     }
 }, {
     timestamps: true,
