@@ -7,6 +7,8 @@ import Dashboard from "./pages/Dashboard/Dashboard";
 import ReportsPage from "./pages/Dashboard/ReportsPage";
 import ClientManagementInterface from "./pages/Clientes";
 import Employee from "./pages/Employees/Employee";
+import MotoristaManagementInterface from "./pages/Motorista/Motorista"; 
+import AddMotoristaForm from "./pages/Motorista/AgregarMotorista"; 
 import SidebarNav from "./components/Nav/Nav";
 import AddEmployeeForm from "./pages/Employees/AgregarEmpleados";
 
@@ -20,7 +22,8 @@ function App() {
     "/verification-code",
     "/verification-input",
     "/reset-password",
-    "/empleados/agregarEmployee" // 👈 AGREGAR ESTA LÍNEA
+    "/empleados/agregarEmployee",
+    "/motoristas/agregarMotorista"
   ];
   
   // El menú aparece en todas las rutas EXCEPTO en las de la lista
@@ -47,6 +50,8 @@ function App() {
           <Route path="/clientes" element={<ClientManagementInterface />} />
           <Route path="/empleados" element={<Employee/>} />
           <Route path="/empleados/agregarEmployee" element={<AddEmployeeForm/>} />
+          <Route path="/motoristas" element={<MotoristaManagementInterface/>} />
+          <Route path="/motoristas/agregarMotorista" element={<AddMotoristaForm/>} />
         </Routes>
       </div>
     </div>
