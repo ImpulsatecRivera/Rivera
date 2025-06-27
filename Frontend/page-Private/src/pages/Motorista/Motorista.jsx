@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Search, Phone, Mail, User, ChevronDown, ArrowLeft, ArrowRight, Plus, MoreHorizontal, Eye, EyeOff } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import axios from "axios";
-
+import useMotoristaManagement from '../../components/Motorista/hooks/useDataMotorista'; // Ajusta la ruta según tu estructura
 
 // Sweet Alert Component
 const SweetAlert = ({ isOpen, onClose, onEdit, onDelete }) => {
@@ -599,247 +599,37 @@ const EditMotoristaAlert = ({ isOpen, onClose, onSave, motorista }) => {
 };
 
 const MotoristaManagementInterface = () => {
-  const navigate = useNavigate();
-  const [motoristas, setMotoristas] = useState([]);
-  const [selectedMotorista, setSelectedMotorista] = useState(null);
-  const [showDetailView, setShowDetailView] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [sortBy, setSortBy] = useState('Newest');
-  const [showAlert, setShowAlert] = useState(false);
-  const [showConfirmDelete, setShowConfirmDelete] = useState(false);
-  const [showSuccessAlert, setShowSuccessAlert] = useState(false);
-  const [showEditAlert, setShowEditAlert] = useState(false);
-  const [successType, setSuccessType] = useState('delete');
-
-  useEffect(() => {
-    const fetchMotoristas = async () => {
-      try {
-        setLoading(true);
-        console.log('Iniciando petición a la API de motoristas...');
-        
-        const response = await fetch('http://localhost:4000/api/motoristas', {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        });
-
-        console.log('Response status:', response.status);
-        
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        const data = await response.json();
-        console.log('Datos recibidos:', data);
-        
-        setMotoristas(data);
-        setError(null);
-      } catch (error) {
-        console.error('Error al cargar los motoristas:', error);
-        setError(`Error al cargar los motoristas: ${error.message}`);
-        setMotoristas([]);
-      } finally {
-        setLoading(false);
-        console.log('Carga completada');
-      }
-    };
-    
-    fetchMotoristas();
-  }, []);
-
-  // Función para verificar si la licencia está vigente
-  const isLicenseValid = (motorista) => {
-    try {
-      if (!motorista || !motorista.circulationCard) return false;
-      
-      if (motorista.birthDate) {
-        const birthDate = new Date(motorista.birthDate);
-        const today = new Date();
-        const age = today.getFullYear() - birthDate.getFullYear();
-        
-        // Verificar si es mayor de edad
-        return age >= 18;
-      }
-      
-      // Si no hay fecha de nacimiento, asumir que está vigente si tiene tarjeta
-      return Boolean(motorista.circulationCard);
-    } catch (error) {
-      console.error('Error en isLicenseValid:', error);
-      return false;
-    }
-  };
-
-  const filterMotoristas = motoristas.filter((motorista) => 
-    [motorista.name, motorista.lastName, motorista.id, motorista.email]
-      .join(' ')
-      .toLowerCase()
-      .includes(searchTerm.toLowerCase())
-  );
-
-  const handleContinue = (e) => {
-    e.preventDefault();
-    console.log('Navegando a agregar motorista...');
-    navigate('/motoristas/agregarMotorista');
-  };
-
-  const handleOptionsClick = (e) => {
-    e.stopPropagation();
-    setShowAlert(true);
-  };
-
-  const handleEdit = () => {
-    setShowAlert(false);
-    setShowEditAlert(true);
-  };
-
-  const handleDelete = () => {
-    setShowAlert(false);
-    setShowConfirmDelete(true);
-  };
-
-  const confirmDelete = async () => {
-    setShowConfirmDelete(false);
-    try {
-      console.log('Eliminando motorista con ID:', selectedMotorista._id);
-      await axios.delete(`http://localhost:4000/api/motoristas/${selectedMotorista._id}`);
-      setMotoristas(motoristas.filter(mot => mot._id !== selectedMotorista._id));
-      console.log("Motorista eliminado exitosamente");
-      setShowDetailView(false);
-      setSelectedMotorista(null);
-      setSuccessType('delete');
-      setShowSuccessAlert(true);
-    } catch (error) {
-      console.error("Error al eliminar motorista:", error);
-      alert('Error al eliminar el motorista. Intente nuevamente.');
-    }
-  };
-
-  const cancelDelete = () => {
-    setShowConfirmDelete(false);
-  };
-
-  const closeSuccessAlert = () => {
-    setShowSuccessAlert(false);
-  };
-
-  const closeEditAlert = () => {
-    setShowEditAlert(false);
-  };
-
-  const handleSaveEdit = async (formData) => {
-    try {
-      console.log('=== INICIANDO ACTUALIZACIÓN ===');
-      console.log('Datos del formulario:', formData);
-      console.log('Motorista seleccionado:', selectedMotorista);
-      
-      // Preparar solo los campos que tienen valor
-      const updateData = {};
-      
-      if (formData.name && formData.name.trim()) {
-        updateData.name = formData.name.trim();
-      }
-      if (formData.lastName && formData.lastName.trim()) {
-        updateData.lastName = formData.lastName.trim();
-      }
-      if (formData.phone && formData.phone.trim()) {
-        updateData.phone = formData.phone.trim();
-      }
-      if (formData.address && formData.address.trim()) {
-        updateData.address = formData.address.trim();
-      }
-      if (formData.password && formData.password.trim()) {
-        updateData.password = formData.password.trim();
-      }
-      if (formData.circulationCard && formData.circulationCard.trim()) {
-        updateData.circulationCard = formData.circulationCard.trim();
-      }
-
-      console.log('Datos a enviar:', updateData);
-      
-      // Verificar que hay algo que actualizar
-      if (Object.keys(updateData).length === 0) {
-        alert('No hay cambios para guardar');
-        return;
-      }
-
-      const response = await axios.put(
-        `http://localhost:4000/api/motoristas/${selectedMotorista._id}`, 
-        updateData,
-        {
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          timeout: 10000
-        }
-      );
-      
-      console.log('=== RESPUESTA EXITOSA ===');
-      console.log('Response:', response.data);
-      
-      // Actualizar la lista de motoristas
-      const motoristaActualizado = response.data.motorista || { ...selectedMotorista, ...updateData };
-      
-      setMotoristas(motoristas.map(mot => 
-        mot._id === selectedMotorista._id ? motoristaActualizado : mot
-      ));
-      
-      // Actualizar el motorista seleccionado
-      setSelectedMotorista(motoristaActualizado);
-      
-      setShowEditAlert(false);
-      setSuccessType('edit');
-      setShowSuccessAlert(true);
-      
-    } catch (error) {
-      console.error('=== ERROR EN ACTUALIZACIÓN ===');
-      console.error('Error completo:', error);
-      
-      if (error.response) {
-        console.error('Status:', error.response.status);
-        console.error('Data:', error.response.data);
-        const errorMessage = error.response.data?.message || 'Error del servidor';
-        alert(`Error: ${errorMessage}`);
-      } else if (error.request) {
-        console.error('No response:', error.request);
-        alert('No se pudo conectar con el servidor');
-      } else {
-        console.error('Error config:', error.message);
-        alert(`Error: ${error.message}`);
-      }
-    }
-  };
-
-  const closeAlert = () => {
-    setShowAlert(false);
-  };
-
-  const handleRefresh = async () => {
-    setLoading(true);
-    try {
-      const response = await fetch('http://localhost:4000/api/motoristas', {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-      setMotoristas(data);
-      setError(null);
-    } catch (error) {
-      console.error('Error al recargar los motoristas:', error);
-      setError(`Error al recargar los motoristas: ${error.message}`);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const {
+    motoristas,
+    selectedMotorista,
+    showDetailView,
+    loading,
+    error,
+    searchTerm,
+    sortBy,
+    setSearchTerm,
+    setSortBy,
+    showAlert,
+    showConfirmDelete,
+    showSuccessAlert,
+    showEditAlert,
+    successType,
+    filterMotoristas,
+    handleContinue,
+    handleOptionsClick,
+    handleEdit,
+    handleDelete,
+    confirmDelete,
+    cancelDelete,
+    handleSaveEdit,
+    closeAlert,
+    closeSuccessAlert,
+    closeEditAlert,
+    selectMotorista,
+    closeDetailView,
+    handleRefresh,
+    isLicenseValid
+  } = useMotoristaManagement();
 
   return (
     <div className="flex h-screen text-white" style={{backgroundColor: '#34353A'}}>
@@ -950,10 +740,7 @@ const MotoristaManagementInterface = () => {
                     className={`grid ${showDetailView ? 'grid-cols-4' : 'grid-cols-7'} gap-4 py-3 px-2 rounded-lg cursor-pointer transition-colors ${
                      selectedMotorista && (selectedMotorista._id === motorista._id || selectedMotorista.id === motorista.id) ? 'bg-teal-100' : 'hover:bg-gray-50'
                    }`}
-                   onClick={() => {
-                     setSelectedMotorista(motorista);
-                     setShowDetailView(true);
-                   }}
+                   onClick={() => selectMotorista(motorista)}
                  >
                    <div className="font-medium truncate">{motorista.name} {motorista.lastName}</div>
                    <div className="text-gray-600 truncate">{motorista.email}</div>
@@ -1025,10 +812,7 @@ const MotoristaManagementInterface = () => {
              <div className="flex items-center">
                <button
                  className="p-2 hover:bg-gray-100 rounded-full mr-3"
-                 onClick={() => {
-                   setShowDetailView(false);
-                   setSelectedMotorista(null);
-                 }}
+                 onClick={closeDetailView}
                >
                  <ArrowLeft className="w-5 h-5 text-gray-600" />
                </button>
