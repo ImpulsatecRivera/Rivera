@@ -13,6 +13,14 @@ import MotoristaManagementInterface from "./pages/Motorista/Motorista";
 import AddMotoristaForm from "./pages/Motorista/AgregarMotorista";
 import SidebarNav from "./components/Nav/Nav";
 import AddEmployeeForm from "./pages/Employees/AgregarEmpleados";
+<<<<<<< HEAD
+import Camiones from "./pages/Camiones/Camiones";
+import TruckDetailScreen from "./pages/Camiones/DetalleCamionenv";
+import TruckFormScreen from "./pages/Camiones/FormAggCamion";
+=======
+import ProviderManagementInterface from "./pages/Provedores/Prooveedores";
+import AddProveedorForm from "./pages/Provedores/AgregarProovedor";
+>>>>>>> bd698e7f8150b39f268591b1156ce74baa5c4368
 
 // If you need this component, make sure to import it
 // import VerificationCode from "./pages/VerificationCode";
@@ -28,7 +36,8 @@ function App() {
     "/verification-input",
     "/reset-password",
     "/empleados/agregarEmployee",
-    "/motoristas/agregarMotorista"
+    "/motoristas/agregarMotorista",
+    "/proveedores/agregarProveedor"
   ];
 
   const shouldShowMenu = !authRoutes.includes(location.pathname);
@@ -54,15 +63,38 @@ function App() {
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/informes" element={<ReportsPage />} />
           <Route path="/clientes" element={<ClientManagementInterface />} />
+<<<<<<< HEAD
           <Route path="/empleados" element={<Employee />} />
           <Route path="/empleados/agregarEmployee" element={<AddEmployeeForm />} />
           <Route path="/motoristas" element={<MotoristaManagementInterface />} />
           <Route path="/motoristas/agregarMotorista" element={<AddMotoristaForm />} />
           <Route path="/viajes" element={<Travel />} />
+=======
+          <Route path="/empleados" element={<Employee/>} />
+          <Route path="/empleados/agregarEmployee" element={<AddEmployeeForm/>} />
+          <Route path="/motoristas" element={<MotoristaManagementInterface/>} />
+          <Route path="/motoristas/agregarMotorista" element={<AddMotoristaForm/>} />
+<<<<<<< HEAD
+          <Route path="/Camiones" element={<Camiones/>} />
+          <Route path="/Camiones/verCamion" element={<TruckDetailScreen/>} />
+          <Route path="/camiones/aggCamion" element={<TruckFormScreen/>} />
+
+
+=======
+          <Route path="/proveedores"element={<ProviderManagementInterface/>} />
+          <Route path="/proveedores/agregarProveedor" element={<AddProveedorForm/>} />
+>>>>>>> bd698e7f8150b39f268591b1156ce74baa5c4368
+>>>>>>> master
         </Routes>
       </div>
     </div>
   );
 }
 
+<<<<<<< HEAD
 export default App;
+=======
+
+
+export default App;
+>>>>>>> master
