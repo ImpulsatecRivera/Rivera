@@ -1,8 +1,17 @@
 import empleadosModel from "../Models/Empleados.js";
 import bcryptjs from "bcryptjs";
 import mongoose from "mongoose";
+import {v2 as cloudinary} from "cloudinary";
+import {config} from "../config.js"
+
 
 const empleadosCon = {};
+
+cloudinary.config({
+    cloud_name: config.cloudinary.cloudinary_name,
+    api_key: config.cloudinary.cloudinary_api_key,
+    api_secret: config.cloudinary.cloudinary_api_secret,
+  });
 
 // Obtener empleados
 empleadosCon.get = async (req, res) => {
@@ -75,6 +84,16 @@ empleadosCon.post = async (req, res) => {
             return res.status(409).json({ message: "Ya existe un empleado registrado con este email" });
         }
 
+        let imgUrl= "";
+
+        if(req.file){
+            const resul = await cloudinary.uploader.upload(req.file.path, {
+                folder: "public",
+                allowed_formats: ["png","jpg","jpeg"],
+            });
+            imgUrl = resul.secure_url;
+        }
+
         const encriptarContraHash = await bcryptjs.hash(password, 10);
 
         const newEmpleado = new empleadosModel({
@@ -85,7 +104,8 @@ empleadosCon.post = async (req, res) => {
             birthDate: new Date(birthDate),
             password: encriptarContraHash,
             phone,
-            address
+            address,
+            img:imgUrl
         });
 
         const empleadoGuardado = await newEmpleado.save();
@@ -102,7 +122,8 @@ empleadosCon.post = async (req, res) => {
                 dui: empleadoGuardado.dui,
                 birthDate: empleadoGuardado.birthDate,
                 phone: empleadoGuardado.phone,
-                address: empleadoGuardado.address
+                address: empleadoGuardado.address,
+                img : empleadoGuardado.img
             }
         });
 
@@ -137,6 +158,16 @@ empleadosCon.put = async (req, res) => {
     try {
         const { name, lastName, email, dui, birthDate, password, phone, address } = req.body;
 
+        let imgUrl= "";
+
+        if(req.file){
+            const resul = await cloudinary.uploader.upload(req.file.path, {
+                folder: "public",
+                allowed_formats: ["png","jpg","jpeg"],
+            });
+            imgUrl = resul.secure_url;
+        }
+
         const datosActualizados = {
             name,
             lastName,
@@ -144,7 +175,8 @@ empleadosCon.put = async (req, res) => {
             dui,
             birthDate,
             phone,
-            address
+            address,
+            img:imgUrl
         };
 
         // Solo encriptar y actualizar la contraseña si fue enviada
