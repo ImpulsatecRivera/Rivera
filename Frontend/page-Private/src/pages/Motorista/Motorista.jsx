@@ -3,6 +3,7 @@ import { Search, Phone, Mail, User, ChevronDown, ArrowLeft, ArrowRight, Plus, Mo
 import { useNavigate } from 'react-router-dom';
 import axios from "axios";
 
+
 // Sweet Alert Component
 const SweetAlert = ({ isOpen, onClose, onEdit, onDelete }) => {
   if (!isOpen) return null;
@@ -17,6 +18,9 @@ const SweetAlert = ({ isOpen, onClose, onEdit, onDelete }) => {
         className={`bg-white rounded-lg p-6 max-w-sm w-full mx-4 shadow-xl relative transform transition-all duration-300 ${
           isOpen ? 'scale-100 translate-y-0' : 'scale-95 translate-y-4'
         }`}
+        style={{
+          animation: isOpen ? 'slideInUp 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)' : 'none'
+        }}
       >
         <button
           onClick={onClose}
@@ -26,16 +30,36 @@ const SweetAlert = ({ isOpen, onClose, onEdit, onDelete }) => {
         </button>
         
         <div className="text-center">
-          <div className="w-16 h-16 bg-gray-200 rounded-full mx-auto mb-4 flex items-center justify-center transition-all duration-300 hover:bg-gray-300">
+          <div 
+            className="w-16 h-16 bg-gray-200 rounded-full mx-auto mb-4 flex items-center justify-center transition-all duration-300 hover:bg-gray-300"
+            style={{
+              animation: isOpen ? 'bounceIn 0.6s ease-out 0.2s both' : 'none'
+            }}
+          >
             <span className="text-2xl text-gray-600">?</span>
           </div>
-          <h3 className="text-lg font-semibold text-gray-900 mb-2 transition-all duration-300">
+          <h3 
+            className="text-lg font-semibold text-gray-900 mb-2 transition-all duration-300"
+            style={{
+              animation: isOpen ? 'fadeInUp 0.5s ease-out 0.3s both' : 'none'
+            }}
+          >
             ¿Deseas eliminar o actualizar un motorista?
           </h3>
-          <p className="text-gray-600 mb-6 transition-all duration-300">
+          <p 
+            className="text-gray-600 mb-6 transition-all duration-300"
+            style={{
+              animation: isOpen ? 'fadeInUp 0.5s ease-out 0.4s both' : 'none'
+            }}
+          >
             Elija la opción
           </p>
-          <div className="flex space-x-3">
+          <div 
+            className="flex space-x-3"
+            style={{
+              animation: isOpen ? 'fadeInUp 0.5s ease-out 0.5s both' : 'none'
+            }}
+          >
             <button
               onClick={onDelete}
               className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-all duration-200 transform hover:scale-105 hover:shadow-lg active:scale-95"
@@ -51,6 +75,47 @@ const SweetAlert = ({ isOpen, onClose, onEdit, onDelete }) => {
           </div>
         </div>
       </div>
+      
+      <style jsx>{`
+        @keyframes slideInUp {
+          from {
+            transform: translateY(100px) scale(0.9);
+            opacity: 0;
+          }
+          to {
+            transform: translateY(0) scale(1);
+            opacity: 1;
+          }
+        }
+        
+        @keyframes bounceIn {
+          0% {
+            transform: scale(0.3);
+            opacity: 0;
+          }
+          50% {
+            transform: scale(1.05);
+          }
+          70% {
+            transform: scale(0.9);
+          }
+          100% {
+            transform: scale(1);
+            opacity: 1;
+          }
+        }
+        
+        @keyframes fadeInUp {
+          from {
+            transform: translateY(20px);
+            opacity: 0;
+          }
+          to {
+            transform: translateY(0);
+            opacity: 1;
+          }
+        }
+      `}</style>
     </div>
   );
 };
@@ -69,18 +134,41 @@ const ConfirmDeleteAlert = ({ isOpen, onClose, onConfirm, motoristaName }) => {
         className={`bg-white rounded-lg p-6 max-w-sm w-full mx-4 shadow-xl relative transform transition-all duration-300 ${
           isOpen ? 'scale-100 translate-y-0' : 'scale-95 translate-y-4'
         }`}
+        style={{
+          animation: isOpen ? 'slideInUp 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)' : 'none'
+        }}
       >
         <div className="text-center">
-          <div className="w-16 h-16 bg-red-500 rounded-full mx-auto mb-4 flex items-center justify-center transition-all duration-300">
+          <div 
+            className="w-16 h-16 bg-red-500 rounded-full mx-auto mb-4 flex items-center justify-center transition-all duration-300"
+            style={{
+              animation: isOpen ? 'bounceIn 0.6s ease-out 0.2s both' : 'none'
+            }}
+          >
             <span className="text-2xl text-white font-bold">×</span>
           </div>
-          <h3 className="text-lg font-semibold text-gray-900 mb-2 transition-all duration-300">
+          <h3 
+            className="text-lg font-semibold text-gray-900 mb-2 transition-all duration-300"
+            style={{
+              animation: isOpen ? 'fadeInUp 0.5s ease-out 0.3s both' : 'none'
+            }}
+          >
             ¿Está seguro de que desea eliminar a este motorista?
           </h3>
-          <p className="text-gray-600 mb-6 transition-all duration-300">
+          <p 
+            className="text-gray-600 mb-6 transition-all duration-300"
+            style={{
+              animation: isOpen ? 'fadeInUp 0.5s ease-out 0.4s both' : 'none'
+            }}
+          >
             El motorista se eliminará con esta acción
           </p>
-          <div className="flex space-x-3">
+          <div 
+            className="flex space-x-3"
+            style={{
+              animation: isOpen ? 'fadeInUp 0.5s ease-out 0.5s both' : 'none'
+            }}
+          >
             <button
               onClick={onClose}
               className="flex-1 px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-lg transition-all duration-200 transform hover:scale-105 hover:shadow-lg active:scale-95"
@@ -96,6 +184,47 @@ const ConfirmDeleteAlert = ({ isOpen, onClose, onConfirm, motoristaName }) => {
           </div>
         </div>
       </div>
+      
+      <style jsx>{`
+        @keyframes slideInUp {
+          from {
+            transform: translateY(100px) scale(0.9);
+            opacity: 0;
+          }
+          to {
+            transform: translateY(0) scale(1);
+            opacity: 1;
+          }
+        }
+        
+        @keyframes bounceIn {
+          0% {
+            transform: scale(0.3);
+            opacity: 0;
+          }
+          50% {
+            transform: scale(1.05);
+          }
+          70% {
+            transform: scale(0.9);
+          }
+          100% {
+            transform: scale(1);
+            opacity: 1;
+          }
+        }
+        
+        @keyframes fadeInUp {
+          from {
+            transform: translateY(20px);
+            opacity: 0;
+          }
+          to {
+            transform: translateY(0);
+            opacity: 1;
+          }
+        }
+      `}</style>
     </div>
   );
 };
@@ -116,20 +245,43 @@ const SuccessAlert = ({ isOpen, onClose, type = 'delete' }) => {
         className={`bg-white rounded-lg p-6 max-w-sm w-full mx-4 shadow-xl relative transform transition-all duration-300 ${
           isOpen ? 'scale-100 translate-y-0' : 'scale-95 translate-y-4'
         }`}
+        style={{
+          animation: isOpen ? 'slideInUp 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)' : 'none'
+        }}
       >
         <div className="text-center">
-          <div className="w-16 h-16 bg-green-400 rounded-full mx-auto mb-4 flex items-center justify-center transition-all duration-300">
+          <div 
+            className="w-16 h-16 bg-green-400 rounded-full mx-auto mb-4 flex items-center justify-center transition-all duration-300"
+            style={{
+              animation: isOpen ? 'bounceIn 0.6s ease-out 0.2s both' : 'none'
+            }}
+          >
             <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
             </svg>
           </div>
-          <h3 className="text-lg font-semibold text-gray-900 mb-2 transition-all duration-300">
+          <h3 
+            className="text-lg font-semibold text-gray-900 mb-2 transition-all duration-300"
+            style={{
+              animation: isOpen ? 'fadeInUp 0.5s ease-out 0.3s both' : 'none'
+            }}
+          >
             {isEdit ? 'Motorista actualizado con éxito' : 'Motorista eliminado con éxito'}
           </h3>
-          <p className="text-gray-600 mb-6 transition-all duration-300">
+          <p 
+            className="text-gray-600 mb-6 transition-all duration-300"
+            style={{
+              animation: isOpen ? 'fadeInUp 0.5s ease-out 0.4s both' : 'none'
+            }}
+          >
             {isEdit ? 'Motorista actualizado correctamente' : 'Motorista eliminado correctamente'}
           </p>
-          <div className="flex justify-center">
+          <div 
+            className="flex justify-center"
+            style={{
+              animation: isOpen ? 'fadeInUp 0.5s ease-out 0.5s both' : 'none'
+            }}
+          >
             <button
               onClick={onClose}
               className="px-8 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-all duration-200 transform hover:scale-105 hover:shadow-lg active:scale-95"
@@ -139,6 +291,47 @@ const SuccessAlert = ({ isOpen, onClose, type = 'delete' }) => {
           </div>
         </div>
       </div>
+      
+      <style jsx>{`
+        @keyframes slideInUp {
+          from {
+            transform: translateY(100px) scale(0.9);
+            opacity: 0;
+          }
+          to {
+            transform: translateY(0) scale(1);
+            opacity: 1;
+          }
+        }
+        
+        @keyframes bounceIn {
+          0% {
+            transform: scale(0.3);
+            opacity: 0;
+          }
+          50% {
+            transform: scale(1.05);
+          }
+          70% {
+            transform: scale(0.9);
+          }
+          100% {
+            transform: scale(1);
+            opacity: 1;
+          }
+        }
+        
+        @keyframes fadeInUp {
+          from {
+            transform: translateY(20px);
+            opacity: 0;
+          }
+          to {
+            transform: translateY(0);
+            opacity: 1;
+          }
+        }
+      `}</style>
     </div>
   );
 };
@@ -211,6 +404,9 @@ const EditMotoristaAlert = ({ isOpen, onClose, onSave, motorista }) => {
         className={`bg-white rounded-lg p-8 max-w-2xl w-full mx-4 shadow-xl relative transform transition-all duration-300 max-h-[90vh] overflow-y-auto ${
           isOpen ? 'scale-100 translate-y-0' : 'scale-95 translate-y-4'
         }`}
+        style={{
+          animation: isOpen ? 'slideInUp 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)' : 'none'
+        }}
       >
         <button
           onClick={onClose}
@@ -220,12 +416,22 @@ const EditMotoristaAlert = ({ isOpen, onClose, onSave, motorista }) => {
         </button>
         
         <div className="text-center mb-8">
-          <h3 className="text-2xl font-semibold text-gray-900 transition-all duration-300">
+          <h3 
+            className="text-2xl font-semibold text-gray-900 transition-all duration-300"
+            style={{
+              animation: isOpen ? 'fadeInUp 0.5s ease-out 0.2s both' : 'none'
+            }}
+          >
             Editar Motorista
           </h3>
         </div>
 
-        <div className="space-y-6">
+        <div 
+          className="space-y-6"
+          style={{
+            animation: isOpen ? 'fadeInUp 0.5s ease-out 0.3s both' : 'none'
+          }}
+        >
           <div className="grid grid-cols-2 gap-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Nombre</label>
@@ -350,7 +556,12 @@ const EditMotoristaAlert = ({ isOpen, onClose, onSave, motorista }) => {
           </div>
         </div>
 
-        <div className="mt-8 flex justify-center">
+        <div 
+          className="mt-8 flex justify-center"
+          style={{
+            animation: isOpen ? 'fadeInUp 0.5s ease-out 0.5s both' : 'none'
+          }}
+        >
           <button
             onClick={handleSave}
             className="px-10 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-all duration-200 transform hover:scale-105 hover:shadow-lg active:scale-95 font-medium text-lg"
@@ -359,6 +570,30 @@ const EditMotoristaAlert = ({ isOpen, onClose, onSave, motorista }) => {
           </button>
         </div>
       </div>
+      
+      <style jsx>{`
+        @keyframes slideInUp {
+          from {
+            transform: translateY(100px) scale(0.9);
+            opacity: 0;
+          }
+          to {
+            transform: translateY(0) scale(1);
+            opacity: 1;
+          }
+        }
+        
+        @keyframes fadeInUp {
+          from {
+            transform: translateY(20px);
+            opacity: 0;
+          }
+          to {
+            transform: translateY(0);
+            opacity: 1;
+          }
+        }
+      `}</style>
     </div>
   );
 };
