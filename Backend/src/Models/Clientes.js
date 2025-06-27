@@ -1,5 +1,4 @@
 import {Schema,model} from "mongoose";
-import { TbPaywall } from "react-icons/tb";
 
 const clienteSchema = new Schema({
 firtsName:{
@@ -27,7 +26,7 @@ password:{
     required:true
 },
 phone:{
-    type:Number,
+    type:String,
     required:true
 },
 address:{
