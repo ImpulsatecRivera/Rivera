@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Search, Phone, Mail, User, ChevronDown, ArrowLeft, ArrowRight, Plus, MoreHorizontal, Eye, EyeOff } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import axios from "axios";
+import useEmployeeManagement from '../../components/Empleados/hooks/useDataEmpleado'; // Ajusta la ruta según tu estructura
 
 // Sweet Alert Component
 const SweetAlert = ({ isOpen, onClose, onEdit, onDelete }) => {
@@ -565,131 +566,35 @@ const EditEmployeeAlert = ({ isOpen, onClose, onSave, employee }) => {
 };
 
 const EmployeeManagementInterface = () => {
-  const [empleados, setEmpleados] = useState([]);
-  const [selectedEmpleados, setSelectedEmpleados] = useState(null);
-  const [showDetailView, setShowDetailView] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [sortBy, setSortBy] = useState('Newest');
-  const [showAlert, setShowAlert] = useState(false);
-  const [showConfirmDelete, setShowConfirmDelete] = useState(false);
-  const [showSuccessAlert, setShowSuccessAlert] = useState(false);
-  const [showEditAlert, setShowEditAlert] = useState(false);
-  const [successType, setSuccessType] = useState('delete');
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    const fetchEmpleados = async () => {
-      try {
-        const response = await axios.get('http://localhost:4000/api/empleados');
-        setEmpleados(response.data);
-      } catch (error) {
-        setError("Error al cargar los empleados");
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchEmpleados();
-  }, []);
-
-  const filterEmpleados = empleados.filter((empleado) => 
-    [empleado.name, empleado.lastName, empleado.dui, empleado.email]
-    .join(' ')
-    .toLowerCase()
-    .includes(searchTerm.toLowerCase())
-  );
-
-  const handleContinue = (e) => {
-    e.preventDefault();
-    navigate('/empleados/agregarEmployee');
-  };
-
-  const handleOptionsClick = (e) => {
-    e.stopPropagation();
-    setShowAlert(true);
-  };
-
-  const handleEdit = () => {
-    setShowAlert(false);
-    setShowEditAlert(true);
-  };
-
-  const handleDelete = () => {
-    setShowAlert(false);
-    setShowConfirmDelete(true);
-  };
-
-  const confirmDelete = async () => {
-    setShowConfirmDelete(false);
-    try {
-      await axios.delete(`http://localhost:4000/api/empleados/${selectedEmpleados._id}`);
-      setEmpleados(empleados.filter(emp => emp._id !== selectedEmpleados._id));
-      console.log("Eliminando empleado:", selectedEmpleados);
-      setShowDetailView(false);
-      setSelectedEmpleados(null);
-      setSuccessType('delete');
-      setShowSuccessAlert(true);
-    } catch (error) {
-      console.error("Error al eliminar empleado:", error);
-    }
-  };
-
-  const cancelDelete = () => {
-    setShowConfirmDelete(false);
-  };
-
-  const closeSuccessAlert = () => {
-    setShowSuccessAlert(false);
-  };
-
-  const closeEditAlert = () => {
-    setShowEditAlert(false);
-  };
-
-  const handleSaveEdit = async (formData) => {
-    try {
-      const updatedData = {};
-      
-      if (formData.name && formData.name.trim()) {
-        updatedData.name = formData.name;
-      }
-      if (formData.lastName && formData.lastName.trim()) {
-        updatedData.lastName = formData.lastName;
-      }
-      if (formData.phone && formData.phone.trim()) {
-        updatedData.phone = formData.phone;
-      }
-      if (formData.address && formData.address.trim()) {
-        updatedData.address = formData.address;
-      }
-      if (formData.password && formData.password.trim()) {
-        updatedData.password = formData.password;
-      }
-
-      const response = await axios.put(`http://localhost:4000/api/empleados/${selectedEmpleados._id}`, updatedData);
-      
-      setEmpleados(empleados.map(emp => 
-        emp._id === selectedEmpleados._id 
-          ? { ...emp, ...updatedData }
-          : emp
-      ));
-      
-      setSelectedEmpleados({ ...selectedEmpleados, ...updatedData });
-      
-      console.log("Empleado actualizado:", response.data);
-      
-      setShowEditAlert(false);
-      setSuccessType('edit');
-      setShowSuccessAlert(true);
-    } catch (error) {
-      console.error("Error al actualizar empleado:", error);
-    }
-  };
-
-  const closeAlert = () => {
-    setShowAlert(false);
-  };
+  const {
+    empleados,
+    selectedEmpleados,
+    showDetailView,
+    loading,
+    error,
+    searchTerm,
+    sortBy,
+    setSearchTerm,
+    setSortBy,
+    showAlert,
+    showConfirmDelete,
+    showSuccessAlert,
+    showEditAlert,
+    successType,
+    filterEmpleados,
+    handleContinue,
+    handleOptionsClick,
+    handleEdit,
+    handleDelete,
+    confirmDelete,
+    cancelDelete,
+    handleSaveEdit,
+    closeAlert,
+    closeSuccessAlert,
+    closeEditAlert,
+    selectEmpleado,
+    closeDetailView
+  } = useEmployeeManagement();
 
   return (
     <div className="flex h-screen text-white" style={{backgroundColor: '#34353A'}}>
@@ -710,6 +615,7 @@ const EmployeeManagementInterface = () => {
                   <input 
                     type="text" 
                     placeholder="Buscar" 
+                    value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
                   />
@@ -764,10 +670,7 @@ const EmployeeManagementInterface = () => {
                     className={`grid ${showDetailView ? 'grid-cols-4' : 'grid-cols-6'} gap-4 py-3 px-2 rounded-lg cursor-pointer transition-colors ${
                       selectedEmpleados && selectedEmpleados._id === empleado._id ? 'bg-teal-100' : 'hover:bg-gray-50'
                     }`}
-                    onClick={() => {
-                      setSelectedEmpleados(empleado);
-                      setShowDetailView(true);
-                    }}
+                    onClick={() => selectEmpleado(empleado)}
                   >
                     <div className="font-medium truncate">{empleado.name} {empleado.lastName}</div>
                     <div className="text-gray-600 truncate">{empleado.email}</div>
@@ -823,10 +726,7 @@ const EmployeeManagementInterface = () => {
               <div className="flex items-center">
                 <button
                   className="p-2 hover:bg-gray-100 rounded-full mr-3"
-                  onClick={() => {
-                    setShowDetailView(false);
-                    setSelectedEmpleados(null);
-                  }}
+                  onClick={closeDetailView}
                 >
                   <ArrowLeft className="w-5 h-5 text-gray-600" />
                 </button>

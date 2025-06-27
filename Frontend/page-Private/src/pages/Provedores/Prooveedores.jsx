@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Search, Phone, Mail, User, ChevronDown, ArrowLeft, ArrowRight, Plus, MoreHorizontal, Building2, Package, Eye, EyeOff } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import axios from "axios";
+import useSupplierManagement from '../../components/Proveedores/hooks/useDataProveedores'; // Ajusta la ruta según tu estructura
 
 // Sweet Alert Component
 const SweetAlert = ({ isOpen, onClose, onEdit, onDelete }) => {
@@ -540,139 +541,36 @@ const EditSupplierAlert = ({ isOpen, onClose, onSave, supplier }) => {
 };
 
 const SupplierManagementInterface = () => {
-  const [proveedores, setProveedores] = useState([]);
-  const [selectedProveedor, setSelectedProveedor] = useState(null);
-  const [showDetailView, setShowDetailView] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [sortBy, setSortBy] = useState('Newest');
-  const [showAlert, setShowAlert] = useState(false);
-  const [showConfirmDelete, setShowConfirmDelete] = useState(false);
-  const [showSuccessAlert, setShowSuccessAlert] = useState(false);
-  const [showEditAlert, setShowEditAlert] = useState(false);
-  const [successType, setSuccessType] = useState('delete');
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    const fetchProveedores = async () => {
-      try {
-        const response = await axios.get('http://localhost:4000/api/proveedores');
-        setProveedores(response.data);
-      } catch (error) {
-        setError("Error al cargar los proveedores");
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchProveedores();
-  }, []);
-
-  const filterProveedores = proveedores.filter((proveedor) => 
-    [proveedor.companyName, proveedor.email, proveedor.partDescription, proveedor.phone]
-    .join(' ')
-    .toLowerCase()
-    .includes(searchTerm.toLowerCase())
-  );
-
-  const handleContinue = (e) => {
-    e.preventDefault();
-    navigate('/proveedores/agregarProveedor');
-  };
-
-  const handleOptionsClick = (e) => {
-    e.stopPropagation();
-    setShowAlert(true);
-  };
-
-  const handleEdit = () => {
-    setShowAlert(false);
-    setShowEditAlert(true);
-  };
-
-  const handleDelete = () => {
-    setShowAlert(false);
-    setShowConfirmDelete(true);
-  };
-
-  const confirmDelete = async () => {
-    setShowConfirmDelete(false);
-    try {
-      await axios.delete(`http://localhost:4000/api/proveedores/${selectedProveedor._id}`);
-      setProveedores(proveedores.filter(prov => prov._id !== selectedProveedor._id));
-      console.log("Eliminando proveedor:", selectedProveedor);
-      setShowDetailView(false);
-      setSelectedProveedor(null);
-      setSuccessType('delete');
-      setShowSuccessAlert(true);
-    } catch (error) {
-      console.error("Error al eliminar proveedor:", error);
-    }
-  };
-
-  const cancelDelete = () => {
-    setShowConfirmDelete(false);
-  };
-
-  const closeSuccessAlert = () => {
-    setShowSuccessAlert(false);
-  };
-
-  const closeEditAlert = () => {
-    setShowEditAlert(false);
-  };
-
-  // ✅ FUNCIÓN CORREGIDA
-  const handleSaveEdit = async (formData) => {
-    try {
-      // Los nombres de los campos ahora coinciden con la estructura del backend
-      const updatedData = {};
-      
-      // Solo incluir campos que no estén vacíos
-      if (formData.companyName && formData.companyName.trim()) {
-        updatedData.companyName = formData.companyName;
-      }
-      if (formData.email && formData.email.trim()) {
-        updatedData.email = formData.email;
-      }
-      if (formData.partDescription && formData.partDescription.trim()) {
-        updatedData.partDescription = formData.partDescription;
-      }
-      if (formData.phone && formData.phone.trim()) {
-        updatedData.phone = formData.phone;
-      }
-      if (formData.direccion && formData.direccion.trim()) {
-        updatedData.direccion = formData.direccion;
-      }
-      if (formData.rubro && formData.rubro.trim()) {
-        updatedData.rubro = formData.rubro;
-      }
-
-      const response = await axios.put(`http://localhost:4000/api/proveedores/${selectedProveedor._id}`, updatedData);
-      
-      // Actualizar la lista de proveedores
-      setProveedores(proveedores.map(prov => 
-        prov._id === selectedProveedor._id 
-          ? { ...prov, ...updatedData }
-          : prov
-      ));
-      
-      // Actualizar el proveedor seleccionado
-      setSelectedProveedor({ ...selectedProveedor, ...updatedData });
-      
-      console.log("Proveedor actualizado:", response.data);
-      
-      setShowEditAlert(false);
-      setSuccessType('edit');
-      setShowSuccessAlert(true);
-    } catch (error) {
-      console.error("Error al actualizar proveedor:", error);
-    }
-  };
-
-  const closeAlert = () => {
-    setShowAlert(false);
-  };
+  const {
+    proveedores,
+    selectedProveedor,
+    showDetailView,
+    loading,
+    error,
+    searchTerm,
+    sortBy,
+    setSearchTerm,
+    setSortBy,
+    showAlert,
+    showConfirmDelete,
+    showSuccessAlert,
+    showEditAlert,
+    successType,
+    filterProveedores,
+    handleContinue,
+    handleOptionsClick,
+    handleEdit,
+    handleDelete,
+    confirmDelete,
+    cancelDelete,
+    handleSaveEdit,
+    closeAlert,
+    closeSuccessAlert,
+    closeEditAlert,
+    selectProveedor,
+    closeDetailView,
+    refreshProveedores
+  } = useSupplierManagement();
 
   return (
     <div className="flex h-screen text-white" style={{backgroundColor: '#34353A'}}>
@@ -693,6 +591,7 @@ const SupplierManagementInterface = () => {
                   <input 
                     type="text" 
                     placeholder="Buscar" 
+                    value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
                   />
@@ -741,10 +640,7 @@ const SupplierManagementInterface = () => {
                     className={`grid grid-cols-4 gap-4 py-3 px-2 rounded-lg cursor-pointer transition-colors ${
                       selectedProveedor && selectedProveedor._id === proveedor._id ? 'bg-teal-100' : 'hover:bg-gray-50'
                     }`}
-                    onClick={() => {
-                      setSelectedProveedor(proveedor);
-                      setShowDetailView(true);
-                    }}
+                    onClick={() => selectProveedor(proveedor)}
                   >
                     <div className="font-medium truncate">{proveedor.companyName}</div>
                     <div className="text-gray-600 truncate">{proveedor.email}</div>
@@ -794,10 +690,7 @@ const SupplierManagementInterface = () => {
               <div className="flex items-center">
                 <button
                   className="p-2 hover:bg-gray-100 rounded-full mr-3"
-                  onClick={() => {
-                    setShowDetailView(false);
-                    setSelectedProveedor(null);
-                  }}
+                  onClick={closeDetailView}
                 >
                   <ArrowLeft className="w-5 h-5 text-gray-600" />
                 </button>
