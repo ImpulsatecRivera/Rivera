@@ -4,6 +4,7 @@ import mongoose from "mongoose";
 
 const empleadosCon = {};
 
+// Obtener empleados
 empleadosCon.get = async (req, res) => {
     try {
         const empleados = await empleadosModel.find();
@@ -14,9 +15,9 @@ empleadosCon.get = async (req, res) => {
     }
 };
 
-// Función para crear el email automáticamente
+// Generar email automáticamente
 const generarEmail = async (name, lastName) => {
-    const dominio = "gmail.com";
+    const dominio = "rivera.com";
     let base = `${name.toLowerCase()}.${lastName.toLowerCase()}`;
     let email = `${base}@${dominio}`;
     let contador = 1;
@@ -29,20 +30,15 @@ const generarEmail = async (name, lastName) => {
     return email;
 };
 
+// Registrar empleado
 empleadosCon.post = async (req, res) => {
     try {
-        console.log('=== INICIO DEL CONTROLADOR ===');
+        console.log('Registro de empleado iniciado');
         console.log('Estado de conexión MongoDB:', mongoose.connection.readyState);
-        console.log('Datos recibidos en el backend:', req.body);
-        
-        // Extraer datos del cuerpo de la petición
+
         const { name, lastName, dui, birthDate, password, phone, address } = req.body;
 
-        console.log('Datos extraídos:', { name, lastName, dui, birthDate, password: '***', phone, address });
-
-        // Validar que todos los campos requeridos estén presentes
         if (!name || !lastName || !dui || !birthDate || !password || !phone || !address) {
-            console.log('❌ Faltan campos obligatorios');
             return res.status(400).json({ 
                 message: "Todos los campos son obligatorios",
                 missingFields: {
@@ -57,76 +53,45 @@ empleadosCon.post = async (req, res) => {
             });
         }
 
-        // Validar formato del DUI (debe tener exactamente 9 dígitos)
         const duiNumbers = dui.replace(/\D/g, '');
         if (duiNumbers.length !== 9) {
-            console.log('❌ DUI con formato incorrecto:', dui);
-            return res.status(400).json({ 
-                message: "El DUI debe tener exactamente 9 dígitos" 
-            });
+            return res.status(400).json({ message: "El DUI debe tener exactamente 9 dígitos" });
         }
 
-        // Validar formato del teléfono (debe tener exactamente 8 dígitos)
         const phoneNumbers = phone.replace(/\D/g, '');
         if (phoneNumbers.length !== 8) {
-            console.log('❌ Teléfono con formato incorrecto:', phone);
-            return res.status(400).json({ 
-                message: "El teléfono debe tener exactamente 8 dígitos" 
-            });
+            return res.status(400).json({ message: "El teléfono debe tener exactamente 8 dígitos" });
         }
 
-        // Generar email automáticamente
-        console.log('🔄 Generando email para:', name, lastName);
         const email = await generarEmail(name, lastName);
-        console.log('✅ Email generado:', email);
 
-        // Verificar si ya existe un empleado con el mismo DUI
-        console.log('🔄 Verificando DUI existente...');
-        const validarDUI = await empleadosModel.findOne({ dui: dui });
+        const validarDUI = await empleadosModel.findOne({ dui });
         if (validarDUI) {
-            console.log('❌ DUI ya existe:', dui);
-            return res.status(409).json({ 
-                message: "Ya existe un empleado registrado con este DUI" 
-            });
+            return res.status(409).json({ message: "Ya existe un empleado registrado con este DUI" });
         }
 
-        // Verificar si ya existe un empleado con el mismo email
-        console.log('🔄 Verificando email existente...');
         const validarEmail = await empleadosModel.findOne({ email });
         if (validarEmail) {
-            console.log('❌ Email ya existe:', email);
-            return res.status(409).json({
-                message: "Ya existe un empleado registrado con este email"
-            });
+            return res.status(409).json({ message: "Ya existe un empleado registrado con este email" });
         }
 
-        // Encriptar la contraseña
-        console.log('🔄 Encriptando contraseña...');
         const encriptarContraHash = await bcryptjs.hash(password, 10);
 
-        // Crear el objeto del empleado
-        const empleadoData = {
-            name: name,
-            lastName: lastName,
-            email: email,
-            dui: dui,
+        const newEmpleado = new empleadosModel({
+            name,
+            lastName,
+            email,
+            dui,
             birthDate: new Date(birthDate),
             password: encriptarContraHash,
-            phone: phone,
-            address: address
-        };
+            phone,
+            address
+        });
 
-        console.log('🔄 Creando empleado con datos:', empleadoData);
-        
-        // Crear el nuevo empleado
-        const newEmpleado = new empleadosModel(empleadoData);
-
-        // Guardar en la base de datos
-        console.log('🔄 Guardando empleado en la base de datos...');
         const empleadoGuardado = await newEmpleado.save();
-        console.log('✅ Empleado guardado exitosamente con ID:', empleadoGuardado._id);
 
-        // Respuesta exitosa
+        console.log('Empleado registrado correctamente');
+
         res.status(201).json({ 
             message: "Empleado agregado correctamente",
             empleado: {
@@ -142,21 +107,17 @@ empleadosCon.post = async (req, res) => {
         });
 
     } catch (error) {
-        console.error('❌ ERROR COMPLETO EN EL CONTROLADOR:', error);
-        console.error('Stack trace:', error.stack);
-        
-        // Errores específicos de Mongoose
+        console.error('Error al registrar empleado:', error);
+
         if (error.name === 'ValidationError') {
-            console.error('Error de validación de Mongoose:', error.errors);
             return res.status(400).json({
                 message: "Error de validación",
                 error: error.message,
                 details: error.errors
             });
         }
-        
+
         if (error.code === 11000) {
-            console.error('Error de duplicación:', error.keyValue);
             return res.status(409).json({
                 message: "Ya existe un empleado con estos datos",
                 error: "Datos duplicados",
@@ -171,6 +132,7 @@ empleadosCon.post = async (req, res) => {
     }
 };
 
+// Actualizar empleado
 empleadosCon.put = async (req, res) => {
     try {
         const { name, lastName, email, dui, birthDate, password, phone, address } = req.body;
@@ -196,6 +158,7 @@ empleadosCon.put = async (req, res) => {
             return res.status(404).json({ message: "Empleado no encontrado" });
         }
 
+        console.log(`Empleado actualizado: ${req.params.id}`);
         res.status(200).json({ 
             message: "Empleado actualizado correctamente",
             empleado: empleadoActualizado
@@ -206,12 +169,15 @@ empleadosCon.put = async (req, res) => {
     }
 };
 
+// Eliminar empleado
 empleadosCon.delete = async (req, res) => {
     try {
         const deleteEmpleado = await empleadosModel.findByIdAndDelete(req.params.id);
         if (!deleteEmpleado) {
             return res.status(404).json({ message: "Empleado no encontrado" });
         }
+
+        console.log(`Empleado eliminado: ${req.params.id}`);
         res.status(200).json({ message: "Empleado eliminado correctamente" });
     } catch (error) {
         console.error('Error al eliminar empleado:', error);

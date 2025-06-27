@@ -13,6 +13,12 @@ const RecoverPassword = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
+  // Validación de email
+  const isValidEmail = (email) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     
@@ -21,16 +27,37 @@ const RecoverPassword = () => {
       return;
     }
 
+    if (!isValidEmail(email)) {
+      setError("Por favor, introduce un correo electrónico válido");
+      return;
+    }
+
     setLoading(true);
     setError("");
 
     try {
-      await axios.post("http://localhost:4000/api/recovery/requestCode", { email });
+      console.log("Enviando solicitud con email:", email);
+      
+      const response = await axios.post("http://localhost:4000/api/recovery/requestCode", 
+        { email },
+        {
+          withCredentials: true, // Para manejar cookies
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+      
+      console.log("Respuesta exitosa:", response.data);
       // Éxito - navegar a la siguiente página
       navigate("/verification-input", { state: { email } });
+      
     } catch (error) {
+      console.error("Error completo:", error);
+      console.error("Respuesta del servidor:", error.response?.data);
+      console.error("Status code:", error.response?.status);
+      
       setError(error.response?.data?.message || "Error al enviar el código");
-      console.error("Error:", error);
     } finally {
       setLoading(false);
     }
