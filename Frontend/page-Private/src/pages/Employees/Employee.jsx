@@ -337,16 +337,21 @@ const SuccessAlert = ({ isOpen, onClose, type = 'delete' }) => {
 };
 
 // Edit Employee Alert Component
-const EditEmployeeAlert = ({ isOpen, onClose, onSave, employee }) => {
+// Edit Employee Alert Component con subida de imágenes
+// Edit Employee Alert Component con subida de imágenes
+// Edit Employee Alert Component adaptado para tu backend
+const EditEmployeeAlert = ({ isOpen, onClose, onSave, employee, uploading }) => {
   const [formData, setFormData] = useState({
     name: '',
     lastName: '',
     phone: '',
     address: '',
-    password: ''
+    password: '',
+    img: null // Para archivos
   });
 
   const [showPassword, setShowPassword] = useState(false);
+  const [imagePreview, setImagePreview] = useState(null);
 
   useEffect(() => {
     if (employee && isOpen) {
@@ -355,9 +360,12 @@ const EditEmployeeAlert = ({ isOpen, onClose, onSave, employee }) => {
         lastName: '',
         phone: '',
         address: '',
-        password: ''
+        password: '',
+        img: null
       });
       setShowPassword(false);
+      // Mostrar imagen actual del empleado si existe
+      setImagePreview(employee.img || null);
     }
   }, [employee, isOpen]);
 
@@ -369,9 +377,75 @@ const EditEmployeeAlert = ({ isOpen, onClose, onSave, employee }) => {
     }));
   };
 
-  const handleSave = () => {
-    onSave(formData);
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      // Validar que sea una imagen
+      if (file.type.startsWith('image/')) {
+        setFormData(prev => ({
+          ...prev,
+          img: file
+        }));
+        
+        // Crear vista previa local
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          setImagePreview(e.target.result);
+        };
+        reader.readAsDataURL(file);
+      } else {
+        alert('Por favor selecciona un archivo de imagen válido');
+        e.target.value = '';
+      }
+    }
   };
+
+  const clearImage = () => {
+    setFormData(prev => ({
+      ...prev,
+      img: null
+    }));
+    setImagePreview(employee.img || null); // Volver a la imagen original
+    // Limpiar el input file
+    const fileInput = document.querySelector('input[type="file"]');
+    if (fileInput) {
+      fileInput.value = '';
+    }
+  };
+
+  const handleSave = () => {
+  // Crear FormData para enviar al backend
+  const formDataToSend = new FormData();
+  
+  // Agregar todos los campos de texto que tengan contenido
+  if (formData.name && formData.name.trim()) {
+    formDataToSend.append('name', formData.name.trim());
+  }
+  if (formData.lastName && formData.lastName.trim()) {
+    formDataToSend.append('lastName', formData.lastName.trim());
+  }
+  if (formData.phone && formData.phone.trim()) {
+    formDataToSend.append('phone', formData.phone.trim());
+  }
+  if (formData.address && formData.address.trim()) {
+    formDataToSend.append('address', formData.address.trim());
+  }
+  if (formData.password && formData.password.trim()) {
+    formDataToSend.append('password', formData.password.trim());
+  }
+  
+  // Solo agregar imagen si se seleccionó una nueva
+  if (formData.img instanceof File) {
+    formDataToSend.append('img', formData.img);
+  } else if (imagePreview) {
+    // Si no se seleccionó una nueva imagen, enviar la imagen existente
+    formDataToSend.append('img', employee.img); // Asegúrate de que `employee.img` contenga la URL o el identificador de la imagen existente
+  }
+  
+  // Llamar a onSave con FormData
+  onSave(formDataToSend);
+};
+
 
   if (!isOpen) return null;
 
@@ -382,7 +456,7 @@ const EditEmployeeAlert = ({ isOpen, onClose, onSave, employee }) => {
       }`}
     >
       <div 
-        className={`bg-white rounded-lg p-8 max-w-2xl w-full mx-4 shadow-xl relative transform transition-all duration-300 max-h-[90vh] overflow-y-auto ${
+        className={`bg-white rounded-lg p-8 max-w-3xl w-full mx-4 shadow-xl relative transform transition-all duration-300 max-h-[90vh] overflow-y-auto ${
           isOpen ? 'scale-100 translate-y-0' : 'scale-95 translate-y-4'
         }`}
         style={{
@@ -413,6 +487,51 @@ const EditEmployeeAlert = ({ isOpen, onClose, onSave, employee }) => {
             animation: isOpen ? 'fadeInUp 0.5s ease-out 0.3s both' : 'none'
           }}
         >
+          {/* Sección de imagen */}
+          <div className="bg-gray-50 p-6 rounded-lg">
+            <h4 className="text-lg font-medium text-gray-900 mb-4">Imagen del empleado</h4>
+            
+            {/* Vista previa de imagen */}
+            {imagePreview && (
+              <div className="flex justify-center mb-4">
+                <div className="relative">
+                  <img 
+                    src={imagePreview} 
+                    alt="Vista previa" 
+                    className="w-24 h-24 object-cover rounded-full border-4 border-white shadow-lg"
+                    onError={(e) => {
+                      // Fallback si la imagen no carga
+                      e.target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTIwIDIxVjE5QzIwIDE3LjkzOTEgMTkuNTc4NiAxNi45MjE3IDE4LjgyODQgMTYuMTcxNkMxOC4wNzgzIDE1LjQyMTQgMTcuMDYwOSAxNSAxNiAxNUg4QzYuOTM5MTMgMTUgNS45MjE3MiAxNS40MjE0IDUuMTcxNTcgMTYuMTcxNkM0LjQyMTQzIDE2LjkyMTcgNCAxNy45MzkxIDQgMTlWMjEiIHN0cm9rZT0iIzk5OTk5OSIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz4KPHBhdGggZD0iTTEyIDExQzE0LjIwOTEgMTEgMTYgOS4yMDkxNCAxNiA3QzE2IDQuNzkwODYgMTQuMjA5MSAzIDEyIDNDOS43OTA4NiAzIDggNC43OTA4NiA4IDdDOCA5LjIwOTE0IDkuNzkwODYgMTEgMTIgMTEiIHN0cm9rZT0iIzk5OTk5OSIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz4KPC9zdmc+';
+                    }}
+                  />
+                  <button
+                    onClick={clearImage}
+                    className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-red-600 transition-colors"
+                  >
+                    ×
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Input para seleccionar imagen */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                {imagePreview ? 'Cambiar imagen' : 'Seleccionar imagen'}
+              </label>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleImageChange}
+                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 text-base text-gray-900 bg-white file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-green-50 file:text-green-700 hover:file:bg-green-100"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                La imagen se subirá automáticamente a Cloudinary cuando actualices
+              </p>
+            </div>
+          </div>
+
+          {/* Resto de campos */}
           <div className="grid grid-cols-2 gap-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Nombre</label>
@@ -531,41 +650,20 @@ const EditEmployeeAlert = ({ isOpen, onClose, onSave, employee }) => {
         >
           <button
             onClick={handleSave}
-            className="px-10 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-all duration-200 transform hover:scale-105 hover:shadow-lg active:scale-95 font-medium text-lg"
+            disabled={uploading}
+            className="px-10 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-all duration-200 transform hover:scale-105 hover:shadow-lg active:scale-95 font-medium text-lg disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Actualizar
+            {uploading ? 'Actualizando...' : 'Actualizar'}
           </button>
         </div>
       </div>
       
-      <style jsx>{`
-        @keyframes slideInUp {
-          from {
-            transform: translateY(100px) scale(0.9);
-            opacity: 0;
-          }
-          to {
-            transform: translateY(0) scale(1);
-            opacity: 1;
-          }
-        }
-        
-        @keyframes fadeInUp {
-          from {
-            transform: translateY(20px);
-            opacity: 0;
-          }
-          to {
-            transform: translateY(0);
-            opacity: 1;
-          }
-        }
-      `}</style>
+
     </div>
   );
 };
 
-const EmployeeManagementInterface = () => {
+;const EmployeeManagementInterface = () => {
   const {
     empleados,
     selectedEmpleados,
@@ -721,82 +819,96 @@ const EmployeeManagementInterface = () => {
         </div>
 
         {showDetailView && selectedEmpleados && (
-          <div className="w-80 bg-white text-gray-900 rounded-r-3xl mr-4 my-4 p-6 relative">
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center">
-                <button
-                  className="p-2 hover:bg-gray-100 rounded-full mr-3"
-                  onClick={closeDetailView}
-                >
-                  <ArrowLeft className="w-5 h-5 text-gray-600" />
-                </button>
-                <h2 className="text-lg font-semibold">Información del Empleado</h2>
-              </div>
-              
-              <div className="relative">
-                <button
-                  onClick={handleOptionsClick}
-                  className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-                >
-                  <MoreHorizontal className="w-5 h-5 text-gray-600" />
-                </button>
-              </div>
-            </div>
+  <div className="w-80 bg-white text-gray-900 rounded-r-3xl mr-4 my-4 p-6 relative">
+    <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center">
+        <button
+          className="p-2 hover:bg-gray-100 rounded-full mr-3"
+          onClick={closeDetailView}
+        >
+          <ArrowLeft className="w-5 h-5 text-gray-600" />
+        </button>
+        <h2 className="text-lg font-semibold">Información del Empleado</h2>
+      </div>
+             
+      <div className="relative">
+        <button
+          onClick={handleOptionsClick}
+          className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+        >
+          <MoreHorizontal className="w-5 h-5 text-gray-600" />
+        </button>
+      </div>
+    </div>
 
-            <div className="text-center mb-8">
-              <div className="w-20 h-20 bg-orange-400 rounded-full mx-auto mb-4 flex items-center justify-center">
-                <div className="w-16 h-16 bg-orange-300 rounded-full flex items-center justify-center">
-                  <User className="w-10 h-10 text-white" />
-                </div>
-              </div>
-              <h3 className="font-semibold text-lg mb-2">{selectedEmpleados.name} {selectedEmpleados.lastName}</h3>
-              <div className="flex justify-center space-x-3">
-                <button className="p-2 bg-gray-100 rounded-full hover:bg-gray-200">
-                  <Phone className="w-4 h-4 text-gray-600" />
-                </button>
-                <button className="p-2 bg-gray-100 rounded-full hover:bg-gray-200">
-                  <Mail className="w-4 h-4 text-gray-600" />
-                </button>
-              </div>
-            </div>
+    <div className="text-center mb-8">
+      <div className="w-20 h-20 bg-orange-400 rounded-full mx-auto mb-4 flex items-center justify-center overflow-hidden">
+        {selectedEmpleados.img ? (
+          <img 
+            src={selectedEmpleados.img} 
+            alt={`${selectedEmpleados.name} ${selectedEmpleados.lastName}`}
+            className="w-full h-full object-cover rounded-full"
+            onError={(e) => {
+              // Fallback al icono si la imagen falla al cargar
+              e.target.style.display = 'none';
+              e.target.nextSibling.style.display = 'flex';
+            }}
+          />
+        ) : null}
+        <div 
+          className={`w-16 h-16 bg-orange-300 rounded-full flex items-center justify-center ${selectedEmpleados.img ? 'hidden' : ''}`}
+        >
+          <User className="w-10 h-10 text-white" />
+        </div>
+      </div>
+      <h3 className="font-semibold text-lg mb-2">{selectedEmpleados.name} {selectedEmpleados.lastName}</h3>
+      <div className="flex justify-center space-x-3">
+        <button className="p-2 bg-gray-100 rounded-full hover:bg-gray-200">
+          <Phone className="w-4 h-4 text-gray-600" />
+        </button>
+        <button className="p-2 bg-gray-100 rounded-full hover:bg-gray-200">
+          <Mail className="w-4 h-4 text-gray-600" />
+        </button>
+      </div>
+    </div>
 
-            <div className="space-y-6">
-              <div className="flex items-center space-x-2">
-                <User className="w-4 h-4 text-gray-400" />
-                <span className="font-medium">Información Personal</span>
-              </div>
-
-              <div className="grid grid-cols-1 gap-4">
-                <div>
-                  <div className="text-sm text-gray-500 mb-1">Correo electrónico</div>
-                  <div className="text-sm text-gray-400 break-words">{selectedEmpleados.email}</div>
-                </div>
-                <div>
-                  <div className="text-sm text-gray-500 mb-1">DUI</div>
-                  <div className="text-sm text-gray-400">{selectedEmpleados.dui}</div>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 gap-4">
-                <div>
-                  <div className="text-sm text-gray-500 mb-1">Fecha de nacimiento</div>
-                  <div className="text-sm text-gray-400">{new Date(selectedEmpleados.birthDate).toLocaleDateString()}</div>
-                </div>
-                <div>
-                  <div className="text-sm text-gray-500 mb-1">Teléfono</div>
-                  <div className="text-sm text-gray-400">{selectedEmpleados.phone ? selectedEmpleados.phone.toString() : 'No disponible'}</div>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 gap-4">
-                <div>
-                  <div className="text-sm text-gray-500 mb-1">Dirección</div>
-                  <div className="text-sm text-gray-400 break-words">{selectedEmpleados.address}</div>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
+    <div className="space-y-6">
+      <div className="flex items-center space-x-2">
+        <User className="w-4 h-4 text-gray-400" />
+        <span className="font-medium">Información Personal</span>
+      </div>
+       
+      <div className="grid grid-cols-1 gap-4">
+        <div>
+          <div className="text-sm text-gray-500 mb-1">Correo electrónico</div>
+          <div className="text-sm text-gray-400 break-words">{selectedEmpleados.email}</div>
+        </div>
+        <div>
+          <div className="text-sm text-gray-500 mb-1">DUI</div>
+          <div className="text-sm text-gray-400">{selectedEmpleados.dui}</div>
+        </div>
+      </div>
+       
+      <div className="grid grid-cols-1 gap-4">
+        <div>
+          <div className="text-sm text-gray-500 mb-1">Fecha de nacimiento</div>
+          <div className="text-sm text-gray-400">{new Date(selectedEmpleados.birthDate).toLocaleDateString()}</div>
+        </div>
+        <div>
+          <div className="text-sm text-gray-500 mb-1">Teléfono</div>
+          <div className="text-sm text-gray-400">{selectedEmpleados.phone ? selectedEmpleados.phone.toString() : 'No disponible'}</div>
+        </div>
+      </div>
+       
+      <div className="grid grid-cols-1 gap-4">
+        <div>
+          <div className="text-sm text-gray-500 mb-1">Dirección</div>
+          <div className="text-sm text-gray-400 break-words">{selectedEmpleados.address}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+)}
       </div>
 
       <SweetAlert

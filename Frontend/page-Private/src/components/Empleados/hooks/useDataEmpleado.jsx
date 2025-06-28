@@ -19,24 +19,28 @@ const useEmployeeManagement = () => {
   const [showEditAlert, setShowEditAlert] = useState(false);
   const [successType, setSuccessType] = useState('delete');
   
+  // Estado para el botón de actualizar
+  const [uploading, setUploading] = useState(false);
+  
   const navigate = useNavigate();
+
+  // Función para cargar empleados (separada para reutilizar)
+  const fetchEmpleados = async () => {
+    try {
+      setLoading(true);
+      const response = await axios.get('http://localhost:4000/api/empleados');
+      setEmpleados(response.data);
+      setError(null);
+    } catch (error) {
+      console.error('Error al cargar empleados:', error);
+      setError("Error al cargar los empleados");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Cargar empleados al iniciar
   useEffect(() => {
-    const fetchEmpleados = async () => {
-      try {
-        setLoading(true);
-        const response = await axios.get('http://localhost:4000/api/empleados');
-        setEmpleados(response.data);
-        setError(null);
-      } catch (error) {
-        console.error('Error al cargar empleados:', error);
-        setError("Error al cargar los empleados");
-      } finally {
-        setLoading(false);
-      }
-    };
-    
     fetchEmpleados();
   }, []);
 
@@ -91,50 +95,54 @@ const useEmployeeManagement = () => {
     setShowConfirmDelete(false);
   };
 
-  // Editar empleado
+  // Editar empleado - FUNCIÓN CORREGIDA
   const handleSaveEdit = async (formData) => {
+    // Activar estado de carga
+    setUploading(true);
+    
     try {
-      const updatedData = {};
-      
-      if (formData.name && formData.name.trim()) {
-        updatedData.name = formData.name;
-      }
-      if (formData.lastName && formData.lastName.trim()) {
-        updatedData.lastName = formData.lastName;
-      }
-      if (formData.phone && formData.phone.trim()) {
-        updatedData.phone = formData.phone;
-      }
-      if (formData.address && formData.address.trim()) {
-        updatedData.address = formData.address;
-      }
-      if (formData.password && formData.password.trim()) {
-        updatedData.password = formData.password;
+      // Verificar qué campos están en el FormData para debug
+      console.log('Campos enviados:');
+      for (let pair of formData.entries()) {
+        console.log(pair[0] + ': ' + (pair[1] instanceof File ? 'Archivo de imagen' : pair[1]));
       }
 
+      // formData ya viene como FormData del componente
       const response = await axios.put(
         `http://localhost:4000/api/empleados/${selectedEmpleados._id}`, 
-        updatedData
+        formData,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        }
       );
       
-      // Actualizar la lista
+      // Usar la respuesta completa del servidor (incluye URL de Cloudinary)
+      const updatedEmployee = response.data.empleado;
+      
+      // Actualizar la lista de empleados
       setEmpleados(empleados.map(emp => 
         emp._id === selectedEmpleados._id 
-          ? { ...emp, ...updatedData }
+          ? updatedEmployee
           : emp
       ));
       
       // Actualizar el empleado seleccionado
-      setSelectedEmpleados({ ...selectedEmpleados, ...updatedData });
+      setSelectedEmpleados(updatedEmployee);
       
-      console.log("Empleado actualizado:", response.data);
+      console.log("Empleado actualizado:", updatedEmployee);
       
       setShowEditAlert(false);
       setSuccessType('edit');
       setShowSuccessAlert(true);
+      
     } catch (error) {
       console.error("Error al actualizar empleado:", error);
       setError("Error al actualizar el empleado");
+    } finally {
+      // IMPORTANTE: Siempre desactivar el estado de carga
+      setUploading(false);
     }
   };
 
@@ -163,19 +171,9 @@ const useEmployeeManagement = () => {
     setSelectedEmpleados(null);
   };
 
-  // Refrescar datos
+  // Refrescar datos (usa la función fetchEmpleados)
   const refreshEmpleados = async () => {
-    try {
-      setLoading(true);
-      const response = await axios.get('http://localhost:4000/api/empleados');
-      setEmpleados(response.data);
-      setError(null);
-    } catch (error) {
-      console.error('Error al refrescar empleados:', error);
-      setError("Error al cargar los empleados");
-    } finally {
-      setLoading(false);
-    }
+    await fetchEmpleados();
   };
 
   return {
@@ -193,11 +191,13 @@ const useEmployeeManagement = () => {
     showEditAlert,
     successType,
     filterEmpleados,
+    uploading, // Estado para el botón de actualizar
 
     // Setters
     setSearchTerm,
     setSortBy,
     setError,
+    setUploading,
 
     // Funciones
     handleContinue,
@@ -212,7 +212,8 @@ const useEmployeeManagement = () => {
     closeEditAlert,
     selectEmpleado,
     closeDetailView,
-    refreshEmpleados
+    refreshEmpleados,
+    fetchEmpleados, // Exportar para usar en otros lugares si necesitas
   };
 };
 
