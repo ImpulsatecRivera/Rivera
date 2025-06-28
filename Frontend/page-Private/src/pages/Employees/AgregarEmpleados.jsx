@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, User, Calendar, ChevronLeft, ChevronRight, ChevronUp, ChevronDown } from 'lucide-react';
+import { ArrowLeft, User, Calendar, ChevronLeft, ChevronRight, ChevronDown, Upload, X } from 'lucide-react';
 import axios from 'axios';
 import Swal from 'sweetalert2';
 
@@ -12,7 +12,8 @@ const AddEmployeeForm = () => {
     birthDate: '',
     password: '',
     phone: '',
-    address: ''
+    address: '',
+    img: null // Nuevo campo para la imagen
   });
 
   const [showCalendar, setShowCalendar] = useState(false);
@@ -21,6 +22,7 @@ const AddEmployeeForm = () => {
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
   const [showYearSelector, setShowYearSelector] = useState(false);
+  const [imagePreview, setImagePreview] = useState(null);
 
   const months = [
     'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
@@ -166,6 +168,51 @@ const AddEmployeeForm = () => {
     });
   };
 
+  // Manejar subida de imagen
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      // Validar tipo de archivo
+      if (!file.type.startsWith('image/')) {
+        alert('Por favor selecciona un archivo de imagen válido');
+        return;
+      }
+      
+      // Validar tamaño (máximo 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        alert('La imagen debe ser menor a 5MB');
+        return;
+      }
+
+      setFormData(prev => ({
+        ...prev,
+        img: file
+      }));
+
+      // Crear preview
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setImagePreview(e.target.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  // Remover imagen
+  const removeImage = () => {
+    setFormData(prev => ({
+      ...prev,
+      img: null
+    }));
+    setImagePreview(null);
+    
+    // Limpiar el input file
+    const fileInput = document.getElementById('img-input');
+    if (fileInput) {
+      fileInput.value = '';
+    }
+  };
+
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     let formattedValue = value;
@@ -205,9 +252,9 @@ const AddEmployeeForm = () => {
     const newErrors = {};
     if (!formData.name) newErrors.name = "El nombre es obligatorio";
     if (!formData.lastName) newErrors.lastName = "El apellido es obligatorio";
-    if (!formData.dui) newErrors.dui = "El DUI es obligatorio"; // CAMBIO: usar 'dui'
+    if (!formData.dui) newErrors.dui = "El DUI es obligatorio";
     if (formData.dui && formData.dui.replace(/\D/g, '').length !== 9) {
-      newErrors.dui = "El DUI debe tener exactamente 9 dígitos"; // CAMBIO: usar 'dui'
+      newErrors.dui = "El DUI debe tener exactamente 9 dígitos";
     }
     if (!formData.birthDate) newErrors.birthDate = "La fecha de nacimiento es obligatoria";
     if (!formData.password) newErrors.password = "La contraseña es obligatoria";
@@ -272,27 +319,31 @@ const AddEmployeeForm = () => {
       setLoading(true);
       console.log('Estado de loading activado');
       
-      // Preparar los datos para enviar (sin email, se genera en el backend)
-      const dataToSend = {
-        name: formData.name.trim(),
-        lastName: formData.lastName.trim(),
-        dui: formData.dui.trim(),
-        birthDate: formData.birthDate,
-        password: formData.password,
-        phone: formData.phone.trim(),
-        address: formData.address.trim()
-      };
+      // Crear FormData para enviar archivo
+      const formDataToSend = new FormData();
+      formDataToSend.append('name', formData.name.trim());
+      formDataToSend.append('lastName', formData.lastName.trim());
+      formDataToSend.append('dui', formData.dui.trim());
+      formDataToSend.append('birthDate', formData.birthDate);
+      formDataToSend.append('password', formData.password);
+      formDataToSend.append('phone', formData.phone.trim());
+      formDataToSend.append('address', formData.address.trim());
+      
+      // Agregar imagen si existe
+      if (formData.img) {
+        formDataToSend.append('img', formData.img);
+      }
 
       console.log('=== DATOS A ENVIAR ===');
-      console.log('Datos completos:', dataToSend);
+      console.log('Incluye imagen:', !!formData.img);
       
       console.log('=== ENVIANDO PETICIÓN ===');
       console.log('URL:', 'http://localhost:4000/api/empleados');
       
       // Llamada a la API con axios
-      const response = await axios.post('http://localhost:4000/api/empleados', dataToSend, {
+      const response = await axios.post('http://localhost:4000/api/empleados', formDataToSend, {
         headers: {
-          'Content-Type': 'application/json',
+          'Content-Type': 'multipart/form-data',
         },
         timeout: 10000, // 10 segundos de timeout
       });
@@ -318,9 +369,11 @@ const AddEmployeeForm = () => {
           birthDate: '',
           password: '',
           phone: '',
-          address: ''
+          address: '',
+          img: null
         });
         setSelectedDate(null);
+        setImagePreview(null);
         setErrors({});
       }
       
@@ -446,7 +499,7 @@ const AddEmployeeForm = () => {
 
       {/* Main Content */}
       <div className="px-8 pb-8" style={{ height: 'calc(100vh - 80px)' }}>
-        <div className="bg-white rounded-2xl p-8 h-full max-w-none mx-0">
+        <div className="bg-white rounded-2xl p-8 h-full max-w-none mx-0 overflow-y-auto">
           {/* Title Section */}
           <div className="flex items-center justify-between mb-8">
             <div className="flex items-center space-x-4">
@@ -466,54 +519,132 @@ const AddEmployeeForm = () => {
           </div>
 
           {/* Form */}
-          <form onSubmit={handleSubmit}>
+          <div>
             <div className="space-y-8 max-w-6xl">
-              {/* First Row */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Nombre</label>
-                  <input
-                    type="text"
-                    name="name"
-                    value={formData.name}
-                    onChange={handleInputChange}
-                    placeholder="Introduce el nombre del empleado"
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none text-sm text-gray-700 placeholder-gray-400"
-                    onFocus={handleFocus}
-                    onBlur={handleBlur}
-                  />
-                  {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name}</p>}
+              {/* First Row - Image and Basic Info */}
+              <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start">
+                {/* Image Upload Section */}
+                <div className="lg:col-span-1">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Foto del Empleado</label>
+                  <div className="space-y-3">
+                    {/* Preview de la imagen - Altura fija para alinear con campos */}
+                    <div className="relative group">
+                      <div className="w-full h-48 border-2 border-dashed rounded-xl flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 overflow-hidden transition-all duration-300 hover:from-blue-50 hover:to-blue-100 hover:border-blue-300"
+                           style={{ borderColor: imagePreview ? '#375E27' : '#d1d5db' }}>
+                        {imagePreview ? (
+                          <div className="relative w-full h-full">
+                            <img 
+                              src={imagePreview} 
+                              alt="Preview" 
+                              className="w-full h-full object-cover rounded-lg"
+                            />
+                            <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all duration-300 rounded-lg flex items-center justify-center">
+                              <button
+                                type="button"
+                                onClick={removeImage}
+                                className="opacity-0 group-hover:opacity-100 bg-red-500 text-white rounded-full p-2 hover:bg-red-600 transition-all duration-300 transform hover:scale-110 shadow-lg"
+                              >
+                                <X className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="text-center p-4">
+                            <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-white shadow-md flex items-center justify-center">
+                              <User className="w-6 h-6 text-gray-400" />
+                            </div>
+                            <p className="text-sm font-medium text-gray-600 mb-1">Foto del empleado</p>
+                            <p className="text-xs text-gray-500">Arrastra o haz clic para subir</p>
+                          </div>
+                        )}
+                      </div>
+                      
+                      {/* Overlay para drag & drop visual */}
+                      <input
+                        type="file"
+                        id="img-input"
+                        accept="image/*"
+                        onChange={handleImageChange}
+                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                      />
+                    </div>
+                    
+                    {/* Botón de acción */}
+                    <label
+                      htmlFor="img-input"
+                      className="w-full flex items-center justify-center px-3 py-2.5 rounded-lg cursor-pointer transition-all duration-300 text-white text-sm font-medium shadow-md hover:shadow-lg"
+                      style={{ backgroundColor: imagePreview ? '#375E27' : '#6B7280' }}
+                    >
+                      <Upload className="w-4 h-4 mr-2" />
+                      <span>{formData.img ? 'Cambiar foto' : 'Seleccionar foto'}</span>
+                    </label>
+                    
+                    {/* Información de ayuda - Compacta */}
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-2.5">
+                      <div className="flex items-start space-x-2">
+                        <div className="w-3 h-3 rounded-full bg-blue-400 flex items-center justify-center mt-0.5 flex-shrink-0">
+                          <span className="text-white text-xs font-bold">i</span>
+                        </div>
+                        <div>
+                          <p className="text-xs font-medium text-blue-800 mb-1">Requisitos:</p>
+                          <div className="text-xs text-blue-700 space-y-0.5">
+                            <div>• JPG, PNG, GIF</div>
+                            <div>• Máximo: 5MB</div>
+                            <div>• Recomendado: 400x400px</div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Apellido</label>
-                  <input
-                    type="text"
-                    name="lastName"
-                    value={formData.lastName}
-                    onChange={handleInputChange}
-                    placeholder="Introduce el apellido del empleado"
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none text-sm text-gray-700 placeholder-gray-400"
-                    onFocus={handleFocus}
-                    onBlur={handleBlur}
-                  />
-                  {errors.lastName && <p className="text-red-500 text-xs mt-1">{errors.lastName}</p>}
-                </div>
+                {/* Basic Information */}
+                <div className="lg:col-span-3 grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Nombre</label>
+                    <input
+                      type="text"
+                      name="name"
+                      value={formData.name}
+                      onChange={handleInputChange}
+                      placeholder="Introduce el nombre del empleado"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none text-sm text-gray-700 placeholder-gray-400"
+                      onFocus={handleFocus}
+                      onBlur={handleBlur}
+                    />
+                    {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name}</p>}
+                  </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">DUI</label>
-                  <input
-                    type="text"
-                    name="dui"
-                    value={formData.dui}
-                    onChange={handleInputChange}
-                    placeholder="12345678-9"
-                    maxLength="10"
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none text-sm text-gray-700 placeholder-gray-400"
-                    onFocus={handleFocus}
-                    onBlur={handleBlur}
-                  />
-                  {errors.dui && <p className="text-red-500 text-xs mt-1">{errors.dui}</p>}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Apellido</label>
+                    <input
+                      type="text"
+                      name="lastName"
+                      value={formData.lastName}
+                      onChange={handleInputChange}
+                      placeholder="Introduce el apellido del empleado"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none text-sm text-gray-700 placeholder-gray-400"
+                      onFocus={handleFocus}
+                      onBlur={handleBlur}
+                    />
+                    {errors.lastName && <p className="text-red-500 text-xs mt-1">{errors.lastName}</p>}
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">DUI</label>
+                    <input
+                      type="text"
+                      name="dui"
+                      value={formData.dui}
+                      onChange={handleInputChange}
+                      placeholder="12345678-9"
+                      maxLength="10"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none text-sm text-gray-700 placeholder-gray-400"
+                      onFocus={handleFocus}
+                      onBlur={handleBlur}
+                    />
+                    {errors.dui && <p className="text-red-500 text-xs mt-1">{errors.dui}</p>}
+                  </div>
                 </div>
               </div>
 
@@ -677,7 +808,7 @@ const AddEmployeeForm = () => {
                 </div>
               </div>
             </div>
-          </form>
+          </div>
         </div>
       </div>
     </div>
