@@ -525,78 +525,81 @@ const AddEmployeeForm = () => {
               <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start">
                 {/* Image Upload Section */}
                 <div className="lg:col-span-1">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Foto del Empleado</label>
-                  <div className="space-y-3">
-                    {/* Preview de la imagen - Altura fija para alinear con campos */}
-                    <div className="relative group">
-                      <div className="w-full h-48 border-2 border-dashed rounded-xl flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 overflow-hidden transition-all duration-300 hover:from-blue-50 hover:to-blue-100 hover:border-blue-300"
-                           style={{ borderColor: imagePreview ? '#375E27' : '#d1d5db' }}>
-                        {imagePreview ? (
-                          <div className="relative w-full h-full">
-                            <img 
-                              src={imagePreview} 
-                              alt="Preview" 
-                              className="w-full h-full object-cover rounded-lg"
-                            />
-                            <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all duration-300 rounded-lg flex items-center justify-center">
-                              <button
-                                type="button"
-                                onClick={removeImage}
-                                className="opacity-0 group-hover:opacity-100 bg-red-500 text-white rounded-full p-2 hover:bg-red-600 transition-all duration-300 transform hover:scale-110 shadow-lg"
-                              >
-                                <X className="w-4 h-4" />
-                              </button>
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="text-center p-4">
-                            <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-white shadow-md flex items-center justify-center">
-                              <User className="w-6 h-6 text-gray-400" />
-                            </div>
-                            <p className="text-sm font-medium text-gray-600 mb-1">Foto del empleado</p>
-                            <p className="text-xs text-gray-500">Arrastra o haz clic para subir</p>
-                          </div>
-                        )}
-                      </div>
-                      
-                      {/* Overlay para drag & drop visual */}
-                      <input
-                        type="file"
-                        id="img-input"
-                        accept="image/*"
-                        onChange={handleImageChange}
-                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-                      />
-                    </div>
-                    
-                    {/* Botón de acción */}
-                    <label
-                      htmlFor="img-input"
-                      className="w-full flex items-center justify-center px-3 py-2.5 rounded-lg cursor-pointer transition-all duration-300 text-white text-sm font-medium shadow-md hover:shadow-lg"
-                      style={{ backgroundColor: imagePreview ? '#375E27' : '#6B7280' }}
-                    >
-                      <Upload className="w-4 h-4 mr-2" />
-                      <span>{formData.img ? 'Cambiar foto' : 'Seleccionar foto'}</span>
-                    </label>
-                    
-                    {/* Información de ayuda - Compacta */}
-                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-2.5">
-                      <div className="flex items-start space-x-2">
-                        <div className="w-3 h-3 rounded-full bg-blue-400 flex items-center justify-center mt-0.5 flex-shrink-0">
-                          <span className="text-white text-xs font-bold">i</span>
-                        </div>
-                        <div>
-                          <p className="text-xs font-medium text-blue-800 mb-1">Requisitos:</p>
-                          <div className="text-xs text-blue-700 space-y-0.5">
-                            <div>• JPG, PNG, GIF</div>
-                            <div>• Máximo: 5MB</div>
-                            <div>• Recomendado: 400x400px</div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+  <label className="block text-sm font-medium text-gray-700 mb-2">Foto del Empleado</label>
+  <div className="space-y-3">
+    {/* Preview de la imagen - Altura fija para alinear con campos */}
+    <div className="relative group">
+      <div
+        className="w-full h-48 border-2 border-dashed rounded-xl flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 overflow-hidden transition-all duration-300 hover:from-blue-50 hover:to-blue-100 hover:border-blue-300"
+        style={{ borderColor: imagePreview ? '#375E27' : '#d1d5db' }}
+      >
+        {imagePreview ? (
+          <div className="relative w-full h-full">
+            <img
+              src={imagePreview}
+              alt="Preview"
+              className="w-full h-full object-cover rounded-lg"
+            />
+            <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all duration-300 rounded-lg flex items-center justify-center">
+              <button
+                type="button"
+                onClick={removeImage}
+                className="opacity-0 group-hover:opacity-100 bg-red-500 text-white rounded-full p-2 hover:bg-red-600 transition-all duration-300 transform hover:scale-110 shadow-lg"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="text-center p-4">
+            <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-white shadow-md flex items-center justify-center">
+              <User className="w-6 h-6 text-gray-400" />
+            </div>
+            <p className="text-sm font-medium text-gray-600 mb-1">Foto del empleado</p>
+            <p className="text-xs text-gray-500">Arrastra o haz clic para subir</p>
+          </div>
+        )}
+      </div>
+
+      {/* Overlay para drag & drop visual */}
+      <input
+        type="file"
+        id="img-input"
+        accept="image/*"
+        onChange={handleImageChange}
+        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+      />
+    </div>
+
+    {/* Botón de acción */}
+    <label
+      htmlFor="img-input"
+      className="w-full flex items-center justify-center px-3 py-2.5 rounded-lg cursor-pointer transition-all duration-300 text-white text-sm font-medium shadow-md hover:shadow-lg"
+      style={{ backgroundColor: imagePreview ? '#375E27' : '#6B7280' }}
+    >
+      <Upload className="w-4 h-4 mr-2" />
+      <span>{formData.img ? 'Cambiar foto' : 'Seleccionar foto'}</span>
+    </label>
+
+    {/* Información de ayuda - Compacta */}
+    <div className="bg-blue-50 border border-blue-200 rounded-lg p-2.5">
+      <div className="flex items-start space-x-2">
+        <div className="w-3 h-3 rounded-full bg-blue-400 flex items-center justify-center mt-0.5 flex-shrink-0">
+          <span className="text-white text-xs font-bold">i</span>
+        </div>
+        <div>
+          <p className="text-xs font-medium text-blue-800 mb-1">Requisitos:</p>
+          <div className="text-xs text-blue-700 space-y-0.5">
+            <div>• JPG, PNG, GIF</div>
+            <div>• Máximo: 5MB</div>
+            <div>• Recomendado: 400x400px</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 
                 {/* Basic Information */}
                 <div className="lg:col-span-3 grid grid-cols-1 md:grid-cols-3 gap-6">
