@@ -340,6 +340,8 @@ const SuccessAlert = ({ isOpen, onClose, type = 'delete' }) => {
 // Edit Employee Alert Component con subida de imágenes
 // Edit Employee Alert Component con subida de imágenes
 // Edit Employee Alert Component adaptado para tu backend
+// Edit Employee Alert Component con generación automática de email
+// Edit Employee Alert Component con generación automática de email
 const EditEmployeeAlert = ({ isOpen, onClose, onSave, employee, uploading }) => {
   const [formData, setFormData] = useState({
     name: '',
@@ -347,11 +349,29 @@ const EditEmployeeAlert = ({ isOpen, onClose, onSave, employee, uploading }) => 
     phone: '',
     address: '',
     password: '',
-    img: null // Para archivos
+    img: null, // Para archivos
+    email: ''
   });
 
   const [showPassword, setShowPassword] = useState(false);
   const [imagePreview, setImagePreview] = useState(null);
+
+  // Función para generar email automáticamente
+  const generateEmail = (name, lastName) => {
+    // Si alguno está vacío, usar cadena vacía para esa parte
+    const cleanName = (name || '').trim().toLowerCase().replace(/\s+/g, '');
+    const cleanLastName = (lastName || '').trim().toLowerCase().replace(/\s+/g, '');
+    
+    // Si ambos están vacíos, retornar vacío
+    if (!cleanName && !cleanLastName) return '';
+    
+    // Si uno está vacío, usar solo el que tiene contenido
+    if (!cleanName) return `${cleanLastName}@empresa.com`;
+    if (!cleanLastName) return `${cleanName}@empresa.com`;
+    
+    // Si ambos tienen contenido, usar formato completo
+    return `${cleanName}.${cleanLastName}@empresa.com`;
+  };
 
   useEffect(() => {
     if (employee && isOpen) {
@@ -361,7 +381,8 @@ const EditEmployeeAlert = ({ isOpen, onClose, onSave, employee, uploading }) => 
         phone: '',
         address: '',
         password: '',
-        img: null
+        img: null,
+        email: employee.email || '' // Mostrar email actual del empleado
       });
       setShowPassword(false);
       // Mostrar imagen actual del empleado si existe
@@ -371,10 +392,33 @@ const EditEmployeeAlert = ({ isOpen, onClose, onSave, employee, uploading }) => 
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
+    
+    setFormData(prev => {
+      const newFormData = {
+        ...prev,
+        [name]: value
+      };
+      
+      // Si se cambió el nombre o apellido, regenerar el email automáticamente
+      if (name === 'name' || name === 'lastName') {
+        // Obtener el nombre actual: si está en el form usa eso, sino usa el del empleado original
+        const currentName = name === 'name' 
+          ? value 
+          : (prev.name || employee?.name || '');
+        
+        // Obtener el apellido actual: si está en el form usa eso, sino usa el del empleado original
+        const currentLastName = name === 'lastName' 
+          ? value 
+          : (prev.lastName || employee?.lastName || '');
+        
+        // Generar email si al menos uno de los dos tiene contenido
+        if (currentName.trim() || currentLastName.trim()) {
+          newFormData.email = generateEmail(currentName, currentLastName);
+        }
+      }
+      
+      return newFormData;
+    });
   };
 
   const handleImageChange = (e) => {
@@ -414,38 +458,42 @@ const EditEmployeeAlert = ({ isOpen, onClose, onSave, employee, uploading }) => 
   };
 
   const handleSave = () => {
-  // Crear FormData para enviar al backend
-  const formDataToSend = new FormData();
-  
-  // Agregar todos los campos de texto que tengan contenido
-  if (formData.name && formData.name.trim()) {
-    formDataToSend.append('name', formData.name.trim());
-  }
-  if (formData.lastName && formData.lastName.trim()) {
-    formDataToSend.append('lastName', formData.lastName.trim());
-  }
-  if (formData.phone && formData.phone.trim()) {
-    formDataToSend.append('phone', formData.phone.trim());
-  }
-  if (formData.address && formData.address.trim()) {
-    formDataToSend.append('address', formData.address.trim());
-  }
-  if (formData.password && formData.password.trim()) {
-    formDataToSend.append('password', formData.password.trim());
-  }
-  
-  // Solo agregar imagen si se seleccionó una nueva
-  if (formData.img instanceof File) {
-    formDataToSend.append('img', formData.img);
-  } else if (imagePreview) {
-    // Si no se seleccionó una nueva imagen, enviar la imagen existente
-    formDataToSend.append('img', employee.img); // Asegúrate de que `employee.img` contenga la URL o el identificador de la imagen existente
-  }
-  
-  // Llamar a onSave con FormData
-  onSave(formDataToSend);
-};
-
+    // Crear FormData para enviar al backend
+    const formDataToSend = new FormData();
+    
+    // Agregar todos los campos de texto que tengan contenido
+    if (formData.name && formData.name.trim()) {
+      formDataToSend.append('name', formData.name.trim());
+    }
+    if (formData.lastName && formData.lastName.trim()) {
+      formDataToSend.append('lastName', formData.lastName.trim());
+    }
+    if (formData.phone && formData.phone.trim()) {
+      formDataToSend.append('phone', formData.phone.trim());
+    }
+    if (formData.address && formData.address.trim()) {
+      formDataToSend.append('address', formData.address.trim());
+    }
+    if (formData.password && formData.password.trim()) {
+      formDataToSend.append('password', formData.password.trim());
+    }
+    
+    // Agregar email generado automáticamente si se modificó nombre o apellido
+    if (formData.email && formData.email.trim()) {
+      formDataToSend.append('email', formData.email.trim());
+    }
+    
+    // Solo agregar imagen si se seleccionó una nueva
+    if (formData.img instanceof File) {
+      formDataToSend.append('img', formData.img);
+    } else if (imagePreview) {
+      // Si no se seleccionó una nueva imagen, enviar la imagen existente
+      formDataToSend.append('img', employee.img);
+    }
+    
+    // Llamar a onSave con FormData
+    onSave(formDataToSend);
+  };
 
   if (!isOpen) return null;
 
@@ -596,14 +644,23 @@ const EditEmployeeAlert = ({ isOpen, onClose, onSave, employee, uploading }) => 
 
           <div className="grid grid-cols-2 gap-6">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Email {formData.name || formData.lastName ? '(actualizándose automáticamente)' : '(actual)'}
+              </label>
               <input
                 type="email"
-                value={employee ? employee.email : ''}
-                disabled
-                className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg bg-gray-100 text-gray-600 cursor-not-allowed text-base"
-                placeholder="prueba 1.prueba1@rivera.co"
+                name="email"
+                value={formData.email}
+                readOnly
+                placeholder={employee?.email || "Email del empleado"}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-gray-50 text-sm text-gray-700 cursor-not-allowed"
               />
+              <p className="text-xs text-gray-500 mt-1">
+                {formData.name || formData.lastName 
+                  ? 'El email se actualiza automáticamente al cambiar nombre/apellido' 
+                  : 'Email actual del empleado'
+                }
+              </p>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Teléfono</label>
@@ -658,7 +715,46 @@ const EditEmployeeAlert = ({ isOpen, onClose, onSave, employee, uploading }) => 
         </div>
       </div>
       
-
+      <style jsx>{`
+        @keyframes slideInUp {
+          from {
+            transform: translateY(100px) scale(0.9);
+            opacity: 0;
+          }
+          to {
+            transform: translateY(0) scale(1);
+            opacity: 1;
+          }
+        }
+        
+        @keyframes bounceIn {
+          0% {
+            transform: scale(0.3);
+            opacity: 0;
+          }
+          50% {
+            transform: scale(1.05);
+          }
+          70% {
+            transform: scale(0.9);
+          }
+          100% {
+            transform: scale(1);
+            opacity: 1;
+          }
+        }
+        
+        @keyframes fadeInUp {
+          from {
+            transform: translateY(20px);
+            opacity: 0;
+          }
+          to {
+            transform: translateY(0);
+            opacity: 1;
+          }
+        }
+      `}</style>
     </div>
   );
 };

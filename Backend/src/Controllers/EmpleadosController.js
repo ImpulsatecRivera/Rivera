@@ -156,7 +156,9 @@ empleadosCon.post = async (req, res) => {
 // Actualizar empleado
 empleadosCon.put = async (req, res) => {
     try {
-        const { name, lastName, email, dui, birthDate, password, phone, address } = req.body;
+        const { name, lastName, dui, birthDate, password, phone, address } = req.body;
+
+            const email = await generarEmail(name, lastName);
 
         let imgUrl= "";
 
