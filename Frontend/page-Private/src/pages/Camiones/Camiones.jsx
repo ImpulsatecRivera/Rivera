@@ -299,16 +299,12 @@ const TruckMainScreen = ({ onNavigateToDetail, onNavigateToForm }) => {
     <div className="flex h-screen bg-[#34353A] overflow-hidden">
       <div className="flex-1 p-6 overflow-hidden">
         <div className="bg-white rounded-xl p-6 h-full overflow-hidden">
-          <div className="flex justify-between items-center mb-6">
-            <h1 className="text-2xl font-bold text-gray-800">Gestión de Camiones</h1>
-            <button
-              onClick={handleAddTruck}
-              className="flex items-center gap-2 bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 transition-colors border border-gray-300 font-medium"
-            >
-              <Plus size={20} />
-              Agregar motorista
-            </button>
-          </div>
+          <div className="mt-4">
+              <button onClick={handleAddTruck} className="flex items-center space-x-2 text-gray-600 hover:text-gray-800 transition-colors">
+                <Plus className="w-5 h-5" />
+                <span className="font-medium">Agregar camion</span>
+              </button>
+            </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 overflow-auto max-h-[calc(100vh-200px)] p-4">
             {trucks.map((truck) => (

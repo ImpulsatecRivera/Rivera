@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, User, Calendar, ChevronLeft, ChevronRight, ChevronDown } from 'lucide-react';
+import { ArrowLeft, User, Calendar, ChevronLeft, ChevronRight, ChevronDown, Upload, X } from 'lucide-react';
 import Swal from 'sweetalert2';
 
 const AddMotoristaForm = () => {
@@ -12,9 +12,11 @@ const AddMotoristaForm = () => {
     password: '',
     phone: '',
     address: '',
-    circulationCard: '' // Tarjeta de circulación según el modelo
+    circulationCard: '', // Tarjeta de circulación según el modelo
+    img: null // Campo para la imagen
   });
 
+  const [imagePreview, setImagePreview] = useState(null);
   const [showCalendar, setShowCalendar] = useState(false);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(null);
@@ -76,19 +78,6 @@ const AddMotoristaForm = () => {
     });
   };
 
-  const showValidationAlert = () => {
-    Swal.fire({
-      title: 'Formulario incompleto',
-      text: 'Por favor, completa todos los campos obligatorios',
-      icon: 'warning',
-      confirmButtonText: 'Entendido',
-      confirmButtonColor: '#f59e0b',
-      customClass: {
-        popup: 'animated pulse'
-      }
-    });
-  };
-
   // Generar email automáticamente cuando cambien nombre o apellido
   useEffect(() => {
     if (formData.name && formData.lastName) {
@@ -104,6 +93,64 @@ const AddMotoristaForm = () => {
       }));
     }
   }, [formData.name, formData.lastName]);
+
+  // Manejar la selección de imagen
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      // Validar tipo de archivo
+      const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
+      if (!validTypes.includes(file.type)) {
+        Swal.fire({
+          title: 'Formato no válido',
+          text: 'Por favor selecciona una imagen en formato JPG, PNG o GIF',
+          icon: 'warning',
+          confirmButtonText: 'Entendido',
+          confirmButtonColor: '#f59e0b'
+        });
+        return;
+      }
+
+      // Validar tamaño (max 5MB)
+      const maxSize = 5 * 1024 * 1024; // 5MB
+      if (file.size > maxSize) {
+        Swal.fire({
+          title: 'Archivo muy grande',
+          text: 'La imagen debe ser menor a 5MB',
+          icon: 'warning',
+          confirmButtonText: 'Entendido',
+          confirmButtonColor: '#f59e0b'
+        });
+        return;
+      }
+
+      setFormData(prev => ({
+        ...prev,
+        img: file
+      }));
+
+      // Crear preview
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setImagePreview(e.target.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  // Remover imagen
+  const removeImage = () => {
+    setFormData(prev => ({
+      ...prev,
+      img: null
+    }));
+    setImagePreview(null);
+    // Limpiar el input
+    const fileInput = document.getElementById('image-upload');
+    if (fileInput) {
+      fileInput.value = '';
+    }
+  };
 
   const getDaysInMonth = (date) => {
     const year = date.getFullYear();
@@ -226,6 +273,8 @@ const AddMotoristaForm = () => {
     if (formData.circulationCard && formData.circulationCard.length < 3) {
       newErrors.circulationCard = "La tarjeta de circulación debe tener al menos 3 caracteres";
     }
+    // La imagen no es obligatoria, pero si se sube debe ser válida
+    if (!formData.img) newErrors.img = "La imagen es obligatoria";
 
     return newErrors;
   };
@@ -252,7 +301,8 @@ const AddMotoristaForm = () => {
           password: 'Contraseña',
           phone: 'Teléfono',
           address: 'Dirección',
-          circulationCard: 'Tarjeta de circulación'
+          circulationCard: 'Tarjeta de circulación',
+          img: 'Imagen'
         };
         return fieldNames[field] || field;
       });
@@ -283,31 +333,43 @@ const AddMotoristaForm = () => {
       setLoading(true);
       console.log('Estado de loading activado');
       
-      // Preparar los datos para enviar (sin email, se genera en el backend)
-      const dataToSend = {
+      // Crear FormData para enviar archivos
+      const formDataToSend = new FormData();
+      formDataToSend.append('name', formData.name.trim());
+      formDataToSend.append('lastName', formData.lastName.trim());
+      formDataToSend.append('id', formData.id.trim());
+      formDataToSend.append('birthDate', formData.birthDate);
+      formDataToSend.append('password', formData.password);
+      formDataToSend.append('phone', formData.phone.trim());
+      formDataToSend.append('address', formData.address.trim());
+      formDataToSend.append('circulationCard', formData.circulationCard.trim());
+      
+      // Agregar la imagen si existe
+      if (formData.img) {
+        formDataToSend.append('img', formData.img);
+      }
+
+      console.log('=== DATOS A ENVIAR ===');
+      console.log('Datos con imagen:', {
         name: formData.name.trim(),
         lastName: formData.lastName.trim(),
-        id: formData.id.trim(), // DUI según el modelo
+        id: formData.id.trim(),
         birthDate: formData.birthDate,
         password: formData.password,
         phone: formData.phone.trim(),
         address: formData.address.trim(),
-        circulationCard: formData.circulationCard.trim() // Tarjeta de circulación
-      };
-
-      console.log('=== DATOS A ENVIAR ===');
-      console.log('Datos completos:', dataToSend);
+        circulationCard: formData.circulationCard.trim(),
+        hasImage: !!formData.img,
+        imageSize: formData.img ? `${(formData.img.size / 1024).toFixed(2)} KB` : 'No image'
+      });
       
       console.log('=== ENVIANDO PETICIÓN ===');
       console.log('URL:', 'http://localhost:4000/api/motoristas');
       
-      // Llamada a la API con fetch
+      // Llamada a la API con fetch usando FormData
       const response = await fetch('http://localhost:4000/api/motoristas', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(dataToSend),
+        body: formDataToSend, // No agregar Content-Type header, fetch lo hace automáticamente con FormData
       });
       
       console.log('=== RESPUESTA RECIBIDA ===');
@@ -333,10 +395,18 @@ const AddMotoristaForm = () => {
           password: '',
           phone: '',
           address: '',
-          circulationCard: ''
+          circulationCard: '',
+          img: null
         });
+        setImagePreview(null);
         setSelectedDate(null);
         setErrors({});
+        
+        // Limpiar input de archivo
+        const fileInput = document.getElementById('image-upload');
+        if (fileInput) {
+          fileInput.value = '';
+        }
       } else {
         const errorData = await response.json();
         throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
@@ -376,6 +446,10 @@ const AddMotoristaForm = () => {
             case 409:
               errorTitle = '⚠️ Conflicto de datos';
               errorMsg = 'Ya existe un motorista con estos datos. Verifica el DUI o tarjeta de circulación.';
+              break;
+            case 413:
+              errorTitle = '📁 Archivo muy grande';
+              errorMsg = 'La imagen es muy grande. Reduce el tamaño e intenta de nuevo.';
               break;
             case 500:
               errorTitle = '🔥 Error del servidor';
@@ -455,8 +529,8 @@ const AddMotoristaForm = () => {
       </div>
 
       {/* Main Content */}
-      <div className="px-8 pb-8" style={{ height: 'calc(100vh - 80px)' }}>
-        <div className="bg-white rounded-2xl p-8 h-full max-w-none mx-0">
+      <div className="px-8 pb-8" style={{ height: 'calc(100vh - 80px)', overflowY: 'auto' }}>
+        <div className="bg-white rounded-2xl p-8 min-h-full max-w-7xl mx-auto">
           {/* Title Section */}
           <div className="flex items-center justify-between mb-8">
             <div className="flex items-center space-x-4">
@@ -476,8 +550,60 @@ const AddMotoristaForm = () => {
           </div>
 
           {/* Form */}
-          <div>
-            <div className="space-y-8 max-w-6xl">
+          <div className="overflow-x-auto">
+            <div className="space-y-8 min-w-[900px]">
+              {/* Image Upload Section */}
+              <div className="w-full">
+                <div className="max-w-md">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Imagen del Motorista</label>
+                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-6">
+                    {!imagePreview ? (
+                      <div className="text-center">
+                        <Upload className="mx-auto h-12 w-12 text-gray-400" />
+                        <div className="mt-4">
+                          <label
+                            htmlFor="image-upload"
+                            className="cursor-pointer bg-white rounded-md font-medium text-gray-600 hover:text-gray-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-indigo-500"
+                          >
+                            <span className="block text-sm">Haz clic para subir una imagen</span>
+                            <input
+                              id="image-upload"
+                              name="img"
+                              type="file"
+                              accept="image/*"
+                              className="sr-only"
+                              onChange={handleImageChange}
+                            />
+                          </label>
+                          <p className="text-xs text-gray-500 mt-2">PNG, JPG, GIF hasta 5MB</p>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="relative inline-block">
+                        <div className="mx-auto w-40 h-40 border-2 border-gray-200 rounded-lg overflow-hidden bg-gray-50 flex items-center justify-center">
+                          <img
+                            src={imagePreview}
+                            alt="Preview"
+                            className="max-w-full max-h-full object-contain"
+                          />
+                        </div>
+                        <button
+                          type="button"
+                          onClick={removeImage}
+                          className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-colors shadow-lg"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                        <p className="text-center text-sm text-gray-600 mt-2 max-w-40 truncate">
+                          {formData.img?.name}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                  {errors.img && <p className="text-red-500 text-xs mt-1">{errors.img}</p>}
+                </div>
+              </div>
+
               {/* First Row */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div>
