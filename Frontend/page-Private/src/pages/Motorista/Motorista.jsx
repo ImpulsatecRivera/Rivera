@@ -344,7 +344,8 @@ const EditMotoristaAlert = ({ isOpen, onClose, onSave, motorista }) => {
     phone: '',
     address: '',
     password: '',
-    circulationCard: ''
+    circulationCard: '',
+    email: ''
   });
 
   const [showPassword, setShowPassword] = useState(false);
@@ -357,7 +358,8 @@ const EditMotoristaAlert = ({ isOpen, onClose, onSave, motorista }) => {
         phone: '',
         address: '',
         password: '',
-        circulationCard: ''
+        circulationCard: '',
+        email: ''
       });
       setShowPassword(false);
     }
@@ -432,7 +434,19 @@ const EditMotoristaAlert = ({ isOpen, onClose, onSave, motorista }) => {
             animation: isOpen ? 'fadeInUp 0.5s ease-out 0.3s both' : 'none'
           }}
         >
+          {/* Primera fila: Apellido y Nombre */}
           <div className="grid grid-cols-2 gap-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Apellido</label>
+              <input
+                type="text"
+                name="lastName"
+                value={formData.lastName}
+                onChange={handleInputChange}
+                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 text-base text-gray-900 bg-white"
+                placeholder="Martinez"
+              />
+            </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Nombre</label>
               <input
@@ -441,8 +455,31 @@ const EditMotoristaAlert = ({ isOpen, onClose, onSave, motorista }) => {
                 value={formData.name}
                 onChange={handleInputChange}
                 className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 text-base text-gray-900 bg-white"
-                placeholder="Carlos"
+                placeholder="Martinez"
               />
+            </div>
+          </div>
+
+          {/* Segunda fila: Email y Fecha de nacimiento */}
+          <div className="grid grid-cols-2 gap-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Email {formData.name || formData.lastName ? '(actualizándose automáticamente)' : '(actual)'}
+              </label>
+              <input
+                type="email"
+                name="email"
+                value={formData.email}
+                readOnly
+                placeholder={motorista?.email || "Email del empleado"}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-gray-50 text-sm text-gray-700 cursor-not-allowed"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                {formData.name || formData.lastName 
+                  ? 'El email se actualiza automáticamente al cambiar nombre/apellido' 
+                  : 'Email actual del empleado'
+                }
+              </p>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Fecha de nacimiento</label>
@@ -456,18 +493,8 @@ const EditMotoristaAlert = ({ isOpen, onClose, onSave, motorista }) => {
             </div>
           </div>
 
+          {/* Tercera fila: Contraseña y Teléfono */}
           <div className="grid grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Apellido</label>
-              <input
-                type="text"
-                name="lastName"
-                value={formData.lastName}
-                onChange={handleInputChange}
-                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 text-base text-gray-900 bg-white"
-                placeholder="Martinez"
-              />
-            </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Contraseña</label>
               <div className="relative">
@@ -492,19 +519,6 @@ const EditMotoristaAlert = ({ isOpen, onClose, onSave, motorista }) => {
                 </button>
               </div>
             </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
-              <input
-                type="email"
-                value={motorista ? motorista.email : ''}
-                disabled
-                className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg bg-gray-100 text-gray-600 cursor-not-allowed text-base"
-                placeholder="prueba1.prueba1@rivera.com"
-              />
-            </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Teléfono</label>
               <input
@@ -518,6 +532,7 @@ const EditMotoristaAlert = ({ isOpen, onClose, onSave, motorista }) => {
             </div>
           </div>
 
+          {/* Cuarta fila: DUI y Tarjeta de Circulación */}
           <div className="grid grid-cols-2 gap-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">DUI</label>
@@ -543,6 +558,7 @@ const EditMotoristaAlert = ({ isOpen, onClose, onSave, motorista }) => {
             </div>
           </div>
 
+          {/* Quinta fila: Dirección (campo completo) */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Dirección</label>
             <input
@@ -830,8 +846,23 @@ const MotoristaManagementInterface = () => {
            </div>
 
            <div className="text-center mb-8">
-             <div className="w-20 h-20 bg-orange-400 rounded-full mx-auto mb-4 flex items-center justify-center">
-               <div className="w-16 h-16 bg-orange-300 rounded-full flex items-center justify-center">
+             <div className="w-20 h-20 bg-orange-400 rounded-full mx-auto mb-4 flex items-center justify-center overflow-hidden">
+               {selectedMotorista.img ? (
+                 <img
+                   src={selectedMotorista.img}
+                   alt={`${selectedMotorista.name} ${selectedMotorista.lastName}`}
+                   className="w-full h-full object-cover rounded-full"
+                   onError={(e) => {
+                     // Si la imagen no carga, mostrar el ícono de fallback
+                     e.target.style.display = 'none';
+                     e.target.nextSibling.style.display = 'flex';
+                   }}
+                 />
+               ) : null}
+               <div 
+                 className={`w-16 h-16 bg-orange-300 rounded-full flex items-center justify-center ${selectedMotorista.img ? 'hidden' : 'flex'}`}
+                 style={{ display: selectedMotorista.img ? 'none' : 'flex' }}
+               >
                  <User className="w-10 h-10 text-white" />
                </div>
              </div>

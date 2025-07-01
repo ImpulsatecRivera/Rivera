@@ -1,32 +1,57 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ArrowLeft, ChevronLeft, ChevronRight } from 'lucide-react';
+import CamionFord from "../../images/CamionFord.jpg";
 
-const TruckDetailScreen = ({ truck, onNavigateBack }) => {
+const TruckDetailScreen = () => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [loadingProgress, setLoadingProgress] = useState({});
 
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'DISPONIBLE':
-        return 'text-green-600 bg-green-50';
-      case 'NO DISPONIBLE':
-        return 'text-red-600 bg-red-50';
-      case 'MANTENIMIENTO':
-        return 'text-yellow-600 bg-yellow-50';
-      case 'EN RUTA':
-        return 'text-blue-600 bg-blue-50';
-      default:
-        return 'text-gray-600 bg-gray-50';
-    }
+  // Sample truck data matching the screenshot
+  const truck = {
+    images: [
+      "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=800&h=600&fit=crop",
+      CamionFord,
+    ],
+    plate: "P1234245-0",
+    card: "P97932-9",
+    year: "1978",
+    driver: "Ronald Richards",
+    brand: "Ford",
+    model: "F150",
+    status: "Disponible",
+    stats: {
+      kilometraje: { value: "97,528", percentage: 25 },
+      viajesRealizados: { value: "150", percentage: 60 },
+      visitasAlTaller: { value: "4", percentage: 15 },
+      combustible: { value: "1/2", percentage: 50 },
+      vecesNoDisponible: { value: "35", percentage: 30 },
+    },
   };
 
+  // Animation effect for progress bars
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      Object.keys(truck.stats).forEach((key, index) => {
+        setTimeout(() => {
+          setLoadingProgress((prev) => ({
+            ...prev,
+            [key]: truck.stats[key].percentage,
+          }));
+        }, index * 300);
+      });
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, []);
+
   const nextImage = () => {
-    setCurrentImageIndex((prev) => 
+    setCurrentImageIndex((prev) =>
       prev === truck.images.length - 1 ? 0 : prev + 1
     );
   };
 
   const prevImage = () => {
-    setCurrentImageIndex((prev) => 
+    setCurrentImageIndex((prev) =>
       prev === 0 ? truck.images.length - 1 : prev - 1
     );
   };
@@ -44,179 +69,182 @@ const TruckDetailScreen = ({ truck, onNavigateBack }) => {
   };
 
   return (
-    <div className="flex h-screen bg-gray-50 overflow-hidden">
-      <div className="flex-1 p-6 overflow-hidden">
-        <div className="bg-white rounded-xl h-full overflow-auto">
-          {/* Header */}
-          <div className="flex items-center gap-4 p-6 border-b border-gray-200">
-            <button 
-              onClick={handleBackToMenu}
-              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-            >
-              <ArrowLeft size={20} className="text-gray-600" />
-            </button>
-            <h1 className="text-xl font-semibold text-gray-800">Información del vehículo</h1>
-          </div>
-
-          <div className="flex">
-            {/* Left Sidebar - Statistics */}
-            <div className="w-80 p-6 border-r border-gray-200">
-              <h2 className="text-lg font-semibold text-gray-800 mb-6">Estadísticas del vehículo</h2>
-              
-              <div className="space-y-4">
-                <div className="flex justify-between items-center py-3 border-b border-gray-100">
-                  <span className="text-gray-600">Kilometraje</span>
-                  <span className="font-medium text-gray-900">{truck?.kilometraje}</span>
-                </div>
-                
-                <div className="flex justify-between items-center py-3 border-b border-gray-100">
-                  <span className="text-gray-600">Vida restante</span>
-                  <span className="font-medium text-gray-900">{truck?.vidaUtil}</span>
-                </div>
-                
-                <div className="flex justify-between items-center py-3 border-b border-gray-100">
-                  <span className="text-gray-600">Valor original</span>
-                  <span className="font-medium text-gray-900">{truck?.valorOriginal}</span>
-                </div>
-                
-                <div className="flex justify-between items-center py-3 border-b border-gray-100">
-                  <span className="text-gray-600">Combustible</span>
-                  <span className="font-medium text-gray-900">{truck?.combustible}</span>
-                </div>
-                
-                <div className="flex justify-between items-center py-3">
-                  <span className="text-gray-600">Valor de depreciación</span>
-                  <span className="font-medium text-gray-900">{truck?.valorDepreciacion}</span>
-                </div>
-              </div>
+    <div className="h-screen overflow-hidden" style={{ backgroundColor: '#34353A' }}>
+      <div className="h-full flex flex-col">
+        <div className="flex-1 p-6 overflow-hidden">
+          <div className="bg-white rounded-3xl shadow-lg h-full overflow-hidden flex flex-col">
+            {/* Header */}
+            <div className="flex items-center gap-4 p-6 border-b border-gray-200 flex-shrink-0">
+              <button onClick={handleBackToMenu} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                <ArrowLeft size={20} className="text-gray-600" />
+              </button>
+              <h1 className="text-xl font-semibold text-gray-800">Información del vehículo</h1>
             </div>
 
-            {/* Main Content Area */}
-            <div className="flex-1 p-6">
-              {/* Image Carousel */}
-              <div className="relative mb-6">
-                <div className="w-full h-80 bg-gray-100 rounded-lg overflow-hidden relative">
-                  <img 
-                    src={truck?.images[currentImageIndex]} 
-                    alt={truck?.name}
-                    className="w-full h-full object-cover"
-                  />
-                  
-                  {/* Navigation Arrows */}
-                  {truck?.images.length > 1 && (
-                    <>
-                      <button
-                        onClick={prevImage}
-                        className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-white bg-opacity-80 hover:bg-opacity-100 rounded-full p-2 transition-all"
-                      >
-                        <ChevronLeft size={20} className="text-gray-700" />
-                      </button>
-                      <button
-                        onClick={nextImage}
-                        className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-white bg-opacity-80 hover:bg-opacity-100 rounded-full p-2 transition-all"
-                      >
-                        <ChevronRight size={20} className="text-gray-700" />
-                      </button>
-                    </>
-                  )}
-                  
-                  {/* Image Indicators */}
-                  {truck?.images.length > 1 && (
-                    <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex gap-2">
-                      {truck.images.map((_, index) => (
-                        <button
-                          key={index}
-                          onClick={() => goToImage(index)}
-                          className={`w-3 h-3 rounded-full transition-all ${
-                            index === currentImageIndex 
-                              ? 'bg-white' 
-                              : 'bg-white bg-opacity-50 hover:bg-opacity-75'
-                          }`}
-                        />
-                      ))}
+            <div className="flex flex-1 overflow-hidden">
+              {/* Left Sidebar - Statistics */}
+              <div className="w-80 p-8 border-r border-gray-200 bg-gray-50 flex-shrink-0">
+                <h2 className="text-xl font-semibold text-gray-800 mb-8">Estadísticas del vehículo</h2>
+
+                <div className="space-y-10">
+                  {Object.entries(truck.stats).map(([key, stat], index) => {
+                    const labels = {
+                      kilometraje: "Kilometraje",
+                      viajesRealizados: "Viajes realizados",
+                      visitasAlTaller: "Visitas al taller",
+                      combustible: "Combustible",
+                      vecesNoDisponible: "Veces no disponible",
+                    };
+
+                    return (
+                      <div key={key} className="space-y-3">
+                        <div className="flex justify-between items-center">
+                          <span className="text-gray-700 font-medium text-base">{labels[key]}</span>
+                          <span className="font-bold text-gray-900 text-xl">{stat.value}</span>
+                        </div>
+
+                        {/* Progress Bar */}
+                        <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+                          <div
+                            className="h-full bg-blue-500 rounded-full transition-all duration-1000 ease-out"
+                            style={{
+                              width: `${loadingProgress[key] || 0}%`,
+                              transitionDelay: `${index * 300}ms`,
+                            }}
+                          ></div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Main Content Area */}
+              <div className="flex-1 overflow-y-auto">
+                <div className="p-8">
+                  {/* Image Carousel */}
+                  <div className="relative mb-6">
+                    <div className="w-full h-72 bg-white rounded-2xl overflow-hidden relative shadow-md">
+                      <img
+                        src={truck.images[currentImageIndex]}
+                        alt="Truck"
+                        className="w-full h-full object-contain"
+                      />
+
+                      {/* Navigation Arrows */}
+                      {truck.images.length > 1 && (
+                        <>
+                          <button
+                            onClick={prevImage}
+                            className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-white bg-opacity-80 hover:bg-opacity-100 rounded-full p-2 transition-all"
+                          >
+                            <ChevronLeft size={20} className="text-gray-700" />
+                          </button>
+                          <button
+                            onClick={nextImage}
+                            className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-white bg-opacity-80 hover:bg-opacity-100 rounded-full p-2 transition-all"
+                          >
+                            <ChevronRight size={20} className="text-gray-700" />
+                          </button>
+                        </>
+                      )}
+
+                      {/* Image Indicators */}
+                      {truck.images.length > 1 && (
+                        <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex gap-2">
+                          {truck.images.map((_, index) => (
+                            <button
+                              key={index}
+                              onClick={() => goToImage(index)}
+                              className={`w-3 h-3 rounded-full transition-all ${
+                                index === currentImageIndex
+                                  ? 'bg-white'
+                                  : 'bg-white bg-opacity-50 hover:bg-opacity-75'
+                              }`}
+                            />
+                          ))}
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
-              </div>
+                  </div>
 
-              {/* Vehicle Info Cards */}
-              <div className="grid grid-cols-3 gap-4 mb-6">
-                <div className="bg-blue-50 p-4 rounded-lg text-center">
-                  <div className="text-2xl font-bold text-blue-600">{truck?.plate}</div>
-                  <div className="text-blue-500 text-sm mt-1">🇺🇸</div>
-                </div>
-                
-                <div className="bg-green-50 p-4 rounded-lg text-center">
-                  <div className="text-2xl font-bold text-green-600">{truck?.card}</div>
-                  <div className="text-green-500 text-sm mt-1">🏆</div>
-                </div>
-                
-                <div className="bg-orange-50 p-4 rounded-lg text-center">
-                  <div className="text-2xl font-bold text-orange-600">{truck?.year}</div>
-                  <div className="text-orange-500 text-sm mt-1">🏠</div>
-                </div>
-              </div>
+                  {/* Vehicle Info Cards - Top Row */}
+                  <div className="grid grid-cols-3 gap-6 mb-6">
+                    <div className="bg-white border border-gray-200 p-6 rounded-2xl shadow-sm transform transition-all duration-500 hover:scale-[1.1] hover:shadow-2xl hover:rotate-[10deg] hover:translate-y-4 hover:bg-gradient-to-r hover:from-purple-300 hover:to-pink-400">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <div className="text-xl font-bold text-gray-900 mb-1">{truck.plate}</div>
+                          <div className="text-sm text-gray-500">Tarjeta de circulación</div>
+                        </div>
+                        <div className="text-3xl">🇺🇸</div>
+                      </div>
+                    </div>
 
-              {/* Driver Info Cards */}
-              <div className="grid grid-cols-3 gap-4 mb-6">
-                <div className="bg-white border border-gray-200 p-4 rounded-lg text-center">
-                  <div className="text-sm font-medium text-gray-900">Ronald Richards</div>
-                  <div className="text-xs text-gray-500 mt-1 flex items-center justify-center gap-1">
-                    <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
-                    Conductor
-                  </div>
-                </div>
-                
-                <div className="bg-white border border-gray-200 p-4 rounded-lg text-center">
-                  <div className="text-sm font-medium text-gray-900">Ford</div>
-                  <div className="text-xs text-gray-500 mt-1 flex items-center justify-center gap-1">
-                    <span className="w-2 h-2 bg-purple-500 rounded-full"></span>
-                    Marca
-                  </div>
-                </div>
-                
-                <div className="bg-white border border-gray-200 p-4 rounded-lg text-center">
-                  <div className="text-sm font-medium text-gray-900">F150</div>
-                  <div className="text-xs text-gray-500 mt-1 flex items-center justify-center gap-1">
-                    <span className="w-2 h-2 bg-gray-500 rounded-full"></span>
-                    Modelo
-                  </div>
-                </div>
-              </div>
+                    <div className="bg-white border border-gray-200 p-6 rounded-2xl shadow-sm transform transition-all duration-500 hover:scale-[1.1] hover:shadow-2xl hover:rotate-[10deg] hover:translate-y-4 hover:bg-gradient-to-r hover:from-purple-300 hover:to-pink-400">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <div className="text-xl font-bold text-gray-900 mb-1">{truck.card}</div>
+                          <div className="text-sm text-gray-500">Placa</div>
+                        </div>
+                        <div className="text-3xl">🏆</div>
+                      </div>
+                    </div>
 
-              {/* Status Badge */}
-              <div className="flex justify-end">
-                <div className={`inline-flex items-center px-4 py-2 rounded-full text-sm font-medium ${getStatusColor(truck?.status)}`}>
-                  <div className={`w-3 h-3 rounded-full mr-2 ${
-                    truck?.status === 'DISPONIBLE' ? 'bg-green-500' :
-                    truck?.status === 'NO DISPONIBLE' ? 'bg-red-500' :
-                    truck?.status === 'MANTENIMIENTO' ? 'bg-yellow-500' :
-                    'bg-blue-500'
-                  }`}></div>
-                  {truck?.status}
-                  <span className="ml-2">✓</span>
-                </div>
-              </div>
+                    <div className="bg-white border border-gray-200 p-6 rounded-2xl shadow-sm transform transition-all duration-500 hover:scale-[1.1] hover:shadow-2xl hover:rotate-[10deg] hover:translate-y-4 hover:bg-gradient-to-r hover:from-purple-300 hover:to-pink-400">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <div className="text-xl font-bold text-gray-900 mb-1">{truck.year}</div>
+                          <div className="text-sm text-gray-500">Año</div>
+                        </div>
+                        <div className="text-3xl">🚚</div>
+                      </div>
+                    </div>
+                  </div>
 
-              {/* Additional Info */}
-              <div className="mt-8 p-6 bg-gray-50 rounded-lg">
-                <h3 className="text-lg font-semibold text-gray-800 mb-4">Información adicional</h3>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <span className="text-gray-600">Nombre:</span>
-                    <span className="font-medium text-gray-900 ml-2">{truck?.name}</span>
+                  {/* Vehicle Info Cards - Bottom Row */}
+                  <div className="grid grid-cols-3 gap-6 mb-8">
+                    <div className="bg-white border border-gray-200 p-6 rounded-2xl shadow-sm transform transition-all duration-500 hover:scale-[1.1] hover:shadow-2xl hover:rotate-[10deg] hover:translate-y-4 hover:bg-gradient-to-r hover:from-purple-300 hover:to-pink-400">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <div className="text-xl font-bold text-gray-900 mb-1">{truck.driver}</div>
+                          <div className="text-sm text-gray-500">Motorista encargado</div>
+                        </div>
+                        <div className="text-3xl">👤</div>
+                      </div>
+                    </div>
+
+                    <div className="bg-white border border-gray-200 p-6 rounded-2xl shadow-sm transform transition-all duration-500 hover:scale-[1.1] hover:shadow-2xl hover:rotate-[10deg] hover:translate-y-4 hover:bg-gradient-to-r hover:from-purple-300 hover:to-pink-400">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <div className="text-xl font-bold text-gray-900 mb-1">{truck.brand}</div>
+                          <div className="text-sm text-gray-500">Marca</div>
+                        </div>
+                        <div className="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center">
+                          <span className="text-white font-bold text-lg">F</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="bg-white border border-gray-200 p-6 rounded-2xl shadow-sm transform transition-all duration-500 hover:scale-[1.1] hover:shadow-2xl hover:rotate-[10deg] hover:translate-y-4 hover:bg-gradient-to-r hover:from-purple-300 hover:to-pink-400">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <div className="text-xl font-bold text-gray-900 mb-1">{truck.model}</div>
+                          <div className="text-sm text-gray-500">Modelo</div>
+                        </div>
+                        <div className="text-3xl">🚛</div>
+                      </div>
+                    </div>
                   </div>
-                  <div>
-                    <span className="text-gray-600">Tipo:</span>
-                    <span className="font-medium text-gray-900 ml-2">{truck?.type}</span>
-                  </div>
-                  <div>
-                    <span className="text-gray-600">Origen:</span>
-                    <span className="font-medium text-gray-900 ml-2">{truck?.origin}</span>
-                  </div>
-                  <div className="col-span-2">
-                    <span className="text-gray-600">Descripción:</span>
-                    <p className="font-medium text-gray-900 mt-1">{truck?.description}</p>
+
+                  {/* Status Badge */}
+                  <div className="flex justify-end">
+                    <div className="inline-flex items-center px-6 py-3 rounded-full bg-green-100 border border-green-200 shadow-sm">
+                      <div className="w-3 h-3 rounded-full bg-green-500 mr-3"></div>
+                      <span className="text-green-700 font-semibold text-lg mr-3">{truck.status}</span>
+                      <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
+                        <span className="text-white text-sm font-bold">✓</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>

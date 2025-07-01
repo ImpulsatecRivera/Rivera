@@ -1,8 +1,18 @@
 import { json } from "express";
 import motoristalModel from "../Models/Motorista.js";
 import bcryptjs from "bcryptjs";
+import {v2 as cloudinary} from "cloudinary";
+import {config} from "../config.js"
+
 
 const motoristasCon = {};
+
+cloudinary.config({
+    cloud_name: config.cloudinary.cloudinary_name,
+    api_key: config.cloudinary.cloudinary_api_key,
+    api_secret: config.cloudinary.cloudinary_api_secret,
+  });
+
 
 motoristasCon.get = async (req, res) => {
     try {
@@ -38,6 +48,16 @@ motoristasCon.post = async (req, res) => {
             return res.status(400).json({ message: "Motorista ya registrado" });
         }
 
+        let imgUrl= "";
+        
+                if(req.file){
+                    const resul = await cloudinary.uploader.upload(req.file.path, {
+                        folder: "public",
+                        allowed_formats: ["png","jpg","jpeg"],
+                    });
+                    imgUrl = resul.secure_url;
+                }
+
         const contraHash = await bcryptjs.hash(password, 10);
 
         const newmotorista = new motoristalModel({
@@ -49,7 +69,8 @@ motoristasCon.post = async (req, res) => {
             password: contraHash,
             phone,
             address,
-            circulationCard
+            circulationCard,
+            img:imgUrl
         });
 
         await newmotorista.save();
@@ -74,6 +95,16 @@ motoristasCon.put = async (req, res) => {
         if (!motoristaExistente) {
             return res.status(404).json({ message: "Motorista no encontrado" });
         }
+
+        let imgUrl= "";
+        
+                if(req.file){
+                    const resul = await cloudinary.uploader.upload(req.file.path, {
+                        folder: "public",
+                        allowed_formats: ["png","jpg","jpeg"],
+                    });
+                    imgUrl = resul.secure_url;
+                }
         
         // Preparar datos de actualización, manteniendo valores existentes si no se proporcionan nuevos
         const updateData = {
@@ -82,6 +113,7 @@ motoristasCon.put = async (req, res) => {
             phone: phone?.trim() || motoristaExistente.phone,
             address: address?.trim() || motoristaExistente.address,
             circulationCard: circulationCard?.trim() || motoristaExistente.circulationCard,
+            img:imgUrl?.trim() || motoristaExistente.img,
             // Mantener campos que no deben cambiar en actualizaciones parciales
             email: motoristaExistente.email,
             id: motoristaExistente.id,
