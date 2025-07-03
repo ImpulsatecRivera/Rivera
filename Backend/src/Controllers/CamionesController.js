@@ -19,61 +19,106 @@ camionesController.get= async (req,res) =>{
     }
 }
 
-camionesController.post = async(req,res) => {
-    try {
-        const {name,brand,model,State,gasolineLevel,age,ciculatioCard,licensePlate,description,supplierId,driverId} = req.body;
-let imgUrl= "";
-if(req.file){
-    const resul = await cloudinary.uploader.upload(req.file.path, {
-        folder: "public",
-        allowed_formats: ["png","jpg","jpeg"],
-    });
-    imgUrl = resul.secure_url;
-}
+camionesController.post = async (req, res) => {
+  try {
+    const {
+      name,
+      brand,
+      model,
+      state, // ya esperamos `state` directamente
+      gasolineLevel,
+      age,
+      ciculatioCard,
+      licensePlate,
+      description,
+      supplierId,
+      driverId
+    } = req.body;
 
-const newCamion = new camionesMod({name,brand,model,State,gasolineLevel,age,ciculatioCard,licensePlate,description,supplierId,driverId,img:imgUrl})
-await newCamion.save();
-res.status(200).json({Message: "Camion agregado correctamente"});
-    } catch (error) {
-        res.status(500).json({ message: "Error al agregar camion", error: error.message });
+    let imgUrl = "";
+    if (req.file) {
+      const resul = await cloudinary.uploader.upload(req.file.path, {
+        folder: "public",
+        allowed_formats: ["png", "jpg", "jpeg"],
+      });
+      imgUrl = resul.secure_url;
     }
 
+    const newCamion = new camionesMod({
+      name,
+      brand,
+      model,
+      state: state?.toUpperCase(), // normalizamos el valor
+      gasolineLevel,
+      age,
+      ciculatioCard,
+      licensePlate,
+      description,
+      supplierId,
+      driverId,
+      img: imgUrl,
+    });
+
+    await newCamion.save();
+
+    res.status(200).json({ message: "Camión agregado correctamente" });
+  } catch (error) {
+    res.status(500).json({ message: "Error al agregar camión", error: error.message });
+  }
 };
 
-camionesController.put = async (req,res) =>{
-    try {
-        const {name,brand,model,State,gasolineLevel,age,ciculatioCard,licensePlate,description,supplierId,driverId} = req.body;
-let imgUrl= "";
-if(req.file){
-    const resul = await cloudinary.uploader.upload(req.file.path, {
-        folder: "public",
-        allowed_formats: ["png","jpg","jpeg"],
-    });
-    imgUrl = resul.secure_url;
-}
+camionesController.put = async (req, res) => {
+  try {
+    const {
+      name,
+      brand,
+      model,
+      state, // corregido
+      gasolineLevel,
+      age,
+      ciculatioCard,
+      licensePlate,
+      description,
+      supplierId,
+      driverId
+    } = req.body;
 
-await camionesMod.findByIdAndUpdate(req.params.id,{
-    name,
-    brand,
-    model,
-    State,
-    gasolineLevel,
-    age,
-    ciculatioCard,
-    licensePlate,
-    description,
-    supplierId,
-    driverId,
-    img:imgUrl
-},
-{new:true}
-);
-res.status(200).json({Message: "Camion actualizado correctamente"})
-    } catch (error) {
-        res.status(500).json({ message: "Error al actualizar camion", error: error.message });
+    let imgUrl = "";
+    if (req.file) {
+      const resul = await cloudinary.uploader.upload(req.file.path, {
+        folder: "public",
+        allowed_formats: ["png", "jpg", "jpeg"],
+      });
+      imgUrl = resul.secure_url;
     }
 
+    const updatedTruck = {
+      name,
+      brand,
+      model,
+      state: state?.toUpperCase(), // seguimos normalizando
+      gasolineLevel,
+      age,
+      ciculatioCard,
+      licensePlate,
+      description,
+      supplierId,
+      driverId,
+    };
+
+    if (imgUrl) {
+      updatedTruck.img = imgUrl;
+    }
+
+    await camionesMod.findByIdAndUpdate(req.params.id, updatedTruck, { new: true });
+
+    res.status(200).json({ message: "Camión actualizado correctamente" });
+  } catch (error) {
+    res.status(500).json({ message: "Error al actualizar camión", error: error.message });
+  }
 };
+
+
 
 camionesController.delete = async (req,res) => {
     try {
