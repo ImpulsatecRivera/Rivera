@@ -248,7 +248,7 @@ const TruckMainScreen = () => {
   const handleSuccessContinue = () => {
     setShowSuccessModal(false);
     setSelectedTruck(null);
-    // Aquí no navegamos, porque ya estamos en el listado
+    // No navega porque ya estás en la pantalla principal con las cards
   };
 
   const handleAddTruck = () => {
@@ -322,28 +322,38 @@ const TruckMainScreen = () => {
   );
 
   return (
-    <div className="flex h-screen bg-[#34353A] overflow-hidden">
-      <div className="flex-1 p-6 overflow-hidden">
-        <div className="bg-white rounded-xl p-6 h-full overflow-hidden">
-          <div className="mt-4">
-            <button onClick={handleAddTruck} className="flex items-center space-x-2 text-gray-600 hover:text-gray-800 transition-colors">
+    <div className="flex flex-col lg:flex-row h-screen bg-[#34353A] overflow-hidden">
+      <div className="flex-1 p-4 lg:p-6 overflow-hidden flex flex-col">
+        <div className="bg-white rounded-xl p-4 lg:p-6 h-full flex flex-col overflow-hidden">
+          
+          {/* Botones */}
+          <div className="space-y-4 sm:flex sm:space-x-4 sm:space-y-0 mb-4">
+            <button 
+              onClick={handleAddTruck} 
+              className="flex items-center justify-center sm:justify-start space-x-2 text-gray-600 hover:text-gray-800 transition-colors w-full sm:w-auto px-4 py-2 border rounded-md"
+            >
               <Plus className="w-5 h-5" />
-              <span className="font-medium">Agregar camion</span>
+              <span className="font-medium">Agregar camión</span>
             </button>
-          </div>
 
-          <div className="mt-4">
-            <button onClick={handleEditTruck} className="flex items-center space-x-2 text-gray-600 hover:text-gray-800 transition-colors">
-              <Plus className="w-5 h-5" />
+            <button 
+              onClick={handleEditTruck} 
+              className="flex items-center justify-center sm:justify-start space-x-2 text-gray-600 hover:text-gray-800 transition-colors w-full sm:w-auto px-4 py-2 border rounded-md"
+            >
+              <Edit3 className="w-5 h-5" />
               <span className="font-medium">Editar camión</span>
             </button>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 overflow-auto max-h-[calc(100vh-200px)] p-4">
+          {/* Grid responsive */}
+          <div 
+            className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 overflow-auto flex-grow max-h-[calc(100vh-160px)] p-2"
+          >
             {trucks.map((truck) => (
               <TruckCard key={truck.id} truck={truck} />
             ))}
           </div>
+
         </div>
       </div>
 
