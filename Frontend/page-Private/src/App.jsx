@@ -18,6 +18,7 @@ import TruckDetailScreen from "./pages/Camiones/DetalleCamionenv";
 import TruckFormScreen from "./pages/Camiones/FormAggCamion";
 import ProviderManagementInterface from "./pages/Provedores/Prooveedores";
 import AddProveedorForm from "./pages/Provedores/AgregarProovedor";
+import TruckManagement from "./pages/Camiones/EditarCamion";
 
 // If you need this component, make sure to import it
 // import VerificationCode from "./pages/VerificationCode";
@@ -72,6 +73,8 @@ function App() {
           <Route path="/Camiones" element={<Camiones/>} />
           <Route path="/Camiones/verCamion" element={<TruckDetailScreen/>} />
           <Route path="/camiones/aggCamion" element={<TruckFormScreen/>} />
+          <Route path="/camiones/EditarCamion" element={<TruckManagement/>} />
+          <Route path="/camiones/Camiones" element={<handleEditTruck/>} />
 
 
 =======
