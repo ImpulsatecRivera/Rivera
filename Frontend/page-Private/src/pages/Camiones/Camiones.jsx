@@ -1,10 +1,9 @@
 import React, { useState } from 'react';
-import { Plus, Edit3, Trash2 } from 'lucide-react';
+import { Plus, Edit3, Trash2, X, Check } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
-const TruckMainScreen = ({ onNavigateToDetail, onNavigateToForm }) => {
-  // Datos de camiones
-  const trucks = [
+const TruckMainScreen = () => {
+  const initialTrucks = [
     {
       id: 1,
       name: "Volvo FH 540",
@@ -213,13 +212,45 @@ const TruckMainScreen = ({ onNavigateToDetail, onNavigateToForm }) => {
 
   const navigate = useNavigate();
 
-  // Función para manejar el clic en el camión y navegar a su detalle
+  const [trucks, setTrucks] = useState(initialTrucks);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [selectedTruck, setSelectedTruck] = useState(null);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+
   const handleContinue = (e) => {
     e.preventDefault();
     navigate('/Camiones/verCamion');
   };
 
-  // Función para navegar a la pantalla de agregar camión
+  const handleEditTruck = (e) => {
+    e.preventDefault();
+    navigate('/Camiones/editarCamion');
+  };
+
+  const handleDeleteClick = (e, truck) => {
+    e.stopPropagation();
+    setSelectedTruck(truck);
+    setShowDeleteModal(true);
+  };
+
+  const handleDeleteConfirm = () => {
+    // Eliminar camión de la lista
+    setTrucks(trucks.filter(t => t.id !== selectedTruck.id));
+    setShowDeleteModal(false);
+    setShowSuccessModal(true);
+  };
+
+  const handleDeleteCancel = () => {
+    setShowDeleteModal(false);
+    setSelectedTruck(null);
+  };
+
+  const handleSuccessContinue = () => {
+    setShowSuccessModal(false);
+    setSelectedTruck(null);
+    // Aquí no navegamos, porque ya estamos en el listado
+  };
+
   const handleAddTruck = () => {
     navigate('/Camiones/aggCamion');
   };
@@ -251,24 +282,20 @@ const TruckMainScreen = ({ onNavigateToDetail, onNavigateToForm }) => {
             className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
             onClick={(e) => {
               e.stopPropagation();
-              console.log('Editar camión:', truck);
+              handleEditTruck(e);
             }}
           >
             <Edit3 size={16} className="text-gray-500" />
           </button>
           <button 
             className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-            onClick={(e) => {
-              e.stopPropagation();
-              console.log('Eliminar camión:', truck);
-            }}
+            onClick={(e) => handleDeleteClick(e, truck)}
           >
             <Trash2 size={16} className="text-gray-500" />
           </button>
         </div>
       </div>
       
-      {/* Image Section */}
       <div className="mb-4">
         <div className="w-full h-32 bg-gray-100 rounded-lg overflow-hidden">
           <img 
@@ -279,7 +306,6 @@ const TruckMainScreen = ({ onNavigateToDetail, onNavigateToForm }) => {
         </div>
       </div>
       
-      {/* Truck Info */}
       <div className="space-y-3">
         <div className="text-sm text-gray-600 font-medium">{truck.type}</div>
         <div className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(truck.status)}`}>
@@ -300,11 +326,18 @@ const TruckMainScreen = ({ onNavigateToDetail, onNavigateToForm }) => {
       <div className="flex-1 p-6 overflow-hidden">
         <div className="bg-white rounded-xl p-6 h-full overflow-hidden">
           <div className="mt-4">
-              <button onClick={handleAddTruck} className="flex items-center space-x-2 text-gray-600 hover:text-gray-800 transition-colors">
-                <Plus className="w-5 h-5" />
-                <span className="font-medium">Agregar camion</span>
-              </button>
-            </div>
+            <button onClick={handleAddTruck} className="flex items-center space-x-2 text-gray-600 hover:text-gray-800 transition-colors">
+              <Plus className="w-5 h-5" />
+              <span className="font-medium">Agregar camion</span>
+            </button>
+          </div>
+
+          <div className="mt-4">
+            <button onClick={handleEditTruck} className="flex items-center space-x-2 text-gray-600 hover:text-gray-800 transition-colors">
+              <Plus className="w-5 h-5" />
+              <span className="font-medium">Editar camión</span>
+            </button>
+          </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 overflow-auto max-h-[calc(100vh-200px)] p-4">
             {trucks.map((truck) => (
@@ -313,6 +346,74 @@ const TruckMainScreen = ({ onNavigateToDetail, onNavigateToForm }) => {
           </div>
         </div>
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-3xl w-full max-w-sm p-8 text-center shadow-xl">
+            {/* Red X Icon */}
+            <div className="w-16 h-16 bg-red-500 rounded-full flex items-center justify-center mx-auto mb-6">
+              <X className="w-8 h-8 text-white" strokeWidth="2.5" />
+            </div>
+
+            {/* Title */}
+            <h3 className="text-xl font-semibold text-black mb-4 leading-tight">
+              ¿Está seguro de que desea eliminar este camión?
+            </h3>
+
+            {/* Subtitle */}
+            <p className="text-gray-600 text-base mb-8">
+              Este camión se eliminará con esta acción
+            </p>
+
+            {/* Buttons */}
+            <div className="flex gap-4">
+              <button
+                onClick={handleDeleteCancel}
+                className="flex-1 bg-gray-500 hover:bg-gray-600 text-white px-6 py-3 rounded-xl font-medium text-base"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleDeleteConfirm}
+                className="flex-1 bg-red-500 hover:bg-red-600 text-white px-6 py-3 rounded-xl font-medium text-base"
+              >
+                Eliminar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Success Modal */}
+      {showSuccessModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-3xl w-full max-w-sm p-10 text-center shadow-2xl">
+            {/* Green Check Icon */}
+            <div className="w-24 h-24 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-8">
+              <Check className="w-12 h-12 text-green-600" strokeWidth="2.5" />
+            </div>
+            
+            {/* Title */}
+            <h3 className="text-2xl font-semibold text-black mb-4 leading-tight">
+              Camión eliminado con éxito
+            </h3>
+            
+            {/* Subtitle */}
+            <p className="text-gray-600 text-lg mb-10">
+              Camión eliminado correctamente
+            </p>
+            
+            {/* Continue Button */}
+            <button
+              onClick={handleSuccessContinue}
+              className="w-full bg-green-600 hover:bg-green-700 text-white px-8 py-4 rounded-2xl font-semibold text-lg shadow-lg"
+            >
+              Continuar
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
