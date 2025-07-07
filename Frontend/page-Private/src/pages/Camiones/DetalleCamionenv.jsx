@@ -1,3 +1,4 @@
+// (importaciones sin cambios)
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, ChevronLeft, ChevronRight } from 'lucide-react';
 import CamionFord from "../../images/CamionFord.jpg";
@@ -6,7 +7,6 @@ const TruckDetailScreen = () => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [loadingProgress, setLoadingProgress] = useState({});
 
-  // Sample truck data matching the screenshot
   const truck = {
     images: [
       "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=800&h=600&fit=crop",
@@ -28,7 +28,6 @@ const TruckDetailScreen = () => {
     },
   };
 
-  // Animation effect for progress bars
   useEffect(() => {
     const timer = setTimeout(() => {
       Object.keys(truck.stats).forEach((key, index) => {
@@ -81,9 +80,9 @@ const TruckDetailScreen = () => {
               <h1 className="text-xl font-semibold text-gray-800">Información del vehículo</h1>
             </div>
 
-            <div className="flex flex-1 overflow-hidden">
+            <div className="flex flex-1 flex-col lg:flex-row overflow-hidden">
               {/* Left Sidebar - Statistics */}
-              <div className="w-80 p-8 border-r border-gray-200 bg-gray-50 flex-shrink-0">
+              <div className="w-full lg:w-80 p-8 border-b lg:border-b-0 lg:border-r border-gray-200 bg-gray-50 flex-shrink-0">
                 <h2 className="text-xl font-semibold text-gray-800 mb-8">Estadísticas del vehículo</h2>
 
                 <div className="space-y-10">
@@ -124,7 +123,7 @@ const TruckDetailScreen = () => {
                 <div className="p-8">
                   {/* Image Carousel */}
                   <div className="relative mb-6">
-                    <div className="w-full h-72 bg-white rounded-2xl overflow-hidden relative shadow-md">
+                    <div className="w-full h-60 sm:h-72 bg-white rounded-2xl overflow-hidden relative shadow-md">
                       <img
                         src={truck.images[currentImageIndex]}
                         alt="Truck"
@@ -169,7 +168,7 @@ const TruckDetailScreen = () => {
                   </div>
 
                   {/* Vehicle Info Cards - Top Row */}
-                  <div className="grid grid-cols-3 gap-6 mb-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
                     <div className="bg-white border border-gray-200 p-6 rounded-2xl shadow-sm transform transition-all duration-500 hover:scale-[1.1] hover:shadow-2xl hover:rotate-[10deg] hover:translate-y-4 hover:bg-gradient-to-r hover:from-purple-300 hover:to-pink-400">
                       <div className="flex items-center justify-between">
                         <div>
@@ -202,7 +201,7 @@ const TruckDetailScreen = () => {
                   </div>
 
                   {/* Vehicle Info Cards - Bottom Row */}
-                  <div className="grid grid-cols-3 gap-6 mb-8">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
                     <div className="bg-white border border-gray-200 p-6 rounded-2xl shadow-sm transform transition-all duration-500 hover:scale-[1.1] hover:shadow-2xl hover:rotate-[10deg] hover:translate-y-4 hover:bg-gradient-to-r hover:from-purple-300 hover:to-pink-400">
                       <div className="flex items-center justify-between">
                         <div>
@@ -246,9 +245,11 @@ const TruckDetailScreen = () => {
                       </div>
                     </div>
                   </div>
+
                 </div>
               </div>
             </div>
+
           </div>
         </div>
       </div>

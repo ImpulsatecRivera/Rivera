@@ -14,50 +14,60 @@ const TruckMainScreen = () => {
   const navigate = useNavigate();
 
   const getStatusColor = (status) => {
-  if (!status || status.trim() === '') {
-    return 'text-gray-600 bg-gray-50';
-  }
-
-  switch (status.toUpperCase()) {
-    case 'DISPONIBLE':
-      return 'text-green-600 bg-green-50';
-    case 'NO DISPONIBLE':
-      return 'text-red-600 bg-red-50';
-    case 'MANTENIMIENTO':
-      return 'text-yellow-600 bg-yellow-50';
-    case 'EN RUTA':
-      return 'text-blue-600 bg-blue-50';
-    default:
+    if (!status || status.trim() === '') {
       return 'text-gray-600 bg-gray-50';
-  }
-};
+    }
+    switch (status.toUpperCase()) {
+      case 'DISPONIBLE':
+        return 'text-green-600 bg-green-50';
+      case 'NO DISPONIBLE':
+        return 'text-red-600 bg-red-50';
+      case 'MANTENIMIENTO':
+        return 'text-yellow-600 bg-yellow-50';
+      case 'EN RUTA':
+        return 'text-blue-600 bg-blue-50';
+      default:
+        return 'text-gray-600 bg-gray-50';
+    }
+  };
 
-const getDotColor = (status) => {
-  if (!status || status.trim() === '') {
-    return 'bg-gray-400';
-  }
-
-  switch (status.toUpperCase()) {
-    case 'DISPONIBLE':
-      return 'bg-green-500';
-    case 'NO DISPONIBLE':
-      return 'bg-red-500';
-    case 'MANTENIMIENTO':
-      return 'bg-yellow-500';
-    case 'EN RUTA':
-      return 'bg-blue-500';
-    default:
+  const getDotColor = (status) => {
+    if (!status || status.trim() === '') {
       return 'bg-gray-400';
-  }
-};
-
+    }
+    switch (status.toUpperCase()) {
+      case 'DISPONIBLE':
+        return 'bg-green-500';
+      case 'NO DISPONIBLE':
+        return 'bg-red-500';
+      case 'MANTENIMIENTO':
+        return 'bg-yellow-500';
+      case 'EN RUTA':
+        return 'bg-blue-500';
+      default:
+        return 'bg-gray-400';
+    }
+  };
 
   useEffect(() => {
     const fetchTrucks = async () => {
       try {
         const res = await fetch('http://localhost:4000/api/camiones');
         const data = await res.json();
-        setTrucks(data);
+        console.log("Camiones recibidos:", data);
+
+        const camiones = Array.isArray(data) ? data : data.camiones || [];
+
+        // 20 tarjetas adicionales
+        const extraCamiones = Array.from({ length: 20 }, (_, i) => ({
+          id: `extra-${i + 1}`,
+          name: `Camión Extra ${i + 1}`,
+          licensePlate: `EXTRA-${1000 + i}`,
+          state: i % 4 === 0 ? 'DISPONIBLE' : i % 4 === 1 ? 'NO DISPONIBLE' : i % 4 === 2 ? 'EN RUTA' : 'MANTENIMIENTO',
+          img: null
+        }));
+
+        setTrucks([...camiones, ...extraCamiones]);
         setError(false);
       } catch (err) {
         console.error('Error al obtener camiones:', err);
@@ -71,25 +81,20 @@ const getDotColor = (status) => {
   }, []);
 
   const handleAddTruck = () => navigate('/Camiones/aggCamion');
-
   const handleEditTruck = (e, truck) => {
     e.stopPropagation();
-    // Aquí puedes pasar el camión al estado global o navegación con datos
     navigate('/Camiones/editarCamion');
   };
-
   const handleDeleteClick = (e, truck) => {
     e.stopPropagation();
     setSelectedTruck(truck);
     setShowDeleteModal(true);
   };
-
   const handleDeleteConfirm = () => {
     setTrucks(trucks.filter(t => t.id !== selectedTruck.id));
     setShowDeleteModal(false);
     setShowSuccessModal(true);
   };
-
   const handleSuccessContinue = () => {
     setShowSuccessModal(false);
     setSelectedTruck(null);
@@ -113,17 +118,16 @@ const getDotColor = (status) => {
       </div>
       <div className="mb-3">
         <img
-          src={truck.img || Camion }
+          src={truck.img || Camion}
           alt={truck.name}
           className="w-full h-32 object-cover rounded-md"
         />
       </div>
       <p className="text-sm text-gray-600 mb-1">Placa: {truck.licensePlate || 'N/A'}</p>
-     <div className={`inline-flex items-center text-xs font-medium px-3 py-1 rounded-full ${getStatusColor(truck.state)}`}>
-  <div className={`w-2 h-2 rounded-full mr-2 ${getDotColor(truck.state)}`} />
-  {truck.state?.toUpperCase() || 'SIN ESTADO'}
-</div>
-
+      <div className={`inline-flex items-center text-xs font-medium px-3 py-1 rounded-full ${getStatusColor(truck.state)}`}>
+        <div className={`w-2 h-2 rounded-full mr-2 ${getDotColor(truck.state)}`} />
+        {truck.state?.toUpperCase() || 'SIN ESTADO'}
+      </div>
     </div>
   );
 
@@ -131,17 +135,13 @@ const getDotColor = (status) => {
     <div className="flex h-screen bg-[#34353A]">
       <div className="flex-1 p-6 overflow-hidden">
         <div className="bg-white rounded-xl p-6 h-full overflow-hidden flex flex-col">
-          {/* Header */}
           <div className="mt-4">
-                       <button onClick={handleAddTruck} className="flex items-center space-x-4 text-gray-600 hover:text-gray-800 transition-colors"
+            <button onClick={handleAddTruck} className="flex items-center space-x-4 text-gray-600 hover:text-gray-800 transition-colors">
+              <Plus className="w-5 h-5" />
+              <span className="font-medium">Agregar camión</span>
+            </button>
+          </div>
 
->
-                         <Plus className="w-5 h-5" />
-                         <span className="font-medium">Agregar camion</span>
-                       </button>
-                     </div>
-
-          {/* Content */}
           {loading ? (
             <div className="flex-1 flex justify-center items-center">
               <div className="animate-spin rounded-full h-10 w-10 border-4 border-blue-400 border-t-transparent" />
@@ -158,7 +158,6 @@ const getDotColor = (status) => {
         </div>
       </div>
 
-      {/* Modal de confirmación de eliminación */}
       {showDeleteModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
           <div className="bg-white rounded-xl p-6 w-full max-w-sm shadow-lg text-center">
@@ -168,16 +167,10 @@ const getDotColor = (status) => {
             <h2 className="text-lg font-semibold text-gray-800 mb-2">¿Eliminar camión?</h2>
             <p className="text-gray-600 mb-6">Esta acción no se puede deshacer.</p>
             <div className="flex justify-center gap-4">
-              <button
-                onClick={handleDeleteConfirm}
-                className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
-              >
+              <button onClick={handleDeleteConfirm} className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600">
                 Eliminar
               </button>
-              <button
-                onClick={() => setShowDeleteModal(false)}
-                className="px-4 py-2 border rounded hover:bg-gray-100"
-              >
+              <button onClick={() => setShowDeleteModal(false)} className="px-4 py-2 border rounded hover:bg-gray-100">
                 Cancelar
               </button>
             </div>
@@ -185,7 +178,6 @@ const getDotColor = (status) => {
         </div>
       )}
 
-      {/* Modal de éxito */}
       {showSuccessModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
           <div className="bg-white rounded-xl p-6 w-full max-w-sm shadow-lg text-center">
@@ -194,10 +186,7 @@ const getDotColor = (status) => {
             </div>
             <h2 className="text-lg font-semibold text-gray-800 mb-2">Camión eliminado</h2>
             <p className="text-gray-600 mb-6">El camión fue eliminado exitosamente.</p>
-            <button
-              onClick={handleSuccessContinue}
-              className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
-            >
+            <button onClick={handleSuccessContinue} className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">
               Continuar
             </button>
           </div>

@@ -487,7 +487,7 @@ const AddEmployeeForm = () => {
   return (
     <div className="fixed inset-0 min-h-screen" style={{ backgroundColor: '#34353A' }}>
       {/* Header */}
-      <div className="text-white px-8 py-4" style={{ backgroundColor: '#34353A' }}>
+      <div className="text-white px-4 sm:px-8 py-2 sm:py-4" style={{ backgroundColor: '#34353A' }}>
         <button 
           onClick={handleBackToMenu}
           className="flex items-center space-x-2 text-white hover:text-gray-300 transition-colors"
@@ -498,320 +498,309 @@ const AddEmployeeForm = () => {
       </div>
 
       {/* Main Content */}
-      <div className="px-8 pb-8" style={{ height: 'calc(100vh - 80px)' }}>
-        <div className="bg-white rounded-2xl p-8 h-full max-w-none mx-0 overflow-y-auto">
+      <div className="px-4 sm:px-8 pb-6 sm:pb-8" style={{ height: 'calc(100vh - 80px)' }}>
+        <div className="bg-white rounded-2xl p-4 sm:p-6 md:p-8 h-full max-w-none mx-0 overflow-y-auto">
           {/* Title Section */}
-          <div className="flex items-center justify-between mb-8">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 sm:mb-8 space-y-4 sm:space-y-0">
             <div className="flex items-center space-x-4">
-              <h1 className="text-2xl font-bold text-gray-900">Agregar Empleado</h1>
+              <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Agregar Empleado</h1>
               <div className="w-14 h-14 rounded-full flex items-center justify-center" style={{ backgroundColor: '#34353A' }}>
                 <User className="w-7 h-7 text-white" />
               </div>
             </div>
             <button 
               onClick={handleSubmit}
-              className="text-white px-8 py-3 rounded-lg text-sm font-medium transition-colors hover:opacity-90"
+              className="text-white px-6 sm:px-8 py-2.5 sm:py-3 rounded-lg text-sm font-medium transition-colors hover:opacity-90"
               style={{ backgroundColor: '#375E27' }}
               disabled={loading}
             >
-              {loading ? 'Cargando...' : 'Agregar'}
+              Guardar
             </button>
           </div>
 
           {/* Form */}
-          <div>
-            <div className="space-y-8 max-w-6xl">
-              {/* First Row - Image and Basic Info */}
-              <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start">
-                {/* Image Upload Section */}
-                <div className="lg:col-span-1">
-  <label className="block text-sm font-medium text-gray-700 mb-2">Foto del Empleado</label>
-  <div className="space-y-3">
-    {/* Preview de la imagen - Altura fija para alinear con campos */}
-    <div className="relative group">
-      <div
-        className="w-full h-48 border-2 border-dashed rounded-xl flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 overflow-hidden transition-all duration-300 hover:from-blue-50 hover:to-blue-100 hover:border-blue-300"
-        style={{ borderColor: imagePreview ? '#375E27' : '#d1d5db' }}
-      >
-        {imagePreview ? (
-          <div className="relative w-full h-full">
-            <img
-              src={imagePreview}
-              alt="Preview"
-              className="w-full h-full object-cover rounded-lg"
-            />
-            <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all duration-300 rounded-lg flex items-center justify-center">
-              <button
-                type="button"
-                onClick={removeImage}
-                className="opacity-0 group-hover:opacity-100 bg-red-500 text-white rounded-full p-2 hover:bg-red-600 transition-all duration-300 transform hover:scale-110 shadow-lg"
-              >
-                <X className="w-4 h-4" />
-              </button>
+          <form onSubmit={handleSubmit} className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+            {/* Nombre */}
+            <div className="flex flex-col">
+              <label htmlFor="name" className="mb-1 font-semibold text-gray-700">Nombre *</label>
+              <input
+                id="name"
+                name="name"
+                type="text"
+                value={formData.name}
+                onChange={handleInputChange}
+                onFocus={handleFocus}
+                onBlur={handleBlur}
+                placeholder="Ingrese el nombre"
+                className={`border rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-600 ${errors.name ? 'border-red-500' : 'border-gray-300'}`}
+              />
+              {errors.name && <span className="text-red-600 text-xs mt-1">{errors.name}</span>}
             </div>
-          </div>
-        ) : (
-          <div className="text-center p-4">
-            <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-white shadow-md flex items-center justify-center">
-              <User className="w-6 h-6 text-gray-400" />
+
+            {/* Apellido */}
+            <div className="flex flex-col">
+              <label htmlFor="lastName" className="mb-1 font-semibold text-gray-700">Apellido *</label>
+              <input
+                id="lastName"
+                name="lastName"
+                type="text"
+                value={formData.lastName}
+                onChange={handleInputChange}
+                onFocus={handleFocus}
+                onBlur={handleBlur}
+                placeholder="Ingrese el apellido"
+                className={`border rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-600 ${errors.lastName ? 'border-red-500' : 'border-gray-300'}`}
+              />
+              {errors.lastName && <span className="text-red-600 text-xs mt-1">{errors.lastName}</span>}
             </div>
-            <p className="text-sm font-medium text-gray-600 mb-1">Foto del empleado</p>
-            <p className="text-xs text-gray-500">Arrastra o haz clic para subir</p>
-          </div>
-        )}
-      </div>
 
-      {/* Overlay para drag & drop visual */}
-      <input
-        type="file"
-        id="img-input"
-        accept="image/*"
-        onChange={handleImageChange}
-        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-      />
-    </div>
+            {/* Email - solo mostrar */}
+            <div className="flex flex-col">
+              <label htmlFor="email" className="mb-1 font-semibold text-gray-700">Email (generado)</label>
+              <input
+                id="email"
+                name="email"
+                type="email"
+                value={formData.email}
+                readOnly
+                className="border rounded-md px-3 py-2 bg-gray-100 cursor-not-allowed border-gray-300"
+              />
+            </div>
 
-    {/* Botón de acción */}
-    <label
-      htmlFor="img-input"
-      className="w-full flex items-center justify-center px-3 py-2.5 rounded-lg cursor-pointer transition-all duration-300 text-white text-sm font-medium shadow-md hover:shadow-lg"
-      style={{ backgroundColor: imagePreview ? '#375E27' : '#6B7280' }}
-    >
-      <Upload className="w-4 h-4 mr-2" />
-      <span>{formData.img ? 'Cambiar foto' : 'Seleccionar foto'}</span>
-    </label>
+            {/* DUI */}
+            <div className="flex flex-col">
+              <label htmlFor="dui" className="mb-1 font-semibold text-gray-700">DUI *</label>
+              <input
+                id="dui"
+                name="dui"
+                type="text"
+                value={formData.dui}
+                onChange={handleInputChange}
+                onFocus={handleFocus}
+                onBlur={handleBlur}
+                placeholder="00000000-0"
+                maxLength={10}
+                className={`border rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-600 ${errors.dui ? 'border-red-500' : 'border-gray-300'}`}
+              />
+              {errors.dui && <span className="text-red-600 text-xs mt-1">{errors.dui}</span>}
+            </div>
 
-    {/* Información de ayuda - Compacta */}
-    <div className="bg-blue-50 border border-blue-200 rounded-lg p-2.5">
-      <div className="flex items-start space-x-2">
-        <div className="w-3 h-3 rounded-full bg-blue-400 flex items-center justify-center mt-0.5 flex-shrink-0">
-          <span className="text-white text-xs font-bold">i</span>
-        </div>
-        <div>
-          <p className="text-xs font-medium text-blue-800 mb-1">Requisitos:</p>
-          <div className="text-xs text-blue-700 space-y-0.5">
-            <div>• JPG, PNG, GIF</div>
-            <div>• Máximo: 5MB</div>
-            <div>• Recomendado: 400x400px</div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
+            {/* Fecha de Nacimiento */}
+            <div className="relative flex flex-col">
+              <label htmlFor="birthDate" className="mb-1 font-semibold text-gray-700">Fecha de Nacimiento *</label>
+              <input
+                id="birthDate"
+                name="birthDate"
+                type="text"
+                value={formData.birthDate}
+                placeholder="YYYY-MM-DD"
+                onFocus={() => setShowCalendar(true)}
+                readOnly
+                className={`border rounded-md px-3 py-2 cursor-pointer focus:outline-none focus:ring-2 focus:ring-green-600 ${errors.birthDate ? 'border-red-500' : 'border-gray-300'}`}
+              />
+              {errors.birthDate && <span className="text-red-600 text-xs mt-1">{errors.birthDate}</span>}
 
-
-                {/* Basic Information */}
-                <div className="lg:col-span-3 grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Nombre</label>
-                    <input
-                      type="text"
-                      name="name"
-                      value={formData.name}
-                      onChange={handleInputChange}
-                      placeholder="Introduce el nombre del empleado"
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none text-sm text-gray-700 placeholder-gray-400"
-                      onFocus={handleFocus}
-                      onBlur={handleBlur}
-                    />
-                    {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name}</p>}
+              {/* Calendario */}
+              {showCalendar && (
+                <div className="absolute z-10 bg-white rounded-md shadow-lg mt-2 p-3 w-64 sm:w-72 md:w-80">
+                  {/* Selector de año */}
+                  <div className="flex justify-between items-center mb-2">
+                    <button
+                      type="button"
+                      onClick={() => navigateYear(-1)}
+                      className="p-1 hover:bg-gray-200 rounded"
+                      aria-label="Año anterior"
+                    >
+                      <ChevronLeft />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowYearSelector(!showYearSelector)}
+                      className="font-semibold text-gray-700"
+                    >
+                      {currentDate.getFullYear()}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => navigateYear(1)}
+                      className="p-1 hover:bg-gray-200 rounded"
+                      aria-label="Año siguiente"
+                    >
+                      <ChevronRight />
+                    </button>
                   </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Apellido</label>
-                    <input
-                      type="text"
-                      name="lastName"
-                      value={formData.lastName}
-                      onChange={handleInputChange}
-                      placeholder="Introduce el apellido del empleado"
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none text-sm text-gray-700 placeholder-gray-400"
-                      onFocus={handleFocus}
-                      onBlur={handleBlur}
-                    />
-                    {errors.lastName && <p className="text-red-500 text-xs mt-1">{errors.lastName}</p>}
+                  {/* Selector de mes */}
+                  <div className="flex justify-between items-center mb-2">
+                    <button
+                      type="button"
+                      onClick={() => navigateMonth(-1)}
+                      className="p-1 hover:bg-gray-200 rounded"
+                      aria-label="Mes anterior"
+                    >
+                      <ChevronLeft />
+                    </button>
+                    <span className="font-semibold text-gray-700">{months[currentDate.getMonth()]}</span>
+                    <button
+                      type="button"
+                      onClick={() => navigateMonth(1)}
+                      className="p-1 hover:bg-gray-200 rounded"
+                      aria-label="Mes siguiente"
+                    >
+                      <ChevronRight />
+                    </button>
                   </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">DUI</label>
-                    <input
-                      type="text"
-                      name="dui"
-                      value={formData.dui}
-                      onChange={handleInputChange}
-                      placeholder="12345678-9"
-                      maxLength="10"
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none text-sm text-gray-700 placeholder-gray-400"
-                      onFocus={handleFocus}
-                      onBlur={handleBlur}
-                    />
-                    {errors.dui && <p className="text-red-500 text-xs mt-1">{errors.dui}</p>}
-                  </div>
-                </div>
-              </div>
-
-              {/* Second Row */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Email (generado automáticamente)
-                  </label>
-                  <input
-                    type="text"
-                    name="email"
-                    value={formData.email}
-                    readOnly
-                    placeholder="Se generará automáticamente"
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-gray-50 text-sm text-gray-500 cursor-not-allowed"
-                  />
-                  <p className="text-xs text-gray-500 mt-1">El email se genera automáticamente basado en el nombre y apellido</p>
-                </div>
-
-                <div className="relative">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Fecha de Nacimiento</label>
-                  <div
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg text-sm text-gray-700 cursor-pointer flex items-center justify-between"
-                    onClick={() => setShowCalendar(!showCalendar)}
-                  >
-                    <span>{formData.birthDate ? formData.birthDate : 'Selecciona una fecha'}</span>
-                    <Calendar className="w-4 h-4 text-gray-400" />
-                  </div>
-                  {showCalendar && (
-                    <div className="absolute mt-2 z-50 p-4 bg-white shadow-xl rounded-lg border">
-                      {/* Header del calendario */}
-                      <div className="flex justify-between items-center mb-4">
-                        <button type="button" onClick={() => navigateMonth(-1)} className="p-1 hover:bg-gray-100 rounded">
-                          <ChevronLeft className="w-5 h-5 text-gray-700" />
+                  {/* Lista de años (cuando se muestra selector) */}
+                  {showYearSelector && (
+                    <div className="max-h-40 overflow-y-auto mb-2 border rounded p-1">
+                      {generateYears().map(year => (
+                        <button
+                          key={year}
+                          type="button"
+                          className={`block w-full text-left px-2 py-1 rounded hover:bg-gray-200 ${
+                            year === currentDate.getFullYear() ? 'bg-green-600 text-white' : 'text-gray-700'
+                          }`}
+                          onClick={() => {
+                            setCurrentDate(new Date(year, currentDate.getMonth(), 1));
+                            setShowYearSelector(false);
+                          }}
+                        >
+                          {year}
                         </button>
-                        
-                        <div className="flex items-center space-x-2">
-                          <span className="text-sm font-semibold">
-                            {months[currentDate.getMonth()]}
-                          </span>
-                          <div className="relative">
-                            <button 
-                              type="button"
-                              onClick={() => setShowYearSelector(!showYearSelector)}
-                              className="flex items-center space-x-1 text-sm font-semibold hover:bg-gray-100 px-2 py-1 rounded"
-                            >
-                              <span>{currentDate.getFullYear()}</span>
-                              <ChevronDown className="w-3 h-3" />
-                            </button>
-                            
-                            {showYearSelector && (
-                              <div className="absolute top-full left-0 mt-1 bg-white border shadow-lg rounded max-h-40 overflow-y-auto z-60">
-                                {generateYears().map(year => (
-                                  <button
-                                    key={year}
-                                    type="button"
-                                    onClick={() => {
-                                      setCurrentDate(prev => {
-                                        const newDate = new Date(prev);
-                                        newDate.setFullYear(year);
-                                        return newDate;
-                                      });
-                                      setShowYearSelector(false);
-                                    }}
-                                    className="block w-full text-left px-4 py-2 text-sm hover:bg-gray-100"
-                                  >
-                                    {year}
-                                  </button>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                        
-                        <button type="button" onClick={() => navigateMonth(1)} className="p-1 hover:bg-gray-100 rounded">
-                          <ChevronRight className="w-5 h-5 text-gray-700" />
-                        </button>
-                      </div>
-                      
-                      {/* Días de la semana */}
-                      <div className="grid grid-cols-7 gap-1 mb-2">
-                        {daysOfWeek.map((day) => (
-                          <div key={day} className="text-xs text-center font-semibold text-gray-600 py-2">
-                            {day}
-                          </div>
-                        ))}
-                      </div>
-                      
-                      {/* Días del mes */}
-                      <div className="grid grid-cols-7 gap-1">
-                        {getDaysInMonth(currentDate).map((day, index) => (
-                          <button
-                            key={index}
-                            type="button"
-                            onClick={() => isCurrentMonth(day) && handleDateSelect(day)}
-                            disabled={!isCurrentMonth(day)}
-                            className={`
-                              text-xs text-center py-2 rounded-full transition-colors
-                              ${!isCurrentMonth(day) ? 'text-gray-300 cursor-not-allowed' : 'hover:bg-gray-100'}
-                              ${isToday(day) ? 'bg-blue-500 text-white hover:bg-blue-600' : ''}
-                              ${isSelected(day) ? 'bg-green-500 text-white hover:bg-green-600' : ''}
-                            `}
-                          >
-                            {day.getDate()}
-                          </button>
-                        ))}
-                      </div>
+                      ))}
                     </div>
                   )}
-                  {errors.birthDate && <p className="text-red-500 text-xs mt-1">{errors.birthDate}</p>}
-                </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Contraseña</label>
-                  <input
-                    type="password"
-                    name="password"
-                    value={formData.password}
-                    onChange={handleInputChange}
-                    placeholder="Introduce la contraseña"
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none text-sm text-gray-700 placeholder-gray-400"
-                    onFocus={handleFocus}
-                    onBlur={handleBlur}
-                  />
-                  {errors.password && <p className="text-red-500 text-xs mt-1">{errors.password}</p>}
-                </div>
-              </div>
+                  {/* Días de la semana */}
+                  <div className="grid grid-cols-7 gap-1 text-center mb-1 text-xs font-semibold text-gray-600">
+                    {daysOfWeek.map(day => (
+                      <div key={day}>{day}</div>
+                    ))}
+                  </div>
 
-              {/* Third Row */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Teléfono</label>
-                  <input
-                    type="text"
-                    name="phone"
-                    value={formData.phone}
-                    onChange={handleInputChange}
-                    placeholder="1234-5678"
-                    maxLength="9"
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none text-sm text-gray-700 placeholder-gray-400"
-                    onFocus={handleFocus}
-                    onBlur={handleBlur}
-                  />
-                  {errors.phone && <p className="text-red-500 text-xs mt-1">{errors.phone}</p>}
-                </div>
+                  {/* Días del mes */}
+                  <div className="grid grid-cols-7 gap-1 text-center text-sm">
+                    {getDaysInMonth(currentDate).map((date, index) => {
+                      const isCurrent = isCurrentMonth(date);
+                      const isSelectedDay = isSelected(date);
+                      const today = isToday(date);
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Dirección</label>
-                  <input
-                    type="text"
-                    name="address"
-                    value={formData.address}
-                    onChange={handleInputChange}
-                    placeholder="Introduce la dirección"
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none text-sm text-gray-700 placeholder-gray-400"
-                    onFocus={handleFocus}
-                    onBlur={handleBlur}
-                  />
-                  {errors.address && <p className="text-red-500 text-xs mt-1">{errors.address}</p>}
+                      return (
+                        <button
+                          key={index}
+                          type="button"
+                          onClick={() => handleDateSelect(date)}
+                          className={`py-1 rounded hover:bg-green-100 focus:outline-none ${
+                            isSelectedDay ? 'bg-green-600 text-white' :
+                            today ? 'border border-green-600 text-green-600' :
+                            isCurrent ? 'text-gray-800' : 'text-gray-400'
+                          }`}
+                          disabled={!isCurrent}
+                        >
+                          {date.getDate()}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setShowCalendar(false)}
+                    className="mt-2 w-full py-1 text-sm text-center text-red-600 hover:text-red-800"
+                  >
+                    Cerrar
+                  </button>
                 </div>
+              )}
+            </div>
+
+            {/* Contraseña */}
+            <div className="flex flex-col">
+              <label htmlFor="password" className="mb-1 font-semibold text-gray-700">Contraseña *</label>
+              <input
+                id="password"
+                name="password"
+                type="password"
+                value={formData.password}
+                onChange={handleInputChange}
+                onFocus={handleFocus}
+                onBlur={handleBlur}
+                placeholder="Ingrese una contraseña"
+                className={`border rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-600 ${errors.password ? 'border-red-500' : 'border-gray-300'}`}
+              />
+              {errors.password && <span className="text-red-600 text-xs mt-1">{errors.password}</span>}
+            </div>
+
+            {/* Teléfono */}
+            <div className="flex flex-col">
+              <label htmlFor="phone" className="mb-1 font-semibold text-gray-700">Teléfono *</label>
+              <input
+                id="phone"
+                name="phone"
+                type="text"
+                value={formData.phone}
+                onChange={handleInputChange}
+                onFocus={handleFocus}
+                onBlur={handleBlur}
+                placeholder="0000-0000"
+                maxLength={9}
+                className={`border rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-600 ${errors.phone ? 'border-red-500' : 'border-gray-300'}`}
+              />
+              {errors.phone && <span className="text-red-600 text-xs mt-1">{errors.phone}</span>}
+            </div>
+
+            {/* Dirección */}
+            <div className="flex flex-col md:col-span-2">
+              <label htmlFor="address" className="mb-1 font-semibold text-gray-700">Dirección *</label>
+              <textarea
+                id="address"
+                name="address"
+                value={formData.address}
+                onChange={handleInputChange}
+                onFocus={handleFocus}
+                onBlur={handleBlur}
+                placeholder="Ingrese la dirección completa"
+                rows={3}
+                className={`border rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-600 resize-none ${errors.address ? 'border-red-500' : 'border-gray-300'}`}
+              />
+              {errors.address && <span className="text-red-600 text-xs mt-1">{errors.address}</span>}
+            </div>
+
+            {/* Imagen */}
+            <div className="flex flex-col md:col-span-3">
+              <label className="mb-2 font-semibold text-gray-700">Foto de perfil (opcional)</label>
+              <div className="flex items-center space-x-4">
+                {imagePreview ? (
+                  <div className="relative w-24 h-24 rounded-full overflow-hidden border border-gray-300">
+                    <img src={imagePreview} alt="Previsualización" className="object-cover w-full h-full" />
+                    <button
+                      type="button"
+                      onClick={removeImage}
+                      className="absolute top-1 right-1 bg-red-600 hover:bg-red-700 text-white rounded-full p-1 focus:outline-none"
+                      aria-label="Eliminar imagen"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <label
+                    htmlFor="img-input"
+                    className="flex items-center justify-center cursor-pointer w-24 h-24 rounded-full bg-gray-100 border border-dashed border-gray-300 hover:bg-gray-200 transition-colors"
+                  >
+                    <Upload className="w-6 h-6 text-gray-400" />
+                    <input
+                      id="img-input"
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageChange}
+                      className="hidden"
+                    />
+                  </label>
+                )}
               </div>
             </div>
-          </div>
+          </form>
         </div>
       </div>
     </div>
