@@ -10,13 +10,13 @@ import BottomMetrics from '../../components/ReportsPage/BottomMetrics';
 const ReportsPage = () => {
   return (
     <div className="w-full h-screen overflow-hidden bg-[#34353A]">
-      <div className="flex-1 p-6 overflow-hidden">
+      <div className="flex-1 p-4 sm:p-6 overflow-hidden">
         <div className="bg-white rounded-lg h-full p-4 flex flex-col">
           <ReportsHeader />
           
-          <div className="grid grid-cols-3 gap-4 flex-grow overflow-hidden">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 flex-grow overflow-hidden mt-4">
             {/* Columna izquierda */}
-            <div className="col-span-2 flex flex-col gap-4 overflow-hidden">
+            <div className="md:col-span-2 flex flex-col gap-4 overflow-hidden">
               <FunctionalGroups />
               <TripsChartStatic />
               <BottomMetrics />
