@@ -35,7 +35,9 @@ function App() {
     "/reset-password",
     "/empleados/agregarEmployee",
     "/motoristas/agregarMotorista",
+    "/Camiones/aggCamion",
     "/proveedores/agregarProveedor"
+    
   ];
 
   const shouldShowMenu = !authRoutes.includes(location.pathname);
@@ -64,7 +66,6 @@ function App() {
           <Route path="/empleados" element={<Employee />} />
           <Route path="/empleados/agregarEmployee" element={<AddEmployeeForm />} />
           <Route path="/motoristas" element={<MotoristaManagementInterface />} />
-          <Route path="/motoristas/agregarMotorista" element={<AddMotoristaForm />} />
           <Route path="/viajes" element={<Travel />} />
           <Route path="/empleados" element={<Employee/>} />
           <Route path="/empleados/agregarEmployee" element={<AddEmployeeForm/>} />
@@ -72,7 +73,7 @@ function App() {
           <Route path="/motoristas/agregarMotorista" element={<AddMotoristaForm/>} />
           <Route path="/Camiones" element={<Camiones/>} />
           <Route path="/Camiones/verCamion" element={<TruckDetailScreen/>} />
-          <Route path="/camiones/aggCamion" element={<TruckFormScreen/>} />
+          <Route path="/Camiones/aggCamion" element={<TruckFormScreen/>} />
           <Route path="/camiones/EditarCamion" element={<TruckManagement/>} />
           <Route path="/camiones/Camiones" element={<handleEditTruck/>} />
 
