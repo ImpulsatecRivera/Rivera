@@ -36,7 +36,8 @@ function App() {
     "/empleados/agregarEmployee",
     "/motoristas/agregarMotorista",
     "/Camiones/aggCamion",
-    "/proveedores/agregarProveedor"
+    "/proveedores/agregarProveedor",
+    "/Camiones/editarCamion"
     
   ];
 
@@ -74,7 +75,7 @@ function App() {
           <Route path="/Camiones" element={<Camiones/>} />
           <Route path="/Camiones/verCamion" element={<TruckDetailScreen/>} />
           <Route path="/Camiones/aggCamion" element={<TruckFormScreen/>} />
-          <Route path="/camiones/EditarCamion" element={<TruckManagement/>} />
+          <Route path="/Camiones/editarCamion" element={<TruckManagement/>} />
           <Route path="/camiones/Camiones" element={<handleEditTruck/>} />
 
 
