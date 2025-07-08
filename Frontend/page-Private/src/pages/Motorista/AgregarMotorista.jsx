@@ -518,8 +518,8 @@ const AddMotoristaForm = () => {
   return (
     <div className="fixed inset-0 min-h-screen" style={{ backgroundColor: '#34353A' }}>
       {/* Header */}
-      <div className="text-white px-8 py-4" style={{ backgroundColor: '#34353A' }}>
-        <button 
+      <div className="text-white px-4 sm:px-8 py-4" style={{ backgroundColor: '#34353A' }}>
+        <button
           onClick={handleBackToMenu}
           className="flex items-center space-x-2 text-white hover:text-gray-300 transition-colors"
         >
@@ -529,19 +529,22 @@ const AddMotoristaForm = () => {
       </div>
 
       {/* Main Content */}
-      <div className="px-8 pb-8" style={{ height: 'calc(100vh - 80px)', overflowY: 'auto' }}>
-        <div className="bg-white rounded-2xl p-8 min-h-full max-w-7xl mx-auto">
+      <div className="px-4 sm:px-8 pb-8" style={{ height: 'calc(100vh - 80px)', overflowY: 'auto' }}>
+        <div className="bg-white rounded-2xl p-6 sm:p-8 min-h-full max-w-full sm:max-w-7xl mx-auto">
           {/* Title Section */}
-          <div className="flex items-center justify-between mb-8">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 sm:mb-8 space-y-4 sm:space-y-0">
             <div className="flex items-center space-x-4">
-              <h1 className="text-2xl font-bold text-gray-900">Agregar Motorista</h1>
-              <div className="w-14 h-14 rounded-full flex items-center justify-center" style={{ backgroundColor: '#34353A' }}>
-                <User className="w-7 h-7 text-white" />
+              <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Agregar Motorista</h1>
+              <div
+                className="w-12 h-12 sm:w-14 sm:h-14 rounded-full flex items-center justify-center"
+                style={{ backgroundColor: '#34353A' }}
+              >
+                <User className="w-6 h-6 sm:w-7 sm:h-7 text-white" />
               </div>
             </div>
-            <button 
+            <button
               onClick={handleSubmit}
-              className="text-white px-8 py-3 rounded-lg text-sm font-medium transition-colors hover:opacity-90"
+              className="text-white px-6 py-2 sm:px-8 sm:py-3 rounded-lg text-sm font-medium transition-colors hover:opacity-90 disabled:opacity-50"
               style={{ backgroundColor: '#375E27' }}
               disabled={loading}
             >
@@ -551,229 +554,261 @@ const AddMotoristaForm = () => {
 
           {/* Form */}
           <div className="overflow-x-auto">
-            <div className="space-y-8 min-w-[900px]">
+            <div className="space-y-8 min-w-[300px] sm:min-w-[900px]">
               {/* Image Upload Section */}
-              <div className="w-full">
-                <div className="max-w-md">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Imagen del Motorista</label>
-                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-6">
-                    {!imagePreview ? (
-                      <div className="text-center">
-                        <Upload className="mx-auto h-12 w-12 text-gray-400" />
-                        <div className="mt-4">
-                          <label
-                            htmlFor="image-upload"
-                            className="cursor-pointer bg-white rounded-md font-medium text-gray-600 hover:text-gray-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-indigo-500"
-                          >
-                            <span className="block text-sm">Haz clic para subir una imagen</span>
-                            <input
-                              id="image-upload"
-                              name="img"
-                              type="file"
-                              accept="image/*"
-                              className="sr-only"
-                              onChange={handleImageChange}
-                            />
-                          </label>
-                          <p className="text-xs text-gray-500 mt-2">PNG, JPG, GIF hasta 5MB</p>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="relative inline-block">
-                        <div className="mx-auto w-40 h-40 border-2 border-gray-200 rounded-lg overflow-hidden bg-gray-50 flex items-center justify-center">
-                          <img
-                            src={imagePreview}
-                            alt="Preview"
-                            className="max-w-full max-h-full object-contain"
-                          />
-                        </div>
-                        <button
-                          type="button"
-                          onClick={removeImage}
-                          className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-colors shadow-lg"
+              <div className="w-full max-w-md mx-auto sm:mx-0">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Imagen del Motorista</label>
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 sm:p-6">
+                  {!imagePreview ? (
+                    <div className="text-center">
+                      <Upload className="mx-auto h-10 w-10 sm:h-12 sm:w-12 text-gray-400" />
+                      <div className="mt-3 sm:mt-4">
+                        <label
+                          htmlFor="image-upload"
+                          className="cursor-pointer bg-white rounded-md font-medium text-gray-600 hover:text-gray-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-indigo-500"
                         >
-                          <X className="w-4 h-4" />
-                        </button>
-                        <p className="text-center text-sm text-gray-600 mt-2 max-w-40 truncate">
-                          {formData.img?.name}
-                        </p>
+                          <span className="block text-sm">Haz clic para subir una imagen</span>
+                          <input
+                            id="image-upload"
+                            name="img"
+                            type="file"
+                            accept="image/*"
+                            className="sr-only"
+                            onChange={handleImageChange}
+                          />
+                        </label>
+                        <p className="text-xs text-gray-500 mt-1 sm:mt-2">PNG, JPG, GIF hasta 5MB</p>
                       </div>
-                    )}
-                  </div>
-                  {errors.img && <p className="text-red-500 text-xs mt-1">{errors.img}</p>}
+                    </div>
+                  ) : (
+                    <div className="relative inline-block mx-auto w-36 h-36 sm:w-40 sm:h-40 border-2 border-gray-200 rounded-lg overflow-hidden bg-gray-50 flex items-center justify-center">
+                      <img src={imagePreview} alt="Preview" className="max-w-full max-h-full object-contain" />
+                      <button
+                        type="button"
+                        onClick={removeImage}
+                        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-colors shadow-lg"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                      <p className="text-center text-sm text-gray-600 mt-2 max-w-36 truncate">{formData.img?.name}</p>
+                    </div>
+                  )}
                 </div>
+                {errors.img && <p className="text-red-500 text-xs mt-1">{errors.img}</p>}
               </div>
 
               {/* First Row */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {/* Nombre */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Nombre</label>
+                  <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
+                    Nombre
+                  </label>
                   <input
-                    type="text"
+                    id="name"
                     name="name"
+                    type="text"
                     value={formData.name}
                     onChange={handleInputChange}
-                    placeholder="Introduce el nombre del motorista"
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none text-sm text-gray-700 placeholder-gray-400"
                     onFocus={handleFocus}
                     onBlur={handleBlur}
+                    placeholder="Nombre"
+                    className={`w-full rounded-md border px-3 py-2 text-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-green-600 ${
+                      errors.name ? 'border-red-500' : 'border-gray-300'
+                    }`}
                   />
                   {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name}</p>}
                 </div>
 
+                {/* Apellido */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Apellido</label>
+                  <label htmlFor="lastName" className="block text-sm font-medium text-gray-700 mb-1">
+                    Apellido
+                  </label>
                   <input
-                    type="text"
+                    id="lastName"
                     name="lastName"
+                    type="text"
                     value={formData.lastName}
                     onChange={handleInputChange}
-                    placeholder="Introduce el apellido del motorista"
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none text-sm text-gray-700 placeholder-gray-400"
                     onFocus={handleFocus}
                     onBlur={handleBlur}
+                    placeholder="Apellido"
+                    className={`w-full rounded-md border px-3 py-2 text-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-green-600 ${
+                      errors.lastName ? 'border-red-500' : 'border-gray-300'
+                    }`}
                   />
                   {errors.lastName && <p className="text-red-500 text-xs mt-1">{errors.lastName}</p>}
                 </div>
 
+                {/* Email (Solo lectura) */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Email (generado automáticamente)
+                  <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+                    Email
                   </label>
                   <input
-                    type="text"
+                    id="email"
                     name="email"
+                    type="email"
                     value={formData.email}
                     readOnly
-                    placeholder="Se generará automáticamente"
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-gray-50 text-sm text-gray-500 cursor-not-allowed"
+                    placeholder="Correo electrónico generado automáticamente"
+                    className="w-full rounded-md border border-gray-300 bg-gray-100 px-3 py-2 text-gray-700 shadow-sm cursor-not-allowed"
                   />
-                  <p className="text-xs text-gray-500 mt-1">El email se genera automáticamente basado en el nombre y apellido</p>
                 </div>
               </div>
 
               {/* Second Row */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {/* DUI */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">DUI</label>
+                  <label htmlFor="id" className="block text-sm font-medium text-gray-700 mb-1">
+                    DUI
+                  </label>
                   <input
-                    type="text"
+                    id="id"
                     name="id"
+                    type="text"
                     value={formData.id}
                     onChange={handleInputChange}
-                    placeholder="12345678-9"
-                    maxLength="10"
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none text-sm text-gray-700 placeholder-gray-400"
                     onFocus={handleFocus}
                     onBlur={handleBlur}
+                    placeholder="00000000-0"
+                    maxLength={10}
+                    className={`w-full rounded-md border px-3 py-2 text-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-green-600 ${
+                      errors.id ? 'border-red-500' : 'border-gray-300'
+                    }`}
                   />
                   {errors.id && <p className="text-red-500 text-xs mt-1">{errors.id}</p>}
                 </div>
 
+                {/* Fecha de nacimiento con calendario personalizado */}
                 <div className="relative">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Fecha de Nacimiento</label>
-                  <div
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg text-sm text-gray-700 cursor-pointer flex items-center justify-between"
+                  <label htmlFor="birthDate" className="block text-sm font-medium text-gray-700 mb-1">
+                    Fecha de nacimiento
+                  </label>
+                  <input
+                    id="birthDate"
+                    name="birthDate"
+                    type="text"
+                    value={formData.birthDate}
+                    readOnly
                     onClick={() => setShowCalendar(!showCalendar)}
+                    placeholder="YYYY-MM-DD"
+                    className={`w-full rounded-md border px-3 py-2 text-gray-700 shadow-sm cursor-pointer focus:outline-none focus:ring-2 focus:ring-green-600 ${
+                      errors.birthDate ? 'border-red-500' : 'border-gray-300'
+                    }`}
+                  />
+                  <button
+                    type="button"
+                    className="absolute right-3 top-8 sm:top-9 text-gray-500 hover:text-gray-700 focus:outline-none"
+                    onClick={() => setShowCalendar(!showCalendar)}
+                    aria-label="Abrir calendario"
                   >
-                    <span>{formData.birthDate ? formData.birthDate : 'Selecciona una fecha'}</span>
-                    <Calendar className="w-4 h-4 text-gray-400" />
-                  </div>
+                    <Calendar className="w-5 h-5" />
+                  </button>
+
                   {showCalendar && (
-                    <div className="absolute mt-2 z-50 p-4 bg-white shadow-xl rounded-lg border">
-                      {/* Header del calendario */}
-                      <div className="flex justify-between items-center mb-4">
-                        <button type="button" onClick={() => navigateMonth(-1)} className="p-1 hover:bg-gray-100 rounded">
-                          <ChevronLeft className="w-5 h-5 text-gray-700" />
+                    <div className="absolute z-10 bg-white border border-gray-300 rounded-md shadow-lg mt-1 p-4 w-64 max-w-full">
+                      {/* Selector año */}
+                      <div className="flex justify-between items-center mb-2">
+                        <button
+                          type="button"
+                          onClick={() => navigateYear(-1)}
+                          className="text-gray-600 hover:text-gray-800 focus:outline-none"
+                          aria-label="Año anterior"
+                        >
+                          <ChevronLeft className="w-5 h-5" />
                         </button>
-                        
-                        <div className="flex items-center space-x-2">
-                          <span className="text-sm font-semibold">
-                            {months[currentDate.getMonth()]}
-                          </span>
-                          <div className="relative">
-                            <button 
-                              type="button"
-                              onClick={() => setShowYearSelector(!showYearSelector)}
-                              className="flex items-center space-x-1 text-sm font-semibold hover:bg-gray-100 px-2 py-1 rounded"
-                            >
-                              <span>{currentDate.getFullYear()}</span>
-                              <ChevronDown className="w-3 h-3" />
-                            </button>
-                            
-                            {showYearSelector && (
-                              <div className="absolute top-full left-0 mt-1 bg-white border shadow-lg rounded max-h-40 overflow-y-auto z-60">
-                                {generateYears().map(year => (
-                                  <button
-                                    key={year}
-                                    type="button"
-                                    onClick={() => {
-                                      setCurrentDate(prev => {
-                                        const newDate = new Date(prev);
-                                        newDate.setFullYear(year);
-                                        return newDate;
-                                      });
-                                      setShowYearSelector(false);
-                                    }}
-                                    className="block w-full text-left px-4 py-2 text-sm hover:bg-gray-100"
-                                  >
-                                    {year}
-                                  </button>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                        
-                        <button type="button" onClick={() => navigateMonth(1)} className="p-1 hover:bg-gray-100 rounded">
-                          <ChevronRight className="w-5 h-5 text-gray-700" />
+                        <span className="font-semibold">{currentDate.getFullYear()}</span>
+                        <button
+                          type="button"
+                          onClick={() => navigateYear(1)}
+                          className="text-gray-600 hover:text-gray-800 focus:outline-none"
+                          aria-label="Año siguiente"
+                        >
+                          <ChevronRight className="w-5 h-5" />
                         </button>
                       </div>
-                      
+
+                      {/* Selector mes */}
+                      <div className="flex justify-between items-center mb-2">
+                        <button
+                          type="button"
+                          onClick={() => navigateMonth(-1)}
+                          className="text-gray-600 hover:text-gray-800 focus:outline-none"
+                          aria-label="Mes anterior"
+                        >
+                          <ChevronLeft className="w-5 h-5" />
+                        </button>
+                        <span className="font-semibold">{months[currentDate.getMonth()]}</span>
+                        <button
+                          type="button"
+                          onClick={() => navigateMonth(1)}
+                          className="text-gray-600 hover:text-gray-800 focus:outline-none"
+                          aria-label="Mes siguiente"
+                        >
+                          <ChevronRight className="w-5 h-5" />
+                        </button>
+                      </div>
+
                       {/* Días de la semana */}
                       <div className="grid grid-cols-7 gap-1 mb-2">
                         {daysOfWeek.map((day) => (
-                          <div key={day} className="text-xs text-center font-semibold text-gray-600 py-2">
+                          <div
+                            key={day}
+                            className="text-center text-xs font-semibold text-gray-500 select-none"
+                          >
                             {day}
                           </div>
                         ))}
                       </div>
-                      
+
                       {/* Días del mes */}
                       <div className="grid grid-cols-7 gap-1">
-                        {getDaysInMonth(currentDate).map((day, index) => (
-                          <button
-                            key={index}
-                            type="button"
-                            onClick={() => isCurrentMonth(day) && handleDateSelect(day)}
-                            disabled={!isCurrentMonth(day)}
-                            className={`
-                              text-xs text-center py-2 rounded-full transition-colors
-                              ${!isCurrentMonth(day) ? 'text-gray-300 cursor-not-allowed' : 'hover:bg-gray-100'}
-                              ${isToday(day) ? 'bg-blue-500 text-white hover:bg-blue-600' : ''}
-                              ${isSelected(day) ? 'bg-green-500 text-white hover:bg-green-600' : ''}
-                            `}
-                          >
-                            {day.getDate()}
-                          </button>
-                        ))}
+                        {getDaysInMonth(currentDate).map((date, index) => {
+                          const isDisabled = date.getMonth() !== currentDate.getMonth();
+                          const isSelectedDate = isSelected(date);
+                          const isTodayDate = isToday(date);
+                          return (
+                            <button
+                              key={index}
+                              type="button"
+                              onClick={() => handleDateSelect(date)}
+                              disabled={isDisabled}
+                              className={`w-8 h-8 flex items-center justify-center text-xs rounded-full focus:outline-none
+                                ${isSelectedDate ? 'bg-green-600 text-white' : ''}
+                                ${isTodayDate && !isSelectedDate ? 'border border-green-600 text-green-600' : ''}
+                                ${isDisabled ? 'text-gray-300 cursor-not-allowed' : 'hover:bg-green-100'}
+                              `}
+                            >
+                              {date.getDate()}
+                            </button>
+                          );
+                        })}
                       </div>
                     </div>
                   )}
                   {errors.birthDate && <p className="text-red-500 text-xs mt-1">{errors.birthDate}</p>}
                 </div>
 
+                {/* Contraseña */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Contraseña</label>
+                  <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
+                    Contraseña
+                  </label>
                   <input
-                    type="password"
+                    id="password"
                     name="password"
+                    type="password"
                     value={formData.password}
                     onChange={handleInputChange}
-                    placeholder="Introduce la contraseña"
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none text-sm text-gray-700 placeholder-gray-400"
                     onFocus={handleFocus}
                     onBlur={handleBlur}
+                    placeholder="Contraseña"
+                    className={`w-full rounded-md border px-3 py-2 text-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-green-600 ${
+                      errors.password ? 'border-red-500' : 'border-gray-300'
+                    }`}
                   />
                   {errors.password && <p className="text-red-500 text-xs mt-1">{errors.password}</p>}
                 </div>
@@ -781,52 +816,68 @@ const AddMotoristaForm = () => {
 
               {/* Third Row */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {/* Teléfono */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Teléfono</label>
+                  <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">
+                    Teléfono
+                  </label>
                   <input
-                    type="text"
+                    id="phone"
                     name="phone"
+                    type="text"
                     value={formData.phone}
                     onChange={handleInputChange}
-                    placeholder="1234-5678"
-                    maxLength="9"
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none text-sm text-gray-700 placeholder-gray-400"
                     onFocus={handleFocus}
                     onBlur={handleBlur}
+                    placeholder="0000-0000"
+                    maxLength={9}
+                    className={`w-full rounded-md border px-3 py-2 text-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-green-600 ${
+                      errors.phone ? 'border-red-500' : 'border-gray-300'
+                    }`}
                   />
                   {errors.phone && <p className="text-red-500 text-xs mt-1">{errors.phone}</p>}
                 </div>
 
+                {/* Dirección */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Dirección</label>
-                  <textarea
+                  <label htmlFor="address" className="block text-sm font-medium text-gray-700 mb-1">
+                    Dirección
+                  </label>
+                  <input
+                    id="address"
                     name="address"
+                    type="text"
                     value={formData.address}
                     onChange={handleInputChange}
-                    placeholder="Introduce la dirección"
-                    rows={3}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none text-sm text-gray-700 placeholder-gray-400 resize-none"
                     onFocus={handleFocus}
                     onBlur={handleBlur}
+                    placeholder="Dirección"
+                    className={`w-full rounded-md border px-3 py-2 text-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-green-600 ${
+                      errors.address ? 'border-red-500' : 'border-gray-300'
+                    }`}
                   />
                   {errors.address && <p className="text-red-500 text-xs mt-1">{errors.address}</p>}
                 </div>
 
+                {/* Tarjeta de circulación */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Tarjeta de circulación</label>
+                  <label htmlFor="circulationCard" className="block text-sm font-medium text-gray-700 mb-1">
+                    Tarjeta de circulación
+                  </label>
                   <input
-                    type="text"
+                    id="circulationCard"
                     name="circulationCard"
+                    type="text"
                     value={formData.circulationCard}
                     onChange={handleInputChange}
-                    placeholder="Ej: ABC123-DEF o 123456-ABC"
-                    maxLength="15"
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none text-sm text-gray-700 placeholder-gray-400"
                     onFocus={handleFocus}
                     onBlur={handleBlur}
+                    placeholder="Ejemplo: ABC-123"
+                    className={`w-full rounded-md border px-3 py-2 text-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-green-600 ${
+                      errors.circulationCard ? 'border-red-500' : 'border-gray-300'
+                    }`}
                   />
                   {errors.circulationCard && <p className="text-red-500 text-xs mt-1">{errors.circulationCard}</p>}
-                  <p className="text-xs text-gray-500 mt-1">Puede contener letras, números y guiones</p>
                 </div>
               </div>
             </div>
