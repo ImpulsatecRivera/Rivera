@@ -58,16 +58,7 @@ const TruckMainScreen = () => {
 
         const camiones = Array.isArray(data) ? data : data.camiones || [];
 
-        // 20 tarjetas adicionales
-        const extraCamiones = Array.from({ length: 20 }, (_, i) => ({
-          id: `extra-${i + 1}`,
-          name: `Camión Extra ${i + 1}`,
-          licensePlate: `EXTRA-${1000 + i}`,
-          state: i % 4 === 0 ? 'DISPONIBLE' : i % 4 === 1 ? 'NO DISPONIBLE' : i % 4 === 2 ? 'EN RUTA' : 'MANTENIMIENTO',
-          img: null
-        }));
-
-        setTrucks([...camiones, ...extraCamiones]);
+        setTrucks(camiones);
         setError(false);
       } catch (err) {
         console.error('Error al obtener camiones:', err);
