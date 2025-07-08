@@ -96,10 +96,15 @@ const getDotColor = (status) => {
   };
 
   const TruckCard = ({ truck }) => (
-    <div
-      className="bg-white rounded-xl border border-gray-200 p-4 hover:shadow-md transition-all cursor-pointer"
-      onClick={() => navigate('/Camiones/verCamion')}
-    >
+   <div
+  className="bg-white rounded-xl border border-gray-200 p-4 hover:shadow-md transition-all cursor-pointer"
+  
+  onClick={() => {
+  console.log('Navegando a camión con id:', truck.id);
+  navigate(`/camiones/${truck.id}`);
+}}
+>
+
       <div className="flex justify-between items-start mb-2">
         <div className="text-md font-semibold text-gray-800">{truck.name}</div>
         <div className="flex gap-2">

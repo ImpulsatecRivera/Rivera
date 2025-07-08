@@ -19,6 +19,23 @@ camionesController.get= async (req,res) =>{
     }
 }
 
+camionesController.getById = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const camion = await camionesMod.findById(id)
+            .populate('driverId') // Para obtener datos del motorista
+            .populate('supplierId'); // Para obtener datos del proveedor
+        
+        if (!camion) {
+            return res.status(404).json({ message: "Camión no encontrado" });
+        }
+        
+        res.json(camion);
+    } catch (error) {
+        res.status(500).json({ message: "Error al obtener camión", error: error.message });
+    }
+}
+
 camionesController.post = async (req, res) => {
   try {
     const {
