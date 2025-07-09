@@ -12,7 +12,6 @@
     "mongoose": "^8.15.2",
     "multer": "^2.0.1",
     "multer-storage-cloudinary": "^4.0.0",
-    "nodemailer": "^7.0.3",
-    "uninstall": "^0.0.0"
+    "nodemailer": "^7.0.3"
   }
 }
