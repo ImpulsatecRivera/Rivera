@@ -27,6 +27,7 @@ password:{
 },
 phone:{
     type:String,
+    type:Number,
     required:true
 },
 address:{
