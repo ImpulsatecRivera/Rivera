@@ -26,6 +26,8 @@ const TruckMainScreen = () => {
         return 'text-yellow-600 bg-yellow-50';
       case 'EN RUTA':
         return 'text-blue-600 bg-blue-50';
+      case 'SIN ESTADO':
+        return 'text-gray-600 bg-gray-50';
       default:
         return 'text-gray-600 bg-gray-50';
     }
@@ -44,9 +46,27 @@ const TruckMainScreen = () => {
         return 'bg-yellow-500';
       case 'EN RUTA':
         return 'bg-blue-500';
+      case 'SIN ESTADO':
+        return 'bg-gray-400';
       default:
         return 'bg-gray-400';
     }
+  };
+
+  // Función para normalizar los datos del camión
+  const normalizeTruckData = (truck) => {
+    // Intenta diferentes campos comunes para el ID
+    const id = truck.id || truck._id || truck.truck_id || truck.camion_id;
+    
+    return {
+      ...truck,
+      id: id,
+      // Asegúrate de que otros campos también estén normalizados
+      name: truck.name || truck.nombre || truck.model || 'Camión sin nombre',
+      licensePlate: truck.licensePlate || truck.placa || truck.license_plate || 'N/A',
+      state: truck.state || truck.estado || truck.status || 'SIN ESTADO',
+      img: truck.img || truck.image || truck.foto || null
+    };
   };
 
   useEffect(() => {
@@ -57,8 +77,24 @@ const TruckMainScreen = () => {
         console.log("Camiones recibidos:", data);
 
         const camiones = Array.isArray(data) ? data : data.camiones || [];
+        
+        // Normaliza los datos y filtra elementos sin ID válido
+        const normalizedTrucks = camiones
+          .map(normalizeTruckData)
+          .filter(truck => truck.id !== undefined && truck.id !== null)
+          .map((truck, index) => {
+            // Asignar algunos camiones como "Sin estado" para demostración
+            if (index % 4 === 0) { // Cada 4to camión sin estado
+              return {
+                ...truck,
+                state: 'Sin estado'
+              };
+            }
+            return truck;
+          });
 
-        setTrucks(camiones);
+        console.log("Camiones normalizados:", normalizedTrucks);
+        setTrucks(normalizedTrucks);
         setError(false);
       } catch (err) {
         console.error('Error al obtener camiones:', err);
@@ -71,61 +107,90 @@ const TruckMainScreen = () => {
     fetchTrucks();
   }, []);
 
-  const handleAddTruck = () => navigate('/Camiones/aggCamion');
+  const handleAddTruck = () => navigate('/camiones/aggCamion');
+  
   const handleEditTruck = (e, truck) => {
     e.stopPropagation();
-    navigate('/Camiones/editarCamion');
+    if (truck.id) {
+      navigate(`/camiones/editarCamion/${truck.id}`);
+    } else {
+      console.error('No se puede editar: ID del camión no válido');
+    }
   };
+  
   const handleDeleteClick = (e, truck) => {
     e.stopPropagation();
     setSelectedTruck(truck);
     setShowDeleteModal(true);
   };
+  
   const handleDeleteConfirm = () => {
     setTrucks(trucks.filter(t => t.id !== selectedTruck.id));
     setShowDeleteModal(false);
     setShowSuccessModal(true);
   };
+  
   const handleSuccessContinue = () => {
     setShowSuccessModal(false);
     setSelectedTruck(null);
   };
 
-  const TruckCard = ({ truck }) => (
-   <div
-  className="bg-white rounded-xl border border-gray-200 p-4 hover:shadow-md transition-all cursor-pointer"
-  
-  onClick={() => {
-  console.log('Navegando a camión con id:', truck.id);
-  navigate(`/camiones/${truck.id}`);
-}}
->
+  const TruckCard = ({ truck }) => {
+    const handleCardClick = () => {
+      if (truck.id) {
+        console.log('Navegando a camión con id:', truck.id);
+        navigate(`/camiones/${truck.id}`);
+      } else {
+        console.error('No se puede navegar: ID del camión no válido', truck);
+      }
+    };
 
-      <div className="flex justify-between items-start mb-2">
-        <div className="text-md font-semibold text-gray-800">{truck.name}</div>
-        <div className="flex gap-2">
-          <button onClick={(e) => handleEditTruck(e, truck)}>
-            <Edit3 size={16} className="text-gray-500 hover:text-gray-700" />
-          </button>
-          <button onClick={(e) => handleDeleteClick(e, truck)}>
-            <Trash2 size={16} className="text-gray-500 hover:text-red-600" />
-          </button>
+    return (
+      <div
+        className="bg-white rounded-xl border border-gray-200 p-4 hover:shadow-md transition-all cursor-pointer"
+        onClick={handleCardClick}
+      >
+        <div className="flex justify-between items-start mb-2">
+          <div className="text-md font-semibold text-gray-800">{truck.name}</div>
+          <div className="flex gap-2">
+            <button 
+              onClick={(e) => handleEditTruck(e, truck)}
+              disabled={!truck.id}
+              className={`${!truck.id ? 'opacity-50 cursor-not-allowed' : ''}`}
+            >
+              <Edit3 size={16} className="text-gray-500 hover:text-gray-700" />
+            </button>
+            <button 
+              onClick={(e) => handleDeleteClick(e, truck)}
+              disabled={!truck.id}
+              className={`${!truck.id ? 'opacity-50 cursor-not-allowed' : ''}`}
+            >
+              <Trash2 size={16} className="text-gray-500 hover:text-red-600" />
+            </button>
+          </div>
         </div>
+        <div className="mb-3">
+          <img
+            src={truck.img || Camion}
+            alt={truck.name}
+            className="w-full h-32 object-cover rounded-md"
+          />
+        </div>
+        <p className="text-sm text-gray-600 mb-1">Placa: {truck.licensePlate}</p>
+        <div className={`inline-flex items-center text-xs font-medium px-3 py-1 rounded-full ${getStatusColor(truck.state)}`}>
+          <div className={`w-2 h-2 rounded-full mr-2 ${getDotColor(truck.state)}`} />
+          {truck.state ? truck.state.toUpperCase() : 'SIN ESTADO'}
+        </div>
+        
+        {/* Indicador de debug para desarrollo */}
+        {process.env.NODE_ENV === 'development' && !truck.id && (
+          <div className="mt-2 text-xs text-red-500 bg-red-50 p-1 rounded">
+            ⚠️ ID no válido
+          </div>
+        )}
       </div>
-      <div className="mb-3">
-        <img
-          src={truck.img || Camion}
-          alt={truck.name}
-          className="w-full h-32 object-cover rounded-md"
-        />
-      </div>
-      <p className="text-sm text-gray-600 mb-1">Placa: {truck.licensePlate || 'N/A'}</p>
-      <div className={`inline-flex items-center text-xs font-medium px-3 py-1 rounded-full ${getStatusColor(truck.state)}`}>
-        <div className={`w-2 h-2 rounded-full mr-2 ${getDotColor(truck.state)}`} />
-        {truck.state?.toUpperCase() || 'SIN ESTADO'}
-      </div>
-    </div>
-  );
+    );
+  };
 
   return (
     <div className="flex h-screen bg-[#34353A]">

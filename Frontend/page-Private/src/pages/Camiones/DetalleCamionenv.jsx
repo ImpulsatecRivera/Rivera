@@ -1,71 +1,180 @@
-// (importaciones sin cambios)
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ArrowLeft, ChevronLeft, ChevronRight, AlertCircle } from 'lucide-react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { useTruckDetail } from '../../components/Camiones/hooks/HookVer'; // Ajusta la ruta según tu estructura
 import CamionFord from "../../images/CamionFord.jpg";
 
 const TruckDetailScreen = () => {
+  const { id: truckId } = useParams();
+  const navigate = useNavigate();
+  const { truck, loading, error, refetch } = useTruckDetail(truckId);
+  
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [loadingProgress, setLoadingProgress] = useState({});
 
-  const truck = {
-    images: [
-      "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=800&h=600&fit=crop",
-      CamionFord,
-    ],
-    plate: "P1234245-0",
-    card: "P97932-9",
-    year: "1978",
-    driver: "Ronald Richards",
-    brand: "Ford",
-    model: "F150",
-    status: "Disponible",
-    stats: {
-      kilometraje: { value: "97,528", percentage: 25 },
-      viajesRealizados: { value: "150", percentage: 60 },
-      visitasAlTaller: { value: "4", percentage: 15 },
-      combustible: { value: "1/2", percentage: 50 },
-      vecesNoDisponible: { value: "35", percentage: 30 },
-    },
-  };
-
+  // Efecto para las animaciones de las barras de progreso
   useEffect(() => {
-    const timer = setTimeout(() => {
-      Object.keys(truck.stats).forEach((key, index) => {
-        setTimeout(() => {
-          setLoadingProgress((prev) => ({
-            ...prev,
-            [key]: truck.stats[key].percentage,
-          }));
-        }, index * 300);
-      });
-    }, 500);
+    if (truck?.stats) {
+      const timer = setTimeout(() => {
+        Object.keys(truck.stats).forEach((key, index) => {
+          setTimeout(() => {
+            setLoadingProgress((prev) => ({
+              ...prev,
+              [key]: truck.stats[key].percentage,
+            }));
+          }, index * 300);
+        });
+      }, 500);
 
-    return () => clearTimeout(timer);
-  }, []);
+      return () => clearTimeout(timer);
+    }
+  }, [truck]);
 
   const nextImage = () => {
-    setCurrentImageIndex((prev) =>
-      prev === truck.images.length - 1 ? 0 : prev + 1
-    );
+    if (truck?.images) {
+      setCurrentImageIndex((prev) =>
+        prev === truck.images.length - 1 ? 0 : prev + 1
+      );
+    }
   };
 
   const prevImage = () => {
-    setCurrentImageIndex((prev) =>
-      prev === 0 ? truck.images.length - 1 : prev - 1
-    );
+    if (truck?.images) {
+      setCurrentImageIndex((prev) =>
+        prev === 0 ? truck.images.length - 1 : prev - 1
+      );
+    }
   };
 
   const handleBackToMenu = () => {
-    if (window.history.length > 1) {
-      window.history.back();
-    } else {
-      console.log('Navegar a la página anterior');
-    }
+    navigate('/camiones');
   };
 
   const goToImage = (index) => {
     setCurrentImageIndex(index);
   };
+
+  const getStatusColor = (status) => {
+    if (!status || status.trim() === '' || status === 'No especificado') {
+      return 'bg-gray-100 text-gray-600';
+    }
+    switch (status.toUpperCase()) {
+      case 'DISPONIBLE':
+        return 'bg-green-100 text-green-700';
+      case 'NO DISPONIBLE':
+        return 'bg-red-100 text-red-700';
+      case 'MANTENIMIENTO':
+        return 'bg-yellow-100 text-yellow-700';
+      case 'EN RUTA':
+        return 'bg-blue-100 text-blue-700';
+      case 'SIN ESTADO':
+        return 'bg-gray-100 text-gray-600';
+      default:
+        return 'bg-gray-100 text-gray-600';
+    }
+  };
+
+  const getStatusDotColor = (status) => {
+    if (!status || status.trim() === '' || status === 'No especificado') {
+      return 'bg-gray-400';
+    }
+    switch (status.toUpperCase()) {
+      case 'DISPONIBLE':
+        return 'bg-green-500';
+      case 'NO DISPONIBLE':
+        return 'bg-red-500';
+      case 'MANTENIMIENTO':
+        return 'bg-yellow-500';
+      case 'EN RUTA':
+        return 'bg-blue-500';
+      case 'SIN ESTADO':
+        return 'bg-gray-400';
+      default:
+        return 'bg-gray-400';
+    }
+  };
+
+  // Estados de carga y error
+  if (loading) {
+    return (
+      <div className="h-screen overflow-hidden" style={{ backgroundColor: '#34353A' }}>
+        <div className="h-full flex flex-col">
+          <div className="flex-1 p-6 overflow-hidden">
+            <div className="bg-white rounded-3xl shadow-lg h-full overflow-hidden flex flex-col">
+              <div className="flex items-center gap-4 p-6 border-b border-gray-200 flex-shrink-0">
+                <button onClick={handleBackToMenu} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                  <ArrowLeft size={20} className="text-gray-600" />
+                </button>
+                <h1 className="text-xl font-semibold text-gray-800">Información del vehículo</h1>
+              </div>
+              <div className="flex-1 flex justify-center items-center">
+                <div className="text-center">
+                  <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-400 border-t-transparent mx-auto mb-4" />
+                  <p className="text-gray-600">Cargando información del camión...</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="h-screen overflow-hidden" style={{ backgroundColor: '#34353A' }}>
+        <div className="h-full flex flex-col">
+          <div className="flex-1 p-6 overflow-hidden">
+            <div className="bg-white rounded-3xl shadow-lg h-full overflow-hidden flex flex-col">
+              <div className="flex items-center gap-4 p-6 border-b border-gray-200 flex-shrink-0">
+                <button onClick={handleBackToMenu} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                  <ArrowLeft size={20} className="text-gray-600" />
+                </button>
+                <h1 className="text-xl font-semibold text-gray-800">Error al cargar el camión</h1>
+              </div>
+              <div className="flex-1 flex justify-center items-center">
+                <div className="text-center max-w-md">
+                  <AlertCircle className="h-16 w-16 text-red-500 mx-auto mb-4" />
+                  <h2 className="text-xl font-semibold text-gray-800 mb-2">Error al cargar</h2>
+                  <p className="text-gray-600 mb-4">{error}</p>
+                  <button 
+                    onClick={refetch}
+                    className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors"
+                  >
+                    Intentar de nuevo
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!truck) {
+    return (
+      <div className="h-screen overflow-hidden" style={{ backgroundColor: '#34353A' }}>
+        <div className="h-full flex flex-col">
+          <div className="flex-1 p-6 overflow-hidden">
+            <div className="bg-white rounded-3xl shadow-lg h-full overflow-hidden flex flex-col">
+              <div className="flex items-center gap-4 p-6 border-b border-gray-200 flex-shrink-0">
+                <button onClick={handleBackToMenu} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                  <ArrowLeft size={20} className="text-gray-600" />
+                </button>
+                <h1 className="text-xl font-semibold text-gray-800">Camión no encontrado</h1>
+              </div>
+              <div className="flex-1 flex justify-center items-center">
+                <div className="text-center">
+                  <p className="text-gray-600">No se encontró información del camión</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="h-screen overflow-hidden" style={{ backgroundColor: '#34353A' }}>
@@ -125,8 +234,8 @@ const TruckDetailScreen = () => {
                   <div className="relative mb-6">
                     <div className="w-full h-60 sm:h-72 bg-white rounded-2xl overflow-hidden relative shadow-md">
                       <img
-                        src={truck.images[currentImageIndex]}
-                        alt="Truck"
+                        src={truck.images[currentImageIndex] || CamionFord}
+                        alt={truck.name}
                         className="w-full h-full object-contain"
                       />
 
@@ -169,40 +278,40 @@ const TruckDetailScreen = () => {
 
                   {/* Vehicle Info Cards - Top Row */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
-                    <div className="bg-white border border-gray-200 p-6 rounded-2xl shadow-sm transform transition-all duration-500 hover:scale-[1.1] hover:shadow-2xl hover:rotate-[10deg] hover:translate-y-4 hover:bg-gradient-to-r hover:from-purple-300 hover:to-pink-400">
+                    <div className="bg-white border border-gray-200 p-6 rounded-2xl shadow-sm transform transition-all duration-500 hover:scale-[1.02] hover:shadow-md">
                       <div className="flex items-center justify-between">
                         <div>
                           <div className="text-xl font-bold text-gray-900 mb-1">{truck.plate}</div>
-                          <div className="text-sm text-gray-500">Tarjeta de circulación</div>
+                          <div className="text-sm text-gray-500">Placa</div>
                         </div>
-                        <div className="text-3xl">🇺🇸</div>
+                        <div className="text-3xl">🚗</div>
                       </div>
                     </div>
 
-                    <div className="bg-white border border-gray-200 p-6 rounded-2xl shadow-sm transform transition-all duration-500 hover:scale-[1.1] hover:shadow-2xl hover:rotate-[10deg] hover:translate-y-4 hover:bg-gradient-to-r hover:from-purple-300 hover:to-pink-400">
+                    <div className="bg-white border border-gray-200 p-6 rounded-2xl shadow-sm transform transition-all duration-500 hover:scale-[1.02] hover:shadow-md">
                       <div className="flex items-center justify-between">
                         <div>
                           <div className="text-xl font-bold text-gray-900 mb-1">{truck.card}</div>
-                          <div className="text-sm text-gray-500">Placa</div>
+                          <div className="text-sm text-gray-500">Tarjeta de circulación</div>
                         </div>
-                        <div className="text-3xl">🏆</div>
+                        <div className="text-3xl">📋</div>
                       </div>
                     </div>
 
-                    <div className="bg-white border border-gray-200 p-6 rounded-2xl shadow-sm transform transition-all duration-500 hover:scale-[1.1] hover:shadow-2xl hover:rotate-[10deg] hover:translate-y-4 hover:bg-gradient-to-r hover:from-purple-300 hover:to-pink-400">
+                    <div className="bg-white border border-gray-200 p-6 rounded-2xl shadow-sm transform transition-all duration-500 hover:scale-[1.02] hover:shadow-md">
                       <div className="flex items-center justify-between">
                         <div>
                           <div className="text-xl font-bold text-gray-900 mb-1">{truck.year}</div>
                           <div className="text-sm text-gray-500">Año</div>
                         </div>
-                        <div className="text-3xl">🚚</div>
+                        <div className="text-3xl">📅</div>
                       </div>
                     </div>
                   </div>
 
                   {/* Vehicle Info Cards - Bottom Row */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-                    <div className="bg-white border border-gray-200 p-6 rounded-2xl shadow-sm transform transition-all duration-500 hover:scale-[1.1] hover:shadow-2xl hover:rotate-[10deg] hover:translate-y-4 hover:bg-gradient-to-r hover:from-purple-300 hover:to-pink-400">
+                    <div className="bg-white border border-gray-200 p-6 rounded-2xl shadow-sm transform transition-all duration-500 hover:scale-[1.02] hover:shadow-md">
                       <div className="flex items-center justify-between">
                         <div>
                           <div className="text-xl font-bold text-gray-900 mb-1">{truck.driver}</div>
@@ -212,19 +321,19 @@ const TruckDetailScreen = () => {
                       </div>
                     </div>
 
-                    <div className="bg-white border border-gray-200 p-6 rounded-2xl shadow-sm transform transition-all duration-500 hover:scale-[1.1] hover:shadow-2xl hover:rotate-[10deg] hover:translate-y-4 hover:bg-gradient-to-r hover:from-purple-300 hover:to-pink-400">
+                    <div className="bg-white border border-gray-200 p-6 rounded-2xl shadow-sm transform transition-all duration-500 hover:scale-[1.02] hover:shadow-md">
                       <div className="flex items-center justify-between">
                         <div>
                           <div className="text-xl font-bold text-gray-900 mb-1">{truck.brand}</div>
                           <div className="text-sm text-gray-500">Marca</div>
                         </div>
                         <div className="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center">
-                          <span className="text-white font-bold text-lg">F</span>
+                          <span className="text-white font-bold text-lg">{truck.brand.charAt(0)}</span>
                         </div>
                       </div>
                     </div>
 
-                    <div className="bg-white border border-gray-200 p-6 rounded-2xl shadow-sm transform transition-all duration-500 hover:scale-[1.1] hover:shadow-2xl hover:rotate-[10deg] hover:translate-y-4 hover:bg-gradient-to-r hover:from-purple-300 hover:to-pink-400">
+                    <div className="bg-white border border-gray-200 p-6 rounded-2xl shadow-sm transform transition-all duration-500 hover:scale-[1.02] hover:shadow-md">
                       <div className="flex items-center justify-between">
                         <div>
                           <div className="text-xl font-bold text-gray-900 mb-1">{truck.model}</div>
@@ -237,19 +346,19 @@ const TruckDetailScreen = () => {
 
                   {/* Status Badge */}
                   <div className="flex justify-end">
-                    <div className="inline-flex items-center px-6 py-3 rounded-full bg-green-100 border border-green-200 shadow-sm">
-                      <div className="w-3 h-3 rounded-full bg-green-500 mr-3"></div>
-                      <span className="text-green-700 font-semibold text-lg mr-3">{truck.status}</span>
-                      <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
+                    <div className={`inline-flex items-center px-6 py-3 rounded-full border shadow-sm ${getStatusColor(truck.status)}`}>
+                      <div className={`w-3 h-3 rounded-full mr-3 ${getStatusDotColor(truck.status)}`} />
+                      <span className="font-semibold text-lg mr-3">
+                        {truck.status === 'No especificado' ? 'Sin estado' : truck.status}
+                      </span>
+                      <div className="w-6 h-6 bg-current rounded-full flex items-center justify-center opacity-70">
                         <span className="text-white text-sm font-bold">✓</span>
                       </div>
                     </div>
                   </div>
-
                 </div>
               </div>
             </div>
-
           </div>
         </div>
       </div>
