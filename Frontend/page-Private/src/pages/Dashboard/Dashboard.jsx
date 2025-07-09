@@ -1,4 +1,5 @@
 import React from 'react';
+import Sidebar from '../../components/Dashboard/Sidebar';
 import Header from '../../components/Dashboard/Header';
 import ActivityChart from '../../components/Dashboard/ActivityChart';
 import CompletedTrips from '../../components/Dashboard/CompletedTrips';
@@ -8,6 +9,8 @@ import ReportsCard from '../../components/Dashboard/ReportsCard';
 const Dashboard = () => {
   return (
     <div className="flex h-screen bg-[#34353A] overflow-hidden">
+      <Sidebar />
+
       <div className="flex-1 p-6 overflow-hidden">
         <div className="bg-white rounded-xl p-6 h-full overflow-hidden">
           <Header />
@@ -37,7 +40,6 @@ const Dashboard = () => {
               </div>
             </div>
           </div>
-          
         </div>
       </div>
     </div>
