@@ -10,6 +10,7 @@ const TruckMainScreen = () => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [selectedTruck, setSelectedTruck] = useState(null);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false); // Nuevo estado para loading
 
   const navigate = useNavigate();
 
@@ -124,10 +125,38 @@ const TruckMainScreen = () => {
     setShowDeleteModal(true);
   };
   
-  const handleDeleteConfirm = () => {
-    setTrucks(trucks.filter(t => t.id !== selectedTruck.id));
-    setShowDeleteModal(false);
-    setShowSuccessModal(true);
+  const handleDeleteConfirm = async () => {
+    try {
+      setIsDeleting(true); // Mostrar loading
+      
+      // Eliminar del backend
+      const response = await fetch(`http://localhost:4000/api/camiones/${selectedTruck.id}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        // Solo si se eliminó exitosamente del backend, quitar del estado local
+        setTrucks(trucks.filter(t => t.id !== selectedTruck.id));
+        setShowDeleteModal(false);
+        setShowSuccessModal(true);
+        console.log('Camión eliminado exitosamente de la base de datos');
+      } else {
+        // Si hay error en el backend, mostrar mensaje
+        const errorData = await response.json();
+        console.error('Error al eliminar camión:', errorData);
+        alert('Error al eliminar el camión. Inténtalo de nuevo.');
+        setShowDeleteModal(false);
+      }
+    } catch (error) {
+      console.error('Error de conexión al eliminar camión:', error);
+      alert('Error de conexión. Verifica tu conexión a internet.');
+      setShowDeleteModal(false);
+    } finally {
+      setIsDeleting(false); // Ocultar loading
+    }
   };
   
   const handleSuccessContinue = () => {
@@ -220,18 +249,41 @@ const TruckMainScreen = () => {
       </div>
 
       {showDeleteModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
-          <div className="bg-white rounded-xl p-6 w-full max-w-sm shadow-lg text-center">
-            <div className="w-16 h-16 bg-red-500 text-white rounded-full mx-auto flex items-center justify-center mb-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 animate-fade-in">
+          <div className="bg-white rounded-xl p-6 w-full max-w-sm shadow-lg text-center animate-scale-in">
+            <div className="w-16 h-16 bg-red-500 text-white rounded-full mx-auto flex items-center justify-center mb-4 animate-shake">
               <X size={32} />
             </div>
             <h2 className="text-lg font-semibold text-gray-800 mb-2">¿Eliminar camión?</h2>
             <p className="text-gray-600 mb-6">Esta acción no se puede deshacer.</p>
             <div className="flex justify-center gap-4">
-              <button onClick={handleDeleteConfirm} className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600">
-                Eliminar
+              <button 
+                onClick={handleDeleteConfirm} 
+                disabled={isDeleting}
+                className={`px-4 py-2 rounded transition-all duration-200 ${
+                  isDeleting 
+                    ? 'bg-gray-400 text-white cursor-not-allowed' 
+                    : 'bg-red-500 text-white hover:bg-red-600 hover:scale-105 active:scale-95'
+                }`}
+              >
+                {isDeleting ? (
+                  <div className="flex items-center">
+                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-2"></div>
+                    Eliminando...
+                  </div>
+                ) : (
+                  'Eliminar'
+                )}
               </button>
-              <button onClick={() => setShowDeleteModal(false)} className="px-4 py-2 border rounded hover:bg-gray-100">
+              <button 
+                onClick={() => setShowDeleteModal(false)} 
+                disabled={isDeleting}
+                className={`px-4 py-2 border rounded transition-all duration-200 ${
+                  isDeleting 
+                    ? 'opacity-50 cursor-not-allowed' 
+                    : 'hover:bg-gray-100 hover:scale-105 active:scale-95'
+                }`}
+              >
                 Cancelar
               </button>
             </div>
@@ -240,19 +292,89 @@ const TruckMainScreen = () => {
       )}
 
       {showSuccessModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
-          <div className="bg-white rounded-xl p-6 w-full max-w-sm shadow-lg text-center">
-            <div className="w-16 h-16 bg-green-500 text-white rounded-full mx-auto flex items-center justify-center mb-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 animate-fade-in">
+          <div className="bg-white rounded-xl p-6 w-full max-w-sm shadow-lg text-center animate-bounce-in">
+            <div className="w-16 h-16 bg-green-500 text-white rounded-full mx-auto flex items-center justify-center mb-4 animate-pulse">
               <Check size={32} />
             </div>
             <h2 className="text-lg font-semibold text-gray-800 mb-2">Camión eliminado</h2>
             <p className="text-gray-600 mb-6">El camión fue eliminado exitosamente.</p>
-            <button onClick={handleSuccessContinue} className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">
+            <button 
+              onClick={handleSuccessContinue} 
+              className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 transition-all duration-200 hover:scale-105 active:scale-95"
+            >
               Continuar
             </button>
           </div>
         </div>
       )}
+
+      <style jsx>{`
+        @keyframes fade-in {
+          from {
+            opacity: 0;
+          }
+          to {
+            opacity: 1;
+          }
+        }
+
+        @keyframes scale-in {
+          from {
+            opacity: 0;
+            transform: scale(0.9);
+          }
+          to {
+            opacity: 1;
+            transform: scale(1);
+          }
+        }
+
+        @keyframes bounce-in {
+          0% {
+            opacity: 0;
+            transform: scale(0.3);
+          }
+          50% {
+            transform: scale(1.05);
+          }
+          70% {
+            transform: scale(0.9);
+          }
+          100% {
+            opacity: 1;
+            transform: scale(1);
+          }
+        }
+
+        @keyframes shake {
+          0%, 100% {
+            transform: translateX(0);
+          }
+          10%, 30%, 50%, 70%, 90% {
+            transform: translateX(-2px);
+          }
+          20%, 40%, 60%, 80% {
+            transform: translateX(2px);
+          }
+        }
+
+        .animate-fade-in {
+          animation: fade-in 0.3s ease-out;
+        }
+
+        .animate-scale-in {
+          animation: scale-in 0.3s ease-out;
+        }
+
+        .animate-bounce-in {
+          animation: bounce-in 0.6s ease-out;
+        }
+
+        .animate-shake {
+          animation: shake 0.5s ease-in-out;
+        }
+      `}</style>
     </div>
   );
 };
