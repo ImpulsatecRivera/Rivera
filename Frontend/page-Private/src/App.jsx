@@ -4,7 +4,6 @@ import RecoverPassword from "./pages/RecoverPassword";
 import VerificationInput from "./pages/VerificationInput";
 import ResetPassword from "./pages/ResetPassword";
 import Travel from "./pages/Travel";
-
 import Dashboard from "./pages/Dashboard/Dashboard";
 import ReportsPage from "./pages/Dashboard/ReportsPage";
 import ClientManagementInterface from "./pages/Clientes";
@@ -19,9 +18,6 @@ import TruckFormScreen from "./pages/Camiones/FormAggCamion";
 import ProviderManagementInterface from "./pages/Provedores/Prooveedores";
 import AddProveedorForm from "./pages/Provedores/AgregarProovedor";
 import TruckManagement from "./pages/Camiones/EditarCamion";
-
-// If you need this component, make sure to import it
-// import VerificationCode from "./pages/VerificationCode";
 
 function App() {
   const location = useLocation();
@@ -38,10 +34,18 @@ function App() {
     "/Camiones/aggCamion",
     "/proveedores/agregarProveedor",
     "/Camiones/editarCamion"
-    
   ];
 
-  const shouldShowMenu = !authRoutes.includes(location.pathname);
+  // Función para verificar si debe mostrar el menú
+  const shouldShowMenu = !authRoutes.some(route => {
+    if (route.includes(':')) {
+      // Para rutas dinámicas, verificar el patrón
+      const pattern = route.replace(':id', '[^/]+');
+      const regex = new RegExp(`^${pattern}$`);
+      return regex.test(location.pathname);
+    }
+    return location.pathname === route || location.pathname.startsWith(route + '/');
+  });
 
   return (
     <div className="flex">
@@ -55,42 +59,64 @@ function App() {
       {/* Contenido principal */}
       <div className={`flex-1 min-h-screen ${shouldShowMenu ? "ml-64" : "ml-0"}`}>
         <Routes>
+          {/* Rutas de autenticación */}
           <Route path="/" element={<Login />} />
           <Route path="/recuperar" element={<RecoverPassword />} />
-          {/* Uncomment this after creating the component */}
-          {/* <Route path="/verification-code" element={<VerificationCode />} /> */}
           <Route path="/verification-input" element={<VerificationInput />} />
           <Route path="/reset-password" element={<ResetPassword />} />
+          
+          {/* Dashboard */}
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/informes" element={<ReportsPage />} />
+          
+          {/* Clientes */}
           <Route path="/clientes" element={<ClientManagementInterface />} />
+          
+          {/* Empleados */}
           <Route path="/empleados" element={<Employee />} />
           <Route path="/empleados/agregarEmployee" element={<AddEmployeeForm />} />
+          
+          {/* Motoristas */}
           <Route path="/motoristas" element={<MotoristaManagementInterface />} />
+          <Route path="/motoristas/agregarMotorista" element={<AddMotoristaForm />} />
+          
+          {/* Viajes */}
           <Route path="/viajes" element={<Travel />} />
-          <Route path="/empleados" element={<Employee/>} />
-          <Route path="/empleados/agregarEmployee" element={<AddEmployeeForm/>} />
-          <Route path="/motoristas" element={<MotoristaManagementInterface/>} />
-          <Route path="/motoristas/agregarMotorista" element={<AddMotoristaForm/>} />
-          <Route path="/Camiones" element={<Camiones/>} />
-          <Route path="/Camiones/verCamion" element={<TruckDetailScreen/>} />
-          <Route path="/Camiones/aggCamion" element={<TruckFormScreen/>} />
-          <Route path="/Camiones/editarCamion" element={<TruckManagement/>} />
-          <Route path="/camiones/Camiones" element={<handleEditTruck/>} />
-
-
-=======
-          <Route path="/proveedores"element={<ProviderManagementInterface/>} />
-          <Route path="/proveedores/agregarProveedor" element={<AddProveedorForm/>} />
+          
+          {/* CAMIONES - RUTAS CORREGIDAS */}
+          {/* Lista de camiones */}
+          <Route path="/Camiones" element={<Camiones />} />
+          <Route path="/camiones" element={<Camiones />} /> {/* Alias en minúscula */}
+          
+          {/* Ver detalle de camión - RUTA DINÁMICA */}
+          <Route path="/camiones/:id" element={<TruckDetailScreen />} />
+          <Route path="/Camiones/:id" element={<TruckDetailScreen />} /> {/* Alias */}
+          
+          {/* Agregar camión */}
+          <Route path="/Camiones/aggCamion" element={<TruckFormScreen />} />
+          <Route path="/camiones/aggCamion" element={<TruckFormScreen />} /> {/* Alias */}
+          
+          {/* Editar camión - RUTA DINÁMICA */}
+          <Route path="/Camiones/editarCamion/:id" element={<TruckManagement />} />
+          <Route path="/camiones/editarCamion/:id" element={<TruckManagement />} /> {/* Alias */}
+          
+          {/* Proveedores */}
+          <Route path="/proveedores" element={<ProviderManagementInterface />} />
+          <Route path="/proveedores/agregarProveedor" element={<AddProveedorForm />} />
+          
+          {/* Ruta catch-all para páginas no encontradas */}
+          <Route path="*" element={
+            <div className="flex items-center justify-center h-screen">
+              <div className="text-center">
+                <h1 className="text-2xl font-bold text-gray-800 mb-2">404 - Página no encontrada</h1>
+                <p className="text-gray-600">La ruta "{location.pathname}" no existe.</p>
+              </div>
+            </div>
+          } />
         </Routes>
       </div>
     </div>
   );
 }
 
-
 export default App;
-
-
-
-
