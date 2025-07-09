@@ -1,19 +1,26 @@
 import motoristalModel from "../Models/Motorista.js";
 import bcryptjs from "bcryptjs";
+import { v2 as cloudinary } from "cloudinary";
+import { config } from "../config.js";
 
 const motoristasCon = {};
 
-// Obtener todos los motoristas
+cloudinary.config({
+  cloud_name: config.cloudinary.cloudinary_name,
+  api_key: config.cloudinary.cloudinary_api_key,
+  api_secret: config.cloudinary.cloudinary_api_secret,
+});
+
 motoristasCon.get = async (req, res) => {
   try {
-    const motoristas = await motoristalModel.find();
-    res.status(200).json(motoristas);
+    const newMotorista = await motoristalModel.find();
+    res.status(200).json(newMotorista);
   } catch (error) {
     res.status(500).json({ message: "Error al obtener motoristas", error: error.message });
   }
 };
 
-// Generar email automáticamente
+// Función para generar email automáticamente
 const generarEmail = async (name, lastName) => {
   const dominio = "rivera.com";
   let base = `${name.toLowerCase()}.${lastName.toLowerCase()}`;
@@ -28,83 +35,127 @@ const generarEmail = async (name, lastName) => {
   return email;
 };
 
-// Registrar nuevo motorista
 motoristasCon.post = async (req, res) => {
   try {
     const { name, lastName, id, birthDate, password, phone, address, circulationCard } = req.body;
 
     const email = await generarEmail(name, lastName);
 
-    const existeMotorista = await motoristalModel.findOne({ email });
-    if (existeMotorista) {
+    const validarMotorista = await motoristalModel.findOne({ email });
+    if (validarMotorista) {
       return res.status(400).json({ message: "Motorista ya registrado" });
     }
 
-    const hashedPassword = await bcryptjs.hash(password, 10);
+    let imgUrl = "";
+    if (req.file) {
+      const resul = await cloudinary.uploader.upload(req.file.path, {
+        folder: "public",
+        allowed_formats: ["png", "jpg", "jpeg"],
+      });
+      imgUrl = resul.secure_url;
+    }
 
-    const newMotorista = new motoristalModel({
+    const contraHash = await bcryptjs.hash(password, 10);
+
+    const newmotorista = new motoristalModel({
       name,
       lastName,
       email,
       id,
       birthDate,
-      password: hashedPassword,
+      password: contraHash,
       phone,
       address,
-      circulationCard
+      circulationCard,
+      img: imgUrl,
     });
 
-    await newMotorista.save();
-    res.status(200).json({ message: "Motorista agregado correctamente" });
+    await newmotorista.save();
+
+    res.status(200).json({ Message: "Motorista agregado correctamente" });
   } catch (error) {
-    res.status(500).json({ message: "Error al agregar motorista", error: error.message });
+    res.status(500).json({ message: "Error al agregar motoristas", error: error.message });
   }
 };
 
-// Actualizar motorista
 motoristasCon.put = async (req, res) => {
   try {
-    const { name, lastName, id, birthDate, password, phone, address, circulationCard } = req.body;
+    console.log("=== PUT MOTORISTA BACKEND ===");
+    console.log("ID recibido:", req.params.id);
+    console.log("Datos recibidos:", req.body);
 
-    const email = await generarEmail(name, lastName);
-    const hashedPassword = await bcryptjs.hash(password, 10);
+    const motoristaId = req.params.id;
+    const { name, lastName, password, phone, address, circulationCard } = req.body;
 
-    const updated = await motoristalModel.findByIdAndUpdate(
-      req.params.id,
-      {
-        name,
-        lastName,
-        email,
-        id,
-        birthDate,
-        password: hashedPassword,
-        phone,
-        address,
-        circulationCard
-      },
-      { new: true }
-    );
-
-    if (!updated) {
+    const motoristaExistente = await motoristalModel.findById(motoristaId);
+    if (!motoristaExistente) {
       return res.status(404).json({ message: "Motorista no encontrado" });
     }
 
-    res.status(200).json({ message: "Motorista editado correctamente" });
+    let imgUrl = "";
+    if (req.file) {
+      const resul = await cloudinary.uploader.upload(req.file.path, {
+        folder: "public",
+        allowed_formats: ["png", "jpg", "jpeg"],
+      });
+      imgUrl = resul.secure_url;
+    }
+
+    const updateData = {
+      name: name?.trim() || motoristaExistente.name,
+      lastName: lastName?.trim() || motoristaExistente.lastName,
+      phone: phone?.trim() || motoristaExistente.phone,
+      address: address?.trim() || motoristaExistente.address,
+      circulationCard: circulationCard?.trim() || motoristaExistente.circulationCard,
+      img: imgUrl?.trim() || motoristaExistente.img,
+      email: motoristaExistente.email,
+      id: motoristaExistente.id,
+      birthDate: motoristaExistente.birthDate,
+    };
+
+    if (name?.trim() || lastName?.trim()) {
+      const nombreFinal = name?.trim() || motoristaExistente.name;
+      const apellidoFinal = lastName?.trim() || motoristaExistente.lastName;
+      updateData.email = await generarEmail(nombreFinal, apellidoFinal);
+    }
+
+    if (password?.trim()) {
+      updateData.password = await bcryptjs.hash(password.trim(), 10);
+    } else {
+      updateData.password = motoristaExistente.password;
+    }
+
+    const motoristaActualizado = await motoristalModel.findByIdAndUpdate(
+      motoristaId,
+      updateData,
+      { new: true, runValidators: true }
+    );
+
+    if (!motoristaActualizado) {
+      return res.status(404).json({ message: "Error al actualizar motorista" });
+    }
+
+    res.status(200).json({
+      message: "Motorista editado correctamente",
+      motorista: motoristaActualizado,
+    });
   } catch (error) {
-    res.status(500).json({ message: "Error al actualizar motorista", error: error.message });
+    res.status(500).json({
+      message: "Error al actualizar motorista",
+      error: error.message,
+    });
   }
 };
 
-// Eliminar motorista
 motoristasCon.delete = async (req, res) => {
   try {
-    const deleted = await motoristalModel.findByIdAndDelete(req.params.id);
-    if (!deleted) {
-      return res.status(404).json({ message: "Motorista no localizado" });
+    const deleteMotorista = await motoristalModel.findByIdAndDelete(req.params.id);
+    if (!deleteMotorista) {
+      return res.status(400).json({ Message: "Motorista no localizado" });
     }
-    res.status(200).json({ message: "Motorista eliminado correctamente" });
+    res.status(200).json({ Message: "Motorista eliminado correctamente" });
   } catch (error) {
-    res.status(500).json({ message: "Error al eliminar motorista", error: error.message });
+    res.status(500).json({ message: "Error al eliminar motoristas", error: error.message });
   }
 };
 
