@@ -1,7 +1,59 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, MoreHorizontal, ArrowLeft } from 'lucide-react';
+import { Plus, MoreHorizontal, ArrowLeft, Check, X } from 'lucide-react';
 
 const TravelDashboard = () => {
+  // Agregamos estilos CSS para las animaciones personalizadas
+  const styles = `
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      10%, 30%, 50%, 70%, 90% { transform: translateX(-3px); }
+      20%, 40%, 60%, 80% { transform: translateX(3px); }
+    }
+    
+    @keyframes redPulse {
+      0%, 100% { 
+        box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4);
+      }
+      50% { 
+        box-shadow: 0 0 0 20px rgba(239, 68, 68, 0);
+      }
+    }
+    
+    .animate-fade-in-up {
+      animation: fadeInUp 0.6s ease-out forwards;
+    }
+    
+    .animate-shake {
+      animation: shake 0.8s ease-in-out;
+    }
+    
+    .animate-red-pulse {
+      animation: redPulse 2s infinite;
+    }
+  `;
+
+  // Inyectamos los estilos en el head
+  useEffect(() => {
+    const styleElement = document.createElement('style');
+    styleElement.textContent = styles;
+    document.head.appendChild(styleElement);
+    
+    return () => {
+      document.head.removeChild(styleElement);
+    };
+  }, []);
+
   const barHeights = [60, 80, 45, 90, 120, 70, 50, 85, 95, 110, 140, 75, 65, 100];
   const [animatedBars, setAnimatedBars] = useState(Array(14).fill(0));
   const [animatedProgress, setAnimatedProgress] = useState(Array(5).fill(0));
@@ -14,6 +66,10 @@ const TravelDashboard = () => {
   const [isConfirmEditClosing, setIsConfirmEditClosing] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [isSuccessClosing, setIsSuccessClosing] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [isDeleteClosing, setIsDeleteClosing] = useState(false);
+  const [showDeleteSuccessModal, setShowDeleteSuccessModal] = useState(false);
+  const [isDeleteSuccessClosing, setIsDeleteSuccessClosing] = useState(false);
   const [editForm, setEditForm] = useState({
     cotizacion: '300.00',
     horaLlegada: '7:00 AM',
@@ -60,13 +116,15 @@ const TravelDashboard = () => {
     }, 300);
   };
 
-  // Confirmar la actualización
+  // Confirmar la actualización - ahora muestra el modal de éxito
   const handleConfirmEdit = () => {
     console.log('Actualizando viaje:', editForm);
     setIsConfirmEditClosing(true);
     setTimeout(() => {
       setShowConfirmEditModal(false);
       setIsConfirmEditClosing(false);
+      setShowSuccessModal(true);
+      setIsSuccessClosing(false);
     }, 300);
   };
 
@@ -78,6 +136,15 @@ const TravelDashboard = () => {
       setIsConfirmEditClosing(false);
       setShowEditModal(true);
       setIsEditClosing(false);
+    }, 300);
+  };
+
+  // Cerrar modal de éxito
+  const handleCloseSuccessModal = () => {
+    setIsSuccessClosing(true);
+    setTimeout(() => {
+      setShowSuccessModal(false);
+      setIsSuccessClosing(false);
     }, 300);
   };
 
@@ -97,8 +164,47 @@ const TravelDashboard = () => {
   };
 
   const handleDelete = () => {
-    console.log('Eliminar viaje:', selectedTrip);
-    handleCloseModal();
+    setIsClosing(true);
+    setTimeout(() => {
+      setShowModal(false);
+      setSelectedTrip(null);
+      setIsClosing(false);
+      setShowDeleteModal(true);
+      setIsDeleteClosing(false);
+    }, 300);
+  };
+
+  // Confirmar la eliminación
+  const handleConfirmDelete = () => {
+    console.log('Eliminando viaje:', selectedTrip);
+    setIsDeleteClosing(true);
+    setTimeout(() => {
+      setShowDeleteModal(false);
+      setIsDeleteClosing(false);
+      setShowDeleteSuccessModal(true);
+      setIsDeleteSuccessClosing(false);
+    }, 300);
+  };
+
+  // Cerrar modal de éxito de eliminación
+  const handleCloseDeleteSuccessModal = () => {
+    setIsDeleteSuccessClosing(true);
+    setTimeout(() => {
+      setShowDeleteSuccessModal(false);
+      setIsDeleteSuccessClosing(false);
+      setSelectedTrip(null);
+    }, 300);
+  };
+
+  // Cancelar la eliminación
+  const handleCancelDelete = () => {
+    setIsDeleteClosing(true);
+    setTimeout(() => {
+      setShowDeleteModal(false);
+      setIsDeleteClosing(false);
+      setShowModal(true);
+      setIsClosing(false);
+    }, 300);
   };
 
   const progressValues = [85, 70, 55, 40, 30];
@@ -257,9 +363,11 @@ const TravelDashboard = () => {
                     ))}
                   </div>
                   
-                  <button className="w-full p-4 border-2 border-dashed border-gray-300 rounded-xl text-gray-500 hover:border-blue-400 hover:text-blue-600 transition-colors flex items-center justify-center">
-                    <Plus size={20} className="mr-2" />
-                    Programar un viaje
+                  <button className="w-full p-4 text-gray-900 hover:bg-gray-50 transition-colors flex items-center justify-start">
+                    <div className="w-6 h-6 bg-black rounded-full flex items-center justify-center mr-3">
+                      <Plus size={14} className="text-white" />
+                    </div>
+                    <span className="font-medium">Programar un viaje</span>
                   </button>
                 </div>
               </div>
@@ -368,7 +476,7 @@ const TravelDashboard = () => {
           </div>
         )}
 
-        {/* Modal de Edición de Viaje - SEGUNDO */}
+        {/* Modal de Edición de Viaje */}
         {showEditModal && (
           <div 
             className={`fixed inset-0 bg-black z-50 flex items-center justify-center transition-all duration-300 ease-out ${
@@ -482,7 +590,7 @@ const TravelDashboard = () => {
           </div>
         )}
 
-        {/* Modal de Confirmación para Editar - ÚLTIMO */}
+        {/* Modal de Confirmación para Editar */}
         {showConfirmEditModal && (
           <div 
             className={`fixed inset-0 bg-black z-50 flex items-center justify-center transition-all duration-300 ease-out ${
@@ -521,6 +629,138 @@ const TravelDashboard = () => {
                   <button 
                     onClick={handleConfirmEdit}
                     className="flex-1 bg-green-600 hover:bg-green-700 text-white py-4 px-6 rounded-2xl font-semibold transition-all duration-200 hover:scale-105 hover:shadow-lg active:scale-95 transform"
+                  >
+                    Continuar
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal de Éxito - NUEVA ALERTA */}
+        {showSuccessModal && (
+          <div 
+            className={`fixed inset-0 bg-black z-50 flex items-center justify-center transition-all duration-300 ease-out ${
+              isSuccessClosing ? 'bg-opacity-0' : 'bg-opacity-50'
+            }`}
+            onClick={handleCloseSuccessModal}
+          >
+            <div 
+              className={`bg-white rounded-3xl p-8 max-w-md w-full mx-4 relative transform transition-all duration-300 ease-out ${
+                isSuccessClosing 
+                  ? 'scale-95 opacity-0 translate-y-4' 
+                  : 'scale-100 opacity-100 translate-y-0'
+              }`}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="text-center">
+                <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6 transform transition-all duration-500 animate-pulse">
+                  <Check size={36} className="text-green-600 animate-bounce" />
+                </div>
+                
+                <h2 className="text-2xl font-bold text-gray-900 mb-2 transform transition-all duration-300 delay-100">
+                  Viaje agregado con éxito
+                </h2>
+                
+                <p className="text-gray-600 mb-8 transform transition-all duration-300 delay-200">
+                  Viaje agregado correctamente
+                </p>
+                
+                <div className="transform transition-all duration-300 delay-300">
+                  <button 
+                    onClick={handleCloseSuccessModal}
+                    className="w-full bg-green-600 hover:bg-green-700 text-white py-4 px-6 rounded-2xl font-semibold transition-all duration-200 hover:scale-105 hover:shadow-lg active:scale-95 transform"
+                  >
+                    Continuar
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal de Confirmación de Eliminación */}
+        {showDeleteModal && (
+          <div 
+            className={`fixed inset-0 bg-black z-50 flex items-center justify-center transition-all duration-300 ease-out ${
+              isDeleteClosing ? 'bg-opacity-0' : 'bg-opacity-50'
+            }`}
+            onClick={handleCancelDelete}
+          >
+            <div 
+              className={`bg-white rounded-3xl p-8 max-w-md w-full mx-4 relative transform transition-all duration-300 ease-out ${
+                isDeleteClosing 
+                  ? 'scale-95 opacity-0 translate-y-4' 
+                  : 'scale-100 opacity-100 translate-y-0'
+              }`}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="text-center">
+                <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6 transform transition-all duration-500 hover:scale-110 animate-shake animate-red-pulse">
+                  <X size={36} className="text-red-600 animate-bounce" />
+                </div>
+                
+                <h2 className="text-2xl font-bold text-gray-900 mb-2 transform transition-all duration-300 delay-100 animate-fade-in-up">
+                  ¿Está seguro de que desea eliminar este viaje?
+                </h2>
+                
+                <p className="text-gray-600 mb-8 transform transition-all duration-300 delay-200 animate-fade-in-up">
+                  Este viaje se eliminará con esta acción
+                </p>
+                
+                <div className="flex space-x-4 transform transition-all duration-300 delay-300 animate-fade-in-up">
+                  <button 
+                    onClick={handleCancelDelete}
+                    className="flex-1 bg-gray-500 hover:bg-gray-600 text-white py-4 px-6 rounded-2xl font-semibold transition-all duration-200 hover:scale-105 hover:shadow-lg active:scale-95 transform hover:rotate-1 hover:shadow-gray-300"
+                  >
+                    Cancelar
+                  </button>
+                  <button 
+                    onClick={handleConfirmDelete}
+                    className="flex-1 bg-red-500 hover:bg-red-600 text-white py-4 px-6 rounded-2xl font-semibold transition-all duration-200 hover:scale-105 hover:shadow-lg active:scale-95 transform hover:-rotate-1 hover:shadow-red-300 active:animate-pulse"
+                  >
+                    Eliminar
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal de Éxito de Eliminación */}
+        {showDeleteSuccessModal && (
+          <div 
+            className={`fixed inset-0 bg-black z-50 flex items-center justify-center transition-all duration-300 ease-out ${
+              isDeleteSuccessClosing ? 'bg-opacity-0' : 'bg-opacity-50'
+            }`}
+            onClick={handleCloseDeleteSuccessModal}
+          >
+            <div 
+              className={`bg-white rounded-3xl p-8 max-w-md w-full mx-4 relative transform transition-all duration-300 ease-out ${
+                isDeleteSuccessClosing 
+                  ? 'scale-95 opacity-0 translate-y-4' 
+                  : 'scale-100 opacity-100 translate-y-0'
+              }`}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="text-center">
+                <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6 transform transition-all duration-500 animate-pulse">
+                  <Check size={36} className="text-green-600 animate-bounce" />
+                </div>
+                
+                <h2 className="text-2xl font-bold text-gray-900 mb-2 transform transition-all duration-300 delay-100">
+                  Viaje eliminado con éxito
+                </h2>
+                
+                <p className="text-gray-600 mb-8 transform transition-all duration-300 delay-200">
+                  Viaje eliminado correctamente
+                </p>
+                
+                <div className="transform transition-all duration-300 delay-300">
+                  <button 
+                    onClick={handleCloseDeleteSuccessModal}
+                    className="w-full bg-green-600 hover:bg-green-700 text-white py-4 px-6 rounded-2xl font-semibold transition-all duration-200 hover:scale-105 hover:shadow-lg active:scale-95 transform"
                   >
                     Continuar
                   </button>
