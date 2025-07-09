@@ -15,6 +15,7 @@ router
 router
 .route("/:id")
 .put(upload.single("img"),camionesController.put)
+.get(camionesController.getById)
 .delete(camionesController.delete);
 
 export default router;

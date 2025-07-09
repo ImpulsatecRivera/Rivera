@@ -1,3 +1,5 @@
+import { useState } from "react";
+import axios from "axios";
 import Input from "../components/Login/Input";
 import Button from "../components/Login/Button";
 import candado from "../images/candado.png";
@@ -7,10 +9,58 @@ import { useNavigate } from "react-router-dom";
 
 const RecoverPassword = () => {
   const navigate = useNavigate();
+  const [email, setEmail] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
-  const handleSubmit = (e) => {
+  // Validación de email
+  const isValidEmail = (email) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    navigate("/verification-code");
+    
+    if (!email) {
+      setError("Por favor, introduce tu correo electrónico");
+      return;
+    }
+
+    if (!isValidEmail(email)) {
+      setError("Por favor, introduce un correo electrónico válido");
+      return;
+    }
+
+    setLoading(true);
+    setError("");
+
+    try {
+      console.log("Enviando solicitud con email:", email);
+      
+      const response = await axios.post("http://localhost:4000/api/recovery/requestCode", 
+        { email },
+        {
+          withCredentials: true, // Para manejar cookies
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+      
+      console.log("Respuesta exitosa:", response.data);
+      // Éxito - navegar a la siguiente página
+      navigate("/verification-input", { state: { email } });
+      
+    } catch (error) {
+      console.error("Error completo:", error);
+      console.error("Respuesta del servidor:", error.response?.data);
+      console.error("Status code:", error.response?.status);
+      
+      setError(error.response?.data?.message || "Error al enviar el código");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -27,9 +77,25 @@ const RecoverPassword = () => {
         </p>
 
         <form onSubmit={handleSubmit} className="w-full max-w-sm space-y-4">
-          <Input label="Correo" type="email" placeholder="ejemplo@email.com" />
-          <Button className="bg-[#a100f2] hover:bg-[#7d00c1]">
-            Enviar código
+          <Input 
+            label="Correo" 
+            type="email" 
+            placeholder="ejemplo@email.com"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+          />
+          
+          {error && (
+            <p className="text-red-400 text-sm text-center">{error}</p>
+          )}
+          
+          <Button 
+            type="submit"
+            disabled={loading}
+            className={`bg-[#a100f2] hover:bg-[#7d00c1] disabled:opacity-50 disabled:cursor-not-allowed ${loading ? 'opacity-50' : ''}`}
+          >
+            {loading ? "Enviando..." : "Enviar código"}
           </Button>
         </form>
       </div>
