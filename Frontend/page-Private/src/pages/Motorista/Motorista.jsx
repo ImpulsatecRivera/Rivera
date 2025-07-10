@@ -15,7 +15,7 @@ const SweetAlert = ({ isOpen, onClose, onEdit, onDelete }) => {
       }`}
     >
       <div 
-        className={`bg-white rounded-lg p-6 max-w-sm w-full mx-4 shadow-xl relative transform transition-all duration-300 ${
+        className={`bg-white rounded-lg p-4 sm:p-6 lg:p-8 xl:p-10 max-w-xs sm:max-w-sm md:max-w-md lg:max-w-lg xl:max-w-xl w-full mx-4 shadow-xl relative transform transition-all duration-300 ${
           isOpen ? 'scale-100 translate-y-0' : 'scale-95 translate-y-4'
         }`}
         style={{
@@ -24,22 +24,22 @@ const SweetAlert = ({ isOpen, onClose, onEdit, onDelete }) => {
       >
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-xl font-bold transition-colors duration-200 hover:scale-110 transform"
+          className="absolute top-3 right-3 sm:top-4 sm:right-4 lg:top-6 lg:right-6 text-gray-400 hover:text-gray-600 text-lg sm:text-xl lg:text-2xl font-bold transition-colors duration-200 hover:scale-110 transform"
         >
           ×
         </button>
         
         <div className="text-center">
           <div 
-            className="w-16 h-16 bg-gray-200 rounded-full mx-auto mb-4 flex items-center justify-center transition-all duration-300 hover:bg-gray-300"
+            className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 lg:w-18 lg:h-18 xl:w-20 xl:h-20 bg-gray-200 rounded-full mx-auto mb-3 sm:mb-4 lg:mb-6 flex items-center justify-center transition-all duration-300 hover:bg-gray-300"
             style={{
               animation: isOpen ? 'bounceIn 0.6s ease-out 0.2s both' : 'none'
             }}
           >
-            <span className="text-2xl text-gray-600">?</span>
+            <span className="text-lg sm:text-xl md:text-2xl lg:text-3xl xl:text-4xl text-gray-600">?</span>
           </div>
           <h3 
-            className="text-lg font-semibold text-gray-900 mb-2 transition-all duration-300"
+            className="text-base sm:text-lg md:text-xl lg:text-2xl xl:text-3xl font-semibold text-gray-900 mb-2 lg:mb-4 transition-all duration-300"
             style={{
               animation: isOpen ? 'fadeInUp 0.5s ease-out 0.3s both' : 'none'
             }}
@@ -47,7 +47,7 @@ const SweetAlert = ({ isOpen, onClose, onEdit, onDelete }) => {
             ¿Deseas eliminar o actualizar un motorista?
           </h3>
           <p 
-            className="text-gray-600 mb-6 transition-all duration-300"
+            className="text-sm sm:text-base md:text-lg lg:text-xl text-gray-600 mb-4 sm:mb-6 lg:mb-8 transition-all duration-300"
             style={{
               animation: isOpen ? 'fadeInUp 0.5s ease-out 0.4s both' : 'none'
             }}
@@ -55,20 +55,20 @@ const SweetAlert = ({ isOpen, onClose, onEdit, onDelete }) => {
             Elija la opción
           </p>
           <div 
-            className="flex space-x-3"
+            className="flex space-x-2 sm:space-x-3 lg:space-x-4"
             style={{
               animation: isOpen ? 'fadeInUp 0.5s ease-out 0.5s both' : 'none'
             }}
           >
             <button
               onClick={onDelete}
-              className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-all duration-200 transform hover:scale-105 hover:shadow-lg active:scale-95"
+              className="flex-1 px-3 py-2 sm:px-4 sm:py-2 md:px-5 md:py-3 lg:px-6 lg:py-3 xl:px-7 xl:py-4 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl transition-all duration-200 transform hover:scale-105 hover:shadow-lg active:scale-95"
             >
               Eliminar
             </button>
             <button
               onClick={onEdit}
-              className="flex-1 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-all duration-200 transform hover:scale-105 hover:shadow-lg active:scale-95"
+              className="flex-1 px-3 py-2 sm:px-4 sm:py-2 md:px-5 md:py-3 lg:px-6 lg:py-3 xl:px-7 xl:py-4 bg-green-600 hover:bg-green-700 text-white rounded-lg text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl transition-all duration-200 transform hover:scale-105 hover:shadow-lg active:scale-95"
             >
               Actualizar
             </button>
@@ -131,7 +131,7 @@ const ConfirmDeleteAlert = ({ isOpen, onClose, onConfirm, motoristaName }) => {
       }`}
     >
       <div 
-        className={`bg-white rounded-lg p-6 max-w-sm w-full mx-4 shadow-xl relative transform transition-all duration-300 ${
+        className={`bg-white rounded-lg p-4 sm:p-6 lg:p-8 xl:p-10 max-w-xs sm:max-w-sm md:max-w-md lg:max-w-lg xl:max-w-xl w-full mx-4 shadow-xl relative transform transition-all duration-300 ${
           isOpen ? 'scale-100 translate-y-0' : 'scale-95 translate-y-4'
         }`}
         style={{
@@ -140,15 +140,15 @@ const ConfirmDeleteAlert = ({ isOpen, onClose, onConfirm, motoristaName }) => {
       >
         <div className="text-center">
           <div 
-            className="w-16 h-16 bg-red-500 rounded-full mx-auto mb-4 flex items-center justify-center transition-all duration-300"
+            className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 lg:w-18 lg:h-18 xl:w-20 xl:h-20 bg-red-500 rounded-full mx-auto mb-3 sm:mb-4 lg:mb-6 flex items-center justify-center transition-all duration-300"
             style={{
               animation: isOpen ? 'bounceIn 0.6s ease-out 0.2s both' : 'none'
             }}
           >
-            <span className="text-2xl text-white font-bold">×</span>
+            <span className="text-lg sm:text-xl md:text-2xl lg:text-3xl xl:text-4xl text-white font-bold">×</span>
           </div>
           <h3 
-            className="text-lg font-semibold text-gray-900 mb-2 transition-all duration-300"
+            className="text-base sm:text-lg md:text-xl lg:text-2xl xl:text-3xl font-semibold text-gray-900 mb-2 lg:mb-4 transition-all duration-300"
             style={{
               animation: isOpen ? 'fadeInUp 0.5s ease-out 0.3s both' : 'none'
             }}
@@ -156,7 +156,7 @@ const ConfirmDeleteAlert = ({ isOpen, onClose, onConfirm, motoristaName }) => {
             ¿Está seguro de que desea eliminar a este motorista?
           </h3>
           <p 
-            className="text-gray-600 mb-6 transition-all duration-300"
+            className="text-sm sm:text-base md:text-lg lg:text-xl text-gray-600 mb-4 sm:mb-6 lg:mb-8 transition-all duration-300"
             style={{
               animation: isOpen ? 'fadeInUp 0.5s ease-out 0.4s both' : 'none'
             }}
@@ -164,20 +164,20 @@ const ConfirmDeleteAlert = ({ isOpen, onClose, onConfirm, motoristaName }) => {
             El motorista se eliminará con esta acción
           </p>
           <div 
-            className="flex space-x-3"
+            className="flex space-x-2 sm:space-x-3 lg:space-x-4"
             style={{
               animation: isOpen ? 'fadeInUp 0.5s ease-out 0.5s both' : 'none'
             }}
           >
             <button
               onClick={onClose}
-              className="flex-1 px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-lg transition-all duration-200 transform hover:scale-105 hover:shadow-lg active:scale-95"
+              className="flex-1 px-3 py-2 sm:px-4 sm:py-2 md:px-5 md:py-3 lg:px-6 lg:py-3 xl:px-7 xl:py-4 bg-gray-500 hover:bg-gray-600 text-white rounded-lg text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl transition-all duration-200 transform hover:scale-105 hover:shadow-lg active:scale-95"
             >
               Cancelar
             </button>
             <button
               onClick={onConfirm}
-              className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-all duration-200 transform hover:scale-105 hover:shadow-lg active:scale-95"
+              className="flex-1 px-3 py-2 sm:px-4 sm:py-2 md:px-5 md:py-3 lg:px-6 lg:py-3 xl:px-7 xl:py-4 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl transition-all duration-200 transform hover:scale-105 hover:shadow-lg active:scale-95"
             >
               Eliminar
             </button>
@@ -230,10 +230,19 @@ const ConfirmDeleteAlert = ({ isOpen, onClose, onConfirm, motoristaName }) => {
 };
 
 // Success Alert Component
-const SuccessAlert = ({ isOpen, onClose, type = 'delete' }) => {
+const SuccessAlert = ({ isOpen, onClose, type }) => {
   if (!isOpen) return null;
 
-  const isEdit = type === 'edit';
+  const getMessage = () => {
+    switch (type) {
+      case 'delete':
+        return '¡Motorista eliminado exitosamente!';
+      case 'edit':
+        return '¡Motorista actualizado exitosamente!';
+      default:
+        return '¡Operación completada exitosamente!';
+    }
+  };
 
   return (
     <div 
@@ -242,7 +251,7 @@ const SuccessAlert = ({ isOpen, onClose, type = 'delete' }) => {
       }`}
     >
       <div 
-        className={`bg-white rounded-lg p-6 max-w-sm w-full mx-4 shadow-xl relative transform transition-all duration-300 ${
+        className={`bg-white rounded-lg p-4 sm:p-6 lg:p-8 xl:p-10 max-w-xs sm:max-w-sm md:max-w-md lg:max-w-lg xl:max-w-xl w-full mx-4 shadow-xl relative transform transition-all duration-300 ${
           isOpen ? 'scale-100 translate-y-0' : 'scale-95 translate-y-4'
         }`}
         style={{
@@ -251,31 +260,21 @@ const SuccessAlert = ({ isOpen, onClose, type = 'delete' }) => {
       >
         <div className="text-center">
           <div 
-            className="w-16 h-16 bg-green-400 rounded-full mx-auto mb-4 flex items-center justify-center transition-all duration-300"
+            className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 lg:w-18 lg:h-18 xl:w-20 xl:h-20 bg-green-500 rounded-full mx-auto mb-3 sm:mb-4 lg:mb-6 flex items-center justify-center transition-all duration-300"
             style={{
               animation: isOpen ? 'bounceIn 0.6s ease-out 0.2s both' : 'none'
             }}
           >
-            <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-            </svg>
+            <span className="text-lg sm:text-xl md:text-2xl lg:text-3xl xl:text-4xl text-white font-bold">✓</span>
           </div>
           <h3 
-            className="text-lg font-semibold text-gray-900 mb-2 transition-all duration-300"
+            className="text-base sm:text-lg md:text-xl lg:text-2xl xl:text-3xl font-semibold text-gray-900 mb-2 lg:mb-4 transition-all duration-300"
             style={{
               animation: isOpen ? 'fadeInUp 0.5s ease-out 0.3s both' : 'none'
             }}
           >
-            {isEdit ? 'Motorista actualizado con éxito' : 'Motorista eliminado con éxito'}
+            {getMessage()}
           </h3>
-          <p 
-            className="text-gray-600 mb-6 transition-all duration-300"
-            style={{
-              animation: isOpen ? 'fadeInUp 0.5s ease-out 0.4s both' : 'none'
-            }}
-          >
-            {isEdit ? 'Motorista actualizado correctamente' : 'Motorista eliminado correctamente'}
-          </p>
           <div 
             className="flex justify-center"
             style={{
@@ -284,9 +283,9 @@ const SuccessAlert = ({ isOpen, onClose, type = 'delete' }) => {
           >
             <button
               onClick={onClose}
-              className="px-8 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-all duration-200 transform hover:scale-105 hover:shadow-lg active:scale-95"
+              className="px-6 py-2 sm:px-8 sm:py-3 md:px-10 md:py-4 lg:px-12 lg:py-5 xl:px-14 xl:py-6 bg-green-600 hover:bg-green-700 text-white rounded-lg text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl transition-all duration-200 transform hover:scale-105 hover:shadow-lg active:scale-95"
             >
-              Continuar
+              Aceptar
             </button>
           </div>
         </div>
@@ -403,7 +402,7 @@ const EditMotoristaAlert = ({ isOpen, onClose, onSave, motorista }) => {
       }`}
     >
       <div 
-        className={`bg-white rounded-lg p-8 max-w-2xl w-full mx-4 shadow-xl relative transform transition-all duration-300 max-h-[90vh] overflow-y-auto ${
+        className={`bg-white rounded-lg p-4 sm:p-6 md:p-8 lg:p-10 xl:p-12 2xl:p-16 max-w-sm sm:max-w-md md:max-w-lg lg:max-w-2xl xl:max-w-4xl 2xl:max-w-6xl w-full mx-4 shadow-xl relative transform transition-all duration-300 max-h-[90vh] overflow-y-auto ${
           isOpen ? 'scale-100 translate-y-0' : 'scale-95 translate-y-4'
         }`}
         style={{
@@ -412,14 +411,14 @@ const EditMotoristaAlert = ({ isOpen, onClose, onSave, motorista }) => {
       >
         <button
           onClick={onClose}
-          className="absolute top-6 right-6 text-gray-400 hover:text-gray-600 text-2xl font-bold transition-colors duration-200 hover:scale-110 transform"
+          className="absolute top-4 right-4 sm:top-6 sm:right-6 lg:top-8 lg:right-8 xl:top-10 xl:right-10 text-gray-400 hover:text-gray-600 text-xl sm:text-2xl lg:text-3xl xl:text-4xl font-bold transition-colors duration-200 hover:scale-110 transform"
         >
           ×
         </button>
         
-        <div className="text-center mb-8">
+        <div className="text-center mb-6 sm:mb-8 lg:mb-10 xl:mb-12">
           <h3 
-            className="text-2xl font-semibold text-gray-900 transition-all duration-300"
+            className="text-xl sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl font-semibold text-gray-900 transition-all duration-300"
             style={{
               animation: isOpen ? 'fadeInUp 0.5s ease-out 0.2s both' : 'none'
             }}
@@ -429,41 +428,41 @@ const EditMotoristaAlert = ({ isOpen, onClose, onSave, motorista }) => {
         </div>
 
         <div 
-          className="space-y-6"
+          className="space-y-4 sm:space-y-6 md:space-y-8 lg:space-y-10 xl:space-y-12"
           style={{
             animation: isOpen ? 'fadeInUp 0.5s ease-out 0.3s both' : 'none'
           }}
         >
           {/* Primera fila: Apellido y Nombre */}
-          <div className="grid grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 lg:gap-8 xl:gap-10">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Apellido</label>
+              <label className="block text-sm sm:text-base md:text-lg lg:text-xl xl:text-2xl font-medium text-gray-700 mb-1 sm:mb-2 lg:mb-3">Apellido</label>
               <input
                 type="text"
                 name="lastName"
                 value={formData.lastName}
                 onChange={handleInputChange}
-                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 text-base text-gray-900 bg-white"
+                className="w-full px-3 py-2 sm:px-4 sm:py-3 md:px-5 md:py-4 lg:px-6 lg:py-5 xl:px-7 xl:py-6 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 text-sm sm:text-base md:text-lg lg:text-xl xl:text-2xl text-gray-900 bg-white"
                 placeholder="Martinez"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Nombre</label>
+              <label className="block text-sm sm:text-base md:text-lg lg:text-xl xl:text-2xl font-medium text-gray-700 mb-1 sm:mb-2 lg:mb-3">Nombre</label>
               <input
                 type="text"
                 name="name"
                 value={formData.name}
                 onChange={handleInputChange}
-                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 text-base text-gray-900 bg-white"
+                className="w-full px-3 py-2 sm:px-4 sm:py-3 md:px-5 md:py-4 lg:px-6 lg:py-5 xl:px-7 xl:py-6 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 text-sm sm:text-base md:text-lg lg:text-xl xl:text-2xl text-gray-900 bg-white"
                 placeholder="Martinez"
               />
             </div>
           </div>
 
           {/* Segunda fila: Email y Fecha de nacimiento */}
-          <div className="grid grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 lg:gap-8 xl:gap-10">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm sm:text-base md:text-lg lg:text-xl xl:text-2xl font-medium text-gray-700 mb-1 sm:mb-2 lg:mb-3">
                 Email {formData.name || formData.lastName ? '(actualizándose automáticamente)' : '(actual)'}
               </label>
               <input
@@ -472,9 +471,9 @@ const EditMotoristaAlert = ({ isOpen, onClose, onSave, motorista }) => {
                 value={formData.email}
                 readOnly
                 placeholder={motorista?.email || "Email del empleado"}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-gray-50 text-sm text-gray-700 cursor-not-allowed"
+                className="w-full px-3 py-2 sm:px-4 sm:py-3 md:px-5 md:py-4 lg:px-6 lg:py-5 xl:px-7 xl:py-6 border border-gray-300 rounded-lg bg-gray-50 text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl text-gray-700 cursor-not-allowed"
               />
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="text-xs sm:text-sm md:text-base lg:text-lg text-gray-500 mt-1">
                 {formData.name || formData.lastName 
                   ? 'El email se actualiza automáticamente al cambiar nombre/apellido' 
                   : 'Email actual del empleado'
@@ -482,76 +481,76 @@ const EditMotoristaAlert = ({ isOpen, onClose, onSave, motorista }) => {
               </p>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Fecha de nacimiento</label>
+              <label className="block text-sm sm:text-base md:text-lg lg:text-xl xl:text-2xl font-medium text-gray-700 mb-1 sm:mb-2 lg:mb-3">Fecha de nacimiento</label>
               <input
                 type="text"
                 value={motorista ? new Date(motorista.birthDate).toLocaleDateString() : ''}
                 disabled
-                className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg bg-gray-100 text-gray-600 cursor-not-allowed text-base"
+                className="w-full px-3 py-2 sm:px-4 sm:py-3 md:px-5 md:py-4 lg:px-6 lg:py-5 xl:px-7 xl:py-6 border-2 border-gray-200 rounded-lg bg-gray-100 text-gray-600 cursor-not-allowed text-sm sm:text-base md:text-lg lg:text-xl xl:text-2xl"
                 placeholder="25/6/2025"
               />
             </div>
           </div>
 
           {/* Tercera fila: Contraseña y Teléfono */}
-          <div className="grid grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 lg:gap-8 xl:gap-10">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Contraseña</label>
+              <label className="block text-sm sm:text-base md:text-lg lg:text-xl xl:text-2xl font-medium text-gray-700 mb-1 sm:mb-2 lg:mb-3">Contraseña</label>
               <div className="relative">
                 <input
                   type={showPassword ? "text" : "password"}
                   name="password"
                   value={formData.password}
                   onChange={handleInputChange}
-                  className="w-full px-4 py-3 pr-12 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 text-base text-gray-900 bg-white"
+                  className="w-full px-3 py-2 sm:px-4 sm:py-3 md:px-5 md:py-4 lg:px-6 lg:py-5 xl:px-7 xl:py-6 pr-10 sm:pr-12 md:pr-14 lg:pr-16 xl:pr-18 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 text-sm sm:text-base md:text-lg lg:text-xl xl:text-2xl text-gray-900 bg-white"
                   placeholder="•••••••••"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 transition-colors duration-200"
+                  className="absolute right-2 sm:right-3 md:right-4 lg:right-5 xl:right-6 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 transition-colors duration-200"
                 >
                   {showPassword ? (
-                    <EyeOff className="w-5 h-5" />
+                    <EyeOff className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 lg:w-7 lg:h-7 xl:w-8 xl:h-8" />
                   ) : (
-                    <Eye className="w-5 h-5" />
+                    <Eye className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 lg:w-7 lg:h-7 xl:w-8 xl:h-8" />
                   )}
                 </button>
               </div>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Teléfono</label>
+              <label className="block text-sm sm:text-base md:text-lg lg:text-xl xl:text-2xl font-medium text-gray-700 mb-1 sm:mb-2 lg:mb-3">Teléfono</label>
               <input
                 type="tel"
                 name="phone"
                 value={formData.phone}
                 onChange={handleInputChange}
-                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 text-base text-gray-900 bg-white"
+                className="w-full px-3 py-2 sm:px-4 sm:py-3 md:px-5 md:py-4 lg:px-6 lg:py-5 xl:px-7 xl:py-6 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 text-sm sm:text-base md:text-lg lg:text-xl xl:text-2xl text-gray-900 bg-white"
                 placeholder="7533-4567"
               />
             </div>
           </div>
 
           {/* Cuarta fila: DUI y Tarjeta de Circulación */}
-          <div className="grid grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 lg:gap-8 xl:gap-10">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">DUI</label>
+              <label className="block text-sm sm:text-base md:text-lg lg:text-xl xl:text-2xl font-medium text-gray-700 mb-1 sm:mb-2 lg:mb-3">DUI</label>
               <input
                 type="text"
                 value={motorista ? motorista.id : ''}
                 disabled
-                className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg bg-gray-100 text-gray-600 cursor-not-allowed text-base"
+                className="w-full px-3 py-2 sm:px-4 sm:py-3 md:px-5 md:py-4 lg:px-6 lg:py-5 xl:px-7 xl:py-6 border-2 border-gray-200 rounded-lg bg-gray-100 text-gray-600 cursor-not-allowed text-sm sm:text-base md:text-lg lg:text-xl xl:text-2xl"
                 placeholder="22223366-6"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Tarjeta de Circulación</label>
+              <label className="block text-sm sm:text-base md:text-lg lg:text-xl xl:text-2xl font-medium text-gray-700 mb-1 sm:mb-2 lg:mb-3">Tarjeta de Circulación</label>
               <input
                 type="text"
                 name="circulationCard"
                 value={formData.circulationCard}
                 onChange={handleInputChange}
-                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 text-base text-gray-900 bg-white"
+                className="w-full px-3 py-2 sm:px-4 sm:py-3 md:px-5 md:py-4 lg:px-6 lg:py-5 xl:px-7 xl:py-6 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 text-sm sm:text-base md:text-lg lg:text-xl xl:text-2xl text-gray-900 bg-white"
                 placeholder="ABC123-DEF"
                 maxLength="15"
               />
@@ -560,27 +559,27 @@ const EditMotoristaAlert = ({ isOpen, onClose, onSave, motorista }) => {
 
           {/* Quinta fila: Dirección (campo completo) */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Dirección</label>
+            <label className="block text-sm sm:text-base md:text-lg lg:text-xl xl:text-2xl font-medium text-gray-700 mb-1 sm:mb-2 lg:mb-3">Dirección</label>
             <input
               type="text"
               name="address"
               value={formData.address}
               onChange={handleInputChange}
-              className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 text-base text-gray-900 bg-white"
+              className="w-full px-3 py-2 sm:px-4 sm:py-3 md:px-5 md:py-4 lg:px-6 lg:py-5 xl:px-7 xl:py-6 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 text-sm sm:text-base md:text-lg lg:text-xl xl:text-2xl text-gray-900 bg-white"
               placeholder="Calle Los Almendros #24, San Salvador"
             />
           </div>
         </div>
 
         <div 
-          className="mt-8 flex justify-center"
+          className="mt-6 sm:mt-8 md:mt-10 lg:mt-12 xl:mt-16 flex justify-center"
           style={{
             animation: isOpen ? 'fadeInUp 0.5s ease-out 0.5s both' : 'none'
           }}
         >
           <button
             onClick={handleSave}
-            className="px-10 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-all duration-200 transform hover:scale-105 hover:shadow-lg active:scale-95 font-medium text-lg"
+            className="px-8 py-2 sm:px-10 sm:py-3 md:px-12 md:py-4 lg:px-14 lg:py-5 xl:px-16 xl:py-6 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-all duration-200 transform hover:scale-105 hover:shadow-lg active:scale-95 font-medium text-sm sm:text-base md:text-lg lg:text-xl xl:text-2xl"
           >
             Actualizar
           </button>
@@ -614,6 +613,7 @@ const EditMotoristaAlert = ({ isOpen, onClose, onSave, motorista }) => {
   );
 };
 
+// Componente principal único
 const MotoristaManagementInterface = () => {
   const {
     motoristas,
@@ -652,50 +652,50 @@ const MotoristaManagementInterface = () => {
       {/* Main Content */}
       <div className="flex-1 flex">
         {/* Motorista List */}
-        <div className={`${showDetailView ? 'flex-1' : 'w-full'} bg-white text-gray-900 ${showDetailView ? 'rounded-l-3xl' : 'rounded-3xl'} ml-4 my-4 flex flex-col`}>
+        <div className={`${showDetailView ? 'flex-1' : 'w-full'} bg-white text-gray-900 ${showDetailView ? 'rounded-l-3xl' : 'rounded-3xl'} ml-2 sm:ml-4 lg:ml-6 xl:ml-8 my-2 sm:my-4 lg:my-6 xl:my-8 flex flex-col`}>
           {/* Header - Fixed */}
-          <div className="p-8 pb-0 flex-shrink-0">
-            <div className="flex items-center justify-between mb-6">
-              <h1 className="text-2xl font-bold text-gray-900">Motoristas</h1>
+          <div className="p-4 sm:p-6 md:p-8 lg:p-10 xl:p-12 2xl:p-16 pb-0 flex-shrink-0">
+            <div className="flex items-center justify-between mb-4 sm:mb-6 lg:mb-8 xl:mb-10">
+              <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl 2xl:text-6xl font-bold text-gray-900">Motoristas</h1>
             </div>
             
-            <div className="mb-6">
-              <h2 className="text-lg font-semibold mb-4">Listado de motoristas</h2>
-              <div className="text-teal-500 text-sm mb-4">Motoristas registrados</div>
+            <div className="mb-4 sm:mb-6 lg:mb-8 xl:mb-10">
+              <h2 className="text-base sm:text-lg md:text-xl lg:text-2xl xl:text-3xl 2xl:text-4xl font-semibold mb-2 sm:mb-4 lg:mb-6">Listado de motoristas</h2>
+              <div className="text-teal-500 text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl mb-2 sm:mb-4 lg:mb-6">Motoristas registrados</div>
               
-              <div className="flex items-center justify-between mb-6">
-                <div className="relative flex-1 max-w-md">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+              <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between mb-4 sm:mb-6 lg:mb-8 xl:mb-10 space-y-4 lg:space-y-0 lg:space-x-6">
+                <div className="relative flex-1 w-full lg:max-w-md xl:max-w-lg 2xl:max-w-xl">
+                  <Search className="absolute left-2 sm:left-3 md:left-4 lg:left-5 top-1/2 transform -translate-y-1/2 w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 lg:w-7 lg:h-7 xl:w-8 xl:h-8 text-gray-400" />
                   <input 
                     type="text" 
                     placeholder="Buscar" 
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
+                    className="w-full pl-8 sm:pl-10 md:pl-12 lg:pl-14 xl:pl-16 pr-3 sm:pr-4 md:pr-5 lg:pr-6 xl:pr-7 py-2 sm:py-3 md:py-4 lg:py-5 xl:py-6 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 text-sm sm:text-base md:text-lg lg:text-xl xl:text-2xl"
                   />
                 </div>
-                <div className="flex items-center space-x-3 ml-4">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-2 sm:space-y-0 sm:space-x-3 lg:space-x-4 xl:space-x-6 w-full lg:w-auto">
                   <button
                     onClick={handleRefresh}
-                    className="px-3 py-2 text-sm text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                    className="w-full sm:w-auto px-2 sm:px-3 md:px-4 lg:px-5 xl:px-6 py-2 sm:py-3 md:py-4 lg:py-5 text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
                     disabled={loading}
                   >
                     {loading ? 'Cargando...' : 'Actualizar'}
                   </button>
-                  <div className="text-sm text-gray-500">
-                    Sort by: <span className="text-gray-700 font-medium">{sortBy}</span>
+                  <div className="text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl text-gray-500 flex flex-col sm:flex-row items-start sm:items-center space-y-2 sm:space-y-0 sm:space-x-2">
+                    <span>Sort by: <span className="text-gray-700 font-medium">{sortBy}</span></span>
                     <div className="relative">
                       <select
                         value={sortBy}
                         onChange={(e) => setSortBy(e.target.value)}
-                        className="appearance-none bg-white border border-gray-300 rounded-lg px-3 py-2 pr-8 text-sm focus:outline-none focus:border-teal-500"
+                        className="appearance-none bg-white border border-gray-300 rounded-lg px-2 sm:px-3 md:px-4 lg:px-5 xl:px-6 py-1 sm:py-2 md:py-3 lg:py-4 pr-6 sm:pr-8 md:pr-10 lg:pr-12 text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl focus:outline-none focus:border-teal-500"
                       >
                         <option value="Newest">Newest</option>
                         <option value="Oldest">Oldest</option>
                         <option value="Name">Name</option>
                         <option value="Email">Email</option>
                       </select>
-                      <ChevronDown className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4 pointer-events-none" />
+                      <ChevronDown className="absolute right-1 sm:right-2 md:right-3 lg:right-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5 lg:w-6 lg:h-6 pointer-events-none" />
                     </div>
                   </div>
                 </div>
@@ -703,47 +703,47 @@ const MotoristaManagementInterface = () => {
             </div>
 
             {/* Table Header - Fixed */}
-            <div className={`grid ${showDetailView ? 'grid-cols-4' : 'grid-cols-7'} gap-4 pb-3 border-b border-gray-200 text-sm font-medium text-gray-500`}>
+            <div className={`grid ${showDetailView ? 'grid-cols-4' : 'grid-cols-4 md:grid-cols-7'} gap-2 sm:gap-4 md:gap-6 lg:gap-8 xl:gap-10 pb-2 sm:pb-3 lg:pb-4 border-b border-gray-200 text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl font-medium text-gray-500`}>
               <div>Nombres</div>
               <div>Email</div>
               <div>DUI</div>
-              <div>Fecha-Nacimiento</div>
+              <div className="hidden md:block">Fecha-Nacimiento</div>
               {!showDetailView && (
                 <>
-                  <div>Teléfono</div>
-                  <div>Dirección</div>
-                  <div>Licencia</div>
+                  <div className="hidden md:block">Teléfono</div>
+                  <div className="hidden md:block">Dirección</div>
+                  <div className="hidden md:block">Licencia</div>
                 </>
               )}
             </div>
           </div>
 
           {/* Scrollable Content */}
-          <div className="flex-1 overflow-y-auto px-8">
-            <div className="space-y-2 py-4">
+          <div className="flex-1 overflow-y-auto px-4 sm:px-6 md:px-8 lg:px-10 xl:px-12 2xl:px-16">
+            <div className="space-y-1 sm:space-y-2 py-2 sm:py-4 lg:py-6">
               {loading ? (
-                <div className="text-center py-8">
-                  <p className="text-gray-500">Cargando motoristas...</p>
+                <div className="text-center py-6 sm:py-8 lg:py-10">
+                  <p className="text-gray-500 text-sm sm:text-base md:text-lg lg:text-xl">Cargando motoristas...</p>
                 </div>
               ) : error ? (
-                <div className="text-center py-8">
-                  <p className="text-red-500 mb-4">{error}</p>
+                <div className="text-center py-6 sm:py-8 lg:py-10">
+                  <p className="text-red-500 mb-2 sm:mb-4 text-sm sm:text-base md:text-lg lg:text-xl">{error}</p>
                   <button
                     onClick={handleRefresh}
-                    className="px-4 py-2 bg-teal-500 text-white rounded-lg hover:bg-teal-600 transition-colors"
+                    className="px-3 sm:px-4 md:px-5 lg:px-6 py-2 sm:py-3 md:py-4 bg-teal-500 text-white rounded-lg hover:bg-teal-600 transition-colors text-sm sm:text-base md:text-lg lg:text-xl"
                   >
                     Intentar de nuevo
                   </button>
                 </div>
               ) : filterMotoristas.length === 0 ? (
-                <div className="text-center py-8">
-                  <p className="text-gray-500">
+                <div className="text-center py-6 sm:py-8 lg:py-10">
+                  <p className="text-gray-500 text-sm sm:text-base md:text-lg lg:text-xl">
                     {searchTerm ? 'No se encontraron resultados para tu búsqueda.' : 'No hay motoristas registrados.'}
                   </p>
                   {!searchTerm && (
                     <button
                       onClick={handleContinue}
-                      className="mt-4 px-4 py-2 bg-teal-500 text-white rounded-lg hover:bg-teal-600 transition-colors"
+                      className="mt-2 sm:mt-4 px-3 sm:px-4 md:px-5 lg:px-6 py-2 sm:py-3 md:py-4 bg-teal-500 text-white rounded-lg hover:bg-teal-600 transition-colors text-sm sm:text-base md:text-lg lg:text-xl"
                     >
                       Agregar primer motorista
                     </button>
@@ -753,7 +753,7 @@ const MotoristaManagementInterface = () => {
                 filterMotoristas.map((motorista, index) => (
                   <div
                     key={motorista._id || motorista.id || index}
-                    className={`grid ${showDetailView ? 'grid-cols-4' : 'grid-cols-7'} gap-4 py-3 px-2 rounded-lg cursor-pointer transition-colors ${
+                    className={`grid ${showDetailView ? 'grid-cols-4' : 'grid-cols-4 md:grid-cols-7'} gap-2 sm:gap-4 md:gap-6 lg:gap-8 xl:gap-10 py-2 sm:py-3 lg:py-4 px-1 sm:px-2 lg:px-3 rounded-lg cursor-pointer transition-colors text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl ${
                      selectedMotorista && (selectedMotorista._id === motorista._id || selectedMotorista.id === motorista.id) ? 'bg-teal-100' : 'hover:bg-gray-50'
                    }`}
                    onClick={() => selectMotorista(motorista)}
@@ -761,20 +761,20 @@ const MotoristaManagementInterface = () => {
                    <div className="font-medium truncate">{motorista.name} {motorista.lastName}</div>
                    <div className="text-gray-600 truncate">{motorista.email}</div>
                    <div className="text-gray-600 truncate">{motorista.id}</div>
-                   <div className="text-gray-600 truncate">
+                   <div className="text-gray-600 truncate hidden md:block">
                      {motorista.birthDate ? new Date(motorista.birthDate).toLocaleDateString() : 'No disponible'}
                    </div>
                    {!showDetailView && (
                      <>
-                       <div className="text-gray-600 truncate">{motorista.phone ? motorista.phone.toString() : 'No disponible'}</div>
-                       <div className="text-gray-600 truncate">{motorista.address || 'No disponible'}</div>
-                       <div className="truncate">
+                       <div className="text-gray-600 truncate hidden md:block">{motorista.phone ? motorista.phone.toString() : 'No disponible'}</div>
+                       <div className="text-gray-600 truncate hidden md:block">{motorista.address || 'No disponible'}</div>
+                       <div className="truncate hidden md:block">
                          {isLicenseValid(motorista) ? (
-                           <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                           <span className="inline-flex items-center px-1 sm:px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
                              Vigente
                            </span>
                          ) : (
-                           <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                           <span className="inline-flex items-center px-1 sm:px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
                              Vencido
                            </span>
                          )}
@@ -788,34 +788,34 @@ const MotoristaManagementInterface = () => {
          </div>
 
          {/* Footer - Fixed */}
-         <div className="p-8 pt-4 flex-shrink-0 border-t border-gray-100">
-           <div className="flex items-center justify-between">
-             <div className="text-sm text-gray-500">
+         <div className="p-4 sm:p-6 md:p-8 lg:p-10 xl:p-12 2xl:p-16 pt-2 sm:pt-4 lg:pt-6 flex-shrink-0 border-t border-gray-100">
+           <div className="flex flex-col lg:flex-row items-center justify-between space-y-4 lg:space-y-0">
+             <div className="text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl text-gray-500">
                Showing data 1 to {Math.min(filterMotoristas.length, 8)} of {filterMotoristas.length} entries
              </div>
-             <div className="flex items-center space-x-1">
-               <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-                 <ArrowLeft className="w-4 h-4 text-gray-500" />
+             <div className="flex items-center space-x-1 sm:space-x-2">
+               <button className="p-1 sm:p-2 lg:p-3 hover:bg-gray-100 rounded-lg transition-colors">
+                 <ArrowLeft className="w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5 lg:w-6 lg:h-6 text-gray-500" />
                </button>
                <div className="flex space-x-1">
-                 <button className="w-8 h-8 bg-teal-500 text-white rounded-lg text-sm font-medium">1</button>
-                 <button className="w-8 h-8 hover:bg-gray-100 rounded-lg text-sm text-gray-700">2</button>
-                 <button className="w-8 h-8 hover:bg-gray-100 rounded-lg text-sm text-gray-700">3</button>
-                 <button className="w-8 h-8 hover:bg-gray-100 rounded-lg text-sm text-gray-700">4</button>
-                 <span className="w-8 h-8 flex items-center justify-center text-gray-400">...</span>
-                 <button className="w-8 h-8 hover:bg-gray-100 rounded-lg text-sm text-gray-700">40</button>
+                 <button className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 lg:w-12 lg:h-12 bg-teal-500 text-white rounded-lg text-xs sm:text-sm md:text-base lg:text-lg font-medium">1</button>
+                 <button className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 lg:w-12 lg:h-12 hover:bg-gray-100 rounded-lg text-xs sm:text-sm md:text-base lg:text-lg text-gray-700">2</button>
+                 <button className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 lg:w-12 lg:h-12 hover:bg-gray-100 rounded-lg text-xs sm:text-sm md:text-base lg:text-lg text-gray-700">3</button>
+                 <button className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 lg:w-12 lg:h-12 hover:bg-gray-100 rounded-lg text-xs sm:text-sm md:text-base lg:text-lg text-gray-700">4</button>
+                 <span className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 lg:w-12 lg:h-12 flex items-center justify-center text-gray-400 text-xs sm:text-sm md:text-base lg:text-lg">...</span>
+                 <button className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 lg:w-12 lg:h-12 hover:bg-gray-100 rounded-lg text-xs sm:text-sm md:text-base lg:text-lg text-gray-700">40</button>
                </div>
-               <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-                 <ArrowRight className="w-4 h-4 text-gray-500" />
+               <button className="p-1 sm:p-2 lg:p-3 hover:bg-gray-100 rounded-lg transition-colors">
+                 <ArrowRight className="w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5 lg:w-6 lg:h-6 text-gray-500" />
                </button>
              </div>
            </div>
            
            {/* Add Motorista Button */}
-           <div className="mt-4">
+           <div className="mt-3 sm:mt-4 lg:mt-6">
              <button onClick={handleContinue} className="flex items-center space-x-2 text-gray-600 hover:text-gray-800 transition-colors">
-               <Plus className="w-5 h-5" />
-               <span className="font-medium">Agregar motorista</span>
+               <Plus className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 lg:w-7 lg:h-7 xl:w-8 xl:h-8" />
+               <span className="font-medium text-sm sm:text-base md:text-lg lg:text-xl xl:text-2xl">Agregar motorista</span>
              </button>
            </div>
          </div>
@@ -823,109 +823,108 @@ const MotoristaManagementInterface = () => {
 
        {/* Motorista Info Panel */}
        {showDetailView && selectedMotorista && (
-         <div className="w-80 bg-white text-gray-900 rounded-r-3xl mr-4 my-4 p-6 relative">
-           <div className="flex items-center justify-between mb-6">
+         <div className="w-64 sm:w-72 md:w-80 lg:w-96 xl:w-[400px] 2xl:w-[500px] bg-white text-gray-900 rounded-r-3xl mr-2 sm:mr-4 lg:mr-6 xl:mr-8 my-2 sm:my-4 lg:my-6 xl:my-8 p-4 sm:p-6 lg:p-8 xl:p-10 relative">
+           <div className="flex items-center justify-between mb-4 sm:mb-6 lg:mb-8">
              <div className="flex items-center">
                <button
-                 className="p-2 hover:bg-gray-100 rounded-full mr-3"
+                 className="p-1 sm:p-2 lg:p-3 hover:bg-gray-100 rounded-full mr-2 sm:mr-3"
                  onClick={closeDetailView}
                >
-                 <ArrowLeft className="w-5 h-5 text-gray-600" />
+                 <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 lg:w-7 lg:h-7 text-gray-600" />
                </button>
-               <h2 className="text-lg font-semibold">Información del motorista</h2>
+               <h2 className="text-base sm:text-lg md:text-xl lg:text-2xl xl:text-3xl font-semibold">Información del motorista</h2>
              </div>
              
              <div className="relative">
                <button
                  onClick={handleOptionsClick}
-                 className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                 className="p-1 sm:p-2 lg:p-3 hover:bg-gray-100 rounded-full transition-colors"
                >
-                 <MoreHorizontal className="w-5 h-5 text-gray-600" />
+                 <MoreHorizontal className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 lg:w-7 lg:h-7 text-gray-600" />
                </button>
              </div>
            </div>
 
-           <div className="text-center mb-8">
-             <div className="w-20 h-20 bg-orange-400 rounded-full mx-auto mb-4 flex items-center justify-center overflow-hidden">
+           <div className="text-center mb-6 sm:mb-8 lg:mb-10">
+             <div className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 lg:w-28 lg:h-28 xl:w-32 xl:h-32 bg-orange-400 rounded-full mx-auto mb-3 sm:mb-4 lg:mb-6 flex items-center justify-center overflow-hidden">
                {selectedMotorista.img ? (
                  <img
                    src={selectedMotorista.img}
                    alt={`${selectedMotorista.name} ${selectedMotorista.lastName}`}
                    className="w-full h-full object-cover rounded-full"
                    onError={(e) => {
-                     // Si la imagen no carga, mostrar el ícono de fallback
                      e.target.style.display = 'none';
                      e.target.nextSibling.style.display = 'flex';
                    }}
                  />
                ) : null}
                <div 
-                 className={`w-16 h-16 bg-orange-300 rounded-full flex items-center justify-center ${selectedMotorista.img ? 'hidden' : 'flex'}`}
+                 className={`w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 lg:w-20 lg:h-20 xl:w-24 xl:h-24 bg-orange-300 rounded-full flex items-center justify-center ${selectedMotorista.img ? 'hidden' : 'flex'}`}
                  style={{ display: selectedMotorista.img ? 'none' : 'flex' }}
                >
-                 <User className="w-10 h-10 text-white" />
+                 <User className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 lg:w-12 lg:h-12 xl:w-14 xl:h-14 text-white" />
                </div>
              </div>
-             <h3 className="font-semibold text-lg mb-2">{selectedMotorista.name} {selectedMotorista.lastName}</h3>
-             <div className="text-sm text-gray-500 mb-4">Motorista</div>
-             <div className="flex justify-center space-x-3">
-               <button className="p-2 bg-gray-100 rounded-full hover:bg-gray-200">
-                 <Phone className="w-4 h-4 text-gray-600" />
+             <h3 className="font-semibold text-base sm:text-lg md:text-xl lg:text-2xl xl:text-3xl mb-1 sm:mb-2">{selectedMotorista.name} {selectedMotorista.lastName}</h3>
+             <div className="text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl text-gray-500 mb-3 sm:mb-4 lg:mb-6">Motorista</div>
+             <div className="flex justify-center space-x-2 sm:space-x-3 lg:space-x-4">
+               <button className="p-1 sm:p-2 lg:p-3 bg-gray-100 rounded-full hover:bg-gray-200">
+                 <Phone className="w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5 lg:w-6 lg:h-6 text-gray-600" />
                </button>
-               <button className="p-2 bg-gray-100 rounded-full hover:bg-gray-200">
-                 <Mail className="w-4 h-4 text-gray-600" />
+               <button className="p-1 sm:p-2 lg:p-3 bg-gray-100 rounded-full hover:bg-gray-200">
+                 <Mail className="w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5 lg:w-6 lg:h-6 text-gray-600" />
                </button>
              </div>
            </div>
 
-           <div className="space-y-6">
-             <div className="flex items-center space-x-2">
-               <User className="w-4 h-4 text-gray-400" />
-               <span className="font-medium">Información Personal</span>
+           <div className="space-y-4 sm:space-y-6 lg:space-y-8">
+             <div className="flex items-center space-x-2 sm:space-x-3">
+               <User className="w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5 lg:w-6 lg:h-6 text-gray-400" />
+               <span className="font-medium text-sm sm:text-base md:text-lg lg:text-xl xl:text-2xl">Información Personal</span>
              </div>
 
-             <div className="grid grid-cols-1 gap-4">
+             <div className="grid grid-cols-1 gap-3 sm:gap-4 lg:gap-6">
                <div>
-                 <div className="text-sm text-gray-500 mb-1">Correo electrónico</div>
-                 <div className="text-sm text-gray-400 break-words">{selectedMotorista.email}</div>
+                 <div className="text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl text-gray-500 mb-1">Correo electrónico</div>
+                 <div className="text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl text-gray-400 break-words">{selectedMotorista.email}</div>
                </div>
                <div>
-                 <div className="text-sm text-gray-500 mb-1">DUI</div>
-                 <div className="text-sm text-gray-400">{selectedMotorista.id}</div>
+                 <div className="text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl text-gray-500 mb-1">DUI</div>
+                 <div className="text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl text-gray-400">{selectedMotorista.id}</div>
                </div>
              </div>
 
-             <div className="grid grid-cols-1 gap-4">
+             <div className="grid grid-cols-1 gap-3 sm:gap-4 lg:gap-6">
                <div>
-                 <div className="text-sm text-gray-500 mb-1">Fecha de nacimiento</div>
-                 <div className="text-sm text-gray-400">
+                 <div className="text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl text-gray-500 mb-1">Fecha de nacimiento</div>
+                 <div className="text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl text-gray-400">
                    {selectedMotorista.birthDate ? new Date(selectedMotorista.birthDate).toLocaleDateString() : 'No disponible'}
                  </div>
                </div>
                <div>
-                 <div className="text-sm text-gray-500 mb-1">Teléfono</div>
-                 <div className="text-sm text-gray-400">{selectedMotorista.phone ? selectedMotorista.phone.toString() : 'No disponible'}</div>
+                 <div className="text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl text-gray-500 mb-1">Teléfono</div>
+                 <div className="text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl text-gray-400">{selectedMotorista.phone ? selectedMotorista.phone.toString() : 'No disponible'}</div>
                </div>
              </div>
 
-             <div className="grid grid-cols-1 gap-4">
+             <div className="grid grid-cols-1 gap-3 sm:gap-4 lg:gap-6">
                <div>
-                 <div className="text-sm text-gray-500 mb-1">Dirección</div>
-                 <div className="text-sm text-gray-400 break-words">{selectedMotorista.address || 'No disponible'}</div>
+                 <div className="text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl text-gray-500 mb-1">Dirección</div>
+                 <div className="text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl text-gray-400 break-words">{selectedMotorista.address || 'No disponible'}</div>
                </div>
                <div>
-                 <div className="text-sm text-gray-500 mb-1">Tarjeta de Circulación</div>
-                 <div className="text-sm text-gray-400">{selectedMotorista.circulationCard || 'No disponible'}</div>
+                 <div className="text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl text-gray-500 mb-1">Tarjeta de Circulación</div>
+                 <div className="text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl text-gray-400">{selectedMotorista.circulationCard || 'No disponible'}</div>
                </div>
                <div>
-                 <div className="text-sm text-gray-500 mb-1">Estado de Licencia</div>
-                 <div className="text-sm">
+                 <div className="text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl text-gray-500 mb-1">Estado de Licencia</div>
+                 <div className="text-xs sm:text-sm md:text-base lg:text-lg">
                    {isLicenseValid(selectedMotorista) ? (
-                     <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                     <span className="inline-flex items-center px-1 sm:px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
                        Vigente
                      </span>
                    ) : (
-                     <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                     <span className="inline-flex items-center px-1 sm:px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
                        Vencido
                      </span>
                    )}
