@@ -120,36 +120,36 @@ export default function TruckEditForm() {
   if (loading) {
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-        <div className="bg-white rounded-lg w-full max-w-2xl p-8 text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-4 border-green-400 border-t-transparent mx-auto mb-4"></div>
-          <p className="text-gray-600">Cargando datos del camión...</p>
+        <div className="bg-white rounded-lg w-full max-w-sm sm:max-w-2xl p-6 sm:p-8 text-center">
+          <div className="animate-spin rounded-full h-10 w-10 sm:h-12 sm:w-12 border-4 border-green-400 border-t-transparent mx-auto mb-4"></div>
+          <p className="text-gray-600 text-sm sm:text-base">Cargando datos del camión...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-lg w-full max-w-2xl max-h-[90vh] overflow-hidden animate-scale-in">
-        <div className="bg-gray-800 text-white p-4 flex items-center justify-between">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-3 sm:p-4 z-50">
+      <div className="bg-white rounded-lg w-full max-w-4xl max-h-[95vh] sm:max-h-[90vh] overflow-hidden animate-scale-in">
+        <div className="bg-gray-800 text-white p-3 sm:p-4 flex items-center justify-between">
           <div className="flex items-center">
-            <Truck className="w-6 h-6 mr-3" />
-            <h2 className="text-lg font-semibold">Editar Camión</h2>
+            <Truck className="w-5 h-5 sm:w-6 sm:h-6 mr-2 sm:mr-3" />
+            <h2 className="text-base sm:text-lg font-semibold">Editar Camión</h2>
           </div>
           <button onClick={handleGoBack} className="p-1 hover:bg-gray-700 rounded transition-colors">
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4 sm:w-5 sm:h-5" />
           </button>
         </div>
 
-        <div className="p-6 overflow-y-auto max-h-[calc(90vh-80px)]">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="col-span-2">
+        <div className="p-4 sm:p-6 overflow-y-auto max-h-[calc(95vh-60px)] sm:max-h-[calc(90vh-80px)]">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+            <div className="col-span-1 sm:col-span-2">
               <label className="block text-sm font-medium text-gray-700 mb-2">Nombre del camión</label>
               <input
                 type="text"
                 value={formData.nombre}
                 onChange={(e) => handleInputChange('nombre', e.target.value)}
-                className="w-full p-3 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
+                className="w-full p-2.5 sm:p-3 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
                 placeholder="Nombre del camión"
               />
             </div>
@@ -160,7 +160,7 @@ export default function TruckEditForm() {
                 type="text"
                 value={formData.tarjetaCirculacion}
                 onChange={(e) => handleInputChange('tarjetaCirculacion', e.target.value)}
-                className="w-full p-3 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
+                className="w-full p-2.5 sm:p-3 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
                 placeholder="Tarjeta de circulación"
               />
             </div>
@@ -171,7 +171,7 @@ export default function TruckEditForm() {
                 type="text"
                 value={formData.placa}
                 onChange={(e) => handleInputChange('placa', e.target.value)}
-                className="w-full p-3 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
+                className="w-full p-2.5 sm:p-3 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
                 placeholder="Placa"
               />
             </div>
@@ -182,7 +182,7 @@ export default function TruckEditForm() {
                 type="text"
                 value={formData.marca}
                 onChange={(e) => handleInputChange('marca', e.target.value)}
-                className="w-full p-3 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
+                className="w-full p-2.5 sm:p-3 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
                 placeholder="Marca"
               />
             </div>
@@ -193,8 +193,19 @@ export default function TruckEditForm() {
                 type="text"
                 value={formData.modelo}
                 onChange={(e) => handleInputChange('modelo', e.target.value)}
-                className="w-full p-3 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
+                className="w-full p-2.5 sm:p-3 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
                 placeholder="Modelo"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Año</label>
+              <input
+                type="number"
+                value={formData.año}
+                onChange={(e) => handleInputChange('año', e.target.value)}
+                className="w-full p-2.5 sm:p-3 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
+                placeholder="Año"
               />
             </div>
 
@@ -204,7 +215,7 @@ export default function TruckEditForm() {
                 <select
                   value={formData.proveedor}
                   onChange={(e) => handleInputChange('proveedor', e.target.value)}
-                  className="w-full p-3 border border-gray-300 rounded-md text-sm appearance-none bg-white focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
+                  className="w-full p-2.5 sm:p-3 border border-gray-300 rounded-md text-sm appearance-none bg-white focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
                 >
                   <option value="">Seleccionar proveedor</option>
                   {proveedores.map((p) => (
@@ -213,7 +224,7 @@ export default function TruckEditForm() {
                     </option>
                   ))}
                 </select>
-                <ChevronDown className="absolute right-3 top-3.5 h-4 w-4 text-gray-400 pointer-events-none" />
+                <ChevronDown className="absolute right-2 sm:right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
               </div>
             </div>
 
@@ -223,7 +234,7 @@ export default function TruckEditForm() {
                 <select
                   value={formData.motorista}
                   onChange={(e) => handleInputChange('motorista', e.target.value)}
-                  className="w-full p-3 border border-gray-300 rounded-md text-sm appearance-none bg-white focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
+                  className="w-full p-2.5 sm:p-3 border border-gray-300 rounded-md text-sm appearance-none bg-white focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
                 >
                   <option value="">Seleccionar motorista</option>
                   {motoristas.map((m) => (
@@ -232,33 +243,33 @@ export default function TruckEditForm() {
                     </option>
                   ))}
                 </select>
-                <ChevronDown className="absolute right-3 top-3.5 h-4 w-4 text-gray-400 pointer-events-none" />
+                <ChevronDown className="absolute right-2 sm:right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
               </div>
             </div>
 
-            <div className="col-span-2">
+            <div className="col-span-1 sm:col-span-2">
               <label className="block text-sm font-medium text-gray-700 mb-2">Descripción</label>
               <textarea
                 value={formData.descripcion}
                 onChange={(e) => handleInputChange('descripcion', e.target.value)}
-                className="w-full p-3 border border-gray-300 rounded-md text-sm h-24 resize-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
+                className="w-full p-2.5 sm:p-3 border border-gray-300 rounded-md text-sm h-20 sm:h-24 resize-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
                 placeholder="Descripción del camión"
               />
             </div>
           </div>
 
-          <div className="mt-6 flex justify-center">
+          <div className="mt-4 sm:mt-6 flex justify-center">
             <button
               onClick={handleSubmit}
               disabled={isSubmitting}
-              className={`px-8 py-3 rounded-md font-medium text-white transition-all duration-200 ${
+              className={`px-6 sm:px-8 py-2.5 sm:py-3 rounded-md font-medium text-white transition-all duration-200 w-full sm:w-auto ${
                 isSubmitting
                   ? 'bg-gray-400 cursor-not-allowed'
                   : 'bg-green-600 hover:bg-green-700 hover:scale-105 active:scale-95'
               }`}
             >
               {isSubmitting ? (
-                <div className="flex items-center">
+                <div className="flex items-center justify-center">
                   <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-2"></div>
                   Actualizando...
                 </div>
@@ -272,15 +283,15 @@ export default function TruckEditForm() {
 
       {showSuccessModal && (
         <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 z-60">
-          <div className="bg-white rounded-lg w-full max-w-sm p-8 text-center animate-bounce-in">
-            <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6 animate-pulse">
-              <Check className="w-10 h-10 text-green-600" />
+          <div className="bg-white rounded-lg w-full max-w-xs sm:max-w-sm p-6 sm:p-8 text-center animate-bounce-in">
+            <div className="w-16 h-16 sm:w-20 sm:h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4 sm:mb-6 animate-pulse">
+              <Check className="w-8 h-8 sm:w-10 sm:h-10 text-green-600" />
             </div>
-            <h3 className="text-xl font-semibold text-gray-800 mb-3">¡Camión actualizado!</h3>
-            <p className="text-gray-600 mb-8">Los cambios se han guardado exitosamente</p>
+            <h3 className="text-lg sm:text-xl font-semibold text-gray-800 mb-2 sm:mb-3">¡Camión actualizado!</h3>
+            <p className="text-gray-600 mb-6 sm:mb-8 text-sm sm:text-base">Los cambios se han guardado exitosamente</p>
             <button
               onClick={handleContinue}
-              className="bg-green-600 hover:bg-green-700 text-white px-8 py-3 rounded-md font-medium w-full transition-all duration-200 hover:scale-105 active:scale-95"
+              className="bg-green-600 hover:bg-green-700 text-white px-6 sm:px-8 py-2.5 sm:py-3 rounded-md font-medium w-full transition-all duration-200 hover:scale-105 active:scale-95 text-sm sm:text-base"
             >
               Continuar
             </button>
