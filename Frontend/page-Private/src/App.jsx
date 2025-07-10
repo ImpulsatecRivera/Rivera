@@ -1,10 +1,9 @@
 import { Routes, Route, useLocation } from "react-router-dom";
-
+import PrivateRoute from "./components/PrivateRoutes/PrivateRoute";
 import Login from "./pages/Login";
 import RecoverPassword from "./pages/RecoverPassword";
 import VerificationInput from "./pages/VerificationInput";
 import ResetPassword from "./pages/ResetPassword";
-import Travel from "./pages/Travel";
 
 import Dashboard from "./pages/Dashboard/Dashboard";
 import ReportsPage from "./pages/Dashboard/ReportsPage";
@@ -24,19 +23,7 @@ import TruckManagement from "./pages/Camiones/EditarCamion";
 function App() {
   const location = useLocation();
 
-  const authRoutes = [
-    "/",
-    "/recuperar",
-    "/verification-code",
-    "/verification-input",
-    "/reset-password",
-    "/empleados/agregarEmployee",
-    "/motoristas/agregarMotorista",
-    "/Camiones/aggCamion",
-    "/proveedores/agregarProveedor",
-    "/Camiones/editarCamion"
-  ];
-
+  const authRoutes = ["/", "/recuperar", "/verification-input", "/reset-password"];
   const shouldShowMenu = !authRoutes.includes(location.pathname);
 
   return (
@@ -49,24 +36,26 @@ function App() {
 
       <div className={`flex-1 min-h-screen ${shouldShowMenu ? "ml-64" : "ml-0"}`}>
         <Routes>
+          {/* públicas */}
           <Route path="/" element={<Login />} />
           <Route path="/recuperar" element={<RecoverPassword />} />
           <Route path="/verification-input" element={<VerificationInput />} />
           <Route path="/reset-password" element={<ResetPassword />} />
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/informes" element={<ReportsPage />} />
-          <Route path="/clientes" element={<ClientManagementInterface />} />
-          <Route path="/empleados" element={<Employee />} />
-          <Route path="/empleados/agregarEmployee" element={<AddEmployeeForm />} />
-          <Route path="/motoristas" element={<MotoristaManagementInterface />} />
-          <Route path="/motoristas/agregarMotorista" element={<AddMotoristaForm />} />
-          <Route path="/viajes" element={<Travel />} />
-          <Route path="/Camiones" element={<Camiones />} />
-          <Route path="/Camiones/verCamion" element={<TruckDetailScreen />} />
-          <Route path="/Camiones/aggCamion" element={<TruckFormScreen />} />
-          <Route path="/Camiones/editarCamion" element={<TruckManagement />} />
-          <Route path="/proveedores" element={<ProviderManagementInterface />} />
-          <Route path="/proveedores/agregarProveedor" element={<AddProveedorForm />} />
+
+          {/* privadas */}
+          <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
+          <Route path="/informes" element={<PrivateRoute><ReportsPage /></PrivateRoute>} />
+          <Route path="/clientes" element={<PrivateRoute><ClientManagementInterface /></PrivateRoute>} />
+          <Route path="/empleados" element={<PrivateRoute><Employee /></PrivateRoute>} />
+          <Route path="/empleados/agregarEmployee" element={<PrivateRoute><AddEmployeeForm /></PrivateRoute>} />
+          <Route path="/motoristas" element={<PrivateRoute><MotoristaManagementInterface /></PrivateRoute>} />
+          <Route path="/motoristas/agregarMotorista" element={<PrivateRoute><AddMotoristaForm /></PrivateRoute>} />
+          <Route path="/Camiones" element={<PrivateRoute><Camiones /></PrivateRoute>} />
+          <Route path="/Camiones/verCamion" element={<PrivateRoute><TruckDetailScreen /></PrivateRoute>} />
+          <Route path="/Camiones/aggCamion" element={<PrivateRoute><TruckFormScreen /></PrivateRoute>} />
+          <Route path="/Camiones/editarCamion" element={<PrivateRoute><TruckManagement /></PrivateRoute>} />
+          <Route path="/proveedores" element={<PrivateRoute><ProviderManagementInterface /></PrivateRoute>} />
+          <Route path="/proveedores/agregarProveedor" element={<PrivateRoute><AddProveedorForm /></PrivateRoute>} />
         </Routes>
       </div>
     </div>

@@ -3,36 +3,55 @@ import Input from "../components/Login/Input";
 import Button from "../components/Login/Button";
 import SideImage from "../components/Login/SideImage";
 import Title from "../components/RecoverPassword/Title";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
+
+import { useState } from "react";
+import useLogin from "../components/Login/hooks/useLogin";
+
 
 const Login = () => {
-  const navigate = useNavigate();
+  const { handleLogin, loading } = useLogin(); 
 
-  const handleLogin = (e) => {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+
+  const onSubmit = (e) => {
     e.preventDefault();
-    navigate("/dashboard"); // redirección temporal
+    handleLogin(email, password);
   };
 
   return (
     <div className="min-h-screen flex flex-col lg:flex-row items-center justify-center bg-gray-100">
-      {/* Columna del formulario */}
       <div className="w-full lg:w-[55%] flex flex-col justify-center items-center p-8">
         <Avatar />
         <Title className="text-gray-800">¡Bienvenido de vuelta!</Title>
 
-        <form className="w-full max-w-md space-y-4" onSubmit={handleLogin}>
-          <Input label="Correo" type="email" placeholder="ejemplo@email.com" />
-          <Input label="Contraseña" type="password" placeholder="Al menos 8 caracteres" />
+        <form className="w-full max-w-md space-y-4" onSubmit={onSubmit}>
+          <Input
+            label="Correo"
+            type="email"
+            placeholder="ejemplo@email.com"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+          />
+          <Input
+            label="Contraseña"
+            type="password"
+            placeholder="Al menos 8 caracteres"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
           <div className="text-right text-sm">
             <Link to="/recuperar" className="text-blue-600 hover:underline">
               ¿Olvidaste tu contraseña?
             </Link>
           </div>
-          <Button type="submit">Iniciar sesión</Button>
+          <Button type="submit" disabled={loading}>
+            {loading ? "Iniciando sesión..." : "Iniciar sesión"}
+          </Button>
         </form>
       </div>
 
-      {/* Imagen lateral */}
       <div className="w-full lg:w-[30%] flex justify-center p-4">
         <SideImage />
       </div>
