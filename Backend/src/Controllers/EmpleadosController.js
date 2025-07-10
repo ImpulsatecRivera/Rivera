@@ -4,14 +4,13 @@ import mongoose from "mongoose";
 import {v2 as cloudinary} from "cloudinary";
 import {config} from "../config.js"
 
-
 const empleadosCon = {};
 
 cloudinary.config({
     cloud_name: config.cloudinary.cloudinary_name,
     api_key: config.cloudinary.cloudinary_api_key,
     api_secret: config.cloudinary.cloudinary_api_secret,
-  });
+});
 
 // Obtener empleados
 empleadosCon.get = async (req, res) => {
@@ -24,8 +23,13 @@ empleadosCon.get = async (req, res) => {
     }
 };
 
-// Generar email automáticamente
+// Generar email automáticamente - CON VALIDACIÓN
 const generarEmail = async (name, lastName) => {
+    // VALIDAR QUE LOS PARÁMETROS EXISTAN
+    if (!name || !lastName) {
+        throw new Error('Nombre y apellido son requeridos para generar el email');
+    }
+
     const dominio = "rivera.com";
     let base = `${name.toLowerCase()}.${lastName.toLowerCase()}`;
     let email = `${base}@${dominio}`;
@@ -84,14 +88,33 @@ empleadosCon.post = async (req, res) => {
             return res.status(409).json({ message: "Ya existe un empleado registrado con este email" });
         }
 
-        let imgUrl= "";
+        // MANEJO MEJORADO DE LA IMAGEN
+        let imgUrl = "";
 
-        if(req.file){
-            const resul = await cloudinary.uploader.upload(req.file.path, {
-                folder: "public",
-                allowed_formats: ["png","jpg","jpeg"],
-            });
-            imgUrl = resul.secure_url;
+        if (req.file) {
+            try {
+                const resul = await cloudinary.uploader.upload(req.file.path, {
+                    folder: "public",
+                    // INCLUIR WEBP EN LOS FORMATOS PERMITIDOS
+                    allowed_formats: ["png", "jpg", "jpeg", "webp"],
+                    // Opcional: agregar transformaciones
+                    transformation: [
+                        { quality: "auto" },
+                        { fetch_format: "auto" }
+                    ]
+                });
+                imgUrl = resul.secure_url;
+            } catch (uploadError) {
+                console.error('Error al subir imagen:', uploadError);
+                return res.status(400).json({ 
+                    message: "Error al procesar la imagen", 
+                    error: uploadError.message 
+                });
+            }
+        } else {
+            // SI NO HAY IMAGEN, USAR UNA IMAGEN POR DEFECTO O DEJAR VACÍO
+            // Si tu modelo REQUIERE img, usa una imagen por defecto
+            imgUrl = "https://res.cloudinary.com/tu-cloud/image/upload/v1/default-avatar.png"; // O deja vacío si no es required
         }
 
         const encriptarContraHash = await bcryptjs.hash(password, 10);
@@ -105,7 +128,7 @@ empleadosCon.post = async (req, res) => {
             password: encriptarContraHash,
             phone,
             address,
-            img:imgUrl
+            img: imgUrl
         });
 
         const empleadoGuardado = await newEmpleado.save();
@@ -123,7 +146,7 @@ empleadosCon.post = async (req, res) => {
                 birthDate: empleadoGuardado.birthDate,
                 phone: empleadoGuardado.phone,
                 address: empleadoGuardado.address,
-                img : empleadoGuardado.img
+                img: empleadoGuardado.img
             }
         });
 
@@ -153,33 +176,58 @@ empleadosCon.post = async (req, res) => {
     }
 };
 
-// Actualizar empleado
+// Actualizar empleado - VERSIÓN CORREGIDA
 empleadosCon.put = async (req, res) => {
     try {
         const { name, lastName, dui, birthDate, password, phone, address } = req.body;
 
-            const email = await generarEmail(name, lastName);
-
-        let imgUrl= "";
-
-        if(req.file){
-            const resul = await cloudinary.uploader.upload(req.file.path, {
-                folder: "public",
-                allowed_formats: ["png","jpg","jpeg"],
-            });
-            imgUrl = resul.secure_url;
+        // OBTENER EL EMPLEADO ACTUAL PARA MANTENER DATOS EXISTENTES
+        const empleadoExistente = await empleadosModel.findById(req.params.id);
+        if (!empleadoExistente) {
+            return res.status(404).json({ message: "Empleado no encontrado" });
         }
 
-        const datosActualizados = {
-            name,
-            lastName,
-            email,
-            dui,
-            birthDate,
-            phone,
-            address,
-            img:imgUrl
-        };
+        // CONSTRUIR OBJETO DE ACTUALIZACIÓN
+        const datosActualizados = {};
+
+        // Solo actualizar campos que se enviaron
+        if (name) datosActualizados.name = name;
+        if (lastName) datosActualizados.lastName = lastName;
+        if (dui) datosActualizados.dui = dui;
+        if (birthDate) datosActualizados.birthDate = birthDate;
+        if (phone) datosActualizados.phone = phone;
+        if (address) datosActualizados.address = address;
+
+        // GENERAR EMAIL SOLO SI SE PROPORCIONAN AMBOS CAMPOS
+        if (name && lastName) {
+            datosActualizados.email = await generarEmail(name, lastName);
+        } else if (name || lastName) {
+            // Si solo se envía uno, usar el existente para generar email
+            const nombreFinal = name || empleadoExistente.name;
+            const apellidoFinal = lastName || empleadoExistente.lastName;
+            datosActualizados.email = await generarEmail(nombreFinal, apellidoFinal);
+        }
+
+        // MANEJO DE LA IMAGEN
+        if (req.file) {
+            try {
+                const resul = await cloudinary.uploader.upload(req.file.path, {
+                    folder: "public",
+                    allowed_formats: ["png", "jpg", "jpeg", "webp"],
+                    transformation: [
+                        { quality: "auto" },
+                        { fetch_format: "auto" }
+                    ]
+                });
+                datosActualizados.img = resul.secure_url;
+            } catch (uploadError) {
+                console.error('Error al subir imagen:', uploadError);
+                return res.status(400).json({ 
+                    message: "Error al procesar la imagen", 
+                    error: uploadError.message 
+                });
+            }
+        }
 
         // Solo encriptar y actualizar la contraseña si fue enviada
         if (password) {
@@ -189,12 +237,8 @@ empleadosCon.put = async (req, res) => {
         const empleadoActualizado = await empleadosModel.findByIdAndUpdate(
             req.params.id,
             datosActualizados,
-            { new: true }
+            { new: true, runValidators: true }
         );
-
-        if (!empleadoActualizado) {
-            return res.status(404).json({ message: "Empleado no encontrado" });
-        }
 
         console.log(`Empleado actualizado: ${req.params.id}`);
         res.status(200).json({ 
