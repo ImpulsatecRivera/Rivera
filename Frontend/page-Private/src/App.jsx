@@ -18,6 +18,7 @@ import TruckFormScreen from "./pages/Camiones/FormAggCamion";
 import ProviderManagementInterface from "./pages/Provedores/Prooveedores";
 import AddProveedorForm from "./pages/Provedores/AgregarProovedor";
 import TruckManagement from "./pages/Camiones/EditarCamion";
+import CotizacionesComponent from "./pages/cotizaciones/Cotizaciones";
 
 function App() {
   const location = useLocation();
@@ -103,6 +104,7 @@ function App() {
           {/* Proveedores */}
           <Route path="/proveedores" element={<ProviderManagementInterface />} />
           <Route path="/proveedores/agregarProveedor" element={<AddProveedorForm />} />
+          <Route path="/cotizaciones" element={<CotizacionesComponent/>} />
           
           {/* Ruta catch-all para páginas no encontradas */}
           <Route path="*" element={
