@@ -176,25 +176,25 @@ const TruckMainScreen = () => {
 
     return (
       <div
-        className="bg-white rounded-xl border border-gray-200 p-4 hover:shadow-md transition-all cursor-pointer"
+        className="bg-white rounded-xl border border-gray-200 p-3 sm:p-4 hover:shadow-md transition-all cursor-pointer"
         onClick={handleCardClick}
       >
         <div className="flex justify-between items-start mb-2">
-          <div className="text-md font-semibold text-gray-800">{truck.name}</div>
-          <div className="flex gap-2">
+          <div className="text-sm sm:text-md font-semibold text-gray-800 truncate pr-2">{truck.name}</div>
+          <div className="flex gap-1 sm:gap-2 flex-shrink-0">
             <button 
               onClick={(e) => handleEditTruck(e, truck)}
               disabled={!truck.id}
-              className={`${!truck.id ? 'opacity-50 cursor-not-allowed' : ''}`}
+              className={`p-1 sm:p-2 rounded ${!truck.id ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-100'}`}
             >
-              <Edit3 size={16} className="text-gray-500 hover:text-gray-700" />
+              <Edit3 size={14} className="text-gray-500 hover:text-gray-700 sm:w-4 sm:h-4" />
             </button>
             <button 
               onClick={(e) => handleDeleteClick(e, truck)}
               disabled={!truck.id}
-              className={`${!truck.id ? 'opacity-50 cursor-not-allowed' : ''}`}
+              className={`p-1 sm:p-2 rounded ${!truck.id ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-100'}`}
             >
-              <Trash2 size={16} className="text-gray-500 hover:text-red-600" />
+              <Trash2 size={14} className="text-gray-500 hover:text-red-600 sm:w-4 sm:h-4" />
             </button>
           </div>
         </div>
@@ -202,13 +202,15 @@ const TruckMainScreen = () => {
           <img
             src={truck.img || Camion}
             alt={truck.name}
-            className="w-full h-32 object-cover rounded-md"
+            className="w-full h-24 sm:h-28 md:h-32 object-cover rounded-md"
           />
         </div>
-        <p className="text-sm text-gray-600 mb-1">Placa: {truck.licensePlate}</p>
-        <div className={`inline-flex items-center text-xs font-medium px-3 py-1 rounded-full ${getStatusColor(truck.state)}`}>
-          <div className={`w-2 h-2 rounded-full mr-2 ${getDotColor(truck.state)}`} />
-          {truck.state ? truck.state.toUpperCase() : 'SIN ESTADO'}
+        <p className="text-xs sm:text-sm text-gray-600 mb-1 truncate">Placa: {truck.licensePlate}</p>
+        <div className={`inline-flex items-center text-xs font-medium px-2 sm:px-3 py-1 rounded-full ${getStatusColor(truck.state)}`}>
+          <div className={`w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full mr-1 sm:mr-2 ${getDotColor(truck.state)}`} />
+          <span className="truncate">
+            {truck.state ? truck.state.toUpperCase() : 'SIN ESTADO'}
+          </span>
         </div>
         
         {/* Indicador de debug para desarrollo */}
@@ -223,51 +225,56 @@ const TruckMainScreen = () => {
 
   return (
     <div className="flex h-screen bg-[#34353A]">
-      <div className="flex-1 p-6 overflow-hidden">
-        <div className="bg-white rounded-xl p-6 h-full overflow-hidden flex flex-col">
-          <div className="mt-4">
-            <button onClick={handleAddTruck} className="flex items-center space-x-4 text-gray-600 hover:text-gray-800 transition-colors">
-              <Plus className="w-5 h-5" />
-              <span className="font-medium">Agregar camión</span>
+      <div className="flex-1 p-3 sm:p-4 lg:p-6 overflow-hidden">
+        <div className="bg-white rounded-xl p-3 sm:p-4 lg:p-6 h-full overflow-hidden flex flex-col">
+          <div className="mt-2 sm:mt-4">
+            <button 
+              onClick={handleAddTruck} 
+              className="flex items-center space-x-2 sm:space-x-4 text-gray-600 hover:text-gray-800 transition-colors p-2 rounded-lg hover:bg-gray-50"
+            >
+              <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
+              <span className="font-medium text-sm sm:text-base">Agregar camión</span>
             </button>
           </div>
 
           {loading ? (
             <div className="flex-1 flex justify-center items-center">
-              <div className="animate-spin rounded-full h-10 w-10 border-4 border-blue-400 border-t-transparent" />
+              <div className="animate-spin rounded-full h-8 w-8 sm:h-10 sm:w-10 border-4 border-blue-400 border-t-transparent" />
             </div>
           ) : error ? (
-            <div className="text-red-500 text-center mt-10 font-medium">Error al cargar los camiones.</div>
+            <div className="text-red-500 text-center mt-10 font-medium text-sm sm:text-base">Error al cargar los camiones.</div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-6 overflow-y-auto">
-              {trucks.map((truck) => (
-                <TruckCard key={truck.id} truck={truck} />
-              ))}
+            <div className="mt-4 sm:mt-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 3xl:grid-cols-6 gap-3 sm:gap-4 lg:gap-6 overflow-y-auto max-h-[calc(100vh-8rem)] pr-2">
+                {trucks.map((truck) => (
+                  <TruckCard key={truck.id} truck={truck} />
+                ))}
+              </div>
             </div>
           )}
         </div>
       </div>
 
       {showDeleteModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 animate-fade-in">
-          <div className="bg-white rounded-xl p-6 w-full max-w-sm shadow-lg text-center animate-scale-in">
-            <div className="w-16 h-16 bg-red-500 text-white rounded-full mx-auto flex items-center justify-center mb-4 animate-shake">
-              <X size={32} />
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 animate-fade-in p-4">
+          <div className="bg-white rounded-xl p-4 sm:p-6 w-full max-w-xs sm:max-w-sm shadow-lg text-center animate-scale-in">
+            <div className="w-12 h-12 sm:w-16 sm:h-16 bg-red-500 text-white rounded-full mx-auto flex items-center justify-center mb-4 animate-shake">
+              <X size={24} className="sm:w-8 sm:h-8" />
             </div>
-            <h2 className="text-lg font-semibold text-gray-800 mb-2">¿Eliminar camión?</h2>
-            <p className="text-gray-600 mb-6">Esta acción no se puede deshacer.</p>
-            <div className="flex justify-center gap-4">
+            <h2 className="text-base sm:text-lg font-semibold text-gray-800 mb-2">¿Eliminar camión?</h2>
+            <p className="text-sm sm:text-base text-gray-600 mb-4 sm:mb-6">Esta acción no se puede deshacer.</p>
+            <div className="flex flex-col sm:flex-row justify-center gap-2 sm:gap-4">
               <button 
                 onClick={handleDeleteConfirm} 
                 disabled={isDeleting}
-                className={`px-4 py-2 rounded transition-all duration-200 ${
+                className={`px-4 py-2 rounded transition-all duration-200 text-sm sm:text-base ${
                   isDeleting 
                     ? 'bg-gray-400 text-white cursor-not-allowed' 
                     : 'bg-red-500 text-white hover:bg-red-600 hover:scale-105 active:scale-95'
                 }`}
               >
                 {isDeleting ? (
-                  <div className="flex items-center">
+                  <div className="flex items-center justify-center">
                     <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-2"></div>
                     Eliminando...
                   </div>
@@ -278,7 +285,7 @@ const TruckMainScreen = () => {
               <button 
                 onClick={() => setShowDeleteModal(false)} 
                 disabled={isDeleting}
-                className={`px-4 py-2 border rounded transition-all duration-200 ${
+                className={`px-4 py-2 border rounded transition-all duration-200 text-sm sm:text-base ${
                   isDeleting 
                     ? 'opacity-50 cursor-not-allowed' 
                     : 'hover:bg-gray-100 hover:scale-105 active:scale-95'
@@ -292,16 +299,16 @@ const TruckMainScreen = () => {
       )}
 
       {showSuccessModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 animate-fade-in">
-          <div className="bg-white rounded-xl p-6 w-full max-w-sm shadow-lg text-center animate-bounce-in">
-            <div className="w-16 h-16 bg-green-500 text-white rounded-full mx-auto flex items-center justify-center mb-4 animate-pulse">
-              <Check size={32} />
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 animate-fade-in p-4">
+          <div className="bg-white rounded-xl p-4 sm:p-6 w-full max-w-xs sm:max-w-sm shadow-lg text-center animate-bounce-in">
+            <div className="w-12 h-12 sm:w-16 sm:h-16 bg-green-500 text-white rounded-full mx-auto flex items-center justify-center mb-4 animate-pulse">
+              <Check size={24} className="sm:w-8 sm:h-8" />
             </div>
-            <h2 className="text-lg font-semibold text-gray-800 mb-2">Camión eliminado</h2>
-            <p className="text-gray-600 mb-6">El camión fue eliminado exitosamente.</p>
+            <h2 className="text-base sm:text-lg font-semibold text-gray-800 mb-2">Camión eliminado</h2>
+            <p className="text-sm sm:text-base text-gray-600 mb-4 sm:mb-6">El camión fue eliminado exitosamente.</p>
             <button 
               onClick={handleSuccessContinue} 
-              className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 transition-all duration-200 hover:scale-105 active:scale-95"
+              className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 transition-all duration-200 hover:scale-105 active:scale-95 text-sm sm:text-base w-full sm:w-auto"
             >
               Continuar
             </button>
@@ -373,6 +380,13 @@ const TruckMainScreen = () => {
 
         .animate-shake {
           animation: shake 0.5s ease-in-out;
+        }
+
+        /* Responsive grid for larger screens */
+        @media (min-width: 1920px) {
+          .3xl\:grid-cols-6 {
+            grid-template-columns: repeat(6, minmax(0, 1fr));
+          }
         }
       `}</style>
     </div>
