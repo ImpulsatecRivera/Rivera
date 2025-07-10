@@ -215,32 +215,32 @@ const FormAggCamion = ({ onNavigateBack, onSubmitSuccess }) => {
   return (
     <div className="fixed inset-0 min-h-screen" style={{ backgroundColor: '#34353A' }}>
       {/* Header */}
-      <div className="text-white px-8 py-4" style={{ backgroundColor: '#34353A' }}>
+      <div className="text-white px-4 sm:px-6 lg:px-8 py-3 sm:py-4" style={{ backgroundColor: '#34353A' }}>
         <button 
           onClick={handleBackToMenu}
           className="flex items-center space-x-2 text-white hover:text-gray-300 transition-colors"
         >
-          <ArrowLeft className="w-5 h-5" />
+          <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />
           <span className="text-sm">Volver al menú principal</span>
         </button>
       </div>
 
       {/* Main Content */}
-      <div className="px-8 pb-8" style={{ height: 'calc(100vh - 80px)' }}>
-        <div className="bg-white rounded-2xl p-8 h-full max-w-none mx-0 overflow-y-auto">
+      <div className="px-4 sm:px-6 lg:px-8 pb-4 sm:pb-6 lg:pb-8" style={{ height: 'calc(100vh - 60px)' }}>
+        <div className="bg-white rounded-xl sm:rounded-2xl p-4 sm:p-6 lg:p-8 h-full max-w-none mx-0 overflow-y-auto">
           {/* Title Section */}
-          <div className="flex items-center justify-between mb-8">
-            <div className="flex items-center space-x-4">
-              <h1 className="text-2xl font-bold text-gray-900">Agregar Camión</h1>
-              <div className="w-14 h-14 rounded-full flex items-center justify-center" style={{ backgroundColor: '#34353A' }}>
-                <svg className="w-7 h-7 text-white" fill="currentColor" viewBox="0 0 24 24">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 sm:mb-8 gap-4">
+            <div className="flex items-center space-x-3 sm:space-x-4">
+              <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Agregar Camión</h1>
+              <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full flex items-center justify-center" style={{ backgroundColor: '#34353A' }}>
+                <svg className="w-6 h-6 sm:w-7 sm:h-7 text-white" fill="currentColor" viewBox="0 0 24 24">
                   <path d="M20 8h-3V4H3c-1.1 0-2 .9-2 2v11h2c0 1.66 1.34 3 3 3s3-1.34 3-3h6c0 1.66 1.34 3 3 3s3-1.34 3-3h2v-5l-3-4zM6 18c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1zm2.22-3c-.55-.61-1.33-1-2.22-1s-1.67.39-2.22 1H3V6h12v9H8.22zM18 18c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1zm-1-3c-.89 0-1.67.39-2.22 1H15V9h3.56l1.33 2H17v4z"/>
                 </svg>
               </div>
             </div>
             <button 
               onClick={() => document.querySelector('form').requestSubmit()}
-              className="text-white px-8 py-3 rounded-lg text-sm font-medium transition-colors hover:opacity-90"
+              className="text-white px-6 sm:px-8 py-2.5 sm:py-3 rounded-lg text-sm font-medium transition-colors hover:opacity-90 w-full sm:w-auto"
               style={{ backgroundColor: '#375E27' }}
               disabled={isSubmitting}
             >
@@ -250,16 +250,16 @@ const FormAggCamion = ({ onNavigateBack, onSubmitSuccess }) => {
 
           {/* Form */}
           <form onSubmit={handleSubmit(handleCustomSubmit, handleFormErrors)}>
-            <div className="space-y-8 max-w-6xl">
+            <div className="space-y-6 sm:space-y-8 max-w-full">
               {/* First Row - Basic Info */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Nombre</label>
                   <input
                     type="text"
                     {...register("name", { required: true })}
                     placeholder="Nombre del número del camión"
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none text-sm text-gray-700 placeholder-gray-400"
+                    className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:outline-none text-sm text-gray-700 placeholder-gray-400"
                     onFocus={handleFocus}
                     onBlur={handleBlur}
                   />
@@ -272,20 +272,20 @@ const FormAggCamion = ({ onNavigateBack, onSubmitSuccess }) => {
                     type="text"
                     {...register("ciculatioCard", { required: true })}
                     placeholder="Tarjeta de circulación del Camión"
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none text-sm text-gray-700 placeholder-gray-400"
+                    className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:outline-none text-sm text-gray-700 placeholder-gray-400"
                     onFocus={handleFocus}
                     onBlur={handleBlur}
                   />
                   {errors.ciculatioCard && <p className="text-red-500 text-xs mt-1">Este campo es obligatorio</p>}
                 </div>
 
-                <div>
+                <div className="sm:col-span-2 lg:col-span-1">
                   <label className="block text-sm font-medium text-gray-700 mb-2">Placa</label>
                   <input
                     type="text"
                     {...register("licensePlate", { required: true })}
                     placeholder="Número de placa"
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none text-sm text-gray-700 placeholder-gray-400"
+                    className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:outline-none text-sm text-gray-700 placeholder-gray-400"
                     onFocus={handleFocus}
                     onBlur={handleBlur}
                   />
@@ -294,14 +294,14 @@ const FormAggCamion = ({ onNavigateBack, onSubmitSuccess }) => {
               </div>
 
               {/* Second Row */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Marca</label>
                   <input
                     type="text"
                     {...register("brand", { required: true })}
                     placeholder="Marca del camión"
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none text-sm text-gray-700 placeholder-gray-400"
+                    className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:outline-none text-sm text-gray-700 placeholder-gray-400"
                     onFocus={handleFocus}
                     onBlur={handleBlur}
                   />
@@ -314,20 +314,20 @@ const FormAggCamion = ({ onNavigateBack, onSubmitSuccess }) => {
                     type="text"
                     {...register("model", { required: true })}
                     placeholder="Modelo del camión"
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none text-sm text-gray-700 placeholder-gray-400"
+                    className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:outline-none text-sm text-gray-700 placeholder-gray-400"
                     onFocus={handleFocus}
                     onBlur={handleBlur}
                   />
                   {errors.model && <p className="text-red-500 text-xs mt-1">Este campo es obligatorio</p>}
                 </div>
 
-                <div>
+                <div className="sm:col-span-2 lg:col-span-1">
                   <label className="block text-sm font-medium text-gray-700 mb-2">Año</label>
                   <input
                     type="number"
                     {...register("age", { required: true })}
                     placeholder="Año del camión"
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none text-sm text-gray-700 placeholder-gray-400"
+                    className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:outline-none text-sm text-gray-700 placeholder-gray-400"
                     onFocus={handleFocus}
                     onBlur={handleBlur}
                   />
@@ -336,7 +336,7 @@ const FormAggCamion = ({ onNavigateBack, onSubmitSuccess }) => {
               </div>
 
               {/* Third Row */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Nivel de Gasolina</label>
                   <input
@@ -345,7 +345,7 @@ const FormAggCamion = ({ onNavigateBack, onSubmitSuccess }) => {
                     max="100"
                     {...register("gasolineLevel", { required: true })}
                     placeholder="Nivel de gasolina (0-100)"
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none text-sm text-gray-700 placeholder-gray-400"
+                    className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:outline-none text-sm text-gray-700 placeholder-gray-400"
                     onFocus={handleFocus}
                     onBlur={handleBlur}
                   />
@@ -357,7 +357,7 @@ const FormAggCamion = ({ onNavigateBack, onSubmitSuccess }) => {
                   <div className="relative">
                     <select
                       {...register("driverId", { required: true })}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none text-sm text-gray-700 appearance-none bg-white"
+                      className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:outline-none text-sm text-gray-700 appearance-none bg-white"
                       onFocus={handleFocus}
                       onBlur={handleBlur}
                     >
@@ -368,17 +368,17 @@ const FormAggCamion = ({ onNavigateBack, onSubmitSuccess }) => {
                         </option>
                       ))}
                     </select>
-                    <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                    <ChevronDown className="absolute right-2 sm:right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
                   </div>
                   {errors.driverId && <p className="text-red-500 text-xs mt-1">Este campo es obligatorio</p>}
                 </div>
 
-                <div>
+                <div className="sm:col-span-2 lg:col-span-1">
                   <label className="block text-sm font-medium text-gray-700 mb-2">Proveedor</label>
                   <div className="relative">
                     <select
                       {...register("supplierId", { required: true })}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none text-sm text-gray-700 appearance-none bg-white"
+                      className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:outline-none text-sm text-gray-700 appearance-none bg-white"
                       onFocus={handleFocus}
                       onBlur={handleBlur}
                     >
@@ -389,35 +389,35 @@ const FormAggCamion = ({ onNavigateBack, onSubmitSuccess }) => {
                         </option>
                       ))}
                     </select>
-                    <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                    <ChevronDown className="absolute right-2 sm:right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
                   </div>
                   {errors.supplierId && <p className="text-red-500 text-xs mt-1">Este campo es obligatorio</p>}
                 </div>
               </div>
 
               {/* Fourth Row - Description and Image */}
-              <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start">
-                {/* Description - takes 3 columns */}
+              <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 sm:gap-6 items-start">
+                {/* Description - takes 3 columns on large screens */}
                 <div className="lg:col-span-3">
                   <label className="block text-sm font-medium text-gray-700 mb-2">Descripción</label>
                   <textarea
                     {...register("description")}
                     placeholder="Descripción con breve descripción del camión"
-                    rows={8}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none text-sm text-gray-700 placeholder-gray-400 resize-none"
+                    rows={6}
+                    className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:outline-none text-sm text-gray-700 placeholder-gray-400 resize-none"
                     onFocus={handleFocus}
                     onBlur={handleBlur}
                   />
                 </div>
 
-                {/* Image Upload Section - takes 1 column */}
+                {/* Image Upload Section - takes 1 column on large screens */}
                 <div className="lg:col-span-1">
                   <label className="block text-sm font-medium text-gray-700 mb-2">Foto del Camión</label>
                   <div className="space-y-3">
                     {/* Preview de la imagen */}
                     <div className="relative group">
                       <div
-                        className="w-full h-48 border-2 border-dashed rounded-xl flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 overflow-hidden transition-all duration-300 hover:from-blue-50 hover:to-blue-100 hover:border-blue-300"
+                        className="w-full h-40 sm:h-48 border-2 border-dashed rounded-xl flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 overflow-hidden transition-all duration-300 hover:from-blue-50 hover:to-blue-100 hover:border-blue-300"
                         style={{ borderColor: imagePreview ? '#375E27' : '#d1d5db' }}
                       >
                         {imagePreview ? (
@@ -438,13 +438,13 @@ const FormAggCamion = ({ onNavigateBack, onSubmitSuccess }) => {
                             </div>
                           </div>
                         ) : (
-                          <div className="text-center p-4">
-                            <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-white shadow-md flex items-center justify-center">
-                              <svg className="w-6 h-6 text-gray-400" fill="currentColor" viewBox="0 0 24 24">
+                          <div className="text-center p-3 sm:p-4">
+                            <div className="w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-2 sm:mb-3 rounded-full bg-white shadow-md flex items-center justify-center">
+                              <svg className="w-5 h-5 sm:w-6 sm:h-6 text-gray-400" fill="currentColor" viewBox="0 0 24 24">
                                 <path d="M20 8h-3V4H3c-1.1 0-2 .9-2 2v11h2c0 1.66 1.34 3 3 3s3-1.34 3-3h6c0 1.66 1.34 3 3 3s3-1.34 3-3h2v-5l-3-4zM6 18c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1zm2.22-3c-.55-.61-1.33-1-2.22-1s-1.67.39-2.22 1H3V6h12v9H8.22zM18 18c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1zm-1-3c-.89 0-1.67.39-2.22 1H15V9h3.56l1.33 2H17v4z"/>
                               </svg>
                             </div>
-                            <p className="text-sm font-medium text-gray-600 mb-1">Foto del camión</p>
+                            <p className="text-xs sm:text-sm font-medium text-gray-600 mb-1">Foto del camión</p>
                             <p className="text-xs text-gray-500">Arrastra o haz clic para subir</p>
                           </div>
                         )}
@@ -464,15 +464,15 @@ const FormAggCamion = ({ onNavigateBack, onSubmitSuccess }) => {
                     {/* Botón de acción */}
                     <label
                       htmlFor="img-input"
-                      className="w-full flex items-center justify-center px-3 py-2.5 rounded-lg cursor-pointer transition-all duration-300 text-white text-sm font-medium shadow-md hover:shadow-lg"
+                      className="w-full flex items-center justify-center px-3 py-2 sm:py-2.5 rounded-lg cursor-pointer transition-all duration-300 text-white text-xs sm:text-sm font-medium shadow-md hover:shadow-lg"
                       style={{ backgroundColor: imagePreview ? '#375E27' : '#6B7280' }}
                     >
-                      <Upload className="w-4 h-4 mr-2" />
+                      <Upload className="w-3 h-3 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" />
                       <span>{imagePreview ? 'Cambiar foto' : 'Seleccionar foto'}</span>
                     </label>
 
                     {/* Información de ayuda */}
-                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-2.5">
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-2 sm:p-2.5">
                       <div className="flex items-start space-x-2">
                         <div className="w-3 h-3 rounded-full bg-blue-400 flex items-center justify-center mt-0.5 flex-shrink-0">
                           <span className="text-white text-xs font-bold">i</span>
