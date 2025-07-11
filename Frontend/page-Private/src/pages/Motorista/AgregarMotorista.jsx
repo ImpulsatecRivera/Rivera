@@ -516,7 +516,7 @@ const AddMotoristaForm = () => {
   };
 
   return (
-    <div className="fixed inset-0 z-50" style={{ backgroundColor: '#34353A' }}>
+    <div className="min-h-screen flex flex-col" style={{ backgroundColor: '#34353A' }}>
       {/* Header */}
       <div className="text-white px-8 py-4" style={{ backgroundColor: '#34353A' }}>
         <button
@@ -529,12 +529,12 @@ const AddMotoristaForm = () => {
       </div>
 
       {/* Main Content with proper scroll */}
-      <div className="px-8 pb-8 h-full overflow-y-auto" style={{ height: 'calc(100vh - 80px)' }}>
-        <div className="bg-white rounded-2xl p-8 max-w-none mx-0">
+      <div className="px-8 pb-8 flex-1 flex">
+        <div className="bg-white rounded-2xl p-8 max-w-none mx-0 w-full flex flex-col">
           {/* Title Section */}
-          <div className="flex items-center justify-between mb-24">
+          <div className="flex items-center justify-between mb-8">
             <div className="flex items-center space-x-4">
-              <h1 className="text-2xl font-bold text-gray-900">Agregar Motorista</h1>
+              <h1 className="text-2xl font-bold text-gray-900">Agregar motorista</h1>
               <div className="w-14 h-14 rounded-full flex items-center justify-center" style={{ backgroundColor: '#34353A' }}>
                 <User className="w-7 h-7 text-white" />
               </div>
@@ -554,7 +554,7 @@ const AddMotoristaForm = () => {
             {/* Image Upload Section - First Row */}
             <div className="flex justify-start">
               <div className="w-96">
-                <label className="block text-sm font-medium text-gray-700 mb-2">Imagen del Motorista</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Imagen del motorista</label>
                 <div className="space-y-3">
                   {/* Preview de la imagen */}
                   <div className="relative group">

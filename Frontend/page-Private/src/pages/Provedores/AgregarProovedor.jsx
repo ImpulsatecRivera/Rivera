@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { ArrowLeft, Building } from 'lucide-react';
 import Swal from 'sweetalert2';
 
-const AddProveedorForm = () => {
+const AgregarProovedor
+ = () => {
   const [formData, setFormData] = useState({
     companyName: '',
     email: '',
@@ -413,4 +414,4 @@ const AddProveedorForm = () => {
   );
 };
 
-export default AddProveedorForm;
+export default AgregarProovedor;

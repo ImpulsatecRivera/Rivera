@@ -1,7 +1,7 @@
 import React from "react";
 import { Users, Truck, Clock, Package, TrendingUp } from "lucide-react";
 
-const LogisticsDashboard = () => {
+const BottomMetrics = () => {
   return (
     <div className="grid grid-cols-3 gap-4">
       {/* Top Row Metrics */}
@@ -57,4 +57,4 @@ const LogisticsDashboard = () => {
   );
 };
 
-export default LogisticsDashboard;
+export default BottomMetrics;

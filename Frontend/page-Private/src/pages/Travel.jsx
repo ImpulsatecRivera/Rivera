@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, MoreHorizontal, ArrowLeft, Check, X } from 'lucide-react';
 
-const TravelDashboard = () => {
+const Travel = () => {
   // Agregamos estilos CSS para las animaciones personalizadas
   const styles = `
     @keyframes fadeInUp {
@@ -1138,4 +1138,4 @@ const TravelDashboard = () => {
   );
 };
 
-export default TravelDashboard;
+export default Travel;

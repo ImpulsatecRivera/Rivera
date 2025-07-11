@@ -1,6 +1,6 @@
 import React from 'react';
 
-const CategoryItem = ({ image, name, progress, gradientClass }) => (
+const FunctionalGroups = ({ image, name, progress, gradientClass }) => (
   <div className="flex items-center space-x-3 mb-4">
     <img 
       src={image} 
@@ -58,4 +58,4 @@ const PerishableFoods = () => {
   );
 };
 
-export default PerishableFoods;
+export default FunctionalGroups;

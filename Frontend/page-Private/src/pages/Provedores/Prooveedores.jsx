@@ -481,7 +481,7 @@ const EditSupplierAlert = ({ isOpen, onClose, onSave, supplier }) => {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Correo electronico</label>
                 <input
                   type="email"
                   name="email"
@@ -608,7 +608,7 @@ const SupplierManagementInterface = () => {
                         <option value="Newest">Newest</option>
                         <option value="Oldest">Oldest</option>
                         <option value="Company">Company</option>
-                        <option value="Email">Email</option>
+                        <option value="Email">Correo electronico</option>
                       </select>
                       <ChevronDown className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4 pointer-events-none" />
                     </div>
@@ -619,7 +619,7 @@ const SupplierManagementInterface = () => {
 
             <div className={`grid ${showDetailView ? 'grid-cols-4' : 'grid-cols-4'} gap-4 pb-3 border-b border-gray-200 text-sm font-medium text-gray-500`}>
               <div>Empresa</div>
-              <div>Email de la empresa</div>
+              <div>correo electronico de la empresa</div>
               <div>Repuesto</div>
               <div>Teléfono</div>
             </div>
@@ -732,7 +732,7 @@ const SupplierManagementInterface = () => {
 
               <div className="grid grid-cols-1 gap-4">
                 <div>
-                  <div className="text-sm text-gray-500 mb-1">Email de la empresa</div>
+                  <div className="text-sm text-gray-500 mb-1">Correo electronico de la empresa</div>
                   <div className="text-sm text-gray-400 break-words">{selectedProveedor.email}</div>
                 </div>
                 <div>
