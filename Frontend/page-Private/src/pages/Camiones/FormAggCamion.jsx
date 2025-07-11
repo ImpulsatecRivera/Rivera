@@ -213,7 +213,7 @@ const FormAggCamion = ({ onNavigateBack, onSubmitSuccess }) => {
   };
 
   return (
-    <div className="fixed inset-0 min-h-screen" style={{ backgroundColor: '#34353A' }}>
+    <div className="fixed inset-0 z-50" style={{ backgroundColor: '#34353A' }}>
       {/* Header */}
       <div className="text-white px-8 py-4" style={{ backgroundColor: '#34353A' }}>
         <button 
@@ -225,9 +225,9 @@ const FormAggCamion = ({ onNavigateBack, onSubmitSuccess }) => {
         </button>
       </div>
 
-      {/* Main Content */}
-      <div className="px-8 pb-8" style={{ height: 'calc(100vh - 80px)' }}>
-        <div className="bg-white rounded-2xl p-8 h-full max-w-none mx-0 overflow-y-auto">
+      {/* Main Content with proper scroll */}
+      <div className="px-8 pb-8 h-full overflow-y-auto" style={{ height: 'calc(100vh - 80px)' }}>
+        <div className="bg-white rounded-2xl p-8 max-w-none mx-0">
           {/* Title Section */}
           <div className="flex items-center justify-between mb-8">
             <div className="flex items-center space-x-4">
@@ -250,7 +250,7 @@ const FormAggCamion = ({ onNavigateBack, onSubmitSuccess }) => {
 
           {/* Form */}
           <form onSubmit={handleSubmit(handleCustomSubmit, handleFormErrors)}>
-            <div className="space-y-8 max-w-6xl">
+            <div className="space-y-6">
               {/* First Row - Basic Info */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div>
@@ -396,22 +396,22 @@ const FormAggCamion = ({ onNavigateBack, onSubmitSuccess }) => {
               </div>
 
               {/* Fourth Row - Description and Image */}
-              <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start">
-                {/* Description - takes 3 columns */}
-                <div className="lg:col-span-3">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Description - takes left column */}
+                <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Descripción</label>
                   <textarea
                     {...register("description")}
                     placeholder="Descripción con breve descripción del camión"
-                    rows={8}
+                    rows={6}
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none text-sm text-gray-700 placeholder-gray-400 resize-none"
                     onFocus={handleFocus}
                     onBlur={handleBlur}
                   />
                 </div>
 
-                {/* Image Upload Section - takes 1 column */}
-                <div className="lg:col-span-1">
+                {/* Image Upload Section - takes right column */}
+                <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Foto del Camión</label>
                   <div className="space-y-3">
                     {/* Preview de la imagen */}
