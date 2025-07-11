@@ -24,77 +24,49 @@ import CotizacionesComponent from "./pages/cotizaciones/Cotizaciones";
 function App() {
   const location = useLocation();
 
+  // Lista de rutas donde NO debe aparecer el menú
   const authRoutes = [
     "/",
     "/recuperar",
     "/verification-code",
     "/verification-input",
-    "/reset-password"
+    "/reset-password",
+    "/empleados/agregarEmployee",
+    "/motoristas/agregarMotorista",
+    "/Camiones/aggCamion",
+    "/proveedores/agregarProveedor",
+    "/Camiones/editarCamion"
   ];
 
-  const shouldShowMenu = !authRoutes.includes(location.pathname);
+  // Función para verificar si debe mostrar el menú
+  const shouldShowMenu = !authRoutes.some(route => {
+    if (route.includes(':')) {
+      // Para rutas dinámicas, verificar el patrón
+      const pattern = route.replace(':id', '[^/]+');
+      const regex = new RegExp(`^${pattern}$`);
+      return regex.test(location.pathname);
+    }
+    return location.pathname === route || location.pathname.startsWith(route + '/');
+  });
 
   return (
     <div className="flex">
+      {/* Sidebar fijo */}
       {shouldShowMenu && (
         <div className="fixed left-0 top-0 z-40">
           <SidebarNav />
         </div>
       )}
 
+      {/* Contenido principal */}
       <div className={`flex-1 min-h-screen ${shouldShowMenu ? "ml-64" : "ml-0"}`}>
         <Routes>
-          {/* Rutas públicas */}
+          {/* Rutas de autenticación */}
           <Route path="/" element={<Login />} />
           <Route path="/recuperar" element={<RecoverPassword />} />
           <Route path="/verification-input" element={<VerificationInput />} />
           <Route path="/reset-password" element={<ResetPassword />} />
-
-          
           {/* Dashboard */}
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/informes" element={<ReportsPage />} />
-          
-          {/* Clientes */}
-          <Route path="/clientes" element={<ClientManagementInterface />} />
-          
-          {/* Empleados */}
-          <Route path="/empleados" element={<Employee />} />
-          <Route path="/empleados/agregarEmployee" element={<AddEmployeeForm />} />
-          
-          {/* Motoristas */}
-          <Route path="/motoristas" element={<MotoristaManagementInterface />} />
-          <Route path="/motoristas/agregarMotorista" element={<AddMotoristaForm />} />
-          
-          {/* Viajes */}
-          <Route path="/viajes" element={<Travel />} />
-          
-          {/* CAMIONES - RUTAS CORREGIDAS */}
-          {/* Lista de camiones */}
-          <Route path="/Camiones" element={<Camiones />} />
-          <Route path="/camiones" element={<Camiones />} /> {/* Alias en minúscula */}
-          
-          {/* Ver detalle de camión - RUTA DINÁMICA */}
-          <Route path="/camiones/:id" element={<TruckDetailScreen />} />
-          <Route path="/Camiones/:id" element={<TruckDetailScreen />} /> {/* Alias */}
-          
-          {/* Agregar camión */}
-          <Route path="/Camiones/aggCamion" element={<TruckFormScreen />} />
-          <Route path="/camiones/aggCamion" element={<TruckFormScreen />} /> {/* Alias */}
-          
-          {/* Editar camión - RUTA DINÁMICA */}
-          <Route path="/Camiones/editarCamion/:id" element={<TruckManagement />} />
-          <Route path="/camiones/editarCamion/:id" element={<TruckManagement />} /> {/* Alias */}
-          
-          {/* Proveedores */}
-          <Route path="/proveedores" element={<ProviderManagementInterface />} />
-          <Route path="/proveedores/agregarProveedor" element={<AddProveedorForm />} />
-          <Route path="/cotizaciones" element={<CotizacionesComponent/>} />
-          
-          {/* Ruta catch-all para páginas no encontradas */}
-=======
-
-          {/* Rutas privadas */}
           <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
           <Route path="/informes" element={<PrivateRoute><ReportsPage /></PrivateRoute>} />
           <Route path="/clientes" element={<PrivateRoute><ClientManagementInterface /></PrivateRoute>} />
@@ -116,7 +88,13 @@ function App() {
           <Route path="/proveedores" element={<PrivateRoute><ProviderManagementInterface /></PrivateRoute>} />
           <Route path="/proveedores/agregarProveedor" element={<PrivateRoute><AddProveedorForm /></PrivateRoute>} />
 
+
           {/* Ruta catch-all para 404 */}
+
+
+          <Route path="/cotizaciones" element={<PrivateRoute><CotizacionesComponent /></PrivateRoute>} />
+          
+          {/* Ruta catch-all para páginas no encontradas */}
 
           <Route path="*" element={
             <div className="flex items-center justify-center h-screen">
