@@ -22,7 +22,6 @@ app.use(
     })
   );
 
-
 app.use("/api/camiones",camionesRoutes);
 app.use("/api/empleados",empleadoRoutes);
 app.use("/api/motoristas",motoristasRoutes);
