@@ -24,18 +24,36 @@ export default function EditarCamion() {
   const [proveedores, setProveedores] = useState([]);
   const [motoristas, setMotoristas] = useState([]);
 
+  // Configuración base para fetch con cookies
+  const fetchOptions = {
+    credentials: 'include', // Incluir cookies en todas las peticiones
+    headers: {
+      'Content-Type': 'application/json',
+    },
+  };
+
   useEffect(() => {
     const fetchTruckData = async () => {
       try {
         setLoading(true);
 
-        const truckResponse = await fetch(`http://localhost:4000/api/camiones/${id}`);
+        // Todas las peticiones incluyen cookies
+        const truckResponse = await fetch(`http://localhost:4000/api/camiones/${id}`, {
+          method: 'GET',
+          ...fetchOptions
+        });
         const truckData = await truckResponse.json();
 
-        const proveedoresResponse = await fetch('http://localhost:4000/api/proveedores');
+        const proveedoresResponse = await fetch('http://localhost:4000/api/proveedores', {
+          method: 'GET',
+          ...fetchOptions
+        });
         const proveedoresData = await proveedoresResponse.json();
 
-        const motoristasResponse = await fetch('http://localhost:4000/api/motoristas');
+        const motoristasResponse = await fetch('http://localhost:4000/api/motoristas', {
+          method: 'GET',
+          ...fetchOptions
+        });
         const motoristasData = await motoristasResponse.json();
 
         setFormData({
@@ -89,9 +107,7 @@ export default function EditarCamion() {
 
       const response = await fetch(`http://localhost:4000/api/camiones/${id}`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        ...fetchOptions,
         body: JSON.stringify(updateData)
       });
 
@@ -119,7 +135,7 @@ export default function EditarCamion() {
 
   if (loading) {
     return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+      <div className="fixed inset-0 flex items-center justify-center p-4 z-50">
         <div className="bg-white rounded-lg w-full max-w-2xl p-8 text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-4 border-green-400 border-t-transparent mx-auto mb-4"></div>
           <p className="text-gray-600">Cargando datos del camión...</p>
@@ -129,7 +145,7 @@ export default function EditarCamion() {
   }
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+    <div className="fixed inset-0 flex items-center justify-center p-4 z-40">
       <div className="bg-white rounded-lg w-full max-w-2xl max-h-[90vh] overflow-hidden animate-scale-in">
         <div className="bg-gray-800 text-white p-4 flex items-center justify-between">
           <div className="flex items-center">
@@ -271,7 +287,7 @@ export default function EditarCamion() {
       </div>
 
       {showSuccessModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 z-60">
+        <div className="fixed inset-0 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg w-full max-w-sm p-8 text-center animate-bounce-in">
             <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6 animate-pulse">
               <Check className="w-10 h-10 text-green-600" />
