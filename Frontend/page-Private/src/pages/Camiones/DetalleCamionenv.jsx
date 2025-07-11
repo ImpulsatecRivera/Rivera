@@ -4,7 +4,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useTruckDetail } from '../../components/Camiones/hooks/HookVer'; // Ajusta la ruta según tu estructura
 import CamionFord from "../../images/CamionFord.jpg";
 
-const TruckDetailScreen = () => {
+const DetalleCamionenv = () => {
   const { id: truckId } = useParams();
   const navigate = useNavigate();
   const { truck, loading, error, refetch } = useTruckDetail(truckId);
@@ -366,4 +366,4 @@ const TruckDetailScreen = () => {
   );
 };
 
-export default TruckDetailScreen;
+export default DetalleCamionenv;

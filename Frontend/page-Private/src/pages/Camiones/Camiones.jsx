@@ -3,7 +3,7 @@ import { Plus, Edit3, Trash2, X, Check } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import Camion from "../../images/camion.png"
 
-const TruckMainScreen = () => {
+const Camiones = () => {
   const [trucks, setTrucks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -379,4 +379,4 @@ const TruckMainScreen = () => {
   );
 };
 
-export default TruckMainScreen;
+export default Camiones;

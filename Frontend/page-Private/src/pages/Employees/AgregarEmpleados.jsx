@@ -522,7 +522,7 @@ const AddEmployeeForm = () => {
           <form onSubmit={handleSubmit} className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
             {/* Nombre */}
             <div className="flex flex-col">
-              <label htmlFor="name" className="mb-1 font-semibold text-gray-700">Nombre *</label>
+              <label htmlFor="name" className="mb-1 font-semibold text-gray-700">Nombre</label>
               <input
                 id="name"
                 name="name"
@@ -539,7 +539,7 @@ const AddEmployeeForm = () => {
 
             {/* Apellido */}
             <div className="flex flex-col">
-              <label htmlFor="lastName" className="mb-1 font-semibold text-gray-700">Apellido *</label>
+              <label htmlFor="lastName" className="mb-1 font-semibold text-gray-700">Apellido</label>
               <input
                 id="lastName"
                 name="lastName"
@@ -556,7 +556,7 @@ const AddEmployeeForm = () => {
 
             {/* Email - solo mostrar */}
             <div className="flex flex-col">
-              <label htmlFor="email" className="mb-1 font-semibold text-gray-700">Email (generado)</label>
+              <label htmlFor="email" className="mb-1 font-semibold text-gray-700">Correo electronico (generado)</label>
               <input
                 id="email"
                 name="email"
@@ -569,7 +569,7 @@ const AddEmployeeForm = () => {
 
             {/* DUI */}
             <div className="flex flex-col">
-              <label htmlFor="dui" className="mb-1 font-semibold text-gray-700">DUI *</label>
+              <label htmlFor="dui" className="mb-1 font-semibold text-gray-700">DUI</label>
               <input
                 id="dui"
                 name="dui"
@@ -587,7 +587,7 @@ const AddEmployeeForm = () => {
 
             {/* Fecha de Nacimiento */}
             <div className="relative flex flex-col">
-              <label htmlFor="birthDate" className="mb-1 font-semibold text-gray-700">Fecha de Nacimiento *</label>
+              <label htmlFor="birthDate" className="mb-1 font-semibold text-gray-700">Fecha de nacimiento</label>
               <input
                 id="birthDate"
                 name="birthDate"
@@ -717,7 +717,7 @@ const AddEmployeeForm = () => {
 
             {/* Contraseña */}
             <div className="flex flex-col">
-              <label htmlFor="password" className="mb-1 font-semibold text-gray-700">Contraseña *</label>
+              <label htmlFor="password" className="mb-1 font-semibold text-gray-700">Contraseña</label>
               <input
                 id="password"
                 name="password"
@@ -734,7 +734,7 @@ const AddEmployeeForm = () => {
 
             {/* Teléfono */}
             <div className="flex flex-col">
-              <label htmlFor="phone" className="mb-1 font-semibold text-gray-700">Teléfono *</label>
+              <label htmlFor="phone" className="mb-1 font-semibold text-gray-700">Teléfono</label>
               <input
                 id="phone"
                 name="phone"
@@ -752,7 +752,7 @@ const AddEmployeeForm = () => {
 
             {/* Dirección */}
             <div className="flex flex-col md:col-span-2">
-              <label htmlFor="address" className="mb-1 font-semibold text-gray-700">Dirección *</label>
+              <label htmlFor="address" className="mb-1 font-semibold text-gray-700">Dirección</label>
               <textarea
                 id="address"
                 name="address"

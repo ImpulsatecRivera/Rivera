@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ChevronDown, X, Check, Truck } from 'lucide-react';
 import { useParams, useNavigate } from 'react-router-dom';
 
-export default function TruckEditForm() {
+export default function EditarCamion() {
   const { id } = useParams();
   const navigate = useNavigate();
 
