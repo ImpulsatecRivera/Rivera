@@ -19,37 +19,54 @@ import TruckFormScreen from "./pages/Camiones/FormAggCamion";
 import ProviderManagementInterface from "./pages/Provedores/Prooveedores";
 import AddProveedorForm from "./pages/Provedores/AgregarProovedor";
 import TruckManagement from "./pages/Camiones/EditarCamion";
+import CotizacionesComponent from "./pages/cotizaciones/Cotizaciones";
 
 function App() {
   const location = useLocation();
 
+  // Lista de rutas donde NO debe aparecer el menú
   const authRoutes = [
     "/",
     "/recuperar",
     "/verification-code",
     "/verification-input",
-    "/reset-password"
+    "/reset-password",
+    "/empleados/agregarEmployee",
+    "/motoristas/agregarMotorista",
+    "/Camiones/aggCamion",
+    "/proveedores/agregarProveedor",
+    "/Camiones/editarCamion"
   ];
 
-  const shouldShowMenu = !authRoutes.includes(location.pathname);
+  // Función para verificar si debe mostrar el menú
+  const shouldShowMenu = !authRoutes.some(route => {
+    if (route.includes(':')) {
+      // Para rutas dinámicas, verificar el patrón
+      const pattern = route.replace(':id', '[^/]+');
+      const regex = new RegExp(`^${pattern}$`);
+      return regex.test(location.pathname);
+    }
+    return location.pathname === route || location.pathname.startsWith(route + '/');
+  });
 
   return (
     <div className="flex">
+      {/* Sidebar fijo */}
       {shouldShowMenu && (
         <div className="fixed left-0 top-0 z-40">
           <SidebarNav />
         </div>
       )}
 
+      {/* Contenido principal */}
       <div className={`flex-1 min-h-screen ${shouldShowMenu ? "ml-64" : "ml-0"}`}>
         <Routes>
-          {/* Rutas públicas */}
+          {/* Rutas de autenticación */}
           <Route path="/" element={<Login />} />
           <Route path="/recuperar" element={<RecoverPassword />} />
           <Route path="/verification-input" element={<VerificationInput />} />
           <Route path="/reset-password" element={<ResetPassword />} />
-
-          {/* Rutas privadas */}
+          {/* Dashboard */}
           <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
           <Route path="/informes" element={<PrivateRoute><ReportsPage /></PrivateRoute>} />
           <Route path="/clientes" element={<PrivateRoute><ClientManagementInterface /></PrivateRoute>} />
@@ -71,7 +88,14 @@ function App() {
           <Route path="/proveedores" element={<PrivateRoute><ProviderManagementInterface /></PrivateRoute>} />
           <Route path="/proveedores/agregarProveedor" element={<PrivateRoute><AddProveedorForm /></PrivateRoute>} />
 
+
           {/* Ruta catch-all para 404 */}
+
+
+          <Route path="/cotizaciones" element={<PrivateRoute><CotizacionesComponent /></PrivateRoute>} />
+          
+          {/* Ruta catch-all para páginas no encontradas */}
+
           <Route path="*" element={
             <div className="flex items-center justify-center h-screen">
               <div className="text-center">

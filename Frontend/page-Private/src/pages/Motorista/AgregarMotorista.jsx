@@ -516,369 +516,337 @@ const AddMotoristaForm = () => {
   };
 
   return (
-    <div className="fixed inset-0 min-h-screen" style={{ backgroundColor: '#34353A' }}>
+    <div className="fixed inset-0 z-50" style={{ backgroundColor: '#34353A' }}>
       {/* Header */}
-      <div className="text-white px-4 sm:px-6 md:px-8 lg:px-10 xl:px-12 2xl:px-16 py-4 lg:py-6" style={{ backgroundColor: '#34353A' }}>
+      <div className="text-white px-8 py-4" style={{ backgroundColor: '#34353A' }}>
         <button
           onClick={handleBackToMenu}
           className="flex items-center space-x-2 text-white hover:text-gray-300 transition-colors"
         >
-          <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />
-          <span className="text-xs sm:text-sm lg:text-base">Volver al menú principal</span>
+          <ArrowLeft className="w-5 h-5" />
+          <span className="text-sm">Volver al menú principal</span>
         </button>
       </div>
 
-      {/* Main Content */}
-      <div className="px-4 sm:px-6 md:px-8 lg:px-10 xl:px-12 2xl:px-16 pb-8" style={{ height: 'calc(100vh - 80px)', overflowY: 'auto' }}>
-        <div className="bg-white rounded-2xl p-4 sm:p-6 md:p-8 lg:p-10 xl:p-12 min-h-full max-w-full mx-auto">
+      {/* Main Content with proper scroll */}
+      <div className="px-8 pb-8 h-full overflow-y-auto" style={{ height: 'calc(100vh - 80px)' }}>
+        <div className="bg-white rounded-2xl p-8 max-w-none mx-0">
           {/* Title Section */}
-          <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between mb-6 lg:mb-8 xl:mb-10 space-y-4 lg:space-y-0">
-            <div className="flex items-center space-x-3 lg:space-x-4">
-              <h1 className="text-lg sm:text-xl md:text-2xl lg:text-3xl xl:text-4xl font-bold text-gray-900">Agregar Motorista</h1>
-              <div
-                className="w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 lg:w-16 lg:h-16 xl:w-18 xl:h-18 rounded-full flex items-center justify-center"
-                style={{ backgroundColor: '#34353A' }}
-              >
-                <User className="w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7 lg:w-8 lg:h-8 xl:w-9 xl:h-9 text-white" />
+          <div className="flex items-center justify-between mb-24">
+            <div className="flex items-center space-x-4">
+              <h1 className="text-2xl font-bold text-gray-900">Agregar Motorista</h1>
+              <div className="w-14 h-14 rounded-full flex items-center justify-center" style={{ backgroundColor: '#34353A' }}>
+                <User className="w-7 h-7 text-white" />
               </div>
             </div>
             <button
               onClick={handleSubmit}
-              className="w-full lg:w-auto text-white px-4 sm:px-6 md:px-8 lg:px-10 xl:px-12 py-2 sm:py-3 md:py-3 lg:py-4 rounded-lg text-sm md:text-base lg:text-lg font-medium transition-colors hover:opacity-90 disabled:opacity-50"
+              className="text-white px-8 py-3 rounded-lg text-sm font-medium transition-colors hover:opacity-90 disabled:opacity-50"
               style={{ backgroundColor: '#375E27' }}
               disabled={loading}
             >
-              {loading ? 'Cargando...' : 'Agregar'}
+              {loading ? 'Agregando...' : 'Agregar'}
             </button>
           </div>
 
           {/* Form */}
-          <div className="overflow-x-auto">
-            <div className="space-y-6 lg:space-y-8 xl:space-y-10 min-w-[320px] md:min-w-[768px] lg:min-w-[1024px] xl:min-w-[1280px] 2xl:min-w-[1536px]">
-              {/* Image Upload Section */}
-              <div className="w-full max-w-xs sm:max-w-sm md:max-w-md lg:max-w-lg xl:max-w-xl mx-auto lg:mx-0">
-                <label className="block text-sm md:text-base lg:text-lg font-medium text-gray-700 mb-2 lg:mb-3">Imagen del Motorista</label>
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 sm:p-6 lg:p-8">
-                  {!imagePreview ? (
-                    <div className="text-center">
-                      <Upload className="mx-auto h-8 w-8 sm:h-10 sm:w-10 md:h-12 md:w-12 lg:h-14 lg:w-14 xl:h-16 xl:w-16 text-gray-400" />
-                      <div className="mt-2 sm:mt-3 md:mt-4">
-                        <label
-                          htmlFor="image-upload"
-                          className="cursor-pointer bg-white rounded-md font-medium text-gray-600 hover:text-gray-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-indigo-500"
-                        >
-                          <span className="block text-xs sm:text-sm md:text-base lg:text-lg">Haz clic para subir una imagen</span>
-                          <input
-                            id="image-upload"
-                            name="img"
-                            type="file"
-                            accept="image/*"
-                            className="sr-only"
-                            onChange={handleImageChange}
+          <div className="space-y-6">
+            {/* Image Upload Section - First Row */}
+            <div className="flex justify-start">
+              <div className="w-96">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Imagen del Motorista</label>
+                <div className="space-y-3">
+                  {/* Preview de la imagen */}
+                  <div className="relative group">
+                    <div
+                      className="w-full h-48 border-2 border-dashed rounded-xl flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 overflow-hidden transition-all duration-300 hover:from-blue-50 hover:to-blue-100 hover:border-blue-300"
+                      style={{ borderColor: imagePreview ? '#375E27' : '#d1d5db' }}
+                    >
+                      {imagePreview ? (
+                        <div className="relative w-full h-full">
+                          <img
+                            src={imagePreview}
+                            alt="Preview"
+                            className="w-full h-full object-cover rounded-lg"
                           />
-                        </label>
-                        <p className="text-xs sm:text-sm lg:text-base text-gray-500 mt-1 sm:mt-2">PNG, JPG, GIF hasta 5MB</p>
-                      </div>
+                          <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all duration-300 rounded-lg flex items-center justify-center">
+                            <button
+                              type="button"
+                              onClick={removeImage}
+                              className="opacity-0 group-hover:opacity-100 bg-red-500 text-white rounded-full p-2 hover:bg-red-600 transition-all duration-300 transform hover:scale-110 shadow-lg"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="text-center p-4">
+                          <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-white shadow-md flex items-center justify-center">
+                            <Upload className="w-6 h-6 text-gray-400" />
+                          </div>
+                          <p className="text-sm font-medium text-gray-600 mb-1">Haz clic para subir una imagen</p>
+                          <p className="text-xs text-gray-500">PNG, JPG, GIF hasta 5MB</p>
+                        </div>
+                      )}
                     </div>
-                  ) : (
-                    <div className="relative inline-block mx-auto w-24 h-24 sm:w-32 sm:h-32 md:w-36 md:h-36 lg:w-40 lg:h-40 xl:w-44 xl:h-44 border-2 border-gray-200 rounded-lg overflow-hidden bg-gray-50 flex items-center justify-center">
-                      <img src={imagePreview} alt="Preview" className="max-w-full max-h-full object-contain" />
+
+                    {/* Overlay para drag & drop visual */}
+                    <input
+                      type="file"
+                      id="image-upload"
+                      accept="image/*"
+                      onChange={handleImageChange}
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                    />
+                  </div>
+                  
+                  {errors.img && (
+                    <span className="text-red-500 text-xs mt-2 block">{errors.img}</span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* First Row - Basic Info */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Nombre</label>
+                <input
+                  name="name"
+                  type="text"
+                  value={formData.name}
+                  onChange={handleInputChange}
+                  placeholder="Nombre"
+                  className={`w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none text-sm text-gray-700 placeholder-gray-400 ${
+                    errors.name ? 'border-red-500' : 'border-gray-300'
+                  }`}
+                  onFocus={handleFocus}
+                  onBlur={handleBlur}
+                />
+                {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name}</p>}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Apellido</label>
+                <input
+                  name="lastName"
+                  type="text"
+                  value={formData.lastName}
+                  onChange={handleInputChange}
+                  placeholder="Apellido"
+                  className={`w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none text-sm text-gray-700 placeholder-gray-400 ${
+                    errors.lastName ? 'border-red-500' : 'border-gray-300'
+                  }`}
+                  onFocus={handleFocus}
+                  onBlur={handleBlur}
+                />
+                {errors.lastName && <p className="text-red-500 text-xs mt-1">{errors.lastName}</p>}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
+                <input
+                  name="email"
+                  type="email"
+                  value={formData.email}
+                  readOnly
+                  placeholder="Correo electrónico generado automáticamente"
+                  className="w-full px-4 py-3 border border-gray-300 bg-gray-100 rounded-lg focus:outline-none text-sm text-gray-700 placeholder-gray-400 cursor-not-allowed"
+                />
+              </div>
+            </div>
+
+            {/* Second Row */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">DUI</label>
+                <input
+                  name="id"
+                  type="text"
+                  value={formData.id}
+                  onChange={handleInputChange}
+                  placeholder="00000000-0"
+                  maxLength={10}
+                  className={`w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none text-sm text-gray-700 placeholder-gray-400 ${
+                    errors.id ? 'border-red-500' : 'border-gray-300'
+                  }`}
+                  onFocus={handleFocus}
+                  onBlur={handleBlur}
+                />
+                {errors.id && <p className="text-red-500 text-xs mt-1">{errors.id}</p>}
+              </div>
+
+              <div className="relative">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Fecha de nacimiento</label>
+                <input
+                  name="birthDate"
+                  type="text"
+                  value={formData.birthDate}
+                  readOnly
+                  onClick={() => setShowCalendar(!showCalendar)}
+                  placeholder="YYYY-MM-DD"
+                  className={`w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none text-sm text-gray-700 placeholder-gray-400 cursor-pointer ${
+                    errors.birthDate ? 'border-red-500' : 'border-gray-300'
+                  }`}
+                />
+                <button
+                  type="button"
+                  className="absolute right-3 top-9 text-gray-500 hover:text-gray-700 focus:outline-none"
+                  onClick={() => setShowCalendar(!showCalendar)}
+                >
+                  <Calendar className="w-5 h-5" />
+                </button>
+
+                {showCalendar && (
+                  <div className="absolute z-10 bg-white border border-gray-300 rounded-md shadow-lg mt-1 p-4 w-64 max-w-full">
+                    {/* Selector año */}
+                    <div className="flex justify-between items-center mb-2">
                       <button
                         type="button"
-                        onClick={removeImage}
-                        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-colors shadow-lg"
+                        onClick={() => navigateYear(-1)}
+                        className="text-gray-600 hover:text-gray-800 focus:outline-none"
                       >
-                        <X className="w-3 h-3 sm:w-4 sm:h-4" />
+                        <ChevronLeft className="w-5 h-5" />
                       </button>
-                      <p className="text-center text-xs sm:text-sm text-gray-600 mt-2 max-w-36 truncate">{formData.img?.name}</p>
+                      <span className="font-semibold">{currentDate.getFullYear()}</span>
+                      <button
+                        type="button"
+                        onClick={() => navigateYear(1)}
+                        className="text-gray-600 hover:text-gray-800 focus:outline-none"
+                      >
+                        <ChevronRight className="w-5 h-5" />
+                      </button>
                     </div>
-                  )}
-                </div>
-                {errors.img && <p className="text-red-500 text-xs sm:text-sm mt-1">{errors.img}</p>}
-              </div>
 
-              {/* First Row */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 2xl:grid-cols-3 gap-4 md:gap-6 lg:gap-8 xl:gap-10">
-                {/* Nombre */}
-                <div>
-                  <label htmlFor="name" className="block text-sm md:text-base lg:text-lg font-medium text-gray-700 mb-1 lg:mb-2">
-                    Nombre
-                  </label>
-                  <input
-                    id="name"
-                    name="name"
-                    type="text"
-                    value={formData.name}
-                    onChange={handleInputChange}
-                    onFocus={handleFocus}
-                    onBlur={handleBlur}
-                    placeholder="Nombre"
-                    className={`w-full rounded-md border px-3 py-2 lg:px-4 lg:py-3 xl:px-5 xl:py-4 text-sm md:text-base lg:text-lg text-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-green-600 ${
-                      errors.name ? 'border-red-500' : 'border-gray-300'
-                    }`}
-                  />
-                  {errors.name && <p className="text-red-500 text-xs sm:text-sm mt-1">{errors.name}</p>}
-                </div>
+                    {/* Selector mes */}
+                    <div className="flex justify-between items-center mb-2">
+                      <button
+                        type="button"
+                        onClick={() => navigateMonth(-1)}
+                        className="text-gray-600 hover:text-gray-800 focus:outline-none"
+                      >
+                        <ChevronLeft className="w-5 h-5" />
+                      </button>
+                      <span className="font-semibold">{months[currentDate.getMonth()]}</span>
+                      <button
+                        type="button"
+                        onClick={() => navigateMonth(1)}
+                        className="text-gray-600 hover:text-gray-800 focus:outline-none"
+                      >
+                        <ChevronRight className="w-5 h-5" />
+                      </button>
+                    </div>
 
-                {/* Apellido */}
-                <div>
-                  <label htmlFor="lastName" className="block text-sm md:text-base lg:text-lg font-medium text-gray-700 mb-1 lg:mb-2">
-                    Apellido
-                  </label>
-                  <input
-                    id="lastName"
-                    name="lastName"
-                    type="text"
-                    value={formData.lastName}
-                    onChange={handleInputChange}
-                    onFocus={handleFocus}
-                    onBlur={handleBlur}
-                    placeholder="Apellido"
-                    className={`w-full rounded-md border px-3 py-2 lg:px-4 lg:py-3 xl:px-5 xl:py-4 text-sm md:text-base lg:text-lg text-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-green-600 ${
-                      errors.lastName ? 'border-red-500' : 'border-gray-300'
-                    }`}
-                  />
-                  {errors.lastName && <p className="text-red-500 text-xs sm:text-sm mt-1">{errors.lastName}</p>}
-                </div>
-
-                {/* Email (Solo lectura) */}
-                <div className="md:col-span-2 lg:col-span-1">
-                  <label htmlFor="email" className="block text-sm md:text-base lg:text-lg font-medium text-gray-700 mb-1 lg:mb-2">
-                    Email
-                  </label>
-                  <input
-                    id="email"
-                    name="email"
-                    type="email"
-                    value={formData.email}
-                    readOnly
-                    placeholder="Correo electrónico generado automáticamente"
-                    className="w-full rounded-md border border-gray-300 bg-gray-100 px-3 py-2 lg:px-4 lg:py-3 xl:px-5 xl:py-4 text-sm md:text-base lg:text-lg text-gray-700 shadow-sm cursor-not-allowed"
-                  />
-                </div>
-              </div>
-
-              {/* Second Row */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 2xl:grid-cols-3 gap-4 md:gap-6 lg:gap-8 xl:gap-10">
-                {/* DUI */}
-                <div>
-                  <label htmlFor="id" className="block text-sm md:text-base lg:text-lg font-medium text-gray-700 mb-1 lg:mb-2">
-                    DUI
-                  </label>
-                  <input
-                    id="id"
-                    name="id"
-                    type="text"
-                    value={formData.id}
-                    onChange={handleInputChange}
-                    onFocus={handleFocus}
-                    onBlur={handleBlur}
-                    placeholder="00000000-0"
-                    maxLength={10}
-                    className={`w-full rounded-md border px-3 py-2 lg:px-4 lg:py-3 xl:px-5 xl:py-4 text-sm md:text-base lg:text-lg text-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-green-600 ${
-                      errors.id ? 'border-red-500' : 'border-gray-300'
-                    }`}
-                  />
-                  {errors.id && <p className="text-red-500 text-xs sm:text-sm mt-1">{errors.id}</p>}
-                </div>
-
-                {/* Fecha de nacimiento con calendario personalizado */}
-                <div className="relative">
-                  <label htmlFor="birthDate" className="block text-sm md:text-base lg:text-lg font-medium text-gray-700 mb-1 lg:mb-2">
-                    Fecha de nacimiento
-                  </label>
-                  <input
-                    id="birthDate"
-                    name="birthDate"
-                    type="text"
-                    value={formData.birthDate}
-                    readOnly
-                    onClick={() => setShowCalendar(!showCalendar)}
-                    placeholder="YYYY-MM-DD"
-                    className={`w-full rounded-md border px-3 py-2 lg:px-4 lg:py-3 xl:px-5 xl:py-4 text-sm md:text-base lg:text-lg text-gray-700 shadow-sm cursor-pointer focus:outline-none focus:ring-2 focus:ring-green-600 ${
-                      errors.birthDate ? 'border-red-500' : 'border-gray-300'
-                    }`}
-                  />
-                  <button
-                    type="button"
-                    className="absolute right-3 lg:right-4 xl:right-5 top-8 sm:top-9 md:top-10 lg:top-11 xl:top-12 text-gray-500 hover:text-gray-700 focus:outline-none"
-                    onClick={() => setShowCalendar(!showCalendar)}
-                    aria-label="Abrir calendario"
-                  >
-                    <Calendar className="w-4 h-4 md:w-5 md:h-5 lg:w-6 lg:h-6" />
-                  </button>
-
-                  {showCalendar && (
-                    <div className="absolute z-10 bg-white border border-gray-300 rounded-md shadow-lg mt-1 p-3 sm:p-4 w-56 sm:w-64 md:w-72 lg:w-80 max-w-full">
-                      {/* Selector año */}
-                      <div className="flex justify-between items-center mb-2">
-                        <button
-                          type="button"
-                          onClick={() => navigateYear(-1)}
-                          className="text-gray-600 hover:text-gray-800 focus:outline-none"
-                          aria-label="Año anterior"
+                    {/* Días de la semana */}
+                    <div className="grid grid-cols-7 gap-1 mb-2">
+                      {daysOfWeek.map((day) => (
+                        <div
+                          key={day}
+                          className="text-center text-xs font-semibold text-gray-500 select-none"
                         >
-                          <ChevronLeft className="w-4 h-4 md:w-5 md:h-5" />
-                        </button>
-                        <span className="font-semibold text-sm md:text-base lg:text-lg">{currentDate.getFullYear()}</span>
-                        <button
-                          type="button"
-                          onClick={() => navigateYear(1)}
-                          className="text-gray-600 hover:text-gray-800 focus:outline-none"
-                          aria-label="Año siguiente"
-                        >
-                          <ChevronRight className="w-4 h-4 md:w-5 md:h-5" />
-                        </button>
-                      </div>
+                          {day}
+                        </div>
+                      ))}
+                    </div>
 
-                      {/* Selector mes */}
-                      <div className="flex justify-between items-center mb-2">
-                        <button
-                          type="button"
-                          onClick={() => navigateMonth(-1)}
-                          className="text-gray-600 hover:text-gray-800 focus:outline-none"
-                          aria-label="Mes anterior"
-                        >
-                          <ChevronLeft className="w-4 h-4 md:w-5 md:h-5" />
-                        </button>
-                        <span className="font-semibold text-sm md:text-base lg:text-lg">{months[currentDate.getMonth()]}</span>
-                        <button
-                          type="button"
-                          onClick={() => navigateMonth(1)}
-                          className="text-gray-600 hover:text-gray-800 focus:outline-none"
-                          aria-label="Mes siguiente"
-                        >
-                          <ChevronRight className="w-4 h-4 md:w-5 md:h-5" />
-                        </button>
-                      </div>
-
-                      {/* Días de la semana */}
-                      <div className="grid grid-cols-7 gap-1 mb-2">
-                        {daysOfWeek.map((day) => (
-                          <div
-                            key={day}
-                            className="text-center text-xs sm:text-sm font-semibold text-gray-500 select-none"
+                    {/* Días del mes */}
+                    <div className="grid grid-cols-7 gap-1">
+                      {getDaysInMonth(currentDate).map((date, index) => {
+                        const isDisabled = date.getMonth() !== currentDate.getMonth();
+                        const isSelectedDate = isSelected(date);
+                        const isTodayDate = isToday(date);
+                        return (
+                          <button
+                            key={index}
+                            type="button"
+                            onClick={() => handleDateSelect(date)}
+                            disabled={isDisabled}
+                            className={`w-8 h-8 flex items-center justify-center text-xs rounded-full focus:outline-none
+                              ${isSelectedDate ? 'bg-green-600 text-white' : ''}
+                              ${isTodayDate && !isSelectedDate ? 'border border-green-600 text-green-600' : ''}
+                              ${isDisabled ? 'text-gray-300 cursor-not-allowed' : 'hover:bg-green-100'}
+                            `}
                           >
-                            {day}
-                          </div>
-                        ))}
-                      </div>
-
-                      {/* Días del mes */}
-                      <div className="grid grid-cols-7 gap-1">
-                        {getDaysInMonth(currentDate).map((date, index) => {
-                          const isDisabled = date.getMonth() !== currentDate.getMonth();
-                          const isSelectedDate = isSelected(date);
-                          const isTodayDate = isToday(date);
-                          return (
-                            <button
-                              key={index}
-                              type="button"
-                              onClick={() => handleDateSelect(date)}
-                              disabled={isDisabled}
-                              className={`w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 flex items-center justify-center text-xs sm:text-sm rounded-full focus:outline-none
-                                ${isSelectedDate ? 'bg-green-600 text-white' : ''}
-                                ${isTodayDate && !isSelectedDate ? 'border border-green-600 text-green-600' : ''}
-                                ${isDisabled ? 'text-gray-300 cursor-not-allowed' : 'hover:bg-green-100'}
-                              `}
-                            >
-                              {date.getDate()}
-                            </button>
-                          );
-                        })}
-                      </div>
+                            {date.getDate()}
+                          </button>
+                        );
+                      })}
                     </div>
-                  )}
-                  {errors.birthDate && <p className="text-red-500 text-xs sm:text-sm mt-1">{errors.birthDate}</p>}
-                </div>
-
-                {/* Contraseña */}
-                <div className="md:col-span-2 lg:col-span-1">
-                  <label htmlFor="password" className="block text-sm md:text-base lg:text-lg font-medium text-gray-700 mb-1 lg:mb-2">
-                    Contraseña
-                  </label>
-                  <input
-                    id="password"
-                    name="password"
-                    type="password"
-                    value={formData.password}
-                    onChange={handleInputChange}
-                    onFocus={handleFocus}
-                    onBlur={handleBlur}
-                    placeholder="Contraseña"
-                    className={`w-full rounded-md border px-3 py-2 lg:px-4 lg:py-3 xl:px-5 xl:py-4 text-sm md:text-base lg:text-lg text-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-green-600 ${
-                      errors.password ? 'border-red-500' : 'border-gray-300'
-                    }`}
-                  />
-                  {errors.password && <p className="text-red-500 text-xs sm:text-sm mt-1">{errors.password}</p>}
-                </div>
+                  </div>
+                )}
+                {errors.birthDate && <p className="text-red-500 text-xs mt-1">{errors.birthDate}</p>}
               </div>
 
-              {/* Third Row */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 2xl:grid-cols-3 gap-4 md:gap-6 lg:gap-8 xl:gap-10">
-                {/* Teléfono */}
-                <div>
-                  <label htmlFor="phone" className="block text-sm md:text-base lg:text-lg font-medium text-gray-700 mb-1 lg:mb-2">
-                    Teléfono
-                  </label>
-                  <input
-                    id="phone"
-                    name="phone"
-                    type="text"
-                    value={formData.phone}
-                    onChange={handleInputChange}
-                    onFocus={handleFocus}
-                    onBlur={handleBlur}
-                    placeholder="0000-0000"
-                    maxLength={9}
-                    className={`w-full rounded-md border px-3 py-2 lg:px-4 lg:py-3 xl:px-5 xl:py-4 text-sm md:text-base lg:text-lg text-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-green-600 ${
-                      errors.phone ? 'border-red-500' : 'border-gray-300'
-                    }`}
-                  />
-                  {errors.phone && <p className="text-red-500 text-xs sm:text-sm mt-1">{errors.phone}</p>}
-                </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Contraseña</label>
+                <input
+                  name="password"
+                  type="password"
+                  value={formData.password}
+                  onChange={handleInputChange}
+                  placeholder="Contraseña"
+                  className={`w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none text-sm text-gray-700 placeholder-gray-400 ${
+                    errors.password ? 'border-red-500' : 'border-gray-300'
+                  }`}
+                  onFocus={handleFocus}
+                  onBlur={handleBlur}
+                />
+                {errors.password && <p className="text-red-500 text-xs mt-1">{errors.password}</p>}
+              </div>
+            </div>
 
-                {/* Dirección */}
-                <div>
-                  <label htmlFor="address" className="block text-sm md:text-base lg:text-lg font-medium text-gray-700 mb-1 lg:mb-2">
-                    Dirección
-                  </label>
-                  <input
-                    id="address"
-                    name="address"
-                    type="text"
-                    value={formData.address}
-                    onChange={handleInputChange}
-                    onFocus={handleFocus}
-                    onBlur={handleBlur}
-                    placeholder="Dirección"
-                    className={`w-full rounded-md border px-3 py-2 lg:px-4 lg:py-3 xl:px-5 xl:py-4 text-sm md:text-base lg:text-lg text-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-green-600 ${
-                      errors.address ? 'border-red-500' : 'border-gray-300'
-                    }`}
-                  />
-                  {errors.address && <p className="text-red-500 text-xs sm:text-sm mt-1">{errors.address}</p>}
-                </div>
+            {/* Third Row */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Teléfono</label>
+                <input
+                  name="phone"
+                  type="text"
+                  value={formData.phone}
+                  onChange={handleInputChange}
+                  placeholder="0000-0000"
+                  maxLength={9}
+                  className={`w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none text-sm text-gray-700 placeholder-gray-400 ${
+                    errors.phone ? 'border-red-500' : 'border-gray-300'
+                  }`}
+                  onFocus={handleFocus}
+                  onBlur={handleBlur}
+                />
+                {errors.phone && <p className="text-red-500 text-xs mt-1">{errors.phone}</p>}
+              </div>
 
-                {/* Tarjeta de circulación */}
-                <div className="md:col-span-2 lg:col-span-1">
-                  <label htmlFor="circulationCard" className="block text-sm md:text-base lg:text-lg font-medium text-gray-700 mb-1 lg:mb-2">
-                    Tarjeta de circulación
-                  </label>
-                  <input
-                    id="circulationCard"
-                    name="circulationCard"
-                    type="text"
-                    value={formData.circulationCard}
-                    onChange={handleInputChange}
-                    onFocus={handleFocus}
-                    onBlur={handleBlur}
-                    placeholder="Ejemplo: ABC-123"
-                    className={`w-full rounded-md border px-3 py-2 lg:px-4 lg:py-3 xl:px-5 xl:py-4 text-sm md:text-base lg:text-lg text-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-green-600 ${
-                      errors.circulationCard ? 'border-red-500' : 'border-gray-300'
-                    }`}
-                  />
-                  {errors.circulationCard && <p className="text-red-500 text-xs sm:text-sm mt-1">{errors.circulationCard}</p>}
-                </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Dirección</label>
+                <input
+                  name="address"
+                  type="text"
+                  value={formData.address}
+                  onChange={handleInputChange}
+                  placeholder="Dirección"
+                  className={`w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none text-sm text-gray-700 placeholder-gray-400 ${
+                    errors.address ? 'border-red-500' : 'border-gray-300'
+                  }`}
+                  onFocus={handleFocus}
+                  onBlur={handleBlur}
+                />
+                {errors.address && <p className="text-red-500 text-xs mt-1">{errors.address}</p>}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Tarjeta de circulación</label>
+                <input
+                  name="circulationCard"
+                  type="text"
+                  value={formData.circulationCard}
+                  onChange={handleInputChange}
+                  placeholder="Ejemplo: ABC-123"
+                  className={`w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none text-sm text-gray-700 placeholder-gray-400 ${
+                    errors.circulationCard ? 'border-red-500' : 'border-gray-300'
+                  }`}
+                  onFocus={handleFocus}
+                  onBlur={handleBlur}
+                />
+                {errors.circulationCard && <p className="text-red-500 text-xs mt-1">{errors.circulationCard}</p>}
               </div>
             </div>
           </div>
