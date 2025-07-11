@@ -4,7 +4,7 @@ import Login from "./pages/Login";
 import RecoverPassword from "./pages/RecoverPassword";
 import VerificationInput from "./pages/VerificationInput";
 import ResetPassword from "./pages/ResetPassword";
-
+import Travel from "./pages/Travel";
 import Dashboard from "./pages/Dashboard/Dashboard";
 import ReportsPage from "./pages/Dashboard/ReportsPage";
 import ClientManagementInterface from "./pages/Clientes";
@@ -23,7 +23,14 @@ import TruckManagement from "./pages/Camiones/EditarCamion";
 function App() {
   const location = useLocation();
 
-  const authRoutes = ["/", "/recuperar", "/verification-input", "/reset-password"];
+  const authRoutes = [
+    "/",
+    "/recuperar",
+    "/verification-code",
+    "/verification-input",
+    "/reset-password"
+  ];
+
   const shouldShowMenu = !authRoutes.includes(location.pathname);
 
   return (
@@ -36,13 +43,13 @@ function App() {
 
       <div className={`flex-1 min-h-screen ${shouldShowMenu ? "ml-64" : "ml-0"}`}>
         <Routes>
-          {/* públicas */}
+          {/* Rutas públicas */}
           <Route path="/" element={<Login />} />
           <Route path="/recuperar" element={<RecoverPassword />} />
           <Route path="/verification-input" element={<VerificationInput />} />
           <Route path="/reset-password" element={<ResetPassword />} />
 
-          {/* privadas */}
+          {/* Rutas privadas */}
           <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
           <Route path="/informes" element={<PrivateRoute><ReportsPage /></PrivateRoute>} />
           <Route path="/clientes" element={<PrivateRoute><ClientManagementInterface /></PrivateRoute>} />
@@ -50,12 +57,29 @@ function App() {
           <Route path="/empleados/agregarEmployee" element={<PrivateRoute><AddEmployeeForm /></PrivateRoute>} />
           <Route path="/motoristas" element={<PrivateRoute><MotoristaManagementInterface /></PrivateRoute>} />
           <Route path="/motoristas/agregarMotorista" element={<PrivateRoute><AddMotoristaForm /></PrivateRoute>} />
+          <Route path="/viajes" element={<PrivateRoute><Travel /></PrivateRoute>} />
+
           <Route path="/Camiones" element={<PrivateRoute><Camiones /></PrivateRoute>} />
-          <Route path="/Camiones/verCamion" element={<PrivateRoute><TruckDetailScreen /></PrivateRoute>} />
+          <Route path="/camiones" element={<PrivateRoute><Camiones /></PrivateRoute>} />
+          <Route path="/camiones/:id" element={<PrivateRoute><TruckDetailScreen /></PrivateRoute>} />
+          <Route path="/Camiones/:id" element={<PrivateRoute><TruckDetailScreen /></PrivateRoute>} />
           <Route path="/Camiones/aggCamion" element={<PrivateRoute><TruckFormScreen /></PrivateRoute>} />
-          <Route path="/Camiones/editarCamion" element={<PrivateRoute><TruckManagement /></PrivateRoute>} />
+          <Route path="/camiones/aggCamion" element={<PrivateRoute><TruckFormScreen /></PrivateRoute>} />
+          <Route path="/Camiones/editarCamion/:id" element={<PrivateRoute><TruckManagement /></PrivateRoute>} />
+          <Route path="/camiones/editarCamion/:id" element={<PrivateRoute><TruckManagement /></PrivateRoute>} />
+
           <Route path="/proveedores" element={<PrivateRoute><ProviderManagementInterface /></PrivateRoute>} />
           <Route path="/proveedores/agregarProveedor" element={<PrivateRoute><AddProveedorForm /></PrivateRoute>} />
+
+          {/* Ruta catch-all para 404 */}
+          <Route path="*" element={
+            <div className="flex items-center justify-center h-screen">
+              <div className="text-center">
+                <h1 className="text-2xl font-bold text-gray-800 mb-2">404 - Página no encontrada</h1>
+                <p className="text-gray-600">La ruta "{location.pathname}" no existe.</p>
+              </div>
+            </div>
+          } />
         </Routes>
       </div>
     </div>
