@@ -469,12 +469,12 @@ const TravelDashboard = () => {
                 
                 {/* Scheduled Trips */}
                 <div className="flex-1 overflow-auto">
-<<<<<<< HEAD
+
                   <h3 className="text-lg font-semibold text-gray-900 mb-6">Viajes programados de este día</h3>
                   
-=======
-                  <h3 className="text-lg font-semibold text-gray-900 mb-6">Viajes programados de este día:</h3>
->>>>>>> Rauda
+
+              <h3 className="text-lg font-semibold text-gray-900 mb-6">Viajes programados de este día:</h3>
+
                   <div className="space-y-3 mb-6">
                     {scheduledTrips.map((trip, index) => (
                       <div key={index} className="flex items-center p-3 hover:bg-white rounded-xl transition-colors group">
