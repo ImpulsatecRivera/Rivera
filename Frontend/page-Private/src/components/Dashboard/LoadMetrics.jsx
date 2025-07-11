@@ -11,7 +11,7 @@ const LoadMetrics = () => {
 
   return (
     <div className="bg-white p-6 rounded-lg border">
-      <h2 className="text-lg font-semibold text-gray-800 mb-6">Tipos de carga frecuentes.</h2>
+      <h2 className="text-lg font-semibold text-gray-800 mb-6">Tipos de carga frecuentes</h2>
 
       <div className="space-y-4">
         {loadMetrics.map((metric, index) => (
@@ -23,7 +23,7 @@ const LoadMetrics = () => {
             <div className="w-full bg-gray-200 rounded-full h-2">
               <div
                 className="h-2 rounded-full transition-all duration-300"
-                style={{
+                style={{ 
                   width: `${metric.percentage}%`,
                   backgroundColor: metric.color
                 }}

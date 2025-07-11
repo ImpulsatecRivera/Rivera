@@ -10,12 +10,12 @@ const SweetAlert = ({ isOpen, onClose, onEdit, onDelete }) => {
 
   return (
     <div 
-      className={`fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 transition-opacity duration-300 p-4 ${
+      className={`fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 transition-opacity duration-300 ${
         isOpen ? 'opacity-100' : 'opacity-0'
       }`}
     >
       <div 
-        className={`bg-white rounded-lg p-4 sm:p-6 max-w-xs sm:max-w-sm w-full shadow-xl relative transform transition-all duration-300 ${
+        className={`bg-white rounded-lg p-6 max-w-sm w-full mx-4 shadow-xl relative transform transition-all duration-300 ${
           isOpen ? 'scale-100 translate-y-0' : 'scale-95 translate-y-4'
         }`}
         style={{
@@ -24,22 +24,22 @@ const SweetAlert = ({ isOpen, onClose, onEdit, onDelete }) => {
       >
         <button
           onClick={onClose}
-          className="absolute top-3 right-3 sm:top-4 sm:right-4 text-gray-400 hover:text-gray-600 text-lg sm:text-xl font-bold transition-colors duration-200 hover:scale-110 transform"
+          className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-xl font-bold transition-colors duration-200 hover:scale-110 transform"
         >
           ×
         </button>
         
         <div className="text-center">
           <div 
-            className="w-12 h-12 sm:w-16 sm:h-16 bg-gray-200 rounded-full mx-auto mb-3 sm:mb-4 flex items-center justify-center transition-all duration-300 hover:bg-gray-300"
+            className="w-16 h-16 bg-gray-200 rounded-full mx-auto mb-4 flex items-center justify-center transition-all duration-300 hover:bg-gray-300"
             style={{
               animation: isOpen ? 'bounceIn 0.6s ease-out 0.2s both' : 'none'
             }}
           >
-            <span className="text-lg sm:text-2xl text-gray-600">?</span>
+            <span className="text-2xl text-gray-600">?</span>
           </div>
           <h3 
-            className="text-base sm:text-lg font-semibold text-gray-900 mb-2 transition-all duration-300"
+            className="text-lg font-semibold text-gray-900 mb-2 transition-all duration-300"
             style={{
               animation: isOpen ? 'fadeInUp 0.5s ease-out 0.3s both' : 'none'
             }}
@@ -47,7 +47,7 @@ const SweetAlert = ({ isOpen, onClose, onEdit, onDelete }) => {
             ¿Deseas eliminar o actualizar un empleado?
           </h3>
           <p 
-            className="text-sm sm:text-base text-gray-600 mb-4 sm:mb-6 transition-all duration-300"
+            className="text-gray-600 mb-6 transition-all duration-300"
             style={{
               animation: isOpen ? 'fadeInUp 0.5s ease-out 0.4s both' : 'none'
             }}
@@ -55,20 +55,20 @@ const SweetAlert = ({ isOpen, onClose, onEdit, onDelete }) => {
             Elija la opción
           </p>
           <div 
-            className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3"
+            className="flex space-x-3"
             style={{
               animation: isOpen ? 'fadeInUp 0.5s ease-out 0.5s both' : 'none'
             }}
           >
             <button
               onClick={onDelete}
-              className="flex-1 px-3 sm:px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-all duration-200 transform hover:scale-105 hover:shadow-lg active:scale-95 text-sm sm:text-base"
+              className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-all duration-200 transform hover:scale-105 hover:shadow-lg active:scale-95"
             >
               Eliminar
             </button>
             <button
               onClick={onEdit}
-              className="flex-1 px-3 sm:px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-all duration-200 transform hover:scale-105 hover:shadow-lg active:scale-95 text-sm sm:text-base"
+              className="flex-1 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-all duration-200 transform hover:scale-105 hover:shadow-lg active:scale-95"
             >
               Actualizar
             </button>
@@ -126,12 +126,12 @@ const ConfirmDeleteAlert = ({ isOpen, onClose, onConfirm, employeeName }) => {
 
   return (
     <div 
-      className={`fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 transition-opacity duration-300 p-4 ${
+      className={`fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 transition-opacity duration-300 ${
         isOpen ? 'opacity-100' : 'opacity-0'
       }`}
     >
       <div 
-        className={`bg-white rounded-lg p-4 sm:p-6 max-w-xs sm:max-w-sm w-full shadow-xl relative transform transition-all duration-300 ${
+        className={`bg-white rounded-lg p-6 max-w-sm w-full mx-4 shadow-xl relative transform transition-all duration-300 ${
           isOpen ? 'scale-100 translate-y-0' : 'scale-95 translate-y-4'
         }`}
         style={{
@@ -140,15 +140,15 @@ const ConfirmDeleteAlert = ({ isOpen, onClose, onConfirm, employeeName }) => {
       >
         <div className="text-center">
           <div 
-            className="w-12 h-12 sm:w-16 sm:h-16 bg-red-500 rounded-full mx-auto mb-3 sm:mb-4 flex items-center justify-center transition-all duration-300"
+            className="w-16 h-16 bg-red-500 rounded-full mx-auto mb-4 flex items-center justify-center transition-all duration-300"
             style={{
               animation: isOpen ? 'bounceIn 0.6s ease-out 0.2s both' : 'none'
             }}
           >
-            <span className="text-lg sm:text-2xl text-white font-bold">×</span>
+            <span className="text-2xl text-white font-bold">×</span>
           </div>
           <h3 
-            className="text-base sm:text-lg font-semibold text-gray-900 mb-2 transition-all duration-300"
+            className="text-lg font-semibold text-gray-900 mb-2 transition-all duration-300"
             style={{
               animation: isOpen ? 'fadeInUp 0.5s ease-out 0.3s both' : 'none'
             }}
@@ -156,7 +156,7 @@ const ConfirmDeleteAlert = ({ isOpen, onClose, onConfirm, employeeName }) => {
             ¿Está seguro de que desea eliminar a este empleado?
           </h3>
           <p 
-            className="text-sm sm:text-base text-gray-600 mb-4 sm:mb-6 transition-all duration-300"
+            className="text-gray-600 mb-6 transition-all duration-300"
             style={{
               animation: isOpen ? 'fadeInUp 0.5s ease-out 0.4s both' : 'none'
             }}
@@ -164,20 +164,20 @@ const ConfirmDeleteAlert = ({ isOpen, onClose, onConfirm, employeeName }) => {
             El empleado se eliminará con esta acción
           </p>
           <div 
-            className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3"
+            className="flex space-x-3"
             style={{
               animation: isOpen ? 'fadeInUp 0.5s ease-out 0.5s both' : 'none'
             }}
           >
             <button
               onClick={onClose}
-              className="flex-1 px-3 sm:px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-lg transition-all duration-200 transform hover:scale-105 hover:shadow-lg active:scale-95 text-sm sm:text-base"
+              className="flex-1 px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-lg transition-all duration-200 transform hover:scale-105 hover:shadow-lg active:scale-95"
             >
               Cancelar
             </button>
             <button
               onClick={onConfirm}
-              className="flex-1 px-3 sm:px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-all duration-200 transform hover:scale-105 hover:shadow-lg active:scale-95 text-sm sm:text-base"
+              className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-all duration-200 transform hover:scale-105 hover:shadow-lg active:scale-95"
             >
               Eliminar
             </button>
@@ -237,12 +237,12 @@ const SuccessAlert = ({ isOpen, onClose, type = 'delete' }) => {
 
   return (
     <div 
-      className={`fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 transition-opacity duration-300 p-4 ${
+      className={`fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 transition-opacity duration-300 ${
         isOpen ? 'opacity-100' : 'opacity-0'
       }`}
     >
       <div 
-        className={`bg-white rounded-lg p-4 sm:p-6 max-w-xs sm:max-w-sm w-full shadow-xl relative transform transition-all duration-300 ${
+        className={`bg-white rounded-lg p-6 max-w-sm w-full mx-4 shadow-xl relative transform transition-all duration-300 ${
           isOpen ? 'scale-100 translate-y-0' : 'scale-95 translate-y-4'
         }`}
         style={{
@@ -251,17 +251,17 @@ const SuccessAlert = ({ isOpen, onClose, type = 'delete' }) => {
       >
         <div className="text-center">
           <div 
-            className="w-12 h-12 sm:w-16 sm:h-16 bg-green-400 rounded-full mx-auto mb-3 sm:mb-4 flex items-center justify-center transition-all duration-300"
+            className="w-16 h-16 bg-green-400 rounded-full mx-auto mb-4 flex items-center justify-center transition-all duration-300"
             style={{
               animation: isOpen ? 'bounceIn 0.6s ease-out 0.2s both' : 'none'
             }}
           >
-            <svg className="w-6 h-6 sm:w-8 sm:h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
             </svg>
           </div>
           <h3 
-            className="text-base sm:text-lg font-semibold text-gray-900 mb-2 transition-all duration-300"
+            className="text-lg font-semibold text-gray-900 mb-2 transition-all duration-300"
             style={{
               animation: isOpen ? 'fadeInUp 0.5s ease-out 0.3s both' : 'none'
             }}
@@ -269,7 +269,7 @@ const SuccessAlert = ({ isOpen, onClose, type = 'delete' }) => {
             {isEdit ? 'Empleado actualizado con éxito' : 'Empleado eliminado con éxito'}
           </h3>
           <p 
-            className="text-sm sm:text-base text-gray-600 mb-4 sm:mb-6 transition-all duration-300"
+            className="text-gray-600 mb-6 transition-all duration-300"
             style={{
               animation: isOpen ? 'fadeInUp 0.5s ease-out 0.4s both' : 'none'
             }}
@@ -284,7 +284,7 @@ const SuccessAlert = ({ isOpen, onClose, type = 'delete' }) => {
           >
             <button
               onClick={onClose}
-              className="px-6 sm:px-8 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-all duration-200 transform hover:scale-105 hover:shadow-lg active:scale-95 text-sm sm:text-base"
+              className="px-8 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-all duration-200 transform hover:scale-105 hover:shadow-lg active:scale-95"
             >
               Continuar
             </button>
@@ -336,7 +336,12 @@ const SuccessAlert = ({ isOpen, onClose, type = 'delete' }) => {
   );
 };
 
+// Edit Employee Alert Component
 // Edit Employee Alert Component con subida de imágenes
+// Edit Employee Alert Component con subida de imágenes
+// Edit Employee Alert Component adaptado para tu backend
+// Edit Employee Alert Component con generación automática de email
+// Edit Employee Alert Component con generación automática de email
 const EditEmployeeAlert = ({ isOpen, onClose, onSave, employee, uploading }) => {
   const [formData, setFormData] = useState({
     name: '',
@@ -494,12 +499,12 @@ const EditEmployeeAlert = ({ isOpen, onClose, onSave, employee, uploading }) => 
 
   return (
     <div 
-      className={`fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 transition-opacity duration-300 p-3 sm:p-4 ${
+      className={`fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 transition-opacity duration-300 ${
         isOpen ? 'opacity-100' : 'opacity-0'
       }`}
     >
       <div 
-        className={`bg-white rounded-lg p-4 sm:p-6 lg:p-8 max-w-sm sm:max-w-2xl lg:max-w-3xl w-full shadow-xl relative transform transition-all duration-300 max-h-[95vh] sm:max-h-[90vh] overflow-y-auto ${
+        className={`bg-white rounded-lg p-8 max-w-3xl w-full mx-4 shadow-xl relative transform transition-all duration-300 max-h-[90vh] overflow-y-auto ${
           isOpen ? 'scale-100 translate-y-0' : 'scale-95 translate-y-4'
         }`}
         style={{
@@ -508,14 +513,14 @@ const EditEmployeeAlert = ({ isOpen, onClose, onSave, employee, uploading }) => 
       >
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 sm:top-6 sm:right-6 text-gray-400 hover:text-gray-600 text-xl sm:text-2xl font-bold transition-colors duration-200 hover:scale-110 transform"
+          className="absolute top-6 right-6 text-gray-400 hover:text-gray-600 text-2xl font-bold transition-colors duration-200 hover:scale-110 transform"
         >
           ×
         </button>
         
-        <div className="text-center mb-6 sm:mb-8">
+        <div className="text-center mb-8">
           <h3 
-            className="text-lg sm:text-xl lg:text-2xl font-semibold text-gray-900 transition-all duration-300"
+            className="text-2xl font-semibold text-gray-900 transition-all duration-300"
             style={{
               animation: isOpen ? 'fadeInUp 0.5s ease-out 0.2s both' : 'none'
             }}
@@ -525,23 +530,23 @@ const EditEmployeeAlert = ({ isOpen, onClose, onSave, employee, uploading }) => 
         </div>
 
         <div 
-          className="space-y-4 sm:space-y-6"
+          className="space-y-6"
           style={{
             animation: isOpen ? 'fadeInUp 0.5s ease-out 0.3s both' : 'none'
           }}
         >
           {/* Sección de imagen */}
-          <div className="bg-gray-50 p-4 sm:p-6 rounded-lg">
-            <h4 className="text-base sm:text-lg font-medium text-gray-900 mb-3 sm:mb-4">Imagen del empleado</h4>
+          <div className="bg-gray-50 p-6 rounded-lg">
+            <h4 className="text-lg font-medium text-gray-900 mb-4">Imagen del empleado</h4>
             
             {/* Vista previa de imagen */}
             {imagePreview && (
-              <div className="flex justify-center mb-3 sm:mb-4">
+              <div className="flex justify-center mb-4">
                 <div className="relative">
                   <img 
                     src={imagePreview} 
                     alt="Vista previa" 
-                    className="w-20 h-20 sm:w-24 sm:h-24 object-cover rounded-full border-4 border-white shadow-lg"
+                    className="w-24 h-24 object-cover rounded-full border-4 border-white shadow-lg"
                     onError={(e) => {
                       // Fallback si la imagen no carga
                       e.target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTIwIDIxVjE5QzIwIDE3LjkzOTEgMTkuNTc4NiAxNi45MjE3IDE4LjgyODQgMTYuMTcxNkMxOC4wNzgzIDE1LjQyMTQgMTcuMDYwOSAxNSAxNiAxNUg4QzYuOTM5MTMgMTUgNS45MjE3MiAxNS40MjE0IDUuMTcxNTcgMTYuMTcxNkM0LjQyMTQzIDE2LjkyMTcgNCAxNy45MzkxIDQgMTlWMjEiIHN0cm9rZT0iIzk5OTk5OSIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz4KPHBhdGggZD0iTTEyIDExQzE0LjIwOTEgMTEgMTYgOS4yMDkxNCAxNiA3QzE2IDQuNzkwODYgMTQuMjA5MSAzIDEyIDNDOS43OTA4NiAzIDggNC43OTA4NiA4IDdDOCA5LjIwOTE0IDkuNzkwODYgMTEgMTIgMTEiIHN0cm9rZT0iIzk5OTk5OSIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz4KPC9zdmc+';
@@ -549,7 +554,7 @@ const EditEmployeeAlert = ({ isOpen, onClose, onSave, employee, uploading }) => 
                   />
                   <button
                     onClick={clearImage}
-                    className="absolute -top-1 -right-1 sm:-top-2 sm:-right-2 bg-red-500 text-white rounded-full w-5 h-5 sm:w-6 sm:h-6 flex items-center justify-center text-xs hover:bg-red-600 transition-colors"
+                    className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-red-600 transition-colors"
                   >
                     ×
                   </button>
@@ -566,7 +571,7 @@ const EditEmployeeAlert = ({ isOpen, onClose, onSave, employee, uploading }) => 
                 type="file"
                 accept="image/*"
                 onChange={handleImageChange}
-                className="w-full px-3 sm:px-4 py-2 sm:py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 text-sm sm:text-base text-gray-900 bg-white file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-green-50 file:text-green-700 hover:file:bg-green-100"
+                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 text-base text-gray-900 bg-white file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-green-50 file:text-green-700 hover:file:bg-green-100"
               />
               <p className="text-xs text-gray-500 mt-1">
                 La imagen se subirá automáticamente a Cloudinary cuando actualices
@@ -575,7 +580,7 @@ const EditEmployeeAlert = ({ isOpen, onClose, onSave, employee, uploading }) => 
           </div>
 
           {/* Resto de campos */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+          <div className="grid grid-cols-2 gap-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Nombre</label>
               <input
@@ -583,7 +588,7 @@ const EditEmployeeAlert = ({ isOpen, onClose, onSave, employee, uploading }) => 
                 name="name"
                 value={formData.name}
                 onChange={handleInputChange}
-                className="w-full px-3 sm:px-4 py-2 sm:py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 text-sm sm:text-base text-gray-900 bg-white"
+                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 text-base text-gray-900 bg-white"
                 placeholder="Carlos"
               />
             </div>
@@ -593,13 +598,13 @@ const EditEmployeeAlert = ({ isOpen, onClose, onSave, employee, uploading }) => 
                 type="text"
                 value={employee ? new Date(employee.birthDate).toLocaleDateString() : ''}
                 disabled
-                className="w-full px-3 sm:px-4 py-2 sm:py-3 border-2 border-gray-200 rounded-lg bg-gray-100 text-gray-600 cursor-not-allowed text-sm sm:text-base"
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg bg-gray-100 text-gray-600 cursor-not-allowed text-base"
                 placeholder="25/6/2025"
               />
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+          <div className="grid grid-cols-2 gap-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Apellido</label>
               <input
@@ -607,7 +612,7 @@ const EditEmployeeAlert = ({ isOpen, onClose, onSave, employee, uploading }) => 
                 name="lastName"
                 value={formData.lastName}
                 onChange={handleInputChange}
-                className="w-full px-3 sm:px-4 py-2 sm:py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 text-sm sm:text-base text-gray-900 bg-white"
+                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 text-base text-gray-900 bg-white"
                 placeholder="Martinez"
               />
             </div>
@@ -619,25 +624,25 @@ const EditEmployeeAlert = ({ isOpen, onClose, onSave, employee, uploading }) => 
                   name="password"
                   value={formData.password}
                   onChange={handleInputChange}
-                  className="w-full px-3 sm:px-4 py-2 sm:py-3 pr-10 sm:pr-12 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 text-sm sm:text-base text-gray-900 bg-white"
+                  className="w-full px-4 py-3 pr-12 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 text-base text-gray-900 bg-white"
                   placeholder="•••••••••"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-2 sm:right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 transition-colors duration-200"
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 transition-colors duration-200"
                 >
                   {showPassword ? (
-                    <EyeOff className="w-4 h-4 sm:w-5 sm:h-5" />
+                    <EyeOff className="w-5 h-5" />
                   ) : (
-                    <Eye className="w-4 h-4 sm:w-5 sm:h-5" />
+                    <Eye className="w-5 h-5" />
                   )}
                 </button>
               </div>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+          <div className="grid grid-cols-2 gap-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Email {formData.name || formData.lastName ? '(actualizándose automáticamente)' : '(actual)'}
@@ -648,7 +653,7 @@ const EditEmployeeAlert = ({ isOpen, onClose, onSave, employee, uploading }) => 
                 value={formData.email}
                 readOnly
                 placeholder={employee?.email || "Email del empleado"}
-                className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 rounded-lg bg-gray-50 text-xs sm:text-sm text-gray-700 cursor-not-allowed"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-gray-50 text-sm text-gray-700 cursor-not-allowed"
               />
               <p className="text-xs text-gray-500 mt-1">
                 {formData.name || formData.lastName 
@@ -664,7 +669,7 @@ const EditEmployeeAlert = ({ isOpen, onClose, onSave, employee, uploading }) => 
                 name="phone"
                 value={formData.phone}
                 onChange={handleInputChange}
-                className="w-full px-3 sm:px-4 py-2 sm:py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 text-sm sm:text-base text-gray-900 bg-white"
+                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 text-base text-gray-900 bg-white"
                 placeholder="7533-4567"
               />
             </div>
@@ -676,7 +681,7 @@ const EditEmployeeAlert = ({ isOpen, onClose, onSave, employee, uploading }) => 
               type="text"
               value={employee ? employee.dui : ''}
               disabled
-              className="w-full px-3 sm:px-4 py-2 sm:py-3 border-2 border-gray-200 rounded-lg bg-gray-100 text-gray-600 cursor-not-allowed text-sm sm:text-base"
+              className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg bg-gray-100 text-gray-600 cursor-not-allowed text-base"
               placeholder="22223366-6"
             />
           </div>
@@ -688,14 +693,14 @@ const EditEmployeeAlert = ({ isOpen, onClose, onSave, employee, uploading }) => 
               name="address"
               value={formData.address}
               onChange={handleInputChange}
-              className="w-full px-3 sm:px-4 py-2 sm:py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 text-sm sm:text-base text-gray-900 bg-white"
+              className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 text-base text-gray-900 bg-white"
               placeholder="Calle Los Almendros #24, San Salvador"
             />
           </div>
         </div>
 
         <div 
-          className="mt-6 sm:mt-8 flex justify-center"
+          className="mt-8 flex justify-center"
           style={{
             animation: isOpen ? 'fadeInUp 0.5s ease-out 0.5s both' : 'none'
           }}
@@ -703,7 +708,7 @@ const EditEmployeeAlert = ({ isOpen, onClose, onSave, employee, uploading }) => 
           <button
             onClick={handleSave}
             disabled={uploading}
-            className="px-8 sm:px-10 py-2.5 sm:py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-all duration-200 transform hover:scale-105 hover:shadow-lg active:scale-95 font-medium text-sm sm:text-base lg:text-lg disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-10 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-all duration-200 transform hover:scale-105 hover:shadow-lg active:scale-95 font-medium text-lg disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {uploading ? 'Actualizando...' : 'Actualizar'}
           </button>
@@ -754,7 +759,7 @@ const EditEmployeeAlert = ({ isOpen, onClose, onSave, employee, uploading }) => 
   );
 };
 
-const EmployeeManagementInterface = () => {
+;const EmployeeManagementInterface = () => {
   const {
     empleados,
     selectedEmpleados,
@@ -788,50 +793,49 @@ const EmployeeManagementInterface = () => {
   return (
     <div className="flex h-screen text-white" style={{backgroundColor: '#34353A'}}>
       <div className="flex-1 flex">
-        <div className={`${showDetailView ? 'flex-1' : 'w-full'} bg-white text-gray-900 ${showDetailView ? 'rounded-l-3xl' : 'rounded-3xl'} ml-2 sm:ml-4 my-2 sm:my-4 flex flex-col`}>
-          <div className="p-4 sm:p-6 lg:p-8 pb-0 flex-shrink-0">
-            <div className="flex items-center justify-between mb-4 sm:mb-6">
-              <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Empleados</h1>
+        <div className={`${showDetailView ? 'flex-1' : 'w-full'} bg-white text-gray-900 ${showDetailView ? 'rounded-l-3xl' : 'rounded-3xl'} ml-4 my-4 flex flex-col`}>
+          <div className="p-8 pb-0 flex-shrink-0">
+            <div className="flex items-center justify-between mb-6">
+              <h1 className="text-2xl font-bold text-gray-900">Empleados</h1>
             </div>
             
-            <div className="mb-4 sm:mb-6">
-              <h2 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4">Listado de empleados</h2>
-              <div className="text-teal-500 text-xs sm:text-sm mb-3 sm:mb-4">Empleados registrados</div>
+            <div className="mb-6">
+              <h2 className="text-lg font-semibold mb-4">Listado de empleados</h2>
+              <div className="text-teal-500 text-sm mb-4">Empleados registrados</div>
               
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 sm:mb-6 space-y-3 sm:space-y-0">
-                <div className="relative flex-1 max-w-full sm:max-w-md w-full">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 sm:w-5 sm:h-5 text-gray-400" />
+              <div className="flex items-center justify-between mb-6">
+                <div className="relative flex-1 max-w-md">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
                   <input 
                     type="text" 
                     placeholder="Buscar" 
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pl-8 sm:pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 text-sm"
+                    className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
                   />
                 </div>
-                <div className="flex items-center space-x-2 sm:space-x-3 sm:ml-4 w-full sm:w-auto justify-end">
-                  <div className="text-xs sm:text-sm text-gray-500">
-                    Sort by: <span className="text-gray-700 font-medium hidden sm:inline">Newest</span>
-                    <div className="relative inline-block sm:inline">
+                <div className="flex items-center space-x-3 ml-4">
+                  <div className="text-sm text-gray-500">
+                    Sort by: <span className="text-gray-700 font-medium">Newest</span>
+                    <div className="relative">
                       <select
                         value={sortBy}
                         onChange={(e) => setSortBy(e.target.value)}
-                        className="appearance-none bg-white border border-gray-300 rounded-lg px-2 sm:px-3 py-1.5 sm:py-2 pr-6 sm:pr-8 text-xs sm:text-sm focus:outline-none focus:border-teal-500"
+                        className="appearance-none bg-white border border-gray-300 rounded-lg px-3 py-2 pr-8 text-sm focus:outline-none focus:border-teal-500"
                       >
                         <option value="Newest">Newest</option>
                         <option value="Oldest">Oldest</option>
                         <option value="Name">Name</option>
                         <option value="Email">Email</option>
                       </select>
-                      <ChevronDown className="absolute right-1 sm:right-2 top-1/2 transform -translate-y-1/2 text-gray-400 w-3 h-3 sm:w-4 sm:h-4 pointer-events-none" />
+                      <ChevronDown className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4 pointer-events-none" />
                     </div>
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Headers - Hidden on mobile, visible on larger screens */}
-            <div className={`hidden sm:grid ${showDetailView ? 'grid-cols-4' : 'grid-cols-6'} gap-4 pb-3 border-b border-gray-200 text-sm font-medium text-gray-500`}>
+            <div className={`grid ${showDetailView ? 'grid-cols-4' : 'grid-cols-6'} gap-4 pb-3 border-b border-gray-200 text-sm font-medium text-gray-500`}>
               <div>Nombres</div>
               <div>Email</div>
               <div>DUI</div>
@@ -845,175 +849,162 @@ const EmployeeManagementInterface = () => {
             </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex-1 overflow-y-auto px-8">
             <div className="space-y-2 py-4">
               {loading ? (
-                <p className="text-gray-500 text-sm sm:text-base">Cargando empleados...</p>
+                <p className="text-gray-500">Cargando empleados...</p>
               ) : error ? (
-                <p className="text-red-500 text-sm sm:text-base">{error}</p>
+                <p className="text-red-500">{error}</p>
               ) : filterEmpleados.length === 0 ? (
-                <p className="text-gray-500 text-sm sm:text-base">No se encontraron resultados.</p>
+                <p className="text-gray-500">No se encontraron resultados.</p>
               ) : (
                 filterEmpleados.map((empleado, index) => (
                   <div
                     key={empleado._id || index}
-                    className={`cursor-pointer transition-colors rounded-lg ${
+                    className={`grid ${showDetailView ? 'grid-cols-4' : 'grid-cols-6'} gap-4 py-3 px-2 rounded-lg cursor-pointer transition-colors ${
                       selectedEmpleados && selectedEmpleados._id === empleado._id ? 'bg-teal-100' : 'hover:bg-gray-50'
                     }`}
                     onClick={() => selectEmpleado(empleado)}
                   >
-                    {/* Mobile Layout */}
-                    <div className="sm:hidden space-y-1 p-3 border border-gray-200 rounded-lg">
-                      <div className="font-medium text-sm">{empleado.name} {empleado.lastName}</div>
-                      <div className="text-xs text-gray-600 break-all">{empleado.email}</div>
-                      <div className="text-xs text-gray-600">DUI: {empleado.dui}</div>
-                      <div className="text-xs text-gray-600">Fecha: {new Date(empleado.birthDate).toLocaleDateString()}</div>
-                      <div className="text-xs text-gray-600">Tel: {empleado.phone ? empleado.phone.toString() : 'No disponible'}</div>
-                      <div className="text-xs text-gray-600 truncate">Dir: {empleado.address}</div>
-                    </div>
-                    
-                    {/* Desktop Layout */}
-                    <div className={`hidden sm:grid ${showDetailView ? 'grid-cols-4' : 'grid-cols-6'} gap-4 py-2 sm:py-3 px-2`}>
-                      <div className="font-medium truncate text-sm lg:text-base">{empleado.name} {empleado.lastName}</div>
-                      <div className="text-gray-600 truncate text-sm lg:text-base">{empleado.email}</div>
-                      <div className="text-gray-600 truncate text-sm lg:text-base">{empleado.dui}</div>
-                      <div className="text-gray-600 truncate text-sm lg:text-base">{new Date(empleado.birthDate).toLocaleDateString()}</div>
-                      {!showDetailView && (
-                        <>
-                          <div className="text-gray-600 truncate text-sm lg:text-base">{empleado.phone ? empleado.phone.toString() : 'No disponible'}</div>
-                          <div className="text-gray-600 truncate text-sm lg:text-base">{empleado.address}</div>
-                        </>
-                      )}
-                    </div>
+                    <div className="font-medium truncate">{empleado.name} {empleado.lastName}</div>
+                    <div className="text-gray-600 truncate">{empleado.email}</div>
+                    <div className="text-gray-600 truncate">{empleado.dui}</div>
+                    <div className="text-gray-600 truncate">{new Date(empleado.birthDate).toLocaleDateString()}</div>
+                    {!showDetailView && (
+                      <>
+                        <div className="text-gray-600 truncate">{empleado.phone ? empleado.phone.toString() : 'No disponible'}</div>
+                        <div className="text-gray-600 truncate">{empleado.address}</div>
+                      </>
+                    )}
                   </div>
                 ))
               )}
             </div>
           </div>
 
-          <div className="p-4 sm:p-6 lg:p-8 pt-4 flex-shrink-0 border-t border-gray-100">
-            <div className="flex flex-col sm:flex-row items-center justify-between space-y-3 sm:space-y-0">
-              <div className="text-xs sm:text-sm text-gray-500">
+          <div className="p-8 pt-4 flex-shrink-0 border-t border-gray-100">
+            <div className="flex items-center justify-between">
+              <div className="text-sm text-gray-500">
                 Showing data 1 to 8 of 256K entries
               </div>
               <div className="flex items-center space-x-1">
-                <button className="p-1.5 sm:p-2 hover:bg-gray-100 rounded-lg transition-colors">
-                  <ArrowLeft className="w-3 h-3 sm:w-4 sm:h-4 text-gray-500" />
+                <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                  <ArrowLeft className="w-4 h-4 text-gray-500" />
                 </button>
                 <div className="flex space-x-1">
-                  <button className="w-6 h-6 sm:w-8 sm:h-8 bg-teal-500 text-white rounded-lg text-xs sm:text-sm font-medium">1</button>
-                  <button className="w-6 h-6 sm:w-8 sm:h-8 hover:bg-gray-100 rounded-lg text-xs sm:text-sm text-gray-700">2</button>
-                  <button className="w-6 h-6 sm:w-8 sm:h-8 hover:bg-gray-100 rounded-lg text-xs sm:text-sm text-gray-700">3</button>
-                  <button className="w-6 h-6 sm:w-8 sm:h-8 hover:bg-gray-100 rounded-lg text-xs sm:text-sm text-gray-700">4</button>
-                  <span className="w-6 h-6 sm:w-8 sm:h-8 flex items-center justify-center text-gray-400 text-xs sm:text-sm">...</span>
-                  <button className="w-6 h-6 sm:w-8 sm:h-8 hover:bg-gray-100 rounded-lg text-xs sm:text-sm text-gray-700">40</button>
+                  <button className="w-8 h-8 bg-teal-500 text-white rounded-lg text-sm font-medium">1</button>
+                  <button className="w-8 h-8 hover:bg-gray-100 rounded-lg text-sm text-gray-700">2</button>
+                  <button className="w-8 h-8 hover:bg-gray-100 rounded-lg text-sm text-gray-700">3</button>
+                  <button className="w-8 h-8 hover:bg-gray-100 rounded-lg text-sm text-gray-700">4</button>
+                  <span className="w-8 h-8 flex items-center justify-center text-gray-400">...</span>
+                  <button className="w-8 h-8 hover:bg-gray-100 rounded-lg text-sm text-gray-700">40</button>
                 </div>
-                <button className="p-1.5 sm:p-2 hover:bg-gray-100 rounded-lg transition-colors">
-                  <ArrowRight className="w-3 h-3 sm:w-4 sm:h-4 text-gray-500" />
+                <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                  <ArrowRight className="w-4 h-4 text-gray-500" />
                 </button>
               </div>
             </div>
             
-            <div className="mt-3 sm:mt-4">
+            <div className="mt-4">
               <button onClick={handleContinue} className="flex items-center space-x-2 text-gray-600 hover:text-gray-800 transition-colors">
-                <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
-                <span className="font-medium text-sm sm:text-base">Agregar empleado</span>
+                <Plus className="w-5 h-5" />
+                <span className="font-medium">Agregar empleado</span>
               </button>
             </div>
           </div>
         </div>
 
         {showDetailView && selectedEmpleados && (
-          <div className="w-64 sm:w-72 lg:w-80 bg-white text-gray-900 rounded-r-3xl mr-2 sm:mr-4 my-2 sm:my-4 p-4 sm:p-6 relative">
-            <div className="flex items-center justify-between mb-4 sm:mb-6">
-              <div className="flex items-center">
-                <button
-                  className="p-1.5 sm:p-2 hover:bg-gray-100 rounded-full mr-2 sm:mr-3"
-                  onClick={closeDetailView}
-                >
-                  <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600" />
-                </button>
-                <h2 className="text-sm sm:text-base lg:text-lg font-semibold">Información del Empleado</h2>
-              </div>
-              
-              <div className="relative">
-                <button
-                  onClick={handleOptionsClick}
-                  className="p-1.5 sm:p-2 hover:bg-gray-100 rounded-full transition-colors"
-                >
-                  <MoreHorizontal className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600" />
-                </button>
-              </div>
-            </div>
+  <div className="w-80 bg-white text-gray-900 rounded-r-3xl mr-4 my-4 p-6 relative">
+    <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center">
+        <button
+          className="p-2 hover:bg-gray-100 rounded-full mr-3"
+          onClick={closeDetailView}
+        >
+          <ArrowLeft className="w-5 h-5 text-gray-600" />
+        </button>
+        <h2 className="text-lg font-semibold">Información del Empleado</h2>
+      </div>
+             
+      <div className="relative">
+        <button
+          onClick={handleOptionsClick}
+          className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+        >
+          <MoreHorizontal className="w-5 h-5 text-gray-600" />
+        </button>
+      </div>
+    </div>
 
-            <div className="text-center mb-6 sm:mb-8">
-              <div className="w-16 h-16 sm:w-20 sm:h-20 bg-orange-400 rounded-full mx-auto mb-3 sm:mb-4 flex items-center justify-center overflow-hidden">
-                {selectedEmpleados.img ? (
-                  <img 
-                    src={selectedEmpleados.img} 
-                    alt={`${selectedEmpleados.name} ${selectedEmpleados.lastName}`}
-                    className="w-full h-full object-cover rounded-full"
-                    onError={(e) => {
-                      // Fallback al icono si la imagen falla al cargar
-                      e.target.style.display = 'none';
-                      e.target.nextSibling.style.display = 'flex';
-                    }}
-                  />
-                ) : null}
-                <div 
-                  className={`w-12 h-12 sm:w-16 sm:h-16 bg-orange-300 rounded-full flex items-center justify-center ${selectedEmpleados.img ? 'hidden' : ''}`}
-                >
-                  <User className="w-8 h-8 sm:w-10 sm:h-10 text-white" />
-                </div>
-              </div>
-              <h3 className="font-semibold text-sm sm:text-base lg:text-lg mb-2">{selectedEmpleados.name} {selectedEmpleados.lastName}</h3>
-              <div className="flex justify-center space-x-2 sm:space-x-3">
-                <button className="p-1.5 sm:p-2 bg-gray-100 rounded-full hover:bg-gray-200">
-                  <Phone className="w-3 h-3 sm:w-4 sm:h-4 text-gray-600" />
-                </button>
-                <button className="p-1.5 sm:p-2 bg-gray-100 rounded-full hover:bg-gray-200">
-                  <Mail className="w-3 h-3 sm:w-4 sm:h-4 text-gray-600" />
-                </button>
-              </div>
-            </div>
+    <div className="text-center mb-8">
+      <div className="w-20 h-20 bg-orange-400 rounded-full mx-auto mb-4 flex items-center justify-center overflow-hidden">
+        {selectedEmpleados.img ? (
+          <img 
+            src={selectedEmpleados.img} 
+            alt={`${selectedEmpleados.name} ${selectedEmpleados.lastName}`}
+            className="w-full h-full object-cover rounded-full"
+            onError={(e) => {
+              // Fallback al icono si la imagen falla al cargar
+              e.target.style.display = 'none';
+              e.target.nextSibling.style.display = 'flex';
+            }}
+          />
+        ) : null}
+        <div 
+          className={`w-16 h-16 bg-orange-300 rounded-full flex items-center justify-center ${selectedEmpleados.img ? 'hidden' : ''}`}
+        >
+          <User className="w-10 h-10 text-white" />
+        </div>
+      </div>
+      <h3 className="font-semibold text-lg mb-2">{selectedEmpleados.name} {selectedEmpleados.lastName}</h3>
+      <div className="flex justify-center space-x-3">
+        <button className="p-2 bg-gray-100 rounded-full hover:bg-gray-200">
+          <Phone className="w-4 h-4 text-gray-600" />
+        </button>
+        <button className="p-2 bg-gray-100 rounded-full hover:bg-gray-200">
+          <Mail className="w-4 h-4 text-gray-600" />
+        </button>
+      </div>
+    </div>
 
-            <div className="space-y-4 sm:space-y-6">
-              <div className="flex items-center space-x-2">
-                <User className="w-3 h-3 sm:w-4 sm:h-4 text-gray-400" />
-                <span className="font-medium text-xs sm:text-sm">Información Personal</span>
-              </div>
-              
-              <div className="grid grid-cols-1 gap-3 sm:gap-4">
-                <div>
-                  <div className="text-xs sm:text-sm text-gray-500 mb-1">Correo electrónico</div>
-                  <div className="text-xs sm:text-sm text-gray-400 break-words">{selectedEmpleados.email}</div>
-                </div>
-                <div>
-                  <div className="text-xs sm:text-sm text-gray-500 mb-1">DUI</div>
-                  <div className="text-xs sm:text-sm text-gray-400">{selectedEmpleados.dui}</div>
-                </div>
-              </div>
-              
-              <div className="grid grid-cols-1 gap-3 sm:gap-4">
-                <div>
-                  <div className="text-xs sm:text-sm text-gray-500 mb-1">Fecha de nacimiento</div>
-                  <div className="text-xs sm:text-sm text-gray-400">{new Date(selectedEmpleados.birthDate).toLocaleDateString()}</div>
-                </div>
-                <div>
-                  <div className="text-xs sm:text-sm text-gray-500 mb-1">Teléfono</div>
-                  <div className="text-xs sm:text-sm text-gray-400">{selectedEmpleados.phone ? selectedEmpleados.phone.toString() : 'No disponible'}</div>
-                </div>
-              </div>
-              
-              <div className="grid grid-cols-1 gap-3 sm:gap-4">
-                <div>
-                  <div className="text-xs sm:text-sm text-gray-500 mb-1">Dirección</div>
-                  <div className="text-xs sm:text-sm text-gray-400 break-words">{selectedEmpleados.address}</div>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
+    <div className="space-y-6">
+      <div className="flex items-center space-x-2">
+        <User className="w-4 h-4 text-gray-400" />
+        <span className="font-medium">Información Personal</span>
+      </div>
+       
+      <div className="grid grid-cols-1 gap-4">
+        <div>
+          <div className="text-sm text-gray-500 mb-1">Correo electrónico</div>
+          <div className="text-sm text-gray-400 break-words">{selectedEmpleados.email}</div>
+        </div>
+        <div>
+          <div className="text-sm text-gray-500 mb-1">DUI</div>
+          <div className="text-sm text-gray-400">{selectedEmpleados.dui}</div>
+        </div>
+      </div>
+       
+      <div className="grid grid-cols-1 gap-4">
+        <div>
+          <div className="text-sm text-gray-500 mb-1">Fecha de nacimiento</div>
+          <div className="text-sm text-gray-400">{new Date(selectedEmpleados.birthDate).toLocaleDateString()}</div>
+        </div>
+        <div>
+          <div className="text-sm text-gray-500 mb-1">Teléfono</div>
+          <div className="text-sm text-gray-400">{selectedEmpleados.phone ? selectedEmpleados.phone.toString() : 'No disponible'}</div>
+        </div>
+      </div>
+       
+      <div className="grid grid-cols-1 gap-4">
+        <div>
+          <div className="text-sm text-gray-500 mb-1">Dirección</div>
+          <div className="text-sm text-gray-400 break-words">{selectedEmpleados.address}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+)}
       </div>
 
       <SweetAlert
