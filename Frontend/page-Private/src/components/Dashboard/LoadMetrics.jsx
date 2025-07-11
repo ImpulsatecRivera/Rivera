@@ -11,7 +11,7 @@ const LoadMetrics = () => {
 
   return (
     <div className="bg-white p-6 rounded-lg border">
-      <h2 className="text-lg font-semibold text-gray-800 mb-6">Tipos de carga frecuentes</h2>
+      <h2 className="text-lg font-semibold text-gray-800 mb-6">Tipos de carga frecuentes.</h2>
 
       <div className="space-y-4">
         {loadMetrics.map((metric, index) => (

@@ -10,7 +10,7 @@ const TruckMainScreen = () => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [selectedTruck, setSelectedTruck] = useState(null);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false); // Nuevo estado para loading
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const navigate = useNavigate();
 
@@ -54,15 +54,12 @@ const TruckMainScreen = () => {
     }
   };
 
-  // Función para normalizar los datos del camión
   const normalizeTruckData = (truck) => {
-    // Intenta diferentes campos comunes para el ID
     const id = truck.id || truck._id || truck.truck_id || truck.camion_id;
     
     return {
       ...truck,
       id: id,
-      // Asegúrate de que otros campos también estén normalizados
       name: truck.name || truck.nombre || truck.model || 'Camión sin nombre',
       licensePlate: truck.licensePlate || truck.placa || truck.license_plate || 'N/A',
       state: truck.state || truck.estado || truck.status || 'SIN ESTADO',
@@ -79,13 +76,11 @@ const TruckMainScreen = () => {
 
         const camiones = Array.isArray(data) ? data : data.camiones || [];
         
-        // Normaliza los datos y filtra elementos sin ID válido
         const normalizedTrucks = camiones
           .map(normalizeTruckData)
           .filter(truck => truck.id !== undefined && truck.id !== null)
           .map((truck, index) => {
-            // Asignar algunos camiones como "Sin estado" para demostración
-            if (index % 4 === 0) { // Cada 4to camión sin estado
+            if (index % 4 === 0) {
               return {
                 ...truck,
                 state: 'Sin estado'
@@ -127,9 +122,8 @@ const TruckMainScreen = () => {
   
   const handleDeleteConfirm = async () => {
     try {
-      setIsDeleting(true); // Mostrar loading
+      setIsDeleting(true);
       
-      // Eliminar del backend
       const response = await fetch(`http://localhost:4000/api/camiones/${selectedTruck.id}`, {
         method: 'DELETE',
         headers: {
@@ -138,13 +132,11 @@ const TruckMainScreen = () => {
       });
 
       if (response.ok) {
-        // Solo si se eliminó exitosamente del backend, quitar del estado local
         setTrucks(trucks.filter(t => t.id !== selectedTruck.id));
         setShowDeleteModal(false);
         setShowSuccessModal(true);
         console.log('Camión eliminado exitosamente de la base de datos');
       } else {
-        // Si hay error en el backend, mostrar mensaje
         const errorData = await response.json();
         console.error('Error al eliminar camión:', errorData);
         alert('Error al eliminar el camión. Inténtalo de nuevo.');
@@ -155,7 +147,7 @@ const TruckMainScreen = () => {
       alert('Error de conexión. Verifica tu conexión a internet.');
       setShowDeleteModal(false);
     } finally {
-      setIsDeleting(false); // Ocultar loading
+      setIsDeleting(false);
     }
   };
   
@@ -213,7 +205,6 @@ const TruckMainScreen = () => {
           </span>
         </div>
         
-        {/* Indicador de debug para desarrollo */}
         {process.env.NODE_ENV === 'development' && !truck.id && (
           <div className="mt-2 text-xs text-red-500 bg-red-50 p-1 rounded">
             ⚠️ ID no válido
@@ -224,10 +215,10 @@ const TruckMainScreen = () => {
   };
 
   return (
-    <div className="flex h-screen bg-[#34353A]">
-      <div className="flex-1 p-3 sm:p-4 lg:p-6 overflow-hidden">
-        <div className="bg-white rounded-xl p-3 sm:p-4 lg:p-6 h-full overflow-hidden flex flex-col">
-          <div className="mt-2 sm:mt-4">
+    <div className="min-h-screen bg-[#34353A] p-3 sm:p-4 lg:p-5">
+      <div className="max-w-full mx-auto">
+        <div className="bg-white rounded-xl p-3 sm:p-4 lg:p-5 shadow-lg">
+          <div className="mb-3 sm:mb-4">
             <button 
               onClick={handleAddTruck} 
               className="flex items-center space-x-2 sm:space-x-4 text-gray-600 hover:text-gray-800 transition-colors p-2 rounded-lg hover:bg-gray-50"
@@ -238,14 +229,16 @@ const TruckMainScreen = () => {
           </div>
 
           {loading ? (
-            <div className="flex-1 flex justify-center items-center">
+            <div className="flex justify-center items-center py-20">
               <div className="animate-spin rounded-full h-8 w-8 sm:h-10 sm:w-10 border-4 border-blue-400 border-t-transparent" />
             </div>
           ) : error ? (
-            <div className="text-red-500 text-center mt-10 font-medium text-sm sm:text-base">Error al cargar los camiones.</div>
+            <div className="text-red-500 text-center py-20 font-medium text-sm sm:text-base">
+              Error al cargar los camiones.
+            </div>
           ) : (
-            <div className="mt-4 sm:mt-6">
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 3xl:grid-cols-6 gap-3 sm:gap-4 lg:gap-6 overflow-y-auto max-h-[calc(100vh-8rem)] pr-2">
+            <div className="trucks-container">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 3xl:grid-cols-6 gap-4 sm:gap-5 lg:gap-6">
                 {trucks.map((truck) => (
                   <TruckCard key={truck.id} truck={truck} />
                 ))}
@@ -382,10 +375,47 @@ const TruckMainScreen = () => {
           animation: shake 0.5s ease-in-out;
         }
 
+        .trucks-container {
+          max-height: calc(100vh - 140px);
+          overflow-y: auto;
+          padding-right: 4px;
+        }
+
+        .trucks-container::-webkit-scrollbar {
+          width: 6px;
+        }
+
+        .trucks-container::-webkit-scrollbar-track {
+          background: #f1f1f1;
+          border-radius: 10px;
+        }
+
+        .trucks-container::-webkit-scrollbar-thumb {
+          background: #c1c1c1;
+          border-radius: 10px;
+        }
+
+        .trucks-container::-webkit-scrollbar-thumb:hover {
+          background: #a8a8a8;
+        }
+
         /* Responsive grid for larger screens */
         @media (min-width: 1920px) {
           .3xl\:grid-cols-6 {
             grid-template-columns: repeat(6, minmax(0, 1fr));
+          }
+        }
+
+        /* Responsive adjustments for container height */
+        @media (max-width: 640px) {
+          .trucks-container {
+            max-height: calc(100vh - 120px);
+          }
+        }
+
+        @media (min-width: 1024px) {
+          .trucks-container {
+            max-height: calc(100vh - 160px);
           }
         }
       `}</style>
