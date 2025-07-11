@@ -297,32 +297,32 @@ const AddProveedorForm = () => {
   };
 
   return (
-    <div className="fixed inset-0 min-h-screen w-full overflow-auto" style={{ backgroundColor: '#34353A' }}>
+    <div className="fixed inset-0 min-h-screen" style={{ backgroundColor: '#34353A' }}>
       {/* Header */}
-      <div className="text-white px-4 sm:px-6 lg:px-8 py-4" style={{ backgroundColor: '#34353A' }}>
+      <div className="text-white px-8 py-4" style={{ backgroundColor: '#34353A' }}>
         <button 
           onClick={handleBackToMenu}
           className="flex items-center space-x-2 text-white hover:text-gray-300 transition-colors"
         >
-          <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />
-          <span className="text-xs sm:text-sm">Volver al menú principal</span>
+          <ArrowLeft className="w-5 h-5" />
+          <span className="text-sm">Volver al menú principal</span>
         </button>
       </div>
 
       {/* Main Content */}
-      <div className="px-4 sm:px-6 lg:px-8 pb-4 sm:pb-6 lg:pb-8" style={{ height: 'calc(100vh - 80px)' }}>
-        <div className="bg-white rounded-lg sm:rounded-xl lg:rounded-2xl p-4 sm:p-6 lg:p-8 h-full max-w-none mx-0">
+      <div className="px-8 pb-8" style={{ height: 'calc(100vh - 80px)' }}>
+        <div className="bg-white rounded-2xl p-8 h-full max-w-none mx-0">
           {/* Title Section */}
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 sm:mb-8 gap-4">
-            <div className="flex items-center space-x-3 sm:space-x-4">
-              <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Agregar proveedor</h1>
-              <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full flex items-center justify-center" style={{ backgroundColor: '#34353A' }}>
-                <Building className="w-6 h-6 sm:w-7 sm:h-7 text-white" />
+          <div className="flex items-center justify-between mb-8">
+            <div className="flex items-center space-x-4">
+              <h1 className="text-2xl font-bold text-gray-900">Agregar proveedor</h1>
+              <div className="w-14 h-14 rounded-full flex items-center justify-center" style={{ backgroundColor: '#34353A' }}>
+                <Building className="w-7 h-7 text-white" />
               </div>
             </div>
             <button 
               onClick={handleSubmit}
-              className="w-full sm:w-auto text-white px-6 sm:px-8 py-2.5 sm:py-3 rounded-lg text-sm font-medium transition-colors hover:opacity-90"
+              className="text-white px-8 py-3 rounded-lg text-sm font-medium transition-colors hover:opacity-90"
               style={{ backgroundColor: '#375E27' }}
               disabled={loading}
             >
@@ -332,9 +332,9 @@ const AddProveedorForm = () => {
 
           {/* Form */}
           <div>
-            <div className="space-y-6 sm:space-y-8 max-w-6xl">
+            <div className="space-y-8 max-w-6xl">
               {/* First Row */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-4 sm:gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Nombre de la empresa
@@ -345,7 +345,7 @@ const AddProveedorForm = () => {
                     value={formData.companyName}
                     onChange={handleInputChange}
                     placeholder="Introduce el nombre de la empresa"
-                    className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:outline-none text-sm text-gray-700 placeholder-gray-400"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none text-sm text-gray-700 placeholder-gray-400"
                     onFocus={handleFocus}
                     onBlur={handleBlur}
                   />
@@ -360,14 +360,14 @@ const AddProveedorForm = () => {
                     value={formData.email}
                     onChange={handleInputChange}
                     placeholder="Introduce el correo de la empresa"
-                    className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:outline-none text-sm text-gray-700 placeholder-gray-400"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none text-sm text-gray-700 placeholder-gray-400"
                     onFocus={handleFocus}
                     onBlur={handleBlur}
                   />
                   {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email}</p>}
                 </div>
 
-                <div className="sm:col-span-2 lg:col-span-1">
+                <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Repuesto</label>
                   <input
                     type="text"
@@ -375,7 +375,7 @@ const AddProveedorForm = () => {
                     value={formData.partDescription}
                     onChange={handleInputChange}
                     placeholder="Introduce el repuesto necesitado"
-                    className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:outline-none text-sm text-gray-700 placeholder-gray-400"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none text-sm text-gray-700 placeholder-gray-400"
                     onFocus={handleFocus}
                     onBlur={handleBlur}
                   />
@@ -384,7 +384,7 @@ const AddProveedorForm = () => {
               </div>
 
               {/* Second Row */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-4 sm:gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Teléfono</label>
                   <input
@@ -394,7 +394,7 @@ const AddProveedorForm = () => {
                     onChange={handleInputChange}
                     placeholder="0000-0000"
                     maxLength="9"
-                    className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:outline-none text-sm text-gray-700 placeholder-gray-400"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none text-sm text-gray-700 placeholder-gray-400"
                     onFocus={handleFocus}
                     onBlur={handleBlur}
                   />
