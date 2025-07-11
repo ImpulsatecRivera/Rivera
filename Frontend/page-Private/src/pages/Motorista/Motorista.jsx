@@ -84,6 +84,7 @@ const useMotoristaManagement = () => {
   const [showConfirmDelete, setShowConfirmDelete] = useState(false);
   const [showSuccessAlert, setShowSuccessAlert] = useState(false);
   const [showEditAlert, setShowEditAlert] = useState(false);
+  const [showAddAlert, setShowAddAlert] = useState(false);
   const [successType, setSuccessType] = useState('');
 
   const filterMotoristas = motoristas.filter(motorista =>
@@ -94,15 +95,27 @@ const useMotoristaManagement = () => {
   );
 
   const handleContinue = () => {
-    // Esta función debe navegar al formulario de agregar motorista en tu repositorio
-    // Reemplaza esto con tu lógica de navegación (React Router, Next.js Router, etc.)
-    console.log('Navegando al formulario de agregar motorista...');
-    // Ejemplo con React Router:
-    // navigate('/agregar-motorista');
-    // Ejemplo con Next.js:
-    // router.push('/agregar-motorista');
-    // Ejemplo con redirección simple:
-    // window.location.href = '/agregar-motorista';
+    setShowAddAlert(true);
+  };
+
+  const handleAddNewMotorista = (formData) => {
+    const newId = (motoristas.length + 1).toString();
+    const newMotorista = {
+      _id: newId,
+      name: formData.name,
+      lastName: formData.lastName,
+      email: `${formData.name.toLowerCase()}.${formData.lastName.toLowerCase()}@rivera.com`,
+      id: formData.id,
+      birthDate: formData.birthDate,
+      phone: formData.phone,
+      address: formData.address,
+      circulationCard: formData.circulationCard
+    };
+    
+    setMotoristas(prev => [...prev, newMotorista]);
+    setShowAddAlert(false);
+    setSuccessType('add');
+    setShowSuccessAlert(true);
   };
 
   const handleOptionsClick = () => {
@@ -149,6 +162,10 @@ const useMotoristaManagement = () => {
     setShowEditAlert(false);
   };
 
+  const closeAddAlert = () => {
+    setShowAddAlert(false);
+  };
+
   const selectMotorista = (motorista) => {
     setSelectedMotorista(motorista);
     setShowDetailView(true);
@@ -181,9 +198,11 @@ const useMotoristaManagement = () => {
     showConfirmDelete,
     showSuccessAlert,
     showEditAlert,
+    showAddAlert,
     successType,
     filterMotoristas,
     handleContinue,
+    handleAddNewMotorista,
     handleOptionsClick,
     handleEdit,
     handleDelete,
@@ -193,6 +212,7 @@ const useMotoristaManagement = () => {
     closeAlert,
     closeSuccessAlert,
     closeEditAlert,
+    closeAddAlert,
     selectMotorista,
     closeDetailView,
     handleRefresh,
@@ -435,6 +455,8 @@ const SuccessAlert = ({ isOpen, onClose, type }) => {
         return '¡Motorista eliminado exitosamente!';
       case 'edit':
         return '¡Motorista actualizado exitosamente!';
+      case 'add':
+        return '¡Motorista agregado exitosamente!';
       default:
         return '¡Operación completada exitosamente!';
     }
@@ -531,7 +553,281 @@ const SuccessAlert = ({ isOpen, onClose, type }) => {
   );
 };
 
-// Add Motorista Alert Component - ELIMINADO - Usar formulario del repositorio
+// Add Motorista Alert Component
+const AddMotoristaAlert = ({ isOpen, onClose, onSave }) => {
+  const [formData, setFormData] = useState({
+    name: '',
+    lastName: '',
+    id: '',
+    birthDate: '',
+    phone: '',
+    address: '',
+    circulationCard: ''
+  });
+
+  useEffect(() => {
+    if (isOpen) {
+      setFormData({
+        name: '',
+        lastName: '',
+        id: '',
+        birthDate: '',
+        phone: '',
+        address: '',
+        circulationCard: ''
+      });
+    }
+  }, [isOpen]);
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    let formattedValue = value;
+
+    // Formateo para DUI
+    if (name === 'id') {
+      const numbers = value.replace(/\D/g, '');
+      if (numbers.length > 8) {
+        formattedValue = numbers.slice(0, 8) + '-' + numbers.slice(8, 9);
+      } else {
+        formattedValue = numbers;
+      }
+    }
+
+    // Formateo para tarjeta de circulación
+    if (name === 'circulationCard') {
+      formattedValue = value.replace(/[^a-zA-Z0-9-]/g, '').toUpperCase();
+    }
+
+    // Formateo para teléfono
+    if (name === 'phone') {
+      const numbers = value.replace(/\D/g, '');
+      if (numbers.length > 4) {
+        formattedValue = numbers.slice(0, 4) + '-' + numbers.slice(4, 8);
+      } else {
+        formattedValue = numbers;
+      }
+    }
+
+    setFormData(prev => ({
+      ...prev,
+      [name]: formattedValue
+    }));
+  };
+
+  const handleSave = () => {
+    // Validación básica
+    if (!formData.name || !formData.lastName || !formData.id || !formData.birthDate) {
+      alert('Por favor complete todos los campos obligatorios');
+      return;
+    }
+    onSave(formData);
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div 
+      className={`fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 transition-opacity duration-300 ${
+        isOpen ? 'opacity-100' : 'opacity-0'
+      }`}
+    >
+      <div 
+        className={`bg-white rounded-lg p-4 sm:p-6 md:p-8 lg:p-10 xl:p-12 2xl:p-16 max-w-sm sm:max-w-md md:max-w-lg lg:max-w-2xl xl:max-w-4xl 2xl:max-w-6xl w-full mx-4 shadow-xl relative transform transition-all duration-300 max-h-[90vh] overflow-y-auto ${
+          isOpen ? 'scale-100 translate-y-0' : 'scale-95 translate-y-4'
+        }`}
+        style={{
+          animation: isOpen ? 'slideInUp 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)' : 'none'
+        }}
+      >
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 sm:top-6 sm:right-6 lg:top-8 lg:right-8 xl:top-10 xl:right-10 text-gray-400 hover:text-gray-600 text-xl sm:text-2xl lg:text-3xl xl:text-4xl font-bold transition-colors duration-200 hover:scale-110 transform"
+        >
+          ×
+        </button>
+        
+        <div className="text-center mb-6 sm:mb-8 lg:mb-10 xl:mb-12">
+          <h3 
+            className="text-xl sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl font-semibold text-gray-900 transition-all duration-300"
+            style={{
+              animation: isOpen ? 'fadeInUp 0.5s ease-out 0.2s both' : 'none'
+            }}
+          >
+            Agregar Nuevo Motorista
+          </h3>
+        </div>
+
+        <div 
+          className="space-y-4 sm:space-y-6 md:space-y-8 lg:space-y-10 xl:space-y-12"
+          style={{
+            animation: isOpen ? 'fadeInUp 0.5s ease-out 0.3s both' : 'none'
+          }}
+        >
+          {/* Primera fila: Apellido y Nombre */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 lg:gap-8 xl:gap-10">
+            <div>
+              <label className="block text-sm sm:text-base md:text-lg lg:text-xl xl:text-2xl font-medium text-gray-700 mb-1 sm:mb-2 lg:mb-3">
+                Apellido *
+              </label>
+              <input
+                type="text"
+                name="lastName"
+                value={formData.lastName}
+                onChange={handleInputChange}
+                className="w-full px-3 py-2 sm:px-4 sm:py-3 md:px-5 md:py-4 lg:px-6 lg:py-5 xl:px-7 xl:py-6 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 text-sm sm:text-base md:text-lg lg:text-xl xl:text-2xl text-gray-900 bg-white"
+                placeholder="Martinez"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm sm:text-base md:text-lg lg:text-xl xl:text-2xl font-medium text-gray-700 mb-1 sm:mb-2 lg:mb-3">
+                Nombre *
+              </label>
+              <input
+                type="text"
+                name="name"
+                value={formData.name}
+                onChange={handleInputChange}
+                className="w-full px-3 py-2 sm:px-4 sm:py-3 md:px-5 md:py-4 lg:px-6 lg:py-5 xl:px-7 xl:py-6 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 text-sm sm:text-base md:text-lg lg:text-xl xl:text-2xl text-gray-900 bg-white"
+                placeholder="Juan"
+                required
+              />
+            </div>
+          </div>
+
+          {/* Segunda fila: DUI y Fecha de nacimiento */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 lg:gap-8 xl:gap-10">
+            <div>
+              <label className="block text-sm sm:text-base md:text-lg lg:text-xl xl:text-2xl font-medium text-gray-700 mb-1 sm:mb-2 lg:mb-3">
+                DUI *
+              </label>
+              <input
+                type="text"
+                name="id"
+                value={formData.id}
+                onChange={handleInputChange}
+                className="w-full px-3 py-2 sm:px-4 sm:py-3 md:px-5 md:py-4 lg:px-6 lg:py-5 xl:px-7 xl:py-6 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 text-sm sm:text-base md:text-lg lg:text-xl xl:text-2xl text-gray-900 bg-white"
+                placeholder="12345678-9"
+                maxLength="10"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm sm:text-base md:text-lg lg:text-xl xl:text-2xl font-medium text-gray-700 mb-1 sm:mb-2 lg:mb-3">
+                Fecha de nacimiento *
+              </label>
+              <input
+                type="date"
+                name="birthDate"
+                value={formData.birthDate}
+                onChange={handleInputChange}
+                className="w-full px-3 py-2 sm:px-4 sm:py-3 md:px-5 md:py-4 lg:px-6 lg:py-5 xl:px-7 xl:py-6 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 text-sm sm:text-base md:text-lg lg:text-xl xl:text-2xl text-gray-900 bg-white"
+                required
+              />
+            </div>
+          </div>
+
+          {/* Tercera fila: Teléfono y Tarjeta de Circulación */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 lg:gap-8 xl:gap-10">
+            <div>
+              <label className="block text-sm sm:text-base md:text-lg lg:text-xl xl:text-2xl font-medium text-gray-700 mb-1 sm:mb-2 lg:mb-3">
+                Teléfono
+              </label>
+              <input
+                type="tel"
+                name="phone"
+                value={formData.phone}
+                onChange={handleInputChange}
+                className="w-full px-3 py-2 sm:px-4 sm:py-3 md:px-5 md:py-4 lg:px-6 lg:py-5 xl:px-7 xl:py-6 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 text-sm sm:text-base md:text-lg lg:text-xl xl:text-2xl text-gray-900 bg-white"
+                placeholder="7533-4567"
+              />
+            </div>
+            <div>
+              <label className="block text-sm sm:text-base md:text-lg lg:text-xl xl:text-2xl font-medium text-gray-700 mb-1 sm:mb-2 lg:mb-3">
+                Tarjeta de Circulación
+              </label>
+              <input
+                type="text"
+                name="circulationCard"
+                value={formData.circulationCard}
+                onChange={handleInputChange}
+                className="w-full px-3 py-2 sm:px-4 sm:py-3 md:px-5 md:py-4 lg:px-6 lg:py-5 xl:px-7 xl:py-6 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 text-sm sm:text-base md:text-lg lg:text-xl xl:text-2xl text-gray-900 bg-white"
+                placeholder="ABC123-DEF"
+                maxLength="15"
+              />
+            </div>
+          </div>
+
+          {/* Cuarta fila: Dirección (campo completo) */}
+          <div>
+            <label className="block text-sm sm:text-base md:text-lg lg:text-xl xl:text-2xl font-medium text-gray-700 mb-1 sm:mb-2 lg:mb-3">
+              Dirección
+            </label>
+            <input
+              type="text"
+              name="address"
+              value={formData.address}
+              onChange={handleInputChange}
+              className="w-full px-3 py-2 sm:px-4 sm:py-3 md:px-5 md:py-4 lg:px-6 lg:py-5 xl:px-7 xl:py-6 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 text-sm sm:text-base md:text-lg lg:text-xl xl:text-2xl text-gray-900 bg-white"
+              placeholder="Calle Los Almendros #24, San Salvador"
+            />
+          </div>
+
+          {/* Información automática */}
+          <div className="bg-blue-50 p-4 rounded-lg">
+            <p className="text-sm text-blue-800">
+              <strong>Nota:</strong> El email se generará automáticamente como: {formData.name && formData.lastName ? `${formData.name.toLowerCase()}.${formData.lastName.toLowerCase()}@rivera.com` : 'nombre.apellido@rivera.com'}
+            </p>
+          </div>
+        </div>
+
+        <div 
+          className="mt-6 sm:mt-8 md:mt-10 lg:mt-12 xl:mt-16 flex justify-center space-x-4"
+          style={{
+            animation: isOpen ? 'fadeInUp 0.5s ease-out 0.5s both' : 'none'
+          }}
+        >
+          <button
+            onClick={onClose}
+            className="px-6 py-2 sm:px-8 sm:py-3 md:px-10 md:py-4 lg:px-12 lg:py-5 xl:px-14 xl:py-6 bg-gray-500 hover:bg-gray-600 text-white rounded-lg transition-all duration-200 transform hover:scale-105 hover:shadow-lg active:scale-95 font-medium text-sm sm:text-base md:text-lg lg:text-xl xl:text-2xl"
+          >
+            Cancelar
+          </button>
+          <button
+            onClick={handleSave}
+            className="px-8 py-2 sm:px-10 sm:py-3 md:px-12 md:py-4 lg:px-14 lg:py-5 xl:px-16 xl:py-6 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-all duration-200 transform hover:scale-105 hover:shadow-lg active:scale-95 font-medium text-sm sm:text-base md:text-lg lg:text-xl xl:text-2xl"
+          >
+            Agregar Motorista
+          </button>
+        </div>
+      </div>
+      
+      <style jsx>{`
+        @keyframes slideInUp {
+          from {
+            transform: translateY(100px) scale(0.9);
+            opacity: 0;
+          }
+          to {
+            transform: translateY(0) scale(1);
+            opacity: 1;
+          }
+        }
+        
+        @keyframes fadeInUp {
+          from {
+            transform: translateY(20px);
+            opacity: 0;
+          }
+          to {
+            transform: translateY(0);
+            opacity: 1;
+          }
+        }
+      `}</style>
+    </div>
+  );
+};
 
 // Edit Motorista Alert Component
 const EditMotoristaAlert = ({ isOpen, onClose, onSave, motorista }) => {
@@ -827,9 +1123,11 @@ const MotoristaManagementInterface = () => {
     showConfirmDelete,
     showSuccessAlert,
     showEditAlert,
+    showAddAlert,
     successType,
     filterMotoristas,
     handleContinue,
+    handleAddNewMotorista,
     handleOptionsClick,
     handleEdit,
     handleDelete,
@@ -839,6 +1137,7 @@ const MotoristaManagementInterface = () => {
     closeAlert,
     closeSuccessAlert,
     closeEditAlert,
+    closeAddAlert,
     selectMotorista,
     closeDetailView,
     handleRefresh,
@@ -1146,6 +1445,12 @@ const MotoristaManagementInterface = () => {
        onClose={closeEditAlert}
        onSave={handleSaveEdit}
        motorista={selectedMotorista}
+     />
+
+     <AddMotoristaAlert
+       isOpen={showAddAlert}
+       onClose={closeAddAlert}
+       onSave={handleAddNewMotorista}
      />
    </div>
  );
