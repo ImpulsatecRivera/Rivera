@@ -1,16 +1,86 @@
 import React, { useState } from 'react';
 import { Trash2, Edit3, Eye, Calendar, MapPin, User, Filter, Search, ArrowLeft, Phone, Mail, Package, Truck, DollarSign, Clock, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
-import Cotizacion from "../../images/cotizacion.png"
 import { useNavigate } from 'react-router-dom';
 
+// Componente SweetAlert personalizado
+const SweetAlert = ({ isOpen, onClose, onConfirm, title, text, type = 'warning' }) => {
+  if (!isOpen) return null;
+
+  const getIcon = () => {
+    switch (type) {
+      case 'warning':
+        return (
+          <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <AlertCircle className="text-yellow-600" size={32} />
+          </div>
+        );
+      case 'success':
+        return (
+          <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <CheckCircle className="text-green-600" size={32} />
+          </div>
+        );
+      case 'error':
+        return (
+          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <XCircle className="text-red-600" size={32} />
+          </div>
+        );
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-2xl p-8 max-w-md mx-4 shadow-2xl transform scale-100 animate-pulse">
+        {getIcon()}
+        <h2 className="text-2xl font-bold text-center text-gray-800 mb-4">{title}</h2>
+        <p className="text-gray-600 text-center mb-8">{text}</p>
+        <div className="flex gap-4 justify-center">
+          {type === 'warning' ? (
+            <>
+              <button
+                onClick={onClose}
+                className="px-6 py-3 bg-gray-200 text-gray-800 rounded-xl hover:bg-gray-300 transition-colors duration-200 font-medium"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={onConfirm}
+                className="px-6 py-3 bg-red-500 text-white rounded-xl hover:bg-red-600 transition-colors duration-200 font-medium"
+              >
+                Sí, eliminar
+              </button>
+            </>
+          ) : (
+            <button
+              onClick={onConfirm}
+              className="px-6 py-3 bg-blue-500 text-white rounded-xl hover:bg-blue-600 transition-colors duration-200 font-medium"
+            >
+              OK
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
 
 export default function CotizacionesComponent() {
   const [filtroEstado, setFiltroEstado] = useState('Todos');
   const [busqueda, setBusqueda] = useState('');
-  const [vistaActual, setVistaActual] = useState('lista'); // 'lista' o 'detalle'
+  const [vistaActual, setVistaActual] = useState('lista');
   const [cotizacionSeleccionada, setCotizacionSeleccionada] = useState(null);
+  const [sweetAlert, setSweetAlert] = useState({
+    isOpen: false,
+    title: '',
+    text: '',
+    type: 'warning',
+    onConfirm: null
+  });
 
-  const cotizaciones = [
+  const [cotizaciones, setCotizaciones] = useState([
     {
       id: 1,
       cliente: 'Wilfrido Granados',
@@ -173,13 +243,60 @@ export default function CotizacionesComponent() {
       validez: '14 días',
       condicionesPago: 'Pago 25% adelanto, 75% contraentrega'
     }
-  ];
+  ]);
 
   const estadoIcons = {
     'Aprobada': '✓',
     'Pendiente': '⏳',
     'Rechazada': '✗',
     'En Proceso': '🚛'
+  };
+
+  const navigate = useNavigate();
+
+  // Función para mostrar SweetAlert
+  const showSweetAlert = (config) => {
+    setSweetAlert({
+      isOpen: true,
+      ...config
+    });
+  };
+
+  // Función para cerrar SweetAlert
+  const closeSweetAlert = () => {
+    setSweetAlert({
+      isOpen: false,
+      title: '',
+      text: '',
+      type: 'warning',
+      onConfirm: null
+    });
+  };
+
+  // Función para eliminar cotización
+  const eliminarCotizacion = (cotizacion) => {
+    showSweetAlert({
+      title: '¿Estás seguro?',
+      text: `¿Deseas eliminar la cotización #${cotizacion.id.toString().padStart(3, '0')} de ${cotizacion.cliente}? Esta acción no se puede deshacer.`,
+      type: 'warning',
+      onConfirm: () => {
+        // Eliminar la cotización del estado
+        setCotizaciones(prev => prev.filter(c => c.id !== cotizacion.id));
+        
+        // Cerrar el primer alert
+        closeSweetAlert();
+        
+        // Mostrar mensaje de éxito
+        setTimeout(() => {
+          showSweetAlert({
+            title: '¡Eliminado!',
+            text: 'La cotización ha sido eliminada correctamente.',
+            type: 'success',
+            onConfirm: closeSweetAlert
+          });
+        }, 300);
+      }
+    });
   };
 
   const filtrosCotizaciones = cotizaciones.filter(cotizacion => {
@@ -194,10 +311,7 @@ export default function CotizacionesComponent() {
     setVistaActual('detalle');
   };
 
-  const navigate = useNavigate();
-
   const handleAddTruck = () => navigate('/cotizaciones/CotizacionForm');
-
 
   const volverALista = () => {
     setVistaActual('lista');
@@ -213,6 +327,13 @@ export default function CotizacionesComponent() {
       default: return <Clock className="text-gray-600" size={24} />;
     }
   };
+
+  // Imagen placeholder para el camión
+  const CotizacionIcon = () => (
+    <div className="w-6 h-6 bg-white rounded flex items-center justify-center">
+      <Truck size={16} className="text-orange-500" />
+    </div>
+  );
 
   if (vistaActual === 'detalle' && cotizacionSeleccionada) {
     return (
@@ -418,157 +539,185 @@ export default function CotizacionesComponent() {
   }
 
   return (
-    <div className="w-full h-screen p-4" style={{ backgroundColor: '#34353A' }}>
-      <div className="w-full h-full bg-white rounded-2xl shadow-2xl p-8 flex flex-col">
-        
-        {/* Header mejorado */}
-        <div className="mb-8">
-          <div>
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-slate-800 via-blue-800 to-indigo-800 bg-clip-text text-transparent mb-2">
-              Gestión de cotizaciones
-            </h1>
-            <p className="text-slate-600 text-lg">Administra y supervisa todas las cotizaciones de transporte</p>
+    <>
+      <div className="w-full h-screen p-4" style={{ backgroundColor: '#34353A' }}>
+        <div className="w-full h-full bg-white rounded-2xl shadow-2xl p-8 flex flex-col">
+          
+          {/* Header mejorado */}
+          <div className="mb-8">
+            <div>
+              <h1 className="text-4xl font-bold bg-gradient-to-r from-slate-800 via-blue-800 to-indigo-800 bg-clip-text text-transparent mb-2">
+                Gestión de cotizaciones
+              </h1>
+              <p className="text-slate-600 text-lg">Administra y supervisa todas las cotizaciones de transporte</p>
+            </div>
           </div>
-        </div>
 
-        {/* Barra de filtros y búsqueda */}
-        <div className="flex gap-4 mb-8">
-          <div className="relative flex-1">
-            <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400" size={20} />
-            <input
-              type="text"
-              placeholder="Buscar por cliente o destino..."
-              value={busqueda}
-              onChange={(e) => setBusqueda(e.target.value)}
-              className="w-full pl-12 pr-4 py-3 bg-white border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all duration-300"
-            />
+          {/* Barra de filtros y búsqueda */}
+          <div className="flex gap-4 mb-8">
+            <div className="relative flex-1">
+              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400" size={20} />
+              <input
+                type="text"
+                placeholder="Buscar por cliente o destino..."
+                value={busqueda}
+                onChange={(e) => setBusqueda(e.target.value)}
+                className="w-full pl-12 pr-4 py-3 bg-white border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all duration-300"
+              />
+            </div>
+            
+            <div className="relative">
+              <Filter className="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400" size={20} />
+              <select
+                value={filtroEstado}
+                onChange={(e) => setFiltroEstado(e.target.value)}
+                className="pl-12 pr-8 py-3 bg-white border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all duration-300 appearance-none cursor-pointer"
+              >
+                <option value="Todos">Todos los estados</option>
+                <option value="Aprobada">Aprobadas</option>
+                <option value="Pendiente">Pendientes</option>
+                <option value="Rechazada">Rechazadas</option>
+                <option value="En Proceso">En Proceso</option>
+              </select>
+            </div>
           </div>
           
-          <div className="relative">
-            <Filter className="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400" size={20} />
-            <select
-              value={filtroEstado}
-              onChange={(e) => setFiltroEstado(e.target.value)}
-              className="pl-12 pr-8 py-3 bg-white border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all duration-300 appearance-none cursor-pointer"
-            >
-              <option value="Todos">Todos los estados</option>
-              <option value="Aprobada">Aprobadas</option>
-              <option value="Pendiente">Pendientes</option>
-              <option value="Rechazada">Rechazadas</option>
-              <option value="En Proceso">En Proceso</option>
-            </select>
-          </div>
-        </div>
-        
-        {/* Grid de cotizaciones mejorado */}
-        <div className="flex-1 overflow-y-auto">
-          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-            {filtrosCotizaciones.map((cotizacion, index) => (
-              <div 
-                key={cotizacion.id}
-                className="group relative bg-white border border-slate-200/50 rounded-3xl p-6 shadow-lg hover:shadow-2xl hover:shadow-blue-500/10 transition-all duration-500 transform hover:-translate-y-2 hover:scale-[1.02] cursor-pointer overflow-hidden"
-                style={{
-                  animationDelay: `${index * 100}ms`
-                }}
-              >
-                {/* Gradiente de fondo animado */}
-                <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-transparent to-indigo-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-                
-                {/* Efectos de luz */}
-                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-indigo-500 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500"></div>
-                
-                {/* Botones de acción flotantes */}
-                <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transform translate-y-[-10px] group-hover:translate-y-0 transition-all duration-300 delay-150 z-20">
-                  <button 
-                    onClick={() => verDetalleCotizacion(cotizacion)}
-                    className="p-2.5 bg-white/80 backdrop-blur-sm text-blue-600 hover:text-white hover:bg-blue-600 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-110 hover:rotate-3"
-                  >
-                    <Eye size={16} />
-                  </button>
-                  <button onClick={handleAddTruck} className="p-2.5 bg-white/80 backdrop-blur-sm text-emerald-600 hover:text-white hover:bg-emerald-600 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-110 hover:rotate-3">
-                    <Edit3 size={16} />
-                  </button>
-                  <button className="p-2.5 bg-white/80 backdrop-blur-sm text-red-500 hover:text-white hover:bg-red-500 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-110 hover:rotate-3">
-                    <Trash2 size={16} />
-                  </button>
-                </div>
-
-                {/* Contenido principal */}
-                <div className="relative z-10">
+          {/* Grid de cotizaciones mejorado */}
+          <div className="flex-1 overflow-y-auto">
+            <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+              {filtrosCotizaciones.map((cotizacion, index) => (
+                <div 
+                  key={cotizacion.id}
+                  className="group relative bg-white border border-slate-200/50 rounded-3xl p-6 shadow-lg hover:shadow-2xl hover:shadow-blue-500/10 transition-all duration-500 transform hover:-translate-y-2 hover:scale-[1.02] cursor-pointer overflow-hidden"
+                  style={{
+                    animationDelay: `${index * 100}ms`
+                  }}
+                >
+                  {/* Gradiente de fondo animado */}
+                  <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-transparent to-indigo-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
                   
-                  {/* Header de la card */}
-                  <div className="flex items-center justify-between mb-6">
-  <div className="flex items-center gap-3">
-    <div className="w-12 h-12 bg-gradient-to-br from-orange-400 via-orange-500 to-red-500 rounded-2xl flex items-center justify-center shadow-lg group-hover:shadow-xl group-hover:scale-110 transition-all duration-300">
-      <img src={Cotizacion} alt="Camión" className="w-6 h-6 object-contain" />
-    </div>
-    <div>
-      <h3 className="font-bold text-slate-800 text-lg group-hover:text-slate-900 transition-colors duration-300">
-        Cotización #{cotizacion.id.toString().padStart(3, '0')}
-      </h3>
-      <p className="text-slate-500 text-sm">{cotizacion.tipoViaje}</p>
-    </div>
-  </div>
-</div>
-                  {/* Información del cliente */}
-                  <div className="space-y-4 mb-6">
-                    <div className="flex items-center gap-3 group-hover:translate-x-1 transition-transform duration-300">
-                      <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
-                        <User size={16} className="text-blue-600" />
-                      </div>
-                      <div>
-                        <p className="text-xs text-slate-500 uppercase tracking-wide">Cliente</p>
-                        <p className="font-semibold text-slate-800">{cotizacion.cliente}</p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-3 group-hover:translate-x-1 transition-transform duration-300 delay-75">
-                      <div className="w-8 h-8 bg-emerald-100 rounded-lg flex items-center justify-center">
-                        <MapPin size={16} className="text-emerald-600" />
-                      </div>
-                      <div>
-                        <p className="text-xs text-slate-500 uppercase tracking-wide">Destino</p>
-                        <p className="font-semibold text-slate-800 text-sm">{cotizacion.destino}</p>
-                      </div>
-                    </div>
+                  {/* Efectos de luz */}
+                  <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-indigo-500 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500"></div>
+                  
+                  {/* Botones de acción flotantes */}
+                  <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transform translate-y-[-10px] group-hover:translate-y-0 transition-all duration-300 delay-150 z-20">
+                    <button 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        verDetalleCotizacion(cotizacion);
+                      }}
+                      className="p-2.5 bg-white/80 backdrop-blur-sm text-blue-600 hover:text-white hover:bg-blue-600 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-110 hover:rotate-3"
+                    >
+                      <Eye size={16} />
+                    </button>
+                    <button 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleAddTruck();
+                      }}
+                      className="p-2.5 bg-white/80 backdrop-blur-sm text-emerald-600 hover:text-white hover:bg-emerald-600 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-110 hover:rotate-3"
+                    >
+                      <Edit3 size={16} />
+                    </button>
+                    <button 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        eliminarCotizacion(cotizacion);
+                      }}
+                      className="p-2.5 bg-white/80 backdrop-blur-sm text-red-500 hover:text-white hover:bg-red-500 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-110 hover:rotate-3"
+                    >
+                      <Trash2 size={16} />
+                    </button>
                   </div>
 
-                  {/* Footer con fecha y estado */}
-                  <div className="flex items-center justify-between pt-4 border-t border-slate-200/50">
-                    <div className="flex items-center gap-2">
-                      <Calendar size={16} className="text-slate-400" />
-                      <span className="text-sm text-slate-600">{cotizacion.fecha}</span>
+                  {/* Contenido principal */}
+                  <div className="relative z-10">
+                    
+                    {/* Header de la card */}
+                    <div className="flex items-center justify-between mb-6">
+                      <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 bg-gradient-to-br from-orange-400 via-orange-500 to-red-500 rounded-2xl flex items-center justify-center shadow-lg group-hover:shadow-xl group-hover:scale-110 transition-all duration-300">
+                          <CotizacionIcon />
+                        </div>
+                        <div>
+                          <h3 className="font-bold text-slate-800 text-lg group-hover:text-slate-900 transition-colors duration-300">
+                            Cotización #{cotizacion.id.toString().padStart(3, '0')}
+                          </h3>
+                          <p className="text-slate-500 text-sm">{cotizacion.tipoViaje}</p>
+                        </div>
+                      </div>
                     </div>
                     
-                    <div className={`px-4 py-2 rounded-full text-sm font-semibold border ${cotizacion.colorEstado} group-hover:scale-110 transition-transform duration-300 flex items-center gap-2`}>
-                      <span>{estadoIcons[cotizacion.estado]}</span>
-                      <span>{cotizacion.estado}</span>
+                    {/* Información del cliente */}
+                    <div className="space-y-4 mb-6">
+                      <div className="flex items-center gap-3 group-hover:translate-x-1 transition-transform duration-300">
+                        <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                          <User size={16} className="text-blue-600" />
+                        </div>
+                        <div>
+                          <p className="text-xs text-slate-500 uppercase tracking-wide">Cliente</p>
+                          <p className="font-semibold text-slate-800">{cotizacion.cliente}</p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-3 group-hover:translate-x-1 transition-transform duration-300 delay-75">
+                        <div className="w-8 h-8 bg-emerald-100 rounded-lg flex items-center justify-center">
+                          <MapPin size={16} className="text-emerald-600" />
+                        </div>
+                        <div>
+                          <p className="text-xs text-slate-500 uppercase tracking-wide">Destino</p>
+                          <p className="font-semibold text-slate-800 text-sm">{cotizacion.destino}</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Footer con fecha y estado */}
+                    <div className="flex items-center justify-between pt-4 border-t border-slate-200/50">
+                      <div className="flex items-center gap-2">
+                        <Calendar size={16} className="text-slate-400" />
+                        <span className="text-sm text-slate-600">{cotizacion.fecha}</span>
+                      </div>
+                      
+                      <div className={`px-4 py-2 rounded-full text-sm font-semibold border ${cotizacion.colorEstado} group-hover:scale-110 transition-transform duration-300 flex items-center gap-2`}>
+                        <span>{estadoIcons[cotizacion.estado]}</span>
+                        <span>{cotizacion.estado}</span>
+                      </div>
                     </div>
                   </div>
+
+                  {/* Efectos decorativos */}
+                  <div className="absolute bottom-4 left-4 w-2 h-2 bg-blue-400 rounded-full opacity-0 group-hover:opacity-60 transform scale-0 group-hover:scale-100 transition-all duration-500 delay-200 group-hover:animate-pulse"></div>
+                  <div className="absolute top-8 right-8 w-1 h-1 bg-purple-400 rounded-full opacity-0 group-hover:opacity-80 transform scale-0 group-hover:scale-100 transition-all duration-700 delay-300 group-hover:animate-pulse"></div>
+                  
+                  {/* Brillo sutil */}
+                  <div className="absolute inset-0 bg-gradient-to-br from-white/20 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-3xl pointer-events-none"></div>
                 </div>
-
-                {/* Efectos decorativos */}
-                <div className="absolute bottom-4 left-4 w-2 h-2 bg-blue-400 rounded-full opacity-0 group-hover:opacity-60 transform scale-0 group-hover:scale-100 transition-all duration-500 delay-200 group-hover:animate-pulse"></div>
-                <div className="absolute top-8 right-8 w-1 h-1 bg-purple-400 rounded-full opacity-0 group-hover:opacity-80 transform scale-0 group-hover:scale-100 transition-all duration-700 delay-300 group-hover:animate-pulse"></div>
-                
-                {/* Brillo sutil */}
-                <div className="absolute inset-0 bg-gradient-to-br from-white/20 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-3xl pointer-events-none"></div>
-              </div>
-            ))}
-          </div>
-
-          {/* Mensaje si no hay resultados */}
-          {filtrosCotizaciones.length === 0 && (
-            <div className="text-center py-16">
-              <div className="w-24 h-24 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Search size={32} className="text-slate-400" />
-              </div>
-              <h3 className="text-xl font-semibold text-slate-600 mb-2">No se encontraron cotizaciones</h3>
-              <p className="text-slate-500">Intenta con otros términos de búsqueda o filtros</p>
+              ))}
             </div>
-          )}
+
+            {/* Mensaje si no hay resultados */}
+            {filtrosCotizaciones.length === 0 && (
+              <div className="text-center py-16">
+                <div className="w-24 h-24 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Search size={32} className="text-slate-400" />
+                </div>
+                <h3 className="text-xl font-semibold text-slate-600 mb-2">No se encontraron cotizaciones</h3>
+                <p className="text-slate-500">Intenta con otros términos de búsqueda o filtros</p>
+              </div>
+            )}
+          </div>
         </div>
       </div>
-    </div>
+
+      {/* SweetAlert Component */}
+      <SweetAlert
+        isOpen={sweetAlert.isOpen}
+        title={sweetAlert.title}
+        text={sweetAlert.text}
+        type={sweetAlert.type}
+        onClose={closeSweetAlert}
+        onConfirm={sweetAlert.onConfirm}
+      />
+    </>
   );
 }
