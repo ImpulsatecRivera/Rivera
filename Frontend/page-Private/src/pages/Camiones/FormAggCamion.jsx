@@ -338,7 +338,7 @@ const FormAggCamion = ({ onNavigateBack, onSubmitSuccess }) => {
               {/* Third Row */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Nivel de Gasolina</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Nivel de gasolina</label>
                   <input
                     type="number"
                     min="0"

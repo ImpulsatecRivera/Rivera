@@ -614,7 +614,7 @@ const EditMotoristaAlert = ({ isOpen, onClose, onSave, motorista }) => {
   );
 };
 
-const MotoristaManagementInterface = () => {
+const Motorista = () => {
   const {
     motoristas,
     selectedMotorista,
@@ -693,7 +693,7 @@ const MotoristaManagementInterface = () => {
                         <option value="Newest">Newest</option>
                         <option value="Oldest">Oldest</option>
                         <option value="Name">Name</option>
-                        <option value="Email">Email</option>
+                        <option value="Email">Correo electronico</option>
                       </select>
                       <ChevronDown className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4 pointer-events-none" />
                     </div>
@@ -705,7 +705,7 @@ const MotoristaManagementInterface = () => {
             {/* Table Header - Fixed */}
             <div className={`grid ${showDetailView ? 'grid-cols-4' : 'grid-cols-7'} gap-4 pb-3 border-b border-gray-200 text-sm font-medium text-gray-500`}>
               <div>Nombres</div>
-              <div>Email</div>
+              <div>Correo electronico</div>
               <div>DUI</div>
               <div>Fecha-Nacimiento</div>
               {!showDetailView && (
@@ -968,4 +968,4 @@ const MotoristaManagementInterface = () => {
  );
 };
 
-export default MotoristaManagementInterface;
+export default Motorista;

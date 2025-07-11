@@ -3,7 +3,7 @@ import { User, LogOut } from 'lucide-react';
 import avatarImg from '../../images/avatarDashboard.png';
 import { NavLink, useNavigate } from "react-router-dom";
 
-const SidebarNav = () => {
+const Nav = () => {
   const [activeItem, setActiveItem] = useState('Inicio');
   const [isAnimating, setIsAnimating] = useState(false);
   const [animatingItem, setAnimatingItem] = useState('');
@@ -73,7 +73,7 @@ const SidebarNav = () => {
     { id:'Motoristas',name: 'Motoristas', route: '/motoristas' },
     { id:'Proveedores',name: 'Proveedores', route: '/proveedores' },
     { id:'Camiones',name: 'Camiones', route: '/camiones' },
-    { id:'clientes',name: 'clientes', route: '/clientes' },
+    { id:'clientes',name: 'Clientes', route: '/clientes' },
     
   ];
 
@@ -371,4 +371,4 @@ const SidebarNav = () => {
   );
 };
 
-export default SidebarNav;
+export default Nav;
