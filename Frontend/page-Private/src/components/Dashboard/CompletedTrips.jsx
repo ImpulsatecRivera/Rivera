@@ -14,7 +14,6 @@ const CompletedTrips = () => {
 
   return (
     <div className="flex bg-white w-full max-w-md overflow-hidden">
-      {/* Lista de elementos */}
       <div className="flex-1 py-2">
         <div className="space-y-4">
           {completedTrips.map((trip) => (
@@ -28,7 +27,7 @@ const CompletedTrips = () => {
                   <p className="text-sm text-gray-500">{trip.subtitle}</p>
                 </div>
               </div>
-              <div className="w-3 h-3 rounded-full flex-shrink-0 mr-2" style={{backgroundColor: '#5D9646'}}></div>
+              <div className="w-3 h-3 rounded-full flex-shrink-0 mr-2" style={{ backgroundColor: '#5D9646' }}></div>
             </div>
           ))}
         </div>

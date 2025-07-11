@@ -18,9 +18,8 @@ LoginController.Login = async (req, res) => {
       }
 
       userType = "Administrador";
-      userFound = { _id: "Administrador" }; 
-    } 
-    else {
+      userFound = { _id: "admin", email };
+    } else {
       userFound = await EmpleadoModel.findOne({ email });
 
       if (!userFound) {
@@ -50,10 +49,14 @@ LoginController.Login = async (req, res) => {
           return res.status(500).json({ message: "Error al generar token" });
         }
 
-        res.cookie("authToken", token);
-        res.json({
+        res.cookie("authToken", token, { httpOnly: true });
+        res.status(200).json({
           message: "Inicio de sesión completado",
           userType,
+          user: {
+            id: userFound._id,
+            email: userFound.email || email,
+          }
         });
       }
     );
