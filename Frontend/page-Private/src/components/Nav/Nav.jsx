@@ -1,13 +1,17 @@
+
 import React, { useState } from 'react';
 import { User, LogOut } from 'lucide-react';
 import avatarImg from '../../images/avatarDashboard.png';
 import { NavLink, useNavigate } from "react-router-dom";
 
-const Nav = () => {
+ import { useAuth } from "../../Context/AuthContext"; // ✅ Asegúrate que la ruta es correcta
+
+
+const SidebarNav = () => {
   const [activeItem, setActiveItem] = useState('Inicio');
   const [isAnimating, setIsAnimating] = useState(false);
   const [animatingItem, setAnimatingItem] = useState('');
-
+  const { logOut } = useAuth(); // ✅ Usa el contexto
   const navigate = useNavigate();
 
   // SVG del camión de reparto
@@ -73,7 +77,7 @@ const Nav = () => {
     { id:'Motoristas',name: 'Motoristas', route: '/motoristas' },
     { id:'Proveedores',name: 'Proveedores', route: '/proveedores' },
     { id:'Camiones',name: 'Camiones', route: '/camiones' },
-    { id:'clientes',name: 'Clientes', route: '/clientes' },
+    { id:'clientes',name: 'clientes', route: '/clientes' },
     
   ];
 
@@ -93,19 +97,26 @@ const Nav = () => {
     console.log(`Navegando a: ${itemName}`);
   };
 
- const handleLogout = () => {
-  console.log('Cerrando sesión...');
-  setIsAnimating(true);  // Iniciar animación
-  setAnimatingItem('Cerrar sesión');  // Asignar nombre al item de animación
+ 
 
-  // Animación de 2 segundos antes de redirigir
-  setTimeout(() => {
-    navigate('/');  // Redirigir al login
-  }, 1000);  // El retraso de 2 segundos coincide con la animación
-};
+  const handleLogout = async () => {
+    console.log('Cerrando sesión...');
+    setIsAnimating(true);
+    setAnimatingItem('Cerrar sesión');
+
+    try {
+      await logOut(); // ✅ Llamada real al logout del contexto
+      navigate("/");  // ✅ Redirige al login
+    } catch (error) {
+      console.error("Error en cierre de sesión:", error);
+    } finally {
+      setIsAnimating(false);
+      setAnimatingItem('');
+    }
+  };
+
 
   
-
   return (
     <div className="w-64 h-screen text-white flex flex-col" style={{ backgroundColor: '#34353A' }}>
       <style >{`
@@ -371,4 +382,4 @@ const Nav = () => {
   );
 };
 
-export default Nav;
+export default SidebarNav;

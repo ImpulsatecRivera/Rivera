@@ -3,17 +3,26 @@ import Input from "../components/Login/Input";
 import Button from "../components/Login/Button";
 import SideImage from "../components/Login/SideImage";
 import Title from "../components/RecoverPassword/Title";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import useLogin from "../components/Login/hooks/useLogin";
-
+import { useAuth } from "../Context/AuthContext"; // 🔁 Importamos useAuth
 
 const Login = () => {
-  const { handleLogin, loading } = useLogin(); 
+  const { handleLogin, loading } = useLogin();
+  const { isLoggedIn } = useAuth(); // 🔁 Leemos si ya está logueado
+  const navigate = useNavigate();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+
+  // 🔁 Redirección si ya está logueado
+  useEffect(() => {
+    if (isLoggedIn) {
+      navigate("/dashboard"); // Cambia esto si tu ruta es diferente
+    }
+  }, [isLoggedIn, navigate]);
 
   const onSubmit = (e) => {
     e.preventDefault();

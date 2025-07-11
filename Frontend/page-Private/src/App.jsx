@@ -20,6 +20,7 @@ import ProviderManagementInterface from "./pages/Provedores/Prooveedores";
 import AddProveedorForm from "./pages/Provedores/AgregarProovedor";
 import TruckManagement from "./pages/Camiones/EditarCamion";
 import CotizacionesComponent from "./pages/cotizaciones/Cotizaciones";
+import CotizacionForm from "./pages/cotizaciones/EditarCotizacion";
 
 function App() {
   const location = useLocation();
@@ -35,7 +36,8 @@ function App() {
     "/motoristas/agregarMotorista",
     "/Camiones/aggCamion",
     "/proveedores/agregarProveedor",
-    "/Camiones/editarCamion"
+    "/Camiones/editarCamion",
+    "/cotizaciones/CotizacionForm"
   ];
 
   // Función para verificar si debe mostrar el menú
@@ -93,6 +95,7 @@ function App() {
 
 
           <Route path="/cotizaciones" element={<PrivateRoute><CotizacionesComponent /></PrivateRoute>} />
+          <Route path="/cotizaciones/CotizacionForm" element={<PrivateRoute><CotizacionForm/></PrivateRoute>} />
           
           {/* Ruta catch-all para páginas no encontradas */}
 
