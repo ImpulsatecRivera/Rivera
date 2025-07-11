@@ -470,10 +470,21 @@ const TravelDashboard = () => {
                 {/* Scheduled Trips */}
                 <div className="flex-1 overflow-auto">
 
+
                   <h3 className="text-lg font-semibold text-gray-900 mb-6">Viajes programados de este día</h3>
                   
 
               <h3 className="text-lg font-semibold text-gray-900 mb-6">Viajes programados de este día:</h3>
+
+
+                  <h3 className="text-lg font-semibold text-gray-900 mb-6">Viajes programados de este día</h3>
+                  
+
+                  <h3 className="text-lg font-semibold text-gray-900 mb-6">Viajes programados de este día:</h3>
+
+
+                  <h3 className="text-lg font-semibold text-gray-900 mb-6">Viajes programados de este día</h3>
+
 
                   <div className="space-y-3 mb-6">
                     {scheduledTrips.map((trip, index) => (
