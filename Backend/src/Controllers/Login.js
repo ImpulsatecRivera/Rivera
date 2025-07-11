@@ -3,7 +3,7 @@ import bcryptjs from "bcryptjs";
 import { config } from "../config.js";
 import EmpleadoModel from "../Models/Empleados.js";
 
-const LoginController = {};
+const LoginController = {}; // Asegúrate de declarar esto al inicio
 
 LoginController.Login = async (req, res) => {
   const { email, password } = req.body;
@@ -49,19 +49,69 @@ LoginController.Login = async (req, res) => {
           return res.status(500).json({ message: "Error al generar token" });
         }
 
-        res.cookie("authToken", token, { httpOnly: true });
+        res.cookie("authToken", token, {
+          httpOnly: true,
+          sameSite: "Lax",
+          secure: false, // cámbialo a true si usas HTTPS en producción
+        });
+
         res.status(200).json({
           message: "Inicio de sesión completado",
           userType,
           user: {
             id: userFound._id,
             email: userFound.email || email,
-          }
+          },
         });
       }
     );
   } catch (error) {
     console.error("Error en login:", error);
+    res.status(500).json({ message: "Error interno del servidor" });
+  }
+};
+
+LoginController.checkAuth = async (req, res) => {
+  try {
+    const token = req.cookies.authToken;
+
+    if (!token) {
+      return res.status(401).json({ message: "No autorizado" });
+    }
+
+    jwt.verify(token, config.JWT.secret, async (err, decoded) => {
+      if (err) {
+        return res.status(401).json({ message: "Token inválido" });
+      }
+
+      const { id, userType } = decoded;
+
+      if (userType === "Administrador") {
+        return res.status(200).json({
+          user: {
+            id,
+            email: config.ADMIN.emailAdmin,
+            userType: "Administrador",
+          },
+        });
+      }
+
+      const userFound = await EmpleadoModel.findById(id).select("email");
+
+      if (!userFound) {
+        return res.status(404).json({ message: "Empleado no encontrado" });
+      }
+
+      return res.status(200).json({
+        user: {
+          id: userFound._id,
+          email: userFound.email,
+          userType: "Empleado",
+        },
+      });
+    });
+  } catch (error) {
+    console.error("Error en checkAuth:", error);
     res.status(500).json({ message: "Error interno del servidor" });
   }
 };
