@@ -522,7 +522,7 @@ const AddEmployeeForm = () => {
           <form onSubmit={handleSubmit} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 lg:gap-6">
             {/* Nombre */}
             <div className="flex flex-col">
-              <label htmlFor="name" className="mb-1 sm:mb-2 font-semibold text-gray-700 text-sm">Nombre *</label>
+              <label htmlFor="name" className="mb-1 sm:mb-2 font-semibold text-gray-700 text-sm">Nombre </label>
               <input
                 id="name"
                 name="name"
@@ -539,7 +539,7 @@ const AddEmployeeForm = () => {
 
             {/* Apellido */}
             <div className="flex flex-col">
-              <label htmlFor="lastName" className="mb-1 sm:mb-2 font-semibold text-gray-700 text-sm">Apellido *</label>
+              <label htmlFor="lastName" className="mb-1 sm:mb-2 font-semibold text-gray-700 text-sm">Apellido </label>
               <input
                 id="lastName"
                 name="lastName"
@@ -569,7 +569,7 @@ const AddEmployeeForm = () => {
 
             {/* DUI */}
             <div className="flex flex-col">
-              <label htmlFor="dui" className="mb-1 sm:mb-2 font-semibold text-gray-700 text-sm">DUI *</label>
+              <label htmlFor="dui" className="mb-1 sm:mb-2 font-semibold text-gray-700 text-sm">DUI </label>
               <input
                 id="dui"
                 name="dui"
@@ -587,7 +587,7 @@ const AddEmployeeForm = () => {
 
             {/* Fecha de Nacimiento */}
             <div className="relative flex flex-col">
-              <label htmlFor="birthDate" className="mb-1 sm:mb-2 font-semibold text-gray-700 text-sm">Fecha de Nacimiento *</label>
+              <label htmlFor="birthDate" className="mb-1 sm:mb-2 font-semibold text-gray-700 text-sm">Fecha de Nacimiento </label>
               <input
                 id="birthDate"
                 name="birthDate"
@@ -717,7 +717,7 @@ const AddEmployeeForm = () => {
 
             {/* Contraseña */}
             <div className="flex flex-col sm:col-span-2 lg:col-span-1">
-              <label htmlFor="password" className="mb-1 sm:mb-2 font-semibold text-gray-700 text-sm">Contraseña *</label>
+              <label htmlFor="password" className="mb-1 sm:mb-2 font-semibold text-gray-700 text-sm">Contraseña </label>
               <input
                 id="password"
                 name="password"
@@ -734,7 +734,7 @@ const AddEmployeeForm = () => {
 
             {/* Teléfono */}
             <div className="flex flex-col">
-              <label htmlFor="phone" className="mb-1 sm:mb-2 font-semibold text-gray-700 text-sm">Teléfono *</label>
+              <label htmlFor="phone" className="mb-1 sm:mb-2 font-semibold text-gray-700 text-sm">Teléfono </label>
               <input
                 id="phone"
                 name="phone"
@@ -752,7 +752,7 @@ const AddEmployeeForm = () => {
 
             {/* Dirección */}
             <div className="flex flex-col sm:col-span-2 lg:col-span-2">
-              <label htmlFor="address" className="mb-1 sm:mb-2 font-semibold text-gray-700 text-sm">Dirección *</label>
+              <label htmlFor="address" className="mb-1 sm:mb-2 font-semibold text-gray-700 text-sm">Dirección </label>
               <textarea
                 id="address"
                 name="address"
