@@ -1,8 +1,204 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Phone, Mail, User, ChevronDown, ArrowLeft, ArrowRight, Plus, MoreHorizontal, Eye, EyeOff } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
-import axios from "axios";
-import useMotoristaManagement from '../../components/Motorista/hooks/useDataMotorista'; // Ajusta la ruta según tu estructura
+
+// Mock data y hook simulado para que funcione el ejemplo
+const mockMotoristas = [
+  {
+    _id: '1',
+    name: 'Yanira',
+    lastName: 'Rivera',
+    email: 'yanira.rivera@rivera.com',
+    id: '12345678-9',
+    birthDate: '2025-02-10',
+    phone: '5678',
+    address: 'Santa Elena',
+    circulationCard: 'ABC123-DEF'
+  },
+  {
+    _id: '2',
+    name: 'Kendrick',
+    lastName: 'Lopez',
+    email: 'kendrick.lopez1@rivera.com',
+    id: '12349876-5',
+    birthDate: '2025-06-16',
+    phone: '7859-6723',
+    address: 'La Union',
+    circulationCard: 'DEF456-GHI'
+  },
+  {
+    _id: '3',
+    name: 'brayan',
+    lastName: 'granados',
+    email: 'brayan.granados@rivera.com',
+    id: '18273016-9',
+    birthDate: '2004-05-12',
+    phone: '1234-5678',
+    address: 'calle ruben dario',
+    circulationCard: 'GHI789-JKL'
+  },
+  {
+    _id: '4',
+    name: 'mrf',
+    lastName: 'sdd',
+    email: 'mrf.sdd@empresa.com',
+    id: '07659231-8',
+    birthDate: '2007-06-24',
+    phone: '41',
+    address: 'Delgadito',
+    circulationCard: 'JKL012-MNO'
+  },
+  {
+    _id: '5',
+    name: 'Brayan',
+    lastName: 'Miranda',
+    email: 'brayan.miranda@rivera.com',
+    id: '19872912-7',
+    birthDate: '2025-07-10',
+    phone: '5217-8991',
+    address: 'Hola',
+    circulationCard: 'MNO345-PQR'
+  },
+  {
+    _id: '6',
+    name: 'wili',
+    lastName: 'Miranda',
+    email: 'wili.miranda@rivera.com',
+    id: '22032132-0',
+    birthDate: '2007-07-19',
+    phone: '5217-8991',
+    address: 'Hola',
+    circulationCard: 'PQR678-STU'
+  }
+];
+
+// Hook simulado
+const useMotoristaManagement = () => {
+  const [motoristas, setMotoristas] = useState(mockMotoristas);
+  const [selectedMotorista, setSelectedMotorista] = useState(null);
+  const [showDetailView, setShowDetailView] = useState(false);
+  const [loading] = useState(false);
+  const [error] = useState(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [sortBy, setSortBy] = useState('Newest');
+  const [showAlert, setShowAlert] = useState(false);
+  const [showConfirmDelete, setShowConfirmDelete] = useState(false);
+  const [showSuccessAlert, setShowSuccessAlert] = useState(false);
+  const [showEditAlert, setShowEditAlert] = useState(false);
+  const [successType, setSuccessType] = useState('');
+
+  const filterMotoristas = motoristas.filter(motorista =>
+    motorista.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    motorista.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    motorista.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    motorista.id.includes(searchTerm)
+  );
+
+  const handleContinue = () => {
+    // Esta función debe navegar al formulario de agregar motorista en tu repositorio
+    // Reemplaza esto con tu lógica de navegación (React Router, Next.js Router, etc.)
+    console.log('Navegando al formulario de agregar motorista...');
+    // Ejemplo con React Router:
+    // navigate('/agregar-motorista');
+    // Ejemplo con Next.js:
+    // router.push('/agregar-motorista');
+    // Ejemplo con redirección simple:
+    // window.location.href = '/agregar-motorista';
+  };
+
+  const handleOptionsClick = () => {
+    setShowAlert(true);
+  };
+
+  const handleEdit = () => {
+    setShowAlert(false);
+    setShowEditAlert(true);
+  };
+
+  const handleDelete = () => {
+    setShowAlert(false);
+    setShowConfirmDelete(true);
+  };
+
+  const confirmDelete = () => {
+    setShowConfirmDelete(false);
+    setSuccessType('delete');
+    setShowSuccessAlert(true);
+    setSelectedMotorista(null);
+    setShowDetailView(false);
+  };
+
+  const cancelDelete = () => {
+    setShowConfirmDelete(false);
+  };
+
+  const handleSaveEdit = (formData) => {
+    setShowEditAlert(false);
+    setSuccessType('edit');
+    setShowSuccessAlert(true);
+  };
+
+  const closeAlert = () => {
+    setShowAlert(false);
+  };
+
+  const closeSuccessAlert = () => {
+    setShowSuccessAlert(false);
+  };
+
+  const closeEditAlert = () => {
+    setShowEditAlert(false);
+  };
+
+  const selectMotorista = (motorista) => {
+    setSelectedMotorista(motorista);
+    setShowDetailView(true);
+  };
+
+  const closeDetailView = () => {
+    setShowDetailView(false);
+    setSelectedMotorista(null);
+  };
+
+  const handleRefresh = () => {
+    console.log('Refresh data');
+  };
+
+  const isLicenseValid = (motorista) => {
+    return Math.random() > 0.5; // Simulación aleatoria
+  };
+
+  return {
+    motoristas,
+    selectedMotorista,
+    showDetailView,
+    loading,
+    error,
+    searchTerm,
+    sortBy,
+    setSearchTerm,
+    setSortBy,
+    showAlert,
+    showConfirmDelete,
+    showSuccessAlert,
+    showEditAlert,
+    successType,
+    filterMotoristas,
+    handleContinue,
+    handleOptionsClick,
+    handleEdit,
+    handleDelete,
+    confirmDelete,
+    cancelDelete,
+    handleSaveEdit,
+    closeAlert,
+    closeSuccessAlert,
+    closeEditAlert,
+    selectMotorista,
+    closeDetailView,
+    handleRefresh,
+    isLicenseValid
+  };
+};
 
 // Sweet Alert Component
 const SweetAlert = ({ isOpen, onClose, onEdit, onDelete }) => {
@@ -335,6 +531,8 @@ const SuccessAlert = ({ isOpen, onClose, type }) => {
   );
 };
 
+// Add Motorista Alert Component - ELIMINADO - Usar formulario del repositorio
+
 // Edit Motorista Alert Component
 const EditMotoristaAlert = ({ isOpen, onClose, onSave, motorista }) => {
   const [formData, setFormData] = useState({
@@ -648,54 +846,51 @@ const MotoristaManagementInterface = () => {
   } = useMotoristaManagement();
 
   return (
-    <div className="flex h-screen text-white" style={{backgroundColor: '#34353A'}}>
+    <div className="min-h-screen bg-gray-50">
       {/* Main Content */}
-      <div className="flex-1 flex">
+      <div className="flex h-screen">
         {/* Motorista List */}
-        <div className={`${showDetailView ? 'flex-1' : 'w-full'} bg-white text-gray-900 ${showDetailView ? 'rounded-l-3xl' : 'rounded-3xl'} ml-2 sm:ml-4 lg:ml-6 xl:ml-8 my-2 sm:my-4 lg:my-6 xl:my-8 flex flex-col`}>
+        <div className={`${showDetailView ? 'flex-1' : 'w-full'} bg-white text-gray-900 flex flex-col`}>
           {/* Header - Fixed */}
-          <div className="p-4 sm:p-6 md:p-8 lg:p-10 xl:p-12 2xl:p-16 pb-0 flex-shrink-0">
-            <div className="flex items-center justify-between mb-4 sm:mb-6 lg:mb-8 xl:mb-10">
-              <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl 2xl:text-6xl font-bold text-gray-900">Motoristas</h1>
-            </div>
-            
-            <div className="mb-4 sm:mb-6 lg:mb-8 xl:mb-10">
-              <h2 className="text-base sm:text-lg md:text-xl lg:text-2xl xl:text-3xl 2xl:text-4xl font-semibold mb-2 sm:mb-4 lg:mb-6">Listado de motoristas</h2>
-              <div className="text-teal-500 text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl mb-2 sm:mb-4 lg:mb-6">Motoristas registrados</div>
+          <div className="p-6 border-b border-gray-200 flex-shrink-0">
+            <div className="mb-6">
+              <h1 className="text-2xl font-bold text-gray-900 mb-2">Empleados</h1>
+              <h2 className="text-lg font-medium text-gray-800 mb-1">Listado de empleados</h2>
+              <div className="text-teal-500 text-sm mb-6">Empleados registrados</div>
               
-              <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between mb-4 sm:mb-6 lg:mb-8 xl:mb-10 space-y-4 lg:space-y-0 lg:space-x-6">
-                <div className="relative flex-1 w-full lg:max-w-md xl:max-w-lg 2xl:max-w-xl">
-                  <Search className="absolute left-2 sm:left-3 md:left-4 lg:left-5 top-1/2 transform -translate-y-1/2 w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 lg:w-7 lg:h-7 xl:w-8 xl:h-8 text-gray-400" />
+              <div className="flex items-center justify-between mb-6">
+                <div className="relative flex-1 max-w-md">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
                   <input 
                     type="text" 
                     placeholder="Buscar" 
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pl-8 sm:pl-10 md:pl-12 lg:pl-14 xl:pl-16 pr-3 sm:pr-4 md:pr-5 lg:pr-6 xl:pr-7 py-2 sm:py-3 md:py-4 lg:py-5 xl:py-6 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 text-sm sm:text-base md:text-lg lg:text-xl xl:text-2xl"
+                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 text-sm"
                   />
                 </div>
-                <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-2 sm:space-y-0 sm:space-x-3 lg:space-x-4 xl:space-x-6 w-full lg:w-auto">
+                <div className="flex items-center space-x-4 ml-6">
                   <button
                     onClick={handleRefresh}
-                    className="w-full sm:w-auto px-2 sm:px-3 md:px-4 lg:px-5 xl:px-6 py-2 sm:py-3 md:py-4 lg:py-5 text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                    className="px-4 py-2 text-sm text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
                     disabled={loading}
                   >
                     {loading ? 'Cargando...' : 'Actualizar'}
                   </button>
-                  <div className="text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl text-gray-500 flex flex-col sm:flex-row items-start sm:items-center space-y-2 sm:space-y-0 sm:space-x-2">
+                  <div className="text-sm text-gray-500 flex items-center space-x-2">
                     <span>Sort by: <span className="text-gray-700 font-medium">{sortBy}</span></span>
                     <div className="relative">
                       <select
                         value={sortBy}
                         onChange={(e) => setSortBy(e.target.value)}
-                        className="appearance-none bg-white border border-gray-300 rounded-lg px-2 sm:px-3 md:px-4 lg:px-5 xl:px-6 py-1 sm:py-2 md:py-3 lg:py-4 pr-6 sm:pr-8 md:pr-10 lg:pr-12 text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl focus:outline-none focus:border-teal-500"
+                        className="appearance-none bg-white border border-gray-300 rounded-lg px-3 py-1 pr-8 text-sm focus:outline-none focus:border-teal-500"
                       >
                         <option value="Newest">Newest</option>
                         <option value="Oldest">Oldest</option>
                         <option value="Name">Name</option>
                         <option value="Email">Email</option>
                       </select>
-                      <ChevronDown className="absolute right-1 sm:right-2 md:right-3 lg:right-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5 lg:w-6 lg:h-6 pointer-events-none" />
+                      <ChevronDown className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4 pointer-events-none" />
                     </div>
                   </div>
                 </div>
@@ -703,7 +898,7 @@ const MotoristaManagementInterface = () => {
             </div>
 
             {/* Table Header - Fixed */}
-            <div className={`grid ${showDetailView ? 'grid-cols-4' : 'grid-cols-4 md:grid-cols-7'} gap-2 sm:gap-4 md:gap-6 lg:gap-8 xl:gap-10 pb-2 sm:pb-3 lg:pb-4 border-b border-gray-200 text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl font-medium text-gray-500`}>
+            <div className={`grid ${showDetailView ? 'grid-cols-4' : 'grid-cols-7'} gap-4 pb-3 border-b border-gray-200 text-sm font-medium text-gray-500`}>
               <div>Nombres</div>
               <div>Email</div>
               <div>DUI</div>
@@ -719,31 +914,31 @@ const MotoristaManagementInterface = () => {
           </div>
 
           {/* Scrollable Content */}
-          <div className="flex-1 overflow-y-auto px-4 sm:px-6 md:px-8 lg:px-10 xl:px-12 2xl:px-16">
-            <div className="space-y-1 sm:space-y-2 py-2 sm:py-4 lg:py-6">
+          <div className="flex-1 overflow-y-auto px-6">
+            <div className="space-y-1 py-4">
               {loading ? (
-                <div className="text-center py-6 sm:py-8 lg:py-10">
-                  <p className="text-gray-500 text-sm sm:text-base md:text-lg lg:text-xl">Cargando motoristas...</p>
+                <div className="text-center py-8">
+                  <p className="text-gray-500 text-sm">Cargando motoristas...</p>
                 </div>
               ) : error ? (
-                <div className="text-center py-6 sm:py-8 lg:py-10">
-                  <p className="text-red-500 mb-2 sm:mb-4 text-sm sm:text-base md:text-lg lg:text-xl">{error}</p>
+                <div className="text-center py-8">
+                  <p className="text-red-500 mb-4 text-sm">{error}</p>
                   <button
                     onClick={handleRefresh}
-                    className="px-3 sm:px-4 md:px-5 lg:px-6 py-2 sm:py-3 md:py-4 bg-teal-500 text-white rounded-lg hover:bg-teal-600 transition-colors text-sm sm:text-base md:text-lg lg:text-xl"
+                    className="px-4 py-2 bg-teal-500 text-white rounded-lg hover:bg-teal-600 transition-colors text-sm"
                   >
                     Intentar de nuevo
                   </button>
                 </div>
               ) : filterMotoristas.length === 0 ? (
-                <div className="text-center py-6 sm:py-8 lg:py-10">
-                  <p className="text-gray-500 text-sm sm:text-base md:text-lg lg:text-xl">
+                <div className="text-center py-8">
+                  <p className="text-gray-500 text-sm">
                     {searchTerm ? 'No se encontraron resultados para tu búsqueda.' : 'No hay motoristas registrados.'}
                   </p>
                   {!searchTerm && (
                     <button
                       onClick={handleContinue}
-                      className="mt-2 sm:mt-4 px-3 sm:px-4 md:px-5 lg:px-6 py-2 sm:py-3 md:py-4 bg-teal-500 text-white rounded-lg hover:bg-teal-600 transition-colors text-sm sm:text-base md:text-lg lg:text-xl"
+                      className="mt-4 px-4 py-2 bg-teal-500 text-white rounded-lg hover:bg-teal-600 transition-colors text-sm"
                     >
                       Agregar primer motorista
                     </button>
@@ -753,7 +948,7 @@ const MotoristaManagementInterface = () => {
                 filterMotoristas.map((motorista, index) => (
                   <div
                     key={motorista._id || motorista.id || index}
-                    className={`grid ${showDetailView ? 'grid-cols-4' : 'grid-cols-4 md:grid-cols-7'} gap-2 sm:gap-4 md:gap-6 lg:gap-8 xl:gap-10 py-2 sm:py-3 lg:py-4 px-1 sm:px-2 lg:px-3 rounded-lg cursor-pointer transition-colors text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl ${
+                    className={`grid ${showDetailView ? 'grid-cols-4' : 'grid-cols-7'} gap-4 py-3 px-2 rounded-lg cursor-pointer transition-colors text-sm ${
                      selectedMotorista && (selectedMotorista._id === motorista._id || selectedMotorista.id === motorista.id) ? 'bg-teal-100' : 'hover:bg-gray-50'
                    }`}
                    onClick={() => selectMotorista(motorista)}
@@ -770,11 +965,11 @@ const MotoristaManagementInterface = () => {
                        <div className="text-gray-600 truncate hidden md:block">{motorista.address || 'No disponible'}</div>
                        <div className="truncate hidden md:block">
                          {isLicenseValid(motorista) ? (
-                           <span className="inline-flex items-center px-1 sm:px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                           <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
                              Vigente
                            </span>
                          ) : (
-                           <span className="inline-flex items-center px-1 sm:px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                           <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
                              Vencido
                            </span>
                          )}
@@ -788,34 +983,37 @@ const MotoristaManagementInterface = () => {
          </div>
 
          {/* Footer - Fixed */}
-         <div className="p-4 sm:p-6 md:p-8 lg:p-10 xl:p-12 2xl:p-16 pt-2 sm:pt-4 lg:pt-6 flex-shrink-0 border-t border-gray-100">
-           <div className="flex flex-col lg:flex-row items-center justify-between space-y-4 lg:space-y-0">
-             <div className="text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl text-gray-500">
-               Showing data 1 to {Math.min(filterMotoristas.length, 8)} of {filterMotoristas.length} entries
+         <div className="p-6 pt-4 flex-shrink-0 border-t border-gray-100">
+           <div className="flex items-center justify-between">
+             <div className="text-sm text-gray-500">
+               Showing data 1 to {Math.min(filterMotoristas.length, 8)} of 256K entries
              </div>
-             <div className="flex items-center space-x-1 sm:space-x-2">
-               <button className="p-1 sm:p-2 lg:p-3 hover:bg-gray-100 rounded-lg transition-colors">
-                 <ArrowLeft className="w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5 lg:w-6 lg:h-6 text-gray-500" />
+             <div className="flex items-center space-x-1">
+               <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                 <ArrowLeft className="w-4 h-4 text-gray-500" />
                </button>
                <div className="flex space-x-1">
-                 <button className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 lg:w-12 lg:h-12 bg-teal-500 text-white rounded-lg text-xs sm:text-sm md:text-base lg:text-lg font-medium">1</button>
-                 <button className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 lg:w-12 lg:h-12 hover:bg-gray-100 rounded-lg text-xs sm:text-sm md:text-base lg:text-lg text-gray-700">2</button>
-                 <button className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 lg:w-12 lg:h-12 hover:bg-gray-100 rounded-lg text-xs sm:text-sm md:text-base lg:text-lg text-gray-700">3</button>
-                 <button className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 lg:w-12 lg:h-12 hover:bg-gray-100 rounded-lg text-xs sm:text-sm md:text-base lg:text-lg text-gray-700">4</button>
-                 <span className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 lg:w-12 lg:h-12 flex items-center justify-center text-gray-400 text-xs sm:text-sm md:text-base lg:text-lg">...</span>
-                 <button className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 lg:w-12 lg:h-12 hover:bg-gray-100 rounded-lg text-xs sm:text-sm md:text-base lg:text-lg text-gray-700">40</button>
+                 <button className="w-8 h-8 bg-teal-500 text-white rounded-lg text-sm font-medium">1</button>
+                 <button className="w-8 h-8 hover:bg-gray-100 rounded-lg text-sm text-gray-700">2</button>
+                 <button className="w-8 h-8 hover:bg-gray-100 rounded-lg text-sm text-gray-700">3</button>
+                 <button className="w-8 h-8 hover:bg-gray-100 rounded-lg text-sm text-gray-700">4</button>
+                 <span className="w-8 h-8 flex items-center justify-center text-gray-400 text-sm">...</span>
+                 <button className="w-8 h-8 hover:bg-gray-100 rounded-lg text-sm text-gray-700">40</button>
                </div>
-               <button className="p-1 sm:p-2 lg:p-3 hover:bg-gray-100 rounded-lg transition-colors">
-                 <ArrowRight className="w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5 lg:w-6 lg:h-6 text-gray-500" />
+               <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                 <ArrowRight className="w-4 h-4 text-gray-500" />
                </button>
              </div>
            </div>
            
            {/* Add Motorista Button */}
-           <div className="mt-3 sm:mt-4 lg:mt-6">
-             <button onClick={handleContinue} className="flex items-center space-x-2 text-gray-600 hover:text-gray-800 transition-colors">
-               <Plus className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 lg:w-7 lg:h-7 xl:w-8 xl:h-8" />
-               <span className="font-medium text-sm sm:text-base md:text-lg lg:text-xl xl:text-2xl">Agregar motorista</span>
+           <div className="mt-4">
+             <button 
+               onClick={handleContinue} 
+               className="flex items-center space-x-2 text-gray-600 hover:text-gray-800 transition-colors hover:bg-gray-50 px-3 py-2 rounded-lg"
+             >
+               <Plus className="w-4 h-4" />
+               <span className="font-medium text-sm">Agregar empleado</span>
              </button>
            </div>
          </div>
@@ -823,30 +1021,30 @@ const MotoristaManagementInterface = () => {
 
        {/* Motorista Info Panel */}
        {showDetailView && selectedMotorista && (
-         <div className="w-64 sm:w-72 md:w-80 lg:w-96 xl:w-[400px] 2xl:w-[500px] bg-white text-gray-900 rounded-r-3xl mr-2 sm:mr-4 lg:mr-6 xl:mr-8 my-2 sm:my-4 lg:my-6 xl:my-8 p-4 sm:p-6 lg:p-8 xl:p-10 relative">
-           <div className="flex items-center justify-between mb-4 sm:mb-6 lg:mb-8">
+         <div className="w-80 bg-white text-gray-900 p-6 border-l border-gray-200">
+           <div className="flex items-center justify-between mb-6">
              <div className="flex items-center">
                <button
-                 className="p-1 sm:p-2 lg:p-3 hover:bg-gray-100 rounded-full mr-2 sm:mr-3"
+                 className="p-2 hover:bg-gray-100 rounded-full mr-3"
                  onClick={closeDetailView}
                >
-                 <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 lg:w-7 lg:h-7 text-gray-600" />
+                 <ArrowLeft className="w-5 h-5 text-gray-600" />
                </button>
-               <h2 className="text-base sm:text-lg md:text-xl lg:text-2xl xl:text-3xl font-semibold">Información del motorista</h2>
+               <h2 className="text-lg font-semibold">Información del motorista</h2>
              </div>
              
              <div className="relative">
                <button
                  onClick={handleOptionsClick}
-                 className="p-1 sm:p-2 lg:p-3 hover:bg-gray-100 rounded-full transition-colors"
+                 className="p-2 hover:bg-gray-100 rounded-full transition-colors"
                >
-                 <MoreHorizontal className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 lg:w-7 lg:h-7 text-gray-600" />
+                 <MoreHorizontal className="w-5 h-5 text-gray-600" />
                </button>
              </div>
            </div>
 
-           <div className="text-center mb-6 sm:mb-8 lg:mb-10">
-             <div className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 lg:w-28 lg:h-28 xl:w-32 xl:h-32 bg-orange-400 rounded-full mx-auto mb-3 sm:mb-4 lg:mb-6 flex items-center justify-center overflow-hidden">
+           <div className="text-center mb-8">
+             <div className="w-20 h-20 bg-orange-400 rounded-full mx-auto mb-4 flex items-center justify-center overflow-hidden">
                {selectedMotorista.img ? (
                  <img
                    src={selectedMotorista.img}
@@ -859,76 +1057,62 @@ const MotoristaManagementInterface = () => {
                  />
                ) : null}
                <div 
-                 className={`w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 lg:w-20 lg:h-20 xl:w-24 xl:h-24 bg-orange-300 rounded-full flex items-center justify-center ${selectedMotorista.img ? 'hidden' : 'flex'}`}
+                 className={`w-16 h-16 bg-orange-300 rounded-full flex items-center justify-center ${selectedMotorista.img ? 'hidden' : 'flex'}`}
                  style={{ display: selectedMotorista.img ? 'none' : 'flex' }}
                >
-                 <User className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 lg:w-12 lg:h-12 xl:w-14 xl:h-14 text-white" />
+                 <User className="w-8 h-8 text-white" />
                </div>
              </div>
-             <h3 className="font-semibold text-base sm:text-lg md:text-xl lg:text-2xl xl:text-3xl mb-1 sm:mb-2">{selectedMotorista.name} {selectedMotorista.lastName}</h3>
-             <div className="text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl text-gray-500 mb-3 sm:mb-4 lg:mb-6">Motorista</div>
-             <div className="flex justify-center space-x-2 sm:space-x-3 lg:space-x-4">
-               <button className="p-1 sm:p-2 lg:p-3 bg-gray-100 rounded-full hover:bg-gray-200">
-                 <Phone className="w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5 lg:w-6 lg:h-6 text-gray-600" />
+             <h3 className="font-semibold text-lg mb-1">{selectedMotorista.name} {selectedMotorista.lastName}</h3>
+             <div className="text-sm text-gray-500 mb-4">Motorista</div>
+             <div className="flex justify-center space-x-3">
+               <button className="p-2 bg-gray-100 rounded-full hover:bg-gray-200">
+                 <Phone className="w-4 h-4 text-gray-600" />
                </button>
-               <button className="p-1 sm:p-2 lg:p-3 bg-gray-100 rounded-full hover:bg-gray-200">
-                 <Mail className="w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5 lg:w-6 lg:h-6 text-gray-600" />
+               <button className="p-2 bg-gray-100 rounded-full hover:bg-gray-200">
+                 <Mail className="w-4 h-4 text-gray-600" />
                </button>
              </div>
            </div>
 
-           <div className="space-y-4 sm:space-y-6 lg:space-y-8">
-             <div className="flex items-center space-x-2 sm:space-x-3">
-               <User className="w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5 lg:w-6 lg:h-6 text-gray-400" />
-               <span className="font-medium text-sm sm:text-base md:text-lg lg:text-xl xl:text-2xl">Información Personal</span>
+           <div className="space-y-6">
+             <div className="flex items-center space-x-3">
+               <User className="w-4 h-4 text-gray-400" />
+               <span className="font-medium text-base">Información Personal</span>
              </div>
 
-             <div className="grid grid-cols-1 gap-3 sm:gap-4 lg:gap-6">
+             <div className="grid grid-cols-1 gap-4">
                <div>
-                 <div className="text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl text-gray-500 mb-1">Correo electrónico</div>
-                 <div className="text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl text-gray-400 break-words">{selectedMotorista.email}</div>
+                 <div className="text-sm text-gray-500 mb-1">Correo electrónico</div>
+                 <div className="text-sm text-gray-400 break-words">{selectedMotorista.email}</div>
                </div>
                <div>
-                 <div className="text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl text-gray-500 mb-1">DUI</div>
-                 <div className="text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl text-gray-400">{selectedMotorista.id}</div>
+                 <div className="text-sm text-gray-500 mb-1">DUI</div>
+                 <div className="text-sm text-gray-400">{selectedMotorista.id}</div>
                </div>
              </div>
 
-             <div className="grid grid-cols-1 gap-3 sm:gap-4 lg:gap-6">
+             <div className="grid grid-cols-1 gap-4">
                <div>
-                 <div className="text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl text-gray-500 mb-1">Fecha de nacimiento</div>
-                 <div className="text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl text-gray-400">
+                 <div className="text-sm text-gray-500 mb-1">Fecha de nacimiento</div>
+                 <div className="text-sm text-gray-400">
                    {selectedMotorista.birthDate ? new Date(selectedMotorista.birthDate).toLocaleDateString() : 'No disponible'}
                  </div>
                </div>
                <div>
-                 <div className="text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl text-gray-500 mb-1">Teléfono</div>
-                 <div className="text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl text-gray-400">{selectedMotorista.phone ? selectedMotorista.phone.toString() : 'No disponible'}</div>
+                 <div className="text-sm text-gray-500 mb-1">Teléfono</div>
+                 <div className="text-sm text-gray-400">{selectedMotorista.phone ? selectedMotorista.phone.toString() : 'No disponible'}</div>
                </div>
              </div>
 
-             <div className="grid grid-cols-1 gap-3 sm:gap-4 lg:gap-6">
+             <div className="grid grid-cols-1 gap-4">
                <div>
-                 <div className="text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl text-gray-500 mb-1">Dirección</div>
-                 <div className="text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl text-gray-400 break-words">{selectedMotorista.address || 'No disponible'}</div>
+                 <div className="text-sm text-gray-500 mb-1">Dirección</div>
+                 <div className="text-sm text-gray-400 break-words">{selectedMotorista.address || 'No disponible'}</div>
                </div>
                <div>
-                 <div className="text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl text-gray-500 mb-1">Tarjeta de Circulación</div>
-                 <div className="text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl text-gray-400">{selectedMotorista.circulationCard || 'No disponible'}</div>
-               </div>
-               <div>
-                 <div className="text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl text-gray-500 mb-1">Estado de Licencia</div>
-                 <div className="text-xs sm:text-sm md:text-base lg:text-lg">
-                   {isLicenseValid(selectedMotorista) ? (
-                     <span className="inline-flex items-center px-1 sm:px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                       Vigente
-                     </span>
-                   ) : (
-                     <span className="inline-flex items-center px-1 sm:px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                       Vencido
-                     </span>
-                   )}
-                 </div>
+                 <div className="text-sm text-gray-500 mb-1">Tarjeta de Circulación</div>
+                 <div className="text-sm text-gray-400">{selectedMotorista.circulationCard || 'No disponible'}</div>
                </div>
              </div>
            </div>
