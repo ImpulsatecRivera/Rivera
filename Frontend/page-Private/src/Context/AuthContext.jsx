@@ -45,8 +45,32 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const checkAuth = async () => {
+    try {
+      const res = await axios.get("http://localhost:4000/api/login/check-auth", {
+        withCredentials: true,
+      });
+
+      if (res.data?.user) {
+        setUser(res.data.user);
+        setIsLoggedIn(true);
+      } else {
+        setUser(null);
+        setIsLoggedIn(false);
+      }
+    } catch (err) {
+      if (err.response?.status !== 401) {
+        console.error("Error inesperado en checkAuth:", err);
+      }
+      setUser(null);
+      setIsLoggedIn(false);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    setLoading(false); // Solo quita el loading; no hay checkAuth aún
+    checkAuth();
   }, []);
 
   return (
