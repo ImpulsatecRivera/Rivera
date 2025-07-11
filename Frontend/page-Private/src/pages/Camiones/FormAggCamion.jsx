@@ -213,34 +213,34 @@ const FormAggCamion = ({ onNavigateBack, onSubmitSuccess }) => {
   };
 
   return (
-    <div className="min-h-screen bg-[#34353A] p-6">
-      <div className="max-w-full mx-auto px-4">
-        {/* Header */}
-        <div className="text-white mb-6">
-          <button 
-            onClick={handleBackToMenu}
-            className="flex items-center space-x-2 text-white hover:text-gray-300 transition-colors"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            <span className="text-sm">Volver al menú principal</span>
-          </button>
-        </div>
+    <div className="fixed inset-0 min-h-screen" style={{ backgroundColor: '#34353A' }}>
+      {/* Header */}
+      <div className="text-white px-8 py-4" style={{ backgroundColor: '#34353A' }}>
+        <button 
+          onClick={handleBackToMenu}
+          className="flex items-center space-x-2 text-white hover:text-gray-300 transition-colors"
+        >
+          <ArrowLeft className="w-5 h-5" />
+          <span className="text-sm">Volver al menú principal</span>
+        </button>
+      </div>
 
-        {/* Main Content */}
-        <div className="bg-white rounded-xl p-10 shadow-lg">
+      {/* Main Content */}
+      <div className="px-8 pb-8" style={{ height: 'calc(100vh - 80px)' }}>
+        <div className="bg-white rounded-2xl p-8 h-full max-w-none mx-0 overflow-y-auto">
           {/* Title Section */}
-          <div className="flex items-center justify-between mb-10">
-            <div className="flex items-center space-x-3">
+          <div className="flex items-center justify-between mb-8">
+            <div className="flex items-center space-x-4">
               <h1 className="text-2xl font-bold text-gray-900">Agregar Camión</h1>
-              <div className="w-12 h-12 rounded-full flex items-center justify-center" style={{ backgroundColor: '#34353A' }}>
-                <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24">
+              <div className="w-14 h-14 rounded-full flex items-center justify-center" style={{ backgroundColor: '#34353A' }}>
+                <svg className="w-7 h-7 text-white" fill="currentColor" viewBox="0 0 24 24">
                   <path d="M20 8h-3V4H3c-1.1 0-2 .9-2 2v11h2c0 1.66 1.34 3 3 3s3-1.34 3-3h6c0 1.66 1.34 3 3 3s3-1.34 3-3h2v-5l-3-4zM6 18c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1zm2.22-3c-.55-.61-1.33-1-2.22-1s-1.67.39-2.22 1H3V6h12v9H8.22zM18 18c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1zm-1-3c-.89 0-1.67.39-2.22 1H15V9h3.56l1.33 2H17v4z"/>
                 </svg>
               </div>
             </div>
             <button 
               onClick={() => document.querySelector('form').requestSubmit()}
-              className="text-white px-7 py-2.5 rounded-lg text-sm font-medium transition-colors hover:opacity-90"
+              className="text-white px-8 py-3 rounded-lg text-sm font-medium transition-colors hover:opacity-90"
               style={{ backgroundColor: '#375E27' }}
               disabled={isSubmitting}
             >
@@ -250,16 +250,16 @@ const FormAggCamion = ({ onNavigateBack, onSubmitSuccess }) => {
 
           {/* Form */}
           <form onSubmit={handleSubmit(handleCustomSubmit, handleFormErrors)}>
-            <div className="space-y-7">
-              {/* First Row */}
-              <div className="grid grid-cols-3 gap-7">
+            <div className="space-y-8 max-w-6xl">
+              {/* First Row - Basic Info */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Nombre</label>
                   <input
                     type="text"
                     {...register("name", { required: true })}
                     placeholder="Nombre del número del camión"
-                    className="w-full px-4 py-3.5 border border-gray-300 rounded-lg focus:outline-none text-sm text-gray-700 placeholder-gray-400"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none text-sm text-gray-700 placeholder-gray-400"
                     onFocus={handleFocus}
                     onBlur={handleBlur}
                   />
@@ -272,7 +272,7 @@ const FormAggCamion = ({ onNavigateBack, onSubmitSuccess }) => {
                     type="text"
                     {...register("ciculatioCard", { required: true })}
                     placeholder="Tarjeta de circulación del Camión"
-                    className="w-full px-4 py-3.5 border border-gray-300 rounded-lg focus:outline-none text-sm text-gray-700 placeholder-gray-400"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none text-sm text-gray-700 placeholder-gray-400"
                     onFocus={handleFocus}
                     onBlur={handleBlur}
                   />
@@ -285,7 +285,7 @@ const FormAggCamion = ({ onNavigateBack, onSubmitSuccess }) => {
                     type="text"
                     {...register("licensePlate", { required: true })}
                     placeholder="Número de placa"
-                    className="w-full px-4 py-3.5 border border-gray-300 rounded-lg focus:outline-none text-sm text-gray-700 placeholder-gray-400"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none text-sm text-gray-700 placeholder-gray-400"
                     onFocus={handleFocus}
                     onBlur={handleBlur}
                   />
@@ -294,14 +294,14 @@ const FormAggCamion = ({ onNavigateBack, onSubmitSuccess }) => {
               </div>
 
               {/* Second Row */}
-              <div className="grid grid-cols-3 gap-7">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Marca</label>
                   <input
                     type="text"
                     {...register("brand", { required: true })}
                     placeholder="Marca del camión"
-                    className="w-full px-4 py-3.5 border border-gray-300 rounded-lg focus:outline-none text-sm text-gray-700 placeholder-gray-400"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none text-sm text-gray-700 placeholder-gray-400"
                     onFocus={handleFocus}
                     onBlur={handleBlur}
                   />
@@ -314,7 +314,7 @@ const FormAggCamion = ({ onNavigateBack, onSubmitSuccess }) => {
                     type="text"
                     {...register("model", { required: true })}
                     placeholder="Modelo del camión"
-                    className="w-full px-4 py-3.5 border border-gray-300 rounded-lg focus:outline-none text-sm text-gray-700 placeholder-gray-400"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none text-sm text-gray-700 placeholder-gray-400"
                     onFocus={handleFocus}
                     onBlur={handleBlur}
                   />
@@ -322,12 +322,12 @@ const FormAggCamion = ({ onNavigateBack, onSubmitSuccess }) => {
                 </div>
 
                 <div>
-                  <label className="block text-base font-medium text-gray-700 mb-3">Año</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Año</label>
                   <input
                     type="number"
                     {...register("age", { required: true })}
                     placeholder="Año del camión"
-                    className="w-full px-5 py-4 border border-gray-300 rounded-lg focus:outline-none text-base text-gray-700 placeholder-gray-400"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none text-sm text-gray-700 placeholder-gray-400"
                     onFocus={handleFocus}
                     onBlur={handleBlur}
                   />
@@ -336,16 +336,16 @@ const FormAggCamion = ({ onNavigateBack, onSubmitSuccess }) => {
               </div>
 
               {/* Third Row */}
-              <div className="grid grid-cols-3 gap-7">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div>
-                  <label className="block text-base font-medium text-gray-700 mb-3">Nivel de Gasolina</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Nivel de Gasolina</label>
                   <input
                     type="number"
                     min="0"
                     max="100"
                     {...register("gasolineLevel", { required: true })}
                     placeholder="Nivel de gasolina (0-100)"
-                    className="w-full px-5 py-4 border border-gray-300 rounded-lg focus:outline-none text-base text-gray-700 placeholder-gray-400"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none text-sm text-gray-700 placeholder-gray-400"
                     onFocus={handleFocus}
                     onBlur={handleBlur}
                   />
@@ -357,7 +357,7 @@ const FormAggCamion = ({ onNavigateBack, onSubmitSuccess }) => {
                   <div className="relative">
                     <select
                       {...register("driverId", { required: true })}
-                      className="w-full px-4 py-3.5 border border-gray-300 rounded-lg focus:outline-none text-sm text-gray-700 appearance-none bg-white"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none text-sm text-gray-700 appearance-none bg-white"
                       onFocus={handleFocus}
                       onBlur={handleBlur}
                     >
@@ -378,7 +378,7 @@ const FormAggCamion = ({ onNavigateBack, onSubmitSuccess }) => {
                   <div className="relative">
                     <select
                       {...register("supplierId", { required: true })}
-                      className="w-full px-4 py-3.5 border border-gray-300 rounded-lg focus:outline-none text-sm text-gray-700 appearance-none bg-white"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none text-sm text-gray-700 appearance-none bg-white"
                       onFocus={handleFocus}
                       onBlur={handleBlur}
                     >
@@ -395,75 +395,104 @@ const FormAggCamion = ({ onNavigateBack, onSubmitSuccess }) => {
                 </div>
               </div>
 
-              {/* Fourth Row - Description and Photo */}
-              <div className="grid grid-cols-1 gap-7">
-                <div>
+              {/* Fourth Row - Description and Image */}
+              <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start">
+                {/* Description - takes 3 columns */}
+                <div className="lg:col-span-3">
                   <label className="block text-sm font-medium text-gray-700 mb-2">Descripción</label>
                   <textarea
                     {...register("description")}
                     placeholder="Descripción con breve descripción del camión"
-                    rows={5}
-                    className="w-full px-4 py-3.5 border border-gray-300 rounded-lg focus:outline-none text-sm text-gray-700 placeholder-gray-400 resize-none"
+                    rows={8}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none text-sm text-gray-700 placeholder-gray-400 resize-none"
                     onFocus={handleFocus}
                     onBlur={handleBlur}
                   />
                 </div>
-              </div>
 
-              {/* Photo Section */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Foto del Camión (opcional)</label>
-                <div className="flex items-center space-x-5">
-                  {/* Photo Circle */}
-                  <div className="relative">
-                    <div className="w-22 h-22 rounded-full border-2 border-dashed border-gray-300 flex items-center justify-center bg-gray-50 overflow-hidden cursor-pointer hover:border-gray-400 transition-colors">
-                      {imagePreview ? (
-                        <img
-                          src={imagePreview}
-                          alt="Preview"
-                          className="w-full h-full object-cover rounded-full"
-                        />
-                      ) : (
-                        <Upload className="w-7 h-7 text-gray-400" />
-                      )}
+                {/* Image Upload Section - takes 1 column */}
+                <div className="lg:col-span-1">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Foto del Camión</label>
+                  <div className="space-y-3">
+                    {/* Preview de la imagen */}
+                    <div className="relative group">
+                      <div
+                        className="w-full h-48 border-2 border-dashed rounded-xl flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 overflow-hidden transition-all duration-300 hover:from-blue-50 hover:to-blue-100 hover:border-blue-300"
+                        style={{ borderColor: imagePreview ? '#375E27' : '#d1d5db' }}
+                      >
+                        {imagePreview ? (
+                          <div className="relative w-full h-full">
+                            <img
+                              src={imagePreview}
+                              alt="Preview"
+                              className="w-full h-full object-cover rounded-lg"
+                            />
+                            <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all duration-300 rounded-lg flex items-center justify-center">
+                              <button
+                                type="button"
+                                onClick={removeImage}
+                                className="opacity-0 group-hover:opacity-100 bg-red-500 text-white rounded-full p-2 hover:bg-red-600 transition-all duration-300 transform hover:scale-110 shadow-lg"
+                              >
+                                <X className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="text-center p-4">
+                            <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-white shadow-md flex items-center justify-center">
+                              <svg className="w-6 h-6 text-gray-400" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M20 8h-3V4H3c-1.1 0-2 .9-2 2v11h2c0 1.66 1.34 3 3 3s3-1.34 3-3h6c0 1.66 1.34 3 3 3s3-1.34 3-3h2v-5l-3-4zM6 18c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1zm2.22-3c-.55-.61-1.33-1-2.22-1s-1.67.39-2.22 1H3V6h12v9H8.22zM18 18c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1zm-1-3c-.89 0-1.67.39-2.22 1H15V9h3.56l1.33 2H17v4z"/>
+                              </svg>
+                            </div>
+                            <p className="text-sm font-medium text-gray-600 mb-1">Foto del camión</p>
+                            <p className="text-xs text-gray-500">Arrastra o haz clic para subir</p>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Overlay para drag & drop visual */}
+                      <input
+                        type="file"
+                        id="img-input"
+                        accept="image/*"
+                        {...register("img", { required: true })}
+                        onChange={handleImageChange}
+                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                      />
                     </div>
-                    <input
-                      type="file"
-                      id="img-input"
-                      accept="image/*"
-                      {...register("img", { required: true })}
-                      onChange={handleImageChange}
-                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                    />
-                  </div>
 
-                  {/* Photo Text */}
-                  <div className="flex-1">
+                    {/* Botón de acción */}
                     <label
                       htmlFor="img-input"
-                      className="text-sm text-gray-600 cursor-pointer hover:text-gray-800 font-medium"
+                      className="w-full flex items-center justify-center px-3 py-2.5 rounded-lg cursor-pointer transition-all duration-300 text-white text-sm font-medium shadow-md hover:shadow-lg"
+                      style={{ backgroundColor: imagePreview ? '#375E27' : '#6B7280' }}
                     >
-                      Sube una foto del camión (opcional)
+                      <Upload className="w-4 h-4 mr-2" />
+                      <span>{imagePreview ? 'Cambiar foto' : 'Seleccionar foto'}</span>
                     </label>
-                    <p className="text-xs text-gray-500 mt-1">
-                      Formatos: JPG, PNG, GIF. Máximo: 5MB
-                    </p>
-                  </div>
 
-                  {/* Remove Button */}
-                  {imagePreview && (
-                    <button
-                      type="button"
-                      onClick={removeImage}
-                      className="text-red-500 hover:text-red-700 p-2 rounded-full hover:bg-red-50 transition-colors"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  )}
+                    {/* Información de ayuda */}
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-2.5">
+                      <div className="flex items-start space-x-2">
+                        <div className="w-3 h-3 rounded-full bg-blue-400 flex items-center justify-center mt-0.5 flex-shrink-0">
+                          <span className="text-white text-xs font-bold">i</span>
+                        </div>
+                        <div>
+                          <p className="text-xs font-medium text-blue-800 mb-1">Requisitos:</p>
+                          <div className="text-xs text-blue-700 space-y-0.5">
+                            <div>• JPG, PNG, GIF</div>
+                            <div>• Máximo: 5MB</div>
+                            <div>• Recomendado: 400x400px</div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {errors.img && (
+                      <span className="text-red-500 text-xs mt-2 block">Este campo es obligatorio</span>
+                    )}
+                  </div>
                 </div>
-                {errors.img && (
-                  <span className="text-red-500 text-xs mt-2 block">Este campo es obligatorio</span>
-                )}
               </div>
             </div>
 

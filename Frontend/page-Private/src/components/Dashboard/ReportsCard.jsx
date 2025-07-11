@@ -21,7 +21,7 @@ const ReportsCard = () => {
       </div>
       <h3 className="text-sm font-bold text-gray-900 mb-2">Informes</h3>
       <p className="text-xs text-gray-600 mb-4 leading-relaxed px-1">
-        Resumen semanal agrupado de todos los viajes imagen principal de la empresa.
+        Resumen semanal agrupado de todos los viajes imagen principal de la empresa
       </p>
       <PrimaryButton text="Ver más" to="/informes" />
     </div>
