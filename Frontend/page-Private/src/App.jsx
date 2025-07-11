@@ -49,7 +49,7 @@ function App() {
           <Route path="/recuperar" element={<RecoverPassword />} />
           <Route path="/verification-input" element={<VerificationInput />} />
           <Route path="/reset-password" element={<ResetPassword />} />
-<<<<<<< HEAD
+
           
           {/* Dashboard */}
           <Route path="/dashboard" element={<Dashboard />} />
@@ -117,7 +117,7 @@ function App() {
           <Route path="/proveedores/agregarProveedor" element={<PrivateRoute><AddProveedorForm /></PrivateRoute>} />
 
           {/* Ruta catch-all para 404 */}
->>>>>>> d8bbf71261042b151092f53d0fae6aefb3de0ae0
+
           <Route path="*" element={
             <div className="flex items-center justify-center h-screen">
               <div className="text-center">
