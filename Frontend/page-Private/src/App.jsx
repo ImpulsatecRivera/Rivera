@@ -18,6 +18,7 @@ import TruckFormScreen from "./pages/Camiones/FormAggCamion";
 import ProviderManagementInterface from "./pages/Provedores/Prooveedores";
 import AddProveedorForm from "./pages/Provedores/AgregarProovedor";
 import TruckManagement from "./pages/Camiones/EditarCamion";
+import Maps from "./pages/maps";
 
 function App() {
   const location = useLocation();
@@ -33,7 +34,8 @@ function App() {
     "/motoristas/agregarMotorista",
     "/Camiones/aggCamion",
     "/proveedores/agregarProveedor",
-    "/Camiones/editarCamion"
+    "/Camiones/editarCamion",
+    "/viajes/maps"
   ];
 
   // Función para verificar si debe mostrar el menú
@@ -82,6 +84,7 @@ function App() {
           
           {/* Viajes */}
           <Route path="/viajes" element={<Travel />} />
+          <Route path="/viajes/maps" element={<Maps />} />
           
           {/* CAMIONES - RUTAS CORREGIDAS */}
           {/* Lista de camiones */}

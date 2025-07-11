@@ -1,7 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, MoreHorizontal, ArrowLeft, Check, X } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+
 
 const TravelDashboard = () => {
+    const navigate = useNavigate();
+  
   // Agregamos estilos CSS para las animaciones personalizadas
   const styles = `
     @keyframes fadeInUp {
@@ -114,6 +118,9 @@ const TravelDashboard = () => {
       document.head.removeChild(styleElement);
     };
   }, []);
+
+    const handleAddTruck = () => navigate('/viajes/maps');
+
 
   const barHeights = [60, 80, 45, 90, 120, 70, 50, 85, 95, 110, 140, 75, 65, 100];
   const [animatedBars, setAnimatedBars] = useState(Array(14).fill(0));
@@ -556,7 +563,9 @@ const TravelDashboard = () => {
                   Ut enim ad minim.
                 </p>
                 
-                <button className="w-full bg-gray-900 text-white py-3 px-4 rounded-2xl hover:bg-gray-800 transition-colors font-medium text-sm">
+                <button
+                              onClick={handleAddTruck} 
+ className="w-full bg-gray-900 text-white py-3 px-4 rounded-2xl hover:bg-gray-800 transition-colors font-medium text-sm">
                   Ver mas
                 </button>
               </div>
