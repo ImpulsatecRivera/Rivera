@@ -5,8 +5,9 @@ import motoristasRoutes from "./src/Routes/motoristaRoutes.js"
 import proveedoresRoutes from "./src/Routes/proveedoresRoutes.js"
 import ClientesRoutes from "./src/Routes/clienteRoutes.js"
 import LoginRoutes from "./src/Routes/LoginRoutes.js"
-import LogoutRoutes from "./src/Routes/Logout.js" // ✅ Renombrado para claridad
+import LogoutRoutes from "./src/Routes/Logout.js" 
 import RecoveryRoutes from "./src/Routes/Recovery.js"
+import RegisterRoutes from "./src/Routes/RegisterRoute.js"
 import cookieParser from "cookie-parser"
 import cors from "cors";
 
@@ -16,7 +17,7 @@ app.use(cookieParser());
 
 app.use(
   cors({
-    origin: "http://localhost:5173", 
+    origin: ["http://localhost:5173","http://localhost:5174"], 
     credentials: true, 
   })
 );
@@ -27,7 +28,8 @@ app.use("/api/motoristas", motoristasRoutes);
 app.use("/api/proveedores", proveedoresRoutes);
 app.use("/api/clientes", ClientesRoutes);
 app.use("/api/login", LoginRoutes);
-app.use("/api/logout", LogoutRoutes); // ✅ Aquí corregido
+app.use("/api/register",RegisterRoutes);
+app.use("/api/logout", LogoutRoutes); 
 app.use("/api/recovery", RecoveryRoutes);
 
 export default app;
