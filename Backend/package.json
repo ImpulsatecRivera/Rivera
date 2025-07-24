@@ -13,6 +13,18 @@
     "multer": "^2.0.1",
     "multer-storage-cloudinary": "^4.0.0",
     "nodemailer": "^7.0.3",
+    "twilio": "^5.7.3",
     "uninstall": "^0.0.0"
-  }
+  },
+  "name": "backend",
+  "version": "1.0.0",
+  "main": "index.js",
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": ""
 }
