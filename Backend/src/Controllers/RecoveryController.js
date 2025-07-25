@@ -13,6 +13,17 @@ RecoveryPass.requestCode = async (req, res) => {
   try {
     let userFound = await EmpleadosModel.findOne({ email });
     let userType = "Empleado";
+import {EnviarSms} from "../Utils/EnviarSms.js";
+
+const RecoveryPass = {};
+
+// Solicitar código con un nuevo parametro  via : "email o sms"
+RecoveryPass.requestCode = async (req, res) => {
+  const { email,via = "email" } = req.body;
+
+  try {
+    const userFound = await EmpleadosModel.findOne({ email });
+    const userType = "Empleado";
 
     if (!userFound) {
       return res.status(400).json({ message: "Usuario no existente" });
@@ -34,6 +45,15 @@ RecoveryPass.requestCode = async (req, res) => {
     });
 
     await EnviarEmail(
+    if(via === "sms"){
+      const Telefono= userFound.phone;
+      if(!Telefono){
+       return  res.status(400).json({Message: "El numero que ingresaste no esta registrado"})
+      }
+
+      await EnviarSms(Telefono,`Tu codigo de verificacion es: ${codex}` )
+    }else{
+ await EnviarEmail(
       email,
       "Tu código de verificación",
       "Hola, este es tu código de verificación para recuperar tu contraseña.",
@@ -42,6 +62,9 @@ RecoveryPass.requestCode = async (req, res) => {
 
     console.log(`Solicitud de recuperación iniciada para tipo: ${userType}`);
     res.status(200).json({ message: "Correo enviado con el código de verificación" });
+    }
+
+    res.status(200).json({ message: `Codigo enviado via: ${via}` });
 
   } catch (error) {
     console.error("Error en requestCode:", error);
@@ -152,5 +175,46 @@ RecoveryPass.newPassword = async (req, res) => {
     res.status(500).json({ message: "Error interno del servidor" });
   }
 };
+
+
+//nuevo metodo Para loguiarse sin cambiar contraseña
+RecoveryPass.IniciarSesionConCodigo = async (req,res) => {
+  const {code} = req.body;
+  const token = req.cookies.tokenRecoveryCode;
+
+  if(!code || !token){
+   return  res.status(400).json({message: "Faltan datos o token no encontrado"})
+  }
+
+  try {
+    const decoded = jwt.verify(token,config.JWT.secret);
+    if(decoded.codex !== code){
+      return res.status(400).json({message: "Codigo incorrecto"});    
+    }
+
+    
+    const authToken = jwt.sign({
+            email:decoded.email,
+            userType: decoded.userType,
+            id:decoded.id,
+    },
+    config.JWT.secret,
+    {expiresIn: "20m"} //tiempo que durara el token para loguiarse
+    );
+
+    res.clearCookie("tokenRecoveryCode"); //Limpia codigo temporal
+    res.cookie("authToken",authToken, {
+      maxAge: 20 * 60 * 1000,
+      httpOnly:true,
+      secure:process.env.NODE_ENV === 'production',
+      sameSite: 'Lax',
+    });
+
+    return res.status(200).json({message: "Inicio de sesion exitoso", success: true});
+  } catch (error) {
+    console.error(" Error en IniciarSesionConCodigo:", error);
+    return res.status(500).json({ message: "Error al iniciar sesión" });
+  }
+}
 
 export default RecoveryPass;

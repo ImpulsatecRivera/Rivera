@@ -2,7 +2,7 @@ import React from 'react';
 import { Search, Phone, Mail, User, ArrowLeft, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
 import useClients from '../components/Clientes/hooks/useDataCliente'; // Ajusta la ruta según tu estructura
 
-const ClientManagementInterface = () => {
+const Clientes= () => {
   const {
     clients,
     selectedClient,
@@ -268,4 +268,4 @@ const ClientManagementInterface = () => {
   );
 };
 
-export default ClientManagementInterface;
+export default Clientes;

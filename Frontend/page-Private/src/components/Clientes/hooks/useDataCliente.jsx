@@ -1,8 +1,7 @@
-
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 
-const useClients = () => {
+const useDataCliente = () => {
   // Estados principales
   const [clients, setClients] = useState([]);
   const [selectedClient, setSelectedClient] = useState(null);
@@ -185,4 +184,4 @@ const useClients = () => {
   };
 };
 
-export default useClients;
+export default useDataCliente;

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from "axios";
 
-const useEmployeeManagement = () => {
+const useDataEmpleado = () => {
   // Estados principales
   const [empleados, setEmpleados] = useState([]);
   const [selectedEmpleados, setSelectedEmpleados] = useState(null);
@@ -217,4 +217,4 @@ const useEmployeeManagement = () => {
   };
 };
 
-export default useEmployeeManagement;
+export default useDataEmpleado;

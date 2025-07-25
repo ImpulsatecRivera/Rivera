@@ -1,14 +1,17 @@
 import React, { useState } from 'react';
 import { User, LogOut } from 'lucide-react';
 import avatarImg from '../../images/avatarDashboard.png';
-import { NavLink, useNavigate } from "react-router-dom";
+import { NavLink, useNavigate, useLocation } from "react-router-dom";
+import { useAuth } from "../../Context/AuthContext";
 
 const SidebarNav = () => {
   const [activeItem, setActiveItem] = useState('Inicio');
   const [isAnimating, setIsAnimating] = useState(false);
   const [animatingItem, setAnimatingItem] = useState('');
-
+  const [pendingRoute, setPendingRoute] = useState(null);
+  const { logOut } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
   // SVG del camión de reparto
   const TruckIcon = () => (
@@ -74,45 +77,78 @@ const SidebarNav = () => {
     { id:'Proveedores',name: 'Proveedores', route: '/proveedores' },
     { id:'Camiones',name: 'Camiones', route: '/camiones' },
     { id:'clientes',name: 'clientes', route: '/clientes' },
-    
   ];
 
-  const handleItemClick = async (itemName) => {
-    if (isAnimating) return;
+  const handleNavClick = (event, itemName, route) => {
+    // Si ya estamos en esa ruta, no hacer nada
+    if (location.pathname === route) {
+      event.preventDefault();
+      return;
+    }
+
+    // Si hay animación en curso, bloquear
+    if (isAnimating) {
+      event.preventDefault();
+      console.log('Navegación bloqueada - animación en curso');
+      return;
+    }
     
+    // Prevenir navegación inmediata
+    event.preventDefault();
+    
+    // Guardar la ruta destino
+    setPendingRoute(route);
     setIsAnimating(true);
     setAnimatingItem(itemName);
     
-    // Duración de la animación
+    // Ejecutar animación y después navegar
     setTimeout(() => {
       setActiveItem(itemName);
       setIsAnimating(false);
       setAnimatingItem('');
+      
+      // Navegar DESPUÉS de la animación
+      navigate(route);
+      setPendingRoute(null);
+      console.log(`Navegando a: ${itemName} - ${route}`);
     }, 2000);
-    
-    console.log(`Navegando a: ${itemName}`);
   };
 
- const handleLogout = () => {
-  console.log('Cerrando sesión...');
-  setIsAnimating(true);  // Iniciar animación
-  setAnimatingItem('Cerrar sesión');  // Asignar nombre al item de animación
+  const handleLogout = async () => {
+    // BLOQUEAR si ya hay una animación en curso
+    if (isAnimating) {
+      console.log('Logout bloqueado - animación en curso');
+      return;
+    }
 
-  // Animación de 2 segundos antes de redirigir
-  setTimeout(() => {
-    navigate('/');  // Redirigir al login
-  }, 1000);  // El retraso de 2 segundos coincide con la animación
-};
+    console.log('Cerrando sesión...');
+    setIsAnimating(true);
+    setAnimatingItem('Cerrar sesión');
 
-  
+    try {
+      await logOut();
+      navigate("/");
+    } catch (error) {
+      console.error("Error en cierre de sesión:", error);
+    } finally {
+      setIsAnimating(false);
+      setAnimatingItem('');
+    }
+  };
 
   return (
     <div className="w-64 h-screen text-white flex flex-col" style={{ backgroundColor: '#34353A' }}>
-      <style >{`
+      <style>{`
         .menu-button {
           position: relative;
           transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
           backdrop-filter: blur(10px);
+        }
+        
+        .menu-button.disabled {
+          pointer-events: none !important;
+          opacity: 0.4 !important;
+          cursor: not-allowed !important;
         }
         
         .menu-button::before {
@@ -129,11 +165,11 @@ const SidebarNav = () => {
           z-index: -1;
         }
         
-        .menu-button:hover::before {
+        .menu-button:not(.disabled):hover::before {
           opacity: 1;
         }
         
-        .menu-button:hover {
+        .menu-button:not(.disabled):hover {
           transform: translateX(8px) scale(1.02);
           box-shadow: 
             0 10px 25px rgba(0, 0, 0, 0.3),
@@ -158,36 +194,16 @@ const SidebarNav = () => {
           letter-spacing: 0.025em;
         }
         
-        .profile-section {
-          background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(147, 51, 234, 0.1));
-          border-radius: 1rem;
-          padding: 1.5rem;
-          margin: 1rem;
-          box-shadow: 
-            0 8px 32px rgba(0, 0, 0, 0.2),
-            inset 0 1px 0 rgba(255, 255, 255, 0.1);
-          backdrop-filter: blur(10px);
-        }
-        
-        .profile-avatar {
-          transition: all 0.3s ease;
-          box-shadow: 
-            0 8px 20px rgba(0, 0, 0, 0.3),
-            0 0 0 3px rgba(59, 130, 246, 0.3);
-        }
-        
-        .profile-avatar:hover {
-          transform: scale(1.05);
-          box-shadow: 
-            0 12px 30px rgba(0, 0, 0, 0.4),
-            0 0 0 4px rgba(59, 130, 246, 0.5),
-            0 0 20px rgba(59, 130, 246, 0.3);
-        }
-        
         .logout-button {
           transition: all 0.3s ease;
           position: relative;
           overflow: hidden;
+        }
+        
+        .logout-button.disabled {
+          pointer-events: none !important;
+          opacity: 0.4 !important;
+          cursor: not-allowed !important;
         }
         
         .logout-button::before {
@@ -201,21 +217,15 @@ const SidebarNav = () => {
           transition: left 0.5s ease;
         }
         
-        .logout-button:hover::before {
+        .logout-button:not(.disabled):hover::before {
           left: 100%;
         }
         
-        .logout-button:hover {
+        .logout-button:not(.disabled):hover {
           background: rgba(239, 68, 68, 0.1);
           border-left: 3px solid #EF4444;
           transform: translateX(4px);
           box-shadow: 0 6px 15px rgba(239, 68, 68, 0.2);
-        }
-        
-        .sidebar-container {
-          background: linear-gradient(180deg, rgba(52, 53, 58, 0.95), rgba(52, 53, 58, 1));
-          backdrop-filter: blur(10px);
-          border-right: 1px solid rgba(255, 255, 255, 0.1);
         }
         
         .truck-container {
@@ -306,53 +316,52 @@ const SidebarNav = () => {
       {/* Profile Section */}
       <div className="flex items-center justify-center py-8">
         <img
-        src={avatarImg}
-        alt="Avatar"
-        className="w-24 h-24 rounded-full object-cover mx-auto"
-      />
+          src={avatarImg}
+          alt="Avatar"
+          className="w-24 h-24 rounded-full object-cover mx-auto"
+        />
       </div>
 
       {/* Navigation Menu */}
       <nav className="flex-1 px-4 mt-6">
-  <ul className="space-y-2">
-    {menuItems.map((item) => (
-      <li key={item.name} className="relative">
-        <NavLink
-          to={item.route}
-          className={({ isActive }) =>
-            `menu-button w-full text-left px-4 py-3 rounded-lg relative overflow-hidden block ${
-              isActive ? 'active text-white opacity-100' : 'text-gray-300 opacity-75'
-            } ${isAnimating ? 'cursor-not-allowed' : 'cursor-pointer'}`
-          }
-          onClick={() => handleItemClick(item.name)}
-        >
-          <span 
-            className={`menu-text transition-opacity duration-300 ${
-              animatingItem === item.name ? 'opacity-30' : 'opacity-100'
-            }`}
-          >
-            {item.name}
-          </span>
+        <ul className="space-y-2">
+          {menuItems.map((item) => (
+            <li key={item.name} className="relative">
+              <NavLink
+                to={item.route}
+                onClick={(e) => handleNavClick(e, item.name, item.route)}
+                className={({ isActive }) =>
+                  `menu-button w-full text-left px-4 py-3 rounded-lg relative overflow-hidden block ${
+                    isActive ? 'active text-white opacity-100' : 'text-gray-300 opacity-75'
+                  } ${isAnimating ? 'disabled' : 'cursor-pointer'}`
+                }
+              >
+                <span 
+                  className={`menu-text transition-opacity duration-300 ${
+                    animatingItem === item.name ? 'opacity-30' : 'opacity-100'
+                  }`}
+                >
+                  {item.name}
+                </span>
 
-          {/* Animación del camión */}
-          {animatingItem === item.name && (
-            <>
-              <div className="truck-container">
-                <TruckIcon />
-              </div>
-              <div className="smoke-trail"></div>
-              <div className="smoke-trail"></div>
-              <div className="smoke-trail"></div>
-              <div className="smoke-trail"></div>
-              <div className="smoke-trail"></div>
-            </>
-          )}
-        </NavLink>
-      </li>
-    ))}
-  </ul>
-</nav>
-
+                {/* Animación del camión */}
+                {animatingItem === item.name && (
+                  <>
+                    <div className="truck-container">
+                      <TruckIcon />
+                    </div>
+                    <div className="smoke-trail"></div>
+                    <div className="smoke-trail"></div>
+                    <div className="smoke-trail"></div>
+                    <div className="smoke-trail"></div>
+                    <div className="smoke-trail"></div>
+                  </>
+                )}
+              </NavLink>
+            </li>
+          ))}
+        </ul>
+      </nav>
 
       {/* Logout Button */}
       <div className="p-4 border-t" style={{ borderColor: '#4A4B50' }}>
@@ -360,7 +369,7 @@ const SidebarNav = () => {
           onClick={handleLogout}
           disabled={isAnimating}
           className={`logout-button w-full flex items-center px-4 py-3 text-gray-300 rounded-lg opacity-75 ${
-            isAnimating ? 'cursor-not-allowed' : 'cursor-pointer'
+            isAnimating ? 'disabled' : 'cursor-pointer'
           }`}
         >
           <LogOut size={20} className="mr-3" />
