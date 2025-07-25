@@ -5,117 +5,164 @@ const RiveraTransportMapDemo = () => {
   const [zoomLevel, setZoomLevel] = useState(8);
   const [selectedTrip, setSelectedTrip] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [mapData, setMapData] = useState(null);
+  const [error, setError] = useState(null);
   const mapRef = useRef(null);
   const mapInstanceRef = useRef(null);
 
-  // Datos simulados basados en tu estructura de base de datos
-  const mockMapData = {
-    locations: [
-      { 
-        name: "Terminal Rivera - Santa Ana", 
-        coords: [13.9942, -89.5592], 
-        type: "red", 
-        number: "",
-        description: "Terminal principal - Base de operaciones",
-        tripCount: 0,
-        isTerminal: true
-      },
-      { 
-        name: "Chalatenango", 
-        coords: [14.0333, -88.9333], 
-        type: "green", 
-        number: "5",
-        description: "5 viajes programados hoy",
-        tripCount: 5,
-        nextTrip: "10:30 AM"
-      },
-      { 
-        name: "San Miguel", 
-        coords: [13.4833, -88.1833], 
-        type: "green", 
-        number: "3",
-        description: "3 viajes activos",
-        tripCount: 3,
-        nextTrip: "2:00 PM"
-      },
-      { 
-        name: "Usulután", 
-        coords: [13.3500, -88.4500], 
-        type: "green", 
-        number: "2",
-        description: "2 viajes programados",
-        tripCount: 2,
-        nextTrip: "11:15 AM"
-      },
-      { 
-        name: "La Libertad", 
-        coords: [13.4883, -89.3167], 
-        type: "blue", 
-        number: "1",
-        description: "1 viaje ocasional",
-        tripCount: 1,
-        nextTrip: "4:00 PM"
+  // 🆕 Función para obtener datos del backend
+  const fetchMapData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      // 🔧 URL de tu backend (puerto 4000)
+      const apiUrl = 'http://localhost:4000/api/viajes/map-data';
+      
+      console.log('Intentando conectar a:', apiUrl);
+      
+      const response = await fetch(apiUrl, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          // Agregar token de autorización si es necesario
+          // 'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`Error ${response.status}: ${response.statusText}`);
       }
-    ],
-    routes: [
-      {
-        id: "route1",
-        coordinates: [[13.9942, -89.5592], [14.0333, -88.9333]],
-        status: "active",
-        frequency: "high",
-        tripInfo: {
-          driver: "Carlos Pérez",
-          truck: "Volvo FH16",
-          cargo: "Materiales de construcción",
-          departure: "08:00 AM",
-          arrival: "10:30 AM"
-        }
-      },
-      {
-        id: "route2", 
-        coordinates: [[13.9942, -89.5592], [13.4833, -88.1833]],
-        status: "in_progress",
-        frequency: "medium",
-        tripInfo: {
-          driver: "Ana García",
-          truck: "Mercedes Actros",
-          cargo: "Productos agrícolas",
-          departure: "06:30 AM",
-          arrival: "2:00 PM"
-        }
-      },
-      {
-        id: "route3",
-        coordinates: [[13.9942, -89.5592], [13.3500, -88.4500]],
-        status: "scheduled",
-        frequency: "medium",
-        tripInfo: {
-          driver: "Roberto López",
-          truck: "Scania R450",
-          cargo: "Electrodomésticos",
-          departure: "09:00 AM", 
-          arrival: "11:15 AM"
-        }
+
+      const result = await response.json();
+      
+      if (result.success) {
+        setMapData(result.data);
+        console.log('Datos del mapa cargados:', result.data);
+      } else {
+        throw new Error(result.message || 'Error al cargar datos del mapa');
       }
-    ],
-    cities: [
-      { name: "San Salvador", coords: [13.6929, -89.2182] },
-      { name: "Soyapango", coords: [13.7167, -89.1389] },
-      { name: "Mejicanos", coords: [13.7408, -89.2075] }
-    ],
-    statistics: {
-      total_routes: 16,
-      active_routes: 11,
-      growth_percentage: 35,
-      monthly_trips: 147,
-      drivers_active: 8
+
+    } catch (error) {
+      console.error('Error al obtener datos del mapa:', error);
+      setError(`API no disponible: ${error.message}`);
+      
+      // 📋 DATOS MOCK MIENTRAS CONFIGURAS EL BACKEND
+      console.log('Cargando datos mock de demostración...');
+      setMapData({
+        locations: [
+          {
+            name: "Terminal Rivera - Santa Ana",
+            coords: [13.9942, -89.5592],
+            type: "red",
+            number: "",
+            description: "Terminal principal - Base de operaciones",
+            tripCount: 0,
+            isTerminal: true
+          },
+          {
+            name: "Chalatenango",
+            coords: [14.0333, -88.9333],
+            type: "green",
+            number: "5",
+            description: "5 viajes programados hoy",
+            tripCount: 5,
+            nextTrip: "10:30 AM"
+          },
+          {
+            name: "San Miguel",
+            coords: [13.4833, -88.1833],
+            type: "green",
+            number: "3",
+            description: "3 viajes activos",
+            tripCount: 3,
+            nextTrip: "2:00 PM"
+          },
+          {
+            name: "Usulután",
+            coords: [13.3500, -88.4500],
+            type: "green",
+            number: "2",
+            description: "2 viajes programados",
+            tripCount: 2,
+            nextTrip: "11:15 AM"
+          },
+          {
+            name: "La Libertad",
+            coords: [13.4883, -89.3167],
+            type: "blue",
+            number: "1",
+            description: "1 viaje ocasional",
+            tripCount: 1,
+            nextTrip: "4:00 PM"
+          }
+        ],
+        routes: [
+          {
+            id: "route1",
+            coordinates: [[13.9942, -89.5592], [14.0333, -88.9333]],
+            status: "active",
+            frequency: "high",
+            tripInfo: {
+              driver: "Carlos Pérez",
+              truck: "Volvo FH16",
+              cargo: "Materiales de construcción",
+              departure: "08:00 AM",
+              arrival: "10:30 AM"
+            }
+          },
+          {
+            id: "route2",
+            coordinates: [[13.9942, -89.5592], [13.4833, -88.1833]],
+            status: "in_progress",
+            frequency: "medium",
+            tripInfo: {
+              driver: "Ana García",
+              truck: "Mercedes Actros",
+              cargo: "Productos agrícolas",
+              departure: "06:30 AM",
+              arrival: "2:00 PM"
+            }
+          },
+          {
+            id: "route3",
+            coordinates: [[13.9942, -89.5592], [13.3500, -88.4500]],
+            status: "scheduled",
+            frequency: "medium",
+            tripInfo: {
+              driver: "Roberto López",
+              truck: "Scania R450",
+              cargo: "Electrodomésticos",
+              departure: "09:00 AM",
+              arrival: "11:15 AM"
+            }
+          }
+        ],
+        cities: [
+          { name: "San Salvador", coords: [13.6929, -89.2182] },
+          { name: "Soyapango", coords: [13.7167, -89.1389] },
+          { name: "Mejicanos", coords: [13.7408, -89.2075] }
+        ],
+        statistics: {
+          total_routes: 16,
+          active_routes: 11,
+          growth_percentage: 35,
+          monthly_trips: 147,
+          drivers_active: 8
+        }
+      });
+    } finally {
+      setLoading(false);
     }
   };
 
+  // Cargar datos al montar el componente
   useEffect(() => {
-    // Simular carga
-    const timer = setTimeout(() => setLoading(false), 1500);
-    return () => clearTimeout(timer);
+    fetchMapData();
+    
+    // Opcional: Actualizar datos cada 30 segundos solo si la API funciona
+    // const interval = setInterval(fetchMapData, 30000);
+    // return () => clearInterval(interval);
   }, []);
 
   useEffect(() => {
@@ -136,7 +183,12 @@ const RiveraTransportMapDemo = () => {
     };
 
     const initializeMap = () => {
-      if (mapRef.current && window.L && !mapInstanceRef.current && !loading) {
+      if (mapRef.current && window.L && !mapInstanceRef.current && !loading && mapData) {
+        // Limpiar mapa existente si existe
+        if (mapInstanceRef.current) {
+          mapInstanceRef.current.remove();
+        }
+
         const map = window.L.map(mapRef.current, {
           zoomControl: false,
           attributionControl: true
@@ -147,82 +199,104 @@ const RiveraTransportMapDemo = () => {
           maxZoom: 18,
         }).addTo(map);
 
-        // Agregar marcadores
-        mockMapData.locations.forEach(location => {
-          const markerClass = `marker-${location.type}`;
-          
-          const customIcon = window.L.divIcon({
-            className: 'custom-marker-container',
-            html: `<div class="custom-marker ${markerClass}">${location.number}</div>`,
-            iconSize: [35, 35],
-            iconAnchor: [17.5, 17.5],
-            popupAnchor: [0, -17.5]
+        // 🆕 Agregar marcadores desde datos reales
+        if (mapData.locations && mapData.locations.length > 0) {
+          mapData.locations.forEach(location => {
+            const markerClass = `marker-${location.type}`;
+            
+            const customIcon = window.L.divIcon({
+              className: 'custom-marker-container',
+              html: `<div class="custom-marker ${markerClass}">${location.number}</div>`,
+              iconSize: [35, 35],
+              iconAnchor: [17.5, 17.5],
+              popupAnchor: [0, -17.5]
+            });
+
+            const marker = window.L.marker(location.coords, { icon: customIcon }).addTo(map);
+            
+            const popupContent = location.isTerminal ? 
+              `<div style="font-family: 'Segoe UI', sans-serif; min-width: 200px;">
+                <div style="font-weight: 600; color: #dc2626; margin-bottom: 8px; font-size: 14px;">🏢 ${location.name}</div>
+                <div style="color: #666; font-size: 12px; margin-bottom: 6px;">${location.description}</div>
+                <div style="background: #fef2f2; padding: 6px; border-radius: 6px; border-left: 3px solid #dc2626;">
+                  <div style="font-size: 11px; color: #991b1b;">Centro de operaciones principal</div>
+                </div>
+              </div>` :
+              `<div style="font-family: 'Segoe UI', sans-serif; min-width: 200px;">
+                <div style="font-weight: 600; color: #333; margin-bottom: 8px; font-size: 14px;">📍 ${location.name}</div>
+                <div style="color: #666; font-size: 12px; margin-bottom: 8px;">${location.description}</div>
+                <div style="background: #f0fdf4; padding: 6px; border-radius: 6px; border-left: 3px solid #16a34a;">
+                  ${location.nextTrip ? `<div style="font-size: 11px; color: #15803d; margin-bottom: 2px;">⏰ Próximo viaje: ${location.nextTrip}</div>` : ''}
+                  <div style="font-size: 11px; color: #15803d;">🚛 ${location.tripCount} viajes programados</div>
+                </div>
+              </div>`;
+
+            marker.bindPopup(popupContent, {
+              closeButton: true,
+              autoClose: false,
+              className: 'custom-popup'
+            });
           });
+        }
 
-          const marker = window.L.marker(location.coords, { icon: customIcon }).addTo(map);
-          
-          const popupContent = location.isTerminal ? 
-            `<div style="font-family: 'Segoe UI', sans-serif; min-width: 200px;">
-              <div style="font-weight: 600; color: #dc2626; margin-bottom: 8px; font-size: 14px;">🏢 ${location.name}</div>
-              <div style="color: #666; font-size: 12px; margin-bottom: 6px;">${location.description}</div>
-              <div style="background: #fef2f2; padding: 6px; border-radius: 6px; border-left: 3px solid #dc2626;">
-                <div style="font-size: 11px; color: #991b1b;">Centro de operaciones principal</div>
-              </div>
-            </div>` :
-            `<div style="font-family: 'Segoe UI', sans-serif; min-width: 200px;">
-              <div style="font-weight: 600; color: #333; margin-bottom: 8px; font-size: 14px;">📍 ${location.name}</div>
-              <div style="color: #666; font-size: 12px; margin-bottom: 8px;">${location.description}</div>
-              <div style="background: #f0fdf4; padding: 6px; border-radius: 6px; border-left: 3px solid #16a34a;">
-                <div style="font-size: 11px; color: #15803d; margin-bottom: 2px;">⏰ Próximo viaje: ${location.nextTrip}</div>
-                <div style="font-size: 11px; color: #15803d;">🚛 ${location.tripCount} viajes programados</div>
-              </div>
-            </div>`;
+        // 🆕 Agregar rutas desde datos reales
+        if (mapData.routes && mapData.routes.length > 0) {
+          mapData.routes.forEach(route => {
+            if (route.coordinates && route.coordinates.length > 0) {
+              let routeColor = '#2563eb'; // Por defecto azul
+              switch (route.status) {
+                case 'active':
+                case 'in_progress':
+                  routeColor = '#16a34a'; // Verde
+                  break;
+                case 'completed':
+                  routeColor = '#059669'; // Verde oscuro
+                  break;
+                case 'cancelled':
+                  routeColor = '#dc2626'; // Rojo
+                  break;
+                default:
+                  routeColor = '#2563eb'; // Azul
+              }
+              
+              const routeWeight = route.frequency === 'high' ? 6 : 4;
+              
+              const polyline = window.L.polyline(route.coordinates, {
+                color: routeColor,
+                weight: routeWeight,
+                opacity: 0.8,
+                smoothFactor: 1
+              }).addTo(map);
 
-          marker.bindPopup(popupContent, {
-            closeButton: true,
-            autoClose: false,
-            className: 'custom-popup'
+              polyline.on('click', () => {
+                setSelectedTrip(route);
+              });
+            }
           });
-        });
-
-        // Agregar rutas con diferentes estilos
-        mockMapData.routes.forEach(route => {
-          const routeColor = route.status === 'active' ? '#16a34a' : 
-                           route.status === 'in_progress' ? '#eab308' : '#2563eb';
-          const routeWeight = route.frequency === 'high' ? 6 : 4;
-          
-          const polyline = window.L.polyline(route.coordinates, {
-            color: routeColor,
-            weight: routeWeight,
-            opacity: 0.8,
-            smoothFactor: 1
-          }).addTo(map);
-
-          polyline.on('click', () => {
-            setSelectedTrip(route);
-          });
-        });
+        }
 
         // Agregar ciudades de referencia
-        mockMapData.cities.forEach(city => {
-          window.L.circleMarker(city.coords, {
-            radius: 4,
-            fillColor: '#64748b',
-            color: 'white',
-            weight: 2,
-            opacity: 1,
-            fillOpacity: 0.8
-          }).addTo(map).bindTooltip(city.name, {
-            permanent: false,
-            direction: 'top'
+        if (mapData.cities && mapData.cities.length > 0) {
+          mapData.cities.forEach(city => {
+            window.L.circleMarker(city.coords, {
+              radius: 4,
+              fillColor: '#64748b',
+              color: 'white',
+              weight: 2,
+              opacity: 1,
+              fillOpacity: 0.8
+            }).addTo(map).bindTooltip(city.name, {
+              permanent: false,
+              direction: 'top'
+            });
           });
-        });
+        }
 
         mapInstanceRef.current = map;
       }
     };
 
-    if (!loading) {
+    if (!loading && mapData) {
       loadLeaflet();
     }
 
@@ -232,7 +306,7 @@ const RiveraTransportMapDemo = () => {
         mapInstanceRef.current = null;
       }
     };
-  }, [loading]);
+  }, [loading, mapData, zoomLevel]);
 
   const handleZoomIn = () => {
     if (mapInstanceRef.current) {
@@ -248,24 +322,43 @@ const RiveraTransportMapDemo = () => {
     }
   };
 
+  const handleRefresh = () => {
+    fetchMapData();
+  };
+  
+  // Mostrar loading
   if (loading) {
     return (
-      <div className="w-full h-screen bg-gradient-to-br from-blue-900 via-blue-800 to-indigo-900 p-6">
-        <div className="w-full h-full bg-white rounded-[2rem] shadow-2xl flex items-center justify-center">
+      <div className="w-full h-screen p-6" style={{ backgroundColor: '#34353A' }}>
+        <div className="w-full h-full bg-white rounded-[2rem] shadow-2xl overflow-hidden relative border-2 border-blue-200 flex items-center justify-center">
           <div className="text-center">
-            <div className="relative">
-              <Truck className="w-16 h-16 text-blue-500 mx-auto mb-6 animate-bounce" />
-              <div className="absolute -top-2 -right-2 w-6 h-6 bg-orange-500 rounded-full animate-pulse"></div>
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p className="text-gray-600">Cargando datos del mapa...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Mostrar error
+  if (error && !mapData) {
+    return (
+      <div className="w-full h-screen p-6" style={{ backgroundColor: '#34353A' }}>
+        <div className="w-full h-full bg-white rounded-[2rem] shadow-2xl overflow-hidden relative border-2 border-red-200 flex items-center justify-center">
+          <div className="text-center">
+            <div className="text-red-500 mb-4">
+              <svg className="w-12 h-12 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+              </svg>
             </div>
-            <p className="text-xl text-gray-700 mb-2">Cargando Sistema Rivera</p>
-            <p className="text-sm text-gray-500">Conectando con base de datos...</p>
-            <div className="mt-4 flex justify-center">
-              <div className="flex space-x-1">
-                <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
-                <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" style={{animationDelay: '0.2s'}}></div>
-                <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" style={{animationDelay: '0.4s'}}></div>
-              </div>
-            </div>
+            <h3 className="text-lg font-bold text-gray-900 mb-2">Error al cargar el mapa</h3>
+            <p className="text-gray-600 mb-4">{error}</p>
+            <button 
+              onClick={handleRefresh}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
+            >
+              Reintentar
+            </button>
           </div>
         </div>
       </div>
@@ -327,7 +420,7 @@ const RiveraTransportMapDemo = () => {
         `}
       </style>
       
-      <div className="w-full h-screen bg-gradient-to-br from-blue-900 via-blue-800 to-indigo-900 p-6">
+      <div className="w-full h-screen p-6" style={{ backgroundColor: '#34353A' }}>
         <div className="w-full h-full bg-white rounded-[2rem] shadow-2xl overflow-hidden relative border-2 border-blue-200">
           
           {/* Header */}
@@ -342,6 +435,17 @@ const RiveraTransportMapDemo = () => {
               <h1 className="text-2xl font-bold text-gray-900">Sistema Rivera Transport</h1>
               <p className="text-sm text-gray-600">Monitoreo de rutas en tiempo real</p>
             </div>
+            
+            {/* 🆕 Botón de actualizar */}
+            <button
+              onClick={handleRefresh}
+              className="w-10 h-10 bg-white rounded-2xl flex items-center justify-center border-2 border-blue-200 shadow-lg cursor-pointer hover:bg-blue-50 transition-all duration-200"
+              title="Actualizar datos"
+            >
+              <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+            </button>
           </div>
 
           {/* Mapa */}
@@ -352,45 +456,47 @@ const RiveraTransportMapDemo = () => {
           />
 
           {/* Panel de estadísticas principal */}
-          <div className="absolute bottom-8 left-8 z-30 bg-white rounded-3xl shadow-2xl p-6 w-80 border-2 border-blue-100">
-            <div className="flex items-center space-x-4 mb-4">
-              <div className="flex-shrink-0">
-                <div className="w-16 h-16 bg-gradient-to-br from-orange-400 to-orange-600 rounded-3xl flex items-center justify-center shadow-lg">
-                  <Truck className="w-8 h-8 text-white" />
+          {mapData && mapData.statistics && (
+            <div className="absolute bottom-8 left-8 z-30 bg-white rounded-3xl shadow-2xl p-6 w-80 border-2 border-blue-100">
+              <div className="flex items-center space-x-4 mb-4">
+                <div className="flex-shrink-0">
+                  <div className="w-16 h-16 bg-gradient-to-br from-orange-400 to-orange-600 rounded-3xl flex items-center justify-center shadow-lg">
+                    <Truck className="w-8 h-8 text-white" />
+                  </div>
+                </div>
+                
+                <div className="flex-1">
+                  <div className="text-sm text-gray-500 mb-1 font-medium">Rutas Activas</div>
+                  <div className="flex items-center space-x-2 mb-2">
+                    <span className="text-4xl font-bold text-gray-900">{mapData.statistics.active_routes}</span>
+                    <span className="text-lg text-gray-400">/ {mapData.statistics.total_routes}</span>
+                  </div>
+                  <div className="flex items-center space-x-1">
+                    <TrendingUp className="w-4 h-4 text-green-500" />
+                    <span className="text-sm text-green-600 font-semibold">{mapData.statistics.growth_percentage}% este mes</span>
+                  </div>
                 </div>
               </div>
               
-              <div className="flex-1">
-                <div className="text-sm text-gray-500 mb-1 font-medium">Rutas Activas</div>
-                <div className="flex items-center space-x-2 mb-2">
-                  <span className="text-4xl font-bold text-gray-900">{mockMapData.statistics.active_routes}</span>
-                  <span className="text-lg text-gray-400">/ {mockMapData.statistics.total_routes}</span>
+              {/* Estadísticas adicionales */}
+              <div className="grid grid-cols-2 gap-4 pt-4 border-t border-gray-100">
+                <div className="text-center">
+                  <div className="flex items-center justify-center mb-2">
+                    <Calendar className="w-5 h-5 text-blue-500 mr-1" />
+                  </div>
+                  <div className="text-2xl font-bold text-gray-900">{mapData.statistics.monthly_trips}</div>
+                  <div className="text-xs text-gray-500">Viajes este mes</div>
                 </div>
-                <div className="flex items-center space-x-1">
-                  <TrendingUp className="w-4 h-4 text-green-500" />
-                  <span className="text-sm text-green-600 font-semibold">{mockMapData.statistics.growth_percentage}% este mes</span>
+                <div className="text-center">
+                  <div className="flex items-center justify-center mb-2">
+                    <Users className="w-5 h-5 text-green-500 mr-1" />
+                  </div>
+                  <div className="text-2xl font-bold text-gray-900">{mapData.statistics.drivers_active}</div>
+                  <div className="text-xs text-gray-500">Conductores activos</div>
                 </div>
               </div>
             </div>
-            
-            {/* Estadísticas adicionales */}
-            <div className="grid grid-cols-2 gap-4 pt-4 border-t border-gray-100">
-              <div className="text-center">
-                <div className="flex items-center justify-center mb-2">
-                  <Calendar className="w-5 h-5 text-blue-500 mr-1" />
-                </div>
-                <div className="text-2xl font-bold text-gray-900">{mockMapData.statistics.monthly_trips}</div>
-                <div className="text-xs text-gray-500">Viajes este mes</div>
-              </div>
-              <div className="text-center">
-                <div className="flex items-center justify-center mb-2">
-                  <Users className="w-5 h-5 text-green-500 mr-1" />
-                </div>
-                <div className="text-2xl font-bold text-gray-900">{mockMapData.statistics.drivers_active}</div>
-                <div className="text-xs text-gray-500">Conductores activos</div>
-              </div>
-            </div>
-          </div>
+          )}
 
           {/* Panel de información de viaje seleccionado */}
           {selectedTrip && (
@@ -448,12 +554,15 @@ const RiveraTransportMapDemo = () => {
                 </div>
                 
                 <div className={`inline-flex px-3 py-1 rounded-full text-xs font-medium ${
-                  selectedTrip.status === 'active' ? 'bg-green-100 text-green-800' :
-                  selectedTrip.status === 'in_progress' ? 'bg-yellow-100 text-yellow-800' :
-                  'bg-blue-100 text-blue-800'
+                  selectedTrip.status === 'active' || selectedTrip.status === 'in_progress' ? 'bg-green-100 text-green-800' :
+                  selectedTrip.status === 'completed' ? 'bg-blue-100 text-blue-800' :
+                  selectedTrip.status === 'cancelled' ? 'bg-red-100 text-red-800' :
+                  'bg-yellow-100 text-yellow-800'
                 }`}>
-                  {selectedTrip.status === 'active' ? 'Activo' :
-                   selectedTrip.status === 'in_progress' ? 'En progreso' : 'Programado'}
+                  {selectedTrip.status === 'active' || selectedTrip.status === 'in_progress' ? 'En progreso' :
+                   selectedTrip.status === 'completed' ? 'Completado' :
+                   selectedTrip.status === 'cancelled' ? 'Cancelado' :
+                   'Programado'}
                 </div>
               </div>
             </div>
@@ -485,12 +594,18 @@ const RiveraTransportMapDemo = () => {
               </div>
               <div className="flex items-center space-x-2">
                 <div className="w-4 h-4 bg-green-500 rounded-full border-2 border-white shadow"></div>
-                <span className="text-xs text-gray-600">Rutas Frecuentes</span>
+                <span className="text-xs text-gray-600">Rutas Activas</span>
               </div>
               <div className="flex items-center space-x-2">
                 <div className="w-4 h-4 bg-blue-500 rounded-full border-2 border-white shadow"></div>
-                <span className="text-xs text-gray-600">Rutas Ocasionales</span>
+                <span className="text-xs text-gray-600">Rutas Programadas</span>
               </div>
+              {error && (
+                <div className="mt-3 p-2 bg-yellow-50 border border-yellow-200 rounded">
+                  <div className="text-xs text-yellow-800 font-medium">⚠️ Modo Demo</div>
+                  <div className="text-xs text-yellow-600 mt-1">Usando datos de ejemplo</div>
+                </div>
+              )}
             </div>
           </div>
         </div>

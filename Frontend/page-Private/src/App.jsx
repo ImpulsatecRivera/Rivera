@@ -22,7 +22,7 @@ import AddProveedorForm from "./pages/Provedores/AgregarProovedor";
 import TruckManagement from "./pages/Camiones/EditarCamion";
 import CotizacionesComponent from "./pages/cotizaciones/Cotizaciones";
 import CotizacionForm from "./pages/cotizaciones/EditarCotizacion";
-import Maps from "./pages/Maps";
+import Maps from "./pages/mapa";
 import PantallaCarga from "./components/SplashScreen/PantallaCarga";
 
 function App() {

@@ -8,6 +8,7 @@ import LoginRoutes from "./src/Routes/LoginRoutes.js"
 import LogoutRoutes from "./src/Routes/Logout.js" 
 import RecoveryRoutes from "./src/Routes/Recovery.js"
 import RegisterRoutes from "./src/Routes/RegisterRoute.js"
+import ViajesRoutes from "./src/Routes/ViajesRoutes.js"
 import cookieParser from "cookie-parser"
 import cors from "cors";
 
@@ -31,5 +32,6 @@ app.use("/api/login", LoginRoutes);
 app.use("/api/register",RegisterRoutes);
 app.use("/api/logout", LogoutRoutes); 
 app.use("/api/recovery", RecoveryRoutes);
+app.use("/api/viajes", ViajesRoutes);
 
 export default app;
