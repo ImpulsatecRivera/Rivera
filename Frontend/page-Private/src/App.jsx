@@ -31,14 +31,14 @@ function App() {
   const [isRouteLoading, setIsRouteLoading] = useState(false);
 
   const splashRoutes = [
-    "/",
+    
     "/empleados/agregarEmployee",
     "/motoristas/agregarMotorista",
     "/Camiones/aggCamion",
     "/proveedores/agregarProveedor",
     "/Camiones/editarCamion/:id",
     "/cotizaciones/CotizacionForm",
-    "/viajes/maps"
+      "/viajes/maps"
   ];
 
   useEffect(() => {
