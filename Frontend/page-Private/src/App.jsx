@@ -20,14 +20,10 @@ import TruckFormScreen from "./pages/Camiones/FormAggCamion";
 import ProviderManagementInterface from "./pages/Provedores/Prooveedores";
 import AddProveedorForm from "./pages/Provedores/AgregarProovedor";
 import TruckManagement from "./pages/Camiones/EditarCamion";
-<<<<<<< HEAD
 import Maps from "./pages/maps";
-=======
 import CotizacionesComponent from "./pages/cotizaciones/Cotizaciones";
 import CotizacionForm from "./pages/cotizaciones/EditarCotizacion";
-import Maps from "./pages/Maps";
 import PantallaCarga from "./components/SplashScreen/PantallaCarga";
->>>>>>> master
 
 function App() {
   const location = useLocation();
@@ -35,14 +31,13 @@ function App() {
   const [isRouteLoading, setIsRouteLoading] = useState(false);
 
   const splashRoutes = [
-    
     "/empleados/agregarEmployee",
     "/motoristas/agregarMotorista",
     "/Camiones/aggCamion",
     "/proveedores/agregarProveedor",
     "/Camiones/editarCamion/:id",
     "/cotizaciones/CotizacionForm",
-      "/viajes/maps"
+    "/viajes/maps"
   ];
 
   useEffect(() => {
@@ -77,12 +72,9 @@ function App() {
     "/motoristas/agregarMotorista",
     "/Camiones/aggCamion",
     "/proveedores/agregarProveedor",
-<<<<<<< HEAD
     "/Camiones/editarCamion",
-=======
     "/Camiones/editarCamion/:id",
     "/cotizaciones/CotizacionForm",
->>>>>>> master
     "/viajes/maps"
   ];
 
@@ -100,14 +92,19 @@ function App() {
   }
 
   return (
-    <div className="flex">
-      {shouldShowMenu && (
-        <div className="fixed left-0 top-0 z-40">
-          <SidebarNav />
-        </div>
-      )}
+    <div className="flex h-screen overflow-hidden">
+      {shouldShowMenu && <SidebarNav />}
 
-      <div className={`flex-1 min-h-screen ${shouldShowMenu ? "ml-64" : "ml-0"}`}>
+      {/* 🆕 Contenido principal responsivo */}
+      <div className={`
+        flex-1 min-h-screen overflow-y-auto
+        ${shouldShowMenu ? 
+          // Con sidebar: márgenes responsivos
+          'lg:ml-0 md:ml-0 ml-0' : 
+          // Sin sidebar: sin márgenes
+          'ml-0'
+        }
+      `}>
         <Routes>
           <Route path="/" element={<Login />} />
           <Route path="/recuperar" element={<RecoverPassword />} />
@@ -136,7 +133,6 @@ function App() {
           <Route path="/cotizaciones" element={<PrivateRoute><CotizacionesComponent /></PrivateRoute>} />
           <Route path="/cotizaciones/CotizacionForm" element={<PrivateRoute><CotizacionForm/></PrivateRoute>} />
           
-<<<<<<< HEAD
           {/* Clientes */}
           <Route path="/clientes" element={<ClientManagementInterface />} />
           
@@ -153,29 +149,20 @@ function App() {
           <Route path="/viajes/maps" element={<Maps />} />
           
           {/* CAMIONES - RUTAS CORREGIDAS */}
-          {/* Lista de camiones */}
           <Route path="/Camiones" element={<Camiones />} />
-          <Route path="/camiones" element={<Camiones />} /> {/* Alias en minúscula */}
-          
-          {/* Ver detalle de camión - RUTA DINÁMICA */}
+          <Route path="/camiones" element={<Camiones />} />
           <Route path="/camiones/:id" element={<TruckDetailScreen />} />
-          <Route path="/Camiones/:id" element={<TruckDetailScreen />} /> {/* Alias */}
-          
-          {/* Agregar camión */}
+          <Route path="/Camiones/:id" element={<TruckDetailScreen />} />
           <Route path="/Camiones/aggCamion" element={<TruckFormScreen />} />
-          <Route path="/camiones/aggCamion" element={<TruckFormScreen />} /> {/* Alias */}
-          
-          {/* Editar camión - RUTA DINÁMICA */}
+          <Route path="/camiones/aggCamion" element={<TruckFormScreen />} />
           <Route path="/Camiones/editarCamion/:id" element={<TruckManagement />} />
-          <Route path="/camiones/editarCamion/:id" element={<TruckManagement />} /> {/* Alias */}
+          <Route path="/camiones/editarCamion/:id" element={<TruckManagement />} />
           
           {/* Proveedores */}
           <Route path="/proveedores" element={<ProviderManagementInterface />} />
           <Route path="/proveedores/agregarProveedor" element={<AddProveedorForm />} />
           
           {/* Ruta catch-all para páginas no encontradas */}
-=======
->>>>>>> master
           <Route path="*" element={
             <div className="flex items-center justify-center h-screen">
               <div className="text-center">
