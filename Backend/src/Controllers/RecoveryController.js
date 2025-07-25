@@ -3,7 +3,6 @@ import bcryptjs from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { EnviarEmail, html } from "../Utils/RecoveryPass.js";
 import { config } from "../config.js";
-<<<<<<< HEAD
 
 const RecoveryPass = {};
 
@@ -14,7 +13,6 @@ RecoveryPass.requestCode = async (req, res) => {
   try {
     let userFound = await EmpleadosModel.findOne({ email });
     let userType = "Empleado";
-=======
 import {EnviarSms} from "../Utils/EnviarSms.js";
 
 const RecoveryPass = {};
@@ -26,7 +24,6 @@ RecoveryPass.requestCode = async (req, res) => {
   try {
     const userFound = await EmpleadosModel.findOne({ email });
     const userType = "Empleado";
->>>>>>> 32c94ab92a55539026f958b94589d7d3bf77a044
 
     if (!userFound) {
       return res.status(400).json({ message: "Usuario no existente" });
@@ -46,10 +43,8 @@ RecoveryPass.requestCode = async (req, res) => {
       secure: process.env.NODE_ENV === "production",
       sameSite: process.env.NODE_ENV === "production" ? "Strict" : "Lax",
     });
-<<<<<<< HEAD
 
     await EnviarEmail(
-=======
     if(via === "sms"){
       const Telefono= userFound.phone;
       if(!Telefono){
@@ -59,21 +54,17 @@ RecoveryPass.requestCode = async (req, res) => {
       await EnviarSms(Telefono,`Tu codigo de verificacion es: ${codex}` )
     }else{
  await EnviarEmail(
->>>>>>> 32c94ab92a55539026f958b94589d7d3bf77a044
       email,
       "Tu código de verificación",
       "Hola, este es tu código de verificación para recuperar tu contraseña.",
       html(codex)
     );
-<<<<<<< HEAD
 
     console.log(`Solicitud de recuperación iniciada para tipo: ${userType}`);
     res.status(200).json({ message: "Correo enviado con el código de verificación" });
-=======
     }
 
     res.status(200).json({ message: `Codigo enviado via: ${via}` });
->>>>>>> 32c94ab92a55539026f958b94589d7d3bf77a044
 
   } catch (error) {
     console.error("Error en requestCode:", error);
@@ -185,8 +176,6 @@ RecoveryPass.newPassword = async (req, res) => {
   }
 };
 
-<<<<<<< HEAD
-=======
 
 //nuevo metodo Para loguiarse sin cambiar contraseña
 RecoveryPass.IniciarSesionConCodigo = async (req,res) => {
@@ -228,5 +217,4 @@ RecoveryPass.IniciarSesionConCodigo = async (req,res) => {
   }
 }
 
->>>>>>> 32c94ab92a55539026f958b94589d7d3bf77a044
 export default RecoveryPass;
