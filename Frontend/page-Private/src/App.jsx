@@ -1,4 +1,5 @@
 import { Routes, Route, useLocation } from "react-router-dom";
+import { useState, useEffect } from "react";
 import PrivateRoute from "./components/PrivateRoutes/PrivateRoute";
 import Login from "./pages/Login";
 import RecoverPassword from "./pages/RecoverPassword";
@@ -22,11 +23,46 @@ import TruckManagement from "./pages/Camiones/EditarCamion";
 import CotizacionesComponent from "./pages/cotizaciones/Cotizaciones";
 import CotizacionForm from "./pages/cotizaciones/EditarCotizacion";
 import Maps from "./pages/Maps";
+import PantallaCarga from "./components/SplashScreen/PantallaCarga";
 
 function App() {
   const location = useLocation();
+  
+  const [isRouteLoading, setIsRouteLoading] = useState(false);
 
-  // Lista de rutas donde NO debe aparecer el menú
+  const splashRoutes = [
+    
+    "/empleados/agregarEmployee",
+    "/motoristas/agregarMotorista",
+    "/Camiones/aggCamion",
+    "/proveedores/agregarProveedor",
+    "/Camiones/editarCamion/:id",
+    "/cotizaciones/CotizacionForm",
+      "/viajes/maps"
+  ];
+
+  useEffect(() => {
+    const shouldShowSplashForRoute = splashRoutes.some(route => {
+      if (route.includes(':')) {
+        const pattern = route.replace(':id', '[^/]+');
+        const regex = new RegExp(`^${pattern}$`);
+        return regex.test(location.pathname);
+      }
+      return location.pathname === route;
+    });
+
+    if (shouldShowSplashForRoute) {
+      setIsRouteLoading(true);
+      const timer = setTimeout(() => {
+        setIsRouteLoading(false);
+      }, 1500);
+
+      return () => clearTimeout(timer);
+    } else {
+      setIsRouteLoading(false);
+    }
+  }, [location.pathname]);
+
   const authRoutes = [
     "/",
     "/recuperar",
@@ -37,15 +73,13 @@ function App() {
     "/motoristas/agregarMotorista",
     "/Camiones/aggCamion",
     "/proveedores/agregarProveedor",
-    "/Camiones/editarCamion",
+    "/Camiones/editarCamion/:id",
     "/cotizaciones/CotizacionForm",
     "/viajes/maps"
   ];
 
-  // Función para verificar si debe mostrar el menú
   const shouldShowMenu = !authRoutes.some(route => {
     if (route.includes(':')) {
-      // Para rutas dinámicas, verificar el patrón
       const pattern = route.replace(':id', '[^/]+');
       const regex = new RegExp(`^${pattern}$`);
       return regex.test(location.pathname);
@@ -53,24 +87,25 @@ function App() {
     return location.pathname === route || location.pathname.startsWith(route + '/');
   });
 
+  if (isRouteLoading) {
+    return <PantallaCarga />;
+  }
+
   return (
     <div className="flex">
-      {/* Sidebar fijo */}
       {shouldShowMenu && (
         <div className="fixed left-0 top-0 z-40">
           <SidebarNav />
         </div>
       )}
 
-      {/* Contenido principal */}
       <div className={`flex-1 min-h-screen ${shouldShowMenu ? "ml-64" : "ml-0"}`}>
         <Routes>
-          {/* Rutas de autenticación */}
           <Route path="/" element={<Login />} />
           <Route path="/recuperar" element={<RecoverPassword />} />
           <Route path="/verification-input" element={<VerificationInput />} />
           <Route path="/reset-password" element={<ResetPassword />} />
-          {/* Dashboard */}
+          
           <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
           <Route path="/informes" element={<PrivateRoute><ReportsPage /></PrivateRoute>} />
           <Route path="/clientes" element={<PrivateRoute><ClientManagementInterface /></PrivateRoute>} />
@@ -88,19 +123,11 @@ function App() {
           <Route path="/camiones/aggCamion" element={<PrivateRoute><TruckFormScreen /></PrivateRoute>} />
           <Route path="/Camiones/editarCamion/:id" element={<PrivateRoute><TruckManagement /></PrivateRoute>} />
           <Route path="/camiones/editarCamion/:id" element={<PrivateRoute><TruckManagement /></PrivateRoute>} />
-
           <Route path="/proveedores" element={<PrivateRoute><ProviderManagementInterface /></PrivateRoute>} />
           <Route path="/proveedores/agregarProveedor" element={<PrivateRoute><AddProveedorForm /></PrivateRoute>} />
-
-
-          {/* Ruta catch-all para 404 */}
-
-
           <Route path="/cotizaciones" element={<PrivateRoute><CotizacionesComponent /></PrivateRoute>} />
           <Route path="/cotizaciones/CotizacionForm" element={<PrivateRoute><CotizacionForm/></PrivateRoute>} />
           
-          {/* Ruta catch-all para páginas no encontradas */}
-
           <Route path="*" element={
             <div className="flex items-center justify-center h-screen">
               <div className="text-center">
