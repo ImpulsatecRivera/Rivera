@@ -4,7 +4,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useTruckDetail } from '../../components/Camiones/hooks/HookVer'; // Ajusta la ruta según tu estructura
 import CamionFord from "../../images/CamionFord.jpg";
 
-const TruckDetailScreen = () => {
+const DetalleCamionenv = () => {
   const { id: truckId } = useParams();
   const navigate = useNavigate();
   const { truck, loading, error, refetch } = useTruckDetail(truckId);
@@ -99,18 +99,18 @@ const TruckDetailScreen = () => {
     return (
       <div className="h-screen overflow-hidden" style={{ backgroundColor: '#34353A' }}>
         <div className="h-full flex flex-col">
-          <div className="flex-1 p-3 sm:p-4 lg:p-6 overflow-hidden">
-            <div className="bg-white rounded-2xl sm:rounded-3xl shadow-lg h-full overflow-hidden flex flex-col">
-              <div className="flex items-center gap-2 sm:gap-4 p-4 sm:p-6 border-b border-gray-200 flex-shrink-0">
-                <button onClick={handleBackToMenu} className="p-1.5 sm:p-2 hover:bg-gray-100 rounded-lg transition-colors">
-                  <ArrowLeft size={18} className="text-gray-600 sm:w-5 sm:h-5" />
+          <div className="flex-1 p-6 overflow-hidden">
+            <div className="bg-white rounded-3xl shadow-lg h-full overflow-hidden flex flex-col">
+              <div className="flex items-center gap-4 p-6 border-b border-gray-200 flex-shrink-0">
+                <button onClick={handleBackToMenu} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                  <ArrowLeft size={20} className="text-gray-600" />
                 </button>
-                <h1 className="text-lg sm:text-xl font-semibold text-gray-800">Información del vehículo</h1>
+                <h1 className="text-xl font-semibold text-gray-800">Información del vehículo</h1>
               </div>
               <div className="flex-1 flex justify-center items-center">
                 <div className="text-center">
-                  <div className="animate-spin rounded-full h-12 w-12 sm:h-16 sm:w-16 border-4 border-blue-400 border-t-transparent mx-auto mb-4" />
-                  <p className="text-gray-600 text-sm sm:text-base">Cargando información del camión...</p>
+                  <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-400 border-t-transparent mx-auto mb-4" />
+                  <p className="text-gray-600">Cargando información del camión...</p>
                 </div>
               </div>
             </div>
@@ -124,22 +124,22 @@ const TruckDetailScreen = () => {
     return (
       <div className="h-screen overflow-hidden" style={{ backgroundColor: '#34353A' }}>
         <div className="h-full flex flex-col">
-          <div className="flex-1 p-3 sm:p-4 lg:p-6 overflow-hidden">
-            <div className="bg-white rounded-2xl sm:rounded-3xl shadow-lg h-full overflow-hidden flex flex-col">
-              <div className="flex items-center gap-2 sm:gap-4 p-4 sm:p-6 border-b border-gray-200 flex-shrink-0">
-                <button onClick={handleBackToMenu} className="p-1.5 sm:p-2 hover:bg-gray-100 rounded-lg transition-colors">
-                  <ArrowLeft size={18} className="text-gray-600 sm:w-5 sm:h-5" />
+          <div className="flex-1 p-6 overflow-hidden">
+            <div className="bg-white rounded-3xl shadow-lg h-full overflow-hidden flex flex-col">
+              <div className="flex items-center gap-4 p-6 border-b border-gray-200 flex-shrink-0">
+                <button onClick={handleBackToMenu} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                  <ArrowLeft size={20} className="text-gray-600" />
                 </button>
-                <h1 className="text-lg sm:text-xl font-semibold text-gray-800">Error al cargar el camión</h1>
+                <h1 className="text-xl font-semibold text-gray-800">Error al cargar el camión</h1>
               </div>
-              <div className="flex-1 flex justify-center items-center px-4">
+              <div className="flex-1 flex justify-center items-center">
                 <div className="text-center max-w-md">
-                  <AlertCircle className="h-12 w-12 sm:h-16 sm:w-16 text-red-500 mx-auto mb-4" />
-                  <h2 className="text-lg sm:text-xl font-semibold text-gray-800 mb-2">Error al cargar</h2>
-                  <p className="text-gray-600 mb-4 text-sm sm:text-base">{error}</p>
+                  <AlertCircle className="h-16 w-16 text-red-500 mx-auto mb-4" />
+                  <h2 className="text-xl font-semibold text-gray-800 mb-2">Error al cargar</h2>
+                  <p className="text-gray-600 mb-4">{error}</p>
                   <button 
                     onClick={refetch}
-                    className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors text-sm sm:text-base"
+                    className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors"
                   >
                     Intentar de nuevo
                   </button>
@@ -156,17 +156,17 @@ const TruckDetailScreen = () => {
     return (
       <div className="h-screen overflow-hidden" style={{ backgroundColor: '#34353A' }}>
         <div className="h-full flex flex-col">
-          <div className="flex-1 p-3 sm:p-4 lg:p-6 overflow-hidden">
-            <div className="bg-white rounded-2xl sm:rounded-3xl shadow-lg h-full overflow-hidden flex flex-col">
-              <div className="flex items-center gap-2 sm:gap-4 p-4 sm:p-6 border-b border-gray-200 flex-shrink-0">
-                <button onClick={handleBackToMenu} className="p-1.5 sm:p-2 hover:bg-gray-100 rounded-lg transition-colors">
-                  <ArrowLeft size={18} className="text-gray-600 sm:w-5 sm:h-5" />
+          <div className="flex-1 p-6 overflow-hidden">
+            <div className="bg-white rounded-3xl shadow-lg h-full overflow-hidden flex flex-col">
+              <div className="flex items-center gap-4 p-6 border-b border-gray-200 flex-shrink-0">
+                <button onClick={handleBackToMenu} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                  <ArrowLeft size={20} className="text-gray-600" />
                 </button>
-                <h1 className="text-lg sm:text-xl font-semibold text-gray-800">Camión no encontrado</h1>
+                <h1 className="text-xl font-semibold text-gray-800">Camión no encontrado</h1>
               </div>
               <div className="flex-1 flex justify-center items-center">
                 <div className="text-center">
-                  <p className="text-gray-600 text-sm sm:text-base">No se encontró información del camión</p>
+                  <p className="text-gray-600">No se encontró información del camión</p>
                 </div>
               </div>
             </div>
@@ -179,22 +179,22 @@ const TruckDetailScreen = () => {
   return (
     <div className="h-screen overflow-hidden" style={{ backgroundColor: '#34353A' }}>
       <div className="h-full flex flex-col">
-        <div className="flex-1 p-3 sm:p-4 lg:p-6 overflow-hidden">
-          <div className="bg-white rounded-2xl sm:rounded-3xl shadow-lg h-full overflow-hidden flex flex-col">
+        <div className="flex-1 p-6 overflow-hidden">
+          <div className="bg-white rounded-3xl shadow-lg h-full overflow-hidden flex flex-col">
             {/* Header */}
-            <div className="flex items-center gap-2 sm:gap-4 p-4 sm:p-6 border-b border-gray-200 flex-shrink-0">
-              <button onClick={handleBackToMenu} className="p-1.5 sm:p-2 hover:bg-gray-100 rounded-lg transition-colors">
-                <ArrowLeft size={18} className="text-gray-600 sm:w-5 sm:h-5" />
+            <div className="flex items-center gap-4 p-6 border-b border-gray-200 flex-shrink-0">
+              <button onClick={handleBackToMenu} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                <ArrowLeft size={20} className="text-gray-600" />
               </button>
-              <h1 className="text-lg sm:text-xl font-semibold text-gray-800">Información del vehículo</h1>
+              <h1 className="text-xl font-semibold text-gray-800">Información del vehículo</h1>
             </div>
 
-            <div className="flex flex-1 flex-col xl:flex-row overflow-hidden">
+            <div className="flex flex-1 flex-col lg:flex-row overflow-hidden">
               {/* Left Sidebar - Statistics */}
-              <div className="w-full xl:w-80 2xl:w-96 p-4 sm:p-6 lg:p-8 border-b xl:border-b-0 xl:border-r border-gray-200 bg-gray-50 flex-shrink-0">
-                <h2 className="text-lg sm:text-xl font-semibold text-gray-800 mb-6 sm:mb-8">Estadísticas del vehículo</h2>
+              <div className="w-full lg:w-80 p-8 border-b lg:border-b-0 lg:border-r border-gray-200 bg-gray-50 flex-shrink-0">
+                <h2 className="text-xl font-semibold text-gray-800 mb-8">Estadísticas del vehículo</h2>
 
-                <div className="space-y-6 sm:space-y-8 lg:space-y-10">
+                <div className="space-y-10">
                   {Object.entries(truck.stats).map(([key, stat], index) => {
                     const labels = {
                       kilometraje: "Kilometraje",
@@ -205,14 +205,14 @@ const TruckDetailScreen = () => {
                     };
 
                     return (
-                      <div key={key} className="space-y-2 sm:space-y-3">
+                      <div key={key} className="space-y-3">
                         <div className="flex justify-between items-center">
-                          <span className="text-gray-700 font-medium text-sm sm:text-base">{labels[key]}</span>
-                          <span className="font-bold text-gray-900 text-lg sm:text-xl">{stat.value}</span>
+                          <span className="text-gray-700 font-medium text-base">{labels[key]}</span>
+                          <span className="font-bold text-gray-900 text-xl">{stat.value}</span>
                         </div>
 
                         {/* Progress Bar */}
-                        <div className="w-full bg-gray-200 rounded-full h-1.5 sm:h-2 overflow-hidden">
+                        <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
                           <div
                             className="h-full bg-blue-500 rounded-full transition-all duration-1000 ease-out"
                             style={{
@@ -229,10 +229,10 @@ const TruckDetailScreen = () => {
 
               {/* Main Content Area */}
               <div className="flex-1 overflow-y-auto">
-                <div className="p-4 sm:p-6 lg:p-8">
+                <div className="p-8">
                   {/* Image Carousel */}
-                  <div className="relative mb-4 sm:mb-6">
-                    <div className="w-full h-48 sm:h-60 md:h-72 lg:h-80 bg-white rounded-xl sm:rounded-2xl overflow-hidden relative shadow-md">
+                  <div className="relative mb-6">
+                    <div className="w-full h-60 sm:h-72 bg-white rounded-2xl overflow-hidden relative shadow-md">
                       <img
                         src={truck.images[currentImageIndex] || CamionFord}
                         alt={truck.name}
@@ -244,27 +244,27 @@ const TruckDetailScreen = () => {
                         <>
                           <button
                             onClick={prevImage}
-                            className="absolute left-2 sm:left-4 top-1/2 transform -translate-y-1/2 bg-white bg-opacity-80 hover:bg-opacity-100 rounded-full p-1.5 sm:p-2 transition-all"
+                            className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-white bg-opacity-80 hover:bg-opacity-100 rounded-full p-2 transition-all"
                           >
-                            <ChevronLeft size={16} className="text-gray-700 sm:w-5 sm:h-5" />
+                            <ChevronLeft size={20} className="text-gray-700" />
                           </button>
                           <button
                             onClick={nextImage}
-                            className="absolute right-2 sm:right-4 top-1/2 transform -translate-y-1/2 bg-white bg-opacity-80 hover:bg-opacity-100 rounded-full p-1.5 sm:p-2 transition-all"
+                            className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-white bg-opacity-80 hover:bg-opacity-100 rounded-full p-2 transition-all"
                           >
-                            <ChevronRight size={16} className="text-gray-700 sm:w-5 sm:h-5" />
+                            <ChevronRight size={20} className="text-gray-700" />
                           </button>
                         </>
                       )}
 
                       {/* Image Indicators */}
                       {truck.images.length > 1 && (
-                        <div className="absolute bottom-2 sm:bottom-4 left-1/2 transform -translate-x-1/2 flex gap-1.5 sm:gap-2">
+                        <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex gap-2">
                           {truck.images.map((_, index) => (
                             <button
                               key={index}
                               onClick={() => goToImage(index)}
-                              className={`w-2 h-2 sm:w-3 sm:h-3 rounded-full transition-all ${
+                              className={`w-3 h-3 rounded-full transition-all ${
                                 index === currentImageIndex
                                   ? 'bg-white'
                                   : 'bg-white bg-opacity-50 hover:bg-opacity-75'
@@ -277,82 +277,82 @@ const TruckDetailScreen = () => {
                   </div>
 
                   {/* Vehicle Info Cards - Top Row */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 lg:gap-6 mb-4 sm:mb-6">
-                    <div className="bg-white border border-gray-200 p-4 sm:p-6 rounded-xl sm:rounded-2xl shadow-sm transform transition-all duration-500 hover:scale-[1.02] hover:shadow-md">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+                    <div className="bg-white border border-gray-200 p-6 rounded-2xl shadow-sm transform transition-all duration-500 hover:scale-[1.02] hover:shadow-md">
                       <div className="flex items-center justify-between">
-                        <div className="min-w-0 flex-1">
-                          <div className="text-lg sm:text-xl font-bold text-gray-900 mb-1 truncate">{truck.plate}</div>
-                          <div className="text-xs sm:text-sm text-gray-500">Placa</div>
+                        <div>
+                          <div className="text-xl font-bold text-gray-900 mb-1">{truck.plate}</div>
+                          <div className="text-sm text-gray-500">Placa</div>
                         </div>
-                        <div className="text-2xl sm:text-3xl ml-2">🚗</div>
+                        <div className="text-3xl">🚗</div>
                       </div>
                     </div>
 
-                    <div className="bg-white border border-gray-200 p-4 sm:p-6 rounded-xl sm:rounded-2xl shadow-sm transform transition-all duration-500 hover:scale-[1.02] hover:shadow-md">
+                    <div className="bg-white border border-gray-200 p-6 rounded-2xl shadow-sm transform transition-all duration-500 hover:scale-[1.02] hover:shadow-md">
                       <div className="flex items-center justify-between">
-                        <div className="min-w-0 flex-1">
-                          <div className="text-lg sm:text-xl font-bold text-gray-900 mb-1 truncate">{truck.card}</div>
-                          <div className="text-xs sm:text-sm text-gray-500">Tarjeta de circulación</div>
+                        <div>
+                          <div className="text-xl font-bold text-gray-900 mb-1">{truck.card}</div>
+                          <div className="text-sm text-gray-500">Tarjeta de circulación</div>
                         </div>
-                        <div className="text-2xl sm:text-3xl ml-2">📋</div>
+                        <div className="text-3xl">📋</div>
                       </div>
                     </div>
 
-                    <div className="bg-white border border-gray-200 p-4 sm:p-6 rounded-xl sm:rounded-2xl shadow-sm transform transition-all duration-500 hover:scale-[1.02] hover:shadow-md sm:col-span-2 lg:col-span-1">
+                    <div className="bg-white border border-gray-200 p-6 rounded-2xl shadow-sm transform transition-all duration-500 hover:scale-[1.02] hover:shadow-md">
                       <div className="flex items-center justify-between">
-                        <div className="min-w-0 flex-1">
-                          <div className="text-lg sm:text-xl font-bold text-gray-900 mb-1">{truck.year}</div>
-                          <div className="text-xs sm:text-sm text-gray-500">Año</div>
+                        <div>
+                          <div className="text-xl font-bold text-gray-900 mb-1">{truck.year}</div>
+                          <div className="text-sm text-gray-500">Año</div>
                         </div>
-                        <div className="text-2xl sm:text-3xl ml-2">📅</div>
+                        <div className="text-3xl">📅</div>
                       </div>
                     </div>
                   </div>
 
                   {/* Vehicle Info Cards - Bottom Row */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 lg:gap-6 mb-6 sm:mb-8">
-                    <div className="bg-white border border-gray-200 p-4 sm:p-6 rounded-xl sm:rounded-2xl shadow-sm transform transition-all duration-500 hover:scale-[1.02] hover:shadow-md">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+                    <div className="bg-white border border-gray-200 p-6 rounded-2xl shadow-sm transform transition-all duration-500 hover:scale-[1.02] hover:shadow-md">
                       <div className="flex items-center justify-between">
-                        <div className="min-w-0 flex-1">
-                          <div className="text-lg sm:text-xl font-bold text-gray-900 mb-1 truncate">{truck.driver}</div>
-                          <div className="text-xs sm:text-sm text-gray-500">Motorista encargado</div>
+                        <div>
+                          <div className="text-xl font-bold text-gray-900 mb-1">{truck.driver}</div>
+                          <div className="text-sm text-gray-500">Motorista encargado</div>
                         </div>
-                        <div className="text-2xl sm:text-3xl ml-2">👤</div>
+                        <div className="text-3xl">👤</div>
                       </div>
                     </div>
 
-                    <div className="bg-white border border-gray-200 p-4 sm:p-6 rounded-xl sm:rounded-2xl shadow-sm transform transition-all duration-500 hover:scale-[1.02] hover:shadow-md">
+                    <div className="bg-white border border-gray-200 p-6 rounded-2xl shadow-sm transform transition-all duration-500 hover:scale-[1.02] hover:shadow-md">
                       <div className="flex items-center justify-between">
-                        <div className="min-w-0 flex-1">
-                          <div className="text-lg sm:text-xl font-bold text-gray-900 mb-1 truncate">{truck.brand}</div>
-                          <div className="text-xs sm:text-sm text-gray-500">Marca</div>
+                        <div>
+                          <div className="text-xl font-bold text-gray-900 mb-1">{truck.brand}</div>
+                          <div className="text-sm text-gray-500">Marca</div>
                         </div>
-                        <div className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-500 rounded-full flex items-center justify-center ml-2">
-                          <span className="text-white font-bold text-sm sm:text-lg">{truck.brand.charAt(0)}</span>
+                        <div className="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center">
+                          <span className="text-white font-bold text-lg">{truck.brand.charAt(0)}</span>
                         </div>
                       </div>
                     </div>
 
-                    <div className="bg-white border border-gray-200 p-4 sm:p-6 rounded-xl sm:rounded-2xl shadow-sm transform transition-all duration-500 hover:scale-[1.02] hover:shadow-md sm:col-span-2 lg:col-span-1">
+                    <div className="bg-white border border-gray-200 p-6 rounded-2xl shadow-sm transform transition-all duration-500 hover:scale-[1.02] hover:shadow-md">
                       <div className="flex items-center justify-between">
-                        <div className="min-w-0 flex-1">
-                          <div className="text-lg sm:text-xl font-bold text-gray-900 mb-1 truncate">{truck.model}</div>
-                          <div className="text-xs sm:text-sm text-gray-500">Modelo</div>
+                        <div>
+                          <div className="text-xl font-bold text-gray-900 mb-1">{truck.model}</div>
+                          <div className="text-sm text-gray-500">Modelo</div>
                         </div>
-                        <div className="text-2xl sm:text-3xl ml-2">🚛</div>
+                        <div className="text-3xl">🚛</div>
                       </div>
                     </div>
                   </div>
 
                   {/* Status Badge */}
-                  <div className="flex justify-center sm:justify-end">
-                    <div className={`inline-flex items-center px-4 sm:px-6 py-2 sm:py-3 rounded-full border shadow-sm ${getStatusColor(truck.status)} max-w-full`}>
-                      <div className={`w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full mr-2 sm:mr-3 ${getStatusDotColor(truck.status)}`} />
-                      <span className="font-semibold text-sm sm:text-lg mr-2 sm:mr-3 truncate">
+                  <div className="flex justify-end">
+                    <div className={`inline-flex items-center px-6 py-3 rounded-full border shadow-sm ${getStatusColor(truck.status)}`}>
+                      <div className={`w-3 h-3 rounded-full mr-3 ${getStatusDotColor(truck.status)}`} />
+                      <span className="font-semibold text-lg mr-3">
                         {truck.status === 'No especificado' ? 'Sin estado' : truck.status}
                       </span>
-                      <div className="w-5 h-5 sm:w-6 sm:h-6 bg-current rounded-full flex items-center justify-center opacity-70 flex-shrink-0">
-                        <span className="text-white text-xs sm:text-sm font-bold">✓</span>
+                      <div className="w-6 h-6 bg-current rounded-full flex items-center justify-center opacity-70">
+                        <span className="text-white text-sm font-bold">✓</span>
                       </div>
                     </div>
                   </div>
@@ -366,4 +366,4 @@ const TruckDetailScreen = () => {
   );
 };
 
-export default TruckDetailScreen;
+export default DetalleCamionenv;

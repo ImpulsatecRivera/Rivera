@@ -1,55 +1,59 @@
 import camionesMod from "../Models/Camiones.js";
-import {v2 as cloudinary} from "cloudinary";
+import { v2 as cloudinary } from "cloudinary";
 import { config } from "../config.js";
 
-const camionesController={};
+const camionesController = {};
 
+// Configurar Cloudinary
 cloudinary.config({
-    cloud_name: config.cloudinary.cloudinary_name,
-    api_key: config.cloudinary.cloudinary_api_key,
-    api_secret: config.cloudinary.cloudinary_api_secret,
-  });
+  cloud_name: config.cloudinary.cloudinary_name,
+  api_key: config.cloudinary.cloudinary_api_key,
+  api_secret: config.cloudinary.cloudinary_api_secret,
+});
 
-camionesController.get= async (req,res) =>{
-    try {
-           const newCamion = await camionesMod.find();
-    res.json(newCamion);
-    } catch (error) {
-         res.status(500).json({ message: "Error al obtener camiones", error: error.message });
-    }
-}
+// Obtener todos los camiones
+camionesController.get = async (req, res) => {
+  try {
+    const camiones = await camionesMod.find();
+    res.status(200).json(camiones);
+  } catch (error) {
+    res.status(500).json({ message: "Error al obtener camiones", error: error.message });
+  }
+};
 
+// Obtener camión por ID
 camionesController.getById = async (req, res) => {
-    try {
-        const { id } = req.params;
-        const camion = await camionesMod.findById(id)
-            .populate('driverId') // Para obtener datos del motorista
-            .populate('supplierId'); // Para obtener datos del proveedor
-        
-        if (!camion) {
-            return res.status(404).json({ message: "Camión no encontrado" });
-        }
-        
-        res.json(camion);
-    } catch (error) {
-        res.status(500).json({ message: "Error al obtener camión", error: error.message });
-    }
-}
+  try {
+    const { id } = req.params;
+    const camion = await camionesMod.findById(id)
+      .populate("driverId")
+      .populate("supplierId");
 
+    if (!camion) {
+      return res.status(404).json({ message: "Camión no encontrado" });
+    }
+
+    res.json(camion);
+  } catch (error) {
+    res.status(500).json({ message: "Error al obtener camión", error: error.message });
+  }
+};
+
+// Agregar un nuevo camión
 camionesController.post = async (req, res) => {
   try {
     const {
       name,
       brand,
       model,
-      state, // ya esperamos `state` directamente
+      state,
       gasolineLevel,
       age,
       ciculatioCard,
       licensePlate,
       description,
       supplierId,
-      driverId
+      driverId,
     } = req.body;
 
     let imgUrl = "";
@@ -65,7 +69,7 @@ camionesController.post = async (req, res) => {
       name,
       brand,
       model,
-      state: state?.toUpperCase(), // normalizamos el valor
+      state: state?.toUpperCase(),
       gasolineLevel,
       age,
       ciculatioCard,
@@ -84,20 +88,21 @@ camionesController.post = async (req, res) => {
   }
 };
 
+// Actualizar un camión
 camionesController.put = async (req, res) => {
   try {
     const {
       name,
       brand,
       model,
-      state, // corregido
+      state,
       gasolineLevel,
       age,
       ciculatioCard,
       licensePlate,
       description,
       supplierId,
-      driverId
+      driverId,
     } = req.body;
 
     let imgUrl = "";
@@ -113,7 +118,7 @@ camionesController.put = async (req, res) => {
       name,
       brand,
       model,
-      state: state?.toUpperCase(), // seguimos normalizando
+      state: state?.toUpperCase(),
       gasolineLevel,
       age,
       ciculatioCard,
@@ -135,19 +140,17 @@ camionesController.put = async (req, res) => {
   }
 };
 
-
-
-camionesController.delete = async (req,res) => {
-    try {
-         const deleteCamion = await camionesMod.findByIdAndDelete(req.params.id);
-    if(!deleteCamion){
-        return res.status(404).json({Message: "Camion no encontrado"});
+// Eliminar un camión
+camionesController.delete = async (req, res) => {
+  try {
+    const deleteCamion = await camionesMod.findByIdAndDelete(req.params.id);
+    if (!deleteCamion) {
+      return res.status(404).json({ message: "Camión no encontrado" });
     }
-    res.status(200).json({Message: "Camion eliminado correctamente"})
-    } catch (error) {
-        res.status(500).json({ message: "Error al eliminar camion", error: error.message });
-    }
+    res.status(200).json({ message: "Camión eliminado correctamente" });
+  } catch (error) {
+    res.status(500).json({ message: "Error al eliminar camión", error: error.message });
+  }
 };
-
 
 export default camionesController;

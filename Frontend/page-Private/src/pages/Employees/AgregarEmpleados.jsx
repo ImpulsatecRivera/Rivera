@@ -487,30 +487,30 @@ const AddEmployeeForm = () => {
   return (
     <div className="fixed inset-0 min-h-screen" style={{ backgroundColor: '#34353A' }}>
       {/* Header */}
-      <div className="text-white px-3 sm:px-4 md:px-6 lg:px-8 py-2 sm:py-3 md:py-4" style={{ backgroundColor: '#34353A' }}>
+      <div className="text-white px-4 sm:px-8 py-2 sm:py-4" style={{ backgroundColor: '#34353A' }}>
         <button 
           onClick={handleBackToMenu}
           className="flex items-center space-x-2 text-white hover:text-gray-300 transition-colors"
         >
-          <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />
-          <span className="text-xs sm:text-sm">Volver al menú principal</span>
+          <ArrowLeft className="w-5 h-5" />
+          <span className="text-sm">Volver al menú principal</span>
         </button>
       </div>
 
       {/* Main Content */}
-      <div className="px-3 sm:px-4 md:px-6 lg:px-8 pb-4 sm:pb-6 lg:pb-8" style={{ height: 'calc(100vh - 60px)' }}>
-        <div className="bg-white rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-6 lg:p-8 h-full max-w-none mx-0 overflow-y-auto">
+      <div className="px-4 sm:px-8 pb-6 sm:pb-8" style={{ height: 'calc(100vh - 80px)' }}>
+        <div className="bg-white rounded-2xl p-4 sm:p-6 md:p-8 h-full max-w-none mx-0 overflow-y-auto">
           {/* Title Section */}
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 sm:mb-6 lg:mb-8 space-y-3 sm:space-y-0">
-            <div className="flex items-center space-x-3 sm:space-x-4">
-              <h1 className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900">Agregar Empleado</h1>
-              <div className="w-10 h-10 sm:w-12 sm:h-12 lg:w-14 lg:h-14 rounded-full flex items-center justify-center" style={{ backgroundColor: '#34353A' }}>
-                <User className="w-5 h-5 sm:w-6 sm:h-6 lg:w-7 lg:h-7 text-white" />
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 sm:mb-8 space-y-4 sm:space-y-0">
+            <div className="flex items-center space-x-4">
+              <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Agregar Empleado</h1>
+              <div className="w-14 h-14 rounded-full flex items-center justify-center" style={{ backgroundColor: '#34353A' }}>
+                <User className="w-7 h-7 text-white" />
               </div>
             </div>
             <button 
               onClick={handleSubmit}
-              className="text-white px-4 sm:px-6 lg:px-8 py-2 sm:py-2.5 lg:py-3 rounded-lg text-xs sm:text-sm font-medium transition-colors hover:opacity-90 w-full sm:w-auto"
+              className="text-white px-6 sm:px-8 py-2.5 sm:py-3 rounded-lg text-sm font-medium transition-colors hover:opacity-90"
               style={{ backgroundColor: '#375E27' }}
               disabled={loading}
             >
@@ -519,10 +519,10 @@ const AddEmployeeForm = () => {
           </div>
 
           {/* Form */}
-          <form onSubmit={handleSubmit} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 lg:gap-6">
+          <form onSubmit={handleSubmit} className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
             {/* Nombre */}
             <div className="flex flex-col">
-              <label htmlFor="name" className="mb-1 sm:mb-2 font-semibold text-gray-700 text-sm">Nombre *</label>
+              <label htmlFor="name" className="mb-1 font-semibold text-gray-700">Nombre</label>
               <input
                 id="name"
                 name="name"
@@ -532,14 +532,14 @@ const AddEmployeeForm = () => {
                 onFocus={handleFocus}
                 onBlur={handleBlur}
                 placeholder="Ingrese el nombre"
-                className={`border rounded-md px-2 sm:px-3 py-1.5 sm:py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-600 ${errors.name ? 'border-red-500' : 'border-gray-300'}`}
+                className={`border rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-600 ${errors.name ? 'border-red-500' : 'border-gray-300'}`}
               />
               {errors.name && <span className="text-red-600 text-xs mt-1">{errors.name}</span>}
             </div>
 
             {/* Apellido */}
             <div className="flex flex-col">
-              <label htmlFor="lastName" className="mb-1 sm:mb-2 font-semibold text-gray-700 text-sm">Apellido *</label>
+              <label htmlFor="lastName" className="mb-1 font-semibold text-gray-700">Apellido</label>
               <input
                 id="lastName"
                 name="lastName"
@@ -549,27 +549,27 @@ const AddEmployeeForm = () => {
                 onFocus={handleFocus}
                 onBlur={handleBlur}
                 placeholder="Ingrese el apellido"
-                className={`border rounded-md px-2 sm:px-3 py-1.5 sm:py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-600 ${errors.lastName ? 'border-red-500' : 'border-gray-300'}`}
+                className={`border rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-600 ${errors.lastName ? 'border-red-500' : 'border-gray-300'}`}
               />
               {errors.lastName && <span className="text-red-600 text-xs mt-1">{errors.lastName}</span>}
             </div>
 
             {/* Email - solo mostrar */}
-            <div className="flex flex-col sm:col-span-2 lg:col-span-1">
-              <label htmlFor="email" className="mb-1 sm:mb-2 font-semibold text-gray-700 text-sm">Email (generado)</label>
+            <div className="flex flex-col">
+              <label htmlFor="email" className="mb-1 font-semibold text-gray-700">Correo electronico (generado)</label>
               <input
                 id="email"
                 name="email"
                 type="email"
                 value={formData.email}
                 readOnly
-                className="border rounded-md px-2 sm:px-3 py-1.5 sm:py-2 text-sm bg-gray-100 cursor-not-allowed border-gray-300"
+                className="border rounded-md px-3 py-2 bg-gray-100 cursor-not-allowed border-gray-300"
               />
             </div>
 
             {/* DUI */}
             <div className="flex flex-col">
-              <label htmlFor="dui" className="mb-1 sm:mb-2 font-semibold text-gray-700 text-sm">DUI *</label>
+              <label htmlFor="dui" className="mb-1 font-semibold text-gray-700">DUI</label>
               <input
                 id="dui"
                 name="dui"
@@ -580,14 +580,14 @@ const AddEmployeeForm = () => {
                 onBlur={handleBlur}
                 placeholder="00000000-0"
                 maxLength={10}
-                className={`border rounded-md px-2 sm:px-3 py-1.5 sm:py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-600 ${errors.dui ? 'border-red-500' : 'border-gray-300'}`}
+                className={`border rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-600 ${errors.dui ? 'border-red-500' : 'border-gray-300'}`}
               />
               {errors.dui && <span className="text-red-600 text-xs mt-1">{errors.dui}</span>}
             </div>
 
             {/* Fecha de Nacimiento */}
             <div className="relative flex flex-col">
-              <label htmlFor="birthDate" className="mb-1 sm:mb-2 font-semibold text-gray-700 text-sm">Fecha de Nacimiento *</label>
+              <label htmlFor="birthDate" className="mb-1 font-semibold text-gray-700">Fecha de nacimiento</label>
               <input
                 id="birthDate"
                 name="birthDate"
@@ -596,13 +596,13 @@ const AddEmployeeForm = () => {
                 placeholder="YYYY-MM-DD"
                 onFocus={() => setShowCalendar(true)}
                 readOnly
-                className={`border rounded-md px-2 sm:px-3 py-1.5 sm:py-2 text-sm cursor-pointer focus:outline-none focus:ring-2 focus:ring-green-600 ${errors.birthDate ? 'border-red-500' : 'border-gray-300'}`}
+                className={`border rounded-md px-3 py-2 cursor-pointer focus:outline-none focus:ring-2 focus:ring-green-600 ${errors.birthDate ? 'border-red-500' : 'border-gray-300'}`}
               />
               {errors.birthDate && <span className="text-red-600 text-xs mt-1">{errors.birthDate}</span>}
 
               {/* Calendario */}
               {showCalendar && (
-                <div className="absolute z-10 bg-white rounded-md shadow-lg mt-2 p-3 w-64 sm:w-72 md:w-80 top-full">
+                <div className="absolute z-10 bg-white rounded-md shadow-lg mt-2 p-3 w-64 sm:w-72 md:w-80">
                   {/* Selector de año */}
                   <div className="flex justify-between items-center mb-2">
                     <button
@@ -611,12 +611,12 @@ const AddEmployeeForm = () => {
                       className="p-1 hover:bg-gray-200 rounded"
                       aria-label="Año anterior"
                     >
-                      <ChevronLeft className="w-4 h-4" />
+                      <ChevronLeft />
                     </button>
                     <button
                       type="button"
                       onClick={() => setShowYearSelector(!showYearSelector)}
-                      className="font-semibold text-gray-700 text-sm"
+                      className="font-semibold text-gray-700"
                     >
                       {currentDate.getFullYear()}
                     </button>
@@ -626,7 +626,7 @@ const AddEmployeeForm = () => {
                       className="p-1 hover:bg-gray-200 rounded"
                       aria-label="Año siguiente"
                     >
-                      <ChevronRight className="w-4 h-4" />
+                      <ChevronRight />
                     </button>
                   </div>
 
@@ -638,27 +638,27 @@ const AddEmployeeForm = () => {
                       className="p-1 hover:bg-gray-200 rounded"
                       aria-label="Mes anterior"
                     >
-                      <ChevronLeft className="w-4 h-4" />
+                      <ChevronLeft />
                     </button>
-                    <span className="font-semibold text-gray-700 text-sm">{months[currentDate.getMonth()]}</span>
+                    <span className="font-semibold text-gray-700">{months[currentDate.getMonth()]}</span>
                     <button
                       type="button"
                       onClick={() => navigateMonth(1)}
                       className="p-1 hover:bg-gray-200 rounded"
                       aria-label="Mes siguiente"
                     >
-                      <ChevronRight className="w-4 h-4" />
+                      <ChevronRight />
                     </button>
                   </div>
 
                   {/* Lista de años (cuando se muestra selector) */}
                   {showYearSelector && (
-                    <div className="max-h-32 sm:max-h-40 overflow-y-auto mb-2 border rounded p-1">
+                    <div className="max-h-40 overflow-y-auto mb-2 border rounded p-1">
                       {generateYears().map(year => (
                         <button
                           key={year}
                           type="button"
-                          className={`block w-full text-left px-2 py-1 rounded hover:bg-gray-200 text-sm ${
+                          className={`block w-full text-left px-2 py-1 rounded hover:bg-gray-200 ${
                             year === currentDate.getFullYear() ? 'bg-green-600 text-white' : 'text-gray-700'
                           }`}
                           onClick={() => {
@@ -680,7 +680,7 @@ const AddEmployeeForm = () => {
                   </div>
 
                   {/* Días del mes */}
-                  <div className="grid grid-cols-7 gap-1 text-center text-xs sm:text-sm">
+                  <div className="grid grid-cols-7 gap-1 text-center text-sm">
                     {getDaysInMonth(currentDate).map((date, index) => {
                       const isCurrent = isCurrentMonth(date);
                       const isSelectedDay = isSelected(date);
@@ -707,7 +707,7 @@ const AddEmployeeForm = () => {
                   <button
                     type="button"
                     onClick={() => setShowCalendar(false)}
-                    className="mt-2 w-full py-1 text-xs sm:text-sm text-center text-red-600 hover:text-red-800"
+                    className="mt-2 w-full py-1 text-sm text-center text-red-600 hover:text-red-800"
                   >
                     Cerrar
                   </button>
@@ -716,8 +716,8 @@ const AddEmployeeForm = () => {
             </div>
 
             {/* Contraseña */}
-            <div className="flex flex-col sm:col-span-2 lg:col-span-1">
-              <label htmlFor="password" className="mb-1 sm:mb-2 font-semibold text-gray-700 text-sm">Contraseña *</label>
+            <div className="flex flex-col">
+              <label htmlFor="password" className="mb-1 font-semibold text-gray-700">Contraseña</label>
               <input
                 id="password"
                 name="password"
@@ -727,14 +727,14 @@ const AddEmployeeForm = () => {
                 onFocus={handleFocus}
                 onBlur={handleBlur}
                 placeholder="Ingrese una contraseña"
-                className={`border rounded-md px-2 sm:px-3 py-1.5 sm:py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-600 ${errors.password ? 'border-red-500' : 'border-gray-300'}`}
+                className={`border rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-600 ${errors.password ? 'border-red-500' : 'border-gray-300'}`}
               />
               {errors.password && <span className="text-red-600 text-xs mt-1">{errors.password}</span>}
             </div>
 
             {/* Teléfono */}
             <div className="flex flex-col">
-              <label htmlFor="phone" className="mb-1 sm:mb-2 font-semibold text-gray-700 text-sm">Teléfono *</label>
+              <label htmlFor="phone" className="mb-1 font-semibold text-gray-700">Teléfono</label>
               <input
                 id="phone"
                 name="phone"
@@ -745,14 +745,14 @@ const AddEmployeeForm = () => {
                 onBlur={handleBlur}
                 placeholder="0000-0000"
                 maxLength={9}
-                className={`border rounded-md px-2 sm:px-3 py-1.5 sm:py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-600 ${errors.phone ? 'border-red-500' : 'border-gray-300'}`}
+                className={`border rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-600 ${errors.phone ? 'border-red-500' : 'border-gray-300'}`}
               />
               {errors.phone && <span className="text-red-600 text-xs mt-1">{errors.phone}</span>}
             </div>
 
             {/* Dirección */}
-            <div className="flex flex-col sm:col-span-2 lg:col-span-2">
-              <label htmlFor="address" className="mb-1 sm:mb-2 font-semibold text-gray-700 text-sm">Dirección *</label>
+            <div className="flex flex-col md:col-span-2">
+              <label htmlFor="address" className="mb-1 font-semibold text-gray-700">Dirección</label>
               <textarea
                 id="address"
                 name="address"
@@ -762,33 +762,33 @@ const AddEmployeeForm = () => {
                 onBlur={handleBlur}
                 placeholder="Ingrese la dirección completa"
                 rows={3}
-                className={`border rounded-md px-2 sm:px-3 py-1.5 sm:py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-600 resize-none ${errors.address ? 'border-red-500' : 'border-gray-300'}`}
+                className={`border rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-600 resize-none ${errors.address ? 'border-red-500' : 'border-gray-300'}`}
               />
               {errors.address && <span className="text-red-600 text-xs mt-1">{errors.address}</span>}
             </div>
 
             {/* Imagen */}
-            <div className="flex flex-col sm:col-span-2 lg:col-span-3">
-              <label className="mb-2 font-semibold text-gray-700 text-sm">Foto de perfil (opcional)</label>
-              <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-3 sm:space-y-0 sm:space-x-4">
+            <div className="flex flex-col md:col-span-3">
+              <label className="mb-2 font-semibold text-gray-700">Foto de perfil (opcional)</label>
+              <div className="flex items-center space-x-4">
                 {imagePreview ? (
-                  <div className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-full overflow-hidden border border-gray-300 flex-shrink-0">
+                  <div className="relative w-24 h-24 rounded-full overflow-hidden border border-gray-300">
                     <img src={imagePreview} alt="Previsualización" className="object-cover w-full h-full" />
                     <button
                       type="button"
                       onClick={removeImage}
-                      className="absolute top-0.5 right-0.5 sm:top-1 sm:right-1 bg-red-600 hover:bg-red-700 text-white rounded-full p-1 focus:outline-none"
+                      className="absolute top-1 right-1 bg-red-600 hover:bg-red-700 text-white rounded-full p-1 focus:outline-none"
                       aria-label="Eliminar imagen"
                     >
-                      <X className="w-3 h-3 sm:w-4 sm:h-4" />
+                      <X className="w-4 h-4" />
                     </button>
                   </div>
                 ) : (
                   <label
                     htmlFor="img-input"
-                    className="flex items-center justify-center cursor-pointer w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-gray-100 border border-dashed border-gray-300 hover:bg-gray-200 transition-colors flex-shrink-0"
+                    className="flex items-center justify-center cursor-pointer w-24 h-24 rounded-full bg-gray-100 border border-dashed border-gray-300 hover:bg-gray-200 transition-colors"
                   >
-                    <Upload className="w-5 h-5 sm:w-6 sm:h-6 text-gray-400" />
+                    <Upload className="w-6 h-6 text-gray-400" />
                     <input
                       id="img-input"
                       type="file"
@@ -798,15 +798,6 @@ const AddEmployeeForm = () => {
                     />
                   </label>
                 )}
-                
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs sm:text-sm text-gray-600 mb-1">
-                    Sube una foto de perfil (opcional)
-                  </p>
-                  <p className="text-xs text-gray-500">
-                    Formatos: JPG, PNG, GIF. Máximo: 5MB
-                  </p>
-                </div>
               </div>
             </div>
           </form>

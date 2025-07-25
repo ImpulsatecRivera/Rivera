@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from "axios";
 
-const useMotoristaManagement = () => {
+const useDataMotorista = () => {
   // Estados principales
   const [motoristas, setMotoristas] = useState([]);
   const [selectedMotorista, setSelectedMotorista] = useState(null);
@@ -310,4 +310,4 @@ const useMotoristaManagement = () => {
   };
 };
 
-export default useMotoristaManagement;
+export default useDataMotorista;

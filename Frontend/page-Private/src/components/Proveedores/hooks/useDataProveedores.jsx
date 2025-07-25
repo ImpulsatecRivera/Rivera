@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from "axios";
 
-const useSupplierManagement = () => {
+const useDataProveedores = () => {
   // Estados principales
   const [proveedores, setProveedores] = useState([]);
   const [selectedProveedor, setSelectedProveedor] = useState(null);
@@ -221,4 +221,4 @@ const useSupplierManagement = () => {
   };
 };
 
-export default useSupplierManagement;
+export default useDataProveedores;
