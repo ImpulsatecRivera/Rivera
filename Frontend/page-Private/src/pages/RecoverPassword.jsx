@@ -14,7 +14,6 @@ const RecoverPassword = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  // Métodos de recuperación disponibles
   const recoveryMethods = [
     {
       id: "email",
@@ -22,46 +21,42 @@ const RecoverPassword = () => {
       placeholder: "ejemplo@email.com",
       icon: "📧",
       description: "Recuperar y cambiar contraseña",
-      flow: "reset" // Flujo tradicional: código → nueva contraseña
+      flow: "reset"
     },
     {
       id: "sms",
       label: "SMS",
       placeholder: "+1234567890",
       icon: "📱",
-      description: "Acceso rápido con código",
-      flow: "quickLogin" // Flujo rápido: código → login directo
-    },
-    {
-      id: "whatsapp",
-      label: "WhatsApp",
-      placeholder: "+1234567890",
-      icon: "💬",
-      description: "Acceso rápido con código",
-      flow: "quickLogin" // Flujo rápido: código → login directo
+      description: "Recuperar y cambiar contraseña",
+      flow: "reset"
     }
   ];
 
-  // Validaciones según el método seleccionado
   const validateInput = (method, value) => {
     if (!value) return false;
-    
     switch (method) {
       case "email":
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        return emailRegex.test(value);
+        return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
       case "sms":
-      case "whatsapp":
-        const phoneRegex = /^\+?[\d\s-()]{10,}$/;
-        return phoneRegex.test(value);
+        return /^\+?[\d\s-()]{10,}$/.test(value);
       default:
         return false;
     }
   };
 
+  const maskContactInfo = (method, info) => {
+    if (method === "email") {
+      const [username, domain] = info.split("@");
+      return `${username.charAt(0)}${"*".repeat(username.length - 2)}${username.charAt(username.length - 1)}@${domain}`;
+    } else {
+      return `${info.substring(0, 3)}${"*".repeat(info.length - 6)}${info.substring(info.length - 3)}`;
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (!selectedMethod) {
       setError("Por favor, selecciona un método de recuperación");
       return;
@@ -82,51 +77,44 @@ const RecoverPassword = () => {
     setError("");
 
     try {
-      console.log("Enviando solicitud:", { method: selectedMethod, contactInfo });
-      
-      const response = await axios.post("http://localhost:4000/api/recovery/requestCode",
-        { 
-          method: selectedMethod,
-          contactInfo: contactInfo
-        },
-        {
-          withCredentials: true,
-          headers: {
-            'Content-Type': 'application/json'
-          }
+      const endpoint = "http://localhost:4000/api/recovery/requestCode";
+
+      const requestPayload = {
+        contactInfo: contactInfo,
+        method: selectedMethod
+      };
+
+      const response = await axios.post(endpoint, requestPayload, {
+        withCredentials: true,
+        headers: {
+          'Content-Type': 'application/json'
         }
-      );
-      
-      console.log("Respuesta exitosa:", response.data);
-      // Navegar a la página de verificación con la información del método y flujo seleccionado
-      const selectedMethodData = recoveryMethods.find(m => m.id === selectedMethod);
-      navigate("/verification-input", { 
-        state: { 
-          method: selectedMethod, 
-          contactInfo: contactInfo,
-          maskedInfo: maskContactInfo(selectedMethod, contactInfo),
-          flow: selectedMethodData.flow // 'reset' para email, 'quickLogin' para SMS/WhatsApp
-        } 
       });
-      
+
+      navigate("/verification-input", {
+        state: {
+          method: selectedMethod,
+          contactInfo: contactInfo,
+          email: contactInfo,
+          maskedInfo: maskContactInfo(selectedMethod, contactInfo),
+          flow: "reset",
+          verificationEndpoint: "/api/recovery/verifyCode"
+        }
+      });
+
     } catch (error) {
-      console.error("Error completo:", error);
-      console.error("Respuesta del servidor:", error.response?.data);
-      console.error("Status code:", error.response?.status);
-      
-      setError(error.response?.data?.message || "Error al enviar el código");
+      if (error.code === 'ECONNREFUSED' || error.code === 'ERR_NETWORK') {
+        setError("No se puede conectar al servidor. Verifica que esté ejecutándose.");
+      } else if (error.response?.status === 404) {
+        setError("Endpoint no encontrado. Verifica la URL del API.");
+      } else if (error.response?.status === 400) {
+        const backendMessage = error.response?.data?.message || "Error de validación en el servidor";
+        setError(`Error 400: ${backendMessage}`);
+      } else {
+        setError(error.response?.data?.message || "Error al enviar el código");
+      }
     } finally {
       setLoading(false);
-    }
-  };
-
-  // Función para enmascarar la información de contacto
-  const maskContactInfo = (method, info) => {
-    if (method === "email") {
-      const [username, domain] = info.split("@");
-      return `${username.charAt(0)}${"*".repeat(username.length - 2)}${username.charAt(username.length - 1)}@${domain}`;
-    } else {
-      return `${info.substring(0, 3)}${"*".repeat(info.length - 6)}${info.substring(info.length - 3)}`;
     }
   };
 
@@ -142,11 +130,10 @@ const RecoverPassword = () => {
         <img src={candado} alt="Icono de candado" className="w-24 h-24 mb-4" />
         <Title className="text-white">RECUPERAR ACCESO</Title>
         <p className="text-center text-white text-sm max-w-sm">
-          Elige cómo quieres recuperar tu acceso. Con email cambiarás tu contraseña, con SMS/WhatsApp tendrás acceso inmediato.
+          Elige cómo quieres recuperar tu acceso. Te enviaremos un código para cambiar tu contraseña.
         </p>
 
         <form onSubmit={handleSubmit} className="w-full max-w-sm space-y-4">
-          {/* Selector de métodos de recuperación */}
           <div className="space-y-3">
             <label className="block text-white text-sm font-medium">
               Método de recuperación
@@ -168,29 +155,22 @@ const RecoverPassword = () => {
                 />
                 <label
                   htmlFor={method.id}
-                  className={`
-                    flex items-center p-3 rounded-lg cursor-pointer border-2 transition-all
-                    ${selectedMethod === method.id 
+                  className={`flex items-center p-3 rounded-lg cursor-pointer border-2 transition-all ${
+                    selectedMethod === method.id 
                       ? 'border-[#a100f2] bg-[#a100f2]/10' 
                       : 'border-gray-600 bg-gray-700/30 hover:border-gray-500'
-                    }
-                  `}
+                  }`}
                 >
                   <span className="text-xl mr-3">{method.icon}</span>
                   <div className="flex-1">
                     <div className="font-medium text-white">{method.label}</div>
                     <div className="text-xs text-gray-300">{method.description}</div>
-                    {method.flow === "quickLogin" && (
-                      <div className="text-xs text-[#a100f2] mt-1">✨ Acceso instantáneo</div>
-                    )}
                   </div>
-                  <div className={`
-                    w-4 h-4 rounded-full border-2 flex items-center justify-center
-                    ${selectedMethod === method.id 
+                  <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
+                    selectedMethod === method.id 
                       ? 'border-[#a100f2] bg-[#a100f2]' 
                       : 'border-gray-400'
-                    }
-                  `}>
+                  }`}>
                     {selectedMethod === method.id && (
                       <div className="w-2 h-2 bg-white rounded-full"></div>
                     )}
@@ -200,15 +180,16 @@ const RecoverPassword = () => {
             ))}
           </div>
 
-          {/* Input para información de contacto */}
-          {selectedMethod && selectedMethodData && (
+          {selectedMethod && (
             <Input
-              label={selectedMethodData.label}
               type={selectedMethod === "email" ? "email" : "tel"}
-              placeholder={selectedMethodData.placeholder}
+              placeholder={selectedMethodData?.placeholder}
               value={contactInfo}
-              onChange={(e) => setContactInfo(e.target.value)}
-              required
+              onChange={(e) => {
+                setContactInfo(e.target.value);
+                setError("");
+              }}
+              className="bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:border-[#a100f2]"
             />
           )}
 
@@ -219,13 +200,11 @@ const RecoverPassword = () => {
           <Button
             type="submit"
             disabled={loading || !selectedMethod}
-            className={`
-              bg-[#a100f2] hover:bg-[#7d00c1] disabled:opacity-50 disabled:cursor-not-allowed 
-              ${loading ? 'opacity-50' : ''}
-            `}
+            className={`bg-[#a100f2] hover:bg-[#7d00c1] disabled:opacity-50 disabled:cursor-not-allowed ${
+              loading ? 'opacity-50' : ''
+            }`}
           >
-            {loading ? "Enviando..." : 
-             selectedMethodData?.flow === "quickLogin" ? "Enviar código de acceso" : "Enviar código"}
+            {loading ? "Enviando..." : "Enviar código"}
           </Button>
         </form>
       </div>
