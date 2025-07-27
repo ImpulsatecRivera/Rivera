@@ -1,11 +1,12 @@
 import { useState } from "react";
 import axios from "axios";
-import Input from "../components/Login/Input";
+import Input from "../components/RecoverPassword/input";
 import Button from "../components/Login/Button";
 import candado from "../images/candado.png";
 import ilustracion from "../images/recover.png";
 import Title from "../components/RecoverPassword/Title";
 import { useNavigate } from "react-router-dom";
+import { motion, AnimatePresence } from "framer-motion";
 
 const RecoverPassword = () => {
   const navigate = useNavigate();
@@ -84,7 +85,7 @@ const RecoverPassword = () => {
         method: selectedMethod
       };
 
-      const response = await axios.post(endpoint, requestPayload, {
+      await axios.post(endpoint, requestPayload, {
         withCredentials: true,
         headers: {
           'Content-Type': 'application/json'
@@ -133,80 +134,73 @@ const RecoverPassword = () => {
           Elige cómo quieres recuperar tu acceso. Te enviaremos un código para cambiar tu contraseña.
         </p>
 
-        <form onSubmit={handleSubmit} className="w-full max-w-sm space-y-4">
-          <div className="space-y-3">
-            <label className="block text-white text-sm font-medium">
-              Método de recuperación
-            </label>
-            {recoveryMethods.map((method) => (
-              <div key={method.id} className="relative">
-                <input
-                  type="radio"
-                  id={method.id}
-                  name="recoveryMethod"
-                  value={method.id}
-                  checked={selectedMethod === method.id}
-                  onChange={(e) => {
-                    setSelectedMethod(e.target.value);
-                    setContactInfo("");
-                    setError("");
-                  }}
-                  className="sr-only"
-                />
-                <label
-                  htmlFor={method.id}
-                  className={`flex items-center p-3 rounded-lg cursor-pointer border-2 transition-all ${
-                    selectedMethod === method.id 
-                      ? 'border-[#a100f2] bg-[#a100f2]/10' 
-                      : 'border-gray-600 bg-gray-700/30 hover:border-gray-500'
-                  }`}
-                >
-                  <span className="text-xl mr-3">{method.icon}</span>
-                  <div className="flex-1">
-                    <div className="font-medium text-white">{method.label}</div>
-                    <div className="text-xs text-gray-300">{method.description}</div>
-                  </div>
-                  <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
-                    selectedMethod === method.id 
-                      ? 'border-[#a100f2] bg-[#a100f2]' 
-                      : 'border-gray-400'
-                  }`}>
-                    {selectedMethod === method.id && (
-                      <div className="w-2 h-2 bg-white rounded-full"></div>
-                    )}
-                  </div>
-                </label>
-              </div>
-            ))}
-          </div>
+        <form onSubmit={handleSubmit} className="w-full max-w-sm space-y-6">
+  {/* Selector de método estilo tabs */}
+  <div className="flex bg-gray-800/50 rounded-xl p-1 backdrop-blur-sm border border-gray-700/50">
+    {recoveryMethods.map((method) => (
+      <button
+        key={method.id}
+        type="button"
+        onClick={() => {
+          setSelectedMethod(method.id);
+          setContactInfo("");
+          setError("");
+        }}
+        className={`flex-1 py-3 px-4 rounded-lg text-sm font-medium transition-all duration-300 flex items-center justify-center space-x-2 ${
+          selectedMethod === method.id
+            ? "bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg shadow-purple-500/30"
+            : "text-gray-400 hover:text-white"
+        }`}
+      >
+        {method.id === "email" ? (
+          <span className="material-icons">mail</span>
+        ) : (
+          <span className="material-icons">phone</span>
+        )}
+        <span>{method.label}</span>
+      </button>
+    ))}
+  </div>
 
-          {selectedMethod && (
-            <Input
-              type={selectedMethod === "email" ? "email" : "tel"}
-              placeholder={selectedMethodData?.placeholder}
-              value={contactInfo}
-              onChange={(e) => {
-                setContactInfo(e.target.value);
-                setError("");
-              }}
-              className="bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:border-[#a100f2]"
-            />
-          )}
+  {/* Input con animación */}
+  <AnimatePresence mode="wait">
+    {selectedMethod && (
+      <motion.div
+        key={selectedMethod}
+        initial={{ y: 10, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        exit={{ y: -10, opacity: 0 }}
+        transition={{ duration: 0.3 }}
+      >
+        <Input
+          type={selectedMethod === "email" ? "email" : "tel"}
+          placeholder={selectedMethodData?.placeholder}
+          value={contactInfo}
+          onChange={(e) => {
+            setContactInfo(e.target.value);
+            setError("");
+          }}
+          className="bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:border-[#a100f2]"
+        />
+      </motion.div>
+    )}
+  </AnimatePresence>
 
-          {error && (
-            <p className="text-red-400 text-sm text-center">{error}</p>
-          )}
+  {error && (
+    <p className="text-red-400 text-sm text-center">{error}</p>
+  )}
 
-          <Button
-            type="submit"
-            disabled={loading || !selectedMethod}
-            className={`bg-[#a100f2] hover:bg-[#7d00c1] disabled:opacity-50 disabled:cursor-not-allowed ${
-              loading ? 'opacity-50' : ''
-            }`}
-          >
-            {loading ? "Enviando..." : "Enviar código"}
-          </Button>
-        </form>
+  <Button
+    type="submit"
+    disabled={loading || !selectedMethod}
+    className={`bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-400 hover:to-pink-400 text-white font-semibold py-3 rounded-xl shadow-lg shadow-purple-500/30 disabled:opacity-50 disabled:cursor-not-allowed ${
+      loading ? 'opacity-50' : ''
+    }`}
+  >
+    {loading ? "Enviando..." : "Enviar código"}
+  </Button>
+</form>
+
       </div>
     </div>
   );
