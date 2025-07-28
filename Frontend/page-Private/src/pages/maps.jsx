@@ -305,7 +305,7 @@ const RiveraTransportMapDemo = () => {
         `}
       </style>
       
-      <div className="w-full h-screen p-6" style={{ backgroundColor: '#34353A' }}>
+      <div className="w-full h-screen bg-gradient-to-br from-blue-900 via-blue-800 to-indigo-900 p-6">
         <div className="w-full h-full bg-white rounded-[2rem] shadow-2xl overflow-hidden relative border-2 border-blue-200">
           
           {/* Header */}
