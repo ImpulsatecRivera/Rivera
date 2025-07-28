@@ -1,28 +1,35 @@
+import { useState, useEffect } from "react";
+import { useNavigate, Link } from "react-router-dom";
+import Swal from 'sweetalert2';
+
 import Avatar from "../components/Login/Avatar";
 import Input from "../components/Login/Input";
 import Button from "../components/Login/Button";
 import SideImage from "../components/Login/SideImage";
 import Title from "../components/RecoverPassword/Title";
-import { Link, useNavigate } from "react-router-dom";
-import Swal from 'sweetalert2';
 
-
-import { useState, useEffect } from "react";
 import useLogin from "../components/Login/hooks/useLogin";
-import { useAuth } from "../Context/AuthContext"; //  Importamos useAuth
+import { useAuth } from "../Context/AuthContext";
 
 const Login = () => {
-  const { handleLogin, loading } = useLogin();
-  const { isLoggedIn } = useAuth(); //  Leemos si ya está logueado
   const navigate = useNavigate();
+  const { handleLogin, loading } = useLogin();
+  const { isLoggedIn } = useAuth();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
+  // Redirección si ya está logueado
+  useEffect(() => {
+    if (isLoggedIn) {
+      navigate("/dashboard");
+    }
+  }, [isLoggedIn, navigate]);
+
   const showSuccessAlert = () => {
     Swal.fire({
-      title: 'Inicio de session  con éxito!',
-      text: 'Inicio de session correctamente',
+      title: 'Inicio de sesión con éxito!',
+      text: 'Inicio de sesión correctamente',
       icon: 'success',
       confirmButtonText: 'Continuar',
       confirmButtonColor: '#22c55e',
@@ -31,17 +38,15 @@ const Login = () => {
         popup: 'animated bounceIn'
       }
     }).then((result) => {
-      // Cuando el usuario hace clic en "Continuar"
       if (result.isConfirmed) {
-        handleBackToMenu(); // Volver a la pantalla anterior
+        // Opcional: hacer algo como volver a menú
       }
     });
   };
 
-
   const showErrorAlert = (message) => {
     Swal.fire({
-      title: 'Error al iniciar session',
+      title: 'Error al iniciar sesión',
       text: message || 'Hubo un error al procesar la solicitud',
       icon: 'error',
       confirmButtonText: 'Intentar de nuevo',
@@ -55,7 +60,7 @@ const Login = () => {
 
   const showLoadingAlert = () => {
     Swal.fire({
-      title: 'Comprovando datos...',
+      title: 'Comprobando datos...',
       text: 'Por favor espera mientras procesamos la información',
       allowOutsideClick: false,
       allowEscapeKey: false,
@@ -69,7 +74,7 @@ const Login = () => {
   const showValidationAlert = () => {
     Swal.fire({
       title: 'Formulario incompleto',
-      text: 'Por favor, completa  los campos obligatorios',
+      text: 'Por favor, completa los campos obligatorios',
       icon: 'warning',
       confirmButtonText: 'Entendido',
       confirmButtonColor: '#f59e0b',
@@ -79,40 +84,31 @@ const Login = () => {
     });
   };
 
-  //  Redirección si ya está logueado
-  useEffect(() => {
-    if (isLoggedIn) {
-      navigate("/dashboard"); // Cambia esto si tu ruta es diferente
-    }
-  }, [isLoggedIn, navigate]);
-
   const onSubmit = async (e) => {
     e.preventDefault();
-  
+
     if (!email || !password) {
       showValidationAlert();
       return;
     }
-  
-    showLoadingAlert(); // Mostrar alerta de carga
-    await new Promise(resolve => setTimeout(resolve, 100)); // ⏱ Pequeño delay de 100ms
-  
+
+    showLoadingAlert();
+    await new Promise(resolve => setTimeout(resolve, 100));
+
     try {
       const result = await handleLogin(email, password);
-      Swal.close(); // Cierra el loading
-  
+      Swal.close();
+
       if (result?.success) {
-        showSuccessAlert(); // Éxito
+        showSuccessAlert();
       } else {
         showErrorAlert(result?.message || "Credenciales incorrectas");
       }
     } catch (error) {
-      Swal.close(); // Cierra el loading
+      Swal.close();
       showErrorAlert(error?.message || "Ocurrió un error inesperado");
     }
   };
-  
-  
 
   return (
     <div className="min-h-screen flex flex-col lg:flex-row items-center justify-center bg-gray-100">

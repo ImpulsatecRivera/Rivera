@@ -322,6 +322,7 @@ const RiveraTransportMapDemo = () => {
     }
   };
 
+<<<<<<< HEAD:Frontend/page-Private/src/pages/mapa.jsx
   const handleRefresh = () => {
     fetchMapData();
   };
@@ -364,6 +365,9 @@ const RiveraTransportMapDemo = () => {
       </div>
     );
   }
+=======
+  
+>>>>>>> master:Frontend/page-Private/src/pages/maps.jsx
 
   return (
     <>
