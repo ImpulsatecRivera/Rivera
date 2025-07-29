@@ -11,11 +11,7 @@ import RecoveryRoutes from "./src/Routes/Recovery.js"
 
 
 import RegisterRoutes from "./src/Routes/RegisterRoute.js"
-<<<<<<< HEAD
 import ViajesRoutes from "./src/Routes/ViajesRoutes.js"
-=======
-
->>>>>>> master
 import cookieParser from "cookie-parser"
 import cors from "cors";
 

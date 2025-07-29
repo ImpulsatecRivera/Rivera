@@ -4,7 +4,7 @@ const { Schema, model } = mongoose;
 const viajeSchema = new Schema({
   quoteId: {
     type: Schema.Types.ObjectId,
-    ref: 'Quote',
+    ref: 'Cotizaciones',
     required: true
   },
   tripDescription: {
@@ -14,7 +14,7 @@ const viajeSchema = new Schema({
   },
   truckId: {
     type: Schema.Types.ObjectId,
-    ref: 'Truck',
+    ref: 'Camiones',
     required: true
   },
   arrivalTime: {
@@ -120,7 +120,7 @@ const viajeSchema = new Schema({
 }, {
   timestamps: true,
   versionKey: '__v',
-  collection: "Viajes" // Corregido a lowercase como requiere mongoose
+  collection: "Viajes" 
 });
 
 export default model("Viajes", viajeSchema);
