@@ -322,7 +322,6 @@ const RiveraTransportMapDemo = () => {
     }
   };
 
-<<<<<<< HEAD:Frontend/page-Private/src/pages/mapa.jsx
   const handleRefresh = () => {
     fetchMapData();
   };
@@ -365,9 +364,6 @@ const RiveraTransportMapDemo = () => {
       </div>
     );
   }
-=======
-  
->>>>>>> master:Frontend/page-Private/src/pages/maps.jsx
 
   return (
     <>
@@ -440,7 +436,7 @@ const RiveraTransportMapDemo = () => {
               <p className="text-sm text-gray-600">Monitoreo de rutas en tiempo real</p>
             </div>
             
-            {/* 🆕 Botón de actualizar */}
+            {/* Botón de actualizar */}
             <button
               onClick={handleRefresh}
               className="w-10 h-10 bg-white rounded-2xl flex items-center justify-center border-2 border-blue-200 shadow-lg cursor-pointer hover:bg-blue-50 transition-all duration-200"

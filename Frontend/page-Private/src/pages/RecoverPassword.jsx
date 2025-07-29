@@ -80,17 +80,21 @@ const RecoverPassword = () => {
     try {
       const endpoint = "http://localhost:4000/api/recovery/requestCode";
 
-      const requestPayload = {
-        contactInfo: contactInfo,
-        method: selectedMethod
-      };
+      // ✅ Corregido: enviar datos según el método seleccionado
+      const requestPayload = selectedMethod === "email" 
+        ? { email: contactInfo, via: "email" }        // Para email: enviar email
+        : { phone: contactInfo, via: "sms" };         // Para SMS: enviar phone
 
-      await axios.post(endpoint, requestPayload, {
+      console.log("Enviando payload:", requestPayload); // Para debugging
+
+      const response = await axios.post(endpoint, requestPayload, {
         withCredentials: true,
         headers: {
           'Content-Type': 'application/json'
         }
       });
+
+      console.log("Respuesta del servidor:", response.data);
 
       navigate("/verification-input", {
         state: {
@@ -104,13 +108,30 @@ const RecoverPassword = () => {
       });
 
     } catch (error) {
+      console.error("Error completo:", error);
+      
       if (error.code === 'ECONNREFUSED' || error.code === 'ERR_NETWORK') {
         setError("No se puede conectar al servidor. Verifica que esté ejecutándose.");
       } else if (error.response?.status === 404) {
         setError("Endpoint no encontrado. Verifica la URL del API.");
       } else if (error.response?.status === 400) {
         const backendMessage = error.response?.data?.message || "Error de validación en el servidor";
-        setError(`Error 400: ${backendMessage}`);
+        
+        // Mensajes más amigables para el usuario
+        if (backendMessage === "Usuario no existente") {
+          setError("No encontramos una cuenta asociada a este email. Verifica que sea correcto o contacta al administrador.");
+        } else if (backendMessage === "Email es requerido") {
+          setError("Por favor, ingresa tu email.");
+        } else if (backendMessage === "Tu cuenta no tiene un número de teléfono registrado. Usa email como método de envío.") {
+          setError("Tu cuenta no tiene teléfono registrado. Cambia a recuperación por email.");
+          setSelectedMethod("email"); // Cambiar automáticamente a email
+        } else {
+          setError(backendMessage);
+        }
+        
+        console.log("Error 400 detalles:", error.response.data);
+      } else if (error.response?.status === 500) {
+        setError("Error interno del servidor. Inténtalo más tarde.");
       } else {
         setError(error.response?.data?.message || "Error al enviar el código");
       }
@@ -135,72 +156,86 @@ const RecoverPassword = () => {
         </p>
 
         <form onSubmit={handleSubmit} className="w-full max-w-sm space-y-6">
-  {/* Selector de método estilo tabs */}
-  <div className="flex bg-gray-800/50 rounded-xl p-1 backdrop-blur-sm border border-gray-700/50">
-    {recoveryMethods.map((method) => (
-      <button
-        key={method.id}
-        type="button"
-        onClick={() => {
-          setSelectedMethod(method.id);
-          setContactInfo("");
-          setError("");
-        }}
-        className={`flex-1 py-3 px-4 rounded-lg text-sm font-medium transition-all duration-300 flex items-center justify-center space-x-2 ${
-          selectedMethod === method.id
-            ? "bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg shadow-purple-500/30"
-            : "text-gray-400 hover:text-white"
-        }`}
-      >
-        {method.id === "email" ? (
-          <span className="material-icons">mail</span>
-        ) : (
-          <span className="material-icons">phone</span>
-        )}
-        <span>{method.label}</span>
-      </button>
-    ))}
-  </div>
+          {/* Selector de método estilo tabs */}
+          <div className="flex bg-gray-800/50 rounded-xl p-1 backdrop-blur-sm border border-gray-700/50">
+            {recoveryMethods.map((method) => (
+              <button
+                key={method.id}
+                type="button"
+                onClick={() => {
+                  setSelectedMethod(method.id);
+                  setContactInfo("");
+                  setError("");
+                }}
+                className={`flex-1 py-3 px-4 rounded-lg text-sm font-medium transition-all duration-300 flex items-center justify-center space-x-2 ${
+                  selectedMethod === method.id
+                    ? "bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg shadow-purple-500/30"
+                    : "text-gray-400 hover:text-white"
+                }`}
+              >
+                {method.id === "email" ? (
+                  <span className="material-icons">mail</span>
+                ) : (
+                  <span className="material-icons">phone</span>
+                )}
+                <span>{method.label}</span>
+              </button>
+            ))}
+          </div>
 
-  {/* Input con animación */}
-  <AnimatePresence mode="wait">
-    {selectedMethod && (
-      <motion.div
-        key={selectedMethod}
-        initial={{ y: 10, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        exit={{ y: -10, opacity: 0 }}
-        transition={{ duration: 0.3 }}
-      >
-        <Input
-          type={selectedMethod === "email" ? "email" : "tel"}
-          placeholder={selectedMethodData?.placeholder}
-          value={contactInfo}
-          onChange={(e) => {
-            setContactInfo(e.target.value);
-            setError("");
-          }}
-          className="bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:border-[#a100f2]"
-        />
-      </motion.div>
-    )}
-  </AnimatePresence>
+          {/* Input con animación */}
+          <AnimatePresence mode="wait">
+            {selectedMethod && (
+              <motion.div
+                key={selectedMethod}
+                initial={{ y: 10, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                exit={{ y: -10, opacity: 0 }}
+                transition={{ duration: 0.3 }}
+              >
+                <Input
+                  type={selectedMethod === "email" ? "email" : "tel"}
+                  placeholder={selectedMethodData?.placeholder}
+                  value={contactInfo}
+                  onChange={(e) => {
+                    setContactInfo(e.target.value);
+                    setError("");
+                  }}
+                  className="bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:border-[#a100f2]"
+                />
+                {/* Mostrar qué tipo de dato se espera */}
+                <p className="text-xs text-gray-400 mt-1">
+                  {selectedMethod === "email" 
+                    ? "Ingresa tu email registrado" 
+                    : "Ingresa tu número de teléfono (se enviará código por medio de sms)"}
+                </p>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
-  {error && (
-    <p className="text-red-400 text-sm text-center">{error}</p>
-  )}
+          {error && (
+            <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-3">
+              <p className="text-red-400 text-sm text-center">{error}</p>
+            </div>
+          )}
 
-  <Button
-    type="submit"
-    disabled={loading || !selectedMethod}
-    className={`bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-400 hover:to-pink-400 text-white font-semibold py-3 rounded-xl shadow-lg shadow-purple-500/30 disabled:opacity-50 disabled:cursor-not-allowed ${
-      loading ? 'opacity-50' : ''
-    }`}
-  >
-    {loading ? "Enviando..." : "Enviar código"}
-  </Button>
-</form>
-
+          <Button
+            type="submit"
+            disabled={loading || !selectedMethod || !contactInfo}
+            className={`w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-400 hover:to-pink-400 text-white font-semibold py-3 rounded-xl shadow-lg shadow-purple-500/30 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 ${
+              loading ? 'opacity-50' : ''
+            }`}
+          >
+            {loading ? (
+              <div className="flex items-center justify-center space-x-2">
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                <span>Enviando...</span>
+              </div>
+            ) : (
+              "Enviar código"
+            )}
+          </Button>
+        </form>
       </div>
     </div>
   );
