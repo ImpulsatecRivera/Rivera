@@ -8,17 +8,23 @@ const LoadMetrics = () => {
 
   useEffect(() => {
     const fetchLoadData = async () => {
-      try {
-        const res = await axios.get('http://localhost:4000/api/viajes/cargas/frecuentes');
-        const dataWithColors = res.data.data.map((item, index) => ({
-          ...item,
-          color: colors[index % colors.length],
-        }));
-        setLoadMetrics(dataWithColors);
-      } catch (error) {
-        console.error("Error al obtener cargas frecuentes:", error);
-      }
-    };
+  try {
+    const res = await axios.get('http://localhost:4000/api/viajes/cargas/frecuentes');
+    const totalCantidad = res.data.data.reduce((sum, item) => sum + item.cantidad, 0);
+
+    const dataWithColors = res.data.data.map((item, index) => ({
+      label: item._id,
+      value: item.cantidad,
+      percentage: totalCantidad > 0 ? (item.cantidad / totalCantidad) * 100 : 0,
+      color: colors[index % colors.length],
+    }));
+
+    setLoadMetrics(dataWithColors);
+  } catch (error) {
+    console.error("Error al obtener cargas frecuentes:", error);
+  }
+};
+
 
     fetchLoadData();
   }, []);

@@ -13,7 +13,7 @@ router.put('/update-location/:viajeId', ViajesController.updateLocation);
 router.get("/estadisticas", ViajesController.getTripStats);
 router.get("/completados", ViajesController.getCompletedTrips);
 router.get("/cargas/frecuentes", ViajesController.getCargaStats);
-
+router.patch('/:viajeId/location', ViajesController.updateLocation);
 
 
 export default router;

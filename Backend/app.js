@@ -4,7 +4,9 @@ import empleadoRoutes from "./src/Routes/empleadosRoutes.js"
 import motoristasRoutes from "./src/Routes/motoristaRoutes.js"
 import proveedoresRoutes from "./src/Routes/proveedoresRoutes.js"
 import ClientesRoutes from "./src/Routes/clienteRoutes.js"
-import LoginRoutes from "./src/Routes/LoginRoutes.js"
+import LoginRoutes from "./src/Routes/LoginRoutes.js" 
+//servicio de auto-actualización
+import autoUpdateRoutes from './src/Routes/servicesRouter.js';
 
 import LogoutRoutes from "./src/Routes/Logout.js" // ✅ Renombrado para claridad
 import RecoveryRoutes from "./src/Routes/Recovery.js"
@@ -35,7 +37,7 @@ app.use("/api/clientes", ClientesRoutes);
 app.use("/api/login", LoginRoutes);
 app.use("/api/logout", LogoutRoutes); // ✅ Aquí corregido
 app.use("/api/register",RegisterRoutes);
-
+app.use('/api/auto-update', autoUpdateRoutes);
 app.use("/api/recovery", RecoveryRoutes);
 app.use("/api/viajes", ViajesRoutes);
 
