@@ -340,4 +340,106 @@ ViajesController.updateLocation = async (req, res) => {
   }
 };
 
+// GET: Estadísticas flexibles de viajes
+ViajesController.getTripStats = async (req, res) => {
+  const tipo = req.query.tipo || "mes"; // "dia", "semana", "mes", "año"
+  const groupStages = {
+    dia: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
+    semana: { $isoWeek: "$createdAt" },
+    mes: { $month: "$createdAt" },
+    año: { $year: "$createdAt" },
+  };
+
+  try {
+    const groupId = groupStages[tipo];
+    if (!groupId) {
+      return res.status(400).json({ success: false, message: "Tipo no válido" });
+    }
+
+    const stats = await ViajesModel.aggregate([
+      {
+        $group: {
+          _id: groupId,
+          totalViajes: { $sum: 1 },
+        },
+      },
+      { $sort: { _id: 1 } },
+    ]);
+
+    // Formatear etiquetas
+    let formattedStats = stats;
+    if (tipo === "mes") {
+      const meses = ["ENE", "FEB", "MAR", "ABR", "MAY", "JUN", "JUL", "AGO", "SEP", "OCT", "NOV", "DIC"];
+      formattedStats = meses.map((month, i) => {
+        const found = stats.find((s) => s._id === i + 1);
+        return { label: month, viajes: found ? found.totalViajes : 0 };
+      });
+    } else if (tipo === "año") {
+      formattedStats = stats.map((s) => ({ label: `${s._id}`, viajes: s.totalViajes }));
+    } else if (tipo === "semana") {
+      formattedStats = stats.map((s) => ({ label: `Semana ${s._id}`, viajes: s.totalViajes }));
+    } else if (tipo === "dia") {
+      formattedStats = stats.map((s) => ({ label: s._id, viajes: s.totalViajes }));
+    }
+
+    res.status(200).json({ success: true, data: formattedStats });
+  } catch (error) {
+    console.error("❌ Error en estadísticas:", error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// GET: Obtener solo los viajes completados
+ViajesController.getCompletedTrips = async (req, res) => {
+  try {
+    const completed = await ViajesModel.find({ "estado.actual": "completado" })
+      .sort({ createdAt: -1 }) // opcional: ordena por más recientes
+      .limit(20) // puedes ajustar este límite
+      .select("tripDescription departureTime conductor truckId") // campos útiles
+      .populate({
+        path: "conductor.id",
+        select: "nombre",
+      })
+      .populate({
+        path: "truckId",
+        select: "brand model licensePlate name",
+      });
+
+    res.status(200).json({ success: true, data: completed });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// GET: Cargas frecuentes
+ViajesController.getCargaStats = async (req, res) => {
+  try {
+    const cargas = await ViajesModel.aggregate([
+      {
+        $group: {
+          _id: "$carga.descripcion",
+          cantidad: { $sum: 1 },
+        },
+      },
+      { $sort: { cantidad: -1 } },
+      { $limit: 5 }, // Mostrar solo las 5 más frecuentes
+    ]);
+
+    const total = cargas.reduce((sum, item) => sum + item.cantidad, 0);
+
+    const formatted = cargas.map((item) => ({
+      label: item._id || "No especificada",
+      value: item.cantidad.toLocaleString("es-SV"),
+      percentage: Math.round((item.cantidad / total) * 100),
+    }));
+
+    res.status(200).json({ success: true, data: formatted });
+  } catch (error) {
+    console.error("❌ Error al obtener estadísticas de cargas:", error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+
+
 export default ViajesController;

@@ -10,5 +10,10 @@ router.get('/', ViajesController.getAllViajes); // o la que ya tengas
 // 🆕 NUEVAS RUTAS PARA EL MAPA
 router.get('/map-data', ViajesController.getMapData);
 router.put('/update-location/:viajeId', ViajesController.updateLocation);
+router.get("/estadisticas", ViajesController.getTripStats);
+router.get("/completados", ViajesController.getCompletedTrips);
+router.get("/cargas/frecuentes", ViajesController.getCargaStats);
+
+
 
 export default router;
