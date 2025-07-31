@@ -1,9 +1,28 @@
 import React, { useState } from 'react';
-import { ArrowLeft, Building } from 'lucide-react';
+import { Building, Mail, Phone, Package } from 'lucide-react';
 import Swal from 'sweetalert2';
 
-const AgregarProovedor
- = () => {
+// Componentes UI genéricos para Proveedores
+import LoadingState from '../../components/UIProveedores/LoadingStateAgregar';
+import EmptyState from '../../components/UIProveedores/EmptyStateAgregar';
+import ErrorState from '../../components/UIProveedores/ErrorStateAgregar';
+import SweetAlert from '../../components/UIProveedores/SweetAlertAgregar';
+import ConfirmDeleteAlert from '../../components/UIProveedores/ConfirmeDeleteAlertAgregar';
+import SuccessAlert from '../../components/UIProveedores/SuccesAlertAgregar';
+
+// Componentes de formularios específicos para Proveedores
+import HeaderNavigation from '../../components/FormsProveedores/FormHeaderNavegation';
+import FormHeroSection from '../../components/FormsProveedores/FormHeroSecction';
+import FormContainer from '../../components/FormsProveedores/FormContainer';
+import FormFieldsGrid from '../../components/FormsProveedores/FormFieldsGrid';
+import FormInput from '../../components/FormsProveedores/FormImput';
+import SubmitButton from '../../components/FormsProveedores/FormSubmitButton';
+
+// Hook de Proveedores
+import useSupplierManagement from '../../components/Proveedores/hooks/useAgregarProveedores';
+
+const AgregarProveedor = () => {
+  // Estados del componente
   const [formData, setFormData] = useState({
     companyName: '',
     email: '',
@@ -13,41 +32,14 @@ const AgregarProovedor
 
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [showSuccessDialog, setShowSuccessDialog] = useState(false);
+  const [apiError, setApiError] = useState(null);
 
-  // Configuración personalizada de SweetAlert2
-  const showSuccessAlert = () => {
-    Swal.fire({
-      title: '¡Proveedor agregado con éxito!',
-      text: 'Proveedor agregado correctamente',
-      icon: 'success',
-      confirmButtonText: 'Continuar',
-      confirmButtonColor: '#22c55e',
-      allowOutsideClick: false,
-      customClass: {
-        popup: 'animated bounceIn'
-      }
-    }).then((result) => {
-      // Cuando el usuario hace clic en "Continuar"
-      if (result.isConfirmed) {
-        handleBackToMenu(); // Volver a la pantalla anterior
-      }
-    });
-  };
+  // Usar el hook para navegación y refresh
+  const { handleContinue, refreshProveedores } = useSupplierManagement();
 
-  const showErrorAlert = (message) => {
-    Swal.fire({
-      title: 'Error al agregar proveedor',
-      text: message || 'Hubo un error al procesar la solicitud',
-      icon: 'error',
-      confirmButtonText: 'Intentar de nuevo',
-      confirmButtonColor: '#ef4444',
-      allowOutsideClick: false,
-      customClass: {
-        popup: 'animated shakeX'
-      }
-    });
-  };
-
+  // Configuración de SweetAlert2 (mantenemos algunos para casos específicos)
   const showLoadingAlert = () => {
     Swal.fire({
       title: 'Agregando proveedor...',
@@ -55,25 +47,28 @@ const AgregarProovedor
       allowOutsideClick: false,
       allowEscapeKey: false,
       showConfirmButton: false,
-      didOpen: () => {
-        Swal.showLoading();
-      }
+      didOpen: () => Swal.showLoading()
     });
   };
 
-  const showValidationAlert = () => {
+  const showValidationAlert = (camposFaltantes) => {
     Swal.fire({
-      title: 'Formulario incompleto',
-      text: 'Por favor, completa todos los campos obligatorios',
+      title: '⚠️ Formulario incompleto',
+      html: `
+        <p style="margin-bottom: 15px;">Los siguientes campos son obligatorios:</p>
+        <ul style="text-align: left; color: #dc2626; font-weight: 500;">
+          ${camposFaltantes.map(campo => `<li>• ${campo}</li>`).join('')}
+        </ul>
+      `,
       icon: 'warning',
       confirmButtonText: 'Entendido',
       confirmButtonColor: '#f59e0b',
-      customClass: {
-        popup: 'animated pulse'
-      }
+      allowOutsideClick: false,
+      customClass: { popup: 'animated pulse' }
     });
   };
 
+  // Manejo de cambios en inputs
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     let formattedValue = value;
@@ -94,6 +89,7 @@ const AgregarProovedor
     }));
   };
 
+  // Validación del formulario
   const validateForm = () => {
     const newErrors = {};
     if (!formData.companyName) newErrors.companyName = "El nombre de la empresa es obligatorio";
@@ -110,19 +106,26 @@ const AgregarProovedor
     return newErrors;
   };
 
-  const handleSubmit = async (e) => {
+  // Resetear formulario
+  const resetForm = () => {
+    setFormData({
+      companyName: '',
+      email: '',
+      phone: '',
+      partDescription: ''
+    });
+    setErrors({});
+    setApiError(null);
+  };
+
+  // Manejo de confirmación antes de enviar
+  const handleFormSubmit = (e) => {
     e.preventDefault();
-    console.log('=== INICIO DEL SUBMIT ===');
     
     const formErrors = validateForm();
-    console.log('Errores de validación:', formErrors);
     setErrors(formErrors);
 
-    // Si hay errores de validación, mostrar alerta específica
     if (Object.keys(formErrors).length > 0) {
-      console.log('Formulario tiene errores, no se envía');
-      
-      // Crear lista de campos faltantes
       const camposFaltantes = Object.keys(formErrors).map(field => {
         const fieldNames = {
           companyName: 'Nombre de la empresa',
@@ -133,33 +136,71 @@ const AgregarProovedor
         return fieldNames[field] || field;
       });
 
-      Swal.fire({
-        title: '⚠️ Formulario incompleto',
-        html: `
-          <p style="margin-bottom: 15px;">Los siguientes campos son obligatorios:</p>
-          <ul style="text-align: left; color: #dc2626; font-weight: 500;">
-            ${camposFaltantes.map(campo => `<li>• ${campo}</li>`).join('')}
-          </ul>
-        `,
-        icon: 'warning',
-        confirmButtonText: 'Entendido',
-        confirmButtonColor: '#f59e0b',
-        allowOutsideClick: false,
-        customClass: {
-          popup: 'animated pulse'
-        }
-      });
+      showValidationAlert(camposFaltantes);
       return;
     }
 
-    // Si no hay errores de validación, proceder con el envío
+    // Mostrar modal de confirmación usando componente UI
+    setShowConfirmDialog(true);
+  };
+
+  // Confirmar envío del formulario
+  const confirmSubmit = () => {
+    setShowConfirmDialog(false);
+    handleSubmit();
+  };
+
+  // Cancelar envío
+  const cancelSubmit = () => {
+    setShowConfirmDialog(false);
+  };
+
+  // Manejo de errores de la API
+  const getErrorMessage = (error) => {
+    let errorMsg = 'Error desconocido al agregar proveedor';
+
+    if (error.message.includes('HTTP error!')) {
+      const statusCode = error.message.match(/\d+/);
+      if (statusCode) {
+        switch (parseInt(statusCode[0])) {
+          case 400:
+            errorMsg = 'Los datos enviados no son válidos. Verifica la información.';
+            break;
+          case 401:
+            errorMsg = 'No tienes permisos para realizar esta acción. Verifica tus credenciales.';
+            break;
+          case 403:
+            errorMsg = 'No tienes permisos suficientes para agregar proveedores.';
+            break;
+          case 404:
+            errorMsg = 'El servicio no está disponible. Contacta al administrador.';
+            break;
+          case 409:
+            errorMsg = 'Ya existe un proveedor con estos datos. Verifica el email o nombre de empresa.';
+            break;
+          case 500:
+            errorMsg = 'Error interno del servidor. Inténtalo más tarde.';
+            break;
+          default:
+            errorMsg = `Error del servidor (${statusCode[0]}). Contacta al administrador.`;
+        }
+      }
+    } else if (error.name === 'TypeError' && error.message.includes('fetch')) {
+      errorMsg = 'No se pudo conectar con el servidor. Verifica tu conexión a internet.';
+    } else {
+      errorMsg = 'Error al configurar la petición. Contacta al administrador.';
+    }
+
+    return errorMsg;
+  };
+
+  // Envío del formulario
+  const handleSubmit = async () => {
     try {
-      // Mostrar loading
       showLoadingAlert();
       setLoading(true);
-      console.log('Estado de loading activado');
-      
-      // Preparar los datos para enviar
+      setApiError(null);
+
       const dataToSend = {
         companyName: formData.companyName.trim(),
         email: formData.email.trim(),
@@ -167,13 +208,8 @@ const AgregarProovedor
         partDescription: formData.partDescription.trim()
       };
 
-      console.log('=== DATOS A ENVIAR ===');
-      console.log('Datos completos:', dataToSend);
-      
-      console.log('=== ENVIANDO PETICIÓN ===');
-      console.log('URL:', 'http://localhost:4000/api/proveedores');
-      
-      // Llamada a la API con fetch
+      console.log('Enviando datos:', dataToSend);
+
       const response = await fetch('http://localhost:4000/api/proveedores', {
         method: 'POST',
         headers: {
@@ -181,106 +217,48 @@ const AgregarProovedor
         },
         body: JSON.stringify(dataToSend),
       });
-      
-      console.log('=== RESPUESTA RECIBIDA ===');
-      console.log('Status:', response.status);
-      
-      // Si la respuesta es exitosa
+
       if (response.ok) {
         const responseData = await response.json();
-        console.log('Respuesta del servidor:', responseData);
-        console.log('¡Proveedor creado exitosamente!');
+        console.log('Proveedor creado exitosamente:', responseData);
         
-        // Cerrar loading y mostrar éxito
         Swal.close();
-        showSuccessAlert();
+        resetForm();
         
-        // Limpiar formulario
-        setFormData({
-          companyName: '',
-          email: '',
-          phone: '',
-          partDescription: ''
-        });
-        setErrors({});
+        // Refrescar la lista de proveedores
+        refreshProveedores();
+        
+        // Mostrar modal de éxito usando componente UI
+        setShowSuccessDialog(true);
       } else {
         const errorData = await response.json();
         throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
       }
-      
+
     } catch (error) {
-      console.error('=== ERROR CAPTURADO ===');
-      console.error('Error completo:', error);
-      
-      // Cerrar loading
+      console.error('Error capturado:', error);
       Swal.close();
       
-      let errorMsg = 'Error desconocido';
-      let errorTitle = '❌ Error al agregar proveedor';
-      
-      // Manejo de diferentes tipos de errores
-      if (error.message.includes('HTTP error!')) {
-        const statusCode = error.message.match(/\d+/);
-        if (statusCode) {
-          switch (parseInt(statusCode[0])) {
-            case 400:
-              errorTitle = '❌ Error de validación';
-              errorMsg = 'Los datos enviados no son válidos. Verifica la información.';
-              break;
-            case 401:
-              errorTitle = '🔒 No autorizado';
-              errorMsg = 'No tienes permisos para realizar esta acción. Verifica tus credenciales.';
-              break;
-            case 403:
-              errorTitle = '⛔ Acceso denegado';
-              errorMsg = 'No tienes permisos suficientes para agregar proveedores.';
-              break;
-            case 404:
-              errorTitle = '🔍 Servicio no encontrado';
-              errorMsg = 'El servicio no está disponible. Contacta al administrador.';
-              break;
-            case 409:
-              errorTitle = '⚠️ Conflicto de datos';
-              errorMsg = 'Ya existe un proveedor con estos datos. Verifica el email o nombre de empresa.';
-              break;
-            case 500:
-              errorTitle = '🔥 Error del servidor';
-              errorMsg = 'Error interno del servidor. Inténtalo más tarde.';
-              break;
-            default:
-              errorTitle = '❌ Error inesperado';
-              errorMsg = `Error del servidor (${statusCode[0]}). Contacta al administrador.`;
-          }
-        } else {
-          errorMsg = error.message;
-        }
-      } else if (error.name === 'TypeError' && error.message.includes('fetch')) {
-        errorTitle = '🌐 Sin conexión';
-        errorMsg = 'No se pudo conectar con el servidor. Verifica tu conexión a internet.';
-      } else {
-        errorTitle = '⚙️ Error de configuración';
-        errorMsg = 'Error al configurar la petición. Contacta al administrador.';
-      }
-      
-      // Mostrar error específico
-      Swal.fire({
-        title: errorTitle,
-        text: errorMsg,
-        icon: 'error',
-        confirmButtonText: 'Intentar de nuevo',
-        confirmButtonColor: '#ef4444',
-        allowOutsideClick: false,
-        customClass: {
-          popup: 'animated shakeX'
-        }
-      });
-      
+      const errorMessage = getErrorMessage(error);
+      setApiError(errorMessage);
+
     } finally {
-      console.log('=== FINALIZANDO ===');
       setLoading(false);
     }
   };
 
+  // Manejar éxito y navegar de regreso
+  const handleSuccessClose = () => {
+    setShowSuccessDialog(false);
+    handleBackToMenu();
+  };
+
+  // Manejar retry del error
+  const handleRetryAfterError = () => {
+    setApiError(null);
+  };
+
+  // Navegación
   const handleBackToMenu = () => {
     if (window.history.length > 1) {
       window.history.back();
@@ -289,129 +267,165 @@ const AgregarProovedor
     }
   };
 
-  const handleFocus = (e) => {
-    e.target.style.borderColor = '#375E27';
-  };
+  // Renderizar contenido principal
+  const renderMainContent = () => {
+    // Mostrar error de API si existe
+    if (apiError) {
+      return (
+        <ErrorState
+          error={apiError}
+          onRetry={handleRetryAfterError}
+          retryText="Intentar de nuevo"
+          primaryColor="#5F8EAD"
+        />
+      );
+    }
 
-  const handleBlur = (e) => {
-    e.target.style.borderColor = '#d1d5db';
+    // Mostrar formulario normal
+    return (
+      <FormContainer onSubmit={handleFormSubmit}>
+        
+        <FormFieldsGrid columns="2">
+          
+          {/* Nombre de la empresa */}
+          <FormInput
+            id="companyName"
+            name="companyName"
+            type="text"
+            value={formData.companyName}
+            onChange={handleInputChange}
+            placeholder="Introduce el nombre de la empresa"
+            label="Nombre de la empresa"
+            icon={Building}
+            error={errors.companyName}
+            required={true}
+          />
+
+          {/* Email */}
+          <FormInput
+            id="email"
+            name="email"
+            type="email"
+            value={formData.email}
+            onChange={handleInputChange}
+            placeholder="Introduce el correo de la empresa"
+            label="Email"
+            icon={Mail}
+            error={errors.email}
+            required={true}
+          />
+
+          {/* Teléfono */}
+          <FormInput
+            id="phone"
+            name="phone"
+            type="text"
+            value={formData.phone}
+            onChange={handleInputChange}
+            placeholder="0000-0000"
+            maxLength={9}
+            label="Teléfono"
+            icon={Phone}
+            error={errors.phone}
+            required={true}
+          />
+
+          {/* Repuesto */}
+          <FormInput
+            id="partDescription"
+            name="partDescription"
+            type="text"
+            value={formData.partDescription}
+            onChange={handleInputChange}
+            placeholder="Introduce el repuesto necesitado"
+            label="Repuesto"
+            icon={Package}
+            error={errors.partDescription}
+            required={true}
+          />
+
+        </FormFieldsGrid>
+
+        {/* Submit Button */}
+        <SubmitButton
+          loading={loading}
+          loadingText="Procesando..."
+          icon={Building}
+          color="#5D9646"
+          hoverColor="#4a7a37"
+        >
+          Agregar Proveedor
+        </SubmitButton>
+
+      </FormContainer>
+    );
   };
 
   return (
-    <div className="fixed inset-0 min-h-screen" style={{ backgroundColor: '#34353A' }}>
-      {/* Header */}
-      <div className="text-white px-8 py-4" style={{ backgroundColor: '#34353A' }}>
-        <button 
-          onClick={handleBackToMenu}
-          className="flex items-center space-x-2 text-white hover:text-gray-300 transition-colors"
-        >
-          <ArrowLeft className="w-5 h-5" />
-          <span className="text-sm">Volver al menú principal</span>
-        </button>
-      </div>
+    <div className="min-h-screen" style={{ backgroundColor: '#34353A' }}>
+      {/* Header Navigation */}
+      <HeaderNavigation 
+        onBack={handleBackToMenu}
+        title="Volver al menú principal"
+      />
 
       {/* Main Content */}
-      <div className="px-8 pb-8" style={{ height: 'calc(100vh - 80px)' }}>
-        <div className="bg-white rounded-2xl p-8 h-full max-w-none mx-0">
-          {/* Title Section */}
-          <div className="flex items-center justify-between mb-8">
-            <div className="flex items-center space-x-4">
-              <h1 className="text-2xl font-bold text-gray-900">Agregar proveedor</h1>
-              <div className="w-14 h-14 rounded-full flex items-center justify-center" style={{ backgroundColor: '#34353A' }}>
-                <Building className="w-7 h-7 text-white" />
-              </div>
-            </div>
-            <button 
-              onClick={handleSubmit}
-              className="text-white px-8 py-3 rounded-lg text-sm font-medium transition-colors hover:opacity-90"
-              style={{ backgroundColor: '#375E27' }}
-              disabled={loading}
-            >
-              {loading ? 'Cargando...' : 'Agregar'}
-            </button>
-          </div>
+      <div className="px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+        <div className="max-w-7xl mx-auto">
+          
+          {/* Hero Section */}
+          <FormHeroSection
+            icon={Building}
+            title="Agregar Nuevo Proveedor"
+            description="Complete la información del proveedor para agregarlo al sistema"
+            iconColor="#5D9646"
+          />
 
-          {/* Form */}
-          <div>
-            <div className="space-y-8 max-w-6xl">
-              {/* First Row */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Nombre de la empresa
-                  </label>
-                  <input
-                    type="text"
-                    name="companyName"
-                    value={formData.companyName}
-                    onChange={handleInputChange}
-                    placeholder="Introduce el nombre de la empresa"
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none text-sm text-gray-700 placeholder-gray-400"
-                    onFocus={handleFocus}
-                    onBlur={handleBlur}
-                  />
-                  {errors.companyName && <p className="text-red-500 text-xs mt-1">{errors.companyName}</p>}
-                </div>
+          {/* Contenido principal con manejo de estados */}
+          {renderMainContent()}
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
-                  <input
-                    type="email"
-                    name="email"
-                    value={formData.email}
-                    onChange={handleInputChange}
-                    placeholder="Introduce el correo de la empresa"
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none text-sm text-gray-700 placeholder-gray-400"
-                    onFocus={handleFocus}
-                    onBlur={handleBlur}
-                  />
-                  {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email}</p>}
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Repuesto</label>
-                  <input
-                    type="text"
-                    name="partDescription"
-                    value={formData.partDescription}
-                    onChange={handleInputChange}
-                    placeholder="Introduce el repuesto necesitado"
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none text-sm text-gray-700 placeholder-gray-400"
-                    onFocus={handleFocus}
-                    onBlur={handleBlur}
-                  />
-                  {errors.partDescription && <p className="text-red-500 text-xs mt-1">{errors.partDescription}</p>}
-                </div>
-              </div>
-
-              {/* Second Row */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Teléfono</label>
-                  <input
-                    type="text"
-                    name="phone"
-                    value={formData.phone}
-                    onChange={handleInputChange}
-                    placeholder="0000-0000"
-                    maxLength="9"
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none text-sm text-gray-700 placeholder-gray-400"
-                    onFocus={handleFocus}
-                    onBlur={handleBlur}
-                  />
-                  {errors.phone && <p className="text-red-500 text-xs mt-1">{errors.phone}</p>}
-                </div>
-
-                {/* Empty columns to maintain the layout */}
-                <div></div>
-                <div></div>
-              </div>
-            </div>
-          </div>
         </div>
       </div>
+
+      {/* Modal de confirmación usando SweetAlert UI */}
+      <SweetAlert
+        isOpen={showConfirmDialog}
+        onClose={cancelSubmit}
+        onPrimary={cancelSubmit}
+        onSecondary={confirmSubmit}
+        title="¿Confirmar envío del formulario?"
+        description="Se agregará el nuevo proveedor al sistema"
+        primaryText="Cancelar"
+        secondaryText="Confirmar"
+        primaryColor="#6b7280"
+        secondaryColor="#5D9646"
+        icon="?"
+      />
+
+      {/* Modal de confirmación de eliminación (ejemplo de uso futuro) */}
+      <ConfirmDeleteAlert
+        isOpen={false} // Por ahora no se usa, pero está disponible
+        onClose={() => {}}
+        onConfirm={() => {}}
+        itemName=""
+        title="¿Eliminar datos del formulario?"
+        description="Se perderán todos los datos ingresados"
+        confirmText="Eliminar"
+        cancelText="Cancelar"
+      />
+
+      {/* Modal de éxito usando SuccessAlert UI */}
+      <SuccessAlert
+        isOpen={showSuccessDialog}
+        onClose={handleSuccessClose}
+        type="add"
+        title="¡Proveedor agregado con éxito!"
+        description="El proveedor ha sido registrado correctamente en el sistema"
+        buttonText="Continuar"
+        successColor="#5D9646"
+      />
     </div>
   );
 };
 
-export default AgregarProovedor;
+export default AgregarProveedor;

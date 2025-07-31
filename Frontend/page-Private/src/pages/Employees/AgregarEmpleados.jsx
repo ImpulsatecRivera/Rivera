@@ -1,289 +1,105 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, User, Calendar, ChevronLeft, ChevronRight, ChevronDown, Upload, X } from 'lucide-react';
+import { User, Mail, Phone, MapPin, Lock, CreditCard, UserPlus } from 'lucide-react';
 import axios from 'axios';
-import Swal from 'sweetalert2';
 
-const AddEmployeeForm = () => {
+// Importar componentes UI
+import PageHeader from '../../components/UIEmpleados/PageHeader';
+import HeroSection from '../../components/UIEmpleados/HeroSecction';
+import SubmitButton from '../../components/UIEmpleados/SubmitButton';
+
+// Importar componentes de formulario
+import ImageUploader from '../../components/FormsEmpleados/ImageUploader';
+import FormInput from '../../components/FormsEmpleados/FormInput';
+import FormTextarea from '../../components/FormsEmpleados/FormTextarea';
+import DatePicker from '../../components/FormsEmpleados/DatePicker';
+
+// Importar utilidades
+import { showSuccessAlert, showErrorAlert, showLoadingAlert, showValidationAlert } from '../../components/UIEmpleados/SweetAlertUtils';
+import { validateEmployeeForm, formatInput } from '../../components/UIEmpleados/FormValidation';
+import { generateEmail } from '../../components/UIEmpleados/EmailGenerator';
+import { useImageUpload } from '../../components/Empleados/hooks/useImageUpload';
+
+const AgregarEmpleado = () => {
+  // Estados del formulario
   const [formData, setFormData] = useState({
     name: '',
     lastName: '',
-    email: '', // Solo para mostrar, no se envía al backend
-    dui: '', // CAMBIO: usar 'dui' en lugar de 'id'
+    email: '',
+    dui: '',
     birthDate: '',
     password: '',
     phone: '',
     address: '',
-    img: null // Nuevo campo para la imagen
+    img: null
   });
 
-  const [showCalendar, setShowCalendar] = useState(false);
-  const [currentDate, setCurrentDate] = useState(new Date());
-  const [selectedDate, setSelectedDate] = useState(null);
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
-  const [showYearSelector, setShowYearSelector] = useState(false);
-  const [imagePreview, setImagePreview] = useState(null);
 
-  const months = [
-    'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
-    'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
-  ];
+  // Hook personalizado para manejo de imágenes
+  const { imagePreview, handleImageChange, removeImage, setImagePreview } = useImageUpload();
 
-  const daysOfWeek = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
-
-  // Configuración personalizada de SweetAlert2
-  const showSuccessAlert = () => {
-    Swal.fire({
-      title: '¡Empleado agregado con éxito!',
-      text: 'Empleado agregado correctamente',
-      icon: 'success',
-      confirmButtonText: 'Continuar',
-      confirmButtonColor: '#22c55e',
-      allowOutsideClick: false,
-      customClass: {
-        popup: 'animated bounceIn'
-      }
-    }).then((result) => {
-      // Cuando el usuario hace clic en "Continuar"
-      if (result.isConfirmed) {
-        handleBackToMenu(); // Volver a la pantalla anterior
-      }
-    });
-  };
-
-  const showErrorAlert = (message) => {
-    Swal.fire({
-      title: 'Error al agregar empleado',
-      text: message || 'Hubo un error al procesar la solicitud',
-      icon: 'error',
-      confirmButtonText: 'Intentar de nuevo',
-      confirmButtonColor: '#ef4444',
-      allowOutsideClick: false,
-      customClass: {
-        popup: 'animated shakeX'
-      }
-    });
-  };
-
-  const showLoadingAlert = () => {
-    Swal.fire({
-      title: 'Agregando empleado...',
-      text: 'Por favor espera mientras procesamos la información',
-      allowOutsideClick: false,
-      allowEscapeKey: false,
-      showConfirmButton: false,
-      didOpen: () => {
-        Swal.showLoading();
-      }
-    });
-  };
-
-  const showValidationAlert = () => {
-    Swal.fire({
-      title: 'Formulario incompleto',
-      text: 'Por favor, completa todos los campos obligatorios',
-      icon: 'warning',
-      confirmButtonText: 'Entendido',
-      confirmButtonColor: '#f59e0b',
-      customClass: {
-        popup: 'animated pulse'
-      }
-    });
-  };
-
-  // Generar email automáticamente cuando cambien nombre o apellido (solo para mostrar)
+  // Generar email automáticamente cuando cambien nombre o apellido
   useEffect(() => {
-    if (formData.name && formData.lastName) {
-      const emailGenerated = `${formData.name.toLowerCase()}.${formData.lastName.toLowerCase()}@rivera.com`;
-      setFormData(prev => ({
-        ...prev,
-        email: emailGenerated
-      }));
-    } else {
-      setFormData(prev => ({
-        ...prev,
-        email: ''
-      }));
-    }
+    const email = generateEmail(formData.name, formData.lastName);
+    setFormData(prev => ({
+      ...prev,
+      email: email
+    }));
   }, [formData.name, formData.lastName]);
 
-  const getDaysInMonth = (date) => {
-    const year = date.getFullYear();
-    const month = date.getMonth();
-    const firstDay = new Date(year, month, 1);
-    const lastDay = new Date(year, month + 1, 0);
-    const startDate = new Date(firstDay);
-    startDate.setDate(startDate.getDate() - firstDay.getDay());
-
-    const days = [];
-    const currentDate = new Date(startDate);
-
-    for (let i = 0; i < 42; i++) {
-      days.push(new Date(currentDate));
-      currentDate.setDate(currentDate.getDate() + 1);
-    }
-
-    return days;
-  };
-
-  const formatDate = (date) => {
-    return date.toISOString().split('T')[0];
-  };
-
-  const isToday = (date) => {
-    const today = new Date();
-    return date.toDateString() === today.toDateString();
-  };
-
-  const isCurrentMonth = (date) => {
-    return date.getMonth() === currentDate.getMonth();
-  };
-
-  const isSelected = (date) => {
-    return selectedDate && date.toDateString() === selectedDate.toDateString();
-  };
-
-  const handleDateSelect = (date) => {
-    setSelectedDate(date);
-    setFormData(prev => ({
-      ...prev,
-      birthDate: formatDate(date)
-    }));
-    setShowCalendar(false);
-  };
-
-  const navigateMonth = (direction) => {
-    setCurrentDate(prev => {
-      const newDate = new Date(prev);
-      newDate.setMonth(newDate.getMonth() + direction);
-      return newDate;
-    });
-  };
-
-  const navigateYear = (direction) => {
-    setCurrentDate(prev => {
-      const newDate = new Date(prev);
-      newDate.setFullYear(newDate.getFullYear() + direction);
-      return newDate;
-    });
-  };
-
-  // Manejar subida de imagen
-  const handleImageChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      // Validar tipo de archivo
-      if (!file.type.startsWith('image/')) {
-        alert('Por favor selecciona un archivo de imagen válido');
-        return;
-      }
-      
-      // Validar tamaño (máximo 5MB)
-      if (file.size > 5 * 1024 * 1024) {
-        alert('La imagen debe ser menor a 5MB');
-        return;
-      }
-
-      setFormData(prev => ({
-        ...prev,
-        img: file
-      }));
-
-      // Crear preview
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        setImagePreview(e.target.result);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  // Remover imagen
-  const removeImage = () => {
-    setFormData(prev => ({
-      ...prev,
-      img: null
-    }));
-    setImagePreview(null);
-    
-    // Limpiar el input file
-    const fileInput = document.getElementById('img-input');
-    if (fileInput) {
-      fileInput.value = '';
-    }
-  };
-
+  // Manejo de cambios en inputs
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    let formattedValue = value;
 
-    // No permitir editar el email ya que se genera automáticamente
+    // No permitir editar email
     if (name === 'email') {
       return;
     }
 
-    // Validación y formateo de teléfono
-    if (name === 'phone') {
-      const numbers = value.replace(/\D/g, '');
-      if (numbers.length > 4) {
-        formattedValue = numbers.slice(0, 4) + '-' + numbers.slice(4, 8);
-      } else {
-        formattedValue = numbers;
-      }
-    }
-
-    // Validación y formateo de DUI (CAMBIO: usar 'dui' en lugar de 'id')
-    if (name === 'dui') {
-      const numbers = value.replace(/\D/g, '');
-      if (numbers.length > 8) {
-        formattedValue = numbers.slice(0, 8) + '-' + numbers.slice(8, 9);
-      } else {
-        formattedValue = numbers;
-      }
-    }
+    // Formatear inputs específicos
+    const formattedValue = formatInput(name, value);
 
     setFormData(prev => ({
       ...prev,
       [name]: formattedValue
     }));
+
+    // Limpiar error del campo cuando el usuario empiece a escribir
+    if (errors[name]) {
+      setErrors(prev => ({
+        ...prev,
+        [name]: ''
+      }));
+    }
   };
 
-  const validateForm = () => {
-    const newErrors = {};
-    if (!formData.name) newErrors.name = "El nombre es obligatorio";
-    if (!formData.lastName) newErrors.lastName = "El apellido es obligatorio";
-    if (!formData.dui) newErrors.dui = "El DUI es obligatorio";
-    if (formData.dui && formData.dui.replace(/\D/g, '').length !== 9) {
-      newErrors.dui = "El DUI debe tener exactamente 9 dígitos";
-    }
-    if (!formData.birthDate) newErrors.birthDate = "La fecha de nacimiento es obligatoria";
-    if (!formData.password) newErrors.password = "La contraseña es obligatoria";
-    if (!formData.phone) newErrors.phone = "El teléfono es obligatorio";
-    if (formData.phone && formData.phone.replace(/\D/g, '').length !== 8) {
-      newErrors.phone = "El teléfono debe tener exactamente 8 dígitos";
-    }
-    if (!formData.address) newErrors.address = "La dirección es obligatoria";
-
-    return newErrors;
+  // Manejo de imagen
+  const onImageChange = (e) => {
+    handleImageChange(e, setFormData);
   };
 
+  const onRemoveImage = () => {
+    removeImage(setFormData);
+  };
+
+  // Validación y envío del formulario
   const handleSubmit = async (e) => {
     e.preventDefault();
     console.log('=== INICIO DEL SUBMIT ===');
-    
-    const formErrors = validateForm();
+
+    // Validar formulario
+    const formErrors = validateEmployeeForm(formData);
     console.log('Errores de validación:', formErrors);
     setErrors(formErrors);
 
-    // Si hay errores de validación, mostrar alerta específica
     if (Object.keys(formErrors).length > 0) {
       console.log('Formulario tiene errores, no se envía');
-      
-      // Crear lista de campos faltantes
+
       const camposFaltantes = Object.keys(formErrors).map(field => {
         const fieldNames = {
           name: 'Nombre',
-          lastName: 'Apellido', 
+          lastName: 'Apellido',
           dui: 'DUI',
           birthDate: 'Fecha de nacimiento',
           password: 'Contraseña',
@@ -293,33 +109,16 @@ const AddEmployeeForm = () => {
         return fieldNames[field] || field;
       });
 
-      Swal.fire({
-        title: '⚠️ Formulario incompleto',
-        html: `
-          <p style="margin-bottom: 15px;">Los siguientes campos son obligatorios:</p>
-          <ul style="text-align: left; color: #dc2626; font-weight: 500;">
-            ${camposFaltantes.map(campo => `<li>• ${campo}</li>`).join('')}
-          </ul>
-        `,
-        icon: 'warning',
-        confirmButtonText: 'Entendido',
-        confirmButtonColor: '#f59e0b',
-        allowOutsideClick: false,
-        customClass: {
-          popup: 'animated pulse'
-        }
-      });
+      showValidationAlert(camposFaltantes);
       return;
     }
 
-    // Si no hay errores de validación, proceder con el envío
     try {
-      // Mostrar loading
       showLoadingAlert();
       setLoading(true);
       console.log('Estado de loading activado');
-      
-      // Crear FormData para enviar archivo
+
+      // Preparar FormData
       const formDataToSend = new FormData();
       formDataToSend.append('name', formData.name.trim());
       formDataToSend.append('lastName', formData.lastName.trim());
@@ -328,38 +127,35 @@ const AddEmployeeForm = () => {
       formDataToSend.append('password', formData.password);
       formDataToSend.append('phone', formData.phone.trim());
       formDataToSend.append('address', formData.address.trim());
-      
-      // Agregar imagen si existe
+
       if (formData.img) {
         formDataToSend.append('img', formData.img);
       }
 
       console.log('=== DATOS A ENVIAR ===');
       console.log('Incluye imagen:', !!formData.img);
-      
+
       console.log('=== ENVIANDO PETICIÓN ===');
       console.log('URL:', 'http://localhost:4000/api/empleados');
-      
-      // Llamada a la API con axios
+
+      // Enviar petición
       const response = await axios.post('http://localhost:4000/api/empleados', formDataToSend, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
-        timeout: 10000, // 10 segundos de timeout
+        timeout: 10000,
       });
-      
+
       console.log('=== RESPUESTA RECIBIDA ===');
       console.log('Status:', response.status);
       console.log('Respuesta del servidor:', response.data);
-      
-      // Si la respuesta es exitosa
+
       if (response.status === 200 || response.status === 201) {
         console.log('¡Empleado creado exitosamente!');
-        
+
         // Cerrar loading y mostrar éxito
-        Swal.close();
-        showSuccessAlert();
-        
+        showSuccessAlert(handleBackToMenu);
+
         // Limpiar formulario
         setFormData({
           name: '',
@@ -372,32 +168,26 @@ const AddEmployeeForm = () => {
           address: '',
           img: null
         });
-        setSelectedDate(null);
         setImagePreview(null);
         setErrors({});
       }
-      
+
     } catch (error) {
       console.error('=== ERROR CAPTURADO ===');
       console.error('Error completo:', error);
       console.log('Error response:', error.response);
-      
-      // Cerrar loading
-      Swal.close();
-      
+
       let errorMsg = 'Error desconocido';
       let errorTitle = '❌ Error al agregar empleado';
-      
-      // Manejo de diferentes tipos de errores
+
       if (error.response) {
-        // El servidor respondió con un código de error
         const statusCode = error.response.status;
         const errorMessage = error.response.data?.message || error.response.data?.error || 'Error del servidor';
-        
+
         console.log('Status Code:', statusCode);
         console.log('Error Message:', errorMessage);
         console.log('Full Response Data:', error.response.data);
-        
+
         switch (statusCode) {
           case 400:
             errorTitle = '❌ Error de validación';
@@ -428,36 +218,24 @@ const AddEmployeeForm = () => {
             errorMsg = `Error del servidor (${statusCode}): ${errorMessage}`;
         }
       } else if (error.request) {
-        // La petición fue hecha pero no hubo respuesta
         console.error('No hubo respuesta del servidor');
         errorTitle = '🌐 Sin conexión';
         errorMsg = 'No se pudo conectar con el servidor. Verifica tu conexión a internet.';
       } else {
-        // Error en la configuración de la petición
         console.error('Error en la configuración:', error.message);
         errorTitle = '⚙️ Error de configuración';
         errorMsg = 'Error al configurar la petición. Contacta al administrador.';
       }
-      
-      // Mostrar error específico
-      Swal.fire({
-        title: errorTitle,
-        text: errorMsg,
-        icon: 'error',
-        confirmButtonText: 'Intentar de nuevo',
-        confirmButtonColor: '#ef4444',
-        allowOutsideClick: false,
-        customClass: {
-          popup: 'animated shakeX'
-        }
-      });
-      
+
+      showErrorAlert(errorMsg);
+
     } finally {
       console.log('=== FINALIZANDO ===');
       setLoading(false);
     }
   };
 
+  // Navegación
   const handleBackToMenu = () => {
     if (window.history.length > 1) {
       window.history.back();
@@ -466,345 +244,163 @@ const AddEmployeeForm = () => {
     }
   };
 
-  const handleFocus = (e) => {
-    e.target.style.borderColor = '#375E27';
-  };
-
-  const handleBlur = (e) => {
-    e.target.style.borderColor = '#d1d5db';
-  };
-
-  // Generar años para el selector
-  const generateYears = () => {
-    const currentYear = new Date().getFullYear();
-    const years = [];
-    for (let year = currentYear - 100; year <= currentYear; year++) {
-      years.push(year);
-    }
-    return years.reverse();
-  };
-
   return (
-    <div className="fixed inset-0 min-h-screen" style={{ backgroundColor: '#34353A' }}>
+    <div className="min-h-screen" style={{ backgroundColor: '#34353A' }}>
       {/* Header */}
-      <div className="text-white px-4 sm:px-8 py-2 sm:py-4" style={{ backgroundColor: '#34353A' }}>
-        <button 
-          onClick={handleBackToMenu}
-          className="flex items-center space-x-2 text-white hover:text-gray-300 transition-colors"
-        >
-          <ArrowLeft className="w-5 h-5" />
-          <span className="text-sm">Volver al menú principal</span>
-        </button>
-      </div>
+      <PageHeader 
+        onBack={handleBackToMenu}
+        title="Volver al menú principal"
+      />
 
       {/* Main Content */}
-      <div className="px-4 sm:px-8 pb-6 sm:pb-8" style={{ height: 'calc(100vh - 80px)' }}>
-        <div className="bg-white rounded-2xl p-4 sm:p-6 md:p-8 h-full max-w-none mx-0 overflow-y-auto">
-          {/* Title Section */}
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 sm:mb-8 space-y-4 sm:space-y-0">
-            <div className="flex items-center space-x-4">
-              <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Agregar Empleado</h1>
-              <div className="w-14 h-14 rounded-full flex items-center justify-center" style={{ backgroundColor: '#34353A' }}>
-                <User className="w-7 h-7 text-white" />
-              </div>
-            </div>
-            <button 
-              onClick={handleSubmit}
-              className="text-white px-6 sm:px-8 py-2.5 sm:py-3 rounded-lg text-sm font-medium transition-colors hover:opacity-90"
-              style={{ backgroundColor: '#375E27' }}
-              disabled={loading}
-            >
-              Guardar
-            </button>
-          </div>
+      <div className="px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+        <div className="max-w-7xl mx-auto">
+          {/* Hero Section */}
+          <HeroSection 
+            icon={UserPlus}
+            title="Agregar Nuevo Empleado"
+            subtitle="Complete la información del empleado para agregarlo al sistema"
+          />
 
-          {/* Form */}
-          <form onSubmit={handleSubmit} className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-            {/* Nombre */}
-            <div className="flex flex-col">
-              <label htmlFor="name" className="mb-1 font-semibold text-gray-700">Nombre</label>
-              <input
-                id="name"
-                name="name"
-                type="text"
-                value={formData.name}
-                onChange={handleInputChange}
-                onFocus={handleFocus}
-                onBlur={handleBlur}
-                placeholder="Ingrese el nombre"
-                className={`border rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-600 ${errors.name ? 'border-red-500' : 'border-gray-300'}`}
+          {/* Form Container */}
+          <div className="bg-white rounded-2xl sm:rounded-3xl shadow-2xl p-4 sm:p-6 lg:p-8 xl:p-12">
+            <form onSubmit={handleSubmit} className="space-y-6 sm:space-y-8">
+              
+              {/* Profile Image Section */}
+              <ImageUploader 
+                imagePreview={imagePreview}
+                onImageChange={onImageChange}
+                onRemoveImage={onRemoveImage}
               />
-              {errors.name && <span className="text-red-600 text-xs mt-1">{errors.name}</span>}
-            </div>
 
-            {/* Apellido */}
-            <div className="flex flex-col">
-              <label htmlFor="lastName" className="mb-1 font-semibold text-gray-700">Apellido</label>
-              <input
-                id="lastName"
-                name="lastName"
-                type="text"
-                value={formData.lastName}
-                onChange={handleInputChange}
-                onFocus={handleFocus}
-                onBlur={handleBlur}
-                placeholder="Ingrese el apellido"
-                className={`border rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-600 ${errors.lastName ? 'border-red-500' : 'border-gray-300'}`}
-              />
-              {errors.lastName && <span className="text-red-600 text-xs mt-1">{errors.lastName}</span>}
-            </div>
+              {/* Form Fields Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+                
+                {/* Nombre */}
+                <FormInput
+                  id="name"
+                  name="name"
+                  value={formData.name}
+                  onChange={handleInputChange}
+                  placeholder="Ingrese el nombre"
+                  icon={User}
+                  label="Nombre"
+                  required
+                  error={errors.name}
+                />
 
-            {/* Email - solo mostrar */}
-            <div className="flex flex-col">
-              <label htmlFor="email" className="mb-1 font-semibold text-gray-700">Correo electronico (generado)</label>
-              <input
-                id="email"
-                name="email"
-                type="email"
-                value={formData.email}
-                readOnly
-                className="border rounded-md px-3 py-2 bg-gray-100 cursor-not-allowed border-gray-300"
-              />
-            </div>
+                {/* Apellido */}
+                <FormInput
+                  id="lastName"
+                  name="lastName"
+                  value={formData.lastName}
+                  onChange={handleInputChange}
+                  placeholder="Ingrese el apellido"
+                  icon={User}
+                  label="Apellido"
+                  required
+                  error={errors.lastName}
+                />
 
-            {/* DUI */}
-            <div className="flex flex-col">
-              <label htmlFor="dui" className="mb-1 font-semibold text-gray-700">DUI</label>
-              <input
-                id="dui"
-                name="dui"
-                type="text"
-                value={formData.dui}
-                onChange={handleInputChange}
-                onFocus={handleFocus}
-                onBlur={handleBlur}
-                placeholder="00000000-0"
-                maxLength={10}
-                className={`border rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-600 ${errors.dui ? 'border-red-500' : 'border-gray-300'}`}
-              />
-              {errors.dui && <span className="text-red-600 text-xs mt-1">{errors.dui}</span>}
-            </div>
-
-            {/* Fecha de Nacimiento */}
-            <div className="relative flex flex-col">
-              <label htmlFor="birthDate" className="mb-1 font-semibold text-gray-700">Fecha de nacimiento</label>
-              <input
-                id="birthDate"
-                name="birthDate"
-                type="text"
-                value={formData.birthDate}
-                placeholder="YYYY-MM-DD"
-                onFocus={() => setShowCalendar(true)}
-                readOnly
-                className={`border rounded-md px-3 py-2 cursor-pointer focus:outline-none focus:ring-2 focus:ring-green-600 ${errors.birthDate ? 'border-red-500' : 'border-gray-300'}`}
-              />
-              {errors.birthDate && <span className="text-red-600 text-xs mt-1">{errors.birthDate}</span>}
-
-              {/* Calendario */}
-              {showCalendar && (
-                <div className="absolute z-10 bg-white rounded-md shadow-lg mt-2 p-3 w-64 sm:w-72 md:w-80">
-                  {/* Selector de año */}
-                  <div className="flex justify-between items-center mb-2">
-                    <button
-                      type="button"
-                      onClick={() => navigateYear(-1)}
-                      className="p-1 hover:bg-gray-200 rounded"
-                      aria-label="Año anterior"
-                    >
-                      <ChevronLeft />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setShowYearSelector(!showYearSelector)}
-                      className="font-semibold text-gray-700"
-                    >
-                      {currentDate.getFullYear()}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => navigateYear(1)}
-                      className="p-1 hover:bg-gray-200 rounded"
-                      aria-label="Año siguiente"
-                    >
-                      <ChevronRight />
-                    </button>
-                  </div>
-
-                  {/* Selector de mes */}
-                  <div className="flex justify-between items-center mb-2">
-                    <button
-                      type="button"
-                      onClick={() => navigateMonth(-1)}
-                      className="p-1 hover:bg-gray-200 rounded"
-                      aria-label="Mes anterior"
-                    >
-                      <ChevronLeft />
-                    </button>
-                    <span className="font-semibold text-gray-700">{months[currentDate.getMonth()]}</span>
-                    <button
-                      type="button"
-                      onClick={() => navigateMonth(1)}
-                      className="p-1 hover:bg-gray-200 rounded"
-                      aria-label="Mes siguiente"
-                    >
-                      <ChevronRight />
-                    </button>
-                  </div>
-
-                  {/* Lista de años (cuando se muestra selector) */}
-                  {showYearSelector && (
-                    <div className="max-h-40 overflow-y-auto mb-2 border rounded p-1">
-                      {generateYears().map(year => (
-                        <button
-                          key={year}
-                          type="button"
-                          className={`block w-full text-left px-2 py-1 rounded hover:bg-gray-200 ${
-                            year === currentDate.getFullYear() ? 'bg-green-600 text-white' : 'text-gray-700'
-                          }`}
-                          onClick={() => {
-                            setCurrentDate(new Date(year, currentDate.getMonth(), 1));
-                            setShowYearSelector(false);
-                          }}
-                        >
-                          {year}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Días de la semana */}
-                  <div className="grid grid-cols-7 gap-1 text-center mb-1 text-xs font-semibold text-gray-600">
-                    {daysOfWeek.map(day => (
-                      <div key={day}>{day}</div>
-                    ))}
-                  </div>
-
-                  {/* Días del mes */}
-                  <div className="grid grid-cols-7 gap-1 text-center text-sm">
-                    {getDaysInMonth(currentDate).map((date, index) => {
-                      const isCurrent = isCurrentMonth(date);
-                      const isSelectedDay = isSelected(date);
-                      const today = isToday(date);
-
-                      return (
-                        <button
-                          key={index}
-                          type="button"
-                          onClick={() => handleDateSelect(date)}
-                          className={`py-1 rounded hover:bg-green-100 focus:outline-none ${
-                            isSelectedDay ? 'bg-green-600 text-white' :
-                            today ? 'border border-green-600 text-green-600' :
-                            isCurrent ? 'text-gray-800' : 'text-gray-400'
-                          }`}
-                          disabled={!isCurrent}
-                        >
-                          {date.getDate()}
-                        </button>
-                      );
-                    })}
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => setShowCalendar(false)}
-                    className="mt-2 w-full py-1 text-sm text-center text-red-600 hover:text-red-800"
-                  >
-                    Cerrar
-                  </button>
+                {/* Email */}
+                <div className="sm:col-span-2 lg:col-span-1">
+                  <FormInput
+                    id="email"
+                    name="email"
+                    type="email"
+                    value={formData.email}
+                    onChange={handleInputChange}
+                    icon={Mail}
+                    label="Correo electrónico"
+                    badge="Auto-generado"
+                    readOnly
+                  />
                 </div>
-              )}
-            </div>
 
-            {/* Contraseña */}
-            <div className="flex flex-col">
-              <label htmlFor="password" className="mb-1 font-semibold text-gray-700">Contraseña</label>
-              <input
-                id="password"
-                name="password"
-                type="password"
-                value={formData.password}
-                onChange={handleInputChange}
-                onFocus={handleFocus}
-                onBlur={handleBlur}
-                placeholder="Ingrese una contraseña"
-                className={`border rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-600 ${errors.password ? 'border-red-500' : 'border-gray-300'}`}
-              />
-              {errors.password && <span className="text-red-600 text-xs mt-1">{errors.password}</span>}
-            </div>
+                {/* DUI */}
+                <FormInput
+                  id="dui"
+                  name="dui"
+                  value={formData.dui}
+                  onChange={handleInputChange}
+                  placeholder="00000000-0"
+                  maxLength={10}
+                  icon={CreditCard}
+                  label="DUI"
+                  required
+                  error={errors.dui}
+                />
 
-            {/* Teléfono */}
-            <div className="flex flex-col">
-              <label htmlFor="phone" className="mb-1 font-semibold text-gray-700">Teléfono</label>
-              <input
-                id="phone"
-                name="phone"
-                type="text"
-                value={formData.phone}
-                onChange={handleInputChange}
-                onFocus={handleFocus}
-                onBlur={handleBlur}
-                placeholder="0000-0000"
-                maxLength={9}
-                className={`border rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-600 ${errors.phone ? 'border-red-500' : 'border-gray-300'}`}
-              />
-              {errors.phone && <span className="text-red-600 text-xs mt-1">{errors.phone}</span>}
-            </div>
+                {/* Fecha de Nacimiento */}
+                <DatePicker
+                  id="birthDate"
+                  name="birthDate"
+                  value={formData.birthDate}
+                  onChange={handleInputChange}
+                  label="Fecha de nacimiento"
+                  required
+                  error={errors.birthDate}
+                />
 
-            {/* Dirección */}
-            <div className="flex flex-col md:col-span-2">
-              <label htmlFor="address" className="mb-1 font-semibold text-gray-700">Dirección</label>
-              <textarea
-                id="address"
-                name="address"
-                value={formData.address}
-                onChange={handleInputChange}
-                onFocus={handleFocus}
-                onBlur={handleBlur}
-                placeholder="Ingrese la dirección completa"
-                rows={3}
-                className={`border rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-600 resize-none ${errors.address ? 'border-red-500' : 'border-gray-300'}`}
-              />
-              {errors.address && <span className="text-red-600 text-xs mt-1">{errors.address}</span>}
-            </div>
+                {/* Contraseña */}
+                <FormInput
+                  id="password"
+                  name="password"
+                  type="password"
+                  value={formData.password}
+                  onChange={handleInputChange}
+                  placeholder="Ingrese una contraseña"
+                  icon={Lock}
+                  label="Contraseña"
+                  required
+                  error={errors.password}
+                />
 
-            {/* Imagen */}
-            <div className="flex flex-col md:col-span-3">
-              <label className="mb-2 font-semibold text-gray-700">Foto de perfil (opcional)</label>
-              <div className="flex items-center space-x-4">
-                {imagePreview ? (
-                  <div className="relative w-24 h-24 rounded-full overflow-hidden border border-gray-300">
-                    <img src={imagePreview} alt="Previsualización" className="object-cover w-full h-full" />
-                    <button
-                      type="button"
-                      onClick={removeImage}
-                      className="absolute top-1 right-1 bg-red-600 hover:bg-red-700 text-white rounded-full p-1 focus:outline-none"
-                      aria-label="Eliminar imagen"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  </div>
-                ) : (
-                  <label
-                    htmlFor="img-input"
-                    className="flex items-center justify-center cursor-pointer w-24 h-24 rounded-full bg-gray-100 border border-dashed border-gray-300 hover:bg-gray-200 transition-colors"
-                  >
-                    <Upload className="w-6 h-6 text-gray-400" />
-                    <input
-                      id="img-input"
-                      type="file"
-                      accept="image/*"
-                      onChange={handleImageChange}
-                      className="hidden"
-                    />
-                  </label>
-                )}
+                {/* Teléfono */}
+                <FormInput
+                  id="phone"
+                  name="phone"
+                  value={formData.phone}
+                  onChange={handleInputChange}
+                  placeholder="0000-0000"
+                  maxLength={9}
+                  icon={Phone}
+                  label="Teléfono"
+                  required
+                  error={errors.phone}
+                />
+
+                {/* Dirección */}
+                <div className="sm:col-span-2 lg:col-span-3">
+                  <FormTextarea
+                    id="address"
+                    name="address"
+                    value={formData.address}
+                    onChange={handleInputChange}
+                    placeholder="Ingrese la dirección completa"
+                    icon={MapPin}
+                    label="Dirección"
+                    required
+                    error={errors.address}
+                    rows={3}
+                  />
+                </div>
               </div>
-            </div>
-          </form>
+
+              {/* Submit Button */}
+              <SubmitButton
+                loading={loading}
+                onClick={handleSubmit}
+                icon={UserPlus}
+                text="Agregar Empleado"
+                loadingText="Procesando..."
+              />
+            </form>
+          </div>
         </div>
       </div>
     </div>
   );
 };
 
-export default AddEmployeeForm;
+export default AgregarEmpleado;
