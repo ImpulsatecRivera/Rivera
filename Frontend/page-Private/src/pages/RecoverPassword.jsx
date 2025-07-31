@@ -1,11 +1,12 @@
 import { useState } from "react";
 import axios from "axios";
-import Input from "../components/Login/Input";
+import Input from "../components/RecoverPassword/input";
 import Button from "../components/Login/Button";
 import candado from "../images/candado.png";
 import ilustracion from "../images/recover.png";
 import Title from "../components/RecoverPassword/Title";
 import { useNavigate } from "react-router-dom";
+import { motion, AnimatePresence } from "framer-motion";
 
 const RecoverPassword = () => {
   const navigate = useNavigate();
@@ -14,7 +15,6 @@ const RecoverPassword = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  // Métodos de recuperación disponibles
   const recoveryMethods = [
     {
       id: "email",
@@ -22,46 +22,65 @@ const RecoverPassword = () => {
       placeholder: "ejemplo@email.com",
       icon: "📧",
       description: "Recuperar y cambiar contraseña",
-      flow: "reset" // Flujo tradicional: código → nueva contraseña
+      flow: "reset"
     },
     {
       id: "sms",
       label: "SMS",
-      placeholder: "+1234567890",
+      placeholder: "7123-4567 o +503 7123-4567",
       icon: "📱",
-      description: "Acceso rápido con código",
-      flow: "quickLogin" // Flujo rápido: código → login directo
-    },
-    {
-      id: "whatsapp",
-      label: "WhatsApp",
-      placeholder: "+1234567890",
-      icon: "💬",
-      description: "Acceso rápido con código",
-      flow: "quickLogin" // Flujo rápido: código → login directo
+      description: "Recuperar y cambiar contraseña",
+      flow: "reset"
     }
   ];
 
-  // Validaciones según el método seleccionado
   const validateInput = (method, value) => {
     if (!value) return false;
     
     switch (method) {
       case "email":
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        return emailRegex.test(value);
+        return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
       case "sms":
-      case "whatsapp":
-        const phoneRegex = /^\+?[\d\s-()]{10,}$/;
-        return phoneRegex.test(value);
+        // Validación mejorada para números de El Salvador
+        const cleanPhone = value.replace(/[\s\-()]/g, '');
+        // Acepta +503XXXXXXXX, 503XXXXXXXX o XXXXXXXX (8 dígitos empezando con 2, 6 o 7)
+        return /^(\+?503)?[267]\d{7}$/.test(cleanPhone);
       default:
         return false;
     }
   };
 
+  const normalizePhone = (phone) => {
+    // Limpiar el número de espacios, guiones y paréntesis
+    let cleanPhone = phone.replace(/[\s\-()]/g, '');
+    
+    // Si no empieza con +, procesar
+    if (!cleanPhone.startsWith('+')) {
+      // Si empieza con 503, agregar +
+      if (cleanPhone.startsWith('503')) {
+        cleanPhone = '+' + cleanPhone;
+      } 
+      // Si no empieza con 503, agregar +503
+      else {
+        cleanPhone = '+503' + cleanPhone;
+      }
+    }
+    
+    return cleanPhone;
+  };
+
+  const maskContactInfo = (method, info) => {
+    if (method === "email") {
+      const [username, domain] = info.split("@");
+      return `${username.charAt(0)}${"*".repeat(username.length - 2)}${username.charAt(username.length - 1)}@${domain}`;
+    } else {
+      return `${info.substring(0, 4)}${"*".repeat(info.length - 7)}${info.substring(info.length - 3)}`;
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (!selectedMethod) {
       setError("Por favor, selecciona un método de recuperación");
       return;
@@ -74,7 +93,11 @@ const RecoverPassword = () => {
 
     if (!validateInput(selectedMethod, contactInfo)) {
       const methodLabel = recoveryMethods.find(m => m.id === selectedMethod)?.label;
-      setError(`Por favor, introduce un ${methodLabel.toLowerCase()} válido`);
+      if (selectedMethod === "sms") {
+        setError("Ingresa un número válido (ej: 7123-4567 o +503 7123-4567)");
+      } else {
+        setError(`Por favor, introduce un ${methodLabel.toLowerCase()} válido`);
+      }
       return;
     }
 
@@ -82,51 +105,88 @@ const RecoverPassword = () => {
     setError("");
 
     try {
-      console.log("Enviando solicitud:", { method: selectedMethod, contactInfo });
+      const endpoint = "http://localhost:4000/api/recovery/requestCode";
+
+      let requestPayload;
       
-      const response = await axios.post("http://localhost:4000/api/recovery/requestCode",
-        { 
-          method: selectedMethod,
-          contactInfo: contactInfo
-        },
-        {
-          withCredentials: true,
-          headers: {
-            'Content-Type': 'application/json'
-          }
+      if (selectedMethod === "email") {
+        requestPayload = { 
+          email: contactInfo.trim().toLowerCase(), 
+          via: "email" 
+        };
+      } else {
+        // Normalizar número de teléfono para SMS
+        const normalizedPhone = normalizePhone(contactInfo.trim());
+        requestPayload = { 
+          phone: normalizedPhone, 
+          via: "sms" 
+        };
+      }
+
+      console.log("🚀 Método seleccionado:", selectedMethod);
+      console.log("📝 Info original:", contactInfo);
+      console.log("📤 Enviando payload:", requestPayload);
+
+      const response = await axios.post(endpoint, requestPayload, {
+        withCredentials: true,
+        headers: {
+          'Content-Type': 'application/json'
         }
-      );
-      
-      console.log("Respuesta exitosa:", response.data);
-      // Navegar a la página de verificación con la información del método y flujo seleccionado
-      const selectedMethodData = recoveryMethods.find(m => m.id === selectedMethod);
-      navigate("/verification-input", { 
-        state: { 
-          method: selectedMethod, 
-          contactInfo: contactInfo,
-          maskedInfo: maskContactInfo(selectedMethod, contactInfo),
-          flow: selectedMethodData.flow // 'reset' para email, 'quickLogin' para SMS/WhatsApp
-        } 
       });
-      
+
+      console.log("✅ Respuesta del servidor:", response.data);
+
+      // Navegar a verificación
+      navigate("/verification-input", {
+        state: {
+          method: selectedMethod,
+          contactInfo: selectedMethod === "email" ? contactInfo : normalizePhone(contactInfo),
+          email: selectedMethod === "email" ? contactInfo : null,
+          phone: selectedMethod === "sms" ? normalizePhone(contactInfo) : null,
+          maskedInfo: maskContactInfo(selectedMethod, contactInfo),
+          flow: "reset",
+          verificationEndpoint: "/api/recovery/verifyCode"
+        }
+      });
+
     } catch (error) {
-      console.error("Error completo:", error);
-      console.error("Respuesta del servidor:", error.response?.data);
-      console.error("Status code:", error.response?.status);
+      console.error("❌ Error completo:", error);
       
-      setError(error.response?.data?.message || "Error al enviar el código");
+      if (error.code === 'ECONNREFUSED' || error.code === 'ERR_NETWORK') {
+        setError("No se puede conectar al servidor. Verifica que esté ejecutándose.");
+      } else if (error.response?.status === 404) {
+        setError("Endpoint no encontrado. Verifica la URL del API.");
+      } else if (error.response?.status === 400) {
+        const backendMessage = error.response?.data?.message || "Error de validación en el servidor";
+        
+        // Mensajes más amigables para el usuario
+        if (backendMessage.includes("Usuario no encontrado") || backendMessage.includes("Usuario no existente")) {
+          if (selectedMethod === "email") {
+            setError("No encontramos una cuenta con este email. Verifica que sea correcto.");
+          } else {
+            setError("No encontramos una cuenta con este número. Verifica que sea correcto.");
+          }
+        } else if (backendMessage === "Email es requerido") {
+          setError("Por favor, ingresa tu email.");
+        } else if (backendMessage === "Número de teléfono es requerido") {
+          setError("Por favor, ingresa tu número de teléfono.");
+        } else if (backendMessage.includes("no tiene número de teléfono registrado") || 
+                   backendMessage.includes("no tiene un número de teléfono")) {
+          setError("Tu cuenta no tiene teléfono registrado. Usa recuperación por email.");
+          setSelectedMethod("email");
+          setContactInfo("");
+        } else {
+          setError(backendMessage);
+        }
+        
+        console.log("📋 Error 400 detalles:", error.response.data);
+      } else if (error.response?.status === 500) {
+        setError("Error interno del servidor. Inténtalo más tarde.");
+      } else {
+        setError(error.response?.data?.message || "Error al enviar el código");
+      }
     } finally {
       setLoading(false);
-    }
-  };
-
-  // Función para enmascarar la información de contacto
-  const maskContactInfo = (method, info) => {
-    if (method === "email") {
-      const [username, domain] = info.split("@");
-      return `${username.charAt(0)}${"*".repeat(username.length - 2)}${username.charAt(username.length - 1)}@${domain}`;
-    } else {
-      return `${info.substring(0, 3)}${"*".repeat(info.length - 6)}${info.substring(info.length - 3)}`;
     }
   };
 
@@ -142,92 +202,99 @@ const RecoverPassword = () => {
         <img src={candado} alt="Icono de candado" className="w-24 h-24 mb-4" />
         <Title className="text-white">RECUPERAR ACCESO</Title>
         <p className="text-center text-white text-sm max-w-sm">
-          Elige cómo quieres recuperar tu acceso. Con email cambiarás tu contraseña, con SMS/WhatsApp tendrás acceso inmediato.
+          Elige cómo quieres recuperar tu acceso. Te enviaremos un código para cambiar tu contraseña.
         </p>
 
-        <form onSubmit={handleSubmit} className="w-full max-w-sm space-y-4">
-          {/* Selector de métodos de recuperación */}
-          <div className="space-y-3">
-            <label className="block text-white text-sm font-medium">
-              Método de recuperación
-            </label>
+        <form onSubmit={handleSubmit} className="w-full max-w-sm space-y-6">
+          {/* Selector de método estilo tabs */}
+          <div className="flex bg-gray-800/50 rounded-xl p-1 backdrop-blur-sm border border-gray-700/50">
             {recoveryMethods.map((method) => (
-              <div key={method.id} className="relative">
-                <input
-                  type="radio"
-                  id={method.id}
-                  name="recoveryMethod"
-                  value={method.id}
-                  checked={selectedMethod === method.id}
-                  onChange={(e) => {
-                    setSelectedMethod(e.target.value);
-                    setContactInfo("");
-                    setError("");
-                  }}
-                  className="sr-only"
-                />
-                <label
-                  htmlFor={method.id}
-                  className={`
-                    flex items-center p-3 rounded-lg cursor-pointer border-2 transition-all
-                    ${selectedMethod === method.id 
-                      ? 'border-[#a100f2] bg-[#a100f2]/10' 
-                      : 'border-gray-600 bg-gray-700/30 hover:border-gray-500'
-                    }
-                  `}
-                >
-                  <span className="text-xl mr-3">{method.icon}</span>
-                  <div className="flex-1">
-                    <div className="font-medium text-white">{method.label}</div>
-                    <div className="text-xs text-gray-300">{method.description}</div>
-                    {method.flow === "quickLogin" && (
-                      <div className="text-xs text-[#a100f2] mt-1">✨ Acceso instantáneo</div>
-                    )}
-                  </div>
-                  <div className={`
-                    w-4 h-4 rounded-full border-2 flex items-center justify-center
-                    ${selectedMethod === method.id 
-                      ? 'border-[#a100f2] bg-[#a100f2]' 
-                      : 'border-gray-400'
-                    }
-                  `}>
-                    {selectedMethod === method.id && (
-                      <div className="w-2 h-2 bg-white rounded-full"></div>
-                    )}
-                  </div>
-                </label>
-              </div>
+              <button
+                key={method.id}
+                type="button"
+                onClick={() => {
+                  setSelectedMethod(method.id);
+                  setContactInfo("");
+                  setError("");
+                }}
+                className={`flex-1 py-3 px-4 rounded-lg text-sm font-medium transition-all duration-300 flex items-center justify-center space-x-2 ${
+                  selectedMethod === method.id
+                    ? "bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg shadow-purple-500/30"
+                    : "text-gray-400 hover:text-white"
+                }`}
+              >
+                {method.id === "email" ? (
+                  <span className="material-icons">mail</span>
+                ) : (
+                  <span className="material-icons">phone</span>
+                )}
+                <span>{method.label}</span>
+              </button>
             ))}
           </div>
 
-          {/* Input para información de contacto */}
-          {selectedMethod && selectedMethodData && (
-            <Input
-              label={selectedMethodData.label}
-              type={selectedMethod === "email" ? "email" : "tel"}
-              placeholder={selectedMethodData.placeholder}
-              value={contactInfo}
-              onChange={(e) => setContactInfo(e.target.value)}
-              required
-            />
-          )}
+          {/* Input con animación */}
+          <AnimatePresence mode="wait">
+            {selectedMethod && (
+              <motion.div
+                key={selectedMethod}
+                initial={{ y: 10, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                exit={{ y: -10, opacity: 0 }}
+                transition={{ duration: 0.3 }}
+              >
+                <Input
+                  type={selectedMethod === "email" ? "email" : "tel"}
+                  placeholder={selectedMethodData?.placeholder}
+                  value={contactInfo}
+                  onChange={(e) => {
+                    setContactInfo(e.target.value);
+                    setError("");
+                  }}
+                  className="bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:border-[#a100f2]"
+                />
+                {/* Mostrar qué tipo de dato se espera */}
+                <p className="text-xs text-gray-400 mt-1">
+                  {selectedMethod === "email" 
+                    ? "Ingresa tu email registrado" 
+                    : "Ingresa tu número registrado (ej: 7123-4567)"}
+                </p>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           {error && (
-            <p className="text-red-400 text-sm text-center">{error}</p>
+            <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-3">
+              <p className="text-red-400 text-sm text-center">{error}</p>
+            </div>
           )}
 
           <Button
             type="submit"
-            disabled={loading || !selectedMethod}
-            className={`
-              bg-[#a100f2] hover:bg-[#7d00c1] disabled:opacity-50 disabled:cursor-not-allowed 
-              ${loading ? 'opacity-50' : ''}
-            `}
+            disabled={loading || !selectedMethod || !contactInfo}
+            className={`w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-400 hover:to-pink-400 text-white font-semibold py-3 rounded-xl shadow-lg shadow-purple-500/30 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 ${
+              loading ? 'opacity-50' : ''
+            }`}
           >
-            {loading ? "Enviando..." : 
-             selectedMethodData?.flow === "quickLogin" ? "Enviar código de acceso" : "Enviar código"}
+            {loading ? (
+              <div className="flex items-center justify-center space-x-2">
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                <span>Enviando...</span>
+              </div>
+            ) : (
+              `Enviar código ${selectedMethod === "sms" ? "por SMS" : "por email"}`
+            )}
           </Button>
         </form>
+
+        {/* Información adicional */}
+        {selectedMethod && (
+          <div className="text-center text-xs text-gray-400 max-w-sm">
+            {selectedMethod === "email" 
+              ? "📧 Recibirás el código en tu bandeja de entrada"
+              : "📱 Recibirás el código vía SMS en unos momentos"}
+          </div>
+        )}
       </div>
     </div>
   );
