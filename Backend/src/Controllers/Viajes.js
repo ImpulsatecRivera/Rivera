@@ -626,22 +626,215 @@ ViajesController.getCargaStats = async (req, res) => {
   }
 };
 
+// =====================================================
+// GET: Análisis de frecuencia de tipos de carga
+// =====================================================
 ViajesController.getCargaDistribution = async (req, res) => {
   try {
-    const distribucion = await ViajesModel.aggregate([
-      {
-        $group: {
-          _id: "$carga.tipo",
-          count: { $sum: 1 },
-          pesoPromedio: { $avg: "$carga.peso.valor" }
-        }
-      },
-      { $sort: { count: -1 } }
-    ]);
+    console.log("📊 Iniciando análisis de frecuencia de cargas...");
 
-    res.status(200).json({ success: true, data: distribucion });
+    // 🔍 PASO 1: Obtener todos los viajes con información de carga
+    const viajes = await ViajesModel.find({
+      'estado.actual': { $in: ['pendiente', 'en_curso', 'completado', 'retrasado'] },
+      'carga.tipo': { $exists: true, $ne: null, $ne: "" }
+    })
+    .select('carga.tipo carga.descripcion carga.peso estado.actual')
+    .lean();
+
+    console.log(`🚛 Total de viajes con carga: ${viajes.length}`);
+
+    // 🔍 PASO 2: Recopilar todos los tipos únicos
+    const tiposUnicos = new Set();
+    viajes.forEach(viaje => {
+      if (viaje.carga?.tipo) {
+        tiposUnicos.add(viaje.carga.tipo.trim().toLowerCase());
+      }
+    });
+
+    console.log(`📦 Tipos únicos encontrados: ${Array.from(tiposUnicos).join(', ')}`);
+
+    // 🔍 PASO 3: Contar frecuencia de cada tipo
+    const frecuenciaMap = new Map();
+    
+    viajes.forEach(viaje => {
+      const tipo = viaje.carga?.tipo?.trim().toLowerCase();
+      if (tipo) {
+        if (frecuenciaMap.has(tipo)) {
+          const data = frecuenciaMap.get(tipo);
+          frecuenciaMap.set(tipo, {
+            count: data.count + 1,
+            ejemplos: [...new Set([...data.ejemplos, viaje.carga.descripcion].filter(Boolean))],
+            pesos: [...data.pesos, viaje.carga.peso?.valor].filter(peso => peso != null)
+          });
+        } else {
+          frecuenciaMap.set(tipo, {
+            count: 1,
+            ejemplos: viaje.carga.descripcion ? [viaje.carga.descripcion] : [],
+            pesos: viaje.carga.peso?.valor ? [viaje.carga.peso.valor] : []
+          });
+        }
+      }
+    });
+
+    // 🔍 PASO 4: Calcular estadísticas y porcentajes
+    const totalViajes = viajes.length;
+    console.log(`📊 Total de viajes para cálculo: ${totalViajes}`);
+
+    // Convertir a array y ordenar por frecuencia
+    const tiposFrecuentes = Array.from(frecuenciaMap.entries())
+      .map(([tipo, data]) => {
+        const porcentaje = totalViajes > 0 ? Math.round((data.count / totalViajes) * 100) : 0;
+        
+        // Capitalizar nombre para mostrar
+        const nombreMostrar = tipo.charAt(0).toUpperCase() + tipo.slice(1);
+        
+        // Calcular peso promedio si hay datos
+        const pesoPromedio = data.pesos.length > 0 
+          ? Math.round(data.pesos.reduce((sum, peso) => sum + peso, 0) / data.pesos.length)
+          : 0;
+
+        return {
+          tipo: tipo,                    // Original para identificar
+          name: nombreMostrar,           // Para mostrar en frontend
+          count: data.count,             // Cantidad de viajes
+          percentage: porcentaje,        // Porcentaje del total
+          ejemplos: data.ejemplos.slice(0, 3), // Máximo 3 ejemplos
+          pesoPromedio: pesoPromedio,
+          pesoTotal: data.pesos.reduce((sum, peso) => sum + peso, 0)
+        };
+      })
+      .sort((a, b) => b.count - a.count); // Ordenar por más frecuente
+
+    console.log("📈 Tipos más frecuentes:");
+    tiposFrecuentes.slice(0, 5).forEach(tipo => {
+      console.log(`   ${tipo.name}: ${tipo.count} viajes (${tipo.percentage}%)`);
+    });
+
+    // 🔍 PASO 5: Preparar respuesta para el frontend
+    const respuestaFinal = tiposFrecuentes.map((tipo, index) => ({
+      id: `carga-${index}`,
+      name: tipo.name,
+      percentage: tipo.percentage,
+      count: tipo.count,
+      pesoTotal: tipo.pesoTotal,
+      pesoPromedio: tipo.pesoPromedio,
+      descripcion: tipo.ejemplos[0] || tipo.name,
+      ejemplos: tipo.ejemplos,
+      unidadPeso: 'kg'
+    }));
+
+    // 📊 Estadísticas generales
+    const estadisticas = {
+      totalTiposUnicos: tiposFrecuentes.length,
+      totalViajes: totalViajes,
+      tipoMasFrecuente: tiposFrecuentes[0]?.name || 'N/A',
+      porcentajeMasFrecuente: tiposFrecuentes[0]?.percentage || 0,
+      top3Tipos: tiposFrecuentes.slice(0, 3).map(t => ({
+        tipo: t.name,
+        porcentaje: t.percentage,
+        cantidad: t.count
+      }))
+    };
+
+    // ✅ RESPUESTA EXITOSA
+    res.status(200).json({
+      success: true,
+      data: respuestaFinal,
+      estadisticas: estadisticas,
+      message: `Análisis de ${tiposFrecuentes.length} tipos de carga completado`,
+      timestamp: new Date().toISOString()
+    });
+
+    console.log("✅ Análisis de frecuencia completado exitosamente");
+
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error("❌ Error en análisis de frecuencia:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error al analizar frecuencia de cargas",
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+};
+
+// =====================================================
+// MÉTODO ADICIONAL: Obtener solo los tipos únicos
+// =====================================================
+ViajesController.getTiposDeCargas = async (req, res) => {
+  try {
+    console.log("📋 Obteniendo tipos únicos de carga...");
+
+    // Obtener tipos únicos usando aggregation
+    const tiposUnicos = await ViajesModel.distinct('carga.tipo', {
+      'carga.tipo': { $exists: true, $ne: null, $ne: "" }
+    });
+
+    console.log(`📦 Tipos únicos: ${tiposUnicos.join(', ')}`);
+
+    // Limpiar y capitalizar
+    const tiposLimpios = tiposUnicos
+      .filter(tipo => tipo && tipo.trim() !== '')
+      .map(tipo => tipo.trim())
+      .map(tipo => ({
+        valor: tipo,
+        nombre: tipo.charAt(0).toUpperCase() + tipo.slice(1)
+      }))
+      .sort((a, b) => a.nombre.localeCompare(b.nombre));
+
+    res.status(200).json({
+      success: true,
+      data: tiposLimpios,
+      total: tiposLimpios.length,
+      message: "Tipos de carga obtenidos exitosamente"
+    });
+
+  } catch (error) {
+    console.error("❌ Error obteniendo tipos:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error al obtener tipos de carga",
+      error: error.message
+    });
+  }
+};
+
+// =====================================================
+// MÉTODO DE DEBUGGING: Ver estructura de datos
+// =====================================================
+ViajesController.debugCargas = async (req, res) => {
+  try {
+    // Obtener 5 viajes de muestra
+    const muestras = await ViajesModel.find({})
+      .select('carga estado')
+      .limit(5)
+      .lean();
+
+    // Obtener tipos únicos
+    const tiposUnicos = await ViajesModel.distinct('carga.tipo');
+
+    // Contar total de documentos
+    const totalViajes = await ViajesModel.countDocuments();
+    const viajesConCarga = await ViajesModel.countDocuments({
+      'carga.tipo': { $exists: true, $ne: null, $ne: "" }
+    });
+
+    res.status(200).json({
+      success: true,
+      debug: {
+        totalViajes: totalViajes,
+        viajesConCarga: viajesConCarga,
+        tiposUnicos: tiposUnicos,
+        muestras: muestras
+      },
+      message: "Información de debug obtenida"
+    });
+
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
   }
 };
 

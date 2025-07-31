@@ -4,24 +4,22 @@ import empleadoRoutes from "./src/Routes/empleadosRoutes.js"
 import motoristasRoutes from "./src/Routes/motoristaRoutes.js"
 import proveedoresRoutes from "./src/Routes/proveedoresRoutes.js"
 import ClientesRoutes from "./src/Routes/clienteRoutes.js"
-<<<<<<< HEAD
+
 import LoginRoutes from "./src/Routes/LoginRoutes.js" 
 //servicio de auto-actualización
 import autoUpdateRoutes from './src/Routes/servicesRouter.js';
-=======
-import LoginRoutes from "./src/Routes/LoginRoutes.js"
-import LogoutRoutes from "./src/Routes/Logout.js" 
-import RecoveryRoutes from "./src/Routes/Recovery.js"
->>>>>>> master
+
+
+
+
+
 
 import LogoutRoutes from "./src/Routes/Logout.js" // ✅ Renombrado para claridad
 import RecoveryRoutes from "./src/Routes/Recovery.js"
 
 import RegisterRoutes from "./src/Routes/RegisterRoute.js"
-<<<<<<< HEAD
 import ViajesRoutes from "./src/Routes/ViajesRoutes.js"
-=======
->>>>>>> master
+
 import cookieParser from "cookie-parser"
 import cors from "cors";
 
