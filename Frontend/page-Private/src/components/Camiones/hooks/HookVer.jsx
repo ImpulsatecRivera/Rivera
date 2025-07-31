@@ -299,25 +299,28 @@ export const useTruckDetail = (truckId) => {
       }
 
     } catch (error) {
-      console.error('=== ERROR AL CARGAR CAMIÓN ===');
-      console.error('Error completo:', error);
+  console.error('=== ERROR AL CARGAR CAMIÓN ===');
+  console.error('Error completo:', error);
 
-      let errorMessage = 'Error desconocido';
+  let errorMessage = 'Error desconocido';
 
-      if (error.name === 'AbortError') {
-        errorMessage = 'La solicitud tardó demasiado tiempo. Inténtalo de nuevo.';
-      } else if (error.name === 'TypeError' && error.message.includes('fetch')) {
-        errorMessage = 'No se pudo conectar con el servidor. Verifica tu conexión.';
-      } else {
-        errorMessage = error.message || 'Error al procesar la solicitud';
-      }
+  if (error.name === 'AbortError') {
+    errorMessage = 'La solicitud tardó demasiado tiempo. Inténtalo de nuevo.';
+  } else if (error.name === 'TypeError' && error.message.includes('fetch')) {
+    errorMessage = 'No se pudo conectar con el servidor. Verifica tu conexión.';
+  } else {
+    errorMessage = error.message || 'Error al procesar la solicitud';
+  }
 
-      setError(errorMessage);
-      setTruck(null);
-    } finally {
-      setLoading(false);
-      console.log('=== CARGA FINALIZADA ===');
-    }
+  setError(errorMessage);
+  setTruck(null);
+} finally {
+  // Delay de 5 segundos para mostrar la animación
+  setTimeout(() => {
+    setLoading(false);
+    console.log('=== CARGA FINALIZADA ===');
+  }, 2000); // 3 segundos
+}
   };
 
   const refetch = () => {
