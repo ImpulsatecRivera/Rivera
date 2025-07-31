@@ -27,7 +27,7 @@ const RecoverPassword = () => {
     {
       id: "sms",
       label: "SMS",
-      placeholder: "+1234567890",
+      placeholder: "7123-4567 o +503 7123-4567",
       icon: "📱",
       description: "Recuperar y cambiar contraseña",
       flow: "reset"
@@ -36,14 +36,37 @@ const RecoverPassword = () => {
 
   const validateInput = (method, value) => {
     if (!value) return false;
+    
     switch (method) {
       case "email":
         return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
       case "sms":
-        return /^\+?[\d\s-()]{10,}$/.test(value);
+        // Validación mejorada para números de El Salvador
+        const cleanPhone = value.replace(/[\s\-()]/g, '');
+        // Acepta +503XXXXXXXX, 503XXXXXXXX o XXXXXXXX (8 dígitos empezando con 2, 6 o 7)
+        return /^(\+?503)?[267]\d{7}$/.test(cleanPhone);
       default:
         return false;
     }
+  };
+
+  const normalizePhone = (phone) => {
+    // Limpiar el número de espacios, guiones y paréntesis
+    let cleanPhone = phone.replace(/[\s\-()]/g, '');
+    
+    // Si no empieza con +, procesar
+    if (!cleanPhone.startsWith('+')) {
+      // Si empieza con 503, agregar +
+      if (cleanPhone.startsWith('503')) {
+        cleanPhone = '+' + cleanPhone;
+      } 
+      // Si no empieza con 503, agregar +503
+      else {
+        cleanPhone = '+503' + cleanPhone;
+      }
+    }
+    
+    return cleanPhone;
   };
 
   const maskContactInfo = (method, info) => {
@@ -51,7 +74,7 @@ const RecoverPassword = () => {
       const [username, domain] = info.split("@");
       return `${username.charAt(0)}${"*".repeat(username.length - 2)}${username.charAt(username.length - 1)}@${domain}`;
     } else {
-      return `${info.substring(0, 3)}${"*".repeat(info.length - 6)}${info.substring(info.length - 3)}`;
+      return `${info.substring(0, 4)}${"*".repeat(info.length - 7)}${info.substring(info.length - 3)}`;
     }
   };
 
@@ -70,7 +93,11 @@ const RecoverPassword = () => {
 
     if (!validateInput(selectedMethod, contactInfo)) {
       const methodLabel = recoveryMethods.find(m => m.id === selectedMethod)?.label;
-      setError(`Por favor, introduce un ${methodLabel.toLowerCase()} válido`);
+      if (selectedMethod === "sms") {
+        setError("Ingresa un número válido (ej: 7123-4567 o +503 7123-4567)");
+      } else {
+        setError(`Por favor, introduce un ${methodLabel.toLowerCase()} válido`);
+      }
       return;
     }
 
@@ -80,12 +107,25 @@ const RecoverPassword = () => {
     try {
       const endpoint = "http://localhost:4000/api/recovery/requestCode";
 
-      // ✅ Corregido: enviar datos según el método seleccionado
-      const requestPayload = selectedMethod === "email" 
-        ? { email: contactInfo, via: "email" }        // Para email: enviar email
-        : { phone: contactInfo, via: "sms" };         // Para SMS: enviar phone
+      let requestPayload;
+      
+      if (selectedMethod === "email") {
+        requestPayload = { 
+          email: contactInfo.trim().toLowerCase(), 
+          via: "email" 
+        };
+      } else {
+        // Normalizar número de teléfono para SMS
+        const normalizedPhone = normalizePhone(contactInfo.trim());
+        requestPayload = { 
+          phone: normalizedPhone, 
+          via: "sms" 
+        };
+      }
 
-      console.log("Enviando payload:", requestPayload); // Para debugging
+      console.log("🚀 Método seleccionado:", selectedMethod);
+      console.log("📝 Info original:", contactInfo);
+      console.log("📤 Enviando payload:", requestPayload);
 
       const response = await axios.post(endpoint, requestPayload, {
         withCredentials: true,
@@ -94,13 +134,15 @@ const RecoverPassword = () => {
         }
       });
 
-      console.log("Respuesta del servidor:", response.data);
+      console.log("✅ Respuesta del servidor:", response.data);
 
+      // Navegar a verificación
       navigate("/verification-input", {
         state: {
           method: selectedMethod,
-          contactInfo: contactInfo,
-          email: contactInfo,
+          contactInfo: selectedMethod === "email" ? contactInfo : normalizePhone(contactInfo),
+          email: selectedMethod === "email" ? contactInfo : null,
+          phone: selectedMethod === "sms" ? normalizePhone(contactInfo) : null,
           maskedInfo: maskContactInfo(selectedMethod, contactInfo),
           flow: "reset",
           verificationEndpoint: "/api/recovery/verifyCode"
@@ -108,7 +150,7 @@ const RecoverPassword = () => {
       });
 
     } catch (error) {
-      console.error("Error completo:", error);
+      console.error("❌ Error completo:", error);
       
       if (error.code === 'ECONNREFUSED' || error.code === 'ERR_NETWORK') {
         setError("No se puede conectar al servidor. Verifica que esté ejecutándose.");
@@ -118,18 +160,26 @@ const RecoverPassword = () => {
         const backendMessage = error.response?.data?.message || "Error de validación en el servidor";
         
         // Mensajes más amigables para el usuario
-        if (backendMessage === "Usuario no existente") {
-          setError("No encontramos una cuenta asociada a este email. Verifica que sea correcto o contacta al administrador.");
+        if (backendMessage.includes("Usuario no encontrado") || backendMessage.includes("Usuario no existente")) {
+          if (selectedMethod === "email") {
+            setError("No encontramos una cuenta con este email. Verifica que sea correcto.");
+          } else {
+            setError("No encontramos una cuenta con este número. Verifica que sea correcto.");
+          }
         } else if (backendMessage === "Email es requerido") {
           setError("Por favor, ingresa tu email.");
-        } else if (backendMessage === "Tu cuenta no tiene un número de teléfono registrado. Usa email como método de envío.") {
-          setError("Tu cuenta no tiene teléfono registrado. Cambia a recuperación por email.");
-          setSelectedMethod("email"); // Cambiar automáticamente a email
+        } else if (backendMessage === "Número de teléfono es requerido") {
+          setError("Por favor, ingresa tu número de teléfono.");
+        } else if (backendMessage.includes("no tiene número de teléfono registrado") || 
+                   backendMessage.includes("no tiene un número de teléfono")) {
+          setError("Tu cuenta no tiene teléfono registrado. Usa recuperación por email.");
+          setSelectedMethod("email");
+          setContactInfo("");
         } else {
           setError(backendMessage);
         }
         
-        console.log("Error 400 detalles:", error.response.data);
+        console.log("📋 Error 400 detalles:", error.response.data);
       } else if (error.response?.status === 500) {
         setError("Error interno del servidor. Inténtalo más tarde.");
       } else {
@@ -207,7 +257,7 @@ const RecoverPassword = () => {
                 <p className="text-xs text-gray-400 mt-1">
                   {selectedMethod === "email" 
                     ? "Ingresa tu email registrado" 
-                    : "Ingresa tu número de teléfono (se enviará código por medio de sms)"}
+                    : "Ingresa tu número registrado (ej: 7123-4567)"}
                 </p>
               </motion.div>
             )}
@@ -232,10 +282,19 @@ const RecoverPassword = () => {
                 <span>Enviando...</span>
               </div>
             ) : (
-              "Enviar código"
+              `Enviar código ${selectedMethod === "sms" ? "por SMS" : "por email"}`
             )}
           </Button>
         </form>
+
+        {/* Información adicional */}
+        {selectedMethod && (
+          <div className="text-center text-xs text-gray-400 max-w-sm">
+            {selectedMethod === "email" 
+              ? "📧 Recibirás el código en tu bandeja de entrada"
+              : "📱 Recibirás el código vía SMS en unos momentos"}
+          </div>
+        )}
       </div>
     </div>
   );
