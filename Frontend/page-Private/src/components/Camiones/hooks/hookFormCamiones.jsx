@@ -62,34 +62,59 @@ export const useTruckForm = (onSuccess) => {
       console.log('Data completa:', data);
       console.log('================================');
 
+      // ✅ VALIDACIÓN CRÍTICA: Verificar imagen
+      if (!data.img || !data.img[0]) {
+        throw new Error('Debe seleccionar una imagen para el camión');
+      }
+
       const formData = new FormData();
+
+      // ✅ AGREGAR IMAGEN CORRECTAMENTE (File, no FileList)
+      const imageFile = data.img[0];
+      console.log('Agregando imagen:', {
+        name: imageFile.name,
+        size: imageFile.size,
+        type: imageFile.type
+      });
+      formData.append('img', imageFile);
+
+      // ✅ AGREGAR OTROS CAMPOS (excluyendo img)
       Object.entries(data).forEach(([key, value]) => {
-        console.log(`Agregando a FormData: ${key} =`, value);
-        formData.append(key, key === "img" ? value[0] : value);
+        if (key !== 'img') {
+          console.log(`Agregando a FormData: ${key} =`, value);
+          formData.append(key, value || '');
+        }
       });
 
       console.log('=== ENVIANDO REQUEST ===');
       console.log('URL:', "http://localhost:4000/api/camiones");
       console.log('Método: POST');
-      console.log('FormData entries:', Array.from(formData.entries()));
+      
+      // Debug FormData
+      console.log('=== CONTENIDO FORMDATA ===');
+      for (let [key, value] of formData.entries()) {
+        if (key === 'img') {
+          console.log(`${key}: File(${value.name}, ${value.size} bytes)`);
+        } else {
+          console.log(`${key}: ${value}`);
+        }
+      }
 
       const res = await fetch("http://localhost:4000/api/camiones", {
         method: "POST",
         body: formData,
+        // NO incluir Content-Type para FormData
       });
 
       console.log('=== RESPUESTA RECIBIDA ===');
       console.log('Status:', res.status);
       console.log('Status Text:', res.statusText);
-      console.log('Headers:', Object.fromEntries(res.headers.entries()));
-
-      // Obtener el texto de la respuesta para debug
-      const responseText = await res.text();
-      console.log('Response Body (raw):', responseText);
 
       if (!res.ok) {
+        const responseText = await res.text();
+        console.log('Response Body (raw):', responseText);
         console.log('=== ERROR EN RESPUESTA ===');
-        // Intentar parsear la respuesta como JSON para obtener el mensaje de error
+        
         let errorMessage = `Error ${res.status}: ${res.statusText}`;
         try {
           const errorData = JSON.parse(responseText);
@@ -101,12 +126,13 @@ export const useTruckForm = (onSuccess) => {
         }
         
         console.log('Mensaje de error final:', errorMessage);
-        // IMPORTANTE: Lanzar el error para que pueda ser capturado por el componente
         throw new Error(errorMessage);
       }
 
       console.log('=== ÉXITO ===');
-      // Si llegamos aquí, todo salió bien
+      const result = await res.json();
+      console.log('Camión creado:', result);
+      
       reset();
       setImagePreview(null);
       onSuccess?.();
@@ -119,7 +145,6 @@ export const useTruckForm = (onSuccess) => {
       console.error('Error stack:', error.stack);
       console.error('Error completo:', error);
       
-      // IMPORTANTE: Re-lanzar el error para que pueda ser capturado por el componente
       throw error;
     } finally {
       setIsSubmitting(false);

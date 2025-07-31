@@ -14,13 +14,9 @@ const useLogin = () => {
 
     if (success) {
       navigate("/dashboard");
-<<<<<<< HEAD
-=======
       return { success: true };
-    }
-    else {
+    } else {
       return { success: false, message: "Credenciales incorrectas" };
->>>>>>> 32c94ab92a55539026f958b94589d7d3bf77a044
     }
   };
 

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, ChevronLeft, ChevronRight, AlertCircle } from 'lucide-react';
+import { ArrowLeft, ChevronLeft, ChevronRight, AlertCircle, Truck } from 'lucide-react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTruckDetail } from '../../components/Camiones/hooks/HookVer'; // Ajusta la ruta según tu estructura
 import CamionFord from "../../images/CamionFord.jpg";
@@ -107,10 +107,115 @@ const DetalleCamionenv = () => {
                 </button>
                 <h1 className="text-xl font-semibold text-gray-800">Información del vehículo</h1>
               </div>
-              <div className="flex-1 flex justify-center items-center">
-                <div className="text-center">
-                  <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-400 border-t-transparent mx-auto mb-4" />
-                  <p className="text-gray-600">Cargando información del camión...</p>
+              
+              {/* Enhanced Loading Screen */}
+              <div className="flex-1 flex items-center justify-center relative" 
+                   style={{background: 'linear-gradient(135deg, #34353A 0%, #2a2b2f 100%)'}}>
+                
+                {/* Background Animation */}
+                <div className="absolute inset-0 overflow-hidden">
+                  <div className="absolute top-10 left-10 w-20 h-20 rounded-full opacity-10 animate-pulse"
+                       style={{backgroundColor: '#5F8EAD'}}>
+                  </div>
+                  <div className="absolute bottom-10 right-10 w-16 h-16 rounded-full opacity-10 animate-pulse"
+                       style={{backgroundColor: '#5D9646', animationDelay: '1s'}}>
+                  </div>
+                  <div className="absolute top-1/2 left-4 w-12 h-12 rounded-full opacity-10 animate-pulse"
+                       style={{backgroundColor: '#5F8EAD', animationDelay: '0.5s'}}>
+                  </div>
+                </div>
+
+                <div className="text-center z-10">
+                  {/* Enhanced Profile Loading Animation */}
+                  <div className="relative mb-8">
+                    <div className="w-28 h-28 rounded-2xl mx-auto mb-6 flex items-center justify-center shadow-2xl overflow-hidden relative" 
+                         style={{background: 'linear-gradient(135deg, #5F8EAD 0%, #5D9646 100%)'}}>
+                      <Truck className="w-14 h-14 text-white animate-pulse" />
+                      
+                      {/* Multiple rotating borders */}
+                      <div className="absolute inset-0 rounded-2xl border-4 border-transparent animate-spin"
+                           style={{
+                             borderTopColor: '#FFFFFF',
+                             borderRightColor: 'rgba(255,255,255,0.3)'
+                           }}>
+                      </div>
+                      <div className="absolute inset-2 rounded-xl border-2 border-transparent animate-spin"
+                           style={{
+                             borderBottomColor: '#FFFFFF',
+                             borderLeftColor: 'rgba(255,255,255,0.2)',
+                             animationDirection: 'reverse'
+                           }}>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Enhanced Loading Text */}
+                  <div className="space-y-4 mb-8">
+                    <h2 className="text-2xl font-bold text-white animate-pulse">
+                      Cargando Camión
+                    </h2>
+                    <p className="text-gray-300 text-lg">
+                      Preparando información del vehículo
+                    </p>
+                  </div>
+
+                  {/* Modern Loading Dots with Ripple Effect */}
+                  <div className="flex justify-center space-x-3 mb-8">
+                    <div className="relative">
+                      <div className="w-4 h-4 rounded-full animate-bounce" 
+                           style={{
+                             backgroundColor: '#5F8EAD',
+                             animationDelay: '0ms'
+                           }}>
+                      </div>
+                      <div className="absolute inset-0 w-4 h-4 rounded-full animate-ping" 
+                           style={{backgroundColor: '#5F8EAD', opacity: '0.3'}}>
+                      </div>
+                    </div>
+                    <div className="relative">
+                      <div className="w-4 h-4 rounded-full animate-bounce" 
+                           style={{
+                             backgroundColor: '#FFFFFF',
+                             animationDelay: '0.2s'
+                           }}>
+                      </div>
+                      <div className="absolute inset-0 w-4 h-4 rounded-full animate-ping" 
+                           style={{backgroundColor: '#FFFFFF', opacity: '0.3', animationDelay: '0.2s'}}>
+                      </div>
+                    </div>
+                    <div className="relative">
+                      <div className="w-4 h-4 rounded-full animate-bounce" 
+                           style={{
+                             backgroundColor: '#5D9646',
+                             animationDelay: '0.4s'
+                           }}>
+                      </div>
+                      <div className="absolute inset-0 w-4 h-4 rounded-full animate-ping" 
+                           style={{backgroundColor: '#5D9646', opacity: '0.3', animationDelay: '0.4s'}}>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Advanced Progress Bar */}
+                  <div className="w-80 mx-auto">
+                    <div className="w-full bg-gray-600 rounded-full h-2 mb-4 overflow-hidden shadow-inner">
+                      <div className="h-2 rounded-full relative overflow-hidden animate-pulse"
+                           style={{
+                             background: 'linear-gradient(90deg, #5F8EAD 0%, #5D9646 50%, #5F8EAD 100%)',
+                             width: '100%'
+                           }}>
+                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent opacity-40 animate-pulse">
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* Dynamic Loading Steps */}
+                    <div className="text-sm text-gray-400 animate-pulse">
+                      <span className="inline-block">
+                        Verificando datos del camión...
+                      </span>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
