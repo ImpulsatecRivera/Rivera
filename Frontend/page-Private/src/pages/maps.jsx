@@ -248,29 +248,7 @@ const RiveraTransportMapDemo = () => {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="w-full h-screen bg-gradient-to-br from-blue-900 via-blue-800 to-indigo-900 p-6">
-        <div className="w-full h-full bg-white rounded-[2rem] shadow-2xl flex items-center justify-center">
-          <div className="text-center">
-            <div className="relative">
-              <Truck className="w-16 h-16 text-blue-500 mx-auto mb-6 animate-bounce" />
-              <div className="absolute -top-2 -right-2 w-6 h-6 bg-orange-500 rounded-full animate-pulse"></div>
-            </div>
-            <p className="text-xl text-gray-700 mb-2">Cargando Sistema Rivera</p>
-            <p className="text-sm text-gray-500">Conectando con base de datos...</p>
-            <div className="mt-4 flex justify-center">
-              <div className="flex space-x-1">
-                <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
-                <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" style={{animationDelay: '0.2s'}}></div>
-                <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" style={{animationDelay: '0.4s'}}></div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  
 
   return (
     <>
