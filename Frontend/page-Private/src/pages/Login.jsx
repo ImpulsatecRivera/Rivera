@@ -1,30 +1,31 @@
+import { useState, useEffect } from "react";
+import { useNavigate, Link } from "react-router-dom";
+import Swal from 'sweetalert2';
+ 
 import Avatar from "../components/Login/Avatar";
 import Input from "../components/Login/Input";
 import Button from "../components/Login/Button";
 import SideImage from "../components/Login/SideImage";
 import Title from "../components/RecoverPassword/Title";
-import { Link, useNavigate } from "react-router-dom";
-import Swal from 'sweetalert2';
-
-import { useState, useEffect } from "react";
+ 
 import useLogin from "../components/Login/hooks/useLogin";
 import { useAuth } from "../Context/AuthContext";
-
+ 
 const Login = () => {
+  const navigate = useNavigate();
   const { handleLogin, loading } = useLogin();
   const { isLoggedIn } = useAuth();
-  const navigate = useNavigate();
-
+ 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-
+ 
   // Redirección si ya está logueado
   useEffect(() => {
     if (isLoggedIn) {
       navigate("/dashboard");
     }
   }, [isLoggedIn, navigate]);
-
+ 
   const showSuccessAlert = () => {
     Swal.fire({
       title: 'Inicio de sesión con éxito!',
@@ -38,11 +39,11 @@ const Login = () => {
       }
     }).then((result) => {
       if (result.isConfirmed) {
-        navigate("/dashboard"); // Navegar directamente en lugar de usar función inexistente
+        // Opcional: hacer algo como volver a menú
       }
     });
   };
-
+ 
   const showErrorAlert = (message) => {
     Swal.fire({
       title: 'Error al iniciar sesión',
@@ -56,7 +57,7 @@ const Login = () => {
       }
     });
   };
-
+ 
   const showLoadingAlert = () => {
     Swal.fire({
       title: 'Comprobando datos...',
@@ -69,7 +70,7 @@ const Login = () => {
       }
     });
   };
-
+ 
   const showValidationAlert = () => {
     Swal.fire({
       title: 'Formulario incompleto',
@@ -82,22 +83,22 @@ const Login = () => {
       }
     });
   };
-
+ 
   const onSubmit = async (e) => {
     e.preventDefault();
-
+ 
     if (!email || !password) {
       showValidationAlert();
       return;
     }
-
+ 
     showLoadingAlert();
     await new Promise(resolve => setTimeout(resolve, 100));
-
+ 
     try {
       const result = await handleLogin(email, password);
       Swal.close();
-
+ 
       if (result?.success) {
         showSuccessAlert();
       } else {
@@ -108,13 +109,13 @@ const Login = () => {
       showErrorAlert(error?.message || "Ocurrió un error inesperado");
     }
   };
-
+ 
   return (
     <div className="min-h-screen flex flex-col lg:flex-row items-center justify-center bg-gray-100">
       <div className="w-full lg:w-[55%] flex flex-col justify-center items-center p-8">
         <Avatar />
         <Title className="text-gray-800">¡Bienvenido de vuelta!</Title>
-
+ 
         <form className="w-full max-w-md space-y-4" onSubmit={onSubmit}>
           <Input
             label="Correo"
@@ -140,12 +141,12 @@ const Login = () => {
           </Button>
         </form>
       </div>
-
+ 
       <div className="w-full lg:w-[30%] flex justify-center p-4">
         <SideImage />
       </div>
     </div>
   );
 };
-
+ 
 export default Login;
