@@ -200,34 +200,297 @@ const viajeSchema = new Schema({
   },
   
   // 📦 CARGA MEJORADA
-  carga: {
-    descripcion: {
-      type: String,
+  // 📦 ESQUEMA DE CARGA MEJORADO PARA TU MODELO DE VIAJES
+
+// Reemplaza tu sección "carga" actual con esto:
+carga: {
+  // 🏷️ CATEGORÍA PRINCIPAL
+  categoria: {
+    type: String,
+    enum: [
+      'alimentos_perecederos',     // Frutas, verduras, carnes, lácteos
+      'alimentos_no_perecederos',  // Granos, enlatados, secos
+      'bebidas',                   // Agua, refrescos, alcohol
+      'materiales_construccion',   // Cemento, hierro, madera
+      'textiles',                  // Ropa, telas, zapatos
+      'electronicos',              // Computadoras, celulares, electrodomésticos
+      'medicamentos',              // Farmacéuticos, equipos médicos
+      'maquinaria',               // Equipos industriales, herramientas
+      'vehiculos',                // Carros, motos, repuestos
+      'quimicos',                 // Productos químicos, pinturas
+      'combustibles',             // Gasolina, diesel, gas
+      'papel_carton',             // Documentos, empaques, libros
+      'muebles',                  // Escritorios, sillas, electrodomésticos
+      'productos_agricolas',      // Semillas, fertilizantes, pesticidas
+      'metales',                  // Acero, aluminio, cobre
+      'plasticos',                // Productos plásticos, empaques
+      'vidrio_ceramica',          // Botellas, vajillas, ventanas
+      'productos_limpieza',       // Detergentes, desinfectantes
+      'cosmeticos',               // Maquillaje, perfumes, cuidado personal
+      'juguetes',                 // Juguetes, artículos deportivos
+      'otros'                     // Para casos especiales
+    ],
+    required: true,
+    default: 'otros'
+  },
+
+  // 🎯 SUBCATEGORÍA ESPECÍFICA (permite más detalle)
+  subcategoria: {
+    type: String,
+    trim: true,
+    maxlength: 100
+  },
+
+  // 📝 DESCRIPCIÓN DETALLADA
+  descripcion: {
+    type: String,
+    required: true,
+    trim: true,
+    maxlength: 500
+  },
+
+  // ⚖️ INFORMACIÓN DE PESO
+  peso: {
+    valor: {
+      type: Number,
+      min: 0,
       required: true
     },
-    peso: {
-      valor: Number,
-      unidad: {
-        type: String,
-        enum: ['kg', 'ton', 'lb'],
-        default: 'kg'
-      }
+    unidad: {
+      type: String,
+      enum: ['kg', 'ton', 'lb', 'oz'],
+      default: 'kg'
+    }
+  },
+
+  // 📐 INFORMACIÓN DE VOLUMEN
+  volumen: {
+    valor: {
+      type: Number,
+      min: 0
     },
-    volumen: {
-      valor: Number,
-      unidad: {
-        type: String,
-        enum: ['m3', 'ft3'],
-        default: 'm3'
-      }
+    unidad: {
+      type: String,
+      enum: ['m3', 'ft3', 'l', 'gal'],
+      default: 'm3'
+    }
+  },
+
+  // 🚨 CLASIFICACIÓN DE RIESGO
+  clasificacionRiesgo: {
+    type: String,
+    enum: [
+      'normal',           // Sin riesgos especiales
+      'fragil',          // Requiere cuidado especial
+      'peligroso',       // Materiales peligrosos (químicos, explosivos)
+      'perecedero',      // Se daña con el tiempo
+      'refrigerado',     // Requiere temperatura controlada
+      'congelado',       // Requiere congelación
+      'inflamable',      // Riesgo de incendio
+      'toxico',          // Sustancias tóxicas
+      'corrosivo',       // Sustancias corrosivas
+      'radioactivo',     // Materiales radioactivos
+      'biologico'        // Materiales biológicos
+    ],
+    default: 'normal'
+  },
+
+  // 🌡️ CONDICIONES ESPECIALES DE TRANSPORTE
+  condicionesEspeciales: {
+    temperaturaMinima: Number,     // °C
+    temperaturaMaxima: Number,     // °C
+    humedadMaxima: Number,         // %
+    requiereVentilacion: {
+      type: Boolean,
+      default: false
     },
+    evitarVibración: {
+      type: Boolean,
+      default: false
+    },
+    posicionVertical: {
+      type: Boolean,
+      default: false
+    },
+    protegerDeLuz: {
+      type: Boolean,
+      default: false
+    }
+  },
+
+  // 💰 INFORMACIÓN ECONÓMICA
+  valor: {
+    montoDeclarado: Number,        // Valor de la mercancía
+    moneda: {
+      type: String,
+      enum: ['USD', 'SVC', 'EUR'],
+      default: 'USD'
+    },
+    asegurado: {
+      type: Boolean,
+      default: false
+    },
+    numeroPoliza: String           // Si está asegurado
+  },
+
+  // 📦 INFORMACIÓN DE EMPAQUE
+  empaque: {
     tipo: {
       type: String,
-      enum: ['general', 'fragil', 'peligrosa', 'refrigerada', 'liquida'],
-      default: 'general'
+      enum: [
+        'caja_carton',
+        'caja_madera', 
+        'saco',
+        'contenedor',
+        'pallet',
+        'bolsa_plastico',
+        'tanque',
+        'barril',
+        'otro'
+      ],
+      default: 'caja_carton'
     },
-    valor: Number // Valor monetario de la carga
+    cantidad: {
+      type: Number,
+      min: 1,
+      default: 1
+    },
+    dimensiones: {
+      largo: Number,    // cm
+      ancho: Number,    // cm
+      alto: Number      // cm
+    }
   },
+
+  // 📋 DOCUMENTACIÓN REQUERIDA
+  documentacion: {
+    facturaComercial: {
+      type: Boolean,
+      default: false
+    },
+    certificadoOrigen: {
+      type: Boolean,
+      default: false
+    },
+    permisoSanitario: {
+      type: Boolean,
+      default: false
+    },
+    licenciaImportacion: {
+      type: Boolean,
+      default: false
+    },
+    otros: [String]  // Array de otros documentos
+  },
+
+  // 🏷️ CÓDIGOS Y CLASIFICACIONES
+  codigos: {
+    codigoArancelario: String,     // Para aduanas
+    codigoONU: String,            // Para mercancías peligrosas
+    codigoInterno: String,        // Código interno de la empresa
+    numeroLote: String,           // Para trazabilidad
+    fechaVencimiento: Date        // Para productos perecederos
+  },
+
+  // ⚠️ INSTRUCCIONES ESPECIALES
+  instruccionesEspeciales: {
+    type: String,
+    maxlength: 1000
+  },
+
+  // 📊 MÉTRICAS CALCULADAS (virtuales o calculadas)
+  densidad: {
+    type: Number,
+    // Se calcula como peso/volumen
+  },
+
+  // 🚛 REQUISITOS DE VEHÍCULO
+  requisitoVehiculo: {
+    tipoCarroceria: {
+      type: String,
+      enum: [
+        'carga_seca',
+        'refrigerado',
+        'tanque',
+        'plataforma',
+        'tolva',
+        'contenedor'
+      ]
+    },
+    capacidadMinima: Number,      // Toneladas
+    equipoEspecial: [String]      // ['grúa', 'rampa', 'bomba']
+  }
+},
+
+// 📊 EJEMPLOS DE DATOS REALISTAS:
+
+/* 
+🍎 EJEMPLO 1: Alimentos perecederos
+{
+  categoria: 'alimentos_perecederos',
+  subcategoria: 'frutas frescas',
+  descripcion: 'Manzanas rojas gala para exportación',
+  peso: { valor: 1500, unidad: 'kg' },
+  volumen: { valor: 3.2, unidad: 'm3' },
+  clasificacionRiesgo: 'perecedero',
+  condicionesEspeciales: {
+    temperaturaMinima: 2,
+    temperaturaMaxima: 8,
+    requiereVentilacion: true
+  },
+  valor: {
+    montoDeclarado: 2500,
+    moneda: 'USD',
+    asegurado: true
+  },
+  empaque: {
+    tipo: 'caja_carton',
+    cantidad: 150
+  },
+  codigos: {
+    fechaVencimiento: new Date('2025-09-15')
+  }
+}
+
+💊 EJEMPLO 2: Medicamentos
+{
+  categoria: 'medicamentos',
+  subcategoria: 'antibióticos',
+  descripcion: 'Amoxicilina 500mg - 10,000 tabletas',
+  peso: { valor: 25, unidad: 'kg' },
+  clasificacionRiesgo: 'normal',
+  condicionesEspeciales: {
+    temperaturaMaxima: 25,
+    protegerDeLuz: true
+  },
+  documentacion: {
+    permisoSanitario: true,
+    licenciaImportacion: true
+  },
+  valor: {
+    montoDeclarado: 15000,
+    asegurado: true,
+    numeroPoliza: 'POL-2025-001'
+  }
+}
+
+🏗️ EJEMPLO 3: Materiales de construcción
+{
+  categoria: 'materiales_construccion',
+  subcategoria: 'cemento',
+  descripcion: 'Cemento Portland gris - 200 sacos de 50kg',
+  peso: { valor: 10000, unidad: 'kg' },
+  clasificacionRiesgo: 'normal',
+  empaque: {
+    tipo: 'saco',
+    cantidad: 200
+  },
+  requisitoVehiculo: {
+    tipoCarroceria: 'carga_seca',
+    capacidadMinima: 12
+  }
+}
+*/
   
   // 👤 CONDUCTOR
   conductor: {
