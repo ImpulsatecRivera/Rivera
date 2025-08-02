@@ -22,10 +22,7 @@ import LoginRoutes from "./src/Routes/LoginRoutes.js"
 import LoginRoutes from "./src/Routes/LoginRoutes.js" 
 //servicio de auto-actualización
 import autoUpdateRoutes from './src/Routes/servicesRouter.js';
-import LoginRoutes from "./src/Routes/LoginRoutes.js"
 
-import LogoutRoutes from "./src/Routes/Logout.js" 
-import RecoveryRoutes from "./src/Routes/Recovery.js"
 
 
 
