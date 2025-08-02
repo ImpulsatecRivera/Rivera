@@ -626,6 +626,7 @@ ViajesController.getCargaStats = async (req, res) => {
   }
 };
 
+<<<<<<< HEAD
 // =====================================================
 // GET: Análisis de frecuencia de tipos de carga
 // =====================================================
@@ -833,6 +834,227 @@ ViajesController.debugCargas = async (req, res) => {
   } catch (error) {
     res.status(500).json({
       success: false,
+=======
+// 🚀 CONTROLLER ACTUALIZADO PARA NUEVAS CATEGORÍAS
+// 🔄 REEMPLAZA tu método getCargaDistribution actual con este (COMPATIBLE)
+ViajesController.getCargaDistribution = async (req, res) => {
+  try {
+    // 📊 DISTRIBUCIÓN POR CATEGORÍA (compatible con datos antiguos y nuevos)
+    const distribucionCategoria = await ViajesModel.aggregate([
+      {
+        $group: {
+          _id: {
+            $ifNull: ["$carga.categoria", "$carga.tipo"] // 🔧 COMPATIBILIDAD: usa categoria si existe, sino tipo
+          },
+          count: { $sum: 1 },
+          pesoPromedio: { $avg: "$carga.peso.valor" },
+          valorPromedio: { $avg: "$carga.valor.montoDeclarado" },
+          // Contar tipos de riesgo
+          riesgosEspeciales: {
+            $sum: {
+              $cond: [
+                { $and: [
+                  { $ne: ["$carga.clasificacionRiesgo", "normal"] },
+                  { $ne: ["$carga.clasificacionRiesgo", null] }
+                ]},
+                1,
+                0
+              ]
+            }
+          }
+        }
+      },
+      // Obtener el total para calcular porcentajes
+      {
+        $group: {
+          _id: null,
+          categorias: {
+            $push: {
+              categoria: "$_id",
+              count: "$count",
+              pesoPromedio: "$pesoPromedio",
+              valorPromedio: "$valorPromedio",
+              riesgosEspeciales: "$riesgosEspeciales"
+            }
+          },
+          total: { $sum: "$count" }
+        }
+      },
+      // Calcular porcentajes
+      {
+        $project: {
+          _id: 0,
+          total: 1,
+          distribucion: {
+            $map: {
+              input: "$categorias",
+              as: "item",
+              in: {
+                categoria: "$$item.categoria",
+                count: "$$item.count",
+                pesoPromedio: { $round: [{ $ifNull: ["$$item.pesoPromedio", 0] }, 2] },
+                valorPromedio: { $round: [{ $ifNull: ["$$item.valorPromedio", 0] }, 2] },
+                riesgosEspeciales: "$$item.riesgosEspeciales",
+                porcentaje: {
+                  $round: [
+                    { $multiply: [{ $divide: ["$$item.count", "$total"] }, 100] },
+                    1
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      // Ordenar por cantidad descendente
+      {
+        $project: {
+          total: 1,
+          distribucion: {
+            $sortArray: {
+              input: "$distribucion",
+              sortBy: { count: -1 }
+            }
+          }
+        }
+      }
+    ]);
+
+    // Extraer resultado principal
+    const resultado = distribucionCategoria[0] || { total: 0, distribucion: [] };
+
+    // 🎯 RESPUESTA COMPATIBLE CON FRONTEND
+    res.status(200).json({
+      success: true,
+      data: {
+        // 📊 Distribución principal (formato compatible)
+        total: resultado.total,
+        distribucion: resultado.distribucion.map(item => ({
+          tipo: item.categoria || 'otros', // Para compatibilidad con frontend actual
+          categoria: item.categoria,
+          count: item.count,
+          porcentaje: item.porcentaje,
+          pesoPromedio: item.pesoPromedio,
+          valorPromedio: item.valorPromedio,
+          riesgosEspeciales: item.riesgosEspeciales,
+          // Campo adicional para frontend mejorado
+          clasificacionRiesgo: item.riesgosEspeciales > 0 ? 'especial' : 'normal'
+        }))
+      },
+      
+      // 🏷️ Metadatos
+      metadata: {
+        ultimaActualizacion: new Date().toISOString(),
+        modeloVersion: "2.0",
+        compatibilidad: "backward_compatible",
+        campoUtilizado: "categoria/tipo" // Indica qué campo se está usando
+      }
+    });
+
+  } catch (error) {
+    console.error("❌ Error en getCargaDistribution:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error al obtener distribución de cargas",
+      error: error.message
+    });
+  }
+};
+
+// 🆕 NUEVO ENDPOINT: Estadísticas detalladas por categoría
+ViajesController.getCargaDetailsByCategory = async (req, res) => {
+  try {
+    const { categoria } = req.params;
+
+    const detalles = await ViajesModel.find({
+      "carga.categoria": categoria
+    })
+    .populate('truckId', 'brand model licensePlate')
+    .populate('conductor.id', 'nombre')
+    .select('carga ruta estado departureTime arrivalTime')
+    .sort({ departureTime: -1 })
+    .limit(50);
+
+    // Estadísticas específicas de la categoría
+    const stats = await ViajesModel.aggregate([
+      { $match: { "carga.categoria": categoria } },
+      {
+        $group: {
+          _id: null,
+          totalViajes: { $sum: 1 },
+          pesoTotal: { $sum: "$carga.peso.valor" },
+          pesoPromedio: { $avg: "$carga.peso.valor" },
+          valorTotal: { $sum: "$carga.valor.montoDeclarado" },
+          completados: {
+            $sum: { $cond: [{ $eq: ["$estado.actual", "completado"] }, 1, 0] }
+          },
+          // Top subcategorías
+          subcategorias: { $addToSet: "$carga.subcategoria" },
+          // Riesgos asociados
+          riesgos: { $addToSet: "$carga.clasificacionRiesgo" }
+        }
+      }
+    ]);
+
+    res.status(200).json({
+      success: true,
+      data: {
+        categoria: categoria,
+        viajes: detalles,
+        estadisticas: stats[0] || {},
+        total: detalles.length
+      }
+    });
+
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Error al obtener detalles de categoría",
+      error: error.message
+    });
+  }
+};
+
+// 🆕 NUEVO ENDPOINT: Top subcategorías
+ViajesController.getTopSubcategorias = async (req, res) => {
+  try {
+    const { limite = 10 } = req.query;
+
+    const subcategorias = await ViajesModel.aggregate([
+      {
+        $match: {
+          "carga.subcategoria": { $exists: true, $ne: null, $ne: "" }
+        }
+      },
+      {
+        $group: {
+          _id: {
+            categoria: "$carga.categoria",
+            subcategoria: "$carga.subcategoria"
+          },
+          count: { $sum: 1 },
+          pesoPromedio: { $avg: "$carga.peso.valor" }
+        }
+      },
+      { $sort: { count: -1 } },
+      { $limit: parseInt(limite) }
+    ]);
+
+    res.status(200).json({
+      success: true,
+      data: subcategorias.map(item => ({
+        categoria: item._id.categoria,
+        subcategoria: item._id.subcategoria,
+        count: item.count,
+        pesoPromedio: Math.round(item.pesoPromedio || 0)
+      }))
+    });
+
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Error al obtener subcategorías",
+>>>>>>> 1d053d4 (trbajando aun en graficas y en el service auto)
       error: error.message
     });
   }

@@ -13,6 +13,11 @@ router.put('/update-location/:viajeId', ViajesController.updateLocation);
 router.get("/estadisticas", ViajesController.getTripStats);
 router.get("/completados", ViajesController.getCompletedTrips);
 router.get("/cargas/frecuentes", ViajesController.getCargaStats);
+<<<<<<< HEAD
+=======
+router.patch('/:viajeId/location', ViajesController.updateLocation);
+router.get('/cargas/distribucion',ViajesController.getCargaDistribution)
+>>>>>>> 1d053d4 (trbajando aun en graficas y en el service auto)
 
 
 router.get('/cargas/distribucion', ViajesController.getCargaDistribution);
