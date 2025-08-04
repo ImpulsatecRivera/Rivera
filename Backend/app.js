@@ -8,11 +8,8 @@ import ClientesRoutes from "./src/Routes/clienteRoutes.js"
 
 
 
-import LoginRoutes from "./src/Routes/LoginRoutes.js" 
 //servicio de auto-actualización
-import autoUpdateRoutes from './src/Routes/servicesRouter.js';
 
-import LoginRoutes from "./src/Routes/LoginRoutes.js"
 import migrationRoutes from './src/Routes/migrationRoutes.js';
 
 
@@ -24,12 +21,10 @@ import autoUpdateRoutes from './src/Routes/autoUpdateRoutes.js';
 
 
 
-import LoginRoutes from "./src/Routes/LoginRoutes.js"
 
 
 import LoginRoutes from "./src/Routes/LoginRoutes.js" 
 //servicio de auto-actualización
-import autoUpdateRoutes from './src/Routes/servicesRouter.js';
 
 
 
@@ -37,11 +32,9 @@ import autoUpdateRoutes from './src/Routes/servicesRouter.js';
  
 import LogoutRoutes from "./src/Routes/Logout.js" // ✅ Renombrado para claridad
 
-import LogoutRoutes from "./src/Routes/Logout.js"
 
 import RecoveryRoutes from "./src/Routes/Recovery.js"
 import RegisterRoutes from "./src/Routes/RegisterRoute.js"
-import ViajesRoutes from "./src/Routes/ViajesRoutes.js"
 
 
 
