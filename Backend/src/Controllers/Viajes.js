@@ -1,4 +1,4 @@
-// Controllers/Viajes.js - VERSIÓN OPTIMIZADA PARA UN SOLO MODELO
+// Controllers/Viajes.js - VERSIÓN OPTIMIZADA Y LIMPIA
 import ViajesModel from "../Models/Viajes.js";
 
 const ViajesController = {};
@@ -404,6 +404,184 @@ ViajesController.getMapData = async (req, res) => {
 };
 
 // =====================================================
+// GET: Análisis de distribución de cargas (VERSIÓN UNIFICADA)
+// =====================================================
+ViajesController.getCargaDistribution = async (req, res) => {
+  try {
+    console.log("📊 Iniciando análisis de distribución de cargas...");
+
+    // 📊 DISTRIBUCIÓN POR CATEGORÍA (compatible con datos antiguos y nuevos)
+    const distribucionCategoria = await ViajesModel.aggregate([
+      {
+        $group: {
+          _id: {
+            // 🔧 COMPATIBILIDAD: usa categoria si existe, sino tipo, sino descripción
+            $ifNull: [
+              "$carga.categoria", 
+              { $ifNull: ["$carga.tipo", "$carga.descripcion"] }
+            ]
+          },
+          count: { $sum: 1 },
+          pesoPromedio: { $avg: "$carga.peso.valor" },
+          pesoTotal: { $sum: "$carga.peso.valor" },
+          valorPromedio: { $avg: "$carga.valor.montoDeclarado" },
+          // Ejemplos de descripciones
+          ejemplos: { $addToSet: "$carga.descripcion" },
+          // Contar tipos de riesgo
+          riesgosEspeciales: {
+            $sum: {
+              $cond: [
+                { $and: [
+                  { $ne: ["$carga.clasificacionRiesgo", "normal"] },
+                  { $ne: ["$carga.clasificacionRiesgo", null] }
+                ]},
+                1,
+                0
+              ]
+            }
+          }
+        }
+      },
+      // Obtener el total para calcular porcentajes
+      {
+        $group: {
+          _id: null,
+          categorias: {
+            $push: {
+              categoria: "$_id",
+              count: "$count",
+              pesoPromedio: "$pesoPromedio",
+              pesoTotal: "$pesoTotal",
+              valorPromedio: "$valorPromedio",
+              ejemplos: "$ejemplos",
+              riesgosEspeciales: "$riesgosEspeciales"
+            }
+          },
+          total: { $sum: "$count" }
+        }
+      },
+      // Calcular porcentajes
+      {
+        $project: {
+          _id: 0,
+          total: 1,
+          distribucion: {
+            $map: {
+              input: "$categorias",
+              as: "item",
+              in: {
+                categoria: "$$item.categoria",
+                count: "$$item.count",
+                pesoPromedio: { $round: [{ $ifNull: ["$$item.pesoPromedio", 0] }, 2] },
+                pesoTotal: { $round: [{ $ifNull: ["$$item.pesoTotal", 0] }, 2] },
+                valorPromedio: { $round: [{ $ifNull: ["$$item.valorPromedio", 0] }, 2] },
+                ejemplos: { $slice: ["$$item.ejemplos", 3] }, // Máximo 3 ejemplos
+                riesgosEspeciales: "$$item.riesgosEspeciales",
+                porcentaje: {
+                  $round: [
+                    { $multiply: [{ $divide: ["$$item.count", "$total"] }, 100] },
+                    1
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      // Ordenar por cantidad descendente
+      {
+        $project: {
+          total: 1,
+          distribucion: {
+            $sortArray: {
+              input: "$distribucion",
+              sortBy: { count: -1 }
+            }
+          }
+        }
+      }
+    ]);
+
+    // Extraer resultado principal
+    const resultado = distribucionCategoria[0] || { total: 0, distribucion: [] };
+
+    console.log(`📦 Encontradas ${resultado.distribucion.length} categorías diferentes`);
+    console.log(`🚛 Total de viajes analizados: ${resultado.total}`);
+
+    // 🎯 PROCESAR DATOS PARA FRONTEND
+    const datosFormateados = resultado.distribucion.map((item, index) => {
+      const categoria = item.categoria || 'Sin categoría';
+      const nombreMostrar = categoria.charAt(0).toUpperCase() + categoria.slice(1);
+      
+      return {
+        id: `carga-${index}`,
+        // Para compatibilidad con frontend actual
+        tipo: categoria.toLowerCase(),
+        name: nombreMostrar,
+        categoria: categoria,
+        count: item.count,
+        porcentaje: item.porcentaje,
+        percentage: item.porcentaje, // Alias para compatibilidad
+        pesoPromedio: item.pesoPromedio,
+        pesoTotal: item.pesoTotal,
+        valorPromedio: item.valorPromedio,
+        ejemplos: item.ejemplos.filter(Boolean).slice(0, 3),
+        descripcion: item.ejemplos[0] || nombreMostrar,
+        riesgosEspeciales: item.riesgosEspeciales,
+        clasificacionRiesgo: item.riesgosEspeciales > 0 ? 'especial' : 'normal',
+        unidadPeso: 'kg'
+      };
+    });
+
+    // 📊 ESTADÍSTICAS GENERALES
+    const estadisticas = {
+      totalTiposUnicos: datosFormateados.length,
+      totalViajes: resultado.total,
+      tipoMasFrecuente: datosFormateados[0]?.name || 'N/A',
+      porcentajeMasFrecuente: datosFormateados[0]?.porcentaje || 0,
+      pesoTotalTransportado: datosFormateados.reduce((acc, item) => acc + item.pesoTotal, 0),
+      promedioViajesPorCategoria: datosFormateados.length > 0 ? 
+        Math.round(resultado.total / datosFormateados.length) : 0,
+      top3Tipos: datosFormateados.slice(0, 3).map(t => ({
+        tipo: t.name,
+        porcentaje: t.porcentaje,
+        cantidad: t.count
+      }))
+    };
+
+    // ✅ RESPUESTA EXITOSA
+    res.status(200).json({
+      success: true,
+      data: datosFormateados,
+      estadisticas: estadisticas,
+      
+      // 🏷️ Metadatos para compatibilidad
+      metadata: {
+        total: resultado.total,
+        ultimaActualizacion: new Date().toISOString(),
+        modeloVersion: "2.0",
+        compatibilidad: "backward_compatible",
+        campoUtilizado: "categoria/tipo/descripcion"
+      },
+      
+      message: `Análisis de ${datosFormateados.length} tipos de carga completado`,
+      timestamp: new Date().toISOString()
+    });
+
+    console.log("✅ Análisis de distribución completado exitosamente");
+
+  } catch (error) {
+    console.error("❌ Error en análisis de distribución:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error al analizar distribución de cargas",
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+};
+
+// =====================================================
 // PATCH: Actualizar ubicación GPS
 // =====================================================
 ViajesController.updateLocation = async (req, res) => {
@@ -533,8 +711,9 @@ ViajesController.completeTrip = async (req, res) => {
 };
 
 // =====================================================
-// OTROS MÉTODOS EXISTENTES
+// MÉTODOS ADICIONALES ÚTILES
 // =====================================================
+
 ViajesController.getAllViajes = async (req, res) => {
   try {
     const viajes = await ViajesModel.find()
@@ -590,8 +769,6 @@ ViajesController.getTripStats = async (req, res) => {
   }
 };
 
-
-
 ViajesController.getCompletedTrips = async (req, res) => {
   try {
     const completed = await ViajesModel.find({ "estado.actual": "completado" })
@@ -626,340 +803,9 @@ ViajesController.getCargaStats = async (req, res) => {
   }
 };
 
-<<<<<<< HEAD
 // =====================================================
-// GET: Análisis de frecuencia de tipos de carga
+// NUEVOS ENDPOINTS PARA ANÁLISIS DETALLADO
 // =====================================================
-ViajesController.getCargaDistribution = async (req, res) => {
-  try {
-    console.log("📊 Iniciando análisis de frecuencia de cargas...");
-
-    // 🔍 PASO 1: Obtener todos los viajes con información de carga
-    const viajes = await ViajesModel.find({
-      'estado.actual': { $in: ['pendiente', 'en_curso', 'completado', 'retrasado'] },
-      'carga.tipo': { $exists: true, $ne: null, $ne: "" }
-    })
-    .select('carga.tipo carga.descripcion carga.peso estado.actual')
-    .lean();
-
-    console.log(`🚛 Total de viajes con carga: ${viajes.length}`);
-
-    // 🔍 PASO 2: Recopilar todos los tipos únicos
-    const tiposUnicos = new Set();
-    viajes.forEach(viaje => {
-      if (viaje.carga?.tipo) {
-        tiposUnicos.add(viaje.carga.tipo.trim().toLowerCase());
-      }
-    });
-
-    console.log(`📦 Tipos únicos encontrados: ${Array.from(tiposUnicos).join(', ')}`);
-
-    // 🔍 PASO 3: Contar frecuencia de cada tipo
-    const frecuenciaMap = new Map();
-    
-    viajes.forEach(viaje => {
-      const tipo = viaje.carga?.tipo?.trim().toLowerCase();
-      if (tipo) {
-        if (frecuenciaMap.has(tipo)) {
-          const data = frecuenciaMap.get(tipo);
-          frecuenciaMap.set(tipo, {
-            count: data.count + 1,
-            ejemplos: [...new Set([...data.ejemplos, viaje.carga.descripcion].filter(Boolean))],
-            pesos: [...data.pesos, viaje.carga.peso?.valor].filter(peso => peso != null)
-          });
-        } else {
-          frecuenciaMap.set(tipo, {
-            count: 1,
-            ejemplos: viaje.carga.descripcion ? [viaje.carga.descripcion] : [],
-            pesos: viaje.carga.peso?.valor ? [viaje.carga.peso.valor] : []
-          });
-        }
-      }
-    });
-
-    // 🔍 PASO 4: Calcular estadísticas y porcentajes
-    const totalViajes = viajes.length;
-    console.log(`📊 Total de viajes para cálculo: ${totalViajes}`);
-
-    // Convertir a array y ordenar por frecuencia
-    const tiposFrecuentes = Array.from(frecuenciaMap.entries())
-      .map(([tipo, data]) => {
-        const porcentaje = totalViajes > 0 ? Math.round((data.count / totalViajes) * 100) : 0;
-        
-        // Capitalizar nombre para mostrar
-        const nombreMostrar = tipo.charAt(0).toUpperCase() + tipo.slice(1);
-        
-        // Calcular peso promedio si hay datos
-        const pesoPromedio = data.pesos.length > 0 
-          ? Math.round(data.pesos.reduce((sum, peso) => sum + peso, 0) / data.pesos.length)
-          : 0;
-
-        return {
-          tipo: tipo,                    // Original para identificar
-          name: nombreMostrar,           // Para mostrar en frontend
-          count: data.count,             // Cantidad de viajes
-          percentage: porcentaje,        // Porcentaje del total
-          ejemplos: data.ejemplos.slice(0, 3), // Máximo 3 ejemplos
-          pesoPromedio: pesoPromedio,
-          pesoTotal: data.pesos.reduce((sum, peso) => sum + peso, 0)
-        };
-      })
-      .sort((a, b) => b.count - a.count); // Ordenar por más frecuente
-
-    console.log("📈 Tipos más frecuentes:");
-    tiposFrecuentes.slice(0, 5).forEach(tipo => {
-      console.log(`   ${tipo.name}: ${tipo.count} viajes (${tipo.percentage}%)`);
-    });
-
-    // 🔍 PASO 5: Preparar respuesta para el frontend
-    const respuestaFinal = tiposFrecuentes.map((tipo, index) => ({
-      id: `carga-${index}`,
-      name: tipo.name,
-      percentage: tipo.percentage,
-      count: tipo.count,
-      pesoTotal: tipo.pesoTotal,
-      pesoPromedio: tipo.pesoPromedio,
-      descripcion: tipo.ejemplos[0] || tipo.name,
-      ejemplos: tipo.ejemplos,
-      unidadPeso: 'kg'
-    }));
-
-    // 📊 Estadísticas generales
-    const estadisticas = {
-      totalTiposUnicos: tiposFrecuentes.length,
-      totalViajes: totalViajes,
-      tipoMasFrecuente: tiposFrecuentes[0]?.name || 'N/A',
-      porcentajeMasFrecuente: tiposFrecuentes[0]?.percentage || 0,
-      top3Tipos: tiposFrecuentes.slice(0, 3).map(t => ({
-        tipo: t.name,
-        porcentaje: t.percentage,
-        cantidad: t.count
-      }))
-    };
-
-    // ✅ RESPUESTA EXITOSA
-    res.status(200).json({
-      success: true,
-      data: respuestaFinal,
-      estadisticas: estadisticas,
-      message: `Análisis de ${tiposFrecuentes.length} tipos de carga completado`,
-      timestamp: new Date().toISOString()
-    });
-
-    console.log("✅ Análisis de frecuencia completado exitosamente");
-
-  } catch (error) {
-    console.error("❌ Error en análisis de frecuencia:", error);
-    res.status(500).json({
-      success: false,
-      message: "Error al analizar frecuencia de cargas",
-      error: error.message,
-      timestamp: new Date().toISOString()
-    });
-  }
-};
-
-// =====================================================
-// MÉTODO ADICIONAL: Obtener solo los tipos únicos
-// =====================================================
-ViajesController.getTiposDeCargas = async (req, res) => {
-  try {
-    console.log("📋 Obteniendo tipos únicos de carga...");
-
-    // Obtener tipos únicos usando aggregation
-    const tiposUnicos = await ViajesModel.distinct('carga.tipo', {
-      'carga.tipo': { $exists: true, $ne: null, $ne: "" }
-    });
-
-    console.log(`📦 Tipos únicos: ${tiposUnicos.join(', ')}`);
-
-    // Limpiar y capitalizar
-    const tiposLimpios = tiposUnicos
-      .filter(tipo => tipo && tipo.trim() !== '')
-      .map(tipo => tipo.trim())
-      .map(tipo => ({
-        valor: tipo,
-        nombre: tipo.charAt(0).toUpperCase() + tipo.slice(1)
-      }))
-      .sort((a, b) => a.nombre.localeCompare(b.nombre));
-
-    res.status(200).json({
-      success: true,
-      data: tiposLimpios,
-      total: tiposLimpios.length,
-      message: "Tipos de carga obtenidos exitosamente"
-    });
-
-  } catch (error) {
-    console.error("❌ Error obteniendo tipos:", error);
-    res.status(500).json({
-      success: false,
-      message: "Error al obtener tipos de carga",
-      error: error.message
-    });
-  }
-};
-
-// =====================================================
-// MÉTODO DE DEBUGGING: Ver estructura de datos
-// =====================================================
-ViajesController.debugCargas = async (req, res) => {
-  try {
-    // Obtener 5 viajes de muestra
-    const muestras = await ViajesModel.find({})
-      .select('carga estado')
-      .limit(5)
-      .lean();
-
-    // Obtener tipos únicos
-    const tiposUnicos = await ViajesModel.distinct('carga.tipo');
-
-    // Contar total de documentos
-    const totalViajes = await ViajesModel.countDocuments();
-    const viajesConCarga = await ViajesModel.countDocuments({
-      'carga.tipo': { $exists: true, $ne: null, $ne: "" }
-    });
-
-    res.status(200).json({
-      success: true,
-      debug: {
-        totalViajes: totalViajes,
-        viajesConCarga: viajesConCarga,
-        tiposUnicos: tiposUnicos,
-        muestras: muestras
-      },
-      message: "Información de debug obtenida"
-    });
-
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-=======
-// 🚀 CONTROLLER ACTUALIZADO PARA NUEVAS CATEGORÍAS
-// 🔄 REEMPLAZA tu método getCargaDistribution actual con este (COMPATIBLE)
-ViajesController.getCargaDistribution = async (req, res) => {
-  try {
-    // 📊 DISTRIBUCIÓN POR CATEGORÍA (compatible con datos antiguos y nuevos)
-    const distribucionCategoria = await ViajesModel.aggregate([
-      {
-        $group: {
-          _id: {
-            $ifNull: ["$carga.categoria", "$carga.tipo"] // 🔧 COMPATIBILIDAD: usa categoria si existe, sino tipo
-          },
-          count: { $sum: 1 },
-          pesoPromedio: { $avg: "$carga.peso.valor" },
-          valorPromedio: { $avg: "$carga.valor.montoDeclarado" },
-          // Contar tipos de riesgo
-          riesgosEspeciales: {
-            $sum: {
-              $cond: [
-                { $and: [
-                  { $ne: ["$carga.clasificacionRiesgo", "normal"] },
-                  { $ne: ["$carga.clasificacionRiesgo", null] }
-                ]},
-                1,
-                0
-              ]
-            }
-          }
-        }
-      },
-      // Obtener el total para calcular porcentajes
-      {
-        $group: {
-          _id: null,
-          categorias: {
-            $push: {
-              categoria: "$_id",
-              count: "$count",
-              pesoPromedio: "$pesoPromedio",
-              valorPromedio: "$valorPromedio",
-              riesgosEspeciales: "$riesgosEspeciales"
-            }
-          },
-          total: { $sum: "$count" }
-        }
-      },
-      // Calcular porcentajes
-      {
-        $project: {
-          _id: 0,
-          total: 1,
-          distribucion: {
-            $map: {
-              input: "$categorias",
-              as: "item",
-              in: {
-                categoria: "$$item.categoria",
-                count: "$$item.count",
-                pesoPromedio: { $round: [{ $ifNull: ["$$item.pesoPromedio", 0] }, 2] },
-                valorPromedio: { $round: [{ $ifNull: ["$$item.valorPromedio", 0] }, 2] },
-                riesgosEspeciales: "$$item.riesgosEspeciales",
-                porcentaje: {
-                  $round: [
-                    { $multiply: [{ $divide: ["$$item.count", "$total"] }, 100] },
-                    1
-                  ]
-                }
-              }
-            }
-          }
-        }
-      },
-      // Ordenar por cantidad descendente
-      {
-        $project: {
-          total: 1,
-          distribucion: {
-            $sortArray: {
-              input: "$distribucion",
-              sortBy: { count: -1 }
-            }
-          }
-        }
-      }
-    ]);
-
-    // Extraer resultado principal
-    const resultado = distribucionCategoria[0] || { total: 0, distribucion: [] };
-
-    // 🎯 RESPUESTA COMPATIBLE CON FRONTEND
-    res.status(200).json({
-      success: true,
-      data: {
-        // 📊 Distribución principal (formato compatible)
-        total: resultado.total,
-        distribucion: resultado.distribucion.map(item => ({
-          tipo: item.categoria || 'otros', // Para compatibilidad con frontend actual
-          categoria: item.categoria,
-          count: item.count,
-          porcentaje: item.porcentaje,
-          pesoPromedio: item.pesoPromedio,
-          valorPromedio: item.valorPromedio,
-          riesgosEspeciales: item.riesgosEspeciales,
-          // Campo adicional para frontend mejorado
-          clasificacionRiesgo: item.riesgosEspeciales > 0 ? 'especial' : 'normal'
-        }))
-      },
-      
-      // 🏷️ Metadatos
-      metadata: {
-        ultimaActualizacion: new Date().toISOString(),
-        modeloVersion: "2.0",
-        compatibilidad: "backward_compatible",
-        campoUtilizado: "categoria/tipo" // Indica qué campo se está usando
-      }
-    });
-
-  } catch (error) {
-    console.error("❌ Error en getCargaDistribution:", error);
-    res.status(500).json({
-      success: false,
-      message: "Error al obtener distribución de cargas",
-      error: error.message
-    });
-  }
-};
 
 // 🆕 NUEVO ENDPOINT: Estadísticas detalladas por categoría
 ViajesController.getCargaDetailsByCategory = async (req, res) => {
@@ -967,7 +813,11 @@ ViajesController.getCargaDetailsByCategory = async (req, res) => {
     const { categoria } = req.params;
 
     const detalles = await ViajesModel.find({
-      "carga.categoria": categoria
+      $or: [
+        { "carga.categoria": categoria },
+        { "carga.tipo": categoria },
+        { "carga.descripcion": { $regex: categoria, $options: 'i' } }
+      ]
     })
     .populate('truckId', 'brand model licensePlate')
     .populate('conductor.id', 'nombre')
@@ -977,7 +827,15 @@ ViajesController.getCargaDetailsByCategory = async (req, res) => {
 
     // Estadísticas específicas de la categoría
     const stats = await ViajesModel.aggregate([
-      { $match: { "carga.categoria": categoria } },
+      { 
+        $match: { 
+          $or: [
+            { "carga.categoria": categoria },
+            { "carga.tipo": categoria },
+            { "carga.descripcion": { $regex: categoria, $options: 'i' } }
+          ]
+        } 
+      },
       {
         $group: {
           _id: null,
@@ -1054,7 +912,283 @@ ViajesController.getTopSubcategorias = async (req, res) => {
     res.status(500).json({
       success: false,
       message: "Error al obtener subcategorías",
->>>>>>> 1d053d4 (trbajando aun en graficas y en el service auto)
+      error: error.message
+    });
+  }
+};
+
+// =====================================================
+// MÉTODO ADICIONAL: Obtener solo los tipos únicos
+// =====================================================
+ViajesController.getTiposDeCargas = async (req, res) => {
+  try {
+    console.log("📋 Obteniendo tipos únicos de carga...");
+
+    // Obtener tipos únicos usando aggregation para mayor flexibilidad
+    const tiposUnicos = await ViajesModel.aggregate([
+      {
+        $group: {
+          _id: null,
+          categorias: { $addToSet: "$carga.categoria" },
+          tipos: { $addToSet: "$carga.tipo" },
+          descripciones: { $addToSet: "$carga.descripcion" }
+        }
+      }
+    ]);
+
+    const resultado = tiposUnicos[0] || { categorias: [], tipos: [], descripciones: [] };
+    
+    // Combinar y limpiar todos los tipos
+    const todosTipos = [
+      ...resultado.categorias,
+      ...resultado.tipos,
+      ...resultado.descripciones
+    ]
+    .filter(tipo => tipo && tipo.trim() !== '')
+    .map(tipo => tipo.trim())
+    .filter((tipo, index, array) => array.indexOf(tipo) === index); // Eliminar duplicados
+
+    console.log(`📦 Tipos únicos encontrados: ${todosTipos.length}`);
+
+    // Limpiar y capitalizar
+    const tiposLimpios = todosTipos
+      .map(tipo => ({
+        valor: tipo,
+        nombre: tipo.charAt(0).toUpperCase() + tipo.slice(1)
+      }))
+      .sort((a, b) => a.nombre.localeCompare(b.nombre));
+
+    res.status(200).json({
+      success: true,
+      data: tiposLimpios,
+      total: tiposLimpios.length,
+      message: "Tipos de carga obtenidos exitosamente"
+    });
+
+  } catch (error) {
+    console.error("❌ Error obteniendo tipos:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error al obtener tipos de carga",
+      error: error.message
+    });
+  }
+};
+
+// =====================================================
+// MÉTODO DE DEBUGGING: Ver estructura de datos
+// =====================================================
+ViajesController.debugCargas = async (req, res) => {
+  try {
+    // Obtener 5 viajes de muestra
+    const muestras = await ViajesModel.find({})
+      .select('carga estado')
+      .limit(5)
+      .lean();
+
+    // Obtener tipos únicos por campo
+    const categorias = await ViajesModel.distinct('carga.categoria');
+    const tipos = await ViajesModel.distinct('carga.tipo');
+    const descripciones = await ViajesModel.distinct('carga.descripcion');
+
+    // Contar total de documentos
+    const totalViajes = await ViajesModel.countDocuments();
+    const viajesConCategoria = await ViajesModel.countDocuments({
+      'carga.categoria': { $exists: true, $ne: null, $ne: "" }
+    });
+    const viajesConTipo = await ViajesModel.countDocuments({
+      'carga.tipo': { $exists: true, $ne: null, $ne: "" }
+    });
+    const viajesConDescripcion = await ViajesModel.countDocuments({
+      'carga.descripcion': { $exists: true, $ne: null, $ne: "" }
+    });
+
+    res.status(200).json({
+      success: true,
+      debug: {
+        totalViajes: totalViajes,
+        viajesConCategoria: viajesConCategoria,
+        viajesConTipo: viajesConTipo,
+        viajesConDescripcion: viajesConDescripcion,
+        categoriasUnicas: categorias.length,
+        tiposUnicos: tipos.length,
+        descripcionesUnicas: descripciones.length,
+        ejemplosCategorias: categorias.slice(0, 5),
+        ejemplosTipos: tipos.slice(0, 5),
+        ejemplosDescripciones: descripciones.slice(0, 5),
+        muestras: muestras
+      },
+      message: "Información de debug obtenida"
+    });
+
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Error en debug",
+      error: error.message
+    });
+  }
+};
+
+// =====================================================
+// MÉTODO PARA ACTUALIZAR PROGRESO MANUAL
+// =====================================================
+ViajesController.updateTripProgress = async (req, res) => {
+  try {
+    const { viajeId } = req.params;
+    const { progreso, estado, observaciones } = req.body;
+
+    const viaje = await ViajesModel.findById(viajeId);
+    if (!viaje) {
+      return res.status(404).json({
+        success: false,
+        message: "Viaje no encontrado"
+      });
+    }
+
+    // Actualizar progreso si se proporciona
+    if (progreso !== undefined) {
+      viaje.tracking.progreso.porcentaje = Math.min(100, Math.max(0, progreso));
+      viaje.tracking.progreso.fechaActualizacion = new Date();
+    }
+
+    // Actualizar estado si se proporciona
+    if (estado && estado !== viaje.estado.actual) {
+      const estadoAnterior = viaje.estado.actual;
+      viaje.estado.actual = estado;
+      viaje.estado.fechaCambio = new Date();
+      
+      // Agregar al historial
+      viaje.estado.historial.push({
+        estadoAnterior: estadoAnterior,
+        estadoNuevo: estado,
+        fecha: new Date(),
+        motivo: 'manual'
+      });
+
+      // Si se marca como completado, actualizar progreso a 100%
+      if (estado === 'completado') {
+        viaje.tracking.progreso.porcentaje = 100;
+        viaje.horarios.llegadaReal = new Date();
+      }
+    }
+
+    // Agregar observaciones si se proporcionan
+    if (observaciones) {
+      viaje.condiciones.observaciones = observaciones;
+    }
+
+    await viaje.save();
+
+    res.status(200).json({
+      success: true,
+      data: {
+        id: viaje._id,
+        estado: viaje.estado.actual,
+        progreso: viaje.tracking.progreso.porcentaje,
+        horarios: viaje.horarios
+      },
+      message: "Progreso actualizado exitosamente"
+    });
+
+  } catch (error) {
+    console.error("❌ Error actualizando progreso:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error al actualizar progreso",
+      error: error.message
+    });
+  }
+};
+
+// =====================================================
+// MÉTODO PARA OBTENER MÉTRICAS EN TIEMPO REAL
+// =====================================================
+ViajesController.getRealTimeMetrics = async (req, res) => {
+  try {
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    // Métricas del día actual
+    const metricas = await ViajesModel.aggregate([
+      {
+        $facet: {
+          hoy: [
+            {
+              $match: {
+                departureTime: {
+                  $gte: today,
+                  $lt: tomorrow
+                }
+              }
+            },
+            {
+              $group: {
+                _id: null,
+                total: { $sum: 1 },
+                completados: {
+                  $sum: { $cond: [{ $eq: ["$estado.actual", "completado"] }, 1, 0] }
+                },
+                enCurso: {
+                  $sum: { $cond: [{ $eq: ["$estado.actual", "en_curso"] }, 1, 0] }
+                },
+                retrasados: {
+                  $sum: { $cond: [{ $eq: ["$estado.actual", "retrasado"] }, 1, 0] }
+                },
+                progresoPromedio: { $avg: "$tracking.progreso.porcentaje" }
+              }
+            }
+          ],
+          general: [
+            {
+              $group: {
+                _id: null,
+                totalGeneral: { $sum: 1 },
+                activos: {
+                  $sum: { 
+                    $cond: [
+                      { $in: ["$estado.actual", ["pendiente", "en_curso", "retrasado"]] }, 
+                      1, 
+                      0
+                    ] 
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    ]);
+
+    const datosHoy = metricas[0].hoy[0] || {};
+    const datosGenerales = metricas[0].general[0] || {};
+
+    res.status(200).json({
+      success: true,
+      data: {
+        hoy: {
+          total: datosHoy.total || 0,
+          completados: datosHoy.completados || 0,
+          enCurso: datosHoy.enCurso || 0,
+          retrasados: datosHoy.retrasados || 0,
+          progresoPromedio: Math.round(datosHoy.progresoPromedio || 0)
+        },
+        general: {
+          totalViajes: datosGenerales.totalGeneral || 0,
+          viajesActivos: datosGenerales.activos || 0
+        },
+        timestamp: now.toISOString()
+      },
+      message: "Métricas en tiempo real obtenidas"
+    });
+
+  } catch (error) {
+    console.error("❌ Error obteniendo métricas:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error al obtener métricas en tiempo real",
       error: error.message
     });
   }

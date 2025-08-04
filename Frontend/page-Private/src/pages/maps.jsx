@@ -1,6 +1,34 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Truck, TrendingUp, Plus, Minus, Clock, MapPin, Users, Calendar, RefreshCw } from 'lucide-react';
+import { Truck, TrendingUp, Plus, Minus, Clock, MapPin, Users, Calendar, RefreshCw, Monitor, BarChart3 } from 'lucide-react';
 
+// 📦 IMPORTS DE TUS COMPONENTES (con manejo de errores)
+let RealtimeProgressBar, TripMonitoringDashboard;
+try {
+  RealtimeProgressBar = require('../components/Mapa/RealtimeProgressBar').default;
+  TripMonitoringDashboard = require('../components/Mapa/TripMonitoringDashboard').default;
+} catch (error) {
+  console.warn('Componentes opcionales no encontrados:', error.message);
+  // Crear componentes de fallback
+  RealtimeProgressBar = ({ viajeId, initialProgress, status }) => (
+    <div className="bg-gray-200 rounded-full h-2">
+      <div 
+        className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+        style={{ width: `${initialProgress}%` }}
+      ></div>
+    </div>
+  );
+  TripMonitoringDashboard = ({ onClose }) => (
+    <div className="p-8 text-center">
+      <h2 className="text-xl font-bold mb-4">Dashboard de Monitoreo</h2>
+      <p className="text-gray-600 mb-4">Componente en desarrollo</p>
+      <button onClick={onClose} className="bg-blue-600 text-white px-4 py-2 rounded">
+        Volver al Mapa
+      </button>
+    </div>
+  );
+}
+
+// COMPONENTE PRINCIPAL - RIVERA TRANSPORT MAP
 const RiveraTransportMapDemo = () => {
   const [zoomLevel, setZoomLevel] = useState(8);
   const [selectedTrip, setSelectedTrip] = useState(null);
@@ -11,11 +39,14 @@ const RiveraTransportMapDemo = () => {
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   
+  // 🆕 NUEVO ESTADO PARA MANEJAR LAS VISTAS
+  const [activeView, setActiveView] = useState('map'); // 'map', 'monitoring'
+  
   const mapRef = useRef(null);
   const mapInstanceRef = useRef(null);
   const refreshIntervalRef = useRef(null);
 
-  // 🔄 FUNCIÓN PARA OBTENER DATOS DEL BACKEND
+  // 🔄 FUNCIÓN MEJORADA PARA OBTENER DATOS DEL BACKEND
   const fetchMapData = async (isAutoRefresh = false) => {
     try {
       if (!isAutoRefresh) {
@@ -26,12 +57,14 @@ const RiveraTransportMapDemo = () => {
       setError(null);
       
       const apiUrl = 'http://localhost:4000/api/viajes/map-data';
-      console.log('Obteniendo datos del mapa...', isAutoRefresh ? '(auto-refresh)' : '(manual)');
+      console.log('🗺️ Obteniendo datos del mapa...', isAutoRefresh ? '(auto-refresh)' : '(manual)');
       
       const response = await fetch(apiUrl, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache'
         }
       });
 
@@ -41,10 +74,15 @@ const RiveraTransportMapDemo = () => {
 
       const result = await response.json();
       
-      if (result.success) {
+      if (result.success && result.data) {
         setMapData(result.data);
         setLastUpdate(new Date());
-        console.log('✅ Datos actualizados:', result.data.statistics);
+        console.log('✅ Datos actualizados:', {
+          total: result.data.statistics?.total_routes || 0,
+          completados: result.data.statistics?.completed_routes || 0,
+          enCurso: result.data.statistics?.active_routes || 0,
+          pendientes: result.data.statistics?.pending_routes || 0
+        });
       } else {
         throw new Error(result.message || 'Error al cargar datos del mapa');
       }
@@ -53,9 +91,9 @@ const RiveraTransportMapDemo = () => {
       console.error('❌ Error al obtener datos del mapa:', error);
       setError(`API no disponible: ${error.message}`);
       
-      // Solo mostrar datos mock si es el primer load
+      // Solo usar datos mock si no hay datos previos
       if (!mapData) {
-        console.log('Cargando datos mock de demostración...');
+        console.log('📝 Cargando datos mock de demostración...');
         setMapData({
           locations: [
             {
@@ -101,9 +139,15 @@ const RiveraTransportMapDemo = () => {
           statistics: {
             total_routes: 5,
             active_routes: 2,
-            growth_percentage: 35,
-            monthly_trips: 47,
-            drivers_active: 3
+            completed_routes: 8,
+            pending_routes: 1,
+            delayed_routes: 0,
+            completion_rate: 85,
+            today_trips: 12,
+            total_drivers: 3,
+            total_trucks: 4,
+            on_time_rate: 92,
+            average_progress: 67
           }
         });
         setLastUpdate(new Date());
@@ -114,18 +158,17 @@ const RiveraTransportMapDemo = () => {
     }
   };
 
-  // 🔄 CONFIGURAR AUTO-REFRESH
+  // 🔄 CONFIGURAR AUTO-REFRESH MEJORADO
   useEffect(() => {
-    // Cargar datos inicialmente
     fetchMapData();
 
-    // Configurar auto-refresh
     if (autoRefresh) {
       refreshIntervalRef.current = setInterval(() => {
-        fetchMapData(true); // true = es auto-refresh
-      }, 60000); // Cada 60 segundos
+        console.log('🔄 Auto-refresh ejecutándose...');
+        fetchMapData(true);
+      }, 30000);
 
-      console.log('🔄 Auto-refresh activado (cada 60 segundos)');
+      console.log('🔄 Auto-refresh activado (cada 30 segundos)');
     }
 
     return () => {
@@ -140,139 +183,170 @@ const RiveraTransportMapDemo = () => {
   useEffect(() => {
     const loadLeaflet = async () => {
       if (typeof window !== 'undefined' && !window.L) {
-        const link = document.createElement('link');
-        link.rel = 'stylesheet';
-        link.href = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css';
-        document.head.appendChild(link);
+        try {
+          const link = document.createElement('link');
+          link.rel = 'stylesheet';
+          link.href = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css';
+          document.head.appendChild(link);
 
-        const script = document.createElement('script');
-        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js';
-        script.onload = initializeMap;
-        document.head.appendChild(script);
+          const script = document.createElement('script');
+          script.src = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js';
+          script.onload = initializeMap;
+          script.onerror = () => console.error('Error cargando Leaflet');
+          document.head.appendChild(script);
+        } catch (error) {
+          console.error('Error cargando Leaflet:', error);
+        }
       } else if (window.L) {
         initializeMap();
       }
     };
 
     const initializeMap = () => {
-      if (mapRef.current && window.L && !mapInstanceRef.current && !loading && mapData) {
-        if (mapInstanceRef.current) {
-          mapInstanceRef.current.remove();
-        }
+      try {
+        if (mapRef.current && window.L && !mapInstanceRef.current && !loading && mapData && activeView === 'map') {
+          if (mapInstanceRef.current) {
+            mapInstanceRef.current.remove();
+          }
 
-        const map = window.L.map(mapRef.current, {
-          zoomControl: false,
-          attributionControl: true
-        }).setView([13.7942, -88.8965], zoomLevel);
+          const map = window.L.map(mapRef.current, {
+            zoomControl: false,
+            attributionControl: true
+          }).setView([13.7942, -88.8965], zoomLevel);
 
-        window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-          attribution: '© OpenStreetMap contributors',
-          maxZoom: 18,
-        }).addTo(map);
+          window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors',
+            maxZoom: 18,
+          }).addTo(map);
 
-        // Agregar marcadores
-        if (mapData.locations && mapData.locations.length > 0) {
-          mapData.locations.forEach(location => {
-            const markerClass = `marker-${location.type}`;
-            
-            const customIcon = window.L.divIcon({
-              className: 'custom-marker-container',
-              html: `<div class="custom-marker ${markerClass}">${location.number}</div>`,
-              iconSize: [35, 35],
-              iconAnchor: [17.5, 17.5],
-              popupAnchor: [0, -17.5]
-            });
+          // Agregar marcadores de forma segura
+          if (mapData.locations && Array.isArray(mapData.locations)) {
+            mapData.locations.forEach((location, index) => {
+              try {
+                if (location.coords && Array.isArray(location.coords) && location.coords.length === 2) {
+                  const markerClass = `marker-${location.type || 'blue'}`;
+                  
+                  const customIcon = window.L.divIcon({
+                    className: 'custom-marker-container',
+                    html: `<div class="custom-marker ${markerClass}">${location.number || index + 1}</div>`,
+                    iconSize: [35, 35],
+                    iconAnchor: [17.5, 17.5],
+                    popupAnchor: [0, -17.5]
+                  });
 
-            const marker = window.L.marker(location.coords, { icon: customIcon }).addTo(map);
-            
-            const popupContent = location.isTerminal ? 
-              `<div style="font-family: 'Segoe UI', sans-serif; min-width: 200px;">
-                <div style="font-weight: 600; color: #dc2626; margin-bottom: 8px; font-size: 14px;">🏢 ${location.name}</div>
-                <div style="color: #666; font-size: 12px; margin-bottom: 6px;">${location.description}</div>
-                <div style="background: #fef2f2; padding: 6px; border-radius: 6px; border-left: 3px solid #dc2626;">
-                  <div style="font-size: 11px; color: #991b1b;">Centro de operaciones principal</div>
-                </div>
-              </div>` :
-              `<div style="font-family: 'Segoe UI', sans-serif; min-width: 200px;">
-                <div style="font-weight: 600; color: #333; margin-bottom: 8px; font-size: 14px;">📍 ${location.name}</div>
-                <div style="color: #666; font-size: 12px; margin-bottom: 8px;">${location.description}</div>
-                <div style="background: #f0fdf4; padding: 6px; border-radius: 6px; border-left: 3px solid #16a34a;">
-                  ${location.nextTrip ? `<div style="font-size: 11px; color: #15803d; margin-bottom: 2px;">⏰ Próximo viaje: ${location.nextTrip}</div>` : ''}
-                  <div style="font-size: 11px; color: #15803d;">🚛 ${location.tripCount} viajes programados</div>
-                </div>
-              </div>`;
+                  const marker = window.L.marker(location.coords, { icon: customIcon }).addTo(map);
+                  
+                  const popupContent = location.isTerminal ? 
+                    `<div style="font-family: 'Segoe UI', sans-serif; min-width: 200px;">
+                      <div style="font-weight: 600; color: #dc2626; margin-bottom: 8px; font-size: 14px;">🏢 ${location.name || 'Terminal'}</div>
+                      <div style="color: #666; font-size: 12px; margin-bottom: 6px;">${location.description || ''}</div>
+                      <div style="background: #fef2f2; padding: 6px; border-radius: 6px; border-left: 3px solid #dc2626;">
+                        <div style="font-size: 11px; color: #991b1b;">Centro de operaciones principal</div>
+                      </div>
+                    </div>` :
+                    `<div style="font-family: 'Segoe UI', sans-serif; min-width: 200px;">
+                      <div style="font-weight: 600; color: #333; margin-bottom: 8px; font-size: 14px;">📍 ${location.name || 'Ubicación'}</div>
+                      <div style="color: #666; font-size: 12px; margin-bottom: 8px;">${location.description || ''}</div>
+                      <div style="background: #f0fdf4; padding: 6px; border-radius: 6px; border-left: 3px solid #16a34a;">
+                        ${location.nextTrip ? `<div style="font-size: 11px; color: #15803d; margin-bottom: 2px;">⏰ Próximo viaje: ${location.nextTrip}</div>` : ''}
+                        <div style="font-size: 11px; color: #15803d;">🚛 ${location.tripCount || 0} viajes programados</div>
+                      </div>
+                    </div>`;
 
-            marker.bindPopup(popupContent, {
-              closeButton: true,
-              autoClose: false,
-              className: 'custom-popup'
-            });
-          });
-        }
-
-        // Agregar rutas
-        if (mapData.routes && mapData.routes.length > 0) {
-          mapData.routes.forEach(route => {
-            if (route.coordinates && route.coordinates.length > 0) {
-              let routeColor = '#2563eb';
-              switch (route.status) {
-                case 'active':
-                case 'in_progress':
-                  routeColor = '#16a34a';
-                  break;
-                case 'completed':
-                  routeColor = '#059669';
-                  break;
-                case 'cancelled':
-                  routeColor = '#dc2626';
-                  break;
-                default:
-                  routeColor = '#2563eb';
+                  marker.bindPopup(popupContent, {
+                    closeButton: true,
+                    autoClose: false,
+                    className: 'custom-popup'
+                  });
+                }
+              } catch (error) {
+                console.error(`Error agregando marcador ${index}:`, error);
               }
-              
-              const routeWeight = route.frequency === 'high' ? 6 : 4;
-              
-              const polyline = window.L.polyline(route.coordinates, {
-                color: routeColor,
-                weight: routeWeight,
-                opacity: 0.8,
-                smoothFactor: 1
-              }).addTo(map);
+            });
+          }
 
-              polyline.on('click', () => {
-                setSelectedTrip(route);
-              });
-            }
-          });
+          // Agregar rutas de forma segura
+          if (mapData.routes && Array.isArray(mapData.routes)) {
+            mapData.routes.forEach((route, index) => {
+              try {
+                if (route.coordinates && Array.isArray(route.coordinates) && route.coordinates.length > 0) {
+                  let routeColor = '#2563eb';
+                  switch (route.status) {
+                    case 'active':
+                    case 'in_progress':
+                      routeColor = '#16a34a';
+                      break;
+                    case 'completed':
+                      routeColor = '#059669';
+                      break;
+                    case 'cancelled':
+                      routeColor = '#dc2626';
+                      break;
+                    default:
+                      routeColor = '#2563eb';
+                  }
+                  
+                  const routeWeight = route.frequency === 'high' ? 6 : 4;
+                  
+                  const polyline = window.L.polyline(route.coordinates, {
+                    color: routeColor,
+                    weight: routeWeight,
+                    opacity: 0.8,
+                    smoothFactor: 1
+                  }).addTo(map);
+
+                  polyline.on('click', () => {
+                    setSelectedTrip(route);
+                  });
+                }
+              } catch (error) {
+                console.error(`Error agregando ruta ${index}:`, error);
+              }
+            });
+          }
+
+          mapInstanceRef.current = map;
         }
-
-        mapInstanceRef.current = map;
+      } catch (error) {
+        console.error('Error inicializando mapa:', error);
       }
     };
 
-    if (!loading && mapData) {
+    if (!loading && mapData && activeView === 'map') {
       loadLeaflet();
     }
 
     return () => {
-      if (mapInstanceRef.current) {
-        mapInstanceRef.current.remove();
-        mapInstanceRef.current = null;
+      if (mapInstanceRef.current && activeView !== 'map') {
+        try {
+          mapInstanceRef.current.remove();
+          mapInstanceRef.current = null;
+        } catch (error) {
+          console.error('Error removiendo mapa:', error);
+        }
       }
     };
-  }, [loading, mapData, zoomLevel]);
+  }, [loading, mapData, zoomLevel, activeView]);
 
   const handleZoomIn = () => {
     if (mapInstanceRef.current) {
-      mapInstanceRef.current.zoomIn();
-      setZoomLevel(prev => prev + 1);
+      try {
+        mapInstanceRef.current.zoomIn();
+        setZoomLevel(prev => prev + 1);
+      } catch (error) {
+        console.error('Error haciendo zoom in:', error);
+      }
     }
   };
 
   const handleZoomOut = () => {
     if (mapInstanceRef.current) {
-      mapInstanceRef.current.zoomOut();
-      setZoomLevel(prev => prev - 1);
+      try {
+        mapInstanceRef.current.zoomOut();
+        setZoomLevel(prev => prev - 1);
+      } catch (error) {
+        console.error('Error haciendo zoom out:', error);
+      }
     }
   };
 
@@ -284,7 +358,6 @@ const RiveraTransportMapDemo = () => {
     setAutoRefresh(!autoRefresh);
   };
 
-  // 🚛 Función para mostrar información del vehículo
   const getTruckDisplayInfo = (truck) => {
     if (!truck || truck === "Camión no especificado" || truck === "Camión por asignar") {
       return {
@@ -319,6 +392,55 @@ const RiveraTransportMapDemo = () => {
       color: "text-gray-600",
       bgColor: "bg-gray-100"
     };
+  };
+
+  // 🚀 FUNCIÓN PARA CAMBIAR VISTAS
+  const switchToMonitoring = () => {
+    setActiveView('monitoring');
+    setSelectedTrip(null);
+  };
+
+  const switchToMap = () => {
+    setActiveView('map');
+  };
+
+  // Función para mostrar estadísticas más detalladas
+  const renderDetailedStats = () => {
+    if (!mapData?.statistics) return null;
+    
+    return (
+      <div className="bg-gray-50 rounded-xl p-3 mt-3">
+        <div className="text-xs font-medium text-gray-700 mb-2">
+          📊 Estadísticas detalladas:
+        </div>
+        <div className="grid grid-cols-2 gap-2 text-xs">
+          <div>
+            <span className="text-gray-600">Tasa completado:</span>
+            <span className="font-medium ml-1">
+              {mapData.statistics.completion_rate || 0}%
+            </span>
+          </div>
+          <div>
+            <span className="text-gray-600">Puntualidad:</span>
+            <span className="font-medium ml-1">
+              {mapData.statistics.on_time_rate || 0}%
+            </span>
+          </div>
+          <div>
+            <span className="text-gray-600">Progreso prom:</span>
+            <span className="font-medium ml-1">
+              {mapData.statistics.average_progress || 0}%
+            </span>
+          </div>
+          <div>
+            <span className="text-gray-600">Camiones:</span>
+            <span className="font-medium ml-1">
+              {mapData.statistics.total_trucks || 0}
+            </span>
+          </div>
+        </div>
+      </div>
+    );
   };
   
   if (loading) {
@@ -358,7 +480,18 @@ const RiveraTransportMapDemo = () => {
     );
   }
 
-  const truckInfo = selectedTrip ? getTruckDisplayInfo(selectedTrip.tripInfo.truck) : null;
+  // 🖥️ RENDERIZAR VISTA DE MONITOREO
+  if (activeView === 'monitoring') {
+    return (
+      <div className="w-full h-screen p-6" style={{ backgroundColor: '#34353A' }}>
+        <div className="w-full h-full bg-white rounded-[2rem] shadow-2xl overflow-hidden relative border-2 border-blue-200">
+          <TripMonitoringDashboard onClose={switchToMap} />
+        </div>
+      </div>
+    );
+  }
+
+  const truckInfo = selectedTrip ? getTruckDisplayInfo(selectedTrip.tripInfo?.truck) : null;
 
   return (
     <>
@@ -418,7 +551,7 @@ const RiveraTransportMapDemo = () => {
       <div className="w-full h-screen p-6" style={{ backgroundColor: '#34353A' }}>
         <div className="w-full h-full bg-white rounded-[2rem] shadow-2xl overflow-hidden relative border-2 border-blue-200">
           
-          {/* Header mejorado con auto-refresh */}
+          {/* Header mejorado con navegación */}
           <div className="absolute top-8 left-8 z-30 flex items-center space-x-4">
             <div 
               className="w-10 h-10 bg-white rounded-2xl flex items-center justify-center border-2 border-blue-200 shadow-lg cursor-pointer hover:bg-blue-50 transition-all duration-200"
@@ -438,9 +571,16 @@ const RiveraTransportMapDemo = () => {
               </div>
             </div>
             
-            {/* Controles de actualización */}
+            {/* Controles de actualización y navegación */}
             <div className="flex items-center space-x-2">
-              {/* Botón de actualizar manual */}
+              <button
+                onClick={switchToMonitoring}
+                className="w-10 h-10 bg-white rounded-2xl flex items-center justify-center border-2 border-green-200 shadow-lg cursor-pointer hover:bg-green-50 transition-all duration-200"
+                title="Ver Dashboard de Monitoreo"
+              >
+                <Monitor className="w-5 h-5 text-green-600" />
+              </button>
+
               <button
                 onClick={handleRefresh}
                 disabled={refreshing}
@@ -450,7 +590,6 @@ const RiveraTransportMapDemo = () => {
                 <RefreshCw className={`w-5 h-5 text-blue-600 ${refreshing ? 'animate-spin' : ''}`} />
               </button>
 
-              {/* Toggle auto-refresh */}
               <button
                 onClick={toggleAutoRefresh}
                 className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${
@@ -495,14 +634,20 @@ const RiveraTransportMapDemo = () => {
                 </div>
                 
                 <div className="flex-1">
-                  <div className="text-sm text-gray-500 mb-1 font-medium">Rutas Activas</div>
+                  <div className="text-sm text-gray-500 mb-1 font-medium">Viajes Completados</div>
                   <div className="flex items-center space-x-2 mb-2">
-                    <span className="text-4xl font-bold text-gray-900">{mapData.statistics.active_routes}</span>
-                    <span className="text-lg text-gray-400">/ {mapData.statistics.total_routes}</span>
+                    <span className="text-4xl font-bold text-gray-900">
+                      {mapData.statistics.completed_routes || 0}
+                    </span>
+                    <span className="text-lg text-gray-400">
+                      / {mapData.statistics.total_routes || 0}
+                    </span>
                   </div>
                   <div className="flex items-center space-x-1">
                     <TrendingUp className="w-4 h-4 text-green-500" />
-                    <span className="text-sm text-green-600 font-semibold">{mapData.statistics.growth_percentage}% este mes</span>
+                    <span className="text-sm text-green-600 font-semibold">
+                      {mapData.statistics.completion_rate || 0}% completados
+                    </span>
                   </div>
                 </div>
               </div>
@@ -513,24 +658,66 @@ const RiveraTransportMapDemo = () => {
                   <div className="flex items-center justify-center mb-2">
                     <Calendar className="w-5 h-5 text-blue-500 mr-1" />
                   </div>
-                  <div className="text-2xl font-bold text-gray-900">{mapData.statistics.monthly_trips}</div>
-                  <div className="text-xs text-gray-500">Viajes este mes</div>
+                  <div className="text-2xl font-bold text-gray-900">
+                    {mapData.statistics.today_trips || 0}
+                  </div>
+                  <div className="text-xs text-gray-500">Viajes hoy</div>
                 </div>
                 <div className="text-center">
                   <div className="flex items-center justify-center mb-2">
                     <Users className="w-5 h-5 text-green-500 mr-1" />
                   </div>
-                  <div className="text-2xl font-bold text-gray-900">{mapData.statistics.drivers_active}</div>
-                  <div className="text-xs text-gray-500">Conductores activos</div>
+                  <div className="text-2xl font-bold text-gray-900">
+                    {mapData.statistics.total_drivers || 0}
+                  </div>
+                  <div className="text-xs text-gray-500">Conductores</div>
                 </div>
+              </div>
+
+              {/* Panel adicional con más estadísticas */}
+              <div className="mt-4 pt-3 border-t border-gray-100">
+                <div className="grid grid-cols-3 gap-2 text-center">
+                  <div>
+                    <div className="text-lg font-bold text-blue-600">
+                      {mapData.statistics.active_routes || 0}
+                    </div>
+                    <div className="text-xs text-gray-500">En curso</div>
+                  </div>
+                  <div>
+                    <div className="text-lg font-bold text-yellow-600">
+                      {mapData.statistics.pending_routes || 0}
+                    </div>
+                    <div className="text-xs text-gray-500">Pendientes</div>
+                  </div>
+                  <div>
+                    <div className="text-lg font-bold text-red-600">
+                      {mapData.statistics.delayed_routes || 0}
+                    </div>
+                    <div className="text-xs text-gray-500">Retrasados</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Estadísticas detalladas */}
+              {renderDetailedStats()}
+
+              {/* Botón para acceder al dashboard de monitoreo */}
+              <div className="mt-4 pt-3 border-t border-gray-100">
+                <button
+                  onClick={switchToMonitoring}
+                  className="w-full flex items-center justify-center space-x-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all duration-200 shadow-lg"
+                >
+                  <BarChart3 className="w-4 h-4" />
+                  <span className="text-sm font-medium">Ver Dashboard Completo</span>
+                </button>
               </div>
 
               {/* Indicador de auto-refresh */}
               {autoRefresh && (
-                <div className="mt-4 pt-3 border-t border-gray-100">
+                <div className="mt-3">
                   <div className="flex items-center justify-center space-x-2 text-xs text-gray-500">
                     <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
-                    <span>Actualizando cada minuto</span>
+                    <span>Actualizando cada 30 segundos</span>
                   </div>
                 </div>
               )}
@@ -557,24 +744,30 @@ const RiveraTransportMapDemo = () => {
                     <Users className="w-6 h-6 text-blue-600" />
                   </div>
                   <div className="flex-1">
-                    <div className="text-sm font-semibold text-gray-900">{selectedTrip.tripInfo.driver}</div>
+                    <div className="text-sm font-semibold text-gray-900">
+                      {selectedTrip.tripInfo?.driver || 'No asignado'}
+                    </div>
                     <div className="text-xs text-gray-500">Conductor asignado</div>
                   </div>
                 </div>
                 
                 {/* Vehículo */}
-                <div className="flex items-center space-x-3">
-                  <div className={`w-12 h-12 ${truckInfo.bgColor} rounded-xl flex items-center justify-center`}>
-                    <span className="text-lg">{truckInfo.icon}</span>
+                {truckInfo && (
+                  <div className="flex items-center space-x-3">
+                    <div className={`w-12 h-12 ${truckInfo.bgColor} rounded-xl flex items-center justify-center`}>
+                      <span className="text-lg">{truckInfo.icon}</span>
+                    </div>
+                    <div className="flex-1">
+                      <div className={`text-sm font-semibold ${truckInfo.color}`}>
+                        {truckInfo.display}
+                      </div>
+                      <div className="text-xs text-gray-500">Vehículo de transporte</div>
+                      {selectedTrip.tripInfo?.truck?.includes("por asignar") && (
+                        <div className="text-xs text-yellow-600 font-medium mt-1">⚠️ Pendiente de asignación</div>
+                      )}
+                    </div>
                   </div>
-                  <div className="flex-1">
-                    <div className={`text-sm font-semibold ${truckInfo.color}`}>{truckInfo.display}</div>
-                    <div className="text-xs text-gray-500">Vehículo de transporte</div>
-                    {selectedTrip.tripInfo.truck.includes("por asignar") && (
-                      <div className="text-xs text-yellow-600 font-medium mt-1">⚠️ Pendiente de asignación</div>
-                    )}
-                  </div>
-                </div>
+                )}
                 
                 {/* Carga */}
                 <div className="flex items-center space-x-3">
@@ -582,25 +775,22 @@ const RiveraTransportMapDemo = () => {
                     <MapPin className="w-6 h-6 text-green-600" />
                   </div>
                   <div className="flex-1">
-                    <div className="text-sm font-semibold text-gray-900">{selectedTrip.tripInfo.cargo}</div>
+                    <div className="text-sm font-semibold text-gray-900">
+                      {selectedTrip.tripInfo?.cargo || 'Carga general'}
+                    </div>
                     <div className="text-xs text-gray-500">Tipo de carga</div>
                   </div>
                 </div>
                 
                 {/* Progreso del viaje */}
-                {selectedTrip.tripInfo.progress > 0 && (
+                {selectedTrip.tripInfo?.progress > 0 && (
                   <div className="bg-gray-50 rounded-xl p-3">
-                    <div className="flex items-center justify-between text-sm mb-2">
-                      <span className="text-gray-600">Progreso del viaje:</span>
-                      <span className="font-semibold text-gray-900">{selectedTrip.tripInfo.progress}%</span>
-                    </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2">
-                      <div 
-                        className="bg-blue-600 h-2 rounded-full transition-all duration-500"
-                        style={{ width: `${selectedTrip.tripInfo.progress}%` }}
-                      ></div>
-                    </div>
-                    <div className="text-xs text-gray-500 mt-1">{selectedTrip.tripInfo.currentLocation}</div>
+                    <div className="text-sm font-medium text-gray-700 mb-2">Progreso del viaje:</div>
+                    <RealtimeProgressBar 
+                      viajeId={selectedTrip.id}
+                      initialProgress={selectedTrip.tripInfo.progress}
+                      status="en_curso"
+                    />
                   </div>
                 )}
                 
@@ -611,14 +801,18 @@ const RiveraTransportMapDemo = () => {
                       <Clock className="w-4 h-4 text-gray-400" />
                       <span className="text-gray-600">Salida:</span>
                     </div>
-                    <span className="font-semibold text-gray-900">{selectedTrip.tripInfo.departure}</span>
+                    <span className="font-semibold text-gray-900">
+                      {selectedTrip.tripInfo?.departure || 'No programado'}
+                    </span>
                   </div>
                   <div className="flex items-center justify-between text-sm">
                     <div className="flex items-center space-x-2">
                       <Clock className="w-4 h-4 text-gray-400" />
                       <span className="text-gray-600">Llegada estimada:</span>
                     </div>
-                    <span className="font-semibold text-gray-900">{selectedTrip.tripInfo.arrival}</span>
+                    <span className="font-semibold text-gray-900">
+                      {selectedTrip.tripInfo?.arrival || 'No programado'}
+                    </span>
                   </div>
                 </div>
                 
