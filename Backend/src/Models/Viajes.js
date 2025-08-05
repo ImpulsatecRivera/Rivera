@@ -112,6 +112,26 @@ const viajeSchema = new Schema({
       select: false // No incluir por defecto en queries
     }
   },
+
+  // En tu ViajesModel, agregar dentro de tracking:
+tracking: {
+  // ... campos existentes ...
+  
+  checkpoints: [{
+    tipo: String,           // 'inicio_automatico', 'salida_real', 'ruta', etc.
+    progreso: Number,       // 0-100
+    descripcion: String,    // Descripción legible
+    timestamp: Date,        // Cuándo ocurrió
+    reportadoPor: {         // 'automatico', 'manual', 'gps'
+      type: String,
+      default: 'manual'
+    },
+    ubicacion: {            // Opcional
+      lat: Number,
+      lng: Number
+    }
+  }]
+},
   
   // 📊 ESTADO CON AUTO-ACTUALIZACIÓN MEJORADO
   estado: {
