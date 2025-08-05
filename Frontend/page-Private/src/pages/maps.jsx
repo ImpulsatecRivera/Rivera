@@ -1,32 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Truck, TrendingUp, Plus, Minus, Clock, MapPin, Users, Calendar, RefreshCw, Monitor, BarChart3 } from 'lucide-react';
 
-// 📦 IMPORTS DE TUS COMPONENTES (con manejo de errores)
-let RealtimeProgressBar, TripMonitoringDashboard;
-try {
-  RealtimeProgressBar = require('../components/Mapa/RealtimeProgressBar').default;
-  TripMonitoringDashboard = require('../components/Mapa/TripMonitoringDashboard').default;
-} catch (error) {
-  console.warn('Componentes opcionales no encontrados:', error.message);
-  // Crear componentes de fallback
-  RealtimeProgressBar = ({ viajeId, initialProgress, status }) => (
-    <div className="bg-gray-200 rounded-full h-2">
-      <div 
-        className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-        style={{ width: `${initialProgress}%` }}
-      ></div>
-    </div>
-  );
-  TripMonitoringDashboard = ({ onClose }) => (
-    <div className="p-8 text-center">
-      <h2 className="text-xl font-bold mb-4">Dashboard de Monitoreo</h2>
-      <p className="text-gray-600 mb-4">Componente en desarrollo</p>
-      <button onClick={onClose} className="bg-blue-600 text-white px-4 py-2 rounded">
-        Volver al Mapa
-      </button>
-    </div>
-  );
-}
+// 📦 IMPORTS DE TUS COMPONENTES
+import RealtimeProgressBar from '../components/Mapa/RealtimeProgressBar';
+import TripMonitoringDashboard from '../components/Mapa/TripMonitoringDashboard';
 
 // COMPONENTE PRINCIPAL - RIVERA TRANSPORT MAP
 const RiveraTransportMapDemo = () => {
@@ -328,6 +305,25 @@ const RiveraTransportMapDemo = () => {
     };
   }, [loading, mapData, zoomLevel, activeView]);
 
+  // 🆕 NUEVA FUNCIÓN: Mapear estado del backend al frontend
+  const mapStatusToFrontend = (backendStatus) => {
+    const statusMap = {
+      'programado': 'programado',
+      'pendiente': 'pendiente', 
+      'en_curso': 'en_curso',
+      'in_progress': 'en_curso',
+      'active': 'en_curso',
+      'completado': 'completado',
+      'completed': 'completado',
+      'retrasado': 'retrasado',
+      'delayed': 'retrasado',
+      'cancelado': 'cancelado',
+      'cancelled': 'cancelado'
+    };
+    
+    return statusMap[backendStatus] || 'pendiente';
+  };
+
   const handleZoomIn = () => {
     if (mapInstanceRef.current) {
       try {
@@ -545,6 +541,45 @@ const RiveraTransportMapDemo = () => {
           .custom-popup .leaflet-popup-content {
             margin: 12px 16px;
           }
+          
+          /* 🆕 ESTILOS PARA SCROLL PERSONALIZADO */
+          .scrollbar-thin {
+            scrollbar-width: thin;
+          }
+          
+          .scrollbar-thumb-gray-300::-webkit-scrollbar-thumb {
+            background-color: #d1d5db;
+            border-radius: 6px;
+          }
+          
+          .scrollbar-track-gray-100::-webkit-scrollbar-track {
+            background-color: #f3f4f6;
+            border-radius: 6px;
+          }
+          
+          .scrollbar-thin::-webkit-scrollbar {
+            width: 6px;
+          }
+          
+          .scrollbar-thin::-webkit-scrollbar-track {
+            background: #f3f4f6;
+            border-radius: 6px;
+          }
+          
+          .scrollbar-thin::-webkit-scrollbar-thumb {
+            background: #d1d5db;
+            border-radius: 6px;
+          }
+          
+          .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+            background: #9ca3af;
+          }
+          
+          /* Ocultar scrollbar en Firefox si es necesario */
+          .scrollbar-thin {
+            scrollbar-width: thin;
+            scrollbar-color: #d1d5db #f3f4f6;
+          }
         `}
       </style>
       
@@ -562,7 +597,7 @@ const RiveraTransportMapDemo = () => {
             <div>
               <h1 className="text-2xl font-bold text-gray-900">Sistema Rivera Transport</h1>
               <div className="flex items-center space-x-2">
-                <p className="text-sm text-gray-600">Monitoreo en tiempo real</p>
+                <p className="text-sm text-gray-600">Monitoreo híbrido en tiempo real</p>
                 {lastUpdate && (
                   <span className="text-xs text-gray-500">
                     • Actualizado: {lastUpdate.toLocaleTimeString()}
@@ -612,7 +647,7 @@ const RiveraTransportMapDemo = () => {
                 : 'bg-green-100 text-green-800 border border-green-300'
             }`}>
               <div className={`w-2 h-2 rounded-full ${error ? 'bg-red-500' : 'bg-green-500'} ${!error ? 'animate-pulse' : ''}`}></div>
-              <span>{error ? 'Sin conexión' : 'Conectado'}</span>
+              <span>{error ? 'Sin conexión' : 'Sistema Híbrido'}</span>
             </div>
           </div>
 
@@ -717,34 +752,36 @@ const RiveraTransportMapDemo = () => {
                 <div className="mt-3">
                   <div className="flex items-center justify-center space-x-2 text-xs text-gray-500">
                     <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
-                    <span>Actualizando cada 30 segundos</span>
+                    <span>Sistema híbrido - Actualiza cada 30s</span>
                   </div>
                 </div>
               )}
             </div>
           )}
 
-          {/* Panel de información de viaje seleccionado */}
+          {/* Panel de información de viaje seleccionado - CON SCROLL */}
           {selectedTrip && (
-            <div className="absolute top-24 left-8 z-30 bg-white rounded-2xl shadow-xl p-5 w-80 border-2 border-blue-200">
-              <div className="flex items-center justify-between mb-4">
+            <div className="absolute top-24 left-8 z-30 bg-white rounded-2xl shadow-xl border-2 border-blue-200 w-80 max-h-[calc(100vh-200px)]">
+              {/* Header fijo */}
+              <div className="flex items-center justify-between p-5 border-b border-gray-100 bg-white rounded-t-2xl sticky top-0 z-10">
                 <h3 className="text-lg font-bold text-gray-900">Información del Viaje</h3>
                 <button 
                   onClick={() => setSelectedTrip(null)}
-                  className="text-gray-400 hover:text-gray-600 transition-colors"
+                  className="text-gray-400 hover:text-gray-600 transition-colors w-6 h-6 flex items-center justify-center rounded-full hover:bg-gray-100"
                 >
                   ✕
                 </button>
               </div>
               
-              <div className="space-y-4">
+              {/* Contenido con scroll */}
+              <div className="overflow-y-auto max-h-[calc(100vh-280px)] p-5 space-y-4 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
                 {/* Conductor */}
                 <div className="flex items-center space-x-3">
-                  <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
+                  <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center flex-shrink-0">
                     <Users className="w-6 h-6 text-blue-600" />
                   </div>
-                  <div className="flex-1">
-                    <div className="text-sm font-semibold text-gray-900">
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-semibold text-gray-900 truncate">
                       {selectedTrip.tripInfo?.driver || 'No asignado'}
                     </div>
                     <div className="text-xs text-gray-500">Conductor asignado</div>
@@ -754,11 +791,11 @@ const RiveraTransportMapDemo = () => {
                 {/* Vehículo */}
                 {truckInfo && (
                   <div className="flex items-center space-x-3">
-                    <div className={`w-12 h-12 ${truckInfo.bgColor} rounded-xl flex items-center justify-center`}>
+                    <div className={`w-12 h-12 ${truckInfo.bgColor} rounded-xl flex items-center justify-center flex-shrink-0`}>
                       <span className="text-lg">{truckInfo.icon}</span>
                     </div>
-                    <div className="flex-1">
-                      <div className={`text-sm font-semibold ${truckInfo.color}`}>
+                    <div className="flex-1 min-w-0">
+                      <div className={`text-sm font-semibold ${truckInfo.color} truncate`}>
                         {truckInfo.display}
                       </div>
                       <div className="text-xs text-gray-500">Vehículo de transporte</div>
@@ -770,66 +807,124 @@ const RiveraTransportMapDemo = () => {
                 )}
                 
                 {/* Carga */}
-                <div className="flex items-center space-x-3">
-                  <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
+                <div className="flex items-start space-x-3">
+                  <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center flex-shrink-0">
                     <MapPin className="w-6 h-6 text-green-600" />
                   </div>
-                  <div className="flex-1">
-                    <div className="text-sm font-semibold text-gray-900">
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-semibold text-gray-900 break-words">
                       {selectedTrip.tripInfo?.cargo || 'Carga general'}
                     </div>
                     <div className="text-xs text-gray-500">Tipo de carga</div>
                   </div>
                 </div>
                 
-                {/* Progreso del viaje */}
-                {selectedTrip.tripInfo?.progress > 0 && (
+                {/* 🆕 PROGRESO HÍBRIDO MEJORADO */}
+                {selectedTrip.tripInfo?.progress >= 0 && (
                   <div className="bg-gray-50 rounded-xl p-3">
-                    <div className="text-sm font-medium text-gray-700 mb-2">Progreso del viaje:</div>
+                    <div className="text-sm font-medium text-gray-700 mb-2">
+                      <div className="flex items-center justify-between flex-wrap gap-1">
+                        <span className="text-xs">Progreso del viaje (Sistema Híbrido):</span>
+                        <span className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded-full flex-shrink-0">
+                          🧠 Auto + Manual
+                        </span>
+                      </div>
+                    </div>
                     <RealtimeProgressBar 
                       viajeId={selectedTrip.id}
                       initialProgress={selectedTrip.tripInfo.progress}
-                      status="en_curso"
+                      status={mapStatusToFrontend(selectedTrip.status)}
+                      enablePolling={!error} // Solo hacer polling si no hay error
                     />
+                    
+                    {/* Info adicional del progreso */}
+                    <div className="mt-2 text-xs text-gray-600">
+                      <div className="space-y-1">
+                        <div className="flex items-center space-x-1">
+                          <span>💡</span>
+                          <span>Cálculo automático por tiempo</span>
+                        </div>
+                        <div className="flex items-center space-x-1">
+                          <span>📍</span>
+                          <span>Checkpoints manuales disponibles</span>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 )}
                 
                 {/* Horarios */}
-                <div className="bg-gray-50 rounded-xl p-4 mt-4">
-                  <div className="flex items-center justify-between text-sm mb-2">
-                    <div className="flex items-center space-x-2">
-                      <Clock className="w-4 h-4 text-gray-400" />
-                      <span className="text-gray-600">Salida:</span>
+                <div className="bg-gray-50 rounded-xl p-4">
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between text-sm">
+                      <div className="flex items-center space-x-2 flex-shrink-0">
+                        <Clock className="w-4 h-4 text-gray-400" />
+                        <span className="text-gray-600">Salida:</span>
+                      </div>
+                      <span className="font-semibold text-gray-900 text-right">
+                        {selectedTrip.tripInfo?.departure || 'No programado'}
+                      </span>
                     </div>
-                    <span className="font-semibold text-gray-900">
-                      {selectedTrip.tripInfo?.departure || 'No programado'}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between text-sm">
-                    <div className="flex items-center space-x-2">
-                      <Clock className="w-4 h-4 text-gray-400" />
-                      <span className="text-gray-600">Llegada estimada:</span>
+                    <div className="flex items-center justify-between text-sm">
+                      <div className="flex items-center space-x-2 flex-shrink-0">
+                        <Clock className="w-4 h-4 text-gray-400" />
+                        <span className="text-gray-600">Llegada estimada:</span>
+                      </div>
+                      <span className="font-semibold text-gray-900 text-right">
+                        {selectedTrip.tripInfo?.arrival || 'No programado'}
+                      </span>
                     </div>
-                    <span className="font-semibold text-gray-900">
-                      {selectedTrip.tripInfo?.arrival || 'No programado'}
-                    </span>
                   </div>
                 </div>
                 
-                {/* Estado del viaje */}
+                {/* Estado del viaje mejorado */}
                 <div className="flex justify-center">
                   <div className={`inline-flex px-4 py-2 rounded-full text-sm font-medium ${
                     selectedTrip.status === 'active' || selectedTrip.status === 'in_progress' ? 'bg-green-100 text-green-800' :
                     selectedTrip.status === 'completed' ? 'bg-blue-100 text-blue-800' :
                     selectedTrip.status === 'cancelled' ? 'bg-red-100 text-red-800' :
+                    selectedTrip.status === 'delayed' ? 'bg-orange-100 text-orange-800' :
+                    selectedTrip.status === 'programado' ? 'bg-purple-100 text-purple-800' :
                     'bg-yellow-100 text-yellow-800'
                   }`}>
                     {selectedTrip.status === 'active' || selectedTrip.status === 'in_progress' ? '🟢 En progreso' :
                      selectedTrip.status === 'completed' ? '🔵 Completado' :
                      selectedTrip.status === 'cancelled' ? '🔴 Cancelado' :
-                     '🟡 Programado'}
+                     selectedTrip.status === 'delayed' ? '🟠 Retrasado' :
+                     selectedTrip.status === 'programado' ? '🟣 Programado' :
+                     '🟡 Pendiente'}
                   </div>
                 </div>
+                
+                {/* 🆕 Información del sistema híbrido */}
+                {!error && (
+                  <div className="bg-blue-50 rounded-lg p-3">
+                    <div className="text-xs font-medium text-blue-800 mb-2">
+                      🧠 Sistema Híbrido Activo
+                    </div>
+                    <div className="text-xs text-blue-700 space-y-1">
+                      <div className="flex items-center space-x-1">
+                        <span>•</span>
+                        <span>Auto-inicio a la hora programada</span>
+                      </div>
+                      <div className="flex items-center space-x-1">
+                        <span>•</span>
+                        <span>Progreso calculado por tiempo</span>
+                      </div>
+                      <div className="flex items-center space-x-1">
+                        <span>•</span>
+                        <span>Checkpoints manuales disponibles</span>
+                      </div>
+                      <div className="flex items-center space-x-1">
+                        <span>•</span>
+                        <span>Auto-completar inteligente</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
+                {/* Separador final para mejor scroll */}
+                <div className="h-4"></div>
               </div>
             </div>
           )}
@@ -850,7 +945,7 @@ const RiveraTransportMapDemo = () => {
             </button>
           </div>
 
-          {/* Leyenda */}
+          {/* Leyenda mejorada */}
           <div className="absolute bottom-8 right-8 z-30 bg-white rounded-2xl shadow-xl p-4 border-2 border-blue-100">
             <h4 className="text-sm font-bold text-gray-900 mb-3">Leyenda</h4>
             <div className="space-y-2">
@@ -866,8 +961,17 @@ const RiveraTransportMapDemo = () => {
                 <div className="w-4 h-4 bg-blue-500 rounded-full border-2 border-white shadow"></div>
                 <span className="text-xs text-gray-600">Rutas Programadas</span>
               </div>
+              
+              {/* 🆕 Información del sistema híbrido */}
+              <div className="mt-3 p-2 bg-blue-50 border border-blue-200 rounded">
+                <div className="text-xs text-blue-800 font-medium">🧠 Sistema Híbrido</div>
+                <div className="text-xs text-blue-600 mt-1">
+                  {error ? 'Modo demo - datos estáticos' : 'Tiempo + Checkpoints activo'}
+                </div>
+              </div>
+              
               {error && (
-                <div className="mt-3 p-2 bg-yellow-50 border border-yellow-200 rounded">
+                <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded">
                   <div className="text-xs text-yellow-800 font-medium">⚠️ Modo Demo</div>
                   <div className="text-xs text-yellow-600 mt-1">Usando datos de ejemplo</div>
                 </div>

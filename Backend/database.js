@@ -4,7 +4,7 @@ import mongoose from "mongoose";
 import {config} from "./src/config.js";
 
 // 🆕 IMPORTAR SERVICIO DE AUTO-ACTUALIZACIÓN
-import autoUpdateService from './src/services/services.js';
+import autoUpdateService from './src/services/autoUpdateService.js';
 
 const URI = config.db.URI;
 
