@@ -1,52 +1,44 @@
+//  Backend/src/Models/Viajes.js
+// MODELO OPTIMIZADO CON AUTO-POBLACIÓN Y CAMPOS INTELIGENTES
+
 import mongoose from 'mongoose';
 const { Schema, model } = mongoose;
 
 const viajeSchema = new Schema({
+  // 🔗 REFERENCIAS A OTRAS COLECCIONES (solo IDs)
   quoteId: {
     type: Schema.Types.ObjectId,
-    ref: 'Cotizaciones',
+    ref: 'Cotizaciones', // Se auto-puebla desde la cotización
     required: true
-  },
-  
-  tripDescription: {
-    type: String,
-    required: true,
-    trim: true
   },
   
   truckId: {
     type: Schema.Types.ObjectId,
-    ref: 'Camiones',
+    ref: 'Camiones', // Se auto-puebla desde camiones
     required: true
   },
   
-  // ⏰ HORARIOS MEJORADOS PARA AUTO-ACTUALIZACIÓN
-  departureTime: {
-    type: Date,
+  conductorId: {
+    type: Schema.Types.ObjectId,
+    ref: 'Motorista', // Solo ID, datos se pueblan automáticamente
     required: true
   },
   
-  arrivalTime: {
-    type: Date,
-    required: true
+  // 📝 CAMPOS QUE SE AUTO-COMPLETAN DESDE LA COTIZACIÓN
+  tripDescription: {
+    type: String,
+    required: true,
+    trim: true
+    // Este campo se llena automáticamente desde quoteDescription
   },
   
-  // 🆕 TIEMPOS ADICIONALES PARA CONTROL
-  horarios: {
-    salidaReal: Date,           // Cuando realmente salió
-    llegadaEstimada: Date,      // Estimación actualizada en tiempo real
-    llegadaReal: Date,          // Cuando realmente llegó
-    ultimaActualizacion: {
-      type: Date,
-      default: Date.now
-    }
-  },
-  
+  // 🗺️ RUTA - SE AUTO-COMPLETA DESDE LA COTIZACIÓN
   ruta: {
     origen: {
       nombre: {
         type: String,
         required: true
+        // Auto-completado desde travelLocations
       },
       coordenadas: {
         lat: {
@@ -61,8 +53,8 @@ const viajeSchema = new Schema({
           min: -180,
           max: 180
         }
+        // Estas coordenadas se pueden obtener de una API de geocoding
       },
-      // 🆕 TIPO DE UBICACIÓN PARA FRONTEND
       tipo: {
         type: String,
         enum: ['terminal', 'ciudad', 'puerto', 'bodega', 'cliente'],
@@ -73,6 +65,7 @@ const viajeSchema = new Schema({
       nombre: {
         type: String,
         required: true
+        // Auto-completado desde travelLocations
       },
       coordenadas: {
         lat: {
@@ -88,7 +81,6 @@ const viajeSchema = new Schema({
           max: 180
         }
       },
-      // 🆕 TIPO DE UBICACIÓN PARA FRONTEND
       tipo: {
         type: String,
         enum: ['terminal', 'ciudad', 'puerto', 'bodega', 'cliente'],
@@ -100,40 +92,127 @@ const viajeSchema = new Schema({
     distanciaTotal: {
       type: Number,
       min: 0
+      // Se calcula automáticamente con API de mapas
     },
     tiempoEstimado: {
       type: Number, // en minutos
       min: 0
+      // Se calcula automáticamente basado en distancia
     },
     
-    // 🛣️ RUTA DETALLADA OPCIONAL (para GPS avanzado)
     rutaOptimizada: {
       type: [[Number]],
-      select: false // No incluir por defecto en queries
+      select: false
     }
   },
 
-  // En tu ViajesModel, agregar dentro de tracking:
-tracking: {
-  // ... campos existentes ...
+  // ⏰ HORARIOS - ALGUNOS AUTO-CALCULADOS
+  departureTime: {
+    type: Date,
+    required: true
+    // Se puede auto-sugerir basado en deliveryDate de la cotización
+  },
   
-  checkpoints: [{
-    tipo: String,           // 'inicio_automatico', 'salida_real', 'ruta', etc.
-    progreso: Number,       // 0-100
-    descripcion: String,    // Descripción legible
-    timestamp: Date,        // Cuándo ocurrió
-    reportadoPor: {         // 'automatico', 'manual', 'gps'
-      type: String,
-      default: 'manual'
-    },
-    ubicacion: {            // Opcional
-      lat: Number,
-      lng: Number
+  arrivalTime: {
+    type: Date,
+    required: true
+    // Se calcula automáticamente: departureTime + tiempoEstimado
+  },
+  
+  horarios: {
+    salidaReal: Date,
+    llegadaEstimada: Date,
+    llegadaReal: Date,
+    ultimaActualizacion: {
+      type: Date,
+      default: Date.now
     }
-  }]
-},
+  },
   
-  // 📊 ESTADO CON AUTO-ACTUALIZACIÓN MEJORADO
+  // 📦 CARGA - SIMPLIFICADA PERO FLEXIBLE
+  carga: {
+    categoria: {
+      type: String,
+      enum: [
+        'alimentos_perecederos', 'alimentos_no_perecederos', 'bebidas',
+        'materiales_construccion', 'textiles', 'electronicos', 'medicamentos',
+        'maquinaria', 'vehiculos', 'quimicos', 'combustibles', 'papel_carton',
+        'muebles', 'productos_agricolas', 'metales', 'plasticos',
+        'vidrio_ceramica', 'productos_limpieza', 'cosmeticos', 'juguetes', 'otros'
+      ],
+      required: true,
+      default: 'otros'
+    },
+    
+    subcategoria: {
+      type: String,
+      trim: true,
+      maxlength: 100
+    },
+    
+    descripcion: {
+      type: String,
+      required: true,
+      trim: true,
+      maxlength: 500
+    },
+    
+    // ⚖️ INFORMACIÓN BÁSICA DE PESO Y VOLUMEN
+    peso: {
+      valor: {
+        type: Number,
+        min: 0,
+        required: true
+      },
+      unidad: {
+        type: String,
+        enum: ['kg', 'ton', 'lb'],
+        default: 'kg'
+      }
+    },
+    
+    volumen: {
+      valor: Number,
+      unidad: {
+        type: String,
+        enum: ['m3', 'ft3'],
+        default: 'm3'
+      }
+    },
+    
+    // 🚨 CLASIFICACIÓN DE RIESGO SIMPLIFICADA
+    clasificacionRiesgo: {
+      type: String,
+      enum: ['normal', 'fragil', 'peligroso', 'perecedero', 'biologico'],
+      default: 'normal'
+    },
+    
+    // 🌡️ CONDICIONES ESPECIALES (SOLO LAS IMPORTANTES)
+    condicionesEspeciales: {
+      temperaturaMinima: Number,
+      temperaturaMaxima: Number,
+      requiereRefrigeracion: {
+        type: Boolean,
+        default: false
+      },
+      esFragil: {
+        type: Boolean,
+        default: false
+      }
+    },
+    
+    // 💰 VALOR DECLARADO
+    valorDeclarado: {
+      monto: Number,
+      moneda: {
+        type: String,
+        enum: ['USD', 'SVC'],
+        default: 'USD'
+      }
+    }
+  },
+  
+  // 📊 ESTADO CON AUTO-ACTUALIZACIÓN
   estado: {
     actual: {
       type: String,
@@ -144,14 +223,10 @@ tracking: {
       type: Date,
       default: Date.now
     },
-    
-    // 🔄 CONFIGURACIÓN PARA AUTO-UPDATE
     autoActualizar: {
       type: Boolean,
       default: true
     },
-    
-    // 📋 HISTORIAL DE CAMBIOS
     historial: [{
       estadoAnterior: String,
       estadoNuevo: String,
@@ -159,11 +234,11 @@ tracking: {
         type: Date,
         default: Date.now
       },
-      motivo: String // 'automatico', 'manual', 'gps', etc.
+      motivo: String
     }]
   },
   
-  // 📍 TRACKING MEJORADO
+  // 📍 TRACKING HÍBRIDO
   tracking: {
     ubicacionActual: {
       lat: Number,
@@ -175,15 +250,9 @@ tracking: {
       velocidad: {
         type: Number,
         min: 0
-      },
-      direccion: {
-        type: Number,
-        min: 0,
-        max: 360
       }
     },
     
-    // 📈 PROGRESO CALCULADO AUTOMÁTICAMENTE
     progreso: {
       porcentaje: {
         type: Number,
@@ -201,7 +270,22 @@ tracking: {
       }
     },
     
-    // 🕒 HISTORIAL COMPACTO DE UBICACIONES
+    // 📍 CHECKPOINTS HÍBRIDOS
+    checkpoints: [{
+      tipo: String,
+      progreso: Number,
+      descripcion: String,
+      timestamp: Date,
+      reportadoPor: {
+        type: String,
+        default: 'manual'
+      },
+      ubicacion: {
+        lat: Number,
+        lng: Number
+      }
+    }],
+    
     historialUbicaciones: {
       type: [{
         lat: Number,
@@ -209,327 +293,27 @@ tracking: {
         timestamp: Date,
         velocidad: Number
       }],
-      select: false, // No incluir por defecto
+      select: false,
       validate: {
         validator: function(array) {
-          return array.length <= 100; // Máximo 100 puntos
+          return array.length <= 100;
         },
         message: 'Máximo 100 puntos de historial permitidos'
       }
     }
   },
   
-  // 📦 CARGA MEJORADA
-  // 📦 ESQUEMA DE CARGA MEJORADO PARA TU MODELO DE VIAJES
-
-// Reemplaza tu sección "carga" actual con esto:
-carga: {
-  // 🏷️ CATEGORÍA PRINCIPAL
-  categoria: {
-    type: String,
-    enum: [
-      'alimentos_perecederos',     // Frutas, verduras, carnes, lácteos
-      'alimentos_no_perecederos',  // Granos, enlatados, secos
-      'bebidas',                   // Agua, refrescos, alcohol
-      'materiales_construccion',   // Cemento, hierro, madera
-      'textiles',                  // Ropa, telas, zapatos
-      'electronicos',              // Computadoras, celulares, electrodomésticos
-      'medicamentos',              // Farmacéuticos, equipos médicos
-      'maquinaria',               // Equipos industriales, herramientas
-      'vehiculos',                // Carros, motos, repuestos
-      'quimicos',                 // Productos químicos, pinturas
-      'combustibles',             // Gasolina, diesel, gas
-      'papel_carton',             // Documentos, empaques, libros
-      'muebles',                  // Escritorios, sillas, electrodomésticos
-      'productos_agricolas',      // Semillas, fertilizantes, pesticidas
-      'metales',                  // Acero, aluminio, cobre
-      'plasticos',                // Productos plásticos, empaques
-      'vidrio_ceramica',          // Botellas, vajillas, ventanas
-      'productos_limpieza',       // Detergentes, desinfectantes
-      'cosmeticos',               // Maquillaje, perfumes, cuidado personal
-      'juguetes',                 // Juguetes, artículos deportivos
-      'otros'                     // Para casos especiales
-    ],
-    required: true,
-    default: 'otros'
-  },
-
-  // 🎯 SUBCATEGORÍA ESPECÍFICA (permite más detalle)
-  subcategoria: {
-    type: String,
-    trim: true,
-    maxlength: 100
-  },
-
-  // 📝 DESCRIPCIÓN DETALLADA
-  descripcion: {
-    type: String,
-    required: true,
-    trim: true,
-    maxlength: 500
-  },
-
-  // ⚖️ INFORMACIÓN DE PESO
-  peso: {
-    valor: {
-      type: Number,
-      min: 0,
-      required: true
-    },
-    unidad: {
-      type: String,
-      enum: ['kg', 'ton', 'lb', 'oz'],
-      default: 'kg'
-    }
-  },
-
-  // 📐 INFORMACIÓN DE VOLUMEN
-  volumen: {
-    valor: {
-      type: Number,
-      min: 0
-    },
-    unidad: {
-      type: String,
-      enum: ['m3', 'ft3', 'l', 'gal'],
-      default: 'm3'
-    }
-  },
-
-  // 🚨 CLASIFICACIÓN DE RIESGO
-  clasificacionRiesgo: {
-    type: String,
-    enum: [
-      'normal',           // Sin riesgos especiales
-      'fragil',          // Requiere cuidado especial
-      'peligroso',       // Materiales peligrosos (químicos, explosivos)
-      'perecedero',      // Se daña con el tiempo
-      'refrigerado',     // Requiere temperatura controlada
-      'congelado',       // Requiere congelación
-      'inflamable',      // Riesgo de incendio
-      'toxico',          // Sustancias tóxicas
-      'corrosivo',       // Sustancias corrosivas
-      'radioactivo',     // Materiales radioactivos
-      'biologico'        // Materiales biológicos
-    ],
-    default: 'normal'
-  },
-
-  // 🌡️ CONDICIONES ESPECIALES DE TRANSPORTE
-  condicionesEspeciales: {
-    temperaturaMinima: Number,     // °C
-    temperaturaMaxima: Number,     // °C
-    humedadMaxima: Number,         // %
-    requiereVentilacion: {
-      type: Boolean,
-      default: false
-    },
-    evitarVibración: {
-      type: Boolean,
-      default: false
-    },
-    posicionVertical: {
-      type: Boolean,
-      default: false
-    },
-    protegerDeLuz: {
-      type: Boolean,
-      default: false
-    }
-  },
-
-  // 💰 INFORMACIÓN ECONÓMICA
-  valor: {
-    montoDeclarado: Number,        // Valor de la mercancía
-    moneda: {
-      type: String,
-      enum: ['USD', 'SVC', 'EUR'],
-      default: 'USD'
-    },
-    asegurado: {
-      type: Boolean,
-      default: false
-    },
-    numeroPoliza: String           // Si está asegurado
-  },
-
-  // 📦 INFORMACIÓN DE EMPAQUE
-  empaque: {
-    tipo: {
-      type: String,
-      enum: [
-        'caja_carton',
-        'caja_madera', 
-        'saco',
-        'contenedor',
-        'pallet',
-        'bolsa_plastico',
-        'tanque',
-        'barril',
-        'otro'
-      ],
-      default: 'caja_carton'
-    },
-    cantidad: {
-      type: Number,
-      min: 1,
-      default: 1
-    },
-    dimensiones: {
-      largo: Number,    // cm
-      ancho: Number,    // cm
-      alto: Number      // cm
-    }
-  },
-
-  // 📋 DOCUMENTACIÓN REQUERIDA
-  documentacion: {
-    facturaComercial: {
-      type: Boolean,
-      default: false
-    },
-    certificadoOrigen: {
-      type: Boolean,
-      default: false
-    },
-    permisoSanitario: {
-      type: Boolean,
-      default: false
-    },
-    licenciaImportacion: {
-      type: Boolean,
-      default: false
-    },
-    otros: [String]  // Array de otros documentos
-  },
-
-  // 🏷️ CÓDIGOS Y CLASIFICACIONES
-  codigos: {
-    codigoArancelario: String,     // Para aduanas
-    codigoONU: String,            // Para mercancías peligrosas
-    codigoInterno: String,        // Código interno de la empresa
-    numeroLote: String,           // Para trazabilidad
-    fechaVencimiento: Date        // Para productos perecederos
-  },
-
-  // ⚠️ INSTRUCCIONES ESPECIALES
-  instruccionesEspeciales: {
-    type: String,
-    maxlength: 1000
-  },
-
-  // 📊 MÉTRICAS CALCULADAS (virtuales o calculadas)
-  densidad: {
-    type: Number,
-    // Se calcula como peso/volumen
-  },
-
-  // 🚛 REQUISITOS DE VEHÍCULO
-  requisitoVehiculo: {
-    tipoCarroceria: {
-      type: String,
-      enum: [
-        'carga_seca',
-        'refrigerado',
-        'tanque',
-        'plataforma',
-        'tolva',
-        'contenedor'
-      ]
-    },
-    capacidadMinima: Number,      // Toneladas
-    equipoEspecial: [String]      // ['grúa', 'rampa', 'bomba']
-  }
-},
-
-// 📊 EJEMPLOS DE DATOS REALISTAS:
-
-/* 
-🍎 EJEMPLO 1: Alimentos perecederos
-{
-  categoria: 'alimentos_perecederos',
-  subcategoria: 'frutas frescas',
-  descripcion: 'Manzanas rojas gala para exportación',
-  peso: { valor: 1500, unidad: 'kg' },
-  volumen: { valor: 3.2, unidad: 'm3' },
-  clasificacionRiesgo: 'perecedero',
-  condicionesEspeciales: {
-    temperaturaMinima: 2,
-    temperaturaMaxima: 8,
-    requiereVentilacion: true
-  },
-  valor: {
-    montoDeclarado: 2500,
-    moneda: 'USD',
-    asegurado: true
-  },
-  empaque: {
-    tipo: 'caja_carton',
-    cantidad: 150
-  },
-  codigos: {
-    fechaVencimiento: new Date('2025-09-15')
-  }
-}
-
-💊 EJEMPLO 2: Medicamentos
-{
-  categoria: 'medicamentos',
-  subcategoria: 'antibióticos',
-  descripcion: 'Amoxicilina 500mg - 10,000 tabletas',
-  peso: { valor: 25, unidad: 'kg' },
-  clasificacionRiesgo: 'normal',
-  condicionesEspeciales: {
-    temperaturaMaxima: 25,
-    protegerDeLuz: true
-  },
-  documentacion: {
-    permisoSanitario: true,
-    licenciaImportacion: true
-  },
-  valor: {
-    montoDeclarado: 15000,
-    asegurado: true,
-    numeroPoliza: 'POL-2025-001'
-  }
-}
-
-🏗️ EJEMPLO 3: Materiales de construcción
-{
-  categoria: 'materiales_construccion',
-  subcategoria: 'cemento',
-  descripcion: 'Cemento Portland gris - 200 sacos de 50kg',
-  peso: { valor: 10000, unidad: 'kg' },
-  clasificacionRiesgo: 'normal',
-  empaque: {
-    tipo: 'saco',
-    cantidad: 200
-  },
-  requisitoVehiculo: {
-    tipoCarroceria: 'carga_seca',
-    capacidadMinima: 12
-  }
-}
-*/
-  
-  // 👤 CONDUCTOR
-  conductor: {
-    id: {
-      type: Schema.Types.ObjectId,
-      ref: 'Motorista',
-      required: true
-    },
-    nombre: String,    // Backup si no se puede hacer populate
-    telefono: String   // Backup si no se puede hacer populate
-  },
-  
-  // 💰 INFORMACIÓN FINANCIERA OPCIONAL
+  // 💰 COSTOS CALCULADOS
   costos: {
     combustible: {
       type: Number,
       default: 0
     },
     peajes: {
+      type: Number,
+      default: 0
+    },
+    conductor: {
       type: Number,
       default: 0
     },
@@ -543,11 +327,11 @@ carga: {
     }
   },
   
-  // 🚨 ALERTAS Y NOTIFICACIONES
+  // 🚨 ALERTAS SIMPLIFICADAS
   alertas: [{
     tipo: {
       type: String,
-      enum: ['retraso', 'desviacion', 'emergencia', 'mantenimiento', 'llegada', 'salida']
+      enum: ['retraso', 'emergencia', 'llegada', 'salida', 'urgencia']
     },
     mensaje: String,
     fecha: {
@@ -565,11 +349,11 @@ carga: {
     }
   }],
   
-  // 🌡️ CONDICIONES ESPECIALES
+  // 🌡️ CONDICIONES DEL VIAJE
   condiciones: {
-    clima: String,              // 'soleado', 'lluvia', 'tormenta'
-    trafico: String,            // 'normal', 'pesado', 'congestion'
-    carretera: String,          // 'buena', 'regular', 'mala'
+    clima: String,
+    trafico: String,
+    carretera: String,
     observaciones: String
   }
   
@@ -579,32 +363,70 @@ carga: {
   collection: "Viajes"
 });
 
-// 🔄 MIDDLEWARE PRE-SAVE PARA AUTO-ACTUALIZACIÓN
-viajeSchema.pre('save', function(next) {
+// 🔄 MIDDLEWARE PRE-SAVE MEJORADO
+viajeSchema.pre('save', async function(next) {
   const ahora = new Date();
   
-  // Solo auto-actualizar si está habilitado
+  // 🔄 AUTO-COMPLETAR DATOS DESDE LA COTIZACIÓN (solo en creación)
+  if (this.isNew && this.quoteId) {
+    try {
+      const cotizacion = await mongoose.model('Cotizaciones').findById(this.quoteId);
+      if (cotizacion) {
+        // Auto-completar descripción si no existe
+        if (!this.tripDescription && cotizacion.quoteDescription) {
+          this.tripDescription = cotizacion.quoteDescription;
+        }
+        
+        // Auto-completar ubicaciones si no existen
+        if (cotizacion.travelLocations && !this.ruta.origen.nombre) {
+          const locations = cotizacion.travelLocations.split(',').map(l => l.trim());
+          if (locations.length >= 2) {
+            this.ruta.origen.nombre = locations[0];
+            this.ruta.destino.nombre = locations[1];
+          }
+        }
+        
+        // Auto-sugerir fecha de salida basada en deliveryDate
+        if (!this.departureTime && cotizacion.deliveryDate) {
+          // Sugerir salida 1 día antes de la entrega
+          this.departureTime = new Date(cotizacion.deliveryDate.getTime() - 24 * 60 * 60 * 1000);
+        }
+      }
+    } catch (error) {
+      console.log('No se pudo auto-completar desde cotización:', error.message);
+    }
+  }
+  
+  // 🕐 AUTO-CALCULAR HORA DE LLEGADA
+  if (this.departureTime && this.ruta.tiempoEstimado && !this.arrivalTime) {
+    this.arrivalTime = new Date(this.departureTime.getTime() + (this.ruta.tiempoEstimado * 60 * 1000));
+  }
+  
+  // 💰 AUTO-CALCULAR COSTO TOTAL
+  this.costos.total = (this.costos.combustible || 0) + 
+                      (this.costos.peajes || 0) + 
+                      (this.costos.conductor || 0) + 
+                      (this.costos.otros || 0);
+  
+  // 🔄 LÓGICA DE AUTO-ACTUALIZACIÓN DE ESTADO
   if (this.estado.autoActualizar) {
     const estadoAnterior = this.estado.actual;
     
-    // 🚀 AUTO-INICIAR VIAJES (si ya pasó la hora de salida)
+    // Auto-iniciar viajes
     if (this.estado.actual === 'pendiente' && this.departureTime <= ahora) {
       this.estado.actual = 'en_curso';
       this.estado.fechaCambio = ahora;
       this.horarios.salidaReal = this.horarios.salidaReal || ahora;
       
-      // Agregar al historial
       this.estado.historial.push({
         estadoAnterior: 'pendiente',
         estadoNuevo: 'en_curso',
         fecha: ahora,
         motivo: 'automatico'
       });
-      
-      console.log(`🚀 Viaje ${this._id} iniciado automáticamente`);
     }
     
-    // ✅ AUTO-COMPLETAR VIAJES (si ya pasó la hora de llegada Y progreso >= 95%)
+    // Auto-completar viajes
     if (this.estado.actual === 'en_curso' && 
         this.arrivalTime <= ahora && 
         this.tracking.progreso.porcentaje >= 95) {
@@ -614,157 +436,78 @@ viajeSchema.pre('save', function(next) {
       this.horarios.llegadaReal = ahora;
       this.tracking.progreso.porcentaje = 100;
       
-      // Agregar al historial
       this.estado.historial.push({
         estadoAnterior: 'en_curso',
         estadoNuevo: 'completado',
         fecha: ahora,
         motivo: 'automatico'
       });
-      
-      console.log(`✅ Viaje ${this._id} completado automáticamente`);
     }
     
-    // ⚠️ AUTO-MARCAR RETRASOS (si pasó 30 min de la hora de llegada y progreso < 95%)
-    if (this.estado.actual === 'en_curso' && 
-        this.arrivalTime <= new Date(ahora.getTime() - 30 * 60000) && // 30 min de gracia
-        this.tracking.progreso.porcentaje < 95) {
+    // Auto-marcar retrasos (con gracia proporcional)
+    if (this.estado.actual === 'en_curso') {
+      const tiempoTotal = this.arrivalTime - this.departureTime;
+      const tiempoTotalMinutos = tiempoTotal / (1000 * 60);
       
-      this.estado.actual = 'retrasado';
-      this.estado.fechaCambio = ahora;
+      let tiempoGracia;
+      if (tiempoTotalMinutos <= 10) {
+        tiempoGracia = 2 * 60000; // 2 minutos
+      } else if (tiempoTotalMinutos <= 30) {
+        tiempoGracia = 5 * 60000; // 5 minutos
+      } else {
+        tiempoGracia = 15 * 60000; // 15 minutos
+      }
       
-      // Agregar alerta de retraso
-      this.alertas.push({
-        tipo: 'retraso',
-        mensaje: `Viaje retrasado - Programado para ${this.arrivalTime.toLocaleString()}`,
-        fecha: ahora,
-        prioridad: 'alta'
-      });
+      const tiempoLimiteRetraso = new Date(this.arrivalTime.getTime() + tiempoGracia);
       
-      // Agregar al historial
-      this.estado.historial.push({
-        estadoAnterior: 'en_curso',
-        estadoNuevo: 'retrasado',
-        fecha: ahora,
-        motivo: 'automatico'
-      });
-      
-      console.log(`⚠️ Viaje ${this._id} marcado como retrasado`);
+      if (ahora >= tiempoLimiteRetraso && this.tracking.progreso.porcentaje < 90) {
+        this.estado.actual = 'retrasado';
+        this.estado.fechaCambio = ahora;
+        
+        this.alertas.push({
+          tipo: 'retraso',
+          mensaje: `Viaje retrasado - Programado para ${this.arrivalTime.toLocaleString()}`,
+          fecha: ahora,
+          prioridad: 'alta'
+        });
+        
+        this.estado.historial.push({
+          estadoAnterior: 'en_curso',
+          estadoNuevo: 'retrasado',
+          fecha: ahora,
+          motivo: 'automatico'
+        });
+      }
     }
   }
   
-  // 🕐 Actualizar timestamp de horarios
   this.horarios.ultimaActualizacion = ahora;
-  
   next();
 });
 
 // 📊 MÉTODOS VIRTUALES
 viajeSchema.virtual('duracionProgramada').get(function() {
-  return Math.floor((this.arrivalTime - this.departureTime) / (1000 * 60)); // en minutos
+  return Math.floor((this.arrivalTime - this.departureTime) / (1000 * 60));
 });
 
-viajeSchema.virtual('duracionReal').get(function() {
-  if (this.horarios.salidaReal && this.horarios.llegadaReal) {
-    return Math.floor((this.horarios.llegadaReal - this.horarios.salidaReal) / (1000 * 60));
-  }
-  return null;
-});
-
-viajeSchema.virtual('retrasoEnMinutos').get(function() {
-  if (this.horarios.llegadaReal && this.arrivalTime) {
-    return Math.floor((this.horarios.llegadaReal - this.arrivalTime) / (1000 * 60));
-  }
-  return null;
-});
-
-viajeSchema.virtual('estadoColor').get(function() {
-  const colores = {
-    'pendiente': 'yellow',
-    'en_curso': 'blue', 
-    'completado': 'green',
-    'retrasado': 'orange',
-    'cancelado': 'red'
-  };
-  return colores[this.estado.actual] || 'gray';
-});
-
-// 🔍 ÍNDICES PARA PERFORMANCE
+// 🔍 ÍNDICES OPTIMIZADOS
 viajeSchema.index({ 'estado.actual': 1 });
 viajeSchema.index({ departureTime: 1 });
-viajeSchema.index({ arrivalTime: 1 });
-viajeSchema.index({ 'ruta.origen.nombre': 1 });
-viajeSchema.index({ 'ruta.destino.nombre': 1 });
-viajeSchema.index({ 'tracking.ubicacionActual.timestamp': 1 });
-viajeSchema.index({ createdAt: 1 });
+viajeSchema.index({ quoteId: 1 });
+viajeSchema.index({ truckId: 1 });
+viajeSchema.index({ conductorId: 1 });
 
-// 📱 MÉTODO ESTÁTICO PARA DATOS DEL MAPA
+// 📱 MÉTODO ESTÁTICO MEJORADO PARA DATOS DEL MAPA
 viajeSchema.statics.getMapData = async function() {
   return this.find({ 
     'estado.actual': { $in: ['pendiente', 'en_curso', 'retrasado', 'completado'] } 
   })
-  .populate('truckId', 'brand model licensePlate name marca modelo placa nombre')
-  .populate('conductor.id', 'nombre telefono')
-  .select('-tracking.historialUbicaciones -ruta.rutaOptimizada') // Excluir datos pesados
+  .populate('truckId', 'marca modelo placa nombre')
+  .populate('conductorId', 'nombre telefono')
+  .populate('quoteId', 'quoteDescription price status')
+  .select('-tracking.historialUbicaciones -ruta.rutaOptimizada')
   .sort({ departureTime: 1 })
   .lean();
-};
-
-// 🔄 MÉTODO PARA ACTUALIZAR PROGRESO
-viajeSchema.methods.actualizarProgreso = function() {
-  if (this.tracking.calculoAutomatico && 
-      this.tracking.ubicacionActual.lat && 
-      this.tracking.ubicacionActual.lng) {
-    
-    const ahora = new Date();
-    const tiempoTranscurrido = ahora - (this.horarios.salidaReal || this.departureTime);
-    const tiempoTotal = this.arrivalTime - this.departureTime;
-    
-    // Calcular progreso basado en tiempo (simplificado)
-    let progresoTemporal = Math.min(95, (tiempoTranscurrido / tiempoTotal) * 100);
-    
-    // Asegurar que no retroceda
-    this.tracking.progreso.porcentaje = Math.max(
-      this.tracking.progreso.porcentaje, 
-      Math.max(0, progresoTemporal)
-    );
-    
-    this.tracking.progreso.ultimaActualizacion = ahora;
-    
-    console.log(`📈 Progreso actualizado para viaje ${this._id}: ${this.tracking.progreso.porcentaje}%`);
-  }
-};
-
-// 📍 MÉTODO PARA AGREGAR UBICACIÓN AL HISTORIAL
-viajeSchema.methods.agregarUbicacion = function(lat, lng, velocidad = 0) {
-  // Agregar ubicación actual
-  this.tracking.ubicacionActual = {
-    lat,
-    lng,
-    timestamp: new Date(),
-    velocidad,
-    direccion: this.tracking.ubicacionActual.direccion || 0
-  };
-  
-  // Agregar al historial (mantener solo últimas 50 ubicaciones)
-  if (!this.tracking.historialUbicaciones) {
-    this.tracking.historialUbicaciones = [];
-  }
-  
-  this.tracking.historialUbicaciones.push({
-    lat,
-    lng,
-    timestamp: new Date(),
-    velocidad
-  });
-  
-  // Mantener solo las últimas 50 ubicaciones
-  if (this.tracking.historialUbicaciones.length > 50) {
-    this.tracking.historialUbicaciones = this.tracking.historialUbicaciones.slice(-50);
-  }
-  
-  // Actualizar progreso automáticamente
-  this.actualizarProgreso();
 };
 
 export default model("Viajes", viajeSchema);
