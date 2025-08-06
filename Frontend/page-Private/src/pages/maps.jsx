@@ -1,3 +1,6 @@
+// 📁 Frontend/src/components/RiveraTransportMapDemo.jsx
+// VERSIÓN COMPLETA CORREGIDA - CON MANEJO CORRECTO DE TIMEZONE
+
 import React, { useState, useEffect, useRef } from 'react';
 import { Truck, TrendingUp, Plus, Minus, Clock, MapPin, Users, Calendar, RefreshCw, Monitor, BarChart3 } from 'lucide-react';
 
@@ -22,6 +25,41 @@ const RiveraTransportMapDemo = () => {
   const mapRef = useRef(null);
   const mapInstanceRef = useRef(null);
   const refreshIntervalRef = useRef(null);
+
+  // 🕐 NUEVA FUNCIÓN: Formatear hora correcta del backend
+  const formatBackendTime = (isoString, format = 'time') => {
+    if (!isoString) return 'No programado';
+    
+    try {
+      const date = new Date(isoString);
+      const options = {
+        timeZone: 'America/El_Salvador', // 🇸🇻 Zona horaria de El Salvador
+        hour12: true
+      };
+      
+      if (format === 'time') {
+        options.hour = '2-digit';
+        options.minute = '2-digit';
+        return date.toLocaleTimeString('es-SV', options);
+      } else if (format === 'datetime') {
+        options.year = 'numeric';
+        options.month = 'short';
+        options.day = 'numeric';
+        options.hour = '2-digit';
+        options.minute = '2-digit';
+        return date.toLocaleString('es-SV', options);
+      } else if (format === 'short') {
+        options.hour = 'numeric';
+        options.minute = '2-digit';
+        return date.toLocaleTimeString('es-SV', options);
+      }
+      
+      return date.toLocaleTimeString('es-SV', options);
+    } catch (error) {
+      console.error('Error formateando fecha:', error);
+      return 'Hora inválida';
+    }
+  };
 
   // 🔄 FUNCIÓN MEJORADA PARA OBTENER DATOS DEL BACKEND
   const fetchMapData = async (isAutoRefresh = false) => {
@@ -102,8 +140,8 @@ const RiveraTransportMapDemo = () => {
                 driver: "Carlos Pérez",
                 truck: "Volvo FH16 (ABC-123)",
                 cargo: "Materiales de construcción",
-                departure: "08:00 AM",
-                arrival: "2:00 PM",
+                departure: "2025-08-05T20:00:00.000Z", // 🔧 Formato correcto (2:00 PM El Salvador)
+                arrival: "2025-08-06T02:00:00.000Z",   // 🔧 Formato correcto (8:00 PM El Salvador)
                 progress: 65,
                 currentLocation: "En ruta - 65% completado"
               },
@@ -600,7 +638,7 @@ const RiveraTransportMapDemo = () => {
                 <p className="text-sm text-gray-600">Monitoreo híbrido en tiempo real</p>
                 {lastUpdate && (
                   <span className="text-xs text-gray-500">
-                    • Actualizado: {lastUpdate.toLocaleTimeString()}
+                    • Actualizado: {formatBackendTime(lastUpdate.toISOString(), 'short')}
                   </span>
                 )}
               </div>
@@ -759,7 +797,7 @@ const RiveraTransportMapDemo = () => {
             </div>
           )}
 
-          {/* Panel de información de viaje seleccionado - CON SCROLL */}
+          {/* Panel de información de viaje seleccionado - CON HORARIO CORREGIDO */}
           {selectedTrip && (
             <div className="absolute top-24 left-8 z-30 bg-white rounded-2xl shadow-xl border-2 border-blue-200 w-80 max-h-[calc(100vh-200px)]">
               {/* Header fijo */}
@@ -853,7 +891,7 @@ const RiveraTransportMapDemo = () => {
                   </div>
                 )}
                 
-                {/* Horarios */}
+                {/* 🕐 HORARIOS CORREGIDOS - AQUÍ ESTÁ EL FIX PRINCIPAL */}
                 <div className="bg-gray-50 rounded-xl p-4">
                   <div className="space-y-3">
                     <div className="flex items-center justify-between text-sm">
@@ -862,7 +900,7 @@ const RiveraTransportMapDemo = () => {
                         <span className="text-gray-600">Salida:</span>
                       </div>
                       <span className="font-semibold text-gray-900 text-right">
-                        {selectedTrip.tripInfo?.departure || 'No programado'}
+                        {formatBackendTime(selectedTrip.tripInfo?.departure)}
                       </span>
                     </div>
                     <div className="flex items-center justify-between text-sm">
@@ -871,8 +909,15 @@ const RiveraTransportMapDemo = () => {
                         <span className="text-gray-600">Llegada estimada:</span>
                       </div>
                       <span className="font-semibold text-gray-900 text-right">
-                        {selectedTrip.tripInfo?.arrival || 'No programado'}
+                        {formatBackendTime(selectedTrip.tripInfo?.arrival)}
                       </span>
+                    </div>
+                    
+                    {/* 🆕 Información adicional de timezone */}
+                    <div className="pt-2 border-t border-gray-200">
+                      <div className="text-xs text-gray-500 text-center">
+                        🇸🇻 Horario de El Salvador (UTC-6)
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -923,6 +968,20 @@ const RiveraTransportMapDemo = () => {
                   </div>
                 )}
                 
+                {/* 🆕 Debug de horarios (solo en desarrollo) */}
+                {process.env.NODE_ENV === 'development' && selectedTrip.tripInfo?.departure && (
+                  <div className="bg-yellow-50 rounded-lg p-3 border border-yellow-200">
+                    <div className="text-xs font-medium text-yellow-800 mb-2">
+                      🔧 Debug de Horarios
+                    </div>
+                    <div className="text-xs text-yellow-700 space-y-1">
+                      <div>Backend: {selectedTrip.tripInfo.departure}</div>
+                      <div>Convertido: {formatBackendTime(selectedTrip.tripInfo.departure)}</div>
+                      <div>Zona: America/El_Salvador (UTC-6)</div>
+                    </div>
+                  </div>
+                )}
+                
                 {/* Separador final para mejor scroll */}
                 <div className="h-4"></div>
               </div>
@@ -968,6 +1027,12 @@ const RiveraTransportMapDemo = () => {
                 <div className="text-xs text-blue-600 mt-1">
                   {error ? 'Modo demo - datos estáticos' : 'Tiempo + Checkpoints activo'}
                 </div>
+              </div>
+              
+              {/* 🕐 Información de timezone */}
+              <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded">
+                <div className="text-xs text-green-800 font-medium">🇸🇻 Timezone Corregido</div>
+                <div className="text-xs text-green-600 mt-1">Horario de El Salvador (UTC-6)</div>
               </div>
               
               {error && (

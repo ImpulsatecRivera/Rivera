@@ -15,7 +15,7 @@ ViajesController.getMapData = async (req, res) => {
       'estado.actual': { $in: ['pendiente', 'en_curso', 'retrasado', 'completado'] }
     })
     .populate('truckId', 'brand model licensePlate name marca modelo placa nombre')
-    .populate('conductor.id', 'nombre telefono')
+    .populate('conductorId', 'name phone')
     .select('-tracking.historialUbicaciones -ruta.rutaOptimizada') // Excluir datos pesados
     .sort({ departureTime: 1 })
     .lean();

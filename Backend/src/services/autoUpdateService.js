@@ -334,42 +334,50 @@ class AutoUpdateService {
 
   // 🕒 CALCULAR PROGRESO POR TIEMPO - VERSIÓN MEJORADA
   calculateTimeBasedProgress(viaje, now) {
-    try {
-      const salidaReal = viaje.horarios?.salidaReal || viaje.departureTime;
-      const llegadaProgramada = viaje.arrivalTime;
-      
-      const tiempoTranscurrido = now - new Date(salidaReal);
-      const tiempoTotal = new Date(llegadaProgramada) - new Date(salidaReal);
-      
-      if (tiempoTotal <= 0) return 5;
-      if (tiempoTranscurrido <= 0) return 5;
-      
-      // Progreso lineal basado en tiempo
-      let progreso = (tiempoTranscurrido / tiempoTotal) * 100;
-      
-      // Ajustes realistas según el estado
-      if (viaje.estado.actual === 'retrasado') {
-        // Para retrasados: progreso más conservador
-        progreso = progreso * 0.8; // 80% del progreso calculado
-        if (progreso < 5) progreso = 5;
-        if (progreso > 85) progreso = 85; // Máximo 85% para retrasados por tiempo
-      } else {
-        // Para viajes normales
-        if (progreso < 5) progreso = 5;
-        if (progreso > 100) progreso = 100;
-      }
-      
-      // Agregar variación menor (±1%) para simular condiciones reales
-      const variacion = Math.random() * 2 - 1;
-      progreso += variacion;
-      
-      return Math.max(5, Math.min(progreso, viaje.estado.actual === 'retrasado' ? 85 : 100));
-      
-    } catch (error) {
-      console.error('Error calculando progreso por tiempo:', error);
-      return 5;
+  try {
+    const salidaReal = viaje.horarios?.salidaReal || viaje.departureTime;
+    const llegadaProgramada = viaje.arrivalTime;
+
+    const tiempoTranscurrido = now - new Date(salidaReal);
+    const tiempoTotal = new Date(llegadaProgramada) - new Date(salidaReal);
+
+    if (tiempoTotal <= 0 || tiempoTranscurrido <= 0) return 5;
+
+    let progreso = (tiempoTranscurrido / tiempoTotal) * 100;
+
+    // 🔧 Ajustes según duración del viaje
+    const minutosTotales = tiempoTotal / (1000 * 60);
+
+    if (minutosTotales <= 4) {
+      progreso *= 2.0; // Viaje ultra corto → progreso muy rápido
+    } else if (minutosTotales <= 10) {
+      progreso *= 1.6; // Viaje corto
+    } else if (minutosTotales <= 30) {
+      progreso *= 1.3; // Viaje moderadamente corto
+    } else if (minutosTotales <= 90) {
+      progreso *= 1.0; // Sin cambios
+    } else {
+      progreso *= 0.9; // Viaje largo → un poco más lento
     }
+
+    // 🧠 Lógica para estado retrasado
+    if (viaje.estado.actual === 'retrasado') {
+      progreso = Math.min(progreso * 0.8, 85);
+    } else {
+      progreso = Math.min(progreso, 100);
+    }
+
+    // 🎲 Variación menor para simular realismo
+    const variacion = Math.random() * 2 - 1;
+    progreso += variacion;
+
+    return Math.max(5, Math.min(progreso, 100));
+  } catch (error) {
+    console.error('Error calculando progreso por tiempo:', error);
+    return 5;
   }
+}
+
 
   // ⏱️ CALCULAR INCREMENTO DE TIEMPO DESDE CHECKPOINT
   calculateTimeIncrement(viaje, tiempoTranscurrido) {
