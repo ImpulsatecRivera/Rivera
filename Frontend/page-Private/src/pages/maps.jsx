@@ -1,5 +1,5 @@
 // 📁 Frontend/src/components/RiveraTransportMapDemo.jsx
-// VERSIÓN COMPLETA CORREGIDA - CON MANEJO CORRECTO DE TIMEZONE
+// VERSIÓN COMPLETA ACTUALIZADA - CON MANEJO CORRECTO DE FORMATO DE HORARIOS DEL BACKEND
 
 import React, { useState, useEffect, useRef } from 'react';
 import { Truck, TrendingUp, Plus, Minus, Clock, MapPin, Users, Calendar, RefreshCw, Monitor, BarChart3 } from 'lucide-react';
@@ -26,12 +26,56 @@ const RiveraTransportMapDemo = () => {
   const mapInstanceRef = useRef(null);
   const refreshIntervalRef = useRef(null);
 
-  // 🕐 NUEVA FUNCIÓN: Formatear hora correcta del backend
-  const formatBackendTime = (isoString, format = 'time') => {
-    if (!isoString) return 'No programado';
+  // 🕐 FUNCIÓN CORREGIDA: Formatear hora del backend (maneja formato "HH:mm")
+  const formatBackendTime = (timeInput, format = 'time') => {
+    if (!timeInput) return 'No programado';
     
     try {
-      const date = new Date(isoString);
+      let date;
+      
+      // Manejar diferentes tipos de entrada
+      if (typeof timeInput === 'string') {
+        if (timeInput === 'Invalid Date' || timeInput === '') {
+          return 'Hora no válida';
+        }
+        
+        // 🆕 CASO ESPECIAL: Si es solo hora "HH:mm" (como "05:25", "11:00")
+        if (/^\d{1,2}:\d{2}$/.test(timeInput)) {
+          // Crear fecha de hoy con la hora especificada
+          const today = new Date();
+          const [hours, minutes] = timeInput.split(':').map(Number);
+          
+          // Crear fecha en zona horaria de El Salvador
+          date = new Date();
+          date.setHours(hours, minutes, 0, 0);
+          
+          // Si la hora ya pasó hoy, asumir que es para mañana
+          const now = new Date();
+          if (date < now) {
+            date.setDate(date.getDate() + 1);
+          }
+        }
+        // Formato ISO estándar
+        else if (timeInput.includes('T') && timeInput.includes('Z')) {
+          date = new Date(timeInput);
+        }
+        // Otros formatos
+        else {
+          date = new Date(timeInput);
+        }
+      } else if (timeInput instanceof Date) {
+        date = timeInput;
+      } else {
+        // Si es un timestamp
+        date = new Date(timeInput);
+      }
+      
+      // Verificar si la fecha es válida
+      if (isNaN(date.getTime())) {
+        console.warn('Fecha inválida recibida:', timeInput);
+        return 'Hora inválida';
+      }
+      
       const options = {
         timeZone: 'America/El_Salvador', // 🇸🇻 Zona horaria de El Salvador
         hour12: true
@@ -55,13 +99,189 @@ const RiveraTransportMapDemo = () => {
       }
       
       return date.toLocaleTimeString('es-SV', options);
+      
     } catch (error) {
-      console.error('Error formateando fecha:', error);
-      return 'Hora inválida';
+      console.error('Error formateando fecha:', error, 'Input:', timeInput);
+      return 'Error en fecha';
     }
   };
 
-  // 🔄 FUNCIÓN MEJORADA PARA OBTENER DATOS DEL BACKEND
+  // 🔧 FUNCIÓN ADICIONAL: Convertir hora simple a fecha completa
+  const timeStringToDate = (timeString, baseDate = null) => {
+    if (!timeString || typeof timeString !== 'string') {
+      return null;
+    }
+    
+    // Si ya es formato ISO, devolver como está
+    if (timeString.includes('T') || timeString.includes('Z')) {
+      return timeString;
+    }
+    
+    // Si es formato "HH:mm"
+    if (/^\d{1,2}:\d{2}$/.test(timeString)) {
+      const base = baseDate ? new Date(baseDate) : new Date();
+      const [hours, minutes] = timeString.split(':').map(Number);
+      
+      base.setHours(hours, minutes, 0, 0);
+      
+      return base.toISOString();
+    }
+    
+    return timeString;
+  };
+
+  // 🔄 FUNCIÓN PARA PROCESAR DATOS DEL BACKEND (ACTUALIZADA)
+  const processBackendResponse = (data) => {
+    if (!data) return data;
+    
+    // Procesar rutas y convertir horarios
+    if (data.routes && Array.isArray(data.routes)) {
+      data.routes = data.routes.map(route => {
+        if (route.tripInfo) {
+          // Convertir horarios de formato "HH:mm" a ISO si es necesario
+          if (route.tripInfo.departure) {
+            route.tripInfo.departure = timeStringToDate(route.tripInfo.departure);
+          }
+          if (route.tripInfo.arrival) {
+            route.tripInfo.arrival = timeStringToDate(route.tripInfo.arrival);
+          }
+          if (route.tripInfo.estimatedArrival) {
+            route.tripInfo.estimatedArrival = timeStringToDate(route.tripInfo.estimatedArrival);
+          }
+          if (route.tripInfo.realDeparture) {
+            route.tripInfo.realDeparture = timeStringToDate(route.tripInfo.realDeparture);
+          }
+          if (route.tripInfo.realArrival) {
+            route.tripInfo.realArrival = timeStringToDate(route.tripInfo.realArrival);
+          }
+        }
+        return route;
+      });
+    }
+    
+    // Procesar ubicaciones con nextTrip
+    if (data.locations && Array.isArray(data.locations)) {
+      data.locations = data.locations.map(location => {
+        if (location.nextTrip) {
+          location.nextTrip = timeStringToDate(location.nextTrip);
+        }
+        return location;
+      });
+    }
+    
+    return data;
+  };
+
+  // 🆕 FUNCIÓN PARA GENERAR FECHAS DEMO VÁLIDAS
+  const generateValidDemoData = () => {
+    const now = new Date();
+    const departure = new Date(now);
+    departure.setHours(14, 0, 0, 0); // 2:00 PM hoy
+    
+    const arrival = new Date(departure);
+    arrival.setHours(20, 0, 0, 0); // 8:00 PM hoy
+    
+    return {
+      departure: departure.toISOString(),
+      arrival: arrival.toISOString()
+    };
+  };
+
+  // 🎯 FUNCIÓN ESPECÍFICA PARA TU BACKEND: Mostrar información de viaje
+  const renderTripTimeInfo = (tripInfo, tripId) => {
+    if (!tripInfo) return null;
+    
+    // 🔍 Debug para asegurar que se usa la información correcta
+    console.log(`🕐 Renderizando horarios para viaje ${tripId}:`, {
+      departure: tripInfo.departure,
+      arrival: tripInfo.arrival,
+      realDeparture: tripInfo.realDeparture,
+      realArrival: tripInfo.realArrival
+    });
+    
+    return (
+      <div className="bg-gray-50 rounded-xl p-4">
+        <div className="space-y-3">
+          {/* Salida */}
+          <div className="flex items-center justify-between text-sm">
+            <div className="flex items-center space-x-2 flex-shrink-0">
+              <Clock className="w-4 h-4 text-gray-400" />
+              <span className="text-gray-600">Salida programada:</span>
+            </div>
+            <span className="font-semibold text-gray-900 text-right">
+              {formatBackendTime(tripInfo.departure)}
+            </span>
+          </div>
+          
+          {/* Llegada estimada */}
+          <div className="flex items-center justify-between text-sm">
+            <div className="flex items-center space-x-2 flex-shrink-0">
+              <Clock className="w-4 h-4 text-gray-400" />
+              <span className="text-gray-600">Llegada estimada:</span>
+            </div>
+            <span className="font-semibold text-gray-900 text-right">
+              {formatBackendTime(tripInfo.arrival || tripInfo.estimatedArrival)}
+            </span>
+          </div>
+          
+          {/* Salida real (si existe) */}
+          {tripInfo.realDeparture && (
+            <div className="flex items-center justify-between text-sm">
+              <div className="flex items-center space-x-2 flex-shrink-0">
+                <Clock className="w-4 h-4 text-green-400" />
+                <span className="text-gray-600">Salida real:</span>
+              </div>
+              <span className="font-semibold text-green-700 text-right">
+                {formatBackendTime(tripInfo.realDeparture)}
+              </span>
+            </div>
+          )}
+          
+          {/* Llegada real (si existe) */}
+          {tripInfo.realArrival && (
+            <div className="flex items-center justify-between text-sm">
+              <div className="flex items-center space-x-2 flex-shrink-0">
+                <Clock className="w-4 h-4 text-blue-400" />
+                <span className="text-gray-600">Llegada real:</span>
+              </div>
+              <span className="font-semibold text-blue-700 text-right">
+                {formatBackendTime(tripInfo.realArrival)}
+              </span>
+            </div>
+          )}
+          
+          {/* Duración estimada */}
+          {tripInfo.estimatedTime && (
+            <div className="flex items-center justify-between text-sm">
+              <div className="flex items-center space-x-2 flex-shrink-0">
+                <Clock className="w-4 h-4 text-purple-400" />
+                <span className="text-gray-600">Duración:</span>
+              </div>
+              <span className="font-semibold text-purple-700 text-right">
+                {tripInfo.estimatedTime}
+              </span>
+            </div>
+          )}
+          
+          {/* Información adicional de timezone */}
+          <div className="pt-2 border-t border-gray-200">
+            <div className="text-xs text-gray-500 text-center">
+              🇸🇻 Horario de El Salvador (UTC-6)
+            </div>
+          </div>
+          
+          {/* Información del formato de datos */}
+          <div className="pt-2 border-t border-gray-200">
+            <div className="text-xs text-blue-600 text-center">
+              📊 Viaje: {tripId.slice(-8)}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // 🔄 FUNCIÓN ACTUALIZADA PARA OBTENER DATOS DEL BACKEND
   const fetchMapData = async (isAutoRefresh = false) => {
     try {
       if (!isAutoRefresh) {
@@ -90,14 +310,37 @@ const RiveraTransportMapDemo = () => {
       const result = await response.json();
       
       if (result.success && result.data) {
-        setMapData(result.data);
+        // 🆕 PROCESAR DATOS CON CONVERSIÓN DE HORARIOS
+        console.log('📊 Datos raw del backend:', result.data);
+        
+        const processedData = processBackendResponse(result.data);
+        
+        console.log('✅ Datos procesados:', processedData);
+        
+        setMapData(processedData);
         setLastUpdate(new Date());
+        
         console.log('✅ Datos actualizados:', {
-          total: result.data.statistics?.total_routes || 0,
-          completados: result.data.statistics?.completed_routes || 0,
-          enCurso: result.data.statistics?.active_routes || 0,
-          pendientes: result.data.statistics?.pending_routes || 0
+          total: processedData.statistics?.total_routes || 0,
+          completados: processedData.statistics?.completed_routes || 0,
+          enCurso: processedData.statistics?.active_routes || 0,
+          pendientes: processedData.statistics?.pending_routes || 0,
+          retrasados: processedData.statistics?.delayed_routes || 0
         });
+        
+        // 🔍 Debug de horarios procesados
+        if (processedData.routes && processedData.routes.length > 0) {
+          console.log('🕐 Horarios procesados:');
+          processedData.routes.forEach((route, index) => {
+            console.log(`Ruta ${index + 1}:`, {
+              id: route.id,
+              departure: route.tripInfo?.departure,
+              arrival: route.tripInfo?.arrival,
+              status: route.status
+            });
+          });
+        }
+        
       } else {
         throw new Error(result.message || 'Error al cargar datos del mapa');
       }
@@ -109,6 +352,8 @@ const RiveraTransportMapDemo = () => {
       // Solo usar datos mock si no hay datos previos
       if (!mapData) {
         console.log('📝 Cargando datos mock de demostración...');
+        const validDates = generateValidDemoData();
+        
         setMapData({
           locations: [
             {
@@ -127,7 +372,7 @@ const RiveraTransportMapDemo = () => {
               number: "3",
               description: "3 viajes activos",
               tripCount: 3,
-              nextTrip: "2:00 PM"
+              nextTrip: validDates.departure
             }
           ],
           routes: [
@@ -140,8 +385,8 @@ const RiveraTransportMapDemo = () => {
                 driver: "Carlos Pérez",
                 truck: "Volvo FH16 (ABC-123)",
                 cargo: "Materiales de construcción",
-                departure: "2025-08-05T20:00:00.000Z", // 🔧 Formato correcto (2:00 PM El Salvador)
-                arrival: "2025-08-06T02:00:00.000Z",   // 🔧 Formato correcto (8:00 PM El Salvador)
+                departure: validDates.departure,
+                arrival: validDates.arrival,
                 progress: 65,
                 currentLocation: "En ruta - 65% completado"
               },
@@ -193,6 +438,19 @@ const RiveraTransportMapDemo = () => {
       }
     };
   }, [autoRefresh]);
+
+  // 🔄 EFECTO PARA RESETEAR INFORMACIÓN AL CAMBIAR DE VIAJE SELECCIONADO
+  useEffect(() => {
+    // Cuando cambia el viaje seleccionado, asegurar que la información se actualice
+    if (selectedTrip) {
+      console.log('🔍 Viaje seleccionado cambiado:', {
+        id: selectedTrip.id,
+        status: selectedTrip.status,
+        description: selectedTrip.description,
+        progress: selectedTrip.tripInfo?.progress
+      });
+    }
+  }, [selectedTrip?.id]); // Solo observar cambios en el ID
 
   // 🗺️ INICIALIZAR MAPA LEAFLET
   useEffect(() => {
@@ -263,7 +521,7 @@ const RiveraTransportMapDemo = () => {
                       <div style="font-weight: 600; color: #333; margin-bottom: 8px; font-size: 14px;">📍 ${location.name || 'Ubicación'}</div>
                       <div style="color: #666; font-size: 12px; margin-bottom: 8px;">${location.description || ''}</div>
                       <div style="background: #f0fdf4; padding: 6px; border-radius: 6px; border-left: 3px solid #16a34a;">
-                        ${location.nextTrip ? `<div style="font-size: 11px; color: #15803d; margin-bottom: 2px;">⏰ Próximo viaje: ${location.nextTrip}</div>` : ''}
+                        ${location.nextTrip ? `<div style="font-size: 11px; color: #15803d; margin-bottom: 2px;">⏰ Próximo viaje: ${formatBackendTime(location.nextTrip, 'short')}</div>` : ''}
                         <div style="font-size: 11px; color: #15803d;">🚛 ${location.tripCount || 0} viajes programados</div>
                       </div>
                     </div>`;
@@ -285,21 +543,24 @@ const RiveraTransportMapDemo = () => {
             mapData.routes.forEach((route, index) => {
               try {
                 if (route.coordinates && Array.isArray(route.coordinates) && route.coordinates.length > 0) {
-                  let routeColor = '#2563eb';
-                  switch (route.status) {
-                    case 'active':
-                    case 'in_progress':
-                      routeColor = '#16a34a';
-                      break;
-                    case 'completed':
-                      routeColor = '#059669';
-                      break;
-                    case 'cancelled':
-                      routeColor = '#dc2626';
-                      break;
-                    default:
-                      routeColor = '#2563eb';
-                  }
+                  let routeColor = '#3b82f6'; // Azul por defecto
+                  
+                  // Mapear estados a colores específicos
+                  const statusColorMap = {
+                    'pendiente': '#eab308',    // Amarillo
+                    'scheduled': '#eab308',    // Amarillo
+                    'en_curso': '#16a34a',     // Verde
+                    'active': '#16a34a',       // Verde  
+                    'in_progress': '#16a34a',  // Verde
+                    'completado': '#3b82f6',   // Azul
+                    'completed': '#3b82f6',    // Azul
+                    'retrasado': '#f97316',    // Naranja
+                    'delayed': '#f97316',      // Naranja
+                    'cancelado': '#dc2626',    // Rojo oscuro
+                    'cancelled': '#dc2626'     // Rojo oscuro
+                  };
+                  
+                  routeColor = statusColorMap[route.status] || '#3b82f6';
                   
                   const routeWeight = route.frequency === 'high' ? 6 : 4;
                   
@@ -311,6 +572,12 @@ const RiveraTransportMapDemo = () => {
                   }).addTo(map);
 
                   polyline.on('click', () => {
+                    console.log('🖱️ Ruta clickeada:', {
+                      id: route.id,
+                      status: route.status,
+                      description: route.description,
+                      progress: route.tripInfo?.progress
+                    });
                     setSelectedTrip(route);
                   });
                 }
@@ -343,11 +610,19 @@ const RiveraTransportMapDemo = () => {
     };
   }, [loading, mapData, zoomLevel, activeView]);
 
-  // 🆕 NUEVA FUNCIÓN: Mapear estado del backend al frontend
+  // 🆕 NUEVA FUNCIÓN: Mapear estado del backend al frontend (MEJORADA)
   const mapStatusToFrontend = (backendStatus) => {
+    if (!backendStatus) {
+      console.warn('🔍 Estado vacío recibido');
+      return 'pendiente';
+    }
+    
+    const normalizedStatus = backendStatus.toLowerCase().trim();
+    
     const statusMap = {
-      'programado': 'programado',
-      'pendiente': 'pendiente', 
+      'programado': 'pendiente',
+      'scheduled': 'pendiente',
+      'pendiente': 'pendiente',
       'en_curso': 'en_curso',
       'in_progress': 'en_curso',
       'active': 'en_curso',
@@ -359,7 +634,15 @@ const RiveraTransportMapDemo = () => {
       'cancelled': 'cancelado'
     };
     
-    return statusMap[backendStatus] || 'pendiente';
+    const mappedStatus = statusMap[normalizedStatus];
+    
+    if (!mappedStatus) {
+      console.warn('🔍 Estado no mapeado:', backendStatus, '-> usando pendiente como fallback');
+      return 'pendiente';
+    }
+    
+    console.log('✅ Estado mapeado:', backendStatus, '->', mappedStatus);
+    return mappedStatus;
   };
 
   const handleZoomIn = () => {
@@ -797,7 +1080,7 @@ const RiveraTransportMapDemo = () => {
             </div>
           )}
 
-          {/* Panel de información de viaje seleccionado - CON HORARIO CORREGIDO */}
+          {/* Panel de información de viaje seleccionado - ACTUALIZADO PARA TU BACKEND */}
           {selectedTrip && (
             <div className="absolute top-24 left-8 z-30 bg-white rounded-2xl shadow-xl border-2 border-blue-200 w-80 max-h-[calc(100vh-200px)]">
               {/* Header fijo */}
@@ -813,6 +1096,13 @@ const RiveraTransportMapDemo = () => {
               
               {/* Contenido con scroll */}
               <div className="overflow-y-auto max-h-[calc(100vh-280px)] p-5 space-y-4 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+                
+                {/* ID del viaje */}
+                <div className="bg-blue-50 rounded-lg p-3">
+                  <div className="text-xs font-medium text-blue-800 mb-1">📋 ID del viaje</div>
+                  <div className="text-xs text-blue-700 font-mono break-all">{selectedTrip.id}</div>
+                </div>
+                
                 {/* Conductor */}
                 <div className="flex items-center space-x-3">
                   <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center flex-shrink-0">
@@ -823,164 +1113,197 @@ const RiveraTransportMapDemo = () => {
                       {selectedTrip.tripInfo?.driver || 'No asignado'}
                     </div>
                     <div className="text-xs text-gray-500">Conductor asignado</div>
+                    {selectedTrip.tripInfo?.driverPhone && selectedTrip.tripInfo.driverPhone !== 'No disponible' && (
+                      <div className="text-xs text-blue-600">{selectedTrip.tripInfo.driverPhone}</div>
+                    )}
                   </div>
                 </div>
                 
                 {/* Vehículo */}
-                {truckInfo && (
-                  <div className="flex items-center space-x-3">
-                    <div className={`w-12 h-12 ${truckInfo.bgColor} rounded-xl flex items-center justify-center flex-shrink-0`}>
-                      <span className="text-lg">{truckInfo.icon}</span>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className={`text-sm font-semibold ${truckInfo.color} truncate`}>
-                        {truckInfo.display}
-                      </div>
-                      <div className="text-xs text-gray-500">Vehículo de transporte</div>
-                      {selectedTrip.tripInfo?.truck?.includes("por asignar") && (
-                        <div className="text-xs text-yellow-600 font-medium mt-1">⚠️ Pendiente de asignación</div>
-                      )}
-                    </div>
+                <div className="flex items-center space-x-3">
+                  <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                    <span className="text-lg">🚛</span>
                   </div>
-                )}
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-semibold text-green-600 truncate">
+                      {selectedTrip.tripInfo?.truck || 'Vehículo por asignar'}
+                    </div>
+                    <div className="text-xs text-gray-500">Vehículo de transporte</div>
+                    {selectedTrip.tripInfo?.truck?.includes("por asignar") && (
+                      <div className="text-xs text-yellow-600 font-medium mt-1">⚠️ Pendiente de asignación</div>
+                    )}
+                  </div>
+                </div>
+                
+                {/* Ruta */}
+                <div className="flex items-start space-x-3">
+                  <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                    <MapPin className="w-6 h-6 text-purple-600" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-semibold text-gray-900">
+                      {selectedTrip.route?.from} → {selectedTrip.route?.to}
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      {selectedTrip.route?.fromType} a {selectedTrip.route?.toType}
+                    </div>
+                    {selectedTrip.distance && (
+                      <div className="text-xs text-purple-600 mt-1">
+                        📏 {selectedTrip.distance} • ⏱️ {selectedTrip.estimatedTime}
+                      </div>
+                    )}
+                  </div>
+                </div>
                 
                 {/* Carga */}
                 <div className="flex items-start space-x-3">
-                  <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                    <MapPin className="w-6 h-6 text-green-600" />
+                  <div className="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                    <span className="text-lg">📦</span>
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="text-sm font-semibold text-gray-900 break-words">
                       {selectedTrip.tripInfo?.cargo || 'Carga general'}
                     </div>
                     <div className="text-xs text-gray-500">Tipo de carga</div>
+                    <div className="text-xs text-orange-600 mt-1">
+                      {selectedTrip.description}
+                    </div>
                   </div>
                 </div>
                 
-                {/* 🆕 PROGRESO HÍBRIDO MEJORADO */}
+                {/* Progreso */}
                 {selectedTrip.tripInfo?.progress >= 0 && (
                   <div className="bg-gray-50 rounded-xl p-3">
                     <div className="text-sm font-medium text-gray-700 mb-2">
                       <div className="flex items-center justify-between flex-wrap gap-1">
-                        <span className="text-xs">Progreso del viaje (Sistema Híbrido):</span>
+                        <span className="text-xs">Progreso del viaje:</span>
                         <span className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded-full flex-shrink-0">
-                          🧠 Auto + Manual
+                          {selectedTrip.tripInfo.progress}%
                         </span>
                       </div>
                     </div>
-                    <RealtimeProgressBar 
-                      viajeId={selectedTrip.id}
-                      initialProgress={selectedTrip.tripInfo.progress}
-                      status={mapStatusToFrontend(selectedTrip.status)}
-                      enablePolling={!error} // Solo hacer polling si no hay error
-                    />
-                    
-                    {/* Info adicional del progreso */}
-                    <div className="mt-2 text-xs text-gray-600">
-                      <div className="space-y-1">
-                        <div className="flex items-center space-x-1">
-                          <span>💡</span>
-                          <span>Cálculo automático por tiempo</span>
-                        </div>
-                        <div className="flex items-center space-x-1">
-                          <span>📍</span>
-                          <span>Checkpoints manuales disponibles</span>
-                        </div>
+                    {(() => {
+                      const mappedStatus = mapStatusToFrontend(selectedTrip.status);
+                      console.log('🔍 Props para RealtimeProgressBar:', {
+                        viajeId: selectedTrip.id,
+                        initialProgress: selectedTrip.tripInfo.progress,
+                        originalStatus: selectedTrip.status,
+                        mappedStatus: mappedStatus,
+                        description: selectedTrip.description
+                      });
+                      
+                      return (
+                        <RealtimeProgressBar 
+                          key={`progress-${selectedTrip.id}-${selectedTrip.tripInfo?.progress || 0}`} // 🆕 Clave única
+                          viajeId={selectedTrip.id}
+                          initialProgress={selectedTrip.tripInfo.progress}
+                          status={mappedStatus}
+                          enablePolling={!error} // Solo hacer polling si no hay error
+                          description={selectedTrip.description} // 🆕 Pasar descripción
+                          tripInfo={selectedTrip.tripInfo} // 🆕 Pasar toda la info del viaje
+                        />
+                      );
+                    })()}
+                    <div className="text-xs text-gray-600 mt-2">
+                      📍 {selectedTrip.tripInfo.currentLocation}
+                    </div>
+                  </div>
+                )}
+                
+                {/* 🕐 HORARIOS CORREGIDOS - USANDO LA NUEVA FUNCIÓN */}
+                {renderTripTimeInfo(selectedTrip.tripInfo, selectedTrip.id)}
+                
+                {/* Costos */}
+                {selectedTrip.costs && (
+                  <div className="bg-green-50 rounded-xl p-3">
+                    <div className="text-sm font-medium text-green-800 mb-2">💰 Costos del viaje</div>
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      <div className="flex justify-between">
+                        <span className="text-green-700">Combustible:</span>
+                        <span className="font-medium">${selectedTrip.costs.fuel}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-green-700">Peajes:</span>
+                        <span className="font-medium">${selectedTrip.costs.tolls}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-green-700">Otros:</span>
+                        <span className="font-medium">${selectedTrip.costs.others}</span>
+                      </div>
+                      <div className="flex justify-between font-bold">
+                        <span className="text-green-800">Total:</span>
+                        <span className="text-green-800">${selectedTrip.costs.total}</span>
                       </div>
                     </div>
                   </div>
                 )}
                 
-                {/* 🕐 HORARIOS CORREGIDOS - AQUÍ ESTÁ EL FIX PRINCIPAL */}
-                <div className="bg-gray-50 rounded-xl p-4">
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between text-sm">
-                      <div className="flex items-center space-x-2 flex-shrink-0">
-                        <Clock className="w-4 h-4 text-gray-400" />
-                        <span className="text-gray-600">Salida:</span>
+                {/* Condiciones */}
+                {selectedTrip.conditions && (
+                  <div className="bg-blue-50 rounded-xl p-3">
+                    <div className="text-sm font-medium text-blue-800 mb-2">🌤️ Condiciones del viaje</div>
+                    <div className="space-y-1 text-xs">
+                      <div className="flex justify-between">
+                        <span className="text-blue-700">Clima:</span>
+                        <span className="font-medium capitalize">{selectedTrip.conditions.weather}</span>
                       </div>
-                      <span className="font-semibold text-gray-900 text-right">
-                        {formatBackendTime(selectedTrip.tripInfo?.departure)}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between text-sm">
-                      <div className="flex items-center space-x-2 flex-shrink-0">
-                        <Clock className="w-4 h-4 text-gray-400" />
-                        <span className="text-gray-600">Llegada estimada:</span>
+                      <div className="flex justify-between">
+                        <span className="text-blue-700">Tráfico:</span>
+                        <span className="font-medium capitalize">{selectedTrip.conditions.traffic}</span>
                       </div>
-                      <span className="font-semibold text-gray-900 text-right">
-                        {formatBackendTime(selectedTrip.tripInfo?.arrival)}
-                      </span>
-                    </div>
-                    
-                    {/* 🆕 Información adicional de timezone */}
-                    <div className="pt-2 border-t border-gray-200">
-                      <div className="text-xs text-gray-500 text-center">
-                        🇸🇻 Horario de El Salvador (UTC-6)
+                      <div className="flex justify-between">
+                        <span className="text-blue-700">Carretera:</span>
+                        <span className="font-medium capitalize">{selectedTrip.conditions.road}</span>
                       </div>
                     </div>
                   </div>
-                </div>
+                )}
                 
-                {/* Estado del viaje mejorado */}
+                {/* Alertas */}
+                {selectedTrip.alerts && selectedTrip.alerts.length > 0 && (
+                  <div className="bg-yellow-50 rounded-xl p-3">
+                    <div className="text-sm font-medium text-yellow-800 mb-2">⚠️ Alertas del viaje</div>
+                    <div className="space-y-2">
+                      {selectedTrip.alerts.map((alert, index) => (
+                        <div key={index} className="text-xs">
+                          <div className="flex items-center space-x-1 mb-1">
+                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                              alert.priority === 'alta' ? 'bg-red-100 text-red-800' :
+                              alert.priority === 'media' ? 'bg-yellow-100 text-yellow-800' :
+                              'bg-blue-100 text-blue-800'
+                            }`}>
+                              {alert.type}
+                            </span>
+                            <span className="text-gray-500">
+                              {formatBackendTime(alert.date, 'datetime')}
+                            </span>
+                          </div>
+                          <div className="text-yellow-700">{alert.message}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                
+                {/* Estado del viaje */}
                 <div className="flex justify-center">
                   <div className={`inline-flex px-4 py-2 rounded-full text-sm font-medium ${
-                    selectedTrip.status === 'active' || selectedTrip.status === 'in_progress' ? 'bg-green-100 text-green-800' :
-                    selectedTrip.status === 'completed' ? 'bg-blue-100 text-blue-800' :
-                    selectedTrip.status === 'cancelled' ? 'bg-red-100 text-red-800' :
-                    selectedTrip.status === 'delayed' ? 'bg-orange-100 text-orange-800' :
-                    selectedTrip.status === 'programado' ? 'bg-purple-100 text-purple-800' :
-                    'bg-yellow-100 text-yellow-800'
+                    selectedTrip.status === 'en_curso' || selectedTrip.status === 'active' || selectedTrip.status === 'in_progress' ? 'bg-green-100 text-green-800' :
+                    selectedTrip.status === 'completado' || selectedTrip.status === 'completed' ? 'bg-blue-100 text-blue-800' :
+                    selectedTrip.status === 'cancelado' || selectedTrip.status === 'cancelled' ? 'bg-red-100 text-red-800' :
+                    selectedTrip.status === 'retrasado' || selectedTrip.status === 'delayed' ? 'bg-orange-100 text-orange-800' :
+                    selectedTrip.status === 'pendiente' || selectedTrip.status === 'scheduled' ? 'bg-yellow-100 text-yellow-800' :
+                    'bg-gray-100 text-gray-800'
                   }`}>
-                    {selectedTrip.status === 'active' || selectedTrip.status === 'in_progress' ? '🟢 En progreso' :
-                     selectedTrip.status === 'completed' ? '🔵 Completado' :
-                     selectedTrip.status === 'cancelled' ? '🔴 Cancelado' :
-                     selectedTrip.status === 'delayed' ? '🟠 Retrasado' :
-                     selectedTrip.status === 'programado' ? '🟣 Programado' :
-                     '🟡 Pendiente'}
+                    {selectedTrip.statusText || 
+                     (selectedTrip.status === 'en_curso' || selectedTrip.status === 'active' || selectedTrip.status === 'in_progress' ? '🟢 En Curso' :
+                      selectedTrip.status === 'completado' || selectedTrip.status === 'completed' ? '🔵 Completado' :
+                      selectedTrip.status === 'cancelado' || selectedTrip.status === 'cancelled' ? '🔴 Cancelado' :
+                      selectedTrip.status === 'retrasado' || selectedTrip.status === 'delayed' ? '🟠 Retrasado' :
+                      selectedTrip.status === 'pendiente' || selectedTrip.status === 'scheduled' ? '🟡 Pendiente' :
+                      '⚪ Estado desconocido')}
                   </div>
                 </div>
-                
-                {/* 🆕 Información del sistema híbrido */}
-                {!error && (
-                  <div className="bg-blue-50 rounded-lg p-3">
-                    <div className="text-xs font-medium text-blue-800 mb-2">
-                      🧠 Sistema Híbrido Activo
-                    </div>
-                    <div className="text-xs text-blue-700 space-y-1">
-                      <div className="flex items-center space-x-1">
-                        <span>•</span>
-                        <span>Auto-inicio a la hora programada</span>
-                      </div>
-                      <div className="flex items-center space-x-1">
-                        <span>•</span>
-                        <span>Progreso calculado por tiempo</span>
-                      </div>
-                      <div className="flex items-center space-x-1">
-                        <span>•</span>
-                        <span>Checkpoints manuales disponibles</span>
-                      </div>
-                      <div className="flex items-center space-x-1">
-                        <span>•</span>
-                        <span>Auto-completar inteligente</span>
-                      </div>
-                    </div>
-                  </div>
-                )}
-                
-                {/* 🆕 Debug de horarios (solo en desarrollo) */}
-                {process.env.NODE_ENV === 'development' && selectedTrip.tripInfo?.departure && (
-                  <div className="bg-yellow-50 rounded-lg p-3 border border-yellow-200">
-                    <div className="text-xs font-medium text-yellow-800 mb-2">
-                      🔧 Debug de Horarios
-                    </div>
-                    <div className="text-xs text-yellow-700 space-y-1">
-                      <div>Backend: {selectedTrip.tripInfo.departure}</div>
-                      <div>Convertido: {formatBackendTime(selectedTrip.tripInfo.departure)}</div>
-                      <div>Zona: America/El_Salvador (UTC-6)</div>
-                    </div>
-                  </div>
-                )}
                 
                 {/* Separador final para mejor scroll */}
                 <div className="h-4"></div>
@@ -1013,19 +1336,31 @@ const RiveraTransportMapDemo = () => {
                 <span className="text-xs text-gray-600">Terminal Principal</span>
               </div>
               <div className="flex items-center space-x-2">
+                <div className="w-4 h-4 bg-yellow-500 rounded-full border-2 border-white shadow"></div>
+                <span className="text-xs text-gray-600">Pendiente</span>
+              </div>
+              <div className="flex items-center space-x-2">
                 <div className="w-4 h-4 bg-green-500 rounded-full border-2 border-white shadow"></div>
-                <span className="text-xs text-gray-600">Rutas Activas</span>
+                <span className="text-xs text-gray-600">En Curso</span>
               </div>
               <div className="flex items-center space-x-2">
                 <div className="w-4 h-4 bg-blue-500 rounded-full border-2 border-white shadow"></div>
-                <span className="text-xs text-gray-600">Rutas Programadas</span>
+                <span className="text-xs text-gray-600">Completado</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <div className="w-4 h-4 bg-orange-500 rounded-full border-2 border-white shadow"></div>
+                <span className="text-xs text-gray-600">Retrasado</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <div className="w-4 h-4 bg-red-600 rounded-full border-2 border-white shadow"></div>
+                <span className="text-xs text-gray-600">Cancelado</span>
               </div>
               
               {/* 🆕 Información del sistema híbrido */}
               <div className="mt-3 p-2 bg-blue-50 border border-blue-200 rounded">
                 <div className="text-xs text-blue-800 font-medium">🧠 Sistema Híbrido</div>
                 <div className="text-xs text-blue-600 mt-1">
-                  {error ? 'Modo demo - datos estáticos' : 'Tiempo + Checkpoints activo'}
+                  {error ? 'Modo demo - datos estáticos' : 'Datos en tiempo real activo'}
                 </div>
               </div>
               
