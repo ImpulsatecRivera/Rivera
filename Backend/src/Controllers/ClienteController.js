@@ -1,4 +1,3 @@
-import { ImGift } from "react-icons/im";
 import clienteModel from "../Models/Clientes.js"
 import bcryptjs from "bcryptjs";
 
