@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react';
-import axios from 'axios';
 
 const colors = ['#EF4444', '#3B82F6', '#F97316', '#8B5CF6', '#5F8EAD'];
 
@@ -8,70 +7,80 @@ const LoadMetrics = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  useEffect(() => {
-    const fetchLoadData = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        
-        // 🔧 RUTA CORRECTA: carga-distribution
-        const res = await axios.get('http://localhost:4000/api/viajes/carga-distribution');
-        
-        // 📊 El backend devuelve la data en res.data.data
-        const cargasData = res.data.data || [];
-        
-        // 📈 Calcular total para porcentajes (ya viene calculado desde el backend)
-        const totalCantidad = cargasData.reduce((sum, item) => sum + item.count, 0);
-
-        // 🎨 Mapear datos con colores y formato para el frontend
-        const dataWithColors = cargasData.map((item, index) => ({
-          // 🏷️ Usar 'name' que viene del backend, fallback a 'categoria'
-          label: item.name || item.categoria || item.tipo || 'Sin categoría',
-          
-          // 📊 Usar 'count' que viene del backend
-          value: item.count,
-          
-          // 📈 Usar porcentaje del backend o calcularlo
-          percentage: item.porcentaje || item.percentage || 
-                     (totalCantidad > 0 ? (item.count / totalCantidad) * 100 : 0),
-          
-          // 🎨 Asignar color
-          color: colors[index % colors.length],
-          
-          // 📦 Información adicional del backend
-          pesoPromedio: item.pesoPromedio || 0,
-          pesoTotal: item.pesoTotal || 0,
-          ejemplos: item.ejemplos || [],
-          descripcion: item.descripcion || item.name
-        }));
-
-        setLoadMetrics(dataWithColors);
-        console.log('✅ Datos de cargas cargados:', dataWithColors);
-        
-      } catch (error) {
-        console.error("❌ Error al obtener distribución de cargas:", error);
-        setError(error.response?.data?.message || error.message || 'Error desconocido');
-        
-        // 🔧 Datos de ejemplo en caso de error (opcional)
-        const datosEjemplo = [
-          { label: 'Electrónicos', value: 25, percentage: 35, color: colors[0] },
-          { label: 'Alimentos', value: 18, percentage: 25, color: colors[1] },
-          { label: 'Maquinaria', value: 15, percentage: 21, color: colors[2] },
-          { label: 'Textiles', value: 8, percentage: 11, color: colors[3] },
-          { label: 'Químicos', value: 6, percentage: 8, color: colors[4] }
-        ];
-        setLoadMetrics(datosEjemplo);
-      } finally {
-        setLoading(false);
+  // 🔄 FUNCIÓN PRINCIPAL PARA OBTENER DATOS
+  const fetchDistribution = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      console.log('📊 Obteniendo distribución de cargas...');
+      
+      // 🔧 RUTA CORRECTA: carga-distribution
+      const response = await fetch('http://localhost:4000/api/viajes/carga-distribution');
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
-    };
+      
+      const res = await response.json();
+      
+      // 📊 El backend devuelve la data en res.data.data
+      const cargasData = res.data.data || [];
+      
+      // 📈 Calcular total para porcentajes (ya viene calculado desde el backend)
+      const totalCantidad = cargasData.reduce((sum, item) => sum + (item.count || 0), 0);
 
-    fetchLoadData();
+      // 🎨 Mapear datos con colores y formato para el frontend
+      const dataWithColors = cargasData.map((item, index) => ({
+        // 🏷️ Usar 'name' que viene del backend, fallback a 'categoria'
+        label: item.name || item.categoria || item.tipo || 'Sin categoría',
+        
+        // 📊 Usar 'count' que viene del backend
+        value: item.count,
+        
+        // 📈 Usar porcentaje del backend o calcularlo
+        percentage: item.porcentaje || item.percentage || 
+                   (totalCantidad > 0 ? (item.count / totalCantidad) * 100 : 0),
+        
+        // 🎨 Asignar color
+        color: colors[index % colors.length],
+        
+        // 📦 Información adicional del backend
+        pesoPromedio: item.pesoPromedio || 0,
+        pesoTotal: item.pesoTotal || 0,
+        ejemplos: item.ejemplos || [],
+        descripcion: item.descripcion || item.name
+      }));
+
+      setLoadMetrics(dataWithColors);
+      console.log('✅ Datos de cargas cargados:', dataWithColors);
+      
+    } catch (error) {
+      console.error("❌ Error al obtener distribución de cargas:", error);
+      setError(error.message || 'Error desconocido');
+      
+      // 🔧 Datos de ejemplo en caso de error (opcional)
+      const datosEjemplo = [
+        { label: 'Electrónicos', value: 25, percentage: 35, color: colors[0] },
+        { label: 'Alimentos', value: 18, percentage: 25, color: colors[1] },
+        { label: 'Maquinaria', value: 15, percentage: 21, color: colors[2] },
+        { label: 'Textiles', value: 8, percentage: 11, color: colors[3] },
+        { label: 'Químicos', value: 6, percentage: 8, color: colors[4] }
+      ];
+      setLoadMetrics(datosEjemplo);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 🔄 Cargar datos al montar el componente
+  useEffect(() => {
+    fetchDistribution();
   }, []);
 
-  // 🔄 Función para recargar datos
+  // 🔄 Función para recargar datos (CORREGIDA)
   const handleRefresh = () => {
-    fetchLoadData();
+    fetchDistribution(); // ✅ Usar el nombre correcto de la función
   };
 
   return (
@@ -82,11 +91,11 @@ const LoadMetrics = () => {
           Distribución de Cargas
         </h3>
         <button
-          onClick={handleRefresh}
+          onClick={handleRefresh} // ✅ Ahora funciona correctamente
           disabled={loading}
-          className="px-3 py-1 text-sm bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50"
+          className="px-3 py-1 text-sm bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50 transition-colors"
         >
-          {loading ? '🔄' : '↻'}
+          {loading ? '🔄 Cargando...' : '↻ Actualizar'}
         </button>
       </div>
 
@@ -107,7 +116,7 @@ const LoadMetrics = () => {
             </p>
             <button
               onClick={handleRefresh}
-              className="mt-2 text-sm text-red-700 underline hover:text-red-800"
+              className="mt-2 text-sm text-red-700 underline hover:text-red-800 transition-colors"
             >
               Intentar de nuevo
             </button>
@@ -172,22 +181,35 @@ const LoadMetrics = () => {
               </div>
             ))}
             
-            {/* 📈 Resumen total */}
+            {/* 📊 Resumen de estadísticas */}
             <div className="mt-6 pt-4 border-t border-gray-200">
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-600">Total de categorías:</span>
-                <span className="font-semibold">{loadMetrics.length}</span>
+              <div className="flex justify-between text-xs text-gray-500">
+                <span>Categorías: {loadMetrics.length}</span>
+                <span>
+                  Peso total: {loadMetrics.reduce((sum, cat) => sum + (cat.pesoTotal || 0), 0).toFixed(1)} kg
+                </span>
               </div>
-              <div className="flex justify-between text-sm mt-1">
-                <span className="text-gray-600">Total de viajes:</span>
-                <span className="font-semibold">
-                  {loadMetrics.reduce((sum, item) => sum + item.value, 0)}
+              <div className="flex justify-between text-xs text-gray-400 mt-1">
+                <span>
+                  Más común: {loadMetrics[0]?.label || 'N/A'}
+                </span>
+                <span>
+                  {loadMetrics[0]?.percentage.toFixed(1) || 0}%
                 </span>
               </div>
             </div>
           </>
         )}
       </div>
+      
+      {/* 📈 Información adicional en modo error con datos de ejemplo */}
+      {error && loadMetrics.length > 0 && (
+        <div className="mt-3 p-2 bg-amber-50 border border-amber-200 rounded-lg">
+          <p className="text-xs text-amber-700">
+            ⚠️ Mostrando datos de ejemplo. Error: {error}
+          </p>
+        </div>
+      )}
     </div>
   );
 };

@@ -1,34 +1,62 @@
 // Controllers/Viajes.js - VERSIÓN OPTIMIZADA Y LIMPIA
 import ViajesModel from "../Models/Viajes.js";
+import autoUpdateService from "../services/autoUpdateService.js"
 
 const ViajesController = {};
 
 // =====================================================
 // GET: Datos optimizados para el mapa
 // =====================================================
+// =====================================================
+// GET: Datos optimizados para el mapa CON INTEGRACIÓN DE COTIZACIONES
+// =====================================================
 ViajesController.getMapData = async (req, res) => {
   try {
-    console.log("🗺️ Obteniendo datos del mapa...");
+    console.log("🗺️ Obteniendo datos del mapa con esquema real...");
 
-    // 🚛 OBTENER VIAJES ACTIVOS CON POPULATE
+    // 🚛 OBTENER VIAJES CON POPULATE CORRECTO
     const viajes = await ViajesModel.find({
       'estado.actual': { $in: ['pendiente', 'en_curso', 'retrasado', 'completado'] }
     })
-    .populate('truckId', 'brand model licensePlate name marca modelo placa nombre')
-    .populate('conductorId', 'name phone')
-    .select('-tracking.historialUbicaciones -ruta.rutaOptimizada') // Excluir datos pesados
+    .populate('truckId', 'brand model licensePlate name marca modelo placa nombre') // Referencia a 'Camiones'
+    .populate('conductorId', 'name phone nombre telefono') // Referencia a 'Motorista'
+    .populate({
+      path: 'quoteId', // 🎯 TU CAMPO REAL ES quoteId
+      select: 'clientId quoteName quoteDescription travelLocations truckType deliveryDate paymentMethod status price ruta carga horarios costos observaciones notasInternas',
+      populate: {
+        path: 'clientId', // Referencia a 'Clientes'
+        select: 'nombre name email telefono phone direccion address empresa'
+      }
+    })
+    .select('-tracking.checkpoints') // Excluir datos pesados
     .sort({ departureTime: 1 })
     .lean();
 
-    console.log(`🚛 Encontrados ${viajes.length} viajes`);
+    console.log(`🚛 Encontrados ${viajes.length} viajes totales`);
+    
+    const viajesConCotizacion = viajes.filter(v => v.quoteId);
+    const viajesSinCotizacion = viajes.filter(v => !v.quoteId);
+    console.log(`🧾 Con cotización: ${viajesConCotizacion.length}`);
+    console.log(`📋 Sin cotización: ${viajesSinCotizacion.length}`);
 
-    // 🗺️ CREAR MAPA DE UBICACIONES ÚNICAS
+    // 🔍 Debug detallado
+    viajes.forEach((viaje, index) => {
+      console.log(`🔍 Viaje ${index + 1}:`, {
+        id: viaje._id.toString().slice(-6),
+        hasQuote: !!viaje.quoteId,
+        quoteName: viaje.quoteId?.quoteName,
+        estado: viaje.estado?.actual,
+        departureTime: viaje.departureTime
+      });
+    });
+
+    // 🗺️ CREAR MAPA DE UBICACIONES
     const locationMap = new Map();
     
-    // 🏢 TERMINAL PRINCIPAL FIJO
+    // 🏢 TERMINAL PRINCIPAL
     locationMap.set("Terminal Principal", {
       name: "Terminal Principal",
-      coords: [13.8833, -89.1000], // Coordenadas de El Salvador
+      coords: [13.8833, -89.1000],
       type: "red",
       number: "HQ",
       description: "Centro de operaciones principal",
@@ -37,88 +65,67 @@ ViajesController.getMapData = async (req, res) => {
       details: "Base principal de Rivera Transport"
     });
 
-    // 📍 PROCESAR UBICACIONES DE ORIGEN Y DESTINO
-    viajes.forEach((viaje, index) => {
-      try {
-        // Procesar ORIGEN
-        if (viaje.ruta?.origen?.nombre) {
-          const origenKey = viaje.ruta.origen.nombre;
-          if (!locationMap.has(origenKey)) {
-            locationMap.set(origenKey, {
-              name: viaje.ruta.origen.nombre,
-              coords: [
-                viaje.ruta.origen.coordenadas.lat,
-                viaje.ruta.origen.coordenadas.lng
-              ],
-              type: viaje.ruta.origen.tipo === 'terminal' ? 'red' : 
-                    viaje.ruta.origen.tipo === 'puerto' ? 'blue' : 'green',
-              number: "0",
-              description: `Origen - ${viaje.ruta.origen.tipo || 'ciudad'}`,
-              tripCount: 0,
-              nextTrip: null,
-              isTerminal: viaje.ruta.origen.tipo === 'terminal',
-              details: `${viaje.ruta.origen.tipo || 'Ciudad'} de origen`
-            });
-          }
-        }
-
-        // Procesar DESTINO
-        if (viaje.ruta?.destino?.nombre) {
-          const destinoKey = viaje.ruta.destino.nombre;
-          if (!locationMap.has(destinoKey)) {
-            locationMap.set(destinoKey, {
-              name: viaje.ruta.destino.nombre,
-              coords: [
-                viaje.ruta.destino.coordenadas.lat,
-                viaje.ruta.destino.coordenadas.lng
-              ],
-              type: viaje.ruta.destino.tipo === 'terminal' ? 'red' : 
-                    viaje.ruta.destino.tipo === 'puerto' ? 'blue' : 'green',
-              number: "0",
-              description: `Destino - ${viaje.ruta.destino.tipo || 'ciudad'}`,
-              tripCount: 0,
-              nextTrip: null,
-              isTerminal: viaje.ruta.destino.tipo === 'terminal',
-              details: `${viaje.ruta.destino.tipo || 'Ciudad'} de destino`
-            });
-          }
-
-          // Actualizar estadísticas del destino
-          const location = locationMap.get(destinoKey);
-          location.tripCount++;
-          location.number = location.tripCount.toString();
-
-          // Próximo viaje programado
-          if (viaje.estado.actual === 'pendiente' && !location.nextTrip) {
-            location.nextTrip = new Date(viaje.departureTime).toLocaleTimeString("es-ES", {
-              hour: "2-digit",
-              minute: "2-digit"
-            });
-          }
-
-          location.description = `${location.tripCount} viaje${location.tripCount > 1 ? 's' : ''} programado${location.tripCount > 1 ? 's' : ''}`;
-        }
-
-      } catch (error) {
-        console.log(`❌ Error procesando ubicaciones del viaje ${index + 1}:`, error.message);
-      }
-    });
-
-    // 🛣️ PROCESAR RUTAS CON INFORMACIÓN COMPLETA
+    // 🛣️ PROCESAR RUTAS CON TU ESQUEMA
     const routes = viajes.map((viaje, index) => {
       try {
-        const origen = viaje.ruta?.origen;
-        const destino = viaje.ruta?.destino;
+        const cotizacion = viaje.quoteId; // 🎯 TU CAMPO REAL
         
-        if (!origen || !destino) return null;
+        console.log(`🔄 Procesando viaje ${index + 1}:`, {
+          id: viaje._id.toString().slice(-6),
+          hasCotizacion: !!cotizacion,
+          quoteName: cotizacion?.quoteName
+        });
 
-        // 📍 COORDENADAS DE LA RUTA
+        // 📍 OBTENER COORDENADAS DE RUTA
+        let origen, destino, distanciaTotal, tiempoEstimado;
+        
+        if (cotizacion && cotizacion.ruta) {
+          // Desde cotización
+          origen = cotizacion.ruta.origen;
+          destino = cotizacion.ruta.destino;
+          distanciaTotal = cotizacion.ruta.distanciaTotal;
+          tiempoEstimado = cotizacion.ruta.tiempoEstimado;
+          
+          console.log(`   ✅ Datos desde cotización:`, {
+            origen: origen?.nombre,
+            destino: destino?.nombre,
+            distancia: distanciaTotal
+          });
+        } else {
+          // Coordenadas por defecto si no hay cotización
+          console.log(`   ⚠️ Sin cotización, usando coordenadas por defecto`);
+          
+          origen = {
+            nombre: "Terminal Rivera",
+            coordenadas: { lat: 13.8833, lng: -89.1000 },
+            tipo: "terminal"
+          };
+          
+          destino = {
+            nombre: "Destino General",
+            coordenadas: { lat: 13.6929, lng: -89.2182 },
+            tipo: "ciudad"
+          };
+          
+          distanciaTotal = 50; // km por defecto
+          tiempoEstimado = 2; // horas por defecto
+        }
+
+        // ⚠️ VALIDAR COORDENADAS OBLIGATORIO
+        if (!origen?.coordenadas?.lat || !destino?.coordenadas?.lat) {
+          console.log(`   ❌ Coordenadas inválidas, omitiendo viaje`);
+          return null;
+        }
+
+        // 📍 COORDENADAS FINALES
         const coordinates = [
           [origen.coordenadas.lat, origen.coordenadas.lng],
           [destino.coordenadas.lat, destino.coordenadas.lng]
         ];
 
-        // 📊 ESTADO Y COLOR
+        console.log(`   📍 Coordenadas finales:`, coordinates);
+
+        // 📊 ESTADO DEL VIAJE
         let status = "scheduled";
         let statusText = "Programado";
         
@@ -144,7 +151,7 @@ ViajesController.getMapData = async (req, res) => {
             statusText = "Programado";
         }
 
-        // 🚛 INFORMACIÓN DEL TRUCK MEJORADA
+        // 🚛 INFORMACIÓN DEL CAMIÓN
         const getTruckInfo = () => {
           const truck = viaje.truckId;
           if (!truck) return "Camión por asignar";
@@ -168,32 +175,30 @@ ViajesController.getMapData = async (req, res) => {
 
         // 👤 INFORMACIÓN DEL CONDUCTOR
         const getDriverInfo = () => {
-          if (viaje.conductor?.id?.nombre) return viaje.conductor.id.nombre;
-          if (viaje.conductor?.nombre) return viaje.conductor.nombre;
+          const conductor = viaje.conductorId;
+          if (conductor?.name || conductor?.nombre) {
+            return conductor.name || conductor.nombre;
+          }
           return "Conductor por asignar";
         };
 
-        // ⏰ CALCULAR TIEMPOS Y PROGRESO
-        const ahora = new Date();
-        const salidaProgramada = new Date(viaje.departureTime);
-        const llegadaProgramada = new Date(viaje.arrivalTime);
-        const llegadaEstimada = viaje.horarios?.llegadaEstimada ? 
-          new Date(viaje.horarios.llegadaEstimada) : llegadaProgramada;
-
-        // 📈 PROGRESO INTELIGENTE
+        // ⏰ CALCULAR PROGRESO
         let progreso = viaje.tracking?.progreso?.porcentaje || 0;
         let ubicacionActual = "Terminal";
         
         if (viaje.estado.actual === 'en_curso' || viaje.estado.actual === 'retrasado') {
-          // Si no hay progreso manual, calcular automáticamente
+          // Calcular progreso por tiempo si no existe
           if (progreso === 0) {
+            const ahora = new Date();
+            const salidaProgramada = new Date(viaje.departureTime);
+            const llegadaProgramada = new Date(viaje.arrivalTime);
             const tiempoTotal = llegadaProgramada - salidaProgramada;
             const tiempoTranscurrido = ahora - salidaProgramada;
             progreso = Math.min(95, Math.max(0, (tiempoTranscurrido / tiempoTotal) * 100));
           }
           
-          if (viaje.tracking?.ubicacionActual?.lat) {
-            ubicacionActual = `${Math.round(progreso)}% completado - GPS activo`;
+          if (viaje.tracking?.ubicacionActual) {
+            ubicacionActual = `${Math.round(progreso)}% - GPS activo`;
           } else {
             ubicacionActual = `${Math.round(progreso)}% completado`;
           }
@@ -204,10 +209,14 @@ ViajesController.getMapData = async (req, res) => {
           ubicacionActual = origen.nombre;
         }
 
-        // 🚨 ALERTAS ACTIVAS
-        const alertasActivas = viaje.alertas?.filter(alert => !alert.resuelta) || [];
+        // 📦 INFORMACIÓN DE CARGA
+        const cargaInfo = cotizacion?.carga;
+        const carga = cargaInfo?.descripcion || 'Carga general';
+        const peso = cargaInfo?.peso?.valor ? 
+          ` - ${cargaInfo.peso.valor} ${cargaInfo.peso.unidad || 'kg'}` : '';
 
-        return {
+        // 🎯 CREAR OBJETO DE RUTA
+        const routeObj = {
           id: viaje._id.toString(),
           coordinates,
           status,
@@ -216,101 +225,203 @@ ViajesController.getMapData = async (req, res) => {
                     viaje.estado.actual === "retrasado" ? "high" : "medium",
           
           // 📏 DISTANCIA Y TIEMPO
-          distance: viaje.ruta?.distanciaTotal ? 
-            `${viaje.ruta.distanciaTotal} km` : "Calculando...",
-          estimatedTime: viaje.ruta?.tiempoEstimado ? 
-            `${Math.floor(viaje.ruta.tiempoEstimado / 60)}h ${viaje.ruta.tiempoEstimado % 60}min` : 
-            "Calculando...",
+          distance: distanciaTotal ? `${distanciaTotal} km` : "N/A",
+          estimatedTime: tiempoEstimado ? 
+            `${Math.floor(tiempoEstimado)}h ${Math.round((tiempoEstimado % 1) * 60)}min` : 
+            "N/A",
           
           // 📊 INFORMACIÓN DEL VIAJE
           tripInfo: {
             driver: getDriverInfo(),
-            driverPhone: viaje.conductor?.id?.telefono || 
-                        viaje.conductor?.telefono || 
-                        "No disponible",
+            driverPhone: viaje.conductorId?.phone || viaje.conductorId?.telefono || "No disponible",
             truck: getTruckInfo(),
-            cargo: viaje.carga?.descripcion ? 
-              `${viaje.carga.descripcion}${viaje.carga.peso?.valor ? ` (${viaje.carga.peso.valor} ${viaje.carga.peso.unidad})` : ''}` : 
-              "Carga general",
+            cargo: carga + peso,
             
-            // ⏰ HORARIOS DETALLADOS
-            departure: salidaProgramada.toLocaleTimeString("es-ES", {
+            // ⏰ HORARIOS
+            departure: new Date(viaje.departureTime).toLocaleTimeString("es-ES", {
               hour: "2-digit",
               minute: "2-digit"
             }),
-            arrival: llegadaProgramada.toLocaleTimeString("es-ES", {
+            arrival: new Date(viaje.arrivalTime).toLocaleTimeString("es-ES", {
               hour: "2-digit",
               minute: "2-digit"
             }),
-            estimatedArrival: llegadaEstimada.toLocaleTimeString("es-ES", {
+            estimatedArrival: viaje.arrivalTime ? new Date(viaje.arrivalTime).toLocaleTimeString("es-ES", {
               hour: "2-digit",
               minute: "2-digit"
-            }),
+            }) : "N/A",
             
-            // 📈 PROGRESO Y UBICACIÓN
+            // 📈 PROGRESO
             progress: Math.round(progreso),
             currentLocation: ubicacionActual,
             
-            // ⏰ HORARIOS REALES
-            realDeparture: viaje.horarios?.salidaReal ? 
-              new Date(viaje.horarios.salidaReal).toLocaleTimeString("es-ES", {
+            // ⏰ TIEMPOS REALES (tu esquema)
+            realDeparture: viaje.tiemposReales?.salidaReal ? 
+              new Date(viaje.tiemposReales.salidaReal).toLocaleTimeString("es-ES", {
                 hour: "2-digit",
                 minute: "2-digit"
               }) : null,
-            realArrival: viaje.horarios?.llegadaReal ? 
-              new Date(viaje.horarios.llegadaReal).toLocaleTimeString("es-ES", {
+            realArrival: viaje.tiemposReales?.llegadaReal ? 
+              new Date(viaje.tiemposReales.llegadaReal).toLocaleTimeString("es-ES", {
                 hour: "2-digit",
                 minute: "2-digit"
               }) : null
           },
           
-          // 📝 DESCRIPCIÓN Y DETALLES
-          description: viaje.tripDescription,
+          // 📝 DESCRIPCIÓN
+          description: viaje.tripDescription || 'Sin descripción',
           
           // 🗺️ INFORMACIÓN DE RUTA
           route: {
             from: origen.nombre,
             to: destino.nombre,
             fromType: origen.tipo || 'ciudad',
-            toType: destino.tipo || 'ciudad'
+            toType: destino.tipo || 'ciudad',
+            totalPoints: 2,
+            currentPoint: 0,
+            quoteId: cotizacion?._id // TU CAMPO REAL
           },
           
-          // 🚨 ALERTAS Y NOTIFICACIONES
-          alerts: alertasActivas.map(alert => ({
+          // 🚨 ALERTAS (tu esquema)
+          alerts: viaje.alertas?.filter(alert => !alert.resuelta).map(alert => ({
             type: alert.tipo,
             message: alert.mensaje,
             priority: alert.prioridad || 'media',
             date: alert.fecha
-          })),
+          })) || [],
           
-          // 💰 COSTOS (si disponibles)
-          costs: viaje.costos?.total ? {
-            fuel: viaje.costos.combustible || 0,
-            tolls: viaje.costos.peajes || 0,
-            others: viaje.costos.otros || 0,
-            total: viaje.costos.total
+          // 💰 COSTOS REALES (tu esquema)
+          costs: viaje.costosReales || cotizacion?.costos ? {
+            fuel: viaje.costosReales?.combustible || cotizacion?.costos?.combustible || 0,
+            tolls: viaje.costosReales?.peajes || cotizacion?.costos?.peajes || 0,
+            driver: viaje.costosReales?.conductor || cotizacion?.costos?.conductor || 0,
+            others: viaje.costosReales?.otros || cotizacion?.costos?.otros || 0,
+            total: viaje.costosReales?.total || cotizacion?.costos?.total || 0
           } : null,
           
-          // 🌡️ CONDICIONES
+          // 🌡️ CONDICIONES (tu esquema)
           conditions: viaje.condiciones ? {
             weather: viaje.condiciones.clima,
             traffic: viaje.condiciones.trafico,
             road: viaje.condiciones.carretera
           } : null,
           
-          // ⏱️ MÉTRICAS DE TIEMPO
-          metrics: {
-            duration: viaje.duracionProgramada, // virtual getter
-            realDuration: viaje.duracionReal,   // virtual getter
-            delay: viaje.retrasoEnMinutos       // virtual getter
+          // 🆕 COTIZACIÓN COMPLETA (tu esquema)
+          quotation: cotizacion ? {
+            _id: cotizacion._id,
+            quoteName: cotizacion.quoteName || 'Cotización sin nombre',
+            quoteDescription: cotizacion.quoteDescription || '',
+            travelLocations: cotizacion.travelLocations || '',
+            
+            // 👤 CLIENTE
+            clientId: cotizacion.clientId ? {
+              _id: cotizacion.clientId._id || cotizacion.clientId,
+              nombre: cotizacion.clientId.nombre || cotizacion.clientId.name || 'Cliente no especificado',
+              email: cotizacion.clientId.email || '',
+              telefono: cotizacion.clientId.telefono || cotizacion.clientId.phone || '',
+              empresa: cotizacion.clientId.empresa || ''
+            } : null,
+            
+            // 🚛 TIPO DE CAMIÓN
+            truckType: cotizacion.truckType || 'otros',
+            
+            // 📅 FECHAS Y PAGOS
+            deliveryDate: cotizacion.deliveryDate,
+            paymentMethod: cotizacion.paymentMethod,
+            
+            // 📊 ESTADO Y PRECIO
+            status: cotizacion.status || 'pendiente',
+            price: cotizacion.price || 0,
+            
+            // 🗺️ RUTA COMPLETA
+            ruta: cotizacion.ruta ? {
+              origen: cotizacion.ruta.origen,
+              destino: cotizacion.ruta.destino,
+              distanciaTotal: cotizacion.ruta.distanciaTotal,
+              tiempoEstimado: cotizacion.ruta.tiempoEstimado
+            } : null,
+            
+            // 📦 CARGA DETALLADA
+            carga: cotizacion.carga ? {
+              categoria: cotizacion.carga.categoria,
+              subcategoria: cotizacion.carga.subcategoria,
+              descripcion: cotizacion.carga.descripcion,
+              peso: cotizacion.carga.peso,
+              volumen: cotizacion.carga.volumen,
+              clasificacionRiesgo: cotizacion.carga.clasificacionRiesgo,
+              condicionesEspeciales: cotizacion.carga.condicionesEspeciales,
+              valorDeclarado: cotizacion.carga.valorDeclarado
+            } : null,
+            
+            // ⏰ HORARIOS DETALLADOS
+            horarios: cotizacion.horarios ? {
+              fechaSalida: cotizacion.horarios.fechaSalida,
+              fechaLlegadaEstimada: cotizacion.horarios.fechaLlegadaEstimada,
+              tiempoEstimadoViaje: cotizacion.horarios.tiempoEstimadoViaje,
+              flexibilidadHoraria: cotizacion.horarios.flexibilidadHoraria,
+              horarioPreferido: cotizacion.horarios.horarioPreferido
+            } : null,
+            
+            // 💰 COSTOS PLANIFICADOS
+            costos: cotizacion.costos || null,
+            
+            // 📝 OBSERVACIONES
+            observaciones: cotizacion.observaciones || '',
+            notasInternas: cotizacion.notasInternas || ''
+            
+          } : null,
+          
+          // 🆕 INFORMACIÓN DE INTEGRACIÓN
+          integration: {
+            hasCotizacion: !!cotizacion,
+            hasRuta: !!(cotizacion?.ruta),
+            hasHorarios: !!(cotizacion?.horarios),
+            hasCliente: !!(cotizacion?.clientId),
+            hasCarga: !!(cotizacion?.carga),
+            autoUpdateEnabled: viaje.estado?.autoActualizar !== false,
+            progressMethod: viaje.tracking?.ubicacionActual ? 'gps' : 'time_based'
           }
         };
 
+        // 📍 AGREGAR UBICACIONES AL MAPA
+        [origen, destino].forEach(ubicacion => {
+          if (ubicacion && ubicacion.nombre && ubicacion.coordenadas) {
+            const key = ubicacion.nombre;
+            if (!locationMap.has(key)) {
+              locationMap.set(key, {
+                name: ubicacion.nombre,
+                coords: [ubicacion.coordenadas.lat, ubicacion.coordenadas.lng],
+                type: ubicacion.tipo === 'terminal' ? 'red' : 
+                      ubicacion.tipo === 'puerto' ? 'blue' : 'green',
+                number: "1",
+                description: `${ubicacion.tipo || 'Ubicación'} - 1 viaje`,
+                tripCount: 1,
+                isTerminal: ubicacion.tipo === 'terminal',
+                details: `${ubicacion.tipo || 'Ubicación'} en ${ubicacion.nombre}`,
+                quotationInfo: {
+                  hasQuotation: !!cotizacion,
+                  quotationId: cotizacion?._id
+                }
+              });
+            } else {
+              const location = locationMap.get(key);
+              location.tripCount++;
+              location.number = location.tripCount.toString();
+              location.description = `${location.tripCount} viajes programados`;
+            }
+          }
+        });
+
+        console.log(`   ✅ Ruta procesada exitosamente`);
+        return routeObj;
+
       } catch (error) {
-        console.log(`❌ Error procesando ruta ${index + 1}:`, error.message);
+        console.error(`❌ Error procesando viaje ${index + 1}:`, error.message);
         return null;
       }
     }).filter(route => route !== null);
+
+    console.log(`🛣️ Rutas procesadas: ${routes.length}/${viajes.length}`);
 
     // 🏙️ CIUDADES DE REFERENCIA
     const cities = [
@@ -324,8 +435,8 @@ ViajesController.getMapData = async (req, res) => {
     // 📊 ESTADÍSTICAS DETALLADAS
     const completedTrips = viajes.filter(v => v.estado.actual === "completado");
     const onTimeTrips = completedTrips.filter(v => 
-      !v.horarios?.llegadaReal || 
-      v.horarios.llegadaReal <= v.arrivalTime
+      !v.tiemposReales?.llegadaReal || 
+      v.tiemposReales.llegadaReal <= v.arrivalTime
     );
 
     const statistics = {
@@ -346,7 +457,7 @@ ViajesController.getMapData = async (req, res) => {
         Math.round(routes.reduce((acc, route) => acc + route.tripInfo.progress, 0) / routes.length) : 0,
       
       // 👥 RECURSOS
-      total_drivers: new Set(viajes.map(v => v.conductor?.id?._id || v.conductor?.id).filter(Boolean)).size,
+      total_drivers: new Set(viajes.map(v => v.conductorId?._id).filter(Boolean)).size,
       total_trucks: new Set(viajes.map(v => v.truckId?._id).filter(Boolean)).size,
       
       // 📅 MÉTRICAS TEMPORALES  
@@ -361,13 +472,24 @@ ViajesController.getMapData = async (req, res) => {
         acc + (v.alertas?.filter(alert => !alert.resuelta).length || 0), 0),
       
       // 💰 INFORMACIÓN FINANCIERA
-      total_revenue: viajes.reduce((acc, v) => acc + (v.costos?.total || 0), 0),
+      total_revenue: viajes.reduce((acc, v) => acc + (v.quoteId?.price || v.costosReales?.total || 0), 0),
+      
+      // 🆕 MÉTRICAS DE COTIZACIONES
+      viajes_con_cotizacion: viajesConCotizacion.length,
+      viajes_con_ruta: viajes.filter(v => v.quoteId?.ruta).length,
+      viajes_con_horarios: viajes.filter(v => v.quoteId?.horarios).length,
+      viajes_con_cliente: viajes.filter(v => v.quoteId?.clientId).length,
+      viajes_con_carga: viajes.filter(v => v.quoteId?.carga).length,
+      auto_update_enabled: viajes.filter(v => v.estado?.autoActualizar !== false).length,
       
       // 🎯 MÉTRICAS DE CALIDAD
-      growth_percentage: 35 // Puedes calcular esto comparando con meses anteriores
+      cotizaciones_aceptadas: viajes.filter(v => v.quoteId?.status === 'aceptada').length,
+      cotizaciones_ejecutadas: viajes.filter(v => v.quoteId?.status === 'ejecutada').length,
+      cotizaciones_pendientes: viajes.filter(v => v.quoteId?.status === 'pendiente').length,
+      growth_percentage: 35
     };
 
-    // 🎯 RESPUESTA OPTIMIZADA
+    // 🎯 RESPUESTA FINAL
     const mapData = {
       locations: Array.from(locationMap.values()),
       routes,
@@ -377,20 +499,36 @@ ViajesController.getMapData = async (req, res) => {
       // ⏰ METADATOS
       lastUpdate: new Date().toISOString(),
       autoUpdateEnabled: true,
-      refreshInterval: 60000, // 1 minuto
-      dataSource: "single_model"
+      refreshInterval: 60000,
+      dataSource: "real_schema_model",
+      integrationInfo: {
+        cotizacionesUsed: viajesConCotizacion.length,
+        viajesSinCotizacion: viajesSinCotizacion.length,
+        rutasUsed: viajes.filter(v => v.quoteId?.ruta).length,
+        horariosUsed: viajes.filter(v => v.quoteId?.horarios).length,
+        clientesUsed: viajes.filter(v => v.quoteId?.clientId).length,
+        cargasUsed: viajes.filter(v => v.quoteId?.carga).length,
+        autoUpdateService: !!autoUpdateService,
+        schemaVersion: "real_v1",
+        fieldsUsed: [
+          'quoteId', 'truckId', 'conductorId', 'estado.actual', 
+          'tracking.progreso', 'tiemposReales', 'costosReales', 'alertas'
+        ]
+      }
     };
 
-    console.log("✅ Datos procesados exitosamente:");
+    console.log("✅ Datos procesados exitosamente con esquema real:");
     console.log(`📍 Ubicaciones: ${mapData.locations.length}`);
     console.log(`🛣️ Rutas: ${mapData.routes.length}`);
     console.log(`📊 Tasa de finalización: ${statistics.completion_rate}%`);
     console.log(`⏰ Puntualidad: ${statistics.on_time_rate}%`);
+    console.log(`🔗 Viajes con cotización: ${statistics.viajes_con_cotizacion}/${statistics.total_routes}`);
+    console.log(`🗺️ Viajes con ruta: ${statistics.viajes_con_ruta}/${statistics.total_routes}`);
 
     res.status(200).json({
       success: true,
       data: mapData,
-      message: "Datos del mapa obtenidos exitosamente"
+      message: "Datos del mapa obtenidos exitosamente con esquema real"
     });
 
   } catch (error) {
@@ -398,7 +536,8 @@ ViajesController.getMapData = async (req, res) => {
     res.status(500).json({
       success: false,
       message: "Error al obtener datos del mapa",
-      error: error.message
+      error: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
   }
 };
@@ -406,43 +545,92 @@ ViajesController.getMapData = async (req, res) => {
 // =====================================================
 // GET: Análisis de distribución de cargas (VERSIÓN UNIFICADA)
 // =====================================================
+// Controllers/Viajes.js - MÉTODO CORREGIDO
+// getCargaDistribution - USANDO LOOKUP A COTIZACIONES
+
 ViajesController.getCargaDistribution = async (req, res) => {
   try {
-    console.log("📊 Iniciando análisis de distribución de cargas...");
+    console.log("📊 Iniciando análisis de distribución de cargas (CORREGIDO)...");
 
-    // 📊 DISTRIBUCIÓN POR CATEGORÍA (compatible con datos antiguos y nuevos)
+    // 📊 DISTRIBUCIÓN POR CATEGORÍA - USANDO LOOKUP A COTIZACIONES
     const distribucionCategoria = await ViajesModel.aggregate([
+      // 🔗 LOOKUP A COTIZACIONES PARA OBTENER DATOS DE CARGA
+      {
+        $lookup: {
+          from: "Cotizaciones",
+          localField: "quoteId",
+          foreignField: "_id",
+          as: "cotizacion"
+        }
+      },
+      // 📦 DESCOMPONER COTIZACIÓN
+      {
+        $unwind: {
+          path: "$cotizacion",
+          preserveNullAndEmptyArrays: false // Solo viajes con cotización
+        }
+      },
+      // 📊 AGRUPAR POR CATEGORÍA DE CARGA (DESDE COTIZACIÓN)
       {
         $group: {
-          _id: {
-            // 🔧 COMPATIBILIDAD: usa categoria si existe, sino tipo, sino descripción
-            $ifNull: [
-              "$carga.categoria", 
-              { $ifNull: ["$carga.tipo", "$carga.descripcion"] }
-            ]
-          },
+          _id: "$cotizacion.carga.categoria", // ✅ Desde cotización
           count: { $sum: 1 },
-          pesoPromedio: { $avg: "$carga.peso.valor" },
-          pesoTotal: { $sum: "$carga.peso.valor" },
-          valorPromedio: { $avg: "$carga.valor.montoDeclarado" },
-          // Ejemplos de descripciones
-          ejemplos: { $addToSet: "$carga.descripcion" },
-          // Contar tipos de riesgo
+          
+          // 📊 MÉTRICAS DE PESO
+          pesoPromedio: { $avg: "$cotizacion.carga.peso.valor" },
+          pesoTotal: { $sum: "$cotizacion.carga.peso.valor" },
+          
+          // 💰 MÉTRICAS DE VALOR
+          valorPromedio: { $avg: "$cotizacion.carga.valorDeclarado.monto" },
+          valorTotal: { $sum: "$cotizacion.carga.valorDeclarado.monto" },
+          
+          // 📋 EJEMPLOS DE DESCRIPCIONES
+          ejemplos: { $addToSet: "$cotizacion.carga.descripcion" },
+          subcategorias: { $addToSet: "$cotizacion.carga.subcategoria" },
+          
+          // 🚨 ANÁLISIS DE RIESGOS
           riesgosEspeciales: {
             $sum: {
               $cond: [
-                { $and: [
-                  { $ne: ["$carga.clasificacionRiesgo", "normal"] },
-                  { $ne: ["$carga.clasificacionRiesgo", null] }
-                ]},
+                { $ne: ["$cotizacion.carga.clasificacionRiesgo", "normal"] },
                 1,
                 0
               ]
             }
-          }
+          },
+          
+          // 📈 MÉTRICAS DE VIAJES
+          viajesCompletados: {
+            $sum: {
+              $cond: [{ $eq: ["$estado.actual", "completado"] }, 1, 0]
+            }
+          },
+          viajesEnCurso: {
+            $sum: {
+              $cond: [{ $eq: ["$estado.actual", "en_curso"] }, 1, 0]
+            }
+          },
+          
+          // 🚛 TIPOS DE CAMIÓN MÁS USADOS
+          tiposCamionUsados: { $addToSet: "$cotizacion.truckType" },
+          
+          // 📍 RUTAS MÁS COMUNES
+          rutasComunes: { 
+            $addToSet: {
+              $concat: [
+                "$cotizacion.ruta.origen.nombre",
+                " → ",
+                "$cotizacion.ruta.destino.nombre"
+              ]
+            }
+          },
+          
+          // ⏰ TIEMPOS PROMEDIO
+          tiempoPromedioViaje: { $avg: "$cotizacion.ruta.tiempoEstimado" },
+          distanciaPromedio: { $avg: "$cotizacion.ruta.distanciaTotal" }
         }
       },
-      // Obtener el total para calcular porcentajes
+      // 📊 CALCULAR TOTALES PARA PORCENTAJES
       {
         $group: {
           _id: null,
@@ -453,14 +641,22 @@ ViajesController.getCargaDistribution = async (req, res) => {
               pesoPromedio: "$pesoPromedio",
               pesoTotal: "$pesoTotal",
               valorPromedio: "$valorPromedio",
+              valorTotal: "$valorTotal",
               ejemplos: "$ejemplos",
-              riesgosEspeciales: "$riesgosEspeciales"
+              subcategorias: "$subcategorias",
+              riesgosEspeciales: "$riesgosEspeciales",
+              viajesCompletados: "$viajesCompletados",
+              viajesEnCurso: "$viajesEnCurso",
+              tiposCamionUsados: "$tiposCamionUsados",
+              rutasComunes: "$rutasComunes",
+              tiempoPromedioViaje: "$tiempoPromedioViaje",
+              distanciaPromedio: "$distanciaPromedio"
             }
           },
           total: { $sum: "$count" }
         }
       },
-      // Calcular porcentajes
+      // 📈 CALCULAR PORCENTAJES Y FORMATEAR
       {
         $project: {
           _id: 0,
@@ -471,16 +667,69 @@ ViajesController.getCargaDistribution = async (req, res) => {
               as: "item",
               in: {
                 categoria: "$$item.categoria",
+                name: {
+                  $switch: {
+                    branches: [
+                      { case: { $eq: ["$$item.categoria", "alimentos_perecederos"] }, then: "Alimentos Perecederos" },
+                      { case: { $eq: ["$$item.categoria", "alimentos_no_perecederos"] }, then: "Alimentos No Perecederos" },
+                      { case: { $eq: ["$$item.categoria", "materiales_construccion"] }, then: "Materiales de Construcción" },
+                      { case: { $eq: ["$$item.categoria", "electronicos"] }, then: "Electrónicos" },
+                      { case: { $eq: ["$$item.categoria", "maquinaria"] }, then: "Maquinaria y Equipos" },
+                      { case: { $eq: ["$$item.categoria", "textiles"] }, then: "Textiles" },
+                      { case: { $eq: ["$$item.categoria", "quimicos"] }, then: "Productos Químicos" },
+                      { case: { $eq: ["$$item.categoria", "medicamentos"] }, then: "Medicamentos" },
+                      { case: { $eq: ["$$item.categoria", "vehiculos"] }, then: "Vehículos" },
+                      { case: { $eq: ["$$item.categoria", "productos_agricolas"] }, then: "Productos Agrícolas" }
+                    ],
+                    default: {
+                      $concat: [
+                        { $toUpper: { $substr: ["$$item.categoria", 0, 1] } },
+                        { $substr: ["$$item.categoria", 1, -1] }
+                      ]
+                    }
+                  }
+                },
                 count: "$$item.count",
-                pesoPromedio: { $round: [{ $ifNull: ["$$item.pesoPromedio", 0] }, 2] },
-                pesoTotal: { $round: [{ $ifNull: ["$$item.pesoTotal", 0] }, 2] },
-                valorPromedio: { $round: [{ $ifNull: ["$$item.valorPromedio", 0] }, 2] },
-                ejemplos: { $slice: ["$$item.ejemplos", 3] }, // Máximo 3 ejemplos
-                riesgosEspeciales: "$$item.riesgosEspeciales",
                 porcentaje: {
                   $round: [
                     { $multiply: [{ $divide: ["$$item.count", "$total"] }, 100] },
                     1
+                  ]
+                },
+                
+                // 📊 MÉTRICAS FORMATEADAS
+                pesoPromedio: { $round: [{ $ifNull: ["$$item.pesoPromedio", 0] }, 2] },
+                pesoTotal: { $round: [{ $ifNull: ["$$item.pesoTotal", 0] }, 2] },
+                valorPromedio: { $round: [{ $ifNull: ["$$item.valorPromedio", 0] }, 2] },
+                valorTotal: { $round: [{ $ifNull: ["$$item.valorTotal", 0] }, 2] },
+                
+                // 📋 INFORMACIÓN ADICIONAL
+                ejemplos: { $slice: ["$$item.ejemplos", 3] },
+                subcategorias: { $slice: ["$$item.subcategorias", 5] },
+                riesgosEspeciales: "$$item.riesgosEspeciales",
+                
+                // 📈 MÉTRICAS DE RENDIMIENTO
+                tasaCompletado: {
+                  $cond: [
+                    { $gt: ["$$item.count", 0] },
+                    { $round: [{ $multiply: [{ $divide: ["$$item.viajesCompletados", "$$item.count"] }, 100] }, 1] },
+                    0
+                  ]
+                },
+                viajesActivos: "$$item.viajesEnCurso",
+                
+                // 🚛 INFORMACIÓN OPERATIVA
+                tiposCamionUsados: "$$item.tiposCamionUsados",
+                rutasComunes: { $slice: ["$$item.rutasComunes", 3] },
+                tiempoPromedioHoras: { $round: [{ $ifNull: ["$$item.tiempoPromedioViaje", 0] }, 1] },
+                distanciaPromedioKm: { $round: [{ $ifNull: ["$$item.distanciaPromedio", 0] }, 1] },
+                
+                // 🏷️ CLASIFICACIÓN
+                clasificacionRiesgo: {
+                  $cond: [
+                    { $gt: ["$$item.riesgosEspeciales", 0] },
+                    "especial",
+                    "normal"
                   ]
                 }
               }
@@ -488,7 +737,7 @@ ViajesController.getCargaDistribution = async (req, res) => {
           }
         }
       },
-      // Ordenar por cantidad descendente
+      // 📈 ORDENAR POR CANTIDAD DESCENDENTE
       {
         $project: {
           total: 1,
@@ -502,73 +751,65 @@ ViajesController.getCargaDistribution = async (req, res) => {
       }
     ]);
 
-    // Extraer resultado principal
+    // 📊 EXTRAER RESULTADO
     const resultado = distribucionCategoria[0] || { total: 0, distribucion: [] };
 
-    console.log(`📦 Encontradas ${resultado.distribucion.length} categorías diferentes`);
-    console.log(`🚛 Total de viajes analizados: ${resultado.total}`);
+    console.log(`📦 Análisis completado: ${resultado.distribucion.length} categorías, ${resultado.total} viajes`);
 
-    // 🎯 PROCESAR DATOS PARA FRONTEND
-    const datosFormateados = resultado.distribucion.map((item, index) => {
-      const categoria = item.categoria || 'Sin categoría';
-      const nombreMostrar = categoria.charAt(0).toUpperCase() + categoria.slice(1);
-      
-      return {
-        id: `carga-${index}`,
-        // Para compatibilidad con frontend actual
-        tipo: categoria.toLowerCase(),
-        name: nombreMostrar,
-        categoria: categoria,
-        count: item.count,
-        porcentaje: item.porcentaje,
-        percentage: item.porcentaje, // Alias para compatibilidad
-        pesoPromedio: item.pesoPromedio,
-        pesoTotal: item.pesoTotal,
-        valorPromedio: item.valorPromedio,
-        ejemplos: item.ejemplos.filter(Boolean).slice(0, 3),
-        descripcion: item.ejemplos[0] || nombreMostrar,
-        riesgosEspeciales: item.riesgosEspeciales,
-        clasificacionRiesgo: item.riesgosEspeciales > 0 ? 'especial' : 'normal',
-        unidadPeso: 'kg'
-      };
-    });
-
-    // 📊 ESTADÍSTICAS GENERALES
+    // 📈 ESTADÍSTICAS GENERALES MEJORADAS
     const estadisticas = {
-      totalTiposUnicos: datosFormateados.length,
+      totalTiposUnicos: resultado.distribucion.length,
       totalViajes: resultado.total,
-      tipoMasFrecuente: datosFormateados[0]?.name || 'N/A',
-      porcentajeMasFrecuente: datosFormateados[0]?.porcentaje || 0,
-      pesoTotalTransportado: datosFormateados.reduce((acc, item) => acc + item.pesoTotal, 0),
-      promedioViajesPorCategoria: datosFormateados.length > 0 ? 
-        Math.round(resultado.total / datosFormateados.length) : 0,
-      top3Tipos: datosFormateados.slice(0, 3).map(t => ({
+      tipoMasFrecuente: resultado.distribucion[0]?.name || 'N/A',
+      porcentajeMasFrecuente: resultado.distribucion[0]?.porcentaje || 0,
+      
+      // 📊 MÉTRICAS DE PESO Y VALOR
+      pesoTotalTransportado: resultado.distribucion.reduce((acc, item) => acc + (item.pesoTotal || 0), 0),
+      valorTotalTransportado: resultado.distribucion.reduce((acc, item) => acc + (item.valorTotal || 0), 0),
+      
+      // 📈 MÉTRICAS DE RENDIMIENTO
+      tasaCompletadoGeneral: resultado.total > 0 ? 
+        Math.round(resultado.distribucion.reduce((acc, item) => acc + (item.viajesCompletados || 0), 0) / resultado.total * 100) : 0,
+      
+      // 🚨 ANÁLISIS DE RIESGOS
+      categoriasConRiesgo: resultado.distribucion.filter(item => item.clasificacionRiesgo === 'especial').length,
+      porcentajeRiesgoEspecial: resultado.total > 0 ? 
+        Math.round(resultado.distribucion.reduce((acc, item) => acc + (item.riesgosEspeciales || 0), 0) / resultado.total * 100) : 0,
+      
+      // 🏆 TOP 3
+      top3Tipos: resultado.distribucion.slice(0, 3).map(t => ({
         tipo: t.name,
         porcentaje: t.porcentaje,
         cantidad: t.count
-      }))
+      })),
+      
+      // ⏰ MÉTRICAS OPERATIVAS
+      tiempoPromedioGeneral: resultado.distribucion.length > 0 ?
+        Math.round(resultado.distribucion.reduce((acc, item) => acc + (item.tiempoPromedioHoras || 0), 0) / resultado.distribucion.length) : 0,
+      distanciaPromedioGeneral: resultado.distribucion.length > 0 ?
+        Math.round(resultado.distribucion.reduce((acc, item) => acc + (item.distanciaPromedioKm || 0), 0) / resultado.distribucion.length) : 0
     };
 
-    // ✅ RESPUESTA EXITOSA
+    // ✅ RESPUESTA EXITOSA CON DATOS ENRIQUECIDOS
     res.status(200).json({
       success: true,
-      data: datosFormateados,
+      data: resultado.distribucion,
       estadisticas: estadisticas,
       
-      // 🏷️ Metadatos para compatibilidad
+      // 🏷️ METADATOS
       metadata: {
         total: resultado.total,
+        fuente: "cotizaciones_lookup", // ✅ Indica que viene de cotizaciones
         ultimaActualizacion: new Date().toISOString(),
-        modeloVersion: "2.0",
-        compatibilidad: "backward_compatible",
-        campoUtilizado: "categoria/tipo/descripcion"
+        modeloVersion: "3.0",
+        metodoAnalisis: "aggregation_pipeline_with_lookup"
       },
       
-      message: `Análisis de ${datosFormateados.length} tipos de carga completado`,
+      message: `Análisis de ${resultado.distribucion.length} tipos de carga completado usando datos de cotizaciones`,
       timestamp: new Date().toISOString()
     });
 
-    console.log("✅ Análisis de distribución completado exitosamente");
+    console.log("✅ Análisis de distribución completado exitosamente usando cotizaciones");
 
   } catch (error) {
     console.error("❌ Error en análisis de distribución:", error);
