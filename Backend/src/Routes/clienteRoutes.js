@@ -6,4 +6,6 @@ const router=express.Router();
 
 router.route("/").get(clienteCon.get);
 
+router.route("/:id").put(clienteCon.PutClientes)
+.delete(clienteCon.deleteClientes)
 export default router;

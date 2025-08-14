@@ -4,13 +4,12 @@ import empleadoRoutes from "./src/Routes/empleadosRoutes.js"
 import motoristasRoutes from "./src/Routes/motoristaRoutes.js"
 import proveedoresRoutes from "./src/Routes/proveedoresRoutes.js"
 import ClientesRoutes from "./src/Routes/clienteRoutes.js"
-
+import RegisterClienteRoutes from "./src/Routes/RegisterClienteRouter.js"
 
 
 
 //servicio de auto-actualización
 
-import migrationRoutes from './src/Routes/migrationRoutes.js';
 
 
 // ✅ SOLO esta línea para las rutas (sin importar el servicio)
@@ -51,7 +50,6 @@ const app = express();
 
 app.use(express.json());
 app.use(cookieParser());
-app.use('/api/migrations', migrationRoutes);
 
 app.use(
   cors({
@@ -67,6 +65,7 @@ app.use("/api/proveedores", proveedoresRoutes);
 app.use("/api/clientes", ClientesRoutes);
 app.use("/api/login", LoginRoutes);
 app.use("/api/logout", LogoutRoutes);
+app.use("/api/resgister",RegisterClienteRoutes);
 
 
 
