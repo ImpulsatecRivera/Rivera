@@ -23,37 +23,52 @@ const LoadMetrics = () => {
       }
       
       const res = await response.json();
+      console.log('📦 Respuesta completa del backend:', res);
       
-      // 📊 El backend devuelve la data en res.data.data
-      const cargasData = res.data.data || [];
+      // 🔧 CORRECCIÓN: Los datos están en res.data (que es el array de tipos de carga)
+      const cargasData = res.data || [];
+      console.log('📊 Datos de cargas extraídos:', cargasData);
       
-      // 📈 Calcular total para porcentajes (ya viene calculado desde el backend)
-      const totalCantidad = cargasData.reduce((sum, item) => sum + (item.count || 0), 0);
+      // 📈 Calcular total para porcentajes
+      const totalCantidad = cargasData.reduce((sum, item) => sum + (item.cantidad || item.count || 0), 0);
+      console.log('📊 Total cantidad:', totalCantidad);
 
       // 🎨 Mapear datos con colores y formato para el frontend
-      const dataWithColors = cargasData.map((item, index) => ({
-        // 🏷️ Usar 'name' que viene del backend, fallback a 'categoria'
-        label: item.name || item.categoria || item.tipo || 'Sin categoría',
+      const dataWithColors = cargasData.map((item, index) => {
+        // 📊 Calcular porcentaje
+        const cantidad = item.cantidad || item.count || 0;
+        const percentage = totalCantidad > 0 ? (cantidad / totalCantidad) * 100 : 0;
         
-        // 📊 Usar 'count' que viene del backend
-        value: item.count,
-        
-        // 📈 Usar porcentaje del backend o calcularlo
-        percentage: item.porcentaje || item.percentage || 
-                   (totalCantidad > 0 ? (item.count / totalCantidad) * 100 : 0),
-        
-        // 🎨 Asignar color
-        color: colors[index % colors.length],
-        
-        // 📦 Información adicional del backend
-        pesoPromedio: item.pesoPromedio || 0,
-        pesoTotal: item.pesoTotal || 0,
-        ejemplos: item.ejemplos || [],
-        descripcion: item.descripcion || item.name
-      }));
+        return {
+          // 🏷️ Usar 'tipo' que viene del backend
+          label: item.tipo || item.name || item.categoria || 'Sin categoría',
+          
+          // 📊 Usar 'cantidad' que viene del backend
+          value: cantidad,
+          
+          // 📈 Calcular porcentaje
+          percentage: percentage,
+          
+          // 🎨 Asignar color
+          color: colors[index % colors.length],
+          
+          // 📦 Información adicional del backend
+          pesoPromedio: item.pesoPromedio || 0,
+          pesoTotal: item.pesoTotal || 0,
+          valorPromedio: item.valorPromedio || 0,
+          valorTotal: item.valorTotal || 0,
+          ejemplos: item.ejemplos || [],
+          subcategorias: item.subcategorias || [], // 📂 Agregar subcategorías
+          descripcion: item.descripcion || item.tipo,
+          tasaCompletado: item.tasaCompletado || 0,
+          viajesActivos: item.viajesActivos || 0,
+          clasificacionRiesgo: item.clasificacionRiesgo || 'normal',
+          riesgosEspeciales: item.riesgosEspeciales || 0
+        };
+      });
 
       setLoadMetrics(dataWithColors);
-      console.log('✅ Datos de cargas cargados:', dataWithColors);
+      console.log('✅ Datos de cargas procesados:', dataWithColors);
       
     } catch (error) {
       console.error("❌ Error al obtener distribución de cargas:", error);
@@ -78,9 +93,9 @@ const LoadMetrics = () => {
     fetchDistribution();
   }, []);
 
-  // 🔄 Función para recargar datos (CORREGIDA)
+  // 🔄 Función para recargar datos
   const handleRefresh = () => {
-    fetchDistribution(); // ✅ Usar el nombre correcto de la función
+    fetchDistribution();
   };
 
   return (
@@ -91,7 +106,7 @@ const LoadMetrics = () => {
           Distribución de Cargas
         </h3>
         <button
-          onClick={handleRefresh} // ✅ Ahora funciona correctamente
+          onClick={handleRefresh}
           disabled={loading}
           className="px-3 py-1 text-sm bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50 transition-colors"
         >
@@ -136,12 +151,21 @@ const LoadMetrics = () => {
               <div key={index} className="group">
                 <div className="flex justify-between items-center mb-2">
                   <div className="flex items-center">
-                    <span className="text-sm text-gray-700 font-medium">
-                      {metric.label}
-                    </span>
-                    {metric.ejemplos && metric.ejemplos.length > 0 && (
-                      <span className="ml-2 text-xs text-gray-400">
-                        ({metric.ejemplos[0]})
+                    <div className="flex flex-col">
+                      <span className="text-sm text-gray-700 font-medium">
+                        {metric.label}
+                      </span>
+                      {/* 📂 Mostrar ejemplos (no subcategorías) */}
+                      {metric.ejemplos && metric.ejemplos.length > 0 && (
+                        <span className="text-xs text-gray-500 mt-0.5">
+                          📂 {metric.ejemplos.join(', ')}
+                        </span>
+                      )}
+                    </div>
+                    {/* 🚨 Indicador de riesgo */}
+                    {metric.clasificacionRiesgo === 'especial' && (
+                      <span className="ml-2 text-xs bg-red-100 text-red-600 px-1 rounded">
+                        ⚠️ Especial
                       </span>
                     )}
                   </div>
@@ -167,35 +191,58 @@ const LoadMetrics = () => {
                 </div>
                 
                 {/* 📦 Información adicional en hover */}
-                {(metric.pesoPromedio > 0 || metric.pesoTotal > 0) && (
-                  <div className="mt-1 text-xs text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="mt-1 text-xs text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="grid grid-cols-2 gap-2">
                     {metric.pesoPromedio > 0 && (
                       <span>Peso prom: {metric.pesoPromedio.toFixed(1)}kg</span>
                     )}
-                    {metric.pesoTotal > 0 && metric.pesoPromedio > 0 && <span> | </span>}
                     {metric.pesoTotal > 0 && (
-                      <span>Total: {metric.pesoTotal.toFixed(1)}kg</span>
+                      <span>Peso total: {metric.pesoTotal.toFixed(1)}kg</span>
+                    )}
+                    {metric.valorPromedio > 0 && (
+                      <span>Valor prom: ${metric.valorPromedio.toLocaleString()}</span>
+                    )}
+                    {metric.valorTotal > 0 && (
+                      <span>Valor total: ${metric.valorTotal.toLocaleString()}</span>
+                    )}
+                    {metric.tasaCompletado > 0 && (
+                      <span>Completado: {metric.tasaCompletado}%</span>
+                    )}
+                    {metric.viajesActivos > 0 && (
+                      <span>Activos: {metric.viajesActivos}</span>
                     )}
                   </div>
-                )}
+                </div>
               </div>
             ))}
             
             {/* 📊 Resumen de estadísticas */}
             <div className="mt-6 pt-4 border-t border-gray-200">
-              <div className="flex justify-between text-xs text-gray-500">
-                <span>Categorías: {loadMetrics.length}</span>
-                <span>
-                  Peso total: {loadMetrics.reduce((sum, cat) => sum + (cat.pesoTotal || 0), 0).toFixed(1)} kg
-                </span>
-              </div>
-              <div className="flex justify-between text-xs text-gray-400 mt-1">
-                <span>
-                  Más común: {loadMetrics[0]?.label || 'N/A'}
-                </span>
-                <span>
-                  {loadMetrics[0]?.percentage.toFixed(1) || 0}%
-                </span>
+              <div className="grid grid-cols-2 gap-4 text-xs">
+                <div className="space-y-1">
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Categorías:</span>
+                    <span className="text-gray-700 font-medium">{loadMetrics.length}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Peso total:</span>
+                    <span className="text-gray-700 font-medium">
+                      {loadMetrics.reduce((sum, cat) => sum + (cat.pesoTotal || 0), 0).toFixed(1)} kg
+                    </span>
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Más común:</span>
+                    <span className="text-gray-700 font-medium">{loadMetrics[0]?.label || 'N/A'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Valor total:</span>
+                    <span className="text-gray-700 font-medium">
+                      ${loadMetrics.reduce((sum, cat) => sum + (cat.valorTotal || 0), 0).toLocaleString()}
+                    </span>
+                  </div>
+                </div>
               </div>
             </div>
           </>
