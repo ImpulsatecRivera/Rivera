@@ -26,6 +26,12 @@ router.route("/carga-stats").get(ViajesController.getCargaStats);
 router.route("/por-dias").get(ViajesController.getViajesPorDias);
 router.route("/completed").get(ViajesController.getCompletedTrips);
 
+
+// En tu archivo routes/viajes.js
+router.get('/tiempo-promedio', ViajesController.getTiempoPromedioViaje);
+router.get('/capacidad-carga', ViajesController.getCapacidadCarga);
+ // Opcional: todas las métricas en una sola llamada
+
 // =====================================================
 // 🚛 RUTAS DE GESTIÓN DE VIAJES INDIVIDUALES
 // =====================================================

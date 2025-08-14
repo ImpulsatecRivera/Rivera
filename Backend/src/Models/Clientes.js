@@ -36,7 +36,7 @@ const clienteSchema = new Schema({
 }, {
   timestamps: true,
   strict: false,
-  collection: "Cliente"
+  collection: "Clientes"
 });
 
-export default model("Cliente", clienteSchema);
+export default model("Clientes", clienteSchema);
