@@ -1,80 +1,76 @@
 import React from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-} from 'react-native';
+import { TouchableOpacity, View, Text, StyleSheet, Image } from 'react-native';
+
+const RUTA_IMG = require('../images/ruta.png');
 
 const HistorialCard = ({ item, onPress }) => {
   return (
-    <TouchableOpacity style={styles.container} onPress={onPress}>
-      <View style={styles.iconContainer}>
-        <View style={styles.truckIcon}>
-          <Text style={styles.truckEmoji}>{item.icon}</Text>
-        </View>
-        <View style={styles.locationBadge}>
-          <Text style={styles.locationEmoji}>{item.location}</Text>
-        </View>
+    <TouchableOpacity style={styles.card} activeOpacity={0.9} onPress={onPress}>
+      {/* Imagen del viaje */}
+      <View style={styles.imageWrap}>
+        <Image source={RUTA_IMG} style={styles.image} />
       </View>
-      <Text style={styles.title}>{item.title}</Text>
+
+      {/* Título de la carga */}
+      <Text style={styles.title} numberOfLines={2}>
+        {item?.title}
+      </Text>
+
+      {/* Estado visible nuevamente */}
+      {item?.status === 'completed' && (
+        <View style={[styles.badge, styles.badgeCompleted]}>
+          <Text style={styles.badgeText}>Completado</Text>
+        </View>
+      )}
     </TouchableOpacity>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 15,
-    padding: 20,
-    alignItems: 'center',
+  card: {
     width: '48%',
-    marginBottom: 15,
-    shadowColor: '#000000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 14,
+    borderWidth: 1,
+    borderColor: '#E9ECEF',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
     shadowRadius: 4,
-    elevation: 3,
+    elevation: 2,
   },
-  iconContainer: {
-    position: 'relative',
-    marginBottom: 15,
-  },
-  truckIcon: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: '#10AC84',
-    justifyContent: 'center',
+  imageWrap: {
     alignItems: 'center',
-  },
-  truckEmoji: {
-    fontSize: 30,
-    color: '#FFFFFF',
-  },
-  locationBadge: {
-    position: 'absolute',
-    bottom: -5,
-    right: -5,
-    width: 25,
-    height: 25,
-    borderRadius: 12.5,
-    backgroundColor: '#FF9F43',
     justifyContent: 'center',
-    alignItems: 'center',
+    marginBottom: 10,
   },
-  locationEmoji: {
-    fontSize: 12,
+  image: {
+    width: 64,
+    height: 64,
+    resizeMode: 'contain',
   },
   title: {
-    fontSize: 14,
+    fontSize: 13,
+    fontWeight: '600',
     color: '#2C3E50',
-    textAlign: 'center',
-    fontWeight: '500',
-    lineHeight: 18,
+    marginBottom: 8,
+  },
+  badge: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    backgroundColor: '#F1F5F9',
+  },
+  badgeCompleted: {
+    backgroundColor: '#E6FFFA',
+  },
+  badgeText: {
+    fontSize: 11,
+    color: '#0F766E',
+    fontWeight: '700',
   },
 });
 
