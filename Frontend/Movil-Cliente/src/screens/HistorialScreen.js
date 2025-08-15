@@ -10,28 +10,19 @@ import {
   Alert,
 } from 'react-native';
 import HistorialCard from '../components/HistorialCard';
+import FocusAwareStatusBar from '../components/FocusAwareStatusBar';
 
 const HistorialScreen = () => {
   const [searchText, setSearchText] = useState('');
 
-  
+  // Datos del historial 
   const [historialItems] = useState([
-    { id: 1,  title: 'Maíz blanco',               status: 'completed' },
-    { id: 2,  title: 'Arroz',                      status: 'completed' },
-    { id: 3,  title: 'Azúcar',                     status: 'completed' },
-    { id: 4,  title: 'Café pergamino',             status: 'completed' },
-    { id: 5,  title: 'Harina de trigo',            status: 'completed' },
-    { id: 6,  title: 'Bebidas gaseosas',           status: 'completed' },
-    { id: 7,  title: 'Agua embotellada',           status: 'completed' },
-    { id: 8,  title: 'Cemento',                    status: 'completed' },
-    { id: 9,  title: 'Acero corrugado',            status: 'completed' },
-    { id: 10, title: 'Bloques y materiales',       status: 'completed' },
-    { id: 11, title: 'Fertilizantes',              status: 'completed' },
-    { id: 12, title: 'Lácteos',                    status: 'completed' },
-    { id: 13, title: 'Avícola (pollo)',            status: 'completed' },
-    { id: 14, title: 'Frutas y verduras',          status: 'completed' },
-    { id: 15, title: 'Textiles',                   status: 'completed' },
-    { id: 16, title: 'Paquetería y encomiendas',   status: 'completed' },
+    { id: 1, title: 'Fresh Fruits & Vegetable', icon: '🚛', location: '📍', status: 'completed' },
+    { id: 2, title: 'Fresh Fruits & Vegetable', icon: '🚛', location: '📍', status: 'completed' },
+    { id: 3, title: 'Fresh Fruits & Vegetable', icon: '🚛', location: '📍', status: 'completed' },
+    { id: 4, title: 'Fresh Fruits & Vegetable', icon: '🚛', location: '📍', status: 'completed' },
+    { id: 5, title: 'Fresh Fruits & Vegetable', icon: '🚛', location: '📍', status: 'completed' },
+    { id: 6, title: 'Fresh Fruits & Vegetable', icon: '🚛', location: '📍', status: 'completed' },
   ]);
 
   const filteredItems = historialItems.filter(item =>
@@ -41,17 +32,23 @@ const HistorialScreen = () => {
   const handleItemPress = (item) => {
     Alert.alert(
       'Historial',
-      `${item.title}\n\nEstado: Completado\nUbicación disponible.`,
+      `${item.title}\n\nEstado: Completado\nUbicación disponible`,
       [{ text: 'OK' }]
     );
   };
 
   const renderHistorialItem = ({ item }) => (
-    <HistorialCard item={item} onPress={() => handleItemPress(item)} />
+    <HistorialCard
+      item={item}
+      onPress={() => handleItemPress(item)}
+    />
   );
 
   return (
     <SafeAreaView style={styles.container}>
+      {/* StatusBar blanco para evitar franja negra */}
+      <FocusAwareStatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton}>
@@ -60,7 +57,7 @@ const HistorialScreen = () => {
 
         <Text style={styles.headerTitle}>Historial</Text>
 
-        {/* Espaciador para centrar el título */}
+        {/* Espaciador para balancear y centrar el título */}
         <View style={styles.rightSpacer} />
       </View>
 
@@ -70,7 +67,7 @@ const HistorialScreen = () => {
           <Text style={styles.searchIcon}>🔍</Text>
           <TextInput
             style={styles.searchInput}
-            placeholder="Buscar carga"
+            placeholder="Search done"
             placeholderTextColor="#7F8C8D"
             value={searchText}
             onChangeText={setSearchText}
@@ -78,7 +75,7 @@ const HistorialScreen = () => {
         </View>
       </View>
 
-      {/* Grid */}
+      {/* Historial Grid */}
       <View style={styles.content}>
         <FlatList
           data={filteredItems}
@@ -104,7 +101,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 50,
     paddingBottom: 20,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#FFFFFF', 
   },
   backButton: {
     width: 40, height: 40, borderRadius: 20,
@@ -113,7 +110,8 @@ const styles = StyleSheet.create({
   },
   backButtonText: { fontSize: 20, color: '#2C3E50', fontWeight: 'bold' },
   headerTitle: {
-    flex: 1, textAlign: 'center',
+    flex: 1,
+    textAlign: 'center',
     fontSize: 20, fontWeight: 'bold', color: '#2C3E50',
   },
   rightSpacer: { width: 40, height: 40 },
