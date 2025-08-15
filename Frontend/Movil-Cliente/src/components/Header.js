@@ -4,20 +4,46 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
+  StatusBar,
+  SafeAreaView,
 } from 'react-native';
 
-const Header = () => {
+
+const Header = ({
+  statusBarBg = '#F5F5F5',
+  bg = '#FFFFFF',
+  showNotification = false,
+  onPressNotification,
+}) => {
   return (
-    <View style={styles.container}>
-      <View style={styles.logoContainer}>
-        <View style={styles.logo}>
-          <Text style={styles.logoText}>NUERA</Text>
+    <View style={{ backgroundColor: statusBarBg }}>
+      {/* Controla explícitamente el StatusBar de la pantalla activa */}
+      <StatusBar
+        animated
+        translucent={false}
+        backgroundColor={statusBarBg}
+        barStyle={bg === '#FFFFFF' ? 'dark-content' : 'light-content'}
+      />
+
+      {/* Cubre el área segura superior con el MISMO color del StatusBar */}
+      <SafeAreaView style={{ backgroundColor: statusBarBg }} />
+
+      {/* Contenedor del header */}
+      <View style={[styles.container, { backgroundColor: bg }]}>
+        <View style={styles.logoContainer}>
+          <View style={styles.logo}>
+            <Text style={styles.logoText}>NUERA</Text>
+          </View>
         </View>
+
+        {showNotification ? (
+          <TouchableOpacity style={styles.notificationBtn} onPress={onPressNotification}>
+            <Text style={styles.notificationText}>!</Text>
+          </TouchableOpacity>
+        ) : (
+          <View style={{ width: 30, height: 30 }} />
+        )}
       </View>
-      
-      <TouchableOpacity style={styles.notificationBtn}>
-        <Text style={styles.notificationText}>!</Text>
-      </TouchableOpacity>
     </View>
   );
 };
@@ -28,9 +54,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingTop: 50,
-    paddingBottom: 15,
-    backgroundColor: '#FFFFFF',
+    paddingVertical: 12,
   },
   logoContainer: {
     flex: 1,

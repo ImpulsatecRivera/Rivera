@@ -4,55 +4,40 @@ import {
   StyleSheet,
   ScrollView,
   FlatList,
-  Alert,
   Text,
   TouchableOpacity,
   Dimensions,
   Image,
-  SafeAreaView,
-  StatusBar,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 
 import CarouselSlide from '../components/CarouselSlide';
 import CarouselIndicators from '../components/CarouselIndicators';
 import ProjectCard from '../components/ProjectCard';
+import QuoteSheet from '../components/QuoteSheet';
+import useQuotePreview from '../hooks/useQuotePreview';
+import FocusAwareStatusBar from '../components/FocusAwareStatusBar';
 
 const { width: ITEM_WIDTH } = Dimensions.get('window');
 const BG = '#F5F5F5';
 
+// Tamaño responsive del logo
+const LOGO_WIDTH = Math.min(ITEM_WIDTH * 0.75, 420);
+const LOGO_HEIGHT = 130;
+
 const DashboardScreen = () => {
   const navigation = useNavigation();
 
-  // Slides con imágenes locales
   const baseData = [
-    {
-      id: 1,
-      title: 'Somos',
-      subtitle: 'Rivera distribuidora y transporte',
-      imageSource: require('../images/familiaRivera.png'),
-      backgroundColor: '#667eea',
-    },
-    {
-      id: 2,
-      title: 'Visita',
-      subtitle: 'Nuestro sitio web y concenos',
-      imageSource: require('../images/trabajador.png'),
-      backgroundColor: '#f093fb',
-    },
-    {
-      id: 3,
-      title: '30% OFF',
-      subtitle: 'En tu primera cotización del mes',
-      imageSource: require('../images/cotizacion.png'),
-      backgroundColor: '#4facfe',
-    },
+    { id: 1, title: 'Somos',  subtitle: 'Rivera distribuidora y transporte', imageSource: require('../images/familiaRivera.png'), backgroundColor: '#667eea' },
+    { id: 2, title: 'Visita', subtitle: 'Nuestro sitio web y concenos',     imageSource: require('../images/trabajador.png'),   backgroundColor: '#f093fb' },
+    { id: 3, title: '30% OFF',subtitle: 'En tu primera cotización del mes',  imageSource: require('../images/cotizacion.png'),   backgroundColor: '#4facfe' },
   ];
 
-  // ===== Carrusel infinito =====
-  const LOOP_CLONES = 3;                 
+  // Carrusel infinito
+  const LOOP_CLONES = 3;
   const BASE_LEN = baseData.length;
-  const START_INDEX = BASE_LEN;          
+  const START_INDEX = BASE_LEN;
   const bigData = Array.from({ length: LOOP_CLONES }).flatMap(() => baseData);
 
   const flatListRef = useRef(null);
@@ -62,10 +47,7 @@ const DashboardScreen = () => {
 
   useEffect(() => {
     const id = setTimeout(() => {
-      flatListRef.current?.scrollToOffset({
-        offset: START_INDEX * ITEM_WIDTH,
-        animated: false,
-      });
+      flatListRef.current?.scrollToOffset({ offset: START_INDEX * ITEM_WIDTH, animated: false });
     }, 0);
     return () => clearTimeout(id);
   }, []);
@@ -76,11 +58,8 @@ const DashboardScreen = () => {
     if (!autoPlay || BASE_LEN === 0) return;
     const id = setInterval(() => {
       let nextAbs = absIndex + 1;
-      if (nextAbs >= BASE_LEN * 2) nextAbs -= BASE_LEN; // rebobina al centro
-      flatListRef.current?.scrollToOffset({
-        offset: nextAbs * ITEM_WIDTH,
-        animated: true,
-      });
+      if (nextAbs >= BASE_LEN * 2) nextAbs -= BASE_LEN;
+      flatListRef.current?.scrollToOffset({ offset: nextAbs * ITEM_WIDTH, animated: true });
       setAbsIndex(nextAbs);
     }, INTERVAL);
     return () => clearInterval(id);
@@ -106,49 +85,56 @@ const DashboardScreen = () => {
     }
   };
 
-  // Grid de proyectos
   const projects = [
-    { id: 1, name: 'PROYECTO - USD1', price: '$ 1,800.00', icon: '📄' },
-    { id: 2, name: 'PROYECTO - EUR1', price: '$ 1,800.00', icon: '📄' },
-    { id: 3, name: 'PROYECTO - USD1', price: '$ 1,800.00', icon: '📄' },
-    { id: 4, name: 'PROYECTO - EUR1', price: '$ 1,800.00', icon: '📄' },
-    { id: 5, name: 'PROYECTO - USD1', price: '$ 1,800.00', icon: '📄' },
-    { id: 6, name: 'PROYECTO - EUR1', price: '$ 1,800.00', icon: '📄' },
+    { id: 1, name: 'PROYECTO - USD1', price: '$ 1,800.00', status: 'pendiente',  icon: '📄' },
+    { id: 2, name: 'PROYECTO - EUR1', price: '$ 1,800.00', status: 'en ruta',    icon: '📄' },
+    { id: 3, name: 'PROYECTO - USD1', price: '$ 1,800.00', status: 'completado', icon: '📄' },
+    { id: 4, name: 'PROYECTO - EUR1', price: '$ 1,800.00', status: 'pendiente',  icon: '📄' },
+    { id: 5, name: 'PROYECTO - USD1', price: '$ 1,800.00', status: 'en ruta',    icon: '📄' },
+    { id: 6, name: 'PROYECTO - EUR1', price: '$ 1,800.00', status: 'completado', icon: '📄' },
   ];
 
+  const { visible, item, open, close } = useQuotePreview();
+
   const handleProjectPress = (project) => {
-    Alert.alert(
-      'Proyecto',
-      `${project.name}\nPrecio: ${project.price}\n\n¡Proyecto disponible para cotizar!`,
-      [{ text: 'OK' }]
-    );
+    open({
+      title: project.name,
+      price: project.price,
+      status: project.status,
+      lugarEntrega: 'San Salvador',
+      horaLlegada: '10:30 AM',
+      horaSalida: '11:45 AM',
+    });
   };
 
-  const handleAddQuote = () => {
-    navigation.navigate('Cotizacion');
-  };
+  const handleAddQuote = () => navigation.navigate('Cotizacion');
 
   const renderCarouselItem = ({ item }) => (
     <CarouselSlide
       title={item.title}
       subtitle={item.subtitle}
-      image={item.image}                 // fallback
-      imageSource={item.imageSource}     // imagen real
+      image={item.image}
+      imageSource={item.imageSource}
       backgroundColor={item.backgroundColor}
     />
   );
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor={BG} />
+      {/* Solo la pantalla enfocada pinta su StatusBar */}
+      <FocusAwareStatusBar barStyle="dark-content" backgroundColor={BG} />
 
-      {/* Topbar con LOGO (mismo fondo, sin línea y centrado) */}
-      <SafeAreaView style={styles.topBar}>
-        <Image source={require('../images/logo.png')} style={styles.logo} />
-      </SafeAreaView>
+      <ScrollView
+        style={styles.content}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 20 }}
+      >
+        {/* Header con logo que ahora scrollea */}
+        <View style={styles.logoHeader}>
+          <Image source={require('../images/logo.png')} style={styles.logo} />
+        </View>
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {/* Carrusel informativo (infinito) */}
+        {/* Carrusel */}
         <View style={styles.carouselContainer}>
           <FlatList
             ref={flatListRef}
@@ -165,27 +151,23 @@ const DashboardScreen = () => {
             onTouchStart={() => setAutoPlay(false)}
             onScrollBeginDrag={() => setAutoPlay(false)}
             onScrollEndDrag={() => setAutoPlay(true)}
-            getItemLayout={(_, index) => ({
-              length: ITEM_WIDTH,
-              offset: ITEM_WIDTH * index,
-              index,
-            })}
+            getItemLayout={(_, index) => ({ length: ITEM_WIDTH, offset: ITEM_WIDTH * index, index })}
             initialScrollIndex={START_INDEX}
           />
-
           <CarouselIndicators currentIndex={currentIndex} totalSlides={BASE_LEN} />
         </View>
 
         {/* Sección de cotizaciones */}
         <View style={styles.quotesSection}>
+          <TouchableOpacity style={styles.addButton} onPress={handleAddQuote}>
+            <Text style={styles.addButtonText}>Hacer una cotización de viaje</Text>
+          </TouchableOpacity>
+
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Últimas Cotizaciones fechas</Text>
-            <TouchableOpacity style={styles.addButton} onPress={handleAddQuote}>
-              <Text style={styles.addButtonText}>Agregar</Text>
-            </TouchableOpacity>
+            <Text style={styles.sectionTitle}>Últimas Cotizaciones realizadas</Text>
           </View>
 
-          {/* Grid de proyectos 2x3 */}
+          {/* Grid 2x3 */}
           <View style={styles.projectsGrid}>
             {projects.map((project) => (
               <ProjectCard
@@ -197,6 +179,16 @@ const DashboardScreen = () => {
           </View>
         </View>
       </ScrollView>
+
+      <QuoteSheet
+        visible={visible}
+        item={item}
+        onClose={close}
+        onConfirm={(payload) => {
+          close();
+          navigation.navigate('Cotizacion', payload);
+        }}
+      />
     </View>
   );
 };
@@ -204,41 +196,52 @@ const DashboardScreen = () => {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: BG },
 
-  // Topbar del logo (sin línea divisoria; logo centrado)
-  topBar: {
+  content: { flex: 1 },
+
+  logoHeader: {
     backgroundColor: BG,
     alignItems: 'center',
-    paddingTop: 10,   
-    paddingBottom: 18,
+    paddingTop: 26,
+    paddingBottom: 16,
   },
   logo: {
-    height: 76,
-    marginTop: 6,
+    width: LOGO_WIDTH,
+    height: LOGO_HEIGHT,
     resizeMode: 'contain',
+    alignSelf: 'center',
+    marginTop: 8,
   },
 
-  content: { flex: 1 },
   carouselContainer: { marginTop: 20, marginBottom: 30 },
+
   quotesSection: { paddingHorizontal: 20, paddingBottom: 20 },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
+
+  sectionHeader: { marginTop: 8, marginBottom: 16 },
   sectionTitle: { fontSize: 16, fontWeight: '500', color: '#666666' },
+
   addButton: {
+    alignSelf: 'center',
+    width: '100%',
+    maxWidth: 520,
     backgroundColor: '#10AC84',
-    paddingHorizontal: 20,
-    paddingVertical: 8,
-    borderRadius: 20,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    marginBottom: 12,
+    shadowColor: '#10AC84',
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 3,
   },
-  addButtonText: { color: '#FFFFFF', fontSize: 14, fontWeight: 'bold' },
-  projectsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
+  addButtonText: {
+    textAlign: 'center',
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: 'bold',
   },
+
+  projectsGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' },
 });
 
 export default DashboardScreen;
