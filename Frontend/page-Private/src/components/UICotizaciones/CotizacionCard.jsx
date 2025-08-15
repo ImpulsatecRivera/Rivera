@@ -71,10 +71,12 @@ const CotizacionCard = ({
               <CotizacionIcon />
             </div>
             <div>
+              {/* CORREGIDO: Mostrar quoteName en lugar del ID */}
               <h3 className="font-bold text-slate-800 text-lg group-hover:text-slate-900 transition-colors duration-300">
-                Cotización #{cotizacion.id.toString().padStart(3, '0')}
+                {cotizacion.quoteName || 'Sin nombre'}
               </h3>
-              <p className="text-slate-500 text-sm">{cotizacion.tipoViaje}</p>
+              {/* AGREGADO: Mostrar número de cotización como subtítulo */}
+              <p className="text-slate-500 text-sm">{cotizacion.numeroDetizacion}</p>
             </div>
           </div>
         </div>
