@@ -1,119 +1,59 @@
+//  Backend/src/Models/Viajes.js
+// ESQUEMA FINAL DE VIAJES - DATOS OPERATIVOS
+ 
 import mongoose from 'mongoose';
 const { Schema, model } = mongoose;
-
+ 
 const viajeSchema = new Schema({
+  // 🔗 REFERENCIAS A OTRAS COLECCIONES
   quoteId: {
     type: Schema.Types.ObjectId,
     ref: 'Cotizaciones',
     required: true
   },
-  
-  tripDescription: {
-    type: String,
-    required: true,
-    trim: true
-  },
-  
+ 
   truckId: {
     type: Schema.Types.ObjectId,
     ref: 'Camiones',
     required: true
   },
-  
-  // ⏰ HORARIOS MEJORADOS PARA AUTO-ACTUALIZACIÓN
+ 
+  conductorId: {
+    type: Schema.Types.ObjectId,
+    ref: 'Motorista',
+    required: true
+  },
+ 
+  // 📝 DESCRIPCIÓN DEL VIAJE
+  tripDescription: {
+    type: String,
+    required: true,
+    trim: true
+  },
+ 
+  // ⏰ HORARIOS PRINCIPALES
   departureTime: {
     type: Date,
     required: true
   },
-  
+ 
   arrivalTime: {
     type: Date,
     required: true
   },
-  
-  // 🆕 TIEMPOS ADICIONALES PARA CONTROL
-  horarios: {
-    salidaReal: Date,           // Cuando realmente salió
-    llegadaEstimada: Date,      // Estimación actualizada en tiempo real
-    llegadaReal: Date,          // Cuando realmente llegó
+ 
+  // ⏰ TIEMPOS REALES
+  tiemposReales: {
     ultimaActualizacion: {
       type: Date,
       default: Date.now
-    }
+    },
+    salidaReal: Date,
+    llegadaReal: Date,
+    tiempoRealViaje: Number // en minutos
   },
-  
-  ruta: {
-    origen: {
-      nombre: {
-        type: String,
-        required: true
-      },
-      coordenadas: {
-        lat: {
-          type: Number,
-          required: true,
-          min: -90,
-          max: 90
-        },
-        lng: {
-          type: Number,
-          required: true,
-          min: -180,
-          max: 180
-        }
-      },
-      // 🆕 TIPO DE UBICACIÓN PARA FRONTEND
-      tipo: {
-        type: String,
-        enum: ['terminal', 'ciudad', 'puerto', 'bodega', 'cliente'],
-        default: 'ciudad'
-      }
-    },
-    destino: {
-      nombre: {
-        type: String,
-        required: true
-      },
-      coordenadas: {
-        lat: {
-          type: Number,
-          required: true,
-          min: -90,
-          max: 90
-        },
-        lng: {
-          type: Number,
-          required: true,
-          min: -180,
-          max: 180
-        }
-      },
-      // 🆕 TIPO DE UBICACIÓN PARA FRONTEND
-      tipo: {
-        type: String,
-        enum: ['terminal', 'ciudad', 'puerto', 'bodega', 'cliente'],
-        default: 'ciudad'
-      }
-    },
-    
-    // 📊 DATOS CALCULADOS AUTOMÁTICAMENTE
-    distanciaTotal: {
-      type: Number,
-      min: 0
-    },
-    tiempoEstimado: {
-      type: Number, // en minutos
-      min: 0
-    },
-    
-    // 🛣️ RUTA DETALLADA OPCIONAL (para GPS avanzado)
-    rutaOptimizada: {
-      type: [[Number]],
-      select: false // No incluir por defecto en queries
-    }
-  },
-  
-  // 📊 ESTADO CON AUTO-ACTUALIZACIÓN MEJORADO
+ 
+  // 📊 ESTADO DEL VIAJE
   estado: {
     actual: {
       type: String,
@@ -124,26 +64,21 @@ const viajeSchema = new Schema({
       type: Date,
       default: Date.now
     },
-    
-    // 🔄 CONFIGURACIÓN PARA AUTO-UPDATE
     autoActualizar: {
       type: Boolean,
       default: true
     },
-    
-    // 📋 HISTORIAL DE CAMBIOS
     historial: [{
-      estadoAnterior: String,
-      estadoNuevo: String,
+      estado: String,
       fecha: {
         type: Date,
         default: Date.now
       },
-      motivo: String // 'automatico', 'manual', 'gps', etc.
+      observacion: String
     }]
   },
-  
-  // 📍 TRACKING MEJORADO
+ 
+  // 📍 TRACKING
   tracking: {
     ubicacionActual: {
       lat: Number,
@@ -155,15 +90,9 @@ const viajeSchema = new Schema({
       velocidad: {
         type: Number,
         min: 0
-      },
-      direccion: {
-        type: Number,
-        min: 0,
-        max: 360
       }
     },
-    
-    // 📈 PROGRESO CALCULADO AUTOMÁTICAMENTE
+   
     progreso: {
       porcentaje: {
         type: Number,
@@ -180,73 +109,31 @@ const viajeSchema = new Schema({
         default: true
       }
     },
-    
-    // 🕒 HISTORIAL COMPACTO DE UBICACIONES
-    historialUbicaciones: {
-      type: [{
+   
+    // 📍 CHECKPOINTS
+    checkpoints: [{
+      nombre: String,
+      coordenadas: {
         lat: Number,
-        lng: Number,
-        timestamp: Date,
-        velocidad: Number
-      }],
-      select: false, // No incluir por defecto
-      validate: {
-        validator: function(array) {
-          return array.length <= 100; // Máximo 100 puntos
-        },
-        message: 'Máximo 100 puntos de historial permitidos'
-      }
-    }
+        lng: Number
+      },
+      horaEstimada: Date,
+      horaReal: Date,
+      completado: Boolean
+    }]
   },
-  
-  // 📦 CARGA MEJORADA
-  carga: {
-    descripcion: {
-      type: String,
-      required: true
-    },
-    peso: {
-      valor: Number,
-      unidad: {
-        type: String,
-        enum: ['kg', 'ton', 'lb'],
-        default: 'kg'
-      }
-    },
-    volumen: {
-      valor: Number,
-      unidad: {
-        type: String,
-        enum: ['m3', 'ft3'],
-        default: 'm3'
-      }
-    },
-    tipo: {
-      type: String,
-      enum: ['general', 'fragil', 'peligrosa', 'refrigerada', 'liquida'],
-      default: 'general'
-    },
-    valor: Number // Valor monetario de la carga
-  },
-  
-  // 👤 CONDUCTOR
-  conductor: {
-    id: {
-      type: Schema.Types.ObjectId,
-      ref: 'Motorista',
-      required: true
-    },
-    nombre: String,    // Backup si no se puede hacer populate
-    telefono: String   // Backup si no se puede hacer populate
-  },
-  
-  // 💰 INFORMACIÓN FINANCIERA OPCIONAL
-  costos: {
+ 
+  // 💰 COSTOS REALES
+  costosReales: {
     combustible: {
       type: Number,
       default: 0
     },
     peajes: {
+      type: Number,
+      default: 0
+    },
+    conductor: {
       type: Number,
       default: 0
     },
@@ -259,12 +146,16 @@ const viajeSchema = new Schema({
       default: 0
     }
   },
-  
-  // 🚨 ALERTAS Y NOTIFICACIONES
+ 
+  // 🚨 ALERTAS
   alertas: [{
+    _id: {
+      type: Schema.Types.ObjectId,
+      auto: true
+    },
     tipo: {
       type: String,
-      enum: ['retraso', 'desviacion', 'emergencia', 'mantenimiento', 'llegada', 'salida']
+      enum: ['retraso', 'emergencia', 'llegada', 'salida', 'urgencia']
     },
     mensaje: String,
     fecha: {
@@ -281,207 +172,145 @@ const viajeSchema = new Schema({
       default: 'media'
     }
   }],
-  
-  // 🌡️ CONDICIONES ESPECIALES
+ 
+  // 🌡 CONDICIONES DEL VIAJE
   condiciones: {
-    clima: String,              // 'soleado', 'lluvia', 'tormenta'
-    trafico: String,            // 'normal', 'pesado', 'congestion'
-    carretera: String,          // 'buena', 'regular', 'mala'
+    clima: String,
+    trafico: String,
+    carretera: String,
     observaciones: String
   }
-  
+ 
 }, {
   timestamps: true,
   versionKey: '__v',
   collection: "Viajes"
 });
-
-// 🔄 MIDDLEWARE PRE-SAVE PARA AUTO-ACTUALIZACIÓN
-viajeSchema.pre('save', function(next) {
+ 
+// 🔄 MIDDLEWARE PRE-SAVE
+viajeSchema.pre('save', async function(next) {
   const ahora = new Date();
-  
-  // Solo auto-actualizar si está habilitado
+ 
+  // 🔄 AUTO-COMPLETAR DATOS DESDE LA COTIZACIÓN (solo en creación)
+  if (this.isNew && this.quoteId) {
+    try {
+      const cotizacion = await mongoose.model('Cotizaciones').findById(this.quoteId);
+      if (cotizacion) {
+        // Auto-completar descripción
+        if (!this.tripDescription && cotizacion.quoteDescription) {
+          this.tripDescription = cotizacion.quoteDescription;
+        }
+       
+        // Auto-sugerir fechas basadas en cotización
+        if (!this.departureTime && cotizacion.horarios && cotizacion.horarios.fechaSalida) {
+          this.departureTime = cotizacion.horarios.fechaSalida;
+        }
+        
+        if (!this.arrivalTime && cotizacion.horarios && cotizacion.horarios.fechaLlegadaEstimada) {
+          this.arrivalTime = cotizacion.horarios.fechaLlegadaEstimada;
+        }
+      }
+    } catch (error) {
+      console.log('No se pudo auto-completar desde cotización:', error.message);
+    }
+  }
+ 
+  // 💰 AUTO-CALCULAR COSTO TOTAL
+  this.costosReales.total = (this.costosReales.combustible || 0) +
+                            (this.costosReales.peajes || 0) +
+                            (this.costosReales.conductor || 0) +
+                            (this.costosReales.otros || 0);
+ 
+  // 🔄 LÓGICA DE AUTO-ACTUALIZACIÓN DE ESTADO
   if (this.estado.autoActualizar) {
-    const estadoAnterior = this.estado.actual;
-    
-    // 🚀 AUTO-INICIAR VIAJES (si ya pasó la hora de salida)
+    // Auto-iniciar viajes
     if (this.estado.actual === 'pendiente' && this.departureTime <= ahora) {
       this.estado.actual = 'en_curso';
       this.estado.fechaCambio = ahora;
-      this.horarios.salidaReal = this.horarios.salidaReal || ahora;
-      
-      // Agregar al historial
+      this.tiemposReales.salidaReal = this.tiemposReales.salidaReal || ahora;
+     
       this.estado.historial.push({
-        estadoAnterior: 'pendiente',
-        estadoNuevo: 'en_curso',
+        estado: 'en_curso',
         fecha: ahora,
-        motivo: 'automatico'
+        observacion: 'Viaje iniciado automáticamente'
       });
-      
-      console.log(`🚀 Viaje ${this._id} iniciado automáticamente`);
     }
-    
-    // ✅ AUTO-COMPLETAR VIAJES (si ya pasó la hora de llegada Y progreso >= 95%)
-    if (this.estado.actual === 'en_curso' && 
-        this.arrivalTime <= ahora && 
+   
+    // Auto-completar viajes
+    if (this.estado.actual === 'en_curso' &&
+        this.arrivalTime <= ahora &&
         this.tracking.progreso.porcentaje >= 95) {
-      
+     
       this.estado.actual = 'completado';
       this.estado.fechaCambio = ahora;
-      this.horarios.llegadaReal = ahora;
+      this.tiemposReales.llegadaReal = ahora;
       this.tracking.progreso.porcentaje = 100;
-      
-      // Agregar al historial
+     
+      // Calcular tiempo real del viaje
+      if (this.tiemposReales.salidaReal) {
+        this.tiemposReales.tiempoRealViaje = Math.floor(
+          (ahora - this.tiemposReales.salidaReal) / (1000 * 60)
+        );
+      }
+     
       this.estado.historial.push({
-        estadoAnterior: 'en_curso',
-        estadoNuevo: 'completado',
+        estado: 'completado',
         fecha: ahora,
-        motivo: 'automatico'
+        observacion: 'Viaje completado automáticamente'
       });
-      
-      console.log(`✅ Viaje ${this._id} completado automáticamente`);
-    }
-    
-    // ⚠️ AUTO-MARCAR RETRASOS (si pasó 30 min de la hora de llegada y progreso < 95%)
-    if (this.estado.actual === 'en_curso' && 
-        this.arrivalTime <= new Date(ahora.getTime() - 30 * 60000) && // 30 min de gracia
-        this.tracking.progreso.porcentaje < 95) {
-      
-      this.estado.actual = 'retrasado';
-      this.estado.fechaCambio = ahora;
-      
-      // Agregar alerta de retraso
-      this.alertas.push({
-        tipo: 'retraso',
-        mensaje: `Viaje retrasado - Programado para ${this.arrivalTime.toLocaleString()}`,
-        fecha: ahora,
-        prioridad: 'alta'
-      });
-      
-      // Agregar al historial
-      this.estado.historial.push({
-        estadoAnterior: 'en_curso',
-        estadoNuevo: 'retrasado',
-        fecha: ahora,
-        motivo: 'automatico'
-      });
-      
-      console.log(`⚠️ Viaje ${this._id} marcado como retrasado`);
     }
   }
-  
-  // 🕐 Actualizar timestamp de horarios
-  this.horarios.ultimaActualizacion = ahora;
-  
+ 
+  this.tiemposReales.ultimaActualizacion = ahora;
   next();
 });
-
+ 
 // 📊 MÉTODOS VIRTUALES
 viajeSchema.virtual('duracionProgramada').get(function() {
-  return Math.floor((this.arrivalTime - this.departureTime) / (1000 * 60)); // en minutos
+  if (!this.arrivalTime || !this.departureTime) return 0;
+  return Math.floor((this.arrivalTime - this.departureTime) / (1000 * 60));
 });
-
+ 
 viajeSchema.virtual('duracionReal').get(function() {
-  if (this.horarios.salidaReal && this.horarios.llegadaReal) {
-    return Math.floor((this.horarios.llegadaReal - this.horarios.salidaReal) / (1000 * 60));
-  }
-  return null;
+  if (!this.tiemposReales.llegadaReal || !this.tiemposReales.salidaReal) return 0;
+  return Math.floor((this.tiemposReales.llegadaReal - this.tiemposReales.salidaReal) / (1000 * 60));
 });
-
-viajeSchema.virtual('retrasoEnMinutos').get(function() {
-  if (this.horarios.llegadaReal && this.arrivalTime) {
-    return Math.floor((this.horarios.llegadaReal - this.arrivalTime) / (1000 * 60));
-  }
-  return null;
-});
-
-viajeSchema.virtual('estadoColor').get(function() {
-  const colores = {
-    'pendiente': 'yellow',
-    'en_curso': 'blue', 
-    'completado': 'green',
-    'retrasado': 'orange',
-    'cancelado': 'red'
-  };
-  return colores[this.estado.actual] || 'gray';
-});
-
-// 🔍 ÍNDICES PARA PERFORMANCE
+ 
+// 🔍 ÍNDICES OPTIMIZADOS
 viajeSchema.index({ 'estado.actual': 1 });
 viajeSchema.index({ departureTime: 1 });
-viajeSchema.index({ arrivalTime: 1 });
-viajeSchema.index({ 'ruta.origen.nombre': 1 });
-viajeSchema.index({ 'ruta.destino.nombre': 1 });
-viajeSchema.index({ 'tracking.ubicacionActual.timestamp': 1 });
-viajeSchema.index({ createdAt: 1 });
-
-// 📱 MÉTODO ESTÁTICO PARA DATOS DEL MAPA
-viajeSchema.statics.getMapData = async function() {
-  return this.find({ 
-    'estado.actual': { $in: ['pendiente', 'en_curso', 'retrasado', 'completado'] } 
-  })
-  .populate('truckId', 'brand model licensePlate name marca modelo placa nombre')
-  .populate('conductor.id', 'nombre telefono')
-  .select('-tracking.historialUbicaciones -ruta.rutaOptimizada') // Excluir datos pesados
-  .sort({ departureTime: 1 })
-  .lean();
+viajeSchema.index({ quoteId: 1 });
+viajeSchema.index({ truckId: 1 });
+viajeSchema.index({ conductorId: 1 });
+ 
+// 📱 MÉTODO ESTÁTICO PARA OBTENER VIAJE CON COTIZACIÓN
+viajeSchema.statics.getViajeCompleto = async function(viajeId) {
+  return this.aggregate([
+    {
+      $match: { "_id": new mongoose.Types.ObjectId(viajeId) }
+    },
+    {
+      $lookup: {
+        from: "Cotizaciones",
+        localField: "quoteId",
+        foreignField: "_id",
+        as: "cotizacion"
+      }
+    },
+    {
+      $unwind: "$cotizacion"
+    },
+    {
+      $addFields: {
+        "rutaPlanificada": "$cotizacion.ruta",
+        "cargaPlanificada": "$cotizacion.carga",
+        "horariosPlanificados": "$cotizacion.horarios",
+        "costosPlanificados": "$cotizacion.costos",
+        "precoCotizado": "$cotizacion.price",
+        "clienteId": "$cotizacion.clientId"
+      }
+    }
+  ]);
 };
-
-// 🔄 MÉTODO PARA ACTUALIZAR PROGRESO
-viajeSchema.methods.actualizarProgreso = function() {
-  if (this.tracking.calculoAutomatico && 
-      this.tracking.ubicacionActual.lat && 
-      this.tracking.ubicacionActual.lng) {
-    
-    const ahora = new Date();
-    const tiempoTranscurrido = ahora - (this.horarios.salidaReal || this.departureTime);
-    const tiempoTotal = this.arrivalTime - this.departureTime;
-    
-    // Calcular progreso basado en tiempo (simplificado)
-    let progresoTemporal = Math.min(95, (tiempoTranscurrido / tiempoTotal) * 100);
-    
-    // Asegurar que no retroceda
-    this.tracking.progreso.porcentaje = Math.max(
-      this.tracking.progreso.porcentaje, 
-      Math.max(0, progresoTemporal)
-    );
-    
-    this.tracking.progreso.ultimaActualizacion = ahora;
-    
-    console.log(`📈 Progreso actualizado para viaje ${this._id}: ${this.tracking.progreso.porcentaje}%`);
-  }
-};
-
-// 📍 MÉTODO PARA AGREGAR UBICACIÓN AL HISTORIAL
-viajeSchema.methods.agregarUbicacion = function(lat, lng, velocidad = 0) {
-  // Agregar ubicación actual
-  this.tracking.ubicacionActual = {
-    lat,
-    lng,
-    timestamp: new Date(),
-    velocidad,
-    direccion: this.tracking.ubicacionActual.direccion || 0
-  };
-  
-  // Agregar al historial (mantener solo últimas 50 ubicaciones)
-  if (!this.tracking.historialUbicaciones) {
-    this.tracking.historialUbicaciones = [];
-  }
-  
-  this.tracking.historialUbicaciones.push({
-    lat,
-    lng,
-    timestamp: new Date(),
-    velocidad
-  });
-  
-  // Mantener solo las últimas 50 ubicaciones
-  if (this.tracking.historialUbicaciones.length > 50) {
-    this.tracking.historialUbicaciones = this.tracking.historialUbicaciones.slice(-50);
-  }
-  
-  // Actualizar progreso automáticamente
-  this.actualizarProgreso();
-};
-
-export default model("Viajes", viajeSchema);
+ 
+export default model("Viajes", viajeSchema);

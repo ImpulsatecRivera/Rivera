@@ -24,8 +24,9 @@ const DetalleHeader = ({ cotizacion, onVolver }) => {
           <span className="font-medium">Volver</span>
         </button>
         <div>
+          {/* CORREGIDO: Mostrar quoteName en lugar del ID */}
           <h1 className="text-3xl font-bold text-slate-800">
-            Cotización #{cotizacion.id.toString().padStart(3, '0')}
+            {cotizacion.quoteName || 'Sin nombre de cotización'}
           </h1>
           <p className="text-slate-600">{cotizacion.tipoViaje}</p>
         </div>

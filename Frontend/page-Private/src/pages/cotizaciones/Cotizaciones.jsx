@@ -1,4 +1,4 @@
-// CotizacionesComponent.jsx - Componente principal refactorizado
+// CotizacionesComponent.jsx - Componente principal refactorizado con API
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 
@@ -18,23 +18,31 @@ export default function CotizacionesComponent() {
   
   const {
     // Estados
-    filtroEstado,
-    setFiltroEstado,
-    busqueda,
-    setBusqueda,
-    vistaActual,
+    cotizaciones,
     cotizacionSeleccionada,
+    vistaActual,
+    loading,
+    error,
+    filtroEstado,
+    busqueda,
     sweetAlert,
     
     // Datos computados
-    filtrosCotizaciones,
     estadoIcons,
+    stats,
     
-    // Funciones
-    closeSweetAlert,
-    eliminarCotizacion,
+    // Acciones CRUD - CAMBIO: usar eliminarCotizacionConAPI en lugar de eliminarCotizacion
+    eliminarCotizacionConAPI,
+    refreshCotizaciones,
+    
+    // Acciones de UI
     verDetalleCotizacion,
-    volverALista
+    volverALista,
+    closeSweetAlert,
+    
+    // Setters
+    setFiltroEstado,
+    setBusqueda
   } = useCotizaciones();
 
   const handleAddTruck = () => navigate('/cotizaciones/CotizacionForm');
@@ -56,7 +64,7 @@ export default function CotizacionesComponent() {
         <div className="w-full h-full bg-white rounded-2xl shadow-2xl p-8 flex flex-col">
           
           {/* Header */}
-          <PageHeader />
+          <PageHeader onRecargar={refreshCotizaciones} />
 
           {/* Barra de filtros y búsqueda */}
           <FiltersBar
@@ -64,26 +72,40 @@ export default function CotizacionesComponent() {
             setBusqueda={setBusqueda}
             filtroEstado={filtroEstado}
             setFiltroEstado={setFiltroEstado}
+            loading={loading}
           />
           
-          {/* Grid de cotizaciones */}
+          {/* Contenido principal */}
           <div className="flex-1 overflow-y-auto">
-            <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-              {filtrosCotizaciones.map((cotizacion, index) => (
-                <CotizacionCard
-                  key={cotizacion.id}
-                  cotizacion={cotizacion}
-                  index={index}
-                  estadoIcons={estadoIcons}
-                  onVerDetalle={verDetalleCotizacion}
-                  onEditar={handleAddTruck}
-                  onEliminar={eliminarCotizacion}
-                />
-              ))}
-            </div>
+            {loading ? (
+              <LoadingSpinner />
+            ) : error ? (
+              <ErrorState 
+                error={error} 
+                onRecargar={refreshCotizaciones} 
+              />
+            ) : (
+              <>
+                {/* Grid de cotizaciones */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+                  {cotizaciones.map((cotizacion, index) => (
+                    <CotizacionCard
+                      key={cotizacion.id}
+                      cotizacion={cotizacion}
+                      index={index}
+                      estadoIcons={estadoIcons}
+                      onVerDetalle={verDetalleCotizacion}
+                      onEditar={handleAddTruck}
+                      // CAMBIO PRINCIPAL: usar eliminarCotizacionConAPI
+                      onEliminar={eliminarCotizacionConAPI}
+                    />
+                  ))}
+                </div>
 
-            {/* Mensaje si no hay resultados */}
-            {filtrosCotizaciones.length === 0 && <EmptyState />}
+                {/* Mensaje si no hay resultados */}
+                {cotizaciones.length === 0 && <EmptyState />}
+              </>
+            )}
           </div>
         </div>
       </div>
@@ -100,3 +122,30 @@ export default function CotizacionesComponent() {
     </>
   );
 }
+
+// Componente para mostrar errores
+const ErrorState = ({ error, onRecargar }) => (
+  <div className="flex flex-col items-center justify-center h-64 text-center">
+    <div className="text-red-500 text-6xl mb-4">⚠️</div>
+    <h3 className="text-xl font-semibold text-gray-800 mb-2">
+      Error al cargar cotizaciones
+    </h3>
+    <p className="text-gray-600 mb-6 max-w-md">
+      {error}
+    </p>
+    <button
+      onClick={onRecargar}
+      className="bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600 transition-colors"
+    >
+      🔄 Intentar de nuevo
+    </button>
+  </div>
+);
+
+// Componente LoadingSpinner
+const LoadingSpinner = () => (
+  <div className="flex flex-col items-center justify-center h-64">
+    <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-500 mb-4"></div>
+    <p className="text-gray-600">Cargando cotizaciones...</p>
+  </div>
+);
