@@ -7,57 +7,64 @@ import {
   TextInput,
   TouchableOpacity,
   FlatList,
-  Alert,
 } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import HistorialCard from '../components/HistorialCard';
 import FocusAwareStatusBar from '../components/FocusAwareStatusBar';
+import QuoteSheet from '../components/QuoteSheet';
+import useQuotePreview from '../hooks/useQuotePreview';
+
+const BG = '#F5F5F5';
 
 const HistorialScreen = () => {
-  const [searchText, setSearchText] = useState('');
+  const navigation = useNavigation();
 
-  // Datos del historial 
+  // ===== Datos del historial (nombres y estados variados) =====
   const [historialItems] = useState([
-    { id: 1, title: 'Fresh Fruits & Vegetable', icon: '🚛', location: '📍', status: 'completed' },
-    { id: 2, title: 'Fresh Fruits & Vegetable', icon: '🚛', location: '📍', status: 'completed' },
-    { id: 3, title: 'Fresh Fruits & Vegetable', icon: '🚛', location: '📍', status: 'completed' },
-    { id: 4, title: 'Fresh Fruits & Vegetable', icon: '🚛', location: '📍', status: 'completed' },
-    { id: 5, title: 'Fresh Fruits & Vegetable', icon: '🚛', location: '📍', status: 'completed' },
-    { id: 6, title: 'Fresh Fruits & Vegetable', icon: '🚛', location: '📍', status: 'completed' },
+    { id: 1, title: 'Carga de maíz a San Miguel',        status: 'completado' },
+    { id: 2, title: 'Bebidas gaseosas a Santa Ana',      status: 'en ruta' },
+    { id: 3, title: 'Material de construcción a Soyapango', status: 'pendiente' },
+    { id: 4, title: 'Electrodomésticos a La Unión',      status: 'completado' },
+    { id: 5, title: 'Medicamentos a San Salvador',       status: 'en ruta' },
+    { id: 6, title: 'Paquetería exprés a Sonsonate',     status: 'pendiente' },
   ]);
 
+  const [searchText, setSearchText] = useState('');
   const filteredItems = historialItems.filter(item =>
     item.title.toLowerCase().includes(searchText.toLowerCase())
   );
 
-  const handleItemPress = (item) => {
-    Alert.alert(
-      'Historial',
-      `${item.title}\n\nEstado: Completado\nUbicación disponible`,
-      [{ text: 'OK' }]
-    );
+
+  const { visible, item, open, close } = useQuotePreview();
+
+  const handleItemPress = (it) => {
+    // Muestra el sheet con detalles de ejemplo
+    open({
+      title: it.title,
+      status: it.status,              
+      lugarEntrega: 'San Salvador',
+      horaLlegada: '10:30 AM',
+      horaSalida: '11:45 AM',
+      metodoPago: 'Efectivo',        
+    });
   };
 
   const renderHistorialItem = ({ item }) => (
-    <HistorialCard
-      item={item}
-      onPress={() => handleItemPress(item)}
-    />
+    <HistorialCard item={item} onPress={() => handleItemPress(item)} />
   );
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* StatusBar blanco para evitar franja negra */}
+      {/* StatusBar blanco para evitar bordes/ franjas */}
       <FocusAwareStatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
 
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton}>
+        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
           <Text style={styles.backButtonText}>←</Text>
         </TouchableOpacity>
 
         <Text style={styles.headerTitle}>Historial</Text>
-
-        {/* Espaciador para balancear y centrar el título */}
         <View style={styles.rightSpacer} />
       </View>
 
@@ -67,7 +74,7 @@ const HistorialScreen = () => {
           <Text style={styles.searchIcon}>🔍</Text>
           <TextInput
             style={styles.searchInput}
-            placeholder="Search done"
+            placeholder="Buscar..."
             placeholderTextColor="#7F8C8D"
             value={searchText}
             onChangeText={setSearchText}
@@ -75,7 +82,7 @@ const HistorialScreen = () => {
         </View>
       </View>
 
-      {/* Historial Grid */}
+      {/* Grid */}
       <View style={styles.content}>
         <FlatList
           data={filteredItems}
@@ -87,12 +94,23 @@ const HistorialScreen = () => {
           columnWrapperStyle={styles.row}
         />
       </View>
+
+      {/* Mini pantalla (sheet) con detalles */}
+      <QuoteSheet
+        visible={visible}
+        item={item}
+        onClose={close}
+        onConfirm={(payload) => {
+          close();
+          navigation.navigate('Cotizacion', payload);
+        }}
+      />
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F5F5F5' },
+  container: { flex: 1, backgroundColor: BG },
 
   header: {
     flexDirection: 'row',
@@ -101,7 +119,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 50,
     paddingBottom: 20,
-    backgroundColor: '#FFFFFF', 
+    backgroundColor: '#FFFFFF',
   },
   backButton: {
     width: 40, height: 40, borderRadius: 20,
@@ -110,8 +128,7 @@ const styles = StyleSheet.create({
   },
   backButtonText: { fontSize: 20, color: '#2C3E50', fontWeight: 'bold' },
   headerTitle: {
-    flex: 1,
-    textAlign: 'center',
+    flex: 1, textAlign: 'center',
     fontSize: 20, fontWeight: 'bold', color: '#2C3E50',
   },
   rightSpacer: { width: 40, height: 40 },
