@@ -7,62 +7,32 @@ import ProfileScreen from '../screens/ProfileScreen';
 import HistorialScreen from '../screens/HistorialScreen';
 import CotizacionScreen from '../screens/CotizacionScreen';
 import PaymentSuccessScreen from '../screens/PaymentSuccessScreen'; 
+import SplashScreen from '../screens/SplashScreen';
 import CustomTabBar from '../components/CustomTabBar';
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
 
-const TabNavigator = () => {
-  return (
-    <Tab.Navigator
-      tabBar={(props) => <CustomTabBar {...props} />}
-      screenOptions={{ headerShown: false }}
-      initialRouteName="Dashboard"
-    >
-      <Tab.Screen
-        name="Profile"
-        component={ProfileScreen}
-        options={{ tabBarLabel: 'Perfil' }}
-      />
-      <Tab.Screen
-        name="Dashboard"
-        component={DashboardScreen}
-        options={{ tabBarLabel: 'Inicio' }}
-      />
-      <Tab.Screen
-        name="Historial"
-        component={HistorialScreen}
-        options={{ tabBarLabel: 'Historial' }}
-      />
-    </Tab.Navigator>
-  );
-};
+const TabNavigator = () => (
+  <Tab.Navigator
+    tabBar={(props) => <CustomTabBar {...props} />}
+    screenOptions={{ headerShown: false }}
+    initialRouteName="Dashboard"
+  >
+    <Tab.Screen name="Profile" component={ProfileScreen} options={{ tabBarLabel: 'Perfil' }} />
+    <Tab.Screen name="Dashboard" component={DashboardScreen} options={{ tabBarLabel: 'Inicio' }} />
+    <Tab.Screen name="Historial" component={HistorialScreen} options={{ tabBarLabel: 'Historial' }} />
+  </Tab.Navigator>
+);
 
-const AppNavigator = () => {
-  return (
-    <Stack.Navigator
-      initialRouteName="Main"
-      screenOptions={{ headerShown: false }}
-    >
-      {/* Tabs principales */}
-      <Stack.Screen name="Main" component={TabNavigator} />
-
-      {/* Flujo de cotizaciones */}
-      <Stack.Screen name="Cotizacion" component={CotizacionScreen} />
-
-      {/* Pantalla de éxito: registrada con ambos nombres */}
-      <Stack.Screen
-        name="PaymentSuccessScreen"
-        component={PaymentSuccessScreen}
-        options={{ headerShown: false }}
-      />
-      <Stack.Screen
-        name="PagoExitoso" // alias opcional
-        component={PaymentSuccessScreen}
-        options={{ headerShown: false }}
-      />
-    </Stack.Navigator>
-  );
-};
+const AppNavigator = () => (
+  <Stack.Navigator initialRouteName="Splash" screenOptions={{ headerShown: false }}>
+    <Stack.Screen name="Splash" component={SplashScreen} />
+    <Stack.Screen name="Main" component={TabNavigator} />
+    <Stack.Screen name="Cotizacion" component={CotizacionScreen} />
+    {/* Si usas la pantalla de éxito */}
+    <Stack.Screen name="PaymentSuccessScreen" component={PaymentSuccessScreen} />
+  </Stack.Navigator>
+);
 
 export default AppNavigator;
