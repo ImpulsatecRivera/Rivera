@@ -4,6 +4,12 @@ import empleadoRoutes from "./src/Routes/empleadosRoutes.js"
 import motoristasRoutes from "./src/Routes/motoristaRoutes.js"
 import proveedoresRoutes from "./src/Routes/proveedoresRoutes.js"
 import ClientesRoutes from "./src/Routes/clienteRoutes.js"
+<<<<<<< HEAD
+import LoginRoutes from "./src/Routes/LoginRoutes.js"
+import LogoutRoutes from "./src/Routes/Logout.js"
+import RecoveryRoutes from "./src/Routes/Recovery.js"
+import RegisterRoutes from "./src/Routes/RegisterRoute.js"
+=======
 import RegisterClienteRoutes from "./src/Routes/RegisterClienteRouter.js"
 import CotizacionesRoutes from "./src/Routes/cotizacionesRoutes.js"
 
@@ -44,9 +50,10 @@ import ViajesRoutes from "./src/Routes/ViajesRoutes.js"
 
 
 
+>>>>>>> master
 import cookieParser from "cookie-parser"
-import cors from "cors";
- 
+import cors from "cors";  
+
 const app = express();
 
 app.use(express.json());
@@ -58,7 +65,7 @@ app.use(
     credentials: true,
   })
 );
- 
+
 app.use("/api/camiones", camionesRoutes);
 app.use("/api/empleados", empleadoRoutes);
 app.use("/api/motoristas", motoristasRoutes);
@@ -66,6 +73,12 @@ app.use("/api/proveedores", proveedoresRoutes);
 app.use("/api/clientes", ClientesRoutes);
 app.use("/api/login", LoginRoutes);
 app.use("/api/logout", LogoutRoutes);
+<<<<<<< HEAD
+app.use("/api/register",RegisterRoutes);
+app.use("/api/recovery", RecoveryRoutes);
+
+export default app;
+=======
 app.use("/api/resgister",RegisterClienteRoutes);
 app.use("/api/cotizaciones",CotizacionesRoutes);
 
@@ -85,3 +98,4 @@ app.use('/api/auto-update', autoUpdateRoutes);
 app.use("/api/viajes", ViajesRoutes);
 
 export default app;
+>>>>>>> master
