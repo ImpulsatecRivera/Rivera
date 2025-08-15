@@ -5,6 +5,7 @@ import motoristasRoutes from "./src/Routes/motoristaRoutes.js"
 import proveedoresRoutes from "./src/Routes/proveedoresRoutes.js"
 import ClientesRoutes from "./src/Routes/clienteRoutes.js"
 import RegisterClienteRoutes from "./src/Routes/RegisterClienteRouter.js"
+import CotizacionesRoutes from "./src/Routes/cotizacionesRoutes.js"
 
 
 
@@ -66,6 +67,7 @@ app.use("/api/clientes", ClientesRoutes);
 app.use("/api/login", LoginRoutes);
 app.use("/api/logout", LogoutRoutes);
 app.use("/api/resgister",RegisterClienteRoutes);
+app.use("/api/cotizaciones",CotizacionesRoutes);
 
 
 
