@@ -12,7 +12,6 @@ import FiltersBar from '../../components/UICotizaciones/FiltersBar';
 import CotizacionCard from '../../components/UICotizaciones/CotizacionCard';
 import EmptyState from '../../components/UICotizaciones/EmptyState';
 import DetalleView from '../../components/UICotizaciones/DetalleView';
-import LoadingSpinner from '../../components/Cotizaciones/hook/LoadingSpinner'; // Necesitarás crear este componente
 
 export default function CotizacionesComponent() {
   const navigate = useNavigate();
@@ -32,8 +31,8 @@ export default function CotizacionesComponent() {
     estadoIcons,
     stats,
     
-    // Acciones CRUD
-    eliminarCotizacion,
+    // Acciones CRUD - CAMBIO: usar eliminarCotizacionConAPI en lugar de eliminarCotizacion
+    eliminarCotizacionConAPI,
     refreshCotizaciones,
     
     // Acciones de UI
@@ -97,7 +96,8 @@ export default function CotizacionesComponent() {
                       estadoIcons={estadoIcons}
                       onVerDetalle={verDetalleCotizacion}
                       onEditar={handleAddTruck}
-                      onEliminar={eliminarCotizacion}
+                      // CAMBIO PRINCIPAL: usar eliminarCotizacionConAPI
+                      onEliminar={eliminarCotizacionConAPI}
                     />
                   ))}
                 </div>
@@ -139,5 +139,13 @@ const ErrorState = ({ error, onRecargar }) => (
     >
       🔄 Intentar de nuevo
     </button>
+  </div>
+);
+
+// Componente LoadingSpinner
+const LoadingSpinner = () => (
+  <div className="flex flex-col items-center justify-center h-64">
+    <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-500 mb-4"></div>
+    <p className="text-gray-600">Cargando cotizaciones...</p>
   </div>
 );

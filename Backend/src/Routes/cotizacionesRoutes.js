@@ -6,5 +6,7 @@ const router = express.Router();
 
 router.route("/").get(cotizacionesController.getAllCotizaciones);
 
+router.get('/:id', cotizacionesController.getCotizacionById);
 
+router.delete('/:id', cotizacionesController.deleteCotizacion);
 export default router;
