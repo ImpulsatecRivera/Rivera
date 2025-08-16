@@ -31,15 +31,10 @@ const useCotizaciones = () => {
         setLoading(true);
         setError(null);
         
-        console.log('🔄 Iniciando carga de clientes...');
         const clientesMap = await fetchClientesSync();
-        
-        console.log('🔄 Clientes cargados, ahora cargando cotizaciones con clientes:', clientesMap);
         await fetchCotizacionesConClientes(clientesMap);
-        
-        console.log('✅ Ambos datos cargados exitosamente');
       } catch (error) {
-        console.error('❌ Error al cargar datos:', error);
+        console.error('Error al cargar datos:', error);
         setError('Error al cargar los datos');
       } finally {
         setLoading(false);
@@ -49,32 +44,26 @@ const useCotizaciones = () => {
     cargarDatos();
   }, []);
 
-  // Función síncrona que devuelve el mapa de clientes
+  // Función para cargar clientes
   const fetchClientesSync = async () => {
     try {
       const response = await axios.get('http://localhost:4000/api/clientes');
-      
-      console.log('📦 Respuesta cruda de clientes:', response.data);
       
       const clientesArray = Array.isArray(response.data) ? response.data : 
                            response.data.clientes ? response.data.clientes :
                            response.data.data ? response.data.data : [];
       
       if (!Array.isArray(clientesArray) || clientesArray.length === 0) {
-        console.warn('⚠️ No se encontraron clientes o estructura incorrecta');
         return {};
       }
       
       const clientesMap = {};
-      clientesArray.forEach((cliente, index) => {
-        console.log(`👤 Procesando cliente ${index + 1}:`, cliente);
-        
+      clientesArray.forEach((cliente) => {
         const firstName = cliente.firtsName || cliente.firstName || cliente.name || cliente.nombre || '';
         const lastName = cliente.lastName || cliente.apellido || '';
         const nombreCompleto = `${firstName} ${lastName}`.trim();
         
         const clienteId = cliente._id || cliente.id;
-        console.log(`🔑 ID del cliente: ${clienteId}`);
         
         if (clienteId) {
           clientesMap[clienteId] = {
@@ -86,64 +75,83 @@ const useCotizaciones = () => {
             telefono: cliente.phone || cliente.telefono || cliente.celular || 'Sin teléfono',
             ...cliente
           };
-          
-          console.log(`✅ Cliente ${clienteId} agregado al mapa:`, clientesMap[clienteId]);
         }
       });
       
       setClientes(clientesMap);
-      console.log('🗂️ Mapa final de clientes:', clientesMap);
-      console.log('📊 Total de clientes cargados:', Object.keys(clientesMap).length);
-      
       return clientesMap;
     } catch (error) {
-      console.error('❌ Error al cargar los clientes:', error);
+      console.error('Error al cargar los clientes:', error);
       setError('Error al cargar los clientes');
       return {};
     }
   };
 
-  // Función que recibe el mapa de clientes como parámetro
+  // Función para cargar cotizaciones
   const fetchCotizacionesConClientes = async (clientesMap) => {
     try {
       const response = await axios.get('http://localhost:4000/api/cotizaciones');
       
-      console.log('Cotizaciones recibidas de la API:', response.data);
+      // Acceder a los datos correctamente
+      const cotizacionesData = response.data.data || response.data;
       
-      const cotizacionesFormateadas = response.data.map((cotizacion, index) => {
-        console.log(`📋 Procesando cotización ${index + 1}:`, cotizacion);
-        console.log(`🔗 ClientId de la cotización: "${cotizacion.clientId}"`);
+      if (!Array.isArray(cotizacionesData)) {
+        throw new Error('Formato de datos incorrecto: se esperaba un array');
+      }
+      
+      const cotizacionesFormateadas = cotizacionesData.map((cotizacion) => {
+        // Extraer ID del cliente (manejar si es objeto o string)
+        let clienteId;
+        if (typeof cotizacion.clientId === 'object' && cotizacion.clientId !== null) {
+          clienteId = cotizacion.clientId._id || cotizacion.clientId.id;
+        } else {
+          clienteId = cotizacion.clientId;
+        }
         
-        const clienteInfo = clientesMap[cotizacion.clientId] || null;
-        console.log(`👤 Información del cliente encontrada:`, clienteInfo);
+        // Buscar info del cliente
+        const clienteInfo = clientesMap[clienteId] || null;
         
-        if (!clienteInfo) {
-          console.warn(`⚠️ No se encontró información para clientId: "${cotizacion.clientId}"`);
-          console.log('🗂️ Clientes disponibles en el mapa:', Object.keys(clientesMap));
+        // Si no encontramos en el mapa pero clientId es objeto, usar esa info
+        let clienteData;
+        if (clienteInfo) {
+          clienteData = clienteInfo;
+        } else if (typeof cotizacion.clientId === 'object' && cotizacion.clientId !== null) {
+          const obj = cotizacion.clientId;
+          const firstName = obj.firtsName || obj.firstName || obj.name || obj.nombre || '';
+          const lastName = obj.lastName || obj.apellido || '';
+          clienteData = {
+            id: obj._id || obj.id || clienteId,
+            nombre: `${firstName} ${lastName}`.trim() || 'Cliente sin nombre',
+            firstName: firstName,
+            lastName: lastName,
+            email: obj.email || 'Sin email',
+            telefono: obj.phone || obj.telefono || obj.celular || 'Sin teléfono'
+          };
+        } else {
+          clienteData = {
+            id: clienteId,
+            nombre: 'Cliente no encontrado',
+            firstName: '',
+            lastName: '',
+            email: 'No encontrado',
+            telefono: 'No encontrado'
+          };
         }
         
         return {
           id: cotizacion._id,
-          clientId: cotizacion.clientId,
+          clientId: clienteId,
           quoteName: cotizacion.quoteName || 'Sin nombre de cotización',
           quoteDescription: cotizacion.quoteDescription || 'Sin descripción',
           numeroDetizacion: cotizacion._id ? `#${cotizacion._id.slice(-6).toUpperCase()}` : '#000000',
           
           // Información del cliente
-          cliente: clienteInfo ? clienteInfo.nombre : `Cliente ID: ${cotizacion.clientId} no encontrado`,
-          clienteCompleto: clienteInfo || { 
-            id: cotizacion.clientId,
-            nombre: `Cliente ID: ${cotizacion.clientId} no encontrado`,
-            email: 'Cliente no encontrado',
-            telefono: 'Cliente no encontrado',
-            firstName: 'No encontrado',
-            lastName: 'No encontrado'
-          },
-          
-          telefono: clienteInfo?.telefono || 'Cliente no encontrado',
-          email: clienteInfo?.email || 'Cliente no encontrado',
-          clienteFirstName: clienteInfo?.firstName || '',
-          clienteLastName: clienteInfo?.lastName || '',
+          cliente: clienteData.nombre,
+          clienteCompleto: clienteData,
+          telefono: clienteData.telefono,
+          email: clienteData.email,
+          clienteFirstName: clienteData.firstName,
+          clienteLastName: clienteData.lastName,
           
           // Información de ruta
           origen: cotizacion.ruta?.origen?.nombre || 'Sin origen',
@@ -222,7 +230,6 @@ const useCotizaciones = () => {
       });
 
       setCotizaciones(cotizacionesFormateadas);
-      console.log('Cotizaciones formateadas:', cotizacionesFormateadas);
     } catch (error) {
       console.error('Error al cargar las cotizaciones:', error);
       setError('Error al cargar las cotizaciones');
@@ -230,25 +237,20 @@ const useCotizaciones = () => {
     }
   };
 
-  // Función para eliminar cotización con manejo de error 404 mejorado
+  // Función para eliminar cotización
   const eliminarCotizacionAPI = async (id) => {
     try {
       setLoading(true);
       setError(null);
       
-      console.log(`🗑️ Intentando eliminar cotización con ID: ${id}`);
-      
       const response = await axios.delete(`http://localhost:4000/api/cotizaciones/${id}`);
       
-      console.log('✅ Cotización eliminada desde API:', response.data);
-      
-      // Actualizar estado local solo si la eliminación fue exitosa
       setCotizaciones(prev => prev.filter(c => (c.id || c._id) !== id));
       
       return { success: true, message: 'Cotización eliminada correctamente', fallback: false };
       
     } catch (error) {
-      console.error('❌ Error al eliminar la cotización:', error);
+      console.error('Error al eliminar la cotización:', error);
       
       let errorMessage = 'Error al eliminar la cotización';
       let useFallback = false;
@@ -256,20 +258,14 @@ const useCotizaciones = () => {
       if (error.response) {
         const status = error.response.status;
         
-        console.log(`📊 Status del error: ${status}`);
-        console.log(`🔗 URL intentada: ${error.config?.url}`);
-        console.log(`📝 Respuesta del servidor:`, error.response.data);
-        
         switch (status) {
           case 404:
             errorMessage = 'El endpoint de eliminación no existe en el servidor';
             useFallback = true;
-            console.log('💡 Usando eliminación local como fallback');
             break;
           case 405:
             errorMessage = 'Método DELETE no permitido en el servidor';
             useFallback = true;
-            console.log('💡 Usando eliminación local como fallback');
             break;
           case 500:
             errorMessage = 'Error interno del servidor al eliminar';
@@ -280,12 +276,9 @@ const useCotizaciones = () => {
       } else if (error.request) {
         errorMessage = 'Error de conexión: No se pudo conectar con el servidor';
         useFallback = true;
-        console.log('💡 Sin conexión, usando eliminación local como fallback');
       }
       
-      // Si debemos usar fallback, eliminamos solo localmente
       if (useFallback) {
-        console.log('🔄 Ejecutando fallback - eliminando solo de la vista local');
         setCotizaciones(prev => prev.filter(c => (c.id || c._id) !== id));
         
         return { 
@@ -303,7 +296,7 @@ const useCotizaciones = () => {
     }
   };
 
-  // Función para eliminar con API mejorada
+  // Función para eliminar con confirmación
   const eliminarCotizacionConAPI = (cotizacion) => {
     showSweetAlert({
       title: '¿Estás seguro?',
@@ -312,7 +305,6 @@ const useCotizaciones = () => {
       onConfirm: async () => {
         closeSweetAlert();
         
-        // Mostrar loading
         showSweetAlert({
           title: 'Eliminando...',
           text: 'Por favor espera mientras se procesa la eliminación.',
@@ -324,7 +316,6 @@ const useCotizaciones = () => {
         
         closeSweetAlert();
         
-        // Mostrar resultado
         setTimeout(() => {
           if (resultado.success) {
             const titulo = resultado.fallback ? '¡Eliminado localmente!' : '¡Eliminado!';
@@ -351,132 +342,7 @@ const useCotizaciones = () => {
     });
   };
 
-  // Función para obtener todas las cotizaciones
-  const fetchCotizaciones = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const response = await axios.get('http://localhost:4000/api/cotizaciones');
-      
-      console.log('Cotizaciones recibidas de la API:', response.data);
-      
-      const cotizacionesFormateadas = response.data.map((cotizacion) => {
-        const clienteInfo = clientes[cotizacion.clientId] || null;
-        
-        return {
-          id: cotizacion._id,
-          clientId: cotizacion.clientId,
-          quoteName: cotizacion.quoteName || 'Sin nombre de cotización',
-          quoteDescription: cotizacion.quoteDescription || 'Sin descripción',
-          numeroDetizacion: cotizacion._id ? `#${cotizacion._id.slice(-6).toUpperCase()}` : '#000000',
-          
-          cliente: clienteInfo ? clienteInfo.nombre : `Cliente ID: ${cotizacion.clientId} no encontrado`,
-          clienteCompleto: clienteInfo || { 
-            id: cotizacion.clientId,
-            nombre: `Cliente ID: ${cotizacion.clientId} no encontrado`,
-            email: 'Cliente no encontrado',
-            telefono: 'Cliente no encontrado'
-          },
-          
-          telefono: clienteInfo?.telefono || 'No encontrado',
-          email: clienteInfo?.email || 'No encontrado',
-          
-          origen: cotizacion.ruta?.origen?.nombre || 'Sin origen',
-          destino: cotizacion.ruta?.destino?.nombre || 'Sin destino',
-          
-          estado: mapearEstado(cotizacion.status),
-          status: cotizacion.status,
-          
-          fecha: formatDate(cotizacion.createdAt),
-          fechaCreacion: formatDate(cotizacion.createdAt),
-          
-          monto: `$${cotizacion.price || 0}`,
-          price: cotizacion.price || 0,
-          
-          colorEstado: getColorEstado(mapearEstado(cotizacion.status)),
-          
-          ...cotizacion
-        };
-      });
-
-      setCotizaciones(cotizacionesFormateadas);
-      console.log('Cotizaciones formateadas:', cotizacionesFormateadas);
-    } catch (error) {
-      console.error('Error al cargar las cotizaciones:', error);
-      setError('Error al cargar las cotizaciones');
-      setCotizaciones([]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Función para obtener una cotización por ID
-  const fetchCotizacionById = async (id) => {
-    try {
-      setLoading(true);
-      setError(null);
-      const response = await axios.get(`http://localhost:4000/api/cotizaciones/${id}`);
-      
-      console.log('Cotización obtenida por ID:', response.data);
-      
-      const clienteInfo = clientes[response.data.clientId] || null;
-      
-      const cotizacionFormateada = {
-        id: response.data._id,
-        clientId: response.data.clientId,
-        quoteName: response.data.quoteName || 'Sin nombre de cotización',
-        quoteDescription: response.data.quoteDescription || 'Sin descripción',
-        numeroDetizacion: response.data._id ? `#${response.data._id.slice(-6).toUpperCase()}` : '#000000',
-        
-        cliente: clienteInfo ? clienteInfo.nombre : 'Cliente no encontrado',
-        clienteCompleto: clienteInfo || { 
-          id: response.data.clientId,
-          nombre: 'Cliente no encontrado',
-          email: 'No encontrado',
-          telefono: 'No encontrado'
-        },
-        
-        telefono: clienteInfo?.telefono || 'No encontrado',
-        email: clienteInfo?.email || 'No encontrado',
-        
-        origen: response.data.ruta?.origen?.nombre || 'Sin origen',
-        destino: response.data.ruta?.destino?.nombre || 'Sin destino',
-        
-        estado: mapearEstado(response.data.status),
-        status: response.data.status,
-        
-        fecha: formatDate(response.data.createdAt),
-        fechaCreacion: formatDate(response.data.createdAt),
-        
-        monto: `$${response.data.price || 0}`,
-        price: response.data.price || 0,
-        
-        colorEstado: getColorEstado(mapearEstado(response.data.status)),
-        
-        ...response.data
-      };
-      
-      return cotizacionFormateada;
-    } catch (error) {
-      console.error('Error al obtener la cotización por ID:', error);
-      setError('Error al obtener la cotización');
-      return null;
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Función para cargar y seleccionar una cotización por ID
-  const cargarCotizacionPorId = async (id) => {
-    const cotizacion = await fetchCotizacionById(id);
-    if (cotizacion) {
-      setCotizacionSeleccionada(cotizacion);
-      setVistaActual('detalle');
-    }
-    return cotizacion;
-  };
-
-  // Función para mapear el status de la API al estado del frontend
+  // Funciones de utilidad
   const mapearEstado = (status) => {
     const mapeoEstados = {
       'pendiente': 'Pendiente',
@@ -489,7 +355,6 @@ const useCotizaciones = () => {
     return mapeoEstados[status] || 'Pendiente';
   };
 
-  // Función para calcular validez
   const calcularValidez = (validezCotizacion) => {
     if (!validezCotizacion) return 'Sin fecha de vencimiento';
     
@@ -503,7 +368,6 @@ const useCotizaciones = () => {
     return `${diferenciaDias} días restantes`;
   };
 
-  // Función para obtener el color del estado
   const getColorEstado = (estado) => {
     const colores = {
       'Aprobada': 'bg-emerald-100 text-emerald-800 border-emerald-200',
@@ -515,7 +379,6 @@ const useCotizaciones = () => {
     return colores[estado] || 'bg-gray-100 text-gray-800 border-gray-200';
   };
 
-  // Función para formatear fechas
   const formatDate = (dateString) => {
     if (!dateString) return '';
     try {
@@ -530,16 +393,7 @@ const useCotizaciones = () => {
     }
   };
 
-  // Iconos de estados
-  const estadoIcons = {
-    'Aprobada': '✓',
-    'Pendiente': '⏳',
-    'Rechazada': '✗',
-    'En Proceso': '🚛',
-    'Completada': '🏁'
-  };
-
-  // Función para filtrar cotizaciones
+  // Filtrar cotizaciones
   const filteredCotizaciones = cotizaciones.filter(cotizacion => {
     const cumpleFiltro = filtroEstado === 'Todos' || cotizacion.estado === filtroEstado;
     
@@ -562,7 +416,7 @@ const useCotizaciones = () => {
     return cumpleFiltro && cumpleBusqueda;
   });
 
-  // Funciones para manejar SweetAlert
+  // Funciones SweetAlert
   const showSweetAlert = (config) => {
     setSweetAlert({
       isOpen: true,
@@ -580,7 +434,7 @@ const useCotizaciones = () => {
     });
   };
 
-  // Función para eliminar (solo local)
+  // Otras funciones
   const eliminarCotizacion = (cotizacion) => {
     showSweetAlert({
       title: '¿Estás seguro?',
@@ -603,36 +457,25 @@ const useCotizaciones = () => {
     });
   };
 
-  // Función para ver detalle
   const verDetalleCotizacion = (cotizacion) => {
     setCotizacionSeleccionada(cotizacion);
     setVistaActual('detalle');
   };
 
-  // Función para ver detalle por ID
-  const verDetallePorId = async (id) => {
-    const cotizacion = await cargarCotizacionPorId(id);
-    return cotizacion;
-  };
-
-  // Función para volver a la lista
   const volverALista = () => {
     setVistaActual('lista');
     setCotizacionSeleccionada(null);
   };
 
-  // Función para refrescar datos
   const refreshCotizaciones = async () => {
     const clientesMap = await fetchClientesSync();
     await fetchCotizacionesConClientes(clientesMap);
   };
 
-  // Función para limpiar búsqueda
   const clearSearch = () => {
     setBusqueda('');
   };
 
-  // Función para obtener estadísticas
   const getStats = () => {
     return {
       total: cotizaciones.length,
@@ -644,6 +487,15 @@ const useCotizaciones = () => {
       completadas: cotizaciones.filter(c => c.estado === 'Completada').length,
       hasResults: filteredCotizaciones.length > 0
     };
+  };
+
+  // Iconos de estados
+  const estadoIcons = {
+    'Aprobada': '✓',
+    'Pendiente': '⏳',
+    'Rechazada': '✗',
+    'En Proceso': '🚛',
+    'Completada': '🏁'
   };
 
   return {
@@ -660,8 +512,6 @@ const useCotizaciones = () => {
     
     // Acciones
     verDetalleCotizacion,
-    verDetallePorId,
-    cargarCotizacionPorId,
     volverALista,
     clearSearch,
     showSweetAlert,
@@ -680,13 +530,10 @@ const useCotizaciones = () => {
     setCotizaciones,
     
     // Datos computados
-    filtrosCotizaciones: filteredCotizaciones,
-    estadoIcons,
     stats: getStats(),
+    estadoIcons,
     
     // Funciones de utilidad
-    fetchCotizaciones,
-    fetchCotizacionById,
     mapearEstado,
     calcularValidez,
     getColorEstado,

@@ -3,8 +3,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 
 // Hook personalizado
-import { useCotizaciones } from '../../components/Cotizaciones/hook/useCotizaciones';
-
+import useCotizaciones from '../../components/Cotizaciones/hook/useCotizaciones';
 // Componentes
 import SweetAlert from '../../components/UICotizaciones/SweetAlert';
 import PageHeader from '../../components/UICotizaciones/PageHeader';
