@@ -23,123 +23,200 @@ const ActivityChart = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  useEffect(() => {
-    const fetchStats = async () => {
-      setLoading(true);
-      setError(null);
+  // 🔧 Función principal para obtener estadísticas
+  const fetchStats = async () => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      console.log(`📊 Obteniendo estadísticas para período: ${tipo}`);
       
-      try {
-        // 🔧 RUTA CORRECTA: trip-stats con parámetro 'periodo'
-        const res = await axios.get(
-          `http://localhost:4000/api/viajes/trip-stats?periodo=${tipo}`
-        );
-
-        console.log('📊 Datos recibidos del backend:', res.data);
-
-        // 📊 Verificar que la respuesta tenga la estructura esperada
-        if (!res.data.success || !res.data.data) {
-          throw new Error('Estructura de respuesta inválida del servidor');
+      const res = await axios.get(
+        `http://localhost:4000/api/viajes/trip-stats?periodo=${tipo}`,
+        {
+          timeout: 10000, // 10 segundos de timeout
+          headers: {
+            'Content-Type': 'application/json',
+          }
         }
+      );
 
-        // 🎯 Mapear los datos para adaptarlos al gráfico
-        const mappedData = res.data.data.map((item, index) => {
-          let label = "";
-          
-          // 📅 Manejar diferentes tipos de agrupación según el período
-          if (typeof item._id === "object" && item._id !== null) {
-            // Para semanas: objeto {year, week}
-            if ("year" in item._id && "week" in item._id) {
-              label = `${item._id.year} S${item._id.week}`;
-            }
-            // Para semanas ISO: objeto {year, isoWeek}
-            else if ("year" in item._id && "isoWeek" in item._id) {
-              label = `${item._id.year} S${item._id.isoWeek}`;
-            }
-            // Para otros objetos complejos
-            else {
-              label = `Período ${index + 1}`;
-            }
-          } 
-          // Para valores simples (día, mes, año)
-          else {
-            const valor = String(item._id);
-            
-            // 📅 Formatear según el tipo de período
-            switch (tipo) {
-              case "dia":
-                // Fecha en formato YYYY-MM-DD
-                if (valor.includes("-")) {
-                  const fecha = new Date(valor);
-                  label = fecha.toLocaleDateString('es-ES', { 
-                    day: '2-digit', 
-                    month: 'short' 
-                  });
-                } else {
-                  label = `Día ${valor}`;
-                }
-                break;
-                
-              case "mes":
-                // Número del mes (1-12)
-                if (!isNaN(valor)) {
-                  const meses = [
-                    'Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun',
-                    'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'
-                  ];
-                  label = meses[parseInt(valor) - 1] || `Mes ${valor}`;
-                } else {
-                  label = valor;
-                }
-                break;
-                
-              case "año":
-                label = valor;
-                break;
-                
-              default:
-                label = valor;
-            }
-          }
+      console.log('📊 Respuesta del servidor:', res.data);
 
-          return {
-            label,
-            viajes: item.totalViajes || 0,
-            completados: item.completados || 0,
-            progresoPromedio: Math.round(item.progresoPromedio || 0),
-            // 📊 Campos adicionales para el tooltip
-            periodo: tipo,
-            fecha: item._id
-          };
-        });
+      // ✅ Verificar estructura de respuesta
+      if (!res.data) {
+        throw new Error('Respuesta vacía del servidor');
+      }
 
-        // 📈 Ordenar datos por fecha/período si es necesario
-        const sortedData = mappedData.sort((a, b) => {
-          if (tipo === "mes" && !isNaN(a.fecha) && !isNaN(b.fecha)) {
-            return parseInt(a.fecha) - parseInt(b.fecha);
-          }
-          return 0;
-        });
+      // 📊 Manejar diferentes formatos de respuesta
+      let responseData = [];
+      
+      if (res.data.success && res.data.data) {
+        // Formato: { success: true, data: [...] }
+        responseData = res.data.data;
+      } else if (Array.isArray(res.data)) {
+        // Formato: [...]
+        responseData = res.data;
+      } else if (res.data.data && Array.isArray(res.data.data)) {
+        // Formato alternativo
+        responseData = res.data.data;
+      } else {
+        throw new Error('Formato de respuesta no reconocido');
+      }
 
-        setData(sortedData);
-        console.log('✅ Datos procesados para el gráfico:', sortedData);
-        
-      } catch (error) {
-        console.error("❌ Error al cargar estadísticas:", error);
-        setError(error.response?.data?.message || error.message || 'Error desconocido');
-        
-        // 🎯 Datos de ejemplo en caso de error
+      if (!Array.isArray(responseData) || responseData.length === 0) {
+        console.warn('⚠️ No hay datos disponibles para este período');
+        setData([]);
+        return;
+      }
+
+      // 🎯 Procesar y mapear los datos
+      const mappedData = responseData.map((item, index) => {
+        const processedItem = processDataItem(item, index, tipo);
+        console.log(`📋 Procesando item ${index}:`, { original: item, processed: processedItem });
+        return processedItem;
+      });
+
+      // 📈 Ordenar datos
+      const sortedData = sortDataByPeriod(mappedData, tipo);
+      
+      setData(sortedData);
+      console.log('✅ Datos finales para el gráfico:', sortedData);
+      
+    } catch (error) {
+      console.error("❌ Error detallado:", {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+        config: error.config
+      });
+
+      let errorMessage = 'Error desconocido';
+      
+      if (error.code === 'ECONNABORTED') {
+        errorMessage = 'Timeout - El servidor tardó demasiado en responder';
+      } else if (error.response) {
+        // Error del servidor (4xx, 5xx)
+        errorMessage = error.response.data?.message || 
+                      error.response.data?.error || 
+                      `Error del servidor (${error.response.status})`;
+      } else if (error.request) {
+        // Error de conexión
+        errorMessage = 'Error de conexión - Verifica que el servidor esté ejecutándose';
+      } else {
+        errorMessage = error.message;
+      }
+      
+      setError(errorMessage);
+      
+      // 🎯 Cargar datos de ejemplo solo en desarrollo
+      if (process.env.NODE_ENV === 'development') {
+        console.log('🔧 Modo desarrollo: Cargando datos de ejemplo');
         const datosEjemplo = generarDatosEjemplo(tipo);
         setData(datosEjemplo);
-        
-      } finally {
-        setLoading(false);
       }
-    };
+      
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  // 🔄 Effect para cargar datos cuando cambia el tipo
+  useEffect(() => {
     fetchStats();
   }, [tipo]);
 
-  // 🎯 Función para generar datos de ejemplo según el período
+  // 📊 Procesar un item individual de datos
+  const processDataItem = (item, index, periodo) => {
+    let label = "";
+    let fecha = item._id;
+
+    // 🏷️ Generar etiqueta según el tipo de _id
+    if (typeof item._id === "object" && item._id !== null) {
+      // Para semanas: {year, week} o {year, isoWeek}
+      if (item._id.year && (item._id.week || item._id.isoWeek)) {
+        const weekNum = item._id.week || item._id.isoWeek;
+        label = `${item._id.year} S${weekNum}`;
+      }
+      // Para otros objetos complejos
+      else {
+        label = `Período ${index + 1}`;
+      }
+    } else {
+      // Para valores simples
+      label = formatLabelByPeriod(String(item._id), periodo);
+    }
+
+    return {
+      label,
+      viajes: parseInt(item.totalViajes) || parseInt(item.viajes) || 0,
+      completados: parseInt(item.completados) || parseInt(item.viajesCompletados) || 0,
+      progresoPromedio: Math.round(parseFloat(item.progresoPromedio) || 0),
+      periodo: periodo,
+      fecha: fecha,
+      // Campos adicionales que podrían venir del backend
+      pendientes: parseInt(item.pendientes) || 0,
+      cancelados: parseInt(item.cancelados) || 0
+    };
+  };
+
+  // 🏷️ Formatear etiquetas según el período
+  const formatLabelByPeriod = (valor, periodo) => {
+    switch (periodo) {
+      case "dia":
+        if (valor.includes("-")) {
+          // Formato fecha YYYY-MM-DD
+          const fecha = new Date(valor + 'T00:00:00');
+          return fecha.toLocaleDateString('es-ES', { 
+            day: '2-digit', 
+            month: 'short' 
+          });
+        }
+        return `Día ${valor}`;
+        
+      case "mes":
+        if (!isNaN(valor)) {
+          const meses = [
+            'Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun',
+            'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'
+          ];
+          return meses[parseInt(valor) - 1] || `Mes ${valor}`;
+        }
+        return valor;
+        
+      case "año":
+        return valor;
+        
+      default:
+        return valor;
+    }
+  };
+
+  // 📈 Ordenar datos según el período
+  const sortDataByPeriod = (data, periodo) => {
+    return data.sort((a, b) => {
+      switch (periodo) {
+        case "mes":
+          if (!isNaN(a.fecha) && !isNaN(b.fecha)) {
+            return parseInt(a.fecha) - parseInt(b.fecha);
+          }
+          break;
+        case "dia":
+          if (typeof a.fecha === 'string' && typeof b.fecha === 'string') {
+            return new Date(a.fecha) - new Date(b.fecha);
+          }
+          break;
+        case "año":
+          if (!isNaN(a.fecha) && !isNaN(b.fecha)) {
+            return parseInt(a.fecha) - parseInt(b.fecha);
+          }
+          break;
+      }
+      return 0;
+    });
+  };
+
+  // 🎯 Generar datos de ejemplo para desarrollo
   const generarDatosEjemplo = (periodo) => {
     switch (periodo) {
       case "dia":
@@ -181,32 +258,43 @@ const ActivityChart = () => {
     }
   };
 
-  // 🔄 Función para refrescar datos
-  const handleRefresh = () => {
-    fetchStats();
-  };
-
   // 🎨 Tooltip personalizado
   const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
       return (
         <div className="bg-white p-3 border border-gray-200 rounded-lg shadow-lg">
-          <p className="font-medium text-gray-900">{label}</p>
+          <p className="font-medium text-gray-900 mb-2">{label}</p>
           {payload.map((entry, index) => (
-            <p key={index} style={{ color: entry.color }} className="text-sm">
-              {`${entry.name}: ${entry.value}`}
-            </p>
+            <div key={index} className="flex justify-between items-center mb-1">
+              <span style={{ color: entry.color }} className="text-sm">
+                {entry.name}:
+              </span>
+              <span className="font-medium ml-2">{entry.value}</span>
+            </div>
           ))}
-          {payload[0]?.payload?.progresoPromedio && (
-            <p className="text-xs text-gray-500 mt-1">
+          {payload[0]?.payload?.progresoPromedio > 0 && (
+            <div className="text-xs text-gray-500 mt-2 pt-2 border-t border-gray-100">
               Progreso promedio: {payload[0].payload.progresoPromedio}%
-            </p>
+            </div>
           )}
         </div>
       );
     }
     return null;
   };
+
+  // 📊 Calcular estadísticas resumidas
+  const calcularEstadisticas = () => {
+    if (data.length === 0) return { totalViajes: 0, totalCompletados: 0, tasaExito: 0 };
+
+    const totalViajes = data.reduce((sum, item) => sum + item.viajes, 0);
+    const totalCompletados = data.reduce((sum, item) => sum + item.completados, 0);
+    const tasaExito = totalViajes > 0 ? Math.round((totalCompletados / totalViajes) * 100) : 0;
+
+    return { totalViajes, totalCompletados, tasaExito };
+  };
+
+  const stats = calcularEstadisticas();
 
   return (
     <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm w-full h-80">
@@ -216,7 +304,10 @@ const ActivityChart = () => {
             Estadísticas de Viajes
           </h3>
           {error && (
-            <span className="ml-2 text-xs text-red-500" title={error}>
+            <span 
+              className="ml-2 text-xs text-red-500 cursor-help" 
+              title={`Error: ${error}`}
+            >
               ⚠️
             </span>
           )}
@@ -225,13 +316,23 @@ const ActivityChart = () => {
         <div className="flex items-center space-x-2">
           {/* 🔄 Botón de recarga */}
           <button
-            onClick={handleRefresh}
+            onClick={fetchStats}
             disabled={loading}
-            className="p-1 text-gray-400 hover:text-gray-600 disabled:opacity-50"
+            className="p-1 text-gray-400 hover:text-gray-600 disabled:opacity-50 transition-colors"
             title="Actualizar datos"
           >
-            <svg className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            <svg 
+              className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} 
+              fill="none" 
+              stroke="currentColor" 
+              viewBox="0 0 24 24"
+            >
+              <path 
+                strokeLinecap="round" 
+                strokeLinejoin="round" 
+                strokeWidth={2} 
+                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" 
+              />
             </svg>
           </button>
           
@@ -240,7 +341,8 @@ const ActivityChart = () => {
             <select
               value={tipo}
               onChange={(e) => setTipo(e.target.value)}
-              className="text-sm border border-gray-300 rounded-md px-3 py-1 text-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white appearance-none pr-8"
+              disabled={loading}
+              className="text-sm border border-gray-300 rounded-md px-3 py-1 text-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white appearance-none pr-8 disabled:opacity-50"
             >
               {options.map((opt) => (
                 <option key={opt.value} value={opt.value}>
@@ -277,7 +379,7 @@ const ActivityChart = () => {
           <div className="text-center">
             <p className="text-sm text-red-500 mb-2">❌ {error}</p>
             <button
-              onClick={handleRefresh}
+              onClick={fetchStats}
               className="text-sm text-blue-600 hover:text-blue-800 underline"
             >
               Intentar de nuevo
@@ -325,21 +427,13 @@ const ActivityChart = () => {
         )}
       </div>
       
-      {/* 📊 Resumen de datos */}
+      {/* 📊 Resumen de estadísticas */}
       {!loading && data.length > 0 && (
         <div className="mt-4 pt-3 border-t border-gray-100">
           <div className="flex justify-between text-xs text-gray-500">
-            <span>
-              Total viajes: {data.reduce((sum, item) => sum + item.viajes, 0)}
-            </span>
-            <span>
-              Completados: {data.reduce((sum, item) => sum + item.completados, 0)}
-            </span>
-            <span>
-              Tasa éxito: {data.length > 0 ? 
-                Math.round((data.reduce((sum, item) => sum + item.completados, 0) / 
-                           data.reduce((sum, item) => sum + item.viajes, 0)) * 100) : 0}%
-            </span>
+            <span>Total viajes: {stats.totalViajes}</span>
+            <span>Completados: {stats.totalCompletados}</span>
+            <span>Tasa éxito: {stats.tasaExito}%</span>
           </div>
         </div>
       )}
