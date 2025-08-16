@@ -1,91 +1,65 @@
-// src/Routes/ViajesRoutes.js - VERSIÓN COMPLETAMENTE CORREGIDA
+// src/Routes/ViajesRoutes.js - ORDEN CORREGIDO PARA COMPATIBILIDAD
 import express from "express";
 import ViajesController from "../Controllers/Viajes.js";
 
 const router = express.Router();
 
 // =====================================================
-// 🚨 ORDEN CRÍTICO: RUTAS ESPECÍFICAS PRIMERO, GENÉRICAS AL FINAL
+// 🚨 RUTAS QUE USA EL FRONTEND - PRIORIDAD MÁXIMA
 // =====================================================
 
+// ✅ ESTAS SON LAS RUTAS QUE ESTÁ LLAMANDO TU FRONTEND
+router.get("/trip-stats", ViajesController.getTripStats);
+router.get("/carga-distribution", ViajesController.getCargaDistribution);
+
 // =====================================================
-// 📍 RUTAS DE DATOS DEL MAPA Y MÉTRICAS (MÁS ESPECÍFICAS PRIMERO)
+// 📍 RUTAS DE DATOS DEL MAPA Y MÉTRICAS
 // =====================================================
 
-// GET /api/viajes/map-data - Datos del mapa principal
 router.get("/map-data", ViajesController.getMapData);
-
-// GET /api/viajes/real-time-metrics - Métricas en tiempo real
 router.get("/real-time-metrics", ViajesController.getRealTimeMetrics);
 
-// GET /api/viajes/metrics/realtime - Alias para métricas
+// =====================================================
+// 📊 RUTAS DE DASHBOARD Y ESTADÍSTICAS ORGANIZADAS
+// =====================================================
+
+router.get("/dashboard/data", ViajesController.getDashboardData);
 router.get("/metrics/realtime", ViajesController.getRealTimeMetrics);
-
-// GET /api/viajes/metrics/efficiency - Métricas de eficiencia
 router.get("/metrics/efficiency", ViajesController.getEfficiencyMetrics);
-
-// GET /api/viajes/metrics/average-time - Tiempo promedio de viaje
 router.get("/metrics/average-time", ViajesController.getTiempoPromedioViaje);
-
-// GET /api/viajes/metrics/capacity - Capacidad de carga
 router.get("/metrics/capacity", ViajesController.getCapacidadCarga);
 
 // =====================================================
-// 📊 RUTAS DE DASHBOARD Y ESTADÍSTICAS
+// 📦 RUTAS DE ANÁLISIS DE CARGAS
 // =====================================================
 
-// GET /api/viajes/dashboard/data - Dashboard principal
-router.get("/dashboard/data", ViajesController.getDashboardData);
-
-// GET /api/viajes/stats/quick - Estadísticas rápidas
-router.get("/stats/quick", ViajesController.getQuickStats);
-
-// GET /api/viajes/stats/period - Estadísticas por período
-router.get("/stats/period", ViajesController.getTripStats);
-
-// GET /api/viajes/search/advanced - Búsqueda avanzada
-router.get("/search/advanced", ViajesController.searchViajes);
-
-// =====================================================
-// 📦 RUTAS DE ANÁLISIS DE CARGAS (TODAS LAS VARIANTES)
-// =====================================================
-
-// GET /api/viajes/cargo/distribution - Distribución de cargas
 router.get("/cargo/distribution", ViajesController.getCargaDistribution);
-
-// GET /api/viajes/cargo/types - Tipos de cargas únicas
 router.get("/cargo/types", ViajesController.getTiposDeCargas);
-
-// GET /api/viajes/cargo/stats - Estadísticas de cargas
 router.get("/cargo/stats", ViajesController.getCargaStats);
-
-// GET /api/viajes/cargo/subcategories - Top subcategorías
 router.get("/cargo/subcategories", ViajesController.getTopSubcategorias);
-
-// GET /api/viajes/cargo/category/:categoria - Detalles por categoría
 router.get("/cargo/category/:categoria", ViajesController.getCargaDetailsByCategory);
 
 // =====================================================
 // 📅 RUTAS DE ORGANIZACIÓN TEMPORAL
 // =====================================================
 
-// GET /api/viajes/schedule/days - Viajes organizados por días
 router.get("/schedule/days", ViajesController.getViajesPorDias);
-
-// GET /api/viajes/completed/list - Viajes completados
 router.get("/completed/list", ViajesController.getCompletedTrips);
-
-// GET /api/viajes/completed - Alias para viajes completados
 router.get("/completed", ViajesController.getCompletedTrips);
 
 // =====================================================
-// 👥 RUTAS POR RECURSOS ESPECÍFICOS (CON PARÁMETROS)
+// 🔍 RUTAS DE BÚSQUEDA Y FILTROS
 // =====================================================
 
-// GET /api/viajes/conductor/:conductorId - Viajes por conductor
-router.get("/conductor/:conductorId", ViajesController.getViajesByConductor);
+router.get("/search/advanced", ViajesController.searchViajes);
+router.get("/stats/quick", ViajesController.getQuickStats);
+router.get("/stats/period", ViajesController.getTripStats);
 
-// GET /api/viajes/truck/:truckId - Viajes por camión
+// =====================================================
+// 👥 RUTAS POR RECURSOS ESPECÍFICOS
+// =====================================================
+
+router.get("/conductor/:conductorId", ViajesController.getViajesByConductor);
 router.get("/truck/:truckId", ViajesController.getViajesByTruck);
 
 // =====================================================
@@ -93,62 +67,44 @@ router.get("/truck/:truckId", ViajesController.getViajesByTruck);
 // =====================================================
 
 if (process.env.NODE_ENV === 'development') {
-  // GET /api/viajes/debug/cargo - Debug de cargas
   router.get("/debug/cargo", ViajesController.debugCargas);
-  
-  // GET /api/viajes/debug/estados - Debug de estados
   router.get("/debug/estados", ViajesController.debugEstados);
 }
 
 // =====================================================
-// 🆕 RUTAS POST/PUT/PATCH (DESPUÉS DE TODAS LAS GETS ESPECÍFICAS)
+// 🆕 RUTAS POST/PUT/PATCH
 // =====================================================
 
-// ✅ POST /api/viajes - CREAR NUEVO VIAJE
 router.post("/", ViajesController.addViaje);
 
 // =====================================================
 // 🛠️ RUTAS DE ACTUALIZACIÓN CON PARÁMETROS
 // =====================================================
 
-// PATCH /api/viajes/:viajeId/location - Actualizar ubicación GPS
 router.patch("/:viajeId/location", ViajesController.updateLocation);
-
-// PATCH /api/viajes/:viajeId/progress - Actualizar progreso
 router.patch("/:viajeId/progress", ViajesController.updateTripProgress);
-
-// PATCH /api/viajes/:viajeId/complete - Completar viaje manualmente
 router.patch("/:viajeId/complete", ViajesController.completeTrip);
-
-// PATCH /api/viajes/:viajeId/cancel - Cancelar viaje
 router.patch("/:viajeId/cancel", ViajesController.cancelTrip);
-
-// PATCH /api/viajes/:viajeId/reactivate - Reactivar viaje cancelado
 router.patch("/:viajeId/reactivate", ViajesController.reactivateTrip);
 
 // =====================================================
-// 📋 RUTAS CON PARÁMETROS INDIVIDUALES (AL FINAL)
+// 📋 RUTAS CON PARÁMETROS INDIVIDUALES
 // =====================================================
 
-// GET /api/viajes/:viajeId/history - Historial del viaje
 router.get("/:viajeId/history", ViajesController.getTripHistory);
-
-// GET /api/viajes/:viajeId - Obtener detalles de un viaje específico
 router.get("/:viajeId", ViajesController.getTripDetails);
 
 // =====================================================
-// 🌐 RUTA GENÉRICA FINAL (DEBE IR AL ÚLTIMO LUGAR)
+// 🌐 RUTA GENÉRICA FINAL
 // =====================================================
 
-// GET /api/viajes - Obtener todos los viajes (ÚLTIMA RUTA GET)
 router.get("/", ViajesController.getAllViajes);
 
 // =====================================================
-// 🔄 ALIAS PARA COMPATIBILIDAD (SI LOS NECESITAS)
+// 🔄 ALIAS ADICIONALES PARA COMPATIBILIDAD
 // =====================================================
 
-// Alias adicionales para rutas comunes
-router.get("/carga-distribution", ViajesController.getCargaDistribution);
+// Estos son alias adicionales por si acaso
 router.get("/tipos-cargas", ViajesController.getTiposDeCargas);
 router.get("/carga-stats", ViajesController.getCargaStats);
 router.get("/subcategorias", ViajesController.getTopSubcategorias);
@@ -156,10 +112,9 @@ router.get("/carga-details/:categoria", ViajesController.getCargaDetailsByCatego
 router.get("/tiempo-promedio", ViajesController.getTiempoPromedioViaje);
 router.get("/capacidad-carga", ViajesController.getCapacidadCarga);
 router.get("/por-dias", ViajesController.getViajesPorDias);
-router.get("/trip-stats", ViajesController.getTripStats);
 
 // =====================================================
-// 🚨 MIDDLEWARE DE MANEJO DE ERRORES ESPECÍFICO
+// 🚨 MIDDLEWARE DE MANEJO DE ERRORES
 // =====================================================
 router.use((error, req, res, next) => {
   console.error('❌ Error en rutas de viajes:', {
@@ -171,7 +126,6 @@ router.use((error, req, res, next) => {
     timestamp: new Date().toISOString()
   });
   
-  // Error de validación de Mongoose
   if (error.name === 'ValidationError') {
     return res.status(400).json({
       success: false,
@@ -184,7 +138,6 @@ router.use((error, req, res, next) => {
     });
   }
   
-  // Error de ID inválido (CastError)
   if (error.name === 'CastError') {
     return res.status(400).json({
       success: false,
@@ -194,7 +147,6 @@ router.use((error, req, res, next) => {
     });
   }
 
-  // Error de viaje no encontrado
   if (error.message.includes('not found') || error.message.includes('no encontrado')) {
     return res.status(404).json({
       success: false,
@@ -202,7 +154,6 @@ router.use((error, req, res, next) => {
     });
   }
 
-  // Error de duplicado (código 11000)
   if (error.code === 11000) {
     return res.status(400).json({
       success: false,
@@ -211,7 +162,6 @@ router.use((error, req, res, next) => {
     });
   }
   
-  // Error interno del servidor
   res.status(500).json({
     success: false,
     message: 'Error interno en el módulo de viajes',
@@ -219,18 +169,5 @@ router.use((error, req, res, next) => {
     timestamp: new Date().toISOString()
   });
 });
-
-// =====================================================
-// 📊 MIDDLEWARE DE LOGGING (OPCIONAL)
-// =====================================================
-if (process.env.NODE_ENV === 'development') {
-  router.use((req, res, next) => {
-    console.log(`📝 ${req.method} ${req.originalUrl} - ${new Date().toISOString()}`);
-    if (req.body && Object.keys(req.body).length > 0) {
-      console.log(`📦 Body:`, req.body);
-    }
-    next();
-  });
-}
 
 export default router;
