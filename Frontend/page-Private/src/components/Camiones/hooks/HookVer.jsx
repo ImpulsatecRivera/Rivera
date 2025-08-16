@@ -14,7 +14,7 @@ export const useTruckDetail = (truckId) => {
   const [truck, setTruck] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [allDrivers, setAllDrivers] = useState([]); // Para guardar todos los motoristas
+  const [allDrivers, setAllDrivers] = useState([]);
 
   // Función para obtener todos los motoristas
   const fetchAllDrivers = async () => {
@@ -81,32 +81,12 @@ export const useTruckDetail = (truckId) => {
       setLoading(true);
       setError(null);
       
-      console.log('=== OBTENIENDO DETALLE DEL CAMIÓN ===');
+      console.log('=== OBTENIENDO DETALLE DEL CAMIÓN CON ESTADÍSTICAS ===');
       console.log('ID del camión:', truckId);
       
-      // Primero obtener la lista de camiones para aplicar la misma lógica de estado
-      const allTrucksResponse = await fetchWithTimeout(
-        'http://localhost:4000/api/camiones',
-        {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        },
-        10000
-      );
-      
-      let truckIndex = -1;
-      if (allTrucksResponse.ok) {
-        const allTrucks = await allTrucksResponse.json();
-        const trucksArray = Array.isArray(allTrucks) ? allTrucks : allTrucks.camiones || [];
-        truckIndex = trucksArray.findIndex(truck => (truck._id || truck.id) === truckId);
-        console.log('Índice del camión en la lista:', truckIndex);
-      }
-      
-      // Luego obtener los detalles específicos del camión
+      // NUEVO: Usar el endpoint que incluye estadísticas
       const response = await fetchWithTimeout(
-        `http://localhost:4000/api/camiones/${truckId}`,
+        `http://localhost:4000/api/camiones/${truckId}/stats`,
         {
           method: 'GET',
           headers: {
@@ -145,7 +125,7 @@ export const useTruckDetail = (truckId) => {
       }
 
       const data = await response.json();
-      console.log('Datos del camión recibidos:', data);
+      console.log('Datos del camión con estadísticas recibidos:', data);
 
       if (data) {
         console.log('=== ESTRUCTURA COMPLETA DE LA API ===');
@@ -162,9 +142,12 @@ export const useTruckDetail = (truckId) => {
           return defaultValue;
         };
 
+        // Obtener todos los motoristas
+        const driversList = await fetchAllDrivers();
+        
         // Mapear los datos del API al formato esperado por el componente
         const truckData = {
-          // Datos básicos - probando múltiples variantes de nombres
+          // Datos básicos
           name: findValue(data, ['name', 'nombre', 'truck_name'], 'Sin nombre'),
           plate: findValue(data, ['licensePlate', 'placa', 'license_plate', 'plate']),
           card: findValue(data, ['ciculatioCard', 'circulationCard', 'tarjeta_circulacion', 'circulation_card']), 
@@ -172,18 +155,10 @@ export const useTruckDetail = (truckId) => {
           brand: findValue(data, ['brand', 'marca', 'manufacturer']),
           model: findValue(data, ['model', 'modelo']),
           
-          // STATUS: Aplicar la misma lógica que en TruckMainScreen
+          // STATUS
           status: (() => {
             const rawStatus = findValue(data, ['state', 'status', 'estado', 'condition'], null);
             
-            // Aplicar la misma lógica de "cada 4to camión" si tenemos el índice
-            if (truckIndex !== -1 && truckIndex % 4 === 0) {
-              console.log('=== APLICANDO LÓGICA SIN ESTADO ===');
-              console.log('Camión en posición:', truckIndex, '- Asignando "Sin estado"');
-              return 'Sin estado';
-            }
-            
-            // Si no hay estado definido
             if (!rawStatus || rawStatus.trim() === '' || rawStatus === 'undefined' || rawStatus === 'null') {
               return 'Sin estado';
             }
@@ -193,9 +168,20 @@ export const useTruckDetail = (truckId) => {
           
           description: findValue(data, ['description', 'descripcion', 'notes'], 'Sin descripción'),
           
-          // Motorista - se asignará después de la llamada asíncrona
-          driver: 'Cargando...',
-          driverId: data.driverId, // Guardar el ID para hacer la llamada
+          // Motorista
+          driver: (() => {
+            if (data.driverId && typeof data.driverId === 'string') {
+              const foundDriverName = getDriverNameById(data.driverId, driversList);
+              return foundDriverName || getRandomDriver(driversList);
+            } else if (data.driverId && typeof data.driverId === 'object') {
+              const firstName = data.driverId.name || data.driverId.firstName || data.driverId.nombre || '';
+              const lastName = data.driverId.lastName || data.driverId.apellido || data.driverId.surname || '';
+              const fullName = `${firstName} ${lastName}`.trim();
+              return fullName || getRandomDriver(driversList);
+            } else {
+              return getRandomDriver(driversList);
+            }
+          })(),
           
           // Proveedor
           supplier: (() => {
@@ -214,113 +200,62 @@ export const useTruckDetail = (truckId) => {
             return ["https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=800&h=600&fit=crop"];
           })(),
           
-          // Estadísticas con datos reales o valores de demostración
-          stats: {
-            kilometraje: { 
-              value: findValue(data, ['mileage', 'kilometraje', 'odometer'], '97,528'), 
-              percentage: 25 
-            },
-            viajesRealizados: { 
-              value: findValue(data, ['trips', 'viajes', 'trips_completed'], '150'), 
-              percentage: 60 
-            },
-            visitasAlTaller: { 
-              value: findValue(data, ['maintenanceVisits', 'visitas_taller', 'maintenance_count'], '4'), 
-              percentage: 15 
-            },
-            combustible: { 
-              value: (() => {
-                const level = findValue(data, ['gasolineLevel', 'fuel_level', 'combustible'], null);
-                if (level && !isNaN(level)) {
-                  return `${level}/4`;
-                }
-                return "1/2";
-              })(),
-              percentage: 50 
-            },
-            vecesNoDisponible: { 
-              value: findValue(data, ['unavailableTimes', 'veces_no_disponible', 'downtime_count'], '35'), 
-              percentage: 30 
-            },
+          // NUEVO: Usar las estadísticas que vienen del backend
+          stats: data.stats || {
+            kilometraje: { value: '97,528', percentage: 25 },
+            viajesRealizados: { value: '150', percentage: 60 },
+            visitasAlTaller: { value: '4', percentage: 15 },
+            combustible: { value: "100%", percentage: 100 },
+            vecesNoDisponible: { value: '35', percentage: 30 },
           },
           
           // ID original para referencias
           _id: data._id || data.id,
         };
 
-        console.log('=== DATOS MAPEADOS ===');
+        console.log('=== DATOS MAPEADOS CON ESTADÍSTICAS ===');
         console.log('Datos procesados:', truckData);
+        console.log('Estadísticas:', truckData.stats);
         
-        // Primero obtener todos los motoristas
-        const driversList = await fetchAllDrivers();
-        
-        // Determinar qué motorista mostrar
-        let driverName = 'Cargando...';
-        
-        if (data.driverId && typeof data.driverId === 'string') {
-          // Buscar el motorista específico por ID
-          console.log('=== BUSCANDO MOTORISTA POR ID ===');
-          console.log('Driver ID:', data.driverId);
-          
-          const foundDriverName = getDriverNameById(data.driverId, driversList);
-          if (foundDriverName) {
-            driverName = foundDriverName;
-            console.log('Motorista encontrado:', driverName);
-          } else {
-            // Si no se encuentra, asignar uno aleatorio
-            console.log('Motorista no encontrado, asignando uno aleatorio');
-            driverName = getRandomDriver(driversList);
-          }
-          
-        } else if (data.driverId && typeof data.driverId === 'object') {
-          // Si ya viene como objeto populated
-          const firstName = data.driverId.name || data.driverId.firstName || data.driverId.nombre || '';
-          const lastName = data.driverId.lastName || data.driverId.apellido || data.driverId.surname || '';
-          const fullName = `${firstName} ${lastName}`.trim();
-          driverName = fullName || getRandomDriver(driversList);
-          
-        } else {
-          // No hay motorista asignado, asignar uno aleatorio
-          console.log('=== NO HAY MOTORISTA ASIGNADO ===');
-          console.log('Asignando motorista aleatorio...');
-          driverName = getRandomDriver(driversList);
+        // Log detallado del combustible si está disponible
+        if (truckData.stats.combustible?.details) {
+          console.log('=== DETALLES DEL COMBUSTIBLE ===');
+          console.log('Litros actuales:', truckData.stats.combustible.details.liters);
+          console.log('Capacidad total:', truckData.stats.combustible.details.capacity);
+          console.log('Litros consumidos:', truckData.stats.combustible.details.consumed);
+          console.log('Eficiencia:', truckData.stats.combustible.details.efficiency);
+          console.log('Viajes activos:', truckData.stats.combustible.details.activeTrips);
+          console.log('Distancia total:', truckData.stats.combustible.details.totalDistance);
         }
         
-        console.log('=== MOTORISTA FINAL ASIGNADO ===');
-        console.log('Nombre del motorista:', driverName);
-        
-        // Setear los datos con el motorista asignado
-        setTruck({
-          ...truckData,
-          driver: driverName
-        });
+        setTruck(truckData);
       } else {
         throw new Error('No se encontraron datos del camión');
       }
 
     } catch (error) {
-  console.error('=== ERROR AL CARGAR CAMIÓN ===');
-  console.error('Error completo:', error);
+      console.error('=== ERROR AL CARGAR CAMIÓN ===');
+      console.error('Error completo:', error);
 
-  let errorMessage = 'Error desconocido';
+      let errorMessage = 'Error desconocido';
 
-  if (error.name === 'AbortError') {
-    errorMessage = 'La solicitud tardó demasiado tiempo. Inténtalo de nuevo.';
-  } else if (error.name === 'TypeError' && error.message.includes('fetch')) {
-    errorMessage = 'No se pudo conectar con el servidor. Verifica tu conexión.';
-  } else {
-    errorMessage = error.message || 'Error al procesar la solicitud';
-  }
+      if (error.name === 'AbortError') {
+        errorMessage = 'La solicitud tardó demasiado tiempo. Inténtalo de nuevo.';
+      } else if (error.name === 'TypeError' && error.message.includes('fetch')) {
+        errorMessage = 'No se pudo conectar con el servidor. Verifica tu conexión.';
+      } else {
+        errorMessage = error.message || 'Error al procesar la solicitud';
+      }
 
-  setError(errorMessage);
-  setTruck(null);
-} finally {
-  // Delay de 5 segundos para mostrar la animación
-  setTimeout(() => {
-    setLoading(false);
-    console.log('=== CARGA FINALIZADA ===');
-  }, 2000); // 3 segundos
-}
+      setError(errorMessage);
+      setTruck(null);
+    } finally {
+      // Delay de 2 segundos para mostrar la animación
+      setTimeout(() => {
+        setLoading(false);
+        console.log('=== CARGA FINALIZADA ===');
+      }, 2000);
+    }
   };
 
   const refetch = () => {

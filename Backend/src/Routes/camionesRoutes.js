@@ -18,4 +18,6 @@ router
 .get(camionesController.getById)
 .delete(camionesController.delete);
 
+router.get('/:id/stats', camionesController.getByIdWithStats);
+
 export default router;
