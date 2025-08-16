@@ -72,240 +72,252 @@ const cotizacionSchema = new Schema({
   },
  
   // ===== 1. RUTA =====
-  ruta: {
-    origen: {
-      nombre: {
-        type: String,
-        required: true,
-        trim: true
+ // Cambios en tu modelo Cotizaciones.js para hacerlo más flexible
+
+// ===== 1. RUTA (más flexible) =====
+ruta: {
+  origen: {
+    nombre: {
+      type: String,
+      required: true,
+      trim: true
+    },
+    coordenadas: {
+      lat: {
+        type: Number,
+        // required: false, // ❌ Quitar required
+        min: -90,
+        max: 90,
+        default: 0 // ✅ Valor por defecto
       },
-      coordenadas: {
-        lat: {
-          type: Number,
-          required: true,
-          min: -90,
-          max: 90
-        },
-        lng: {
-          type: Number,
-          required: true,
-          min: -180,
-          max: 180
-        }
-      },
-      tipo: {
-        type: String,
-        enum: ['terminal', 'ciudad', 'puerto', 'bodega', 'cliente'],
-        default: 'ciudad'
+      lng: {
+        type: Number,
+        // required: false, // ❌ Quitar required
+        min: -180,
+        max: 180,
+        default: 0 // ✅ Valor por defecto
       }
     },
-    destino: {
-      nombre: {
-        type: String,
-        required: true,
-        trim: true
-      },
-      coordenadas: {
-        lat: {
-          type: Number,
-          required: true,
-          min: -90,
-          max: 90
-        },
-        lng: {
-          type: Number,
-          required: true,
-          min: -180,
-          max: 180
-        }
-      },
-      tipo: {
-        type: String,
-        enum: ['terminal', 'ciudad', 'puerto', 'bodega', 'cliente'],
-        default: 'ciudad'
-      }
-    },
-    distanciaTotal: {
-      type: Number,
-      required: true,
-      min: 0
-    },
-    tiempoEstimado: {
-      type: Number, // en horas
-      required: true,
-      min: 0
+    tipo: {
+      type: String,
+      enum: ['terminal', 'ciudad', 'puerto', 'bodega', 'cliente'],
+      default: 'ciudad'
     }
   },
- 
-  // ===== 2. CARGA =====
-  carga: {
-    categoria: {
-      type: String,
-      enum: [
-        'alimentos_perecederos', 'alimentos_no_perecederos', 'bebidas',
-        'materiales_construccion', 'textiles', 'electronicos', 'medicamentos',
-        'maquinaria', 'vehiculos', 'quimicos', 'combustibles', 'papel_carton',
-        'muebles', 'productos_agricolas', 'metales', 'plasticos',
-        'vidrio_ceramica', 'productos_limpieza', 'cosmeticos', 'juguetes', 'otros'
-      ],
-      required: true,
-      default: 'otros'
-    },
-   
-    subcategoria: {
-      type: String,
-      trim: true,
-      maxlength: 100
-    },
-   
-    descripcion: {
+  destino: {
+    nombre: {
       type: String,
       required: true,
-      trim: true,
-      maxlength: 500
+      trim: true
     },
-   
-    peso: {
-      valor: {
+    coordenadas: {
+      lat: {
         type: Number,
-        required: true,
-        min: 0
+        // required: false, // ❌ Quitar required
+        min: -90,
+        max: 90,
+        default: 0 // ✅ Valor por defecto
       },
-      unidad: {
-        type: String,
-        enum: ['kg', 'ton', 'lb'],
-        default: 'kg'
+      lng: {
+        type: Number,
+        // required: false, // ❌ Quitar required
+        min: -180,
+        max: 180,
+        default: 0 // ✅ Valor por defecto
       }
     },
-   
-    volumen: {
-      valor: {
-        type: Number,
-        min: 0
-      },
-      unidad: {
-        type: String,
-        enum: ['m3', 'ft3'],
-        default: 'm3'
-      }
-    },
-   
-    clasificacionRiesgo: {
+    tipo: {
       type: String,
-      enum: ['normal', 'fragil', 'peligroso', 'perecedero', 'biologico'],
-      default: 'normal'
-    },
-   
-    condicionesEspeciales: {
-      temperaturaMinima: Number,
-      temperaturaMaxima: Number,
-      requiereRefrigeracion: {
-        type: Boolean,
-        default: false
-      },
-      esFragil: {
-        type: Boolean,
-        default: false
-      },
-      temperaturaControlada: Boolean,
-      manejoCuidadoso: Boolean,
-      seguroAdicional: Boolean
-    },
-   
-    valorDeclarado: {
-      monto: {
-        type: Number,
-        min: 0
-      },
-      moneda: {
-        type: String,
-        enum: ['USD', 'SVC'],
-        default: 'USD'
-      }
+      enum: ['terminal', 'ciudad', 'puerto', 'bodega', 'cliente'],
+      default: 'ciudad'
     }
   },
- 
-  // ===== 3. HORARIOS =====
-  horarios: {
-    fechaSalida: {
-      type: Date,
-      required: true
+  distanciaTotal: {
+    type: Number,
+    // required: false, // ❌ Quitar required
+    min: 0,
+    default: 100 // ✅ Valor por defecto
+  },
+  tiempoEstimado: {
+    type: Number,
+    // required: false, // ❌ Quitar required
+    min: 0,
+    default: 2 // ✅ Valor por defecto en horas
+  }
+},
+
+// ===== 2. CARGA (más flexible) =====
+carga: {
+  categoria: {
+    type: String,
+    enum: [
+      'alimentos_perecederos', 'alimentos_no_perecederos', 'bebidas',
+      'materiales_construccion', 'textiles', 'electronicos', 'medicamentos',
+      'maquinaria', 'vehiculos', 'quimicos', 'combustibles', 'papel_carton',
+      'muebles', 'productos_agricolas', 'metales', 'plasticos',
+      'vidrio_ceramica', 'productos_limpieza', 'cosmeticos', 'juguetes', 'otros'
+    ],
+    // required: false, // ❌ Quitar required
+    default: 'otros'
+  },
+  
+  subcategoria: {
+    type: String,
+    trim: true,
+    maxlength: 100
+  },
+  
+  descripcion: {
+    type: String,
+    required: true, // ✅ Mantener solo este como required
+    trim: true,
+    maxlength: 500
+  },
+  
+  peso: {
+    valor: {
+      type: Number,
+      // required: false, // ❌ Quitar required
+      min: 0,
+      default: 1000 // ✅ Valor por defecto
     },
-    fechaLlegadaEstimada: {
-      type: Date,
-      required: true
-    },
-    tiempoEstimadoViaje: {
-      type: Number, // en horas
-      required: true,
-      min: 0
-    },
-    flexibilidadHoraria: {
-      permitida: {
-        type: Boolean,
-        default: true
-      },
-      rangoTolerancia: {
-        type: Number, // en horas
-        default: 2
-      }
-    },
-    horarioPreferido: {
-      inicio: String, // formato "HH:MM"
-      fin: String     // formato "HH:MM"
+    unidad: {
+      type: String,
+      enum: ['kg', 'ton', 'lb'],
+      default: 'kg'
     }
   },
- 
-  // ===== 4. COSTOS =====
-  costos: {
-    combustible: {
+  
+  volumen: {
+    valor: {
       type: Number,
-      required: true,
-      min: 0,
-      default: 0
-    },
-    peajes: {
-      type: Number,
-      required: true,
-      min: 0,
-      default: 0
-    },
-    conductor: {
-      type: Number,
-      required: true,
-      min: 0,
-      default: 0
-    },
-    otros: {
-      type: Number,
-      min: 0,
-      default: 0
-    },
-    subtotal: {
-      type: Number,
-      required: true,
       min: 0
+      // Sin required ni default - totalmente opcional
     },
-    impuestos: {
-      type: Number,
-      min: 0,
-      default: 0
+    unidad: {
+      type: String,
+      enum: ['m3', 'ft3'],
+      default: 'm3'
+    }
+  },
+  
+  clasificacionRiesgo: {
+    type: String,
+    enum: ['normal', 'fragil', 'peligroso', 'perecedero', 'biologico'],
+    default: 'normal'
+  },
+  
+  condicionesEspeciales: {
+    temperaturaMinima: Number,
+    temperaturaMaxima: Number,
+    requiereRefrigeracion: {
+      type: Boolean,
+      default: false
     },
-    total: {
+    esFragil: {
+      type: Boolean,
+      default: false
+    },
+    temperaturaControlada: Boolean,
+    manejoCuidadoso: Boolean,
+    seguroAdicional: Boolean
+  },
+  
+  valorDeclarado: {
+    monto: {
       type: Number,
-      required: true,
       min: 0
     },
     moneda: {
       type: String,
       enum: ['USD', 'SVC'],
       default: 'USD'
+    }
+  }
+},
+
+// ===== 3. HORARIOS (más flexible) =====
+horarios: {
+  fechaSalida: {
+    type: Date,
+    // required: false // ❌ Quitar required - se auto-genera si no se proporciona
+  },
+  fechaLlegadaEstimada: {
+    type: Date,
+    // required: false // ❌ Quitar required - se auto-calcula
+  },
+  tiempoEstimadoViaje: {
+    type: Number,
+    // required: false, // ❌ Quitar required
+    min: 0,
+    default: 2 // ✅ Valor por defecto
+  },
+  flexibilidadHoraria: {
+    permitida: {
+      type: Boolean,
+      default: true
     },
-    validezCotizacion: {
-      type: Date,
-      required: true
+    rangoTolerancia: {
+      type: Number,
+      default: 2
     }
   },
+  horarioPreferido: {
+    inicio: String,
+    fin: String
+  }
+},
+
+// ===== 4. COSTOS (más flexible) =====
+costos: {
+  combustible: {
+    type: Number,
+    // required: false, // ❌ Quitar required
+    min: 0,
+    default: 0
+  },
+  peajes: {
+    type: Number,
+    // required: false, // ❌ Quitar required
+    min: 0,
+    default: 0
+  },
+  conductor: {
+    type: Number,
+    // required: false, // ❌ Quitar required
+    min: 0,
+    default: 0
+  },
+  otros: {
+    type: Number,
+    min: 0,
+    default: 0
+  },
+  subtotal: {
+    type: Number,
+    // required: false, // ❌ Quitar required - se calcula automáticamente
+    min: 0
+  },
+  impuestos: {
+    type: Number,
+    min: 0,
+    default: 0
+  },
+  total: {
+    type: Number,
+    // required: false, // ❌ Quitar required - se calcula automáticamente
+    min: 0
+  },
+  moneda: {
+    type: String,
+    enum: ['USD', 'SVC'],
+    default: 'USD'
+  },
+  validezCotizacion: {
+    type: Date,
+    // required: false // ❌ Quitar required - se auto-genera en el middleware
+  }
+},
  
   // 📊 CAMPOS DE SEGUIMIENTO
   fechaEnvio: Date,
