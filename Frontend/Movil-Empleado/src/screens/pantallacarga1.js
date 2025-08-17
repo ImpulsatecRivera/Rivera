@@ -1,298 +1,284 @@
 import React from 'react';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 
 const OnboardingScreen = () => {
   return (
-    <div style={styles.container}>
+    <View style={styles.container}>
       {/* Header */}
-      <div style={styles.header}>
-        <span style={styles.pageIndicator}>1/3</span>
-        <button style={styles.skipButton}>Saltar</button>
-      </div>
+      <View style={styles.header}>
+        <Text style={styles.pageIndicator}>1/3</Text>
+        <TouchableOpacity style={styles.skipButton}>
+          <Text style={styles.skipButtonText}>Saltar</Text>
+        </TouchableOpacity>
+      </View>
 
       {/* Illustration Container */}
-      <div style={styles.illustrationContainer}>
+      <View style={styles.illustrationContainer}>
         {/* Person illustration */}
-        <div style={styles.personContainer}>
+        <View style={styles.personContainer}>
           {/* Head */}
-          <div style={styles.head}>
-            <div style={styles.hair} />
-          </div>
+          <View style={styles.head}>
+            <View style={styles.hair} />
+          </View>
           
           {/* Body */}
-          <div style={styles.body} />
+          <View style={styles.body} />
           
           {/* Laptop */}
-          <div style={styles.laptop}>
-            <div style={styles.laptopScreen}>
-              <div style={styles.appleLogo} />
-            </div>
-          </div>
-        </div>
+          <View style={styles.laptop}>
+            <View style={styles.laptopScreen}>
+              <View style={styles.appleLogo} />
+            </View>
+          </View>
+        </View>
 
         {/* Earth illustration */}
-        <div style={styles.earthContainer}>
-          <div style={styles.earth}>
-            <div style={styles.continent1} />
-            <div style={styles.continent2} />
-            <div style={styles.continent3} />
-          </div>
-        </div>
+        <View style={styles.earthContainer}>
+          <View style={styles.earth}>
+            <View style={styles.continent1} />
+            <View style={styles.continent2} />
+            <View style={styles.continent3} />
+          </View>
+        </View>
 
         {/* Desk */}
-        <div style={styles.desk}>
-          <div style={styles.deskTop} />
-          <div style={styles.deskLegs}>
-            <div style={styles.leftLeg} />
-            <div style={styles.rightLeg} />
-          </div>
-          <div style={styles.deskDrawer} />
-        </div>
-      </div>
+        <View style={styles.desk}>
+          <View style={styles.deskTop} />
+          <View style={styles.deskLegs}>
+            <View style={styles.leftLeg} />
+            <View style={styles.rightLeg} />
+          </View>
+          <View style={styles.deskDrawer} />
+        </View>
+      </View>
 
       {/* Content */}
-      <div style={styles.content}>
-        <h2 style={styles.title}>Cotiza Viajes</h2>
-        <p style={styles.subtitle}>
-          Cotiza tus viajes para que podamos<br />
+      <View style={styles.content}>
+        <Text style={styles.title}>Cotiza Viajes</Text>
+        <Text style={styles.subtitle}>
+          Cotiza tus viajes para que podamos{'\n'}
           encargarnos de tus pedidos deseados.
-        </p>
-      </div>
+        </Text>
+      </View>
 
       {/* Bottom Navigation */}
-      <div style={styles.bottomContainer}>
-        <div style={styles.pagination}>
-          <div style={{...styles.dot, ...styles.activeDot}} />
-          <div style={styles.dot} />
-          <div style={styles.dot} />
-        </div>
+      <View style={styles.bottomContainer}>
+        <View style={styles.pagination}>
+          <View style={[styles.dot, styles.activeDot]} />
+          <View style={styles.dot} />
+          <View style={styles.dot} />
+        </View>
         
-        <button style={styles.nextButton}>
-          <span style={styles.nextButtonText}>Siguiente</span>
-        </button>
-      </div>
-    </div>
+        <TouchableOpacity style={styles.nextButton}>
+          <Text style={styles.nextButtonText}>Siguiente</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
   );
 };
 
-const styles = {
+const styles = StyleSheet.create({
   container: {
-    display: 'flex',
-    flexDirection: 'column',
-    height: '100vh',
-    maxWidth: '400px',
-    margin: '0 auto',
+    flex: 1,
+    maxWidth: 400,
+    alignSelf: 'center',
     backgroundColor: '#FFFFFF',
-    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-    paddingTop: '50px',
-    position: 'relative',
+    paddingTop: 50,
+    width: '100%',
   },
   header: {
-    display: 'flex',
+    flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: '0 20px',
-    marginBottom: '60px',
+    paddingHorizontal: 20,
+    marginBottom: 60,
   },
   pageIndicator: {
-    fontSize: '16px',
+    fontSize: 16,
     fontWeight: '600',
     color: '#000000',
   },
   skipButton: {
-    fontSize: '16px',
+    // TouchableOpacity styles can be empty
+  },
+  skipButtonText: {
+    fontSize: 16,
     fontWeight: '600',
     color: '#000000',
-    background: 'none',
-    border: 'none',
-    cursor: 'pointer',
   },
   illustrationContainer: {
     flex: 1,
-    display: 'flex',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: '0 40px',
-    position: 'relative',
-    minHeight: '400px',
+    paddingHorizontal: 40,
+    minHeight: 400,
   },
   personContainer: {
-    display: 'flex',
-    flexDirection: 'column',
     alignItems: 'center',
     zIndex: 2,
   },
   head: {
-    width: '60px',
-    height: '60px',
+    width: 60,
+    height: 60,
     backgroundColor: '#F5C6A0',
-    borderRadius: '30px',
-    marginBottom: '5px',
-    position: 'relative',
+    borderRadius: 30,
+    marginBottom: 5,
   },
   hair: {
-    width: '50px',
-    height: '30px',
+    width: 50,
+    height: 30,
     backgroundColor: '#B8860B',
-    borderRadius: '25px',
+    borderRadius: 25,
     position: 'absolute',
-    top: '-5px',
-    left: '5px',
+    top: -5,
+    left: 5,
   },
   body: {
-    width: '80px',
-    height: '60px',
+    width: 80,
+    height: 60,
     backgroundColor: '#FF8C42',
-    borderRadius: '15px',
-    marginBottom: '10px',
+    borderRadius: 15,
+    marginBottom: 10,
   },
   laptop: {
     backgroundColor: '#E0E0E0',
-    borderRadius: '8px',
-    padding: '8px',
-    transform: 'perspective(1000px) rotateX(15deg)',
+    borderRadius: 8,
+    padding: 8,
   },
   laptopScreen: {
-    width: '100px',
-    height: '70px',
+    width: 100,
+    height: 70,
     backgroundColor: '#333333',
-    borderRadius: '4px',
-    display: 'flex',
+    borderRadius: 4,
     justifyContent: 'center',
     alignItems: 'center',
   },
   appleLogo: {
-    width: '8px',
-    height: '8px',
+    width: 8,
+    height: 8,
     backgroundColor: '#FFFFFF',
-    borderRadius: '4px',
+    borderRadius: 4,
   },
   earthContainer: {
     position: 'absolute',
-    right: '40px',
-    top: '50px',
+    right: 40,
+    top: 50,
   },
   earth: {
-    width: '80px',
-    height: '80px',
+    width: 80,
+    height: 80,
     backgroundColor: '#4A90E2',
-    borderRadius: '40px',
-    position: 'relative',
+    borderRadius: 40,
     overflow: 'hidden',
   },
   continent1: {
-    width: '35px',
-    height: '25px',
+    width: 35,
+    height: 25,
     backgroundColor: '#7ED321',
-    borderRadius: '15px',
+    borderRadius: 15,
     position: 'absolute',
-    top: '15px',
-    left: '10px',
+    top: 15,
+    left: 10,
   },
   continent2: {
-    width: '25px',
-    height: '20px',
+    width: 25,
+    height: 20,
     backgroundColor: '#7ED321',
-    borderRadius: '12px',
+    borderRadius: 12,
     position: 'absolute',
-    bottom: '20px',
-    right: '15px',
+    bottom: 20,
+    right: 15,
   },
   continent3: {
-    width: '20px',
-    height: '15px',
+    width: 20,
+    height: 15,
     backgroundColor: '#7ED321',
-    borderRadius: '8px',
+    borderRadius: 8,
     position: 'absolute',
-    top: '45px',
-    left: '45px',
+    top: 45,
+    left: 45,
   },
   desk: {
     position: 'absolute',
-    bottom: '-20px',
-    width: '200px',
-    display: 'flex',
-    flexDirection: 'column',
+    bottom: -20,
+    width: 200,
     alignItems: 'center',
   },
   deskTop: {
-    width: '200px',
-    height: '20px',
+    width: 200,
+    height: 20,
     backgroundColor: '#D2B48C',
-    borderRadius: '10px',
+    borderRadius: 10,
   },
   deskLegs: {
-    display: 'flex',
+    flexDirection: 'row',
     justifyContent: 'space-between',
-    width: '180px',
-    marginTop: '5px',
+    width: 180,
+    marginTop: 5,
   },
   leftLeg: {
-    width: '15px',
-    height: '40px',
+    width: 15,
+    height: 40,
     backgroundColor: '#D2B48C',
   },
   rightLeg: {
-    width: '15px',
-    height: '40px',
+    width: 15,
+    height: 40,
     backgroundColor: '#D2B48C',
   },
   deskDrawer: {
-    width: '100px',
-    height: '15px',
+    width: 100,
+    height: 15,
     backgroundColor: '#F0E68C',
     position: 'absolute',
-    bottom: '20px',
+    bottom: 20,
   },
   content: {
-    padding: '0 40px',
-    textAlign: 'center',
-    marginBottom: '60px',
+    paddingHorizontal: 40,
+    alignItems: 'center',
+    marginBottom: 60,
   },
   title: {
-    fontSize: '24px',
+    fontSize: 24,
     fontWeight: 'bold',
     color: '#000000',
-    marginBottom: '15px',
-    margin: '0 0 15px 0',
+    marginBottom: 15,
+    textAlign: 'center',
   },
   subtitle: {
-    fontSize: '16px',
+    fontSize: 16,
     color: '#666666',
-    lineHeight: '24px',
-    margin: 0,
+    lineHeight: 24,
+    textAlign: 'center',
   },
   bottomContainer: {
-    padding: '0 40px 40px',
-    display: 'flex',
-    flexDirection: 'column',
+    paddingHorizontal: 40,
+    paddingBottom: 40,
     alignItems: 'center',
   },
   pagination: {
-    display: 'flex',
-    marginBottom: '30px',
+    flexDirection: 'row',
+    marginBottom: 30,
   },
   dot: {
-    width: '10px',
-    height: '10px',
-    borderRadius: '5px',
+    width: 10,
+    height: 10,
+    borderRadius: 5,
     backgroundColor: '#E0E0E0',
-    margin: '0 5px',
+    marginHorizontal: 5,
   },
   activeDot: {
     backgroundColor: '#333333',
-    width: '30px',
+    width: 30,
   },
   nextButton: {
     alignSelf: 'flex-end',
-    background: 'none',
-    border: 'none',
-    cursor: 'pointer',
   },
   nextButtonText: {
-    fontSize: '16px',
+    fontSize: 16,
     fontWeight: '600',
     color: '#7ED321',
   },
-};
+});
 
 export default OnboardingScreen;
