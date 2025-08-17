@@ -1,107 +1,240 @@
 // src/context/AuthContext.js
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Crear el contexto
 const AuthContext = createContext();
+
+// ⏰ CONFIGURACIÓN DE EXPIRACIÓN
+const SESSION_TIMEOUT = 20 * 60 * 1000; // 20 minutos en milisegundos
 
 // Provider del contexto
 export const AuthProvider = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [hasCompletedOnboarding, setHasCompletedOnboarding] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [userType, setUserType] = useState(null);
+  const [user, setUser] = useState(null);
+  const [sessionTimer, setSessionTimer] = useState(null);
 
   useEffect(() => {
     checkAuthStatus();
+    
+    // Cleanup del timer cuando se desmonta el componente
+    return () => {
+      if (sessionTimer) {
+        clearTimeout(sessionTimer);
+      }
+    };
   }, []);
 
+  // 🔍 VERIFICAR SI HAY UNA SESIÓN GUARDADA
   const checkAuthStatus = async () => {
     try {
-      // Aquí verificarías AsyncStorage para ambos estados
-      // const token = await AsyncStorage.getItem('userToken');
-      // const onboardingCompleted = await AsyncStorage.getItem('onboardingCompleted');
+      console.log('🔍 Verificando sesión guardada...');
       
-      // setIsAuthenticated(!!token);
-      // setHasCompletedOnboarding(onboardingCompleted === 'true');
+      const token = await AsyncStorage.getItem('userToken');
+      const loginTime = await AsyncStorage.getItem('loginTime');
+      const onboardingCompleted = await AsyncStorage.getItem('onboardingCompleted');
+      const userData = await AsyncStorage.getItem('userData');
+      const savedUserType = await AsyncStorage.getItem('userType');
+
+      if (token && loginTime) {
+        const currentTime = Date.now();
+        const timeSinceLogin = currentTime - parseInt(loginTime);
+        
+        console.log(`⏰ Tiempo desde login: ${Math.round(timeSinceLogin / 1000 / 60)} minutos`);
+        
+        // ✅ SI EL TOKEN NO HA EXPIRADO
+        if (timeSinceLogin < SESSION_TIMEOUT) {
+          const remainingTime = SESSION_TIMEOUT - timeSinceLogin;
+          console.log(`✅ Sesión válida. Expira en: ${Math.round(remainingTime / 1000 / 60)} minutos`);
+          
+          // Restaurar estado
+          setIsAuthenticated(true);
+          setHasCompletedOnboarding(onboardingCompleted === 'true');
+          setUser(userData ? JSON.parse(userData) : null);
+          setUserType(savedUserType);
+          
+          // Programar auto-logout
+          startSessionTimer(remainingTime);
+        } else {
+          // ❌ TOKEN EXPIRADO
+          console.log('❌ Sesión expirada - limpiando datos');
+          await clearAuthData();
+        }
+      } else {
+        console.log('📭 No hay sesión guardada');
+      }
       
-      console.log('🔍 Verificando estado inicial...');
-      setIsAuthenticated(false);
-      setHasCompletedOnboarding(false);
       setIsLoading(false);
-      console.log('📊 Estado inicial: isAuthenticated=false, hasCompletedOnboarding=false');
     } catch (error) {
-      console.error('Error checking auth status:', error);
-      setIsAuthenticated(false);
-      setHasCompletedOnboarding(false);
+      console.error('❌ Error verificando sesión:', error);
+      await clearAuthData();
       setIsLoading(false);
     }
   };
 
-  const login = async (credentials) => {
+  // ⏲️ INICIAR TIMER DE SESIÓN
+  const startSessionTimer = (timeoutDuration = SESSION_TIMEOUT) => {
+    // Limpiar timer anterior si existe
+    if (sessionTimer) {
+      clearTimeout(sessionTimer);
+    }
+
+    const timer = setTimeout(async () => {
+      console.log('⏰ Sesión expirada automáticamente - cerrando sesión');
+      await autoLogout();
+    }, timeoutDuration);
+
+    setSessionTimer(timer);
+    console.log(`⏰ Timer de sesión iniciado: ${Math.round(timeoutDuration / 1000 / 60)} minutos`);
+  };
+
+  // 🚪 AUTO-LOGOUT POR EXPIRACIÓN
+  const autoLogout = async () => {
     try {
-      // Lógica de login aquí
-      // const response = await loginAPI(credentials);
-      // await AsyncStorage.setItem('userToken', response.token);
+      console.log('🔒 Cerrando sesión automáticamente por expiración');
+      await clearAuthData();
       
-      console.log('🔐 Login exitoso');
+      // Aquí podrías mostrar una alerta al usuario
+      // Alert.alert(
+      //   'Sesión Expirada', 
+      //   'Tu sesión ha expirado por seguridad. Por favor inicia sesión nuevamente.'
+      // );
+    } catch (error) {
+      console.error('❌ Error en auto-logout:', error);
+    }
+  };
+
+  // 🗑️ LIMPIAR TODOS LOS DATOS DE AUTENTICACIÓN
+  const clearAuthData = async () => {
+    try {
+      await AsyncStorage.multiRemove([
+        'userToken',
+        'loginTime', 
+        'onboardingCompleted',
+        'userData',
+        'userType'
+      ]);
+      
+      setIsAuthenticated(false);
+      setHasCompletedOnboarding(false);
+      setUserType(null);
+      setUser(null);
+      
+      if (sessionTimer) {
+        clearTimeout(sessionTimer);
+        setSessionTimer(null);
+      }
+    } catch (error) {
+      console.error('❌ Error limpiando datos:', error);
+    }
+  };
+
+  // 🔐 LOGIN CON PERSISTENCIA
+  const login = async (loginData) => {
+    try {
+      console.log('🔐 Procesando login exitoso:', loginData);
+      
+      const currentTime = Date.now();
+      
+      // 💾 GUARDAR EN ASYNCSTORAGE
+      await AsyncStorage.multiSet([
+        ['userToken', loginData.token || 'temp-token'],
+        ['loginTime', currentTime.toString()],
+        ['userData', JSON.stringify(loginData.user)],
+        ['userType', loginData.userType],
+        ['onboardingCompleted', 'true'] // Los motoristas que hacen login ya pasaron onboarding
+      ]);
+      
+      // 📱 ACTUALIZAR ESTADO
+      setUser(loginData.user);
+      setUserType(loginData.userType);
       setIsAuthenticated(true);
-      // Para usuarios existentes que hacen login, asumimos onboarding completado
-      setHasCompletedOnboarding(true);
-      console.log('📊 Estado después del login: isAuthenticated=true, hasCompletedOnboarding=true');
+      setHasCompletedOnboarding(true); // Motoristas existentes no necesitan onboarding
+      
+      // ⏰ INICIAR TIMER DE EXPIRACIÓN
+      startSessionTimer();
+      
+      console.log('✅ Login completado y guardado');
+      console.log('📊 Sesión expirará en 20 minutos');
+      
       return { success: true };
     } catch (error) {
-      console.error('Login error:', error);
+      console.error('❌ Login error:', error);
       return { success: false, error };
     }
   };
 
+  // 📝 REGISTRO (USUARIOS NUEVOS)
   const register = async (userData) => {
     try {
-      // Simular llamada a API
       console.log('✅ Registro exitoso - activando pantallas de carga');
-      console.log('👤 Datos del usuario:', userData);
       
-      // Simular delay de API
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const currentTime = Date.now();
       
-      // 🔥 CRÍTICO: Cambiar estados para activar onboarding
+      // 💾 GUARDAR EN ASYNCSTORAGE
+      await AsyncStorage.multiSet([
+        ['userToken', 'temp-register-token'],
+        ['loginTime', currentTime.toString()],
+        ['userData', JSON.stringify(userData)],
+        ['userType', 'Motorista'],
+        ['onboardingCompleted', 'false'] // Usuarios nuevos SÍ necesitan onboarding
+      ]);
+      
+      // 📱 ACTUALIZAR ESTADO
+      setUser(userData);
+      setUserType('Motorista');
       setIsAuthenticated(true);
-      setHasCompletedOnboarding(false);
+      setHasCompletedOnboarding(false); // ❌ Mostrar onboarding para nuevos usuarios
       
-      console.log('📊 Estado después del registro: isAuthenticated=true, hasCompletedOnboarding=false');
-      console.log('🎯 Esto debería mostrar las pantallas de carga...');
+      // ⏰ INICIAR TIMER DE EXPIRACIÓN
+      startSessionTimer();
+      
+      console.log('📊 Registro completado - mostrando onboarding');
       
       return { success: true };
     } catch (error) {
-      console.error('Register error:', error);
+      console.error('❌ Register error:', error);
       return { success: false, error };
     }
   };
 
+  // 🎉 COMPLETAR ONBOARDING
   const completeOnboarding = async () => {
     try {
-      // await AsyncStorage.setItem('onboardingCompleted', 'true');
-      console.log('🎉 Completando onboarding - dirigiendo a InicioScreen');
+      await AsyncStorage.setItem('onboardingCompleted', 'true');
       setHasCompletedOnboarding(true);
-      console.log('📊 Estado final: isAuthenticated=true, hasCompletedOnboarding=true');
-      console.log('🏠 Esto debería mostrar InicioScreen...');
+      console.log('🎉 Onboarding completado');
       return { success: true };
     } catch (error) {
-      console.error('Complete onboarding error:', error);
+      console.error('❌ Complete onboarding error:', error);
       return { success: false, error };
     }
   };
 
+  // 🚪 LOGOUT MANUAL
   const logout = async () => {
     try {
-      // await AsyncStorage.removeItem('userToken');
-      // await AsyncStorage.removeItem('onboardingCompleted');
-      console.log('👋 Logout - volviendo al login');
-      setIsAuthenticated(false);
-      setHasCompletedOnboarding(false);
+      console.log('👋 Logout manual - limpiando sesión');
+      await clearAuthData();
       return { success: true };
     } catch (error) {
-      console.error('Logout error:', error);
+      console.error('❌ Logout error:', error);
       return { success: false, error };
+    }
+  };
+
+  // 🔄 RENOVAR SESIÓN (opcional - para extender tiempo)
+  const refreshSession = async () => {
+    try {
+      const currentTime = Date.now();
+      await AsyncStorage.setItem('loginTime', currentTime.toString());
+      startSessionTimer(); // Reiniciar timer
+      console.log('🔄 Sesión renovada por 20 minutos más');
+    } catch (error) {
+      console.error('❌ Error renovando sesión:', error);
     }
   };
 
@@ -109,10 +242,13 @@ export const AuthProvider = ({ children }) => {
     isAuthenticated,
     hasCompletedOnboarding,
     isLoading,
+    userType,
+    user,
     login,
     register,
     completeOnboarding,
     logout,
+    refreshSession, // Por si quieres renovar la sesión
   };
 
   return (

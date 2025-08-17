@@ -11,12 +11,15 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
+import { useAuth } from '../Context/authContext';
 
 const InicioSesionScreen = ({ navigation }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  
+  const { login } = useAuth();
 
   const validateForm = () => {
     if (!email.trim()) {
@@ -39,43 +42,81 @@ const InicioSesionScreen = ({ navigation }) => {
 
     setLoading(true);
     try {
-      console.log('Iniciando sesión...', { email, password });
+      console.log('🔐 Iniciando sesión...', { email });
       
-      // Simular llamada a API
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // ✅ IP CONFIGURADA CORRECTAMENTE
+      const API_URL = 'http://192.168.1.100:4000/api/login';
       
-      // Navegar a la pantalla principal después del login exitoso
-      navigation.reset({
-        index: 0,
-        routes: [{ name: 'Main' }],
+      console.log('🌐 Conectando a:', API_URL);
+      const response = await fetch(API_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify({
+          email: email.trim(),
+          password: password.trim(),
+        }),
       });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        Alert.alert('Error', data.message || 'Error al iniciar sesión');
+        return;
+      }
+
+      console.log('✅ Login exitoso:', data);
+
+      // Verificar que solo motoristas puedan acceder a esta app
+      if (data.userType !== 'Motorista') {
+        Alert.alert(
+          'Acceso Denegado', 
+          'Esta aplicación es exclusiva para motoristas. Tu tipo de usuario no tiene acceso.',
+          [{ text: 'Entendido', style: 'cancel' }]
+        );
+        return;
+      }
+
+      // Guardar información en el contexto
+      await login({
+        user: data.user,
+        userType: data.userType,
+        token: data.token || null, // Si el token viene en la respuesta
+      });
+
+      console.log('🚀 Navegando a onboarding...');
       
     } catch (error) {
-      console.error('Error en login:', error);
-      Alert.alert('Error', 'No se pudo iniciar sesión. Intenta de nuevo.');
+      console.error('❌ Error en login:', error);
+      
+      // Manejo específico de errores de red
+      if (error.message === 'Network request failed') {
+        Alert.alert(
+          'Error de Conexión', 
+          '🔴 No se pudo conectar al servidor.\n\n' +
+          'Pasos para solucionarlo:\n' +
+          '1. Verifica que tu servidor esté corriendo en puerto 4000\n' +
+          '2. Cambia "192.168.1.XXX" por la IP real de tu PC\n' +
+          '3. Asegúrate de estar en la misma red WiFi\n\n' +
+          'IP actual configurada: 192.168.1.100:4000'
+        );
+      } else if (error.name === 'TypeError') {
+        Alert.alert(
+          'Error de Red', 
+          'Problema de conectividad. Verifica tu conexión a internet.'
+        );
+      } else {
+        Alert.alert('Error', 'No se pudo iniciar sesión. Intenta de nuevo.');
+      }
     } finally {
       setLoading(false);
     }
   };
 
-  const handleGoogleLogin = () => {
-    console.log('Login con Google');
-    Alert.alert('Info', 'Función de Google login por implementar');
-  };
-
-  const handleFacebookLogin = () => {
-    console.log('Login con Facebook');
-    Alert.alert('Info', 'Función de Facebook login por implementar');
-  };
-
-  // 🔥 AQUÍ ESTÁ EL CAMBIO IMPORTANTE 👇
   const handleForgotPassword = () => {
     navigation.navigate('Recuperacion');
-  };
-
-  const handleRegister = () => {
-    console.log('Ir a registro');
-    navigation.navigate('Registrarse');
   };
 
   return (
@@ -87,17 +128,26 @@ const InicioSesionScreen = ({ navigation }) => {
         <View style={styles.authContainer}>
           <Text style={styles.title}>¡Bienvenido de{'\n'}vuelta!</Text>
           
+          {/* Mensaje informativo */}
+          <View style={styles.infoContainer}>
+            <Icon name="information-circle" size={20} color="#4CAF50" />
+            <Text style={styles.infoText}>
+              Esta aplicación es exclusiva para motoristas
+            </Text>
+          </View>
+          
           {/* Campo Email */}
           <View style={styles.inputContainer}>
             <Icon name="person-outline" size={20} color="#666" style={styles.inputIcon} />
             <TextInput
               style={styles.textInput}
-              placeholder="Nombre de usuario o correo"
+              placeholder="Email del motorista"
               value={email}
               onChangeText={setEmail}
               keyboardType="email-address"
               autoCapitalize="none"
               placeholderTextColor="#999"
+              editable={!loading}
             />
           </View>
 
@@ -111,10 +161,12 @@ const InicioSesionScreen = ({ navigation }) => {
               onChangeText={setPassword}
               secureTextEntry={!showPassword}
               placeholderTextColor="#999"
+              editable={!loading}
             />
             <TouchableOpacity 
               onPress={() => setShowPassword(!showPassword)}
               style={styles.eyeIcon}
+              disabled={loading}
             >
               <Icon 
                 name={showPassword ? "eye-off-outline" : "eye-outline"} 
@@ -125,7 +177,11 @@ const InicioSesionScreen = ({ navigation }) => {
           </View>
 
           {/* Enlace olvidar contraseña */}
-          <TouchableOpacity onPress={handleForgotPassword} style={styles.forgotPassword}>
+          <TouchableOpacity 
+            onPress={handleForgotPassword} 
+            style={styles.forgotPassword}
+            disabled={loading}
+          >
             <Text style={styles.forgotPasswordText}>
               ¿Olvidaste tu contraseña?
             </Text>
@@ -138,36 +194,14 @@ const InicioSesionScreen = ({ navigation }) => {
             disabled={loading}
           >
             {loading ? (
-              <ActivityIndicator color="#fff" />
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator color="#fff" size="small" />
+                <Text style={styles.loadingText}>Verificando credenciales...</Text>
+              </View>
             ) : (
               <Text style={styles.primaryButtonText}>Iniciar Sesión</Text>
             )}
           </TouchableOpacity>
-
-          {/* Separador */}
-          <View style={styles.dividerContainer}>
-            <View style={styles.dividerLine} />
-            <Text style={styles.dividerText}>O inicia sesión con</Text>
-            <View style={styles.dividerLine} />
-          </View>
-
-          {/* Botones de redes sociales */}
-          <View style={styles.socialContainer}>
-            <TouchableOpacity style={styles.socialButton} onPress={handleGoogleLogin}>
-              <Text style={styles.socialButtonText}>Google</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.socialButton} onPress={handleFacebookLogin}>
-              <Text style={styles.socialButtonText}>Facebook</Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* Enlace de registro */}
-          <View style={styles.registerContainer}>
-            <Text style={styles.registerText}>¿No tienes cuenta? </Text>
-            <TouchableOpacity onPress={handleRegister}>
-              <Text style={styles.registerLink}>Regístrate</Text>
-            </TouchableOpacity>
-          </View>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -193,7 +227,25 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#1f2937',
     textAlign: 'center',
-    marginBottom: 40,
+    marginBottom: 20,
+  },
+  infoContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#f0f9ff',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginBottom: 30,
+    borderWidth: 1,
+    borderColor: '#e0f2fe',
+  },
+  infoText: {
+    fontSize: 14,
+    color: '#0369a1',
+    marginLeft: 8,
+    fontWeight: '500',
   },
   inputContainer: {
     flexDirection: 'row',
@@ -235,7 +287,6 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingVertical: 16,
     alignItems: 'center',
-    marginBottom: 24,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
@@ -250,58 +301,14 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
-  dividerContainer: {
+  loadingContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 24,
   },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: '#e5e7eb',
-  },
-  dividerText: {
-    marginHorizontal: 16,
-    color: '#6b7280',
+  loadingText: {
+    color: '#fff',
     fontSize: 14,
-  },
-  socialContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: 16,
-    marginBottom: 32,
-  },
-  socialButton: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
-  },
-  socialButtonText: {
-    color: '#1f2937',
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  registerContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  registerText: {
-    color: '#6b7280',
-    fontSize: 14,
-  },
-  registerLink: {
-    color: '#4CAF50',
-    fontSize: 14,
-    fontWeight: '600',
+    marginLeft: 8,
   },
 });
 

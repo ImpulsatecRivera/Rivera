@@ -1,17 +1,14 @@
-// src/navigation/AppNavigator.js
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
 import Icon from 'react-native-vector-icons/MaterialIcons';
-import { useAuth } from '../Context/authContext';
+import { useAuth } from '../Context/authContext'; // 🔥 USAR EL CONTEXTO CORRECTO
 
 import InicioScreen from '../screens/InicioScreen';
 import ViajesScreen from '../screens/ViajesScreen';
 import PerfilScreen from '../screens/PerfilScreen';
 import InfoViajeScreen from '../screens/InfoViajeScreen';
 import InicioSesionScreen from '../screens/InicioSesionScreen';
-import RegistrarseScreen from '../screens/RegistrarseScrenn';
-import Registrarse2Screen from '../screens/Registrarse2';
 
 // Pantallas existentes de recuperación
 import RecuperacionScreen from '../screens/RecuperacionScreen';
@@ -97,11 +94,16 @@ const TabNavigator = () => {
   );
 };
 
-// Componente principal del navegador
+// Componente principal del navegador - USANDO EL CONTEXTO CORRECTO
 const AppNavigator = () => {
+  // 🔥 USAR EL CONTEXTO REAL, NO EL LOCAL
   const { isAuthenticated, hasCompletedOnboarding, isLoading } = useAuth();
   
-  console.log('🔄 AppNavigator render:', { isAuthenticated, hasCompletedOnboarding, isLoading });
+  console.log('🔄 AppNavigator render:', { 
+    isAuthenticated, 
+    hasCompletedOnboarding, 
+    isLoading 
+  });
   
   // Mostrar loading si está cargando
   if (isLoading) {
@@ -109,7 +111,7 @@ const AppNavigator = () => {
     return null; // O una pantalla de loading
   }
   
-  // 1️⃣ SI NO ESTÁ AUTENTICADO: Mostrar pantallas de login/registro
+  // 1️⃣ SI NO ESTÁ AUTENTICADO: Mostrar pantallas de login
   if (!isAuthenticated) {
     console.log('🔐 Mostrando navegador de autenticación');
     return (
@@ -125,22 +127,6 @@ const AppNavigator = () => {
           component={InicioSesionScreen}
           options={{
             animationTypeForReplace: 'push',
-          }}
-        />
-        <Stack.Screen 
-          name="Registrarse" 
-          component={RegistrarseScreen}
-          options={{
-            presentation: 'card',
-            gestureEnabled: true,
-          }}
-        />
-        <Stack.Screen 
-          name="Registrarse2" 
-          component={Registrarse2Screen}
-          options={{
-            presentation: 'card',
-            gestureEnabled: true,
           }}
         />
         
