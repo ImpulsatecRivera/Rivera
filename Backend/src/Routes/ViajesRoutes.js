@@ -1,4 +1,4 @@
-// src/Routes/ViajesRoutes.js - ORDEN CORREGIDO PARA COMPATIBILIDAD
+// src/Routes/ViajesRoutes.js - ORDEN CORREGIDO CON ALIASES ORGANIZADOS
 import express from "express";
 import ViajesController from "../Controllers/Viajes.js";
 
@@ -26,8 +26,14 @@ router.get("/real-time-metrics", ViajesController.getRealTimeMetrics);
 router.get("/dashboard/data", ViajesController.getDashboardData);
 router.get("/metrics/realtime", ViajesController.getRealTimeMetrics);
 router.get("/metrics/efficiency", ViajesController.getEfficiencyMetrics);
+
+// ✅ RUTA PRINCIPAL + ALIAS INMEDIATO
 router.get("/metrics/average-time", ViajesController.getTiempoPromedioViaje);
+router.get("/tiempo-promedio", ViajesController.getTiempoPromedioViaje); // 🔄 Alias movido aquí
+
+// ✅ RUTA PRINCIPAL + ALIAS INMEDIATO
 router.get("/metrics/capacity", ViajesController.getCapacidadCarga);
+router.get("/capacidad-carga", ViajesController.getCapacidadCarga); // 🔄 Alias movido aquí
 
 // =====================================================
 // 📦 RUTAS DE ANÁLISIS DE CARGAS
@@ -35,15 +41,24 @@ router.get("/metrics/capacity", ViajesController.getCapacidadCarga);
 
 router.get("/cargo/distribution", ViajesController.getCargaDistribution);
 router.get("/cargo/types", ViajesController.getTiposDeCargas);
+router.get("/tipos-cargas", ViajesController.getTiposDeCargas); // 🔄 Alias movido aquí
+
 router.get("/cargo/stats", ViajesController.getCargaStats);
+router.get("/carga-stats", ViajesController.getCargaStats); // 🔄 Alias movido aquí
+
 router.get("/cargo/subcategories", ViajesController.getTopSubcategorias);
+router.get("/subcategorias", ViajesController.getTopSubcategorias); // 🔄 Alias movido aquí
+
 router.get("/cargo/category/:categoria", ViajesController.getCargaDetailsByCategory);
+router.get("/carga-details/:categoria", ViajesController.getCargaDetailsByCategory); // 🔄 Alias movido aquí
 
 // =====================================================
 // 📅 RUTAS DE ORGANIZACIÓN TEMPORAL
 // =====================================================
 
 router.get("/schedule/days", ViajesController.getViajesPorDias);
+router.get("/por-dias", ViajesController.getViajesPorDias); // 🔄 Alias movido aquí
+
 router.get("/completed/list", ViajesController.getCompletedTrips);
 router.get("/completed", ViajesController.getCompletedTrips);
 
@@ -99,19 +114,6 @@ router.get("/:viajeId", ViajesController.getTripDetails);
 // =====================================================
 
 router.get("/", ViajesController.getAllViajes);
-
-// =====================================================
-// 🔄 ALIAS ADICIONALES PARA COMPATIBILIDAD
-// =====================================================
-
-// Estos son alias adicionales por si acaso
-router.get("/tipos-cargas", ViajesController.getTiposDeCargas);
-router.get("/carga-stats", ViajesController.getCargaStats);
-router.get("/subcategorias", ViajesController.getTopSubcategorias);
-router.get("/carga-details/:categoria", ViajesController.getCargaDetailsByCategory);
-router.get("/tiempo-promedio", ViajesController.getTiempoPromedioViaje);
-router.get("/capacidad-carga", ViajesController.getCapacidadCarga);
-router.get("/por-dias", ViajesController.getViajesPorDias);
 
 // =====================================================
 // 🚨 MIDDLEWARE DE MANEJO DE ERRORES
