@@ -1,15 +1,33 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Dimensions } from 'react-native';
+import { useAuth } from '../Context/authContext';
 
 const { height } = Dimensions.get('window');
 
-const OnboardingScreen = () => {
+const OnboardingScreen2 = ({ navigation }) => {
+  const { completeOnboarding } = useAuth();
+
+  // Función para ir a la siguiente pantalla
+  const handleNext = () => {
+    navigation.navigate('Onboarding3');
+  };
+
+  // Función para regresar a la pantalla anterior
+  const handleBack = () => {
+    navigation.goBack();
+  };
+
+  // Función para saltar el onboarding
+  const handleSkip = async () => {
+    await completeOnboarding();
+  };
+
   return (
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.pageIndicator}>2/3</Text>
-        <TouchableOpacity style={styles.skipButton}>
+        <TouchableOpacity style={styles.skipButton} onPress={handleSkip}>
           <Text style={styles.skipButtonText}>Saltar</Text>
         </TouchableOpacity>
       </View>
@@ -52,7 +70,7 @@ const OnboardingScreen = () => {
       {/* Bottom Navigation */}
       <View style={styles.bottomContainer}>
         <View style={styles.navigation}>
-          <TouchableOpacity style={styles.backButton}>
+          <TouchableOpacity style={styles.backButton} onPress={handleBack}>
             <Text style={styles.backButtonText}>Atrás</Text>
           </TouchableOpacity>
           
@@ -62,7 +80,7 @@ const OnboardingScreen = () => {
             <View style={styles.dot} />
           </View>
           
-          <TouchableOpacity style={styles.nextButton}>
+          <TouchableOpacity style={styles.nextButton} onPress={handleNext}>
             <Text style={styles.nextButtonText}>Siguiente</Text>
           </TouchableOpacity>
         </View>
@@ -246,4 +264,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default OnboardingScreen;
+export default OnboardingScreen2;

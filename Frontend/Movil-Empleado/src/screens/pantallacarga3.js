@@ -1,13 +1,37 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { useAuth } from '../Context/authContext';
 
-const OnboardingScreen = () => {
+const OnboardingScreen3 = ({ navigation }) => {
+  const { completeOnboarding } = useAuth();
+
+  // Función para completar onboarding y ir al dashboard
+  const handleComplete = async () => {
+    console.log('🎯 Completando onboarding desde pantalla 3/3...');
+    const result = await completeOnboarding();
+    if (result.success) {
+      console.log('✅ Onboarding completado, navegando automáticamente a InicioScreen');
+    } else {
+      console.error('❌ Error al completar onboarding');
+    }
+  };
+
+  // Función para ir atrás a la pantalla 2/3
+  const handleBack = () => {
+    navigation.goBack();
+  };
+
+  // Función para saltar directamente al dashboard
+  const handleSkip = async () => {
+    await handleComplete();
+  };
+
   return (
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.pageIndicator}>3/3</Text>
-        <TouchableOpacity style={styles.skipButton}>
+        <TouchableOpacity style={styles.skipButton} onPress={handleSkip}>
           <Text style={styles.skipButtonText}>Saltar</Text>
         </TouchableOpacity>
       </View>
@@ -64,7 +88,7 @@ const OnboardingScreen = () => {
       {/* Bottom Navigation */}
       <View style={styles.bottomContainer}>
         <View style={styles.navigation}>
-          <TouchableOpacity style={styles.backButton}>
+          <TouchableOpacity style={styles.backButton} onPress={handleBack}>
             <Text style={styles.backButtonText}>Atrás</Text>
           </TouchableOpacity>
           
@@ -74,8 +98,8 @@ const OnboardingScreen = () => {
             <View style={[styles.dot, styles.activeDot]} />
           </View>
           
-          <TouchableOpacity style={styles.nextButton}>
-            <Text style={styles.nextButtonText}>Siguiente</Text>
+          <TouchableOpacity style={styles.nextButton} onPress={handleComplete}>
+            <Text style={styles.nextButtonText}>Comenzar</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -311,4 +335,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default OnboardingScreen;
+export default OnboardingScreen3;
