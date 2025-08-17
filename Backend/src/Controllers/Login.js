@@ -2,8 +2,9 @@ import jwt from "jsonwebtoken";
 import bcryptjs from "bcryptjs";
 import { config } from "../config.js";
 import EmpleadoModel from "../Models/Empleados.js";
+import MotoristaModel from "../Models/Motorista.js";
 
-const LoginController = {}; // Asegúrate de declarar esto al inicio
+const LoginController = {};
 
 LoginController.Login = async (req, res) => {
   const { email, password } = req.body;
@@ -12,6 +13,7 @@ LoginController.Login = async (req, res) => {
     let userFound;
     let userType;
 
+    // 1️⃣ Verificar si es el administrador
     if (email === config.ADMIN.emailAdmin) {
       if (password !== config.ADMIN.password) {
         return res.status(400).json({ message: "Contraseña incorrecta" });
@@ -20,18 +22,29 @@ LoginController.Login = async (req, res) => {
       userType = "Administrador";
       userFound = { _id: "admin", email };
     } else {
+      // 2️⃣ Buscar en Empleados
       userFound = await EmpleadoModel.findOne({ email });
 
-      if (!userFound) {
-        return res.status(400).json({ message: "Usuario no encontrado" });
-      }
+      if (userFound) {
+        const isMatch = await bcryptjs.compare(password, userFound.password);
+        if (!isMatch) {
+          return res.status(400).json({ message: "Contraseña incorrecta" });
+        }
+        userType = "Empleado";
+      } else {
+        // 3️⃣ Si no es empleado, buscar en Motoristas
+        userFound = await MotoristaModel.findOne({ email });
 
-      const isMatch = await bcryptjs.compare(password, userFound.password);
-      if (!isMatch) {
-        return res.status(400).json({ message: "Contraseña incorrecta" });
-      }
+        if (!userFound) {
+          return res.status(400).json({ message: "Usuario no encontrado" });
+        }
 
-      userType = "Empleado";
+        const isMatch = await bcryptjs.compare(password, userFound.password);
+        if (!isMatch) {
+          return res.status(400).json({ message: "Contraseña incorrecta" });
+        }
+        userType = "Motorista";
+      }
     }
 
     if (!config.JWT.secret) {
@@ -86,6 +99,7 @@ LoginController.checkAuth = async (req, res) => {
 
       const { id, userType } = decoded;
 
+      // 1️⃣ Si es administrador
       if (userType === "Administrador") {
         return res.status(200).json({
           user: {
@@ -96,19 +110,42 @@ LoginController.checkAuth = async (req, res) => {
         });
       }
 
-      const userFound = await EmpleadoModel.findById(id).select("email");
+      // 2️⃣ Si es empleado
+      if (userType === "Empleado") {
+        const userFound = await EmpleadoModel.findById(id).select("email");
 
-      if (!userFound) {
-        return res.status(404).json({ message: "Empleado no encontrado" });
+        if (!userFound) {
+          return res.status(404).json({ message: "Empleado no encontrado" });
+        }
+
+        return res.status(200).json({
+          user: {
+            id: userFound._id,
+            email: userFound.email,
+            userType: "Empleado",
+          },
+        });
       }
 
-      return res.status(200).json({
-        user: {
-          id: userFound._id,
-          email: userFound.email,
-          userType: "Empleado",
-        },
-      });
+      // 3️⃣ Si es motorista
+      if (userType === "Motorista") {
+        const userFound = await MotoristaModel.findById(id).select("email");
+
+        if (!userFound) {
+          return res.status(404).json({ message: "Motorista no encontrado" });
+        }
+
+        return res.status(200).json({
+          user: {
+            id: userFound._id,
+            email: userFound.email,
+            userType: "Motorista",
+          },
+        });
+      }
+
+      // 4️⃣ Si el userType no es reconocido
+      return res.status(400).json({ message: "Tipo de usuario no válido" });
     });
   } catch (error) {
     console.error("Error en checkAuth:", error);
