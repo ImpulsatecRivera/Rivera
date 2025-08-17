@@ -1,320 +1,314 @@
 import React from 'react';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 
 const OnboardingScreen = () => {
   return (
-    <div style={styles.container}>
+    <View style={styles.container}>
       {/* Header */}
-      <div style={styles.header}>
-        <span style={styles.pageIndicator}>3/3</span>
-        <button style={styles.skipButton}>Saltar</button>
-      </div>
+      <View style={styles.header}>
+        <Text style={styles.pageIndicator}>3/3</Text>
+        <TouchableOpacity style={styles.skipButton}>
+          <Text style={styles.skipButtonText}>Saltar</Text>
+        </TouchableOpacity>
+      </View>
 
       {/* Illustration Container */}
-      <div style={styles.illustrationContainer}>
+      <View style={styles.illustrationContainer}>
         {/* Money Bag Character */}
-        <div style={styles.characterContainer}>
+        <View style={styles.characterContainer}>
           {/* Arms */}
-          <div style={styles.leftArm}>
-            <div style={styles.leftHand} />
-          </div>
-          <div style={styles.rightArm}>
-            <div style={styles.rightHand}>
-              <div style={styles.moneyBill} />
-            </div>
-          </div>
+          <View style={styles.leftArm}>
+            <View style={styles.leftHand} />
+          </View>
+          <View style={styles.rightArm}>
+            <View style={styles.rightHand}>
+              <View style={styles.moneyBill} />
+            </View>
+          </View>
           
           {/* Body (Money Bag) */}
-          <div style={styles.moneyBag}>
+          <View style={styles.moneyBag}>
             {/* Logo/Label */}
-            <div style={styles.logoContainer}>
-              <div style={styles.logo}>
-                <span style={styles.logoText}>RIVERA</span>
-                <div style={styles.logoUnderline} />
-              </div>
-            </div>
+            <View style={styles.logoContainer}>
+              <View style={styles.logo}>
+                <Text style={styles.logoText}>RIVERA</Text>
+                <View style={styles.logoUnderline} />
+              </View>
+            </View>
             
             {/* Bag tie/rope */}
-            <div style={styles.bagTie} />
-          </div>
+            <View style={styles.bagTie} />
+          </View>
           
           {/* Legs */}
-          <div style={styles.legs}>
-            <div style={styles.leftLeg}>
-              <div style={styles.leftShoe} />
-            </div>
-            <div style={styles.rightLeg}>
-              <div style={styles.rightShoe} />
-            </div>
-          </div>
-        </div>
-      </div>
+          <View style={styles.legs}>
+            <View style={styles.leftLeg}>
+              <View style={styles.leftShoe} />
+            </View>
+            <View style={styles.rightLeg}>
+              <View style={styles.rightShoe} />
+            </View>
+          </View>
+        </View>
+      </View>
 
       {/* Content */}
-      <div style={styles.content}>
-        <h2 style={styles.title}>Realiza cotizaciones las veces que quieras</h2>
-        <p style={styles.subtitle}>
-          Puedes realizar las cotizaciones que desees;<br />
+      <View style={styles.content}>
+        <Text style={styles.title}>Realiza cotizaciones las veces que quieras</Text>
+        <Text style={styles.subtitle}>
+          Puedes realizar las cotizaciones que desees;{'\n'}
           estaremos listos para ayudarte.
-        </p>
-      </div>
+        </Text>
+      </View>
 
       {/* Bottom Navigation */}
-      <div style={styles.bottomContainer}>
-        <div style={styles.navigation}>
-          <button style={styles.backButton}>
-            <span style={styles.backButtonText}>Atrás</span>
-          </button>
+      <View style={styles.bottomContainer}>
+        <View style={styles.navigation}>
+          <TouchableOpacity style={styles.backButton}>
+            <Text style={styles.backButtonText}>Atrás</Text>
+          </TouchableOpacity>
           
-          <div style={styles.pagination}>
-            <div style={styles.dot} />
-            <div style={styles.dot} />
-            <div style={{...styles.dot, ...styles.activeDot}} />
-          </div>
+          <View style={styles.pagination}>
+            <View style={styles.dot} />
+            <View style={styles.dot} />
+            <View style={[styles.dot, styles.activeDot]} />
+          </View>
           
-          <button style={styles.nextButton}>
-            <span style={styles.nextButtonText}>Siguiente</span>
-          </button>
-        </div>
-      </div>
-    </div>
+          <TouchableOpacity style={styles.nextButton}>
+            <Text style={styles.nextButtonText}>Siguiente</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </View>
   );
 };
 
-const styles = {
+const styles = StyleSheet.create({
   container: {
-    display: 'flex',
-    flexDirection: 'column',
-    height: '100vh',
-    maxWidth: '400px',
-    margin: '0 auto',
+    flex: 1,
+    maxWidth: 400,
+    alignSelf: 'center',
     backgroundColor: '#FFFFFF',
-    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-    paddingTop: '50px',
-    position: 'relative',
+    paddingTop: 50,
+    width: '100%',
   },
   header: {
-    display: 'flex',
+    flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: '0 20px',
-    marginBottom: '60px',
+    paddingHorizontal: 20,
+    marginBottom: 60,
   },
   pageIndicator: {
-    fontSize: '16px',
+    fontSize: 16,
     fontWeight: '600',
     color: '#000000',
   },
   skipButton: {
-    fontSize: '16px',
+    // TouchableOpacity styles can be empty
+  },
+  skipButtonText: {
+    fontSize: 16,
     fontWeight: '600',
     color: '#000000',
-    background: 'none',
-    border: 'none',
-    cursor: 'pointer',
   },
   illustrationContainer: {
     flex: 1,
-    display: 'flex',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: '0 40px',
-    position: 'relative',
-    minHeight: '400px',
+    paddingHorizontal: 40,
+    minHeight: 400,
   },
   characterContainer: {
-    position: 'relative',
-    display: 'flex',
-    flexDirection: 'column',
     alignItems: 'center',
   },
   leftArm: {
     position: 'absolute',
-    left: '-50px',
-    top: '40px',
-    width: '40px',
-    height: '60px',
+    left: -50,
+    top: 40,
+    width: 40,
+    height: 60,
     backgroundColor: '#D4A574',
-    borderRadius: '20px',
-    transform: 'rotate(-30deg)',
+    borderRadius: 20,
+    transform: [{ rotate: '-30deg' }],
     zIndex: 1,
   },
   leftHand: {
     position: 'absolute',
-    bottom: '-15px',
-    left: '5px',
-    width: '25px',
-    height: '25px',
+    bottom: -15,
+    left: 5,
+    width: 25,
+    height: 25,
     backgroundColor: '#D4A574',
-    borderRadius: '50%',
+    borderRadius: 12.5,
   },
   rightArm: {
     position: 'absolute',
-    right: '-50px',
-    top: '40px',
-    width: '40px',
-    height: '60px',
+    right: -50,
+    top: 40,
+    width: 40,
+    height: 60,
     backgroundColor: '#D4A574',
-    borderRadius: '20px',
-    transform: 'rotate(30deg)',
+    borderRadius: 20,
+    transform: [{ rotate: '30deg' }],
     zIndex: 1,
   },
   rightHand: {
     position: 'absolute',
-    bottom: '-15px',
-    right: '5px',
-    width: '25px',
-    height: '25px',
+    bottom: -15,
+    right: 5,
+    width: 25,
+    height: 25,
     backgroundColor: '#D4A574',
-    borderRadius: '50%',
+    borderRadius: 12.5,
   },
   moneyBill: {
     position: 'absolute',
-    top: '-10px',
-    right: '-20px',
-    width: '30px',
-    height: '20px',
+    top: -10,
+    right: -20,
+    width: 30,
+    height: 20,
     backgroundColor: '#4CAF50',
-    borderRadius: '3px',
-    transform: 'rotate(15deg)',
+    borderRadius: 3,
+    transform: [{ rotate: '15deg' }],
   },
   moneyBag: {
-    width: '160px',
-    height: '140px',
+    width: 160,
+    height: 140,
     backgroundColor: '#C8956D',
-    borderRadius: '80px 80px 20px 20px',
-    position: 'relative',
+    borderTopLeftRadius: 80,
+    borderTopRightRadius: 80,
+    borderBottomLeftRadius: 20,
+    borderBottomRightRadius: 20,
     zIndex: 2,
-    display: 'flex',
     justifyContent: 'center',
     alignItems: 'center',
   },
   logoContainer: {
     backgroundColor: '#FFFFFF',
-    borderRadius: '25px',
-    padding: '15px 20px',
-    border: '2px solid #4CAF50',
+    borderRadius: 25,
+    paddingVertical: 15,
+    paddingHorizontal: 20,
+    borderWidth: 2,
+    borderColor: '#4CAF50',
   },
   logo: {
-    textAlign: 'center',
+    alignItems: 'center',
   },
   logoText: {
-    fontSize: '14px',
+    fontSize: 14,
     fontWeight: 'bold',
     color: '#4CAF50',
-    display: 'block',
   },
   logoUnderline: {
     width: '100%',
-    height: '2px',
+    height: 2,
     backgroundColor: '#4CAF50',
-    marginTop: '2px',
+    marginTop: 2,
   },
   bagTie: {
     position: 'absolute',
-    top: '-15px',
-    width: '60px',
-    height: '30px',
+    top: -15,
+    width: 60,
+    height: 30,
     backgroundColor: '#B8804D',
-    borderRadius: '30px',
+    borderRadius: 30,
   },
   legs: {
-    display: 'flex',
-    gap: '20px',
-    marginTop: '-10px',
+    flexDirection: 'row',
+    gap: 20,
+    marginTop: -10,
     zIndex: 1,
   },
   leftLeg: {
-    width: '30px',
-    height: '50px',
+    width: 30,
+    height: 50,
     backgroundColor: '#C8956D',
-    borderRadius: '15px',
+    borderRadius: 15,
   },
   rightLeg: {
-    width: '30px',
-    height: '50px',
+    width: 30,
+    height: 50,
     backgroundColor: '#C8956D',
-    borderRadius: '15px',
+    borderRadius: 15,
   },
   leftShoe: {
     position: 'absolute',
-    bottom: '-15px',
-    left: '-5px',
-    width: '40px',
-    height: '25px',
+    bottom: -15,
+    left: -5,
+    width: 40,
+    height: 25,
     backgroundColor: '#333333',
-    borderRadius: '20px',
+    borderRadius: 20,
   },
   rightShoe: {
     position: 'absolute',
-    bottom: '-15px',
-    right: '-5px',
-    width: '40px',
-    height: '25px',
+    bottom: -15,
+    right: -5,
+    width: 40,
+    height: 25,
     backgroundColor: '#333333',
-    borderRadius: '20px',
+    borderRadius: 20,
   },
   content: {
-    padding: '0 40px',
-    textAlign: 'center',
-    marginBottom: '60px',
-    marginTop: '20px',
+    paddingHorizontal: 40,
+    alignItems: 'center',
+    marginBottom: 60,
+    marginTop: 20,
   },
   title: {
-    fontSize: '24px',
+    fontSize: 24,
     fontWeight: 'bold',
     color: '#000000',
-    marginBottom: '15px',
-    margin: '0 0 15px 0',
-    lineHeight: '28px',
+    marginBottom: 15,
+    lineHeight: 28,
+    textAlign: 'center',
   },
   subtitle: {
-    fontSize: '16px',
+    fontSize: 16,
     color: '#999999',
-    lineHeight: '24px',
-    margin: 0,
+    lineHeight: 24,
+    textAlign: 'center',
   },
   bottomContainer: {
-    padding: '0 40px 40px',
+    paddingHorizontal: 40,
+    paddingBottom: 40,
   },
   navigation: {
-    display: 'flex',
+    flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
   backButton: {
-    background: 'none',
-    border: 'none',
-    cursor: 'pointer',
+    // TouchableOpacity styles can be empty
   },
   backButtonText: {
-    fontSize: '16px',
+    fontSize: 16,
     fontWeight: '600',
     color: '#CCCCCC',
   },
   pagination: {
-    display: 'flex',
+    flexDirection: 'row',
   },
   dot: {
-    width: '10px',
-    height: '10px',
-    borderRadius: '5px',
+    width: 10,
+    height: 10,
+    borderRadius: 5,
     backgroundColor: '#E0E0E0',
-    margin: '0 5px',
+    marginHorizontal: 5,
   },
   activeDot: {
     backgroundColor: '#333333',
-    width: '30px',
+    width: 30,
   },
   nextButton: {
-    background: 'none',
-    border: 'none',
-    cursor: 'pointer',
+    // TouchableOpacity styles can be empty
   },
   nextButtonText: {
-    fontSize: '16px',
+    fontSize: 16,
     fontWeight: '600',
     color: '#7ED321',
   },
-};
+});
 
 export default OnboardingScreen;

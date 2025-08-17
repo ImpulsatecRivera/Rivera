@@ -1,243 +1,249 @@
 import React from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, Dimensions } from 'react-native';
+
+const { height } = Dimensions.get('window');
 
 const OnboardingScreen = () => {
   return (
-    <div style={styles.container}>
+    <View style={styles.container}>
       {/* Header */}
-      <div style={styles.header}>
-        <span style={styles.pageIndicator}>2/3</span>
-        <button style={styles.skipButton}>Saltar</button>
-      </div>
+      <View style={styles.header}>
+        <Text style={styles.pageIndicator}>2/3</Text>
+        <TouchableOpacity style={styles.skipButton}>
+          <Text style={styles.skipButtonText}>Saltar</Text>
+        </TouchableOpacity>
+      </View>
 
       {/* Illustration Container */}
-      <div style={styles.illustrationContainer}>
+      <View style={styles.illustrationContainer}>
         {/* Credit Card */}
-        <div style={styles.cardContainer}>
-          <div style={styles.creditCard}>
+        <View style={styles.cardContainer}>
+          <View style={styles.creditCard}>
             {/* Card chip */}
-            <div style={styles.chip} />
+            <View style={styles.chip} />
             
             {/* Card lines (representing card number and text) */}
-            <div style={styles.cardLines}>
-              <div style={styles.cardLine1} />
-              <div style={styles.cardLine2} />
-            </div>
+            <View style={styles.cardLines}>
+              <View style={styles.cardLine1} />
+              <View style={styles.cardLine2} />
+            </View>
             
             {/* Card stripe */}
-            <div style={styles.cardStripe} />
-          </div>
+            <View style={styles.cardStripe} />
+          </View>
           
           {/* Green checkmark circle */}
-          <div style={styles.checkmarkContainer}>
-            <div style={styles.checkmarkCircle}>
-              <div style={styles.checkmark}>✓</div>
-            </div>
-          </div>
-        </div>
-      </div>
+          <View style={styles.checkmarkContainer}>
+            <View style={styles.checkmarkCircle}>
+              <Text style={styles.checkmark}>✓</Text>
+            </View>
+          </View>
+        </View>
+      </View>
 
       {/* Content */}
-      <div style={styles.content}>
-        <h2 style={styles.title}>Elige tu forma de pago</h2>
-        <p style={styles.subtitle}>
+      <View style={styles.content}>
+        <Text style={styles.title}>Elige tu forma de pago</Text>
+        <Text style={styles.subtitle}>
           Elige tu forma de pago deseado.
-        </p>
-      </div>
+        </Text>
+      </View>
 
       {/* Bottom Navigation */}
-      <div style={styles.bottomContainer}>
-        <div style={styles.navigation}>
-          <button style={styles.backButton}>
-            <span style={styles.backButtonText}>Atrás</span>
-          </button>
+      <View style={styles.bottomContainer}>
+        <View style={styles.navigation}>
+          <TouchableOpacity style={styles.backButton}>
+            <Text style={styles.backButtonText}>Atrás</Text>
+          </TouchableOpacity>
           
-          <div style={styles.pagination}>
-            <div style={styles.dot} />
-            <div style={{...styles.dot, ...styles.activeDot}} />
-            <div style={styles.dot} />
-          </div>
+          <View style={styles.pagination}>
+            <View style={styles.dot} />
+            <View style={[styles.dot, styles.activeDot]} />
+            <View style={styles.dot} />
+          </View>
           
-          <button style={styles.nextButton}>
-            <span style={styles.nextButtonText}>Siguiente</span>
-          </button>
-        </div>
-      </div>
-    </div>
+          <TouchableOpacity style={styles.nextButton}>
+            <Text style={styles.nextButtonText}>Siguiente</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </View>
   );
 };
 
-const styles = {
+const styles = StyleSheet.create({
   container: {
-    display: 'flex',
-    flexDirection: 'column',
-    height: '100vh',
-    maxWidth: '400px',
-    margin: '0 auto',
+    flex: 1,
+    maxWidth: 400,
+    alignSelf: 'center',
     backgroundColor: '#FFFFFF',
-    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-    paddingTop: '50px',
-    position: 'relative',
+    paddingTop: 50,
+    width: '100%',
   },
   header: {
-    display: 'flex',
+    flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: '0 20px',
-    marginBottom: '80px',
+    paddingHorizontal: 20,
+    marginBottom: 80,
   },
   pageIndicator: {
-    fontSize: '16px',
+    fontSize: 16,
     fontWeight: '600',
     color: '#000000',
   },
   skipButton: {
-    fontSize: '16px',
+    // TouchableOpacity styles can be empty
+  },
+  skipButtonText: {
+    fontSize: 16,
     fontWeight: '600',
     color: '#000000',
-    background: 'none',
-    border: 'none',
-    cursor: 'pointer',
   },
   illustrationContainer: {
     flex: 1,
-    display: 'flex',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: '0 40px',
-    position: 'relative',
-    minHeight: '400px',
+    paddingHorizontal: 40,
+    minHeight: 400,
   },
   cardContainer: {
-    position: 'relative',
-    display: 'flex',
-    flexDirection: 'column',
     alignItems: 'center',
   },
   creditCard: {
-    width: '280px',
-    height: '180px',
+    width: 280,
+    height: 180,
     backgroundColor: '#4A90E2',
-    borderRadius: '15px',
-    position: 'relative',
-    boxShadow: '0 8px 20px rgba(0, 0, 0, 0.15)',
+    borderRadius: 15,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
+    elevation: 8, // for Android
     overflow: 'hidden',
   },
   chip: {
-    width: '45px',
-    height: '35px',
+    width: 45,
+    height: 35,
     backgroundColor: '#F0C851',
-    borderRadius: '6px',
+    borderRadius: 6,
     position: 'absolute',
-    top: '30px',
-    left: '25px',
+    top: 30,
+    left: 25,
   },
   cardLines: {
     position: 'absolute',
-    top: '30px',
-    right: '25px',
+    top: 30,
+    right: 25,
   },
   cardLine1: {
-    width: '120px',
-    height: '8px',
+    width: 120,
+    height: 8,
     backgroundColor: '#FFFFFF',
-    borderRadius: '4px',
-    marginBottom: '8px',
+    borderRadius: 4,
+    marginBottom: 8,
   },
   cardLine2: {
-    width: '80px',
-    height: '8px',
+    width: 80,
+    height: 8,
     backgroundColor: '#FFFFFF',
-    borderRadius: '4px',
+    borderRadius: 4,
   },
   cardStripe: {
     width: '100%',
-    height: '50px',
+    height: 50,
     backgroundColor: '#2C3E50',
     position: 'absolute',
-    bottom: '0',
+    bottom: 0,
   },
   checkmarkContainer: {
     position: 'absolute',
-    bottom: '-25px',
-    right: '-25px',
+    bottom: -25,
+    right: -25,
   },
   checkmarkCircle: {
-    width: '80px',
-    height: '80px',
+    width: 80,
+    height: 80,
     backgroundColor: '#4CAF50',
-    borderRadius: '40px',
-    display: 'flex',
+    borderRadius: 40,
     justifyContent: 'center',
     alignItems: 'center',
-    boxShadow: '0 4px 15px rgba(76, 175, 80, 0.3)',
+    shadowColor: '#4CAF50',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 7.5,
+    elevation: 6, // for Android
   },
   checkmark: {
     color: '#FFFFFF',
-    fontSize: '32px',
+    fontSize: 32,
     fontWeight: 'bold',
-    transform: 'rotate(-10deg)',
+    transform: [{ rotate: '-10deg' }],
   },
   content: {
-    padding: '0 40px',
-    textAlign: 'center',
-    marginBottom: '60px',
-    marginTop: '40px',
+    paddingHorizontal: 40,
+    alignItems: 'center',
+    marginBottom: 60,
+    marginTop: 40,
   },
   title: {
-    fontSize: '24px',
+    fontSize: 24,
     fontWeight: 'bold',
     color: '#000000',
-    marginBottom: '15px',
-    margin: '0 0 15px 0',
+    marginBottom: 15,
+    textAlign: 'center',
   },
   subtitle: {
-    fontSize: '16px',
+    fontSize: 16,
     color: '#999999',
-    lineHeight: '24px',
-    margin: 0,
+    lineHeight: 24,
+    textAlign: 'center',
   },
   bottomContainer: {
-    padding: '0 40px 40px',
+    paddingHorizontal: 40,
+    paddingBottom: 40,
   },
   navigation: {
-    display: 'flex',
+    flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
   backButton: {
-    background: 'none',
-    border: 'none',
-    cursor: 'pointer',
+    // TouchableOpacity styles can be empty
   },
   backButtonText: {
-    fontSize: '16px',
+    fontSize: 16,
     fontWeight: '600',
     color: '#CCCCCC',
   },
   pagination: {
-    display: 'flex',
+    flexDirection: 'row',
   },
   dot: {
-    width: '10px',
-    height: '10px',
-    borderRadius: '5px',
+    width: 10,
+    height: 10,
+    borderRadius: 5,
     backgroundColor: '#E0E0E0',
-    margin: '0 5px',
+    marginHorizontal: 5,
   },
   activeDot: {
     backgroundColor: '#333333',
-    width: '30px',
+    width: 30,
   },
   nextButton: {
-    background: 'none',
-    border: 'none',
-    cursor: 'pointer',
+    // TouchableOpacity styles can be empty
   },
   nextButtonText: {
-    fontSize: '16px',
+    fontSize: 16,
     fontWeight: '600',
     color: '#7ED321',
   },
-};
+});
 
 export default OnboardingScreen;

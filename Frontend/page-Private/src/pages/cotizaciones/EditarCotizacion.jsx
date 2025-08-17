@@ -792,4 +792,4 @@ export default function EditarCotizacionForm({ cotizacionId, cotizacion: cotizac
       </div>
     </div>
   );
-}
+} 
