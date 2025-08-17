@@ -1,4 +1,4 @@
-// hooks/Travels/useTravels.js - VERSIÓN FINAL CORREGIDA
+// hooks/Travels/useTravels.js - VERSIÓN CORREGIDA CON ENDPOINT CORRECTO
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 
@@ -108,18 +108,82 @@ export const useTravels = () => {
     fetchTravels();
   }, []);
 
-  // 🆕 FUNCIONES DE API (NO SON HOOKS, VAN AL FINAL)
+  // 🔧 FUNCIÓN CORREGIDA PARA USAR EL MISMO ENDPOINT QUE RIVERA TRANSPORT
   const fetchTravels = async () => {
     try {
       setLoading(true);
       setError(null);
-      console.log("📊 Cargando viajes desde /api/viajes...");
+      console.log("📊 useTravels: Cargando desde MISMO endpoint que Rivera Transport...");
       
-      const response = await axios.get('http://localhost:4000/api/viajes');
-      console.log("✅ Viajes cargados:", response.data);
-      setApiTravels(response.data);
+      // 🎯 USAR EL MISMO ENDPOINT QUE RIVERA TRANSPORT MAP
+      const response = await axios.get('http://localhost:4000/api/viajes/map-data', {
+        headers: {
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache'
+        }
+      });
+      
+      console.log("🔍 useTravels: RESPUESTA de map-data:", response.data);
+      
+      if (response.data.success && response.data.data) {
+        const mapData = response.data.data;
+        console.log("📅 useTravels: Procesando map-data:", mapData);
+        
+        // 🆕 EXTRAER VIAJES DE LAS RUTAS DEL MAP-DATA
+        const viajesExtraidos = [];
+        
+        if (mapData.routes && Array.isArray(mapData.routes)) {
+          mapData.routes.forEach(route => {
+            const viaje = {
+              _id: route.id,
+              id: route.id,
+              type: `${route.route?.from || 'Origen'} → ${route.route?.to || 'Destino'}`,
+              tripDescription: route.description || route.tripInfo?.cargo || 'Sin descripción',
+              departureTime: route.tripInfo?.departure,
+              arrivalTime: route.tripInfo?.arrival,
+              estado: {
+                actual: route.status === 'in_progress' ? 'en_curso' :
+                       route.status === 'completed' ? 'completado' :
+                       route.status === 'delayed' ? 'retrasado' :
+                       route.status === 'cancelled' ? 'cancelado' :
+                       route.status === 'scheduled' ? 'pendiente' : 'pendiente',
+                progreso: route.tripInfo?.progress || 0
+              },
+              conductorId: {
+                nombre: route.tripInfo?.driver || 'Conductor por asignar'
+              },
+              truckId: {
+                patente: route.tripInfo?.truck || 'Camión por asignar'
+              },
+              quoteId: {
+                ruta: {
+                  origen: { nombre: route.route?.from || 'Origen' },
+                  destino: { nombre: route.route?.to || 'Destino' }
+                }
+              },
+              distancia: route.distance,
+              alertas: route.alerts && route.alerts.length > 0 ? {
+                count: route.alerts.length,
+                prioridad: route.alerts.some(a => a.priority === 'alta') ? 3 :
+                          route.alerts.some(a => a.priority === 'media') ? 2 : 1
+              } : null
+            };
+            
+            console.log(`  🚛 useTravels: Procesando ${viaje.type} - Estado: ${viaje.estado?.actual}`);
+            viajesExtraidos.push(viaje);
+          });
+        }
+        
+        console.log(`✅ useTravels: Total viajes extraídos de map-data: ${viajesExtraidos.length}`);
+        setApiTravels(viajesExtraidos);
+        
+      } else {
+        console.log("❌ useTravels: No se encontraron datos válidos en map-data");
+        setApiTravels([]);
+      }
     } catch (error) {
-      console.error('❌ Error al cargar los viajes:', error);
+      console.error('❌ useTravels: Error al cargar desde map-data:', error);
       setError('Error al cargar los viajes');
       setApiTravels([]);
     } finally {
@@ -184,52 +248,42 @@ export const useTravels = () => {
     }
   };
 
-  // 🔄 DATOS COMBINADOS: API + FALLBACK
-  const scheduledTrips = apiTravels.length > 0 ? 
-    // Usar datos de la API si están disponibles
-    apiTravels.map(travel => ({
-      id: travel._id,
-      type: `${travel.quoteId?.ruta?.origen?.nombre || 'Origen'} → ${travel.quoteId?.ruta?.destino?.nombre || 'Destino'}`,
+  // 🔄 DATOS PROCESADOS: Los viajes ya vienen procesados del endpoint /por-dias
+  const scheduledTrips = apiTravels.map(travel => {
+    console.log("🔄 Procesando viaje para vista:", travel);
+    
+    return {
+      id: travel._id || travel.id,
+      type: travel.type || `${travel.quoteId?.ruta?.origen?.nombre || 'Origen'} → ${travel.quoteId?.ruta?.destino?.nombre || 'Destino'}`,
       color: travel.estado?.actual === 'completado' ? 'bg-green-500' : 
              travel.estado?.actual === 'en_curso' ? 'bg-blue-500' :
              travel.estado?.actual === 'retrasado' ? 'bg-orange-500' :
-             travel.estado?.actual === 'cancelado' ? 'bg-red-500' : 'bg-gray-500',
+             travel.estado?.actual === 'cancelado' ? 'bg-red-500' : 
+             travel.estado?.actual === 'pendiente' ? 'bg-gray-500' : 'bg-gray-400',
       status: travel.estado?.actual === 'completado' ? 'bg-green-400' : 
               travel.estado?.actual === 'en_curso' ? 'bg-blue-400' :
               travel.estado?.actual === 'retrasado' ? 'bg-orange-400' :
-              travel.estado?.actual === 'cancelado' ? 'bg-red-400' : 'bg-gray-400',
-      time: new Date(travel.departureTime).toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" }),
-      description: travel.tripDescription || 'Sin descripción',
-      icon: '🚛',
+              travel.estado?.actual === 'cancelado' ? 'bg-red-400' : 
+              travel.estado?.actual === 'pendiente' ? 'bg-gray-400' : 'bg-gray-300',
+      textColor: travel.estado?.actual === 'completado' ? 'text-green-600' : 
+                 travel.estado?.actual === 'en_curso' ? 'text-blue-600' :
+                 travel.estado?.actual === 'retrasado' ? 'text-orange-600' :
+                 travel.estado?.actual === 'cancelado' ? 'text-red-600' : 
+                 travel.estado?.actual === 'pendiente' ? 'text-gray-600' : 'text-gray-500',
+      time: travel.time || (travel.departureTime ? new Date(travel.departureTime).toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" }) : 'Sin hora'),
+      endTime: travel.endTime || (travel.arrivalTime ? new Date(travel.arrivalTime).toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" }) : null),
+      description: travel.description || travel.tripDescription || 'Sin descripción',
+      driver: travel.driver || travel.conductorId?.nombre || 'Conductor por asignar',
+      truck: travel.truck || travel.truckId?.patente || 'Camión por asignar',
+      distancia: travel.distancia,
+      icon: travel.icon || '🚛',
+      estado: travel.estado,
+      alertas: travel.alertas,
       ...travel
-    })) :
-    // Usar datos estáticos como fallback
-    [
-      { 
-        type: 'Grocery', 
-        color: 'bg-blue-500', 
-        status: 'bg-green-400',
-        time: '5:12 pm',
-        description: 'Belanja di pasar',
-        icon: '🛒'
-      },
-      { 
-        type: 'Transportation', 
-        color: 'bg-purple-500', 
-        status: 'bg-red-400',
-        time: '5:12 pm',
-        description: 'Naik bus umum',
-        icon: '🚌'
-      },
-      { 
-        type: 'Housing', 
-        color: 'bg-orange-500', 
-        status: 'bg-yellow-400',
-        time: '5:12 pm',
-        description: 'Bayar Listrik',
-        icon: '🏠'
-      }
-    ];
+    };
+  });
+
+  console.log("📋 SCHEDULED TRIPS FINAL:", scheduledTrips);
 
   // Datos de earnings (mantener originales)
   const earningsData = [
@@ -240,21 +294,16 @@ export const useTravels = () => {
     { category: 'Almacenaje', amount: '520,000', progress: animatedProgress[4], color: 'bg-gradient-to-r from-pink-500 to-pink-600' }
   ];
 
-  // Estadísticas de API
+  // Estadísticas de API (de todos los viajes, no solo de hoy)
   const getStats = () => {
-    const statusCounts = apiTravels.reduce((acc, travel) => {
-      const status = travel.estado?.actual || 'unknown';
-      acc[status] = (acc[status] || 0) + 1;
-      return acc;
-    }, {});
-
+    // Para las estadísticas, necesitamos todos los viajes, no solo los de hoy
     return {
       total: apiTravels.length,
-      pendiente: statusCounts.pendiente || 0,
-      en_curso: statusCounts.en_curso || 0,
-      completado: statusCounts.completado || 0,
-      retrasado: statusCounts.retrasado || 0,
-      cancelado: statusCounts.cancelado || 0
+      pendiente: apiTravels.filter(t => t.estado?.actual === 'pendiente').length,
+      en_curso: apiTravels.filter(t => t.estado?.actual === 'en_curso').length,
+      completado: apiTravels.filter(t => t.estado?.actual === 'completado').length,
+      retrasado: apiTravels.filter(t => t.estado?.actual === 'retrasado').length,
+      cancelado: apiTravels.filter(t => t.estado?.actual === 'cancelado').length
     };
   };
 
@@ -607,4 +656,3 @@ export const useTravels = () => {
     deleteTravel
   };
 };
-

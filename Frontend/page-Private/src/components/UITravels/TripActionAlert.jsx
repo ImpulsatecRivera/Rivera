@@ -1,35 +1,7 @@
-// components/SuccessModal.jsx
 import React from 'react';
 
-const SuccessModal = ({ isOpen, onClose, type = 'delete', message }) => {
+const TripActionAlert = ({ isOpen, onClose, onEdit, onDelete, trip }) => {
   if (!isOpen) return null;
-
-  const getContent = () => {
-    switch (type) {
-      case 'edit':
-        return {
-          title: 'Viaje actualizado con éxito',
-          text: message || 'Viaje actualizado correctamente'
-        };
-      case 'delete':
-        return {
-          title: 'Viaje eliminado con éxito',
-          text: message || 'Viaje eliminado correctamente'
-        };
-      case 'create':
-        return {
-          title: 'Viaje creado con éxito',
-          text: message || 'Viaje creado correctamente'
-        };
-      default:
-        return {
-          title: 'Operación completada con éxito',
-          text: message || 'Operación completada correctamente'
-        };
-    }
-  };
-
-  const content = getContent();
 
   return (
     <>
@@ -88,16 +60,21 @@ const SuccessModal = ({ isOpen, onClose, type = 'delete', message }) => {
             animation: isOpen ? 'slideInUp 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)' : 'none'
           }}
         >
+          <button
+            onClick={onClose}
+            className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-xl font-bold transition-colors duration-200 hover:scale-110 transform"
+          >
+            ×
+          </button>
+          
           <div className="text-center">
             <div 
-              className="w-16 h-16 bg-green-400 rounded-full mx-auto mb-4 flex items-center justify-center transition-all duration-300"
+              className="w-16 h-16 bg-gray-200 rounded-full mx-auto mb-4 flex items-center justify-center transition-all duration-300 hover:bg-gray-300"
               style={{
                 animation: isOpen ? 'bounceIn 0.6s ease-out 0.2s both' : 'none'
               }}
             >
-              <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-              </svg>
+              <span className="text-2xl text-gray-600">?</span>
             </div>
             <h3 
               className="text-lg font-semibold text-gray-900 mb-2 transition-all duration-300"
@@ -105,7 +82,7 @@ const SuccessModal = ({ isOpen, onClose, type = 'delete', message }) => {
                 animation: isOpen ? 'fadeInUp 0.5s ease-out 0.3s both' : 'none'
               }}
             >
-              {content.title}
+              ¿Deseas eliminar o actualizar este viaje?
             </h3>
             <p 
               className="text-gray-600 mb-6 transition-all duration-300"
@@ -113,19 +90,25 @@ const SuccessModal = ({ isOpen, onClose, type = 'delete', message }) => {
                 animation: isOpen ? 'fadeInUp 0.5s ease-out 0.4s both' : 'none'
               }}
             >
-              {content.text}
+              Elija la opción
             </p>
             <div 
-              className="flex justify-center"
+              className="flex space-x-3"
               style={{
                 animation: isOpen ? 'fadeInUp 0.5s ease-out 0.5s both' : 'none'
               }}
             >
               <button
-                onClick={onClose}
-                className="px-8 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-all duration-200 transform hover:scale-105 hover:shadow-lg active:scale-95"
+                onClick={() => onDelete(trip)}
+                className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-all duration-200 transform hover:scale-105 hover:shadow-lg active:scale-95"
               >
-                Continuar
+                Eliminar
+              </button>
+              <button
+                onClick={() => onEdit(trip)}
+                className="flex-1 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-all duration-200 transform hover:scale-105 hover:shadow-lg active:scale-95"
+              >
+                Actualizar
               </button>
             </div>
           </div>
@@ -135,4 +118,4 @@ const SuccessModal = ({ isOpen, onClose, type = 'delete', message }) => {
   );
 };
 
-export default SuccessModal;
+export default TripActionAlert;
