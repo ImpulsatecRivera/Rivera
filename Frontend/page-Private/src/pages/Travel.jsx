@@ -1,4 +1,4 @@
-// TravelDashboard.jsx - Componente principal refactorizado
+// TravelDashboard.jsx - Dashboard principal con estadísticas integradas
 import React from 'react';
 import { Plus } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -9,7 +9,7 @@ import { useAnimations } from '../components/UITravels/Animation';
 
 // Components
 import AnimatedBarChart from '../components/UITravels/AnimatedBarChart';
-import TripListItem from '../components/UITravels/TripListItem';
+import DashboardTripsSection from '../components/UITravels/DashboardTripsSection';
 import EarningsCard from '../components/UITravels/EarningsCard';
 import RoutesCard from '../components/UITravels/RoutesCard';
 import ActionModal from '../components/UITravels/ActionModal';
@@ -47,10 +47,13 @@ const TravelDashboard = () => {
     editForm,
     programForm,
     
-    // Datos
+    // Datos (ahora solo de la API)
     scheduledTrips,
     earningsData,
     barHeights,
+    loading,
+    error,
+    stats,
     
     // Funciones
     handleTripMenuClick,
@@ -70,10 +73,31 @@ const TravelDashboard = () => {
     handleCloseProgramModal,
     handleProgramInputChange,
     handleProgramTrip,
-    handleCloseProgramSuccessModal
+    handleCloseProgramSuccessModal,
+    refreshTravels
   } = useTravels();
 
   const handleAddTruck = () => navigate('/viajes/maps');
+
+  // 🆕 DATOS PARA EL GRÁFICO BASADOS EN LA API REAL
+  const chartData = React.useMemo(() => {
+    if (!scheduledTrips || scheduledTrips.length === 0) {
+      return Array(14).fill(0);
+    }
+
+    // Generar datos del gráfico basados en los viajes reales
+    const dataPoints = [];
+    const baseHeight = 40;
+    
+    for (let i = 0; i < 14; i++) {
+      // Calcular altura basada en los datos reales
+      const viajesParaEsteIndice = scheduledTrips.filter((_, index) => index % 14 === i);
+      const altura = baseHeight + (viajesParaEsteIndice.length * 20);
+      dataPoints.push(Math.min(altura, 140)); // Máximo 140px
+    }
+    
+    return dataPoints;
+  }, [scheduledTrips]);
 
   return (
     <div className="flex h-screen bg-[#34353A] overflow-hidden">
@@ -86,41 +110,37 @@ const TravelDashboard = () => {
               <div className="p-8 h-full flex flex-col">
                 <div className="mb-8">
                   <h2 className="text-2xl font-bold text-gray-900 mb-2">Viajes</h2>
-                  <p className="text-gray-500 text-sm">Porcentaje de viajes</p>
+                  <p className="text-gray-500 text-sm">
+                    {loading ? 'Cargando datos...' : 
+                     error ? 'Error en los datos' : 
+                     `${stats.total} viajes totales - ${stats.en_curso} en curso`}
+                  </p>
                 </div>
                 
-                {/* Animated Bar Chart */}
+                {/* Animated Bar Chart con datos reales */}
                 <AnimatedBarChart 
                   animatedBars={animatedBars} 
-                  barHeights={barHeights} 
+                  barHeights={chartData} // Usar datos reales
                 />
                 
-                {/* Scheduled Trips */}
+                {/* Sección de viajes con estadísticas integradas */}
                 <div className="flex-1 overflow-auto">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-6">Viajes programados de este día</h3>
-                  
-                  <div className="space-y-3 mb-6">
-                    {scheduledTrips.map((trip, index) => (
-                      <TripListItem
-                        key={index}
-                        trip={trip}
-                        index={index}
-                        onMenuClick={handleTripMenuClick}
-                      />
-                    ))}
-                  </div>
+                  <DashboardTripsSection />
                 </div>
                 
                 {/* Botón Programar Viaje */}
                 <div className="mt-4 px-8">
                   <button 
                     onClick={handleOpenProgramModal}
-                    className="w-full p-4 text-gray-900 hover:bg-gray-50 rounded-xl transition-colors flex items-center justify-start"
+                    disabled={loading}
+                    className="w-full p-4 text-gray-900 hover:bg-gray-50 rounded-xl transition-colors flex items-center justify-start disabled:opacity-50"
                   >
                     <div className="w-6 h-6 bg-black rounded-full flex items-center justify-center mr-3">
                       <Plus size={14} className="text-white" />
                     </div>
-                    <span className="font-medium">Programar un viaje</span>
+                    <span className="font-medium">
+                      {loading ? 'Cargando...' : 'Programar un viaje'}
+                    </span>
                   </button>
                 </div>
               </div>
@@ -131,20 +151,44 @@ const TravelDashboard = () => {
               {/* Earnings Card */}
               <EarningsCard earningsData={earningsData} />
               
-              {/* Routes Card */}
+              {/* Routes Card con datos reales */}
               <RoutesCard onAddTruck={handleAddTruck} />
+              
+              {/* 🆕 Información de estado de la conexión */}
+              <div className="mt-auto p-4 bg-gray-50 rounded-xl">
+                <div className="text-xs text-gray-500">
+                  {loading && (
+                    <div className="flex items-center">
+                      <div className="w-2 h-2 bg-yellow-500 rounded-full mr-2"></div>
+                      Conectando a la base de datos...
+                    </div>
+                  )}
+                  {error && (
+                    <div className="flex items-center">
+                      <div className="w-2 h-2 bg-red-500 rounded-full mr-2"></div>
+                      Error de conexión
+                    </div>
+                  )}
+                  {!loading && !error && (
+                    <div className="flex items-center">
+                      <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
+                      Conectado - {stats.total} viajes
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
         </div>
 
         {/* Modales */}
         <ActionModal
-          show={showModal}
-          isClosing={isClosing}
-          onClose={handleCloseModal}
-          onEdit={handleEdit}
-          onDelete={handleDelete}
-        />
+         show={showModal}
+         isClosing={isClosing}
+         onClose={handleCloseModal}
+         onEdit={handleEdit}
+         onDelete={handleDelete}
+         />
 
         <EditTripModal
           show={showEditModal}
@@ -172,8 +216,8 @@ const TravelDashboard = () => {
           show={showSuccessModal}
           isClosing={isSuccessClosing}
           onClose={handleCloseSuccessModal}
-          title="Viaje agregado con éxito"
-          message="Viaje agregado correctamente"
+          title="Viaje actualizado con éxito"
+          message="Los cambios se han guardado correctamente"
         />
 
         <DeleteModal
@@ -187,8 +231,8 @@ const TravelDashboard = () => {
           show={showDeleteSuccessModal}
           isClosing={isDeleteSuccessClosing}
           onClose={handleCloseDeleteSuccessModal}
-          title="Viaje eliminado con éxito"
-          message="Viaje eliminado correctamente"
+          title="Viaje cancelado con éxito"
+          message="El viaje ha sido cancelado correctamente"
         />
 
         <ProgramTripModal
@@ -204,8 +248,8 @@ const TravelDashboard = () => {
           show={showProgramSuccessModal}
           isClosing={isProgramSuccessClosing}
           onClose={handleCloseProgramSuccessModal}
-          title="Viaje agregado con éxito"
-          message="Viaje agregado correctamente."
+          title="Viaje programado con éxito"
+          message="El nuevo viaje ha sido agregado correctamente."
         />
       </div>
     </div>
