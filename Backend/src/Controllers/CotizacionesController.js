@@ -500,10 +500,245 @@ cotizacionesController.createCotizacion = async (req, res) => {
     }
 };
 
+cotizacionesController.updateCotizacion = async(req, res) => {
+    try {
+        const { id } = req.params;
+        const { 
+            price, 
+            costos, 
+            status, 
+            motivoRechazo 
+        } = req.body;
+
+        console.log('✏️ Actualizando cotización:', { id, status, price });
+
+        // ✅ Validar que el ID sea proporcionado
+        if (!id) {
+            return res.status(400).json({ 
+                message: "ID de cotización es requerido" 
+            });
+        }
+
+        // ✅ Validar formato del ObjectId
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return res.status(400).json({ 
+                message: "Formato de ID inválido" 
+            });
+        }
+
+        // 🔍 Buscar la cotización existente
+        const cotizacionExistente = await CotizacionesModel.findById(id);
+        
+        if (!cotizacionExistente) {
+            return res.status(404).json({ 
+                message: "Cotización no encontrada" 
+            });
+        }
+
+        // 📝 Preparar objeto de actualización
+        const actualizacion = {};
+
+        // 💰 ACTUALIZAR PRECIO SI SE PROPORCIONA
+        if (price !== undefined) {
+            if (typeof price !== 'number' || price <= 0) {
+                return res.status(400).json({ 
+                    message: "El precio debe ser un número mayor a 0" 
+                });
+            }
+            actualizacion.price = price;
+        }
+
+        // 💰 ACTUALIZAR COSTOS SI SE PROPORCIONAN
+        if (costos && typeof costos === 'object') {
+            const costosActualizados = { ...cotizacionExistente.costos };
+
+            // Validar y actualizar cada campo de costos
+            if (costos.combustible !== undefined) {
+                if (typeof costos.combustible !== 'number' || costos.combustible < 0) {
+                    return res.status(400).json({ 
+                        message: "El costo de combustible debe ser un número mayor o igual a 0" 
+                    });
+                }
+                costosActualizados.combustible = costos.combustible;
+            }
+
+
+
+            if (costos.conductor !== undefined) {
+                if (typeof costos.conductor !== 'number' || costos.conductor < 0) {
+                    return res.status(400).json({ 
+                        message: "El costo del conductor debe ser un número mayor o igual a 0" 
+                    });
+                }
+                costosActualizados.conductor = costos.conductor;
+            }
+
+            if (costos.otros !== undefined) {
+                if (typeof costos.otros !== 'number' || costos.otros < 0) {
+                    return res.status(400).json({ 
+                        message: "Otros costos deben ser un número mayor o igual a 0" 
+                    });
+                }
+                costosActualizados.otros = costos.otros;
+            }
+
+            if (costos.impuestos !== undefined) {
+                if (typeof costos.impuestos !== 'number' || costos.impuestos < 0) {
+                    return res.status(400).json({ 
+                        message: "Los impuestos deben ser un número mayor o igual a 0" 
+                    });
+                }
+                costosActualizados.impuestos = costos.impuestos;
+            }
+
+            // 📊 RECALCULAR SUBTOTAL Y TOTAL
+            costosActualizados.subtotal = (costosActualizados.combustible || 0) +
+                                         (costosActualizados.conductor || 0) +
+                                         (costosActualizados.otros || 0);
+            
+            costosActualizados.total = costosActualizados.subtotal + (costosActualizados.impuestos || 0);
+
+            actualizacion.costos = costosActualizados;
+        }
+
+        // 📅 MANEJAR CAMBIOS DE STATUS Y FECHAS AUTOMÁTICAS
+        if (status !== undefined) {
+            const statusValidos = ['pendiente', 'enviada', 'aceptada', 'rechazada', 'ejecutada', 'cancelada'];
+            
+            if (!statusValidos.includes(status)) {
+                return res.status(400).json({ 
+                    message: `Status inválido. Valores permitidos: ${statusValidos.join(', ')}` 
+                });
+            }
+
+            actualizacion.status = status;
+
+            // 📅 ACTUALIZAR FECHAS AUTOMÁTICAMENTE SEGÚN EL STATUS
+            const ahora = new Date();
+
+            switch (status) {
+                case 'enviada':
+                    actualizacion.fechaEnvio = ahora;
+                    // Limpiar fechas posteriores si se regresa a enviada
+                    actualizacion.fechaAceptacion = null;
+                    actualizacion.fechaRechazo = null;
+                    actualizacion.motivoRechazo = null;
+                    break;
+
+                case 'aceptada':
+                    actualizacion.fechaAceptacion = ahora;
+                    // Si no tenía fecha de envío, establecerla
+                    if (!cotizacionExistente.fechaEnvio) {
+                        actualizacion.fechaEnvio = ahora;
+                    }
+                    // Limpiar campos de rechazo
+                    actualizacion.fechaRechazo = null;
+                    actualizacion.motivoRechazo = null;
+                    break;
+
+                case 'rechazada':
+                    actualizacion.fechaRechazo = ahora;
+                    // Si no tenía fecha de envío, establecerla
+                    if (!cotizacionExistente.fechaEnvio) {
+                        actualizacion.fechaEnvio = ahora;
+                    }
+                    // Limpiar campos de aceptación
+                    actualizacion.fechaAceptacion = null;
+                    
+                    // Validar motivo de rechazo
+                    if (!motivoRechazo || motivoRechazo.trim() === '') {
+                        return res.status(400).json({ 
+                            message: "El motivo de rechazo es requerido cuando el status es 'rechazada'" 
+                        });
+                    }
+                    actualizacion.motivoRechazo = motivoRechazo.trim();
+                    break;
+
+                case 'ejecutada':
+                    // Para ejecutar, debe haber sido aceptada primero
+                    if (cotizacionExistente.status !== 'aceptada') {
+                        return res.status(400).json({ 
+                            message: "Solo se pueden ejecutar cotizaciones que han sido aceptadas" 
+                        });
+                    }
+                    // No modificar fechas anteriores, solo establecer el status
+                    break;
+
+                case 'cancelada':
+                    // No modificar fechas, solo el status
+                    break;
+
+                case 'pendiente':
+                    // Si se regresa a pendiente, limpiar todas las fechas
+                    actualizacion.fechaEnvio = null;
+                    actualizacion.fechaAceptacion = null;
+                    actualizacion.fechaRechazo = null;
+                    actualizacion.motivoRechazo = null;
+                    break;
+            }
+        }
+
+        // 🔍 Verificar que hay algo que actualizar
+        if (Object.keys(actualizacion).length === 0) {
+            return res.status(400).json({ 
+                message: "No se proporcionaron campos válidos para actualizar" 
+            });
+        }
+
+        // ✅ REALIZAR LA ACTUALIZACIÓN
+        const cotizacionActualizada = await CotizacionesModel.findByIdAndUpdate(
+            id,
+            actualizacion,
+            { 
+                new: true, // Devolver el documento actualizado
+                runValidators: true // Ejecutar validaciones del modelo
+            }
+        ).populate('clientId', 'name email phone');
+
+        // ✅ Log de auditoría
+        console.log(`Cotización actualizada - ID: ${id}, Status: ${status}, Usuario: ${req.user?.id || 'Sistema'}`);
+
+        // ✅ Respuesta exitosa
+        res.status(200).json({
+            message: "Cotización actualizada exitosamente",
+            data: cotizacionActualizada,
+            cambiosRealizados: {
+                camposActualizados: Object.keys(actualizacion),
+                statusAnterior: cotizacionExistente.status,
+                statusNuevo: status || cotizacionExistente.status,
+                precioAnterior: cotizacionExistente.price,
+                precioNuevo: price || cotizacionExistente.price
+            }
+        });
+
+    } catch (error) {
+        console.error('Error al actualizar cotización:', error);
+
+        // 🔍 Manejo específico de errores
+        if (error.name === 'CastError') {
+            return res.status(400).json({ 
+                message: "Formato de ID inválido" 
+            });
+        }
+
+        if (error.name === 'ValidationError') {
+            return res.status(400).json({ 
+                message: "Error de validación", 
+                errores: Object.values(error.errors).map(err => err.message) 
+            });
+        }
+
+        res.status(500).json({ 
+            message: "Error interno del servidor al actualizar la cotización", 
+            error: error.message 
+        });
+    }
+}
 cotizacionesController.deleteCotizacion = async(req, res) => {
     try {
         const { id } = req.params;
-        const { forceDelete = false } = req.body; // Opción para forzar eliminación
+        
+        console.log('🗑️ Eliminando cotización:', { id });
 
         // ✅ Validar que el ID sea proporcionado
         if (!id) {
@@ -528,44 +763,11 @@ cotizacionesController.deleteCotizacion = async(req, res) => {
             });
         }
 
-        // ✅ Validaciones de negocio antes de eliminar
-        
-        // No permitir eliminar cotizaciones aceptadas o ejecutadas (a menos que se fuerce)
-        if (!forceDelete && ['aceptada', 'ejecutada'].includes(cotizacionExistente.status)) {
-            return res.status(400).json({ 
-                message: `No se puede eliminar una cotización con status '${cotizacionExistente.status}'. Use forceDelete: true para forzar la eliminación.`,
-                cotizacion: {
-                    id: cotizacionExistente._id,
-                    quoteName: cotizacionExistente.quoteName,
-                    status: cotizacionExistente.status
-                }
-            });
-        }
-
-        // Verificar si existe un viaje asociado (usando el método del modelo)
-        if (cotizacionExistente.status === 'ejecutada') {
-            try {
-                const mongoose = await import('mongoose');
-                const ViajesModel = mongoose.model('Viajes');
-                const viajeAsociado = await ViajesModel.findOne({ quoteId: id });
-                
-                if (viajeAsociado && !forceDelete) {
-                    return res.status(400).json({ 
-                        message: "No se puede eliminar una cotización que tiene un viaje asociado. Use forceDelete: true para forzar la eliminación.",
-                        viajeAsociado: viajeAsociado._id
-                    });
-                }
-            } catch (viajeError) {
-                // Si el modelo Viajes no existe, continuar con la eliminación
-                console.warn('Modelo Viajes no encontrado, continuando con eliminación');
-            }
-        }
-
-        // 🗑️ Proceder con la eliminación
+        // 🗑️ Proceder con la eliminación directamente
         const cotizacionEliminada = await CotizacionesModel.findByIdAndDelete(id);
         
-        // ✅ Log de auditoría (en producción, esto debería ir a un sistema de logs)
-        console.log(`Cotización eliminada - ID: ${id}, Usuario: ${req.user?.id || 'Sistema'}, Forzada: ${forceDelete}`);
+        // ✅ Log de auditoría
+        console.log(`Cotización eliminada - ID: ${id}, Usuario: ${req.user?.id || 'Sistema'}`);
         
         res.status(200).json({ 
             message: "Cotización eliminada exitosamente",

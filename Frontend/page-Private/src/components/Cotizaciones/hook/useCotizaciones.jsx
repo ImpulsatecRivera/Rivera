@@ -237,7 +237,261 @@ const useCotizaciones = () => {
     }
   };
 
-  // Función para eliminar cotización
+  // ✅ NUEVA FUNCIÓN: Actualizar cotización
+  const actualizarCotizacionAPI = async (id, datosActualizacion) => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      console.log('🔄 Actualizando cotización:', { id, datosActualizacion });
+      
+      const response = await axios.put(`http://localhost:4000/api/cotizaciones/${id}`, datosActualizacion);
+      
+      // Actualizar la cotización en el estado local
+      setCotizaciones(prev => prev.map(cotizacion => {
+        if ((cotizacion.id || cotizacion._id) === id) {
+          const cotizacionActualizada = response.data.data;
+          
+          // Re-formatear la cotización actualizada
+          return {
+            ...cotizacion,
+            ...cotizacionActualizada,
+            id: cotizacionActualizada._id,
+            estado: mapearEstado(cotizacionActualizada.status),
+            monto: `$${cotizacionActualizada.price || 0}`,
+            subtotal: cotizacionActualizada.costos ? `$${cotizacionActualizada.costos.subtotal}` : '$0.00',
+            impuestos: cotizacionActualizada.costos ? `$${cotizacionActualizada.costos.impuestos}` : '$0.00',
+            total: cotizacionActualizada.costos ? `$${cotizacionActualizada.costos.total}` : '$0.00',
+            colorEstado: getColorEstado(mapearEstado(cotizacionActualizada.status)),
+            fechaEnvio: formatDate(cotizacionActualizada.fechaEnvio),
+            fechaAceptacion: formatDate(cotizacionActualizada.fechaAceptacion),
+            fechaRechazo: formatDate(cotizacionActualizada.fechaRechazo),
+            motivoRechazo: cotizacionActualizada.motivoRechazo
+          };
+        }
+        return cotizacion;
+      }));
+      
+      // Si hay una cotización seleccionada y es la que se actualizó, actualizarla también
+      if (cotizacionSeleccionada && (cotizacionSeleccionada.id || cotizacionSeleccionada._id) === id) {
+        setCotizacionSeleccionada(prev => ({
+          ...prev,
+          ...response.data.data,
+          id: response.data.data._id,
+          estado: mapearEstado(response.data.data.status),
+          monto: `$${response.data.data.price || 0}`,
+          colorEstado: getColorEstado(mapearEstado(response.data.data.status))
+        }));
+      }
+      
+      return { 
+        success: true, 
+        message: 'Cotización actualizada correctamente',
+        data: response.data.data,
+        cambios: response.data.cambiosRealizados
+      };
+      
+    } catch (error) {
+      console.error('Error al actualizar la cotización:', error);
+      
+      let errorMessage = 'Error al actualizar la cotización';
+      
+      if (error.response) {
+        const status = error.response.status;
+        const data = error.response.data;
+        
+        switch (status) {
+          case 400:
+            errorMessage = data?.message || 'Datos inválidos para actualizar';
+            if (data?.errores && Array.isArray(data.errores)) {
+              errorMessage += ': ' + data.errores.join(', ');
+            }
+            break;
+          case 404:
+            errorMessage = 'Cotización no encontrada';
+            break;
+          case 500:
+            errorMessage = 'Error interno del servidor al actualizar';
+            break;
+          default:
+            errorMessage = data?.message || `Error del servidor: ${status}`;
+        }
+      } else if (error.request) {
+        errorMessage = 'Error de conexión: No se pudo conectar con el servidor';
+      }
+      
+      setError(errorMessage);
+      return { success: false, message: errorMessage };
+      
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ✅ NUEVA FUNCIÓN: Actualizar estado de cotización con confirmación
+  const actualizarEstadoCotizacion = (cotizacion, nuevoEstado, motivoRechazo = '') => {
+    const estadosTexto = {
+      'pendiente': 'Pendiente',
+      'enviada': 'Enviada',
+      'aceptada': 'Aceptada',
+      'rechazada': 'Rechazada',
+      'ejecutada': 'Ejecutada',
+      'cancelada': 'Cancelada'
+    };
+
+    let confirmText = `¿Deseas cambiar el estado de la cotización "${cotizacion.quoteName}" a "${estadosTexto[nuevoEstado]}"?`;
+    
+    if (nuevoEstado === 'rechazada' && !motivoRechazo) {
+      showSweetAlert({
+        title: 'Motivo de rechazo requerido',
+        text: 'Debes proporcionar un motivo para rechazar la cotización.',
+        type: 'error',
+        onConfirm: closeSweetAlert
+      });
+      return;
+    }
+
+    if (nuevoEstado === 'rechazada') {
+      confirmText += `\n\nMotivo: ${motivoRechazo}`;
+    }
+
+    showSweetAlert({
+      title: '¿Confirmar cambio de estado?',
+      text: confirmText,
+      type: 'warning',
+      onConfirm: async () => {
+        closeSweetAlert();
+        
+        showSweetAlert({
+          title: 'Actualizando...',
+          text: 'Por favor espera mientras se actualiza el estado.',
+          type: 'info',
+          onConfirm: null
+        });
+        
+        const datosActualizacion = { status: nuevoEstado };
+        if (motivoRechazo) {
+          datosActualizacion.motivoRechazo = motivoRechazo;
+        }
+        
+        const resultado = await actualizarCotizacionAPI(cotizacion.id || cotizacion._id, datosActualizacion);
+        
+        closeSweetAlert();
+        
+        setTimeout(() => {
+          if (resultado.success) {
+            showSweetAlert({
+              title: '¡Actualizado!',
+              text: `El estado ha sido cambiado a "${estadosTexto[nuevoEstado]}" correctamente.`,
+              type: 'success',
+              onConfirm: closeSweetAlert
+            });
+          } else {
+            showSweetAlert({
+              title: 'Error al actualizar',
+              text: resultado.message,
+              type: 'error',
+              onConfirm: closeSweetAlert
+            });
+          }
+        }, 300);
+      }
+    });
+  };
+
+  // ✅ NUEVA FUNCIÓN: Actualizar precio con confirmación
+  const actualizarPrecioCotizacion = (cotizacion, nuevoPrecio) => {
+    if (!nuevoPrecio || nuevoPrecio <= 0) {
+      showSweetAlert({
+        title: 'Precio inválido',
+        text: 'El precio debe ser un número mayor a 0.',
+        type: 'error',
+        onConfirm: closeSweetAlert
+      });
+      return;
+    }
+
+    showSweetAlert({
+      title: '¿Confirmar cambio de precio?',
+      text: `¿Deseas cambiar el precio de la cotización "${cotizacion.quoteName}" de $${cotizacion.price} a $${nuevoPrecio}?`,
+      type: 'warning',
+      onConfirm: async () => {
+        closeSweetAlert();
+        
+        showSweetAlert({
+          title: 'Actualizando...',
+          text: 'Por favor espera mientras se actualiza el precio.',
+          type: 'info',
+          onConfirm: null
+        });
+        
+        const resultado = await actualizarCotizacionAPI(cotizacion.id || cotizacion._id, { price: Number(nuevoPrecio) });
+        
+        closeSweetAlert();
+        
+        setTimeout(() => {
+          if (resultado.success) {
+            showSweetAlert({
+              title: '¡Actualizado!',
+              text: `El precio ha sido actualizado a $${nuevoPrecio} correctamente.`,
+              type: 'success',
+              onConfirm: closeSweetAlert
+            });
+          } else {
+            showSweetAlert({
+              title: 'Error al actualizar',
+              text: resultado.message,
+              type: 'error',
+              onConfirm: closeSweetAlert
+            });
+          }
+        }, 300);
+      }
+    });
+  };
+
+  // ✅ NUEVA FUNCIÓN: Actualizar costos con confirmación
+  const actualizarCostosCotizacion = (cotizacion, nuevosCostos) => {
+    showSweetAlert({
+      title: '¿Confirmar cambio de costos?',
+      text: `¿Deseas actualizar los costos de la cotización "${cotizacion.quoteName}"?`,
+      type: 'warning',
+      onConfirm: async () => {
+        closeSweetAlert();
+        
+        showSweetAlert({
+          title: 'Actualizando...',
+          text: 'Por favor espera mientras se actualizan los costos.',
+          type: 'info',
+          onConfirm: null
+        });
+        
+        const resultado = await actualizarCotizacionAPI(cotizacion.id || cotizacion._id, { costos: nuevosCostos });
+        
+        closeSweetAlert();
+        
+        setTimeout(() => {
+          if (resultado.success) {
+            showSweetAlert({
+              title: '¡Actualizado!',
+              text: 'Los costos han sido actualizados correctamente.',
+              type: 'success',
+              onConfirm: closeSweetAlert
+            });
+          } else {
+            showSweetAlert({
+              title: 'Error al actualizar',
+              text: resultado.message,
+              type: 'error',
+              onConfirm: closeSweetAlert
+            });
+          }
+        }, 300);
+      }
+    });
+  };
+
+  // Función para eliminar con API
   const eliminarCotizacionAPI = async (id) => {
     try {
       setLoading(true);
@@ -259,9 +513,11 @@ const useCotizaciones = () => {
         const status = error.response.status;
         
         switch (status) {
+          case 400:
+            errorMessage = error.response.data?.message || 'Datos inválidos para eliminar';
+            break;
           case 404:
-            errorMessage = 'El endpoint de eliminación no existe en el servidor';
-            useFallback = true;
+            errorMessage = 'Cotización no encontrada';
             break;
           case 405:
             errorMessage = 'Método DELETE no permitido en el servidor';
@@ -296,7 +552,7 @@ const useCotizaciones = () => {
     }
   };
 
-  // Función para eliminar con confirmación
+  // Función de confirmación para eliminar
   const eliminarCotizacionConAPI = (cotizacion) => {
     showSweetAlert({
       title: '¿Estás seguro?',
@@ -346,11 +602,13 @@ const useCotizaciones = () => {
   const mapearEstado = (status) => {
     const mapeoEstados = {
       'pendiente': 'Pendiente',
-      'aprobada': 'Aprobada',
+      'enviada': 'Enviada',
+      'aceptada': 'Aprobada',
       'rechazada': 'Rechazada',
-      'ejecutada': 'Aprobada',
+      'ejecutada': 'Ejecutada',
       'en_proceso': 'En Proceso',
-      'completada': 'Completada'
+      'completada': 'Completada',
+      'cancelada': 'Cancelada'
     };
     return mapeoEstados[status] || 'Pendiente';
   };
@@ -373,8 +631,11 @@ const useCotizaciones = () => {
       'Aprobada': 'bg-emerald-100 text-emerald-800 border-emerald-200',
       'Pendiente': 'bg-amber-100 text-amber-800 border-amber-200',
       'Rechazada': 'bg-red-100 text-red-800 border-red-200',
+      'Enviada': 'bg-blue-100 text-blue-800 border-blue-200',
+      'Ejecutada': 'bg-purple-100 text-purple-800 border-purple-200',
       'En Proceso': 'bg-blue-100 text-blue-800 border-blue-200',
-      'Completada': 'bg-purple-100 text-purple-800 border-purple-200'
+      'Completada': 'bg-purple-100 text-purple-800 border-purple-200',
+      'Cancelada': 'bg-gray-100 text-gray-800 border-gray-200'
     };
     return colores[estado] || 'bg-gray-100 text-gray-800 border-gray-200';
   };
@@ -483,6 +744,9 @@ const useCotizaciones = () => {
       aprobadas: cotizaciones.filter(c => c.estado === 'Aprobada').length,
       pendientes: cotizaciones.filter(c => c.estado === 'Pendiente').length,
       rechazadas: cotizaciones.filter(c => c.estado === 'Rechazada').length,
+      enviadas: cotizaciones.filter(c => c.estado === 'Enviada').length,
+      ejecutadas: cotizaciones.filter(c => c.estado === 'Ejecutada').length,
+      canceladas: cotizaciones.filter(c => c.estado === 'Cancelada').length,
       enProceso: cotizaciones.filter(c => c.estado === 'En Proceso').length,
       completadas: cotizaciones.filter(c => c.estado === 'Completada').length,
       hasResults: filteredCotizaciones.length > 0
@@ -494,6 +758,9 @@ const useCotizaciones = () => {
     'Aprobada': '✓',
     'Pendiente': '⏳',
     'Rechazada': '✗',
+    'Enviada': '📤',
+    'Ejecutada': '🚛',
+    'Cancelada': '❌',
     'En Proceso': '🚛',
     'Completada': '🏁'
   };
@@ -520,6 +787,12 @@ const useCotizaciones = () => {
     eliminarCotizacionConAPI,
     eliminarCotizacionAPI,
     refreshCotizaciones,
+    
+    // ✅ NUEVAS FUNCIONES DE ACTUALIZACIÓN
+    actualizarCotizacionAPI,
+    actualizarEstadoCotizacion,
+    actualizarPrecioCotizacion,
+    actualizarCostosCotizacion,
     
     // Setters
     setFiltroEstado,

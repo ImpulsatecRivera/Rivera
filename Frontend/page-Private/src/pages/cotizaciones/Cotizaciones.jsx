@@ -1,4 +1,4 @@
-// CotizacionesComponent.jsx - Componente principal refactorizado con API
+// CotizacionesComponent.jsx - Componente principal refactorizado con edición
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 
@@ -11,6 +11,7 @@ import FiltersBar from '../../components/UICotizaciones/FiltersBar';
 import CotizacionCard from '../../components/UICotizaciones/CotizacionCard';
 import EmptyState from '../../components/UICotizaciones/EmptyState';
 import DetalleView from '../../components/UICotizaciones/DetalleView';
+import EditarCotizacionForm from './EditarCotizacion'; // ← Agregar import
 
 export default function CotizacionesComponent() {
   const navigate = useNavigate();
@@ -30,7 +31,7 @@ export default function CotizacionesComponent() {
     estadoIcons,
     stats,
     
-    // Acciones CRUD - CAMBIO: usar eliminarCotizacionConAPI en lugar de eliminarCotizacion
+    // Acciones CRUD
     eliminarCotizacionConAPI,
     refreshCotizaciones,
     
@@ -41,10 +42,30 @@ export default function CotizacionesComponent() {
     
     // Setters
     setFiltroEstado,
-    setBusqueda
+    setBusqueda,
+    setVistaActual,
+    setCotizacionSeleccionada
   } = useCotizaciones();
 
+  // ✅ Función para crear nueva cotización
   const handleAddTruck = () => navigate('/cotizaciones/CotizacionForm');
+
+  // ✅ Función para editar cotización existente
+  const handleEditarCotizacion = (cotizacion) => {
+    console.log('📝 Editando cotización:', cotizacion);
+    setCotizacionSeleccionada(cotizacion);
+    setVistaActual('editar');
+  };
+
+  // ✅ Vista de edición
+  if (vistaActual === 'editar' && cotizacionSeleccionada) {
+    return (
+      <EditarCotizacionForm 
+        cotizacion={cotizacionSeleccionada}
+        onVolver={volverALista} 
+      />
+    );
+  }
 
   // Vista de detalle
   if (vistaActual === 'detalle' && cotizacionSeleccionada) {
@@ -94,8 +115,7 @@ export default function CotizacionesComponent() {
                       index={index}
                       estadoIcons={estadoIcons}
                       onVerDetalle={verDetalleCotizacion}
-                      onEditar={handleAddTruck}
-                      // CAMBIO PRINCIPAL: usar eliminarCotizacionConAPI
+                      onEditar={() => handleEditarCotizacion(cotizacion)}
                       onEliminar={eliminarCotizacionConAPI}
                     />
                   ))}

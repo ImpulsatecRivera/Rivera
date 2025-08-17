@@ -11,4 +11,7 @@ router.route("/").post(cotizacionesController.createCotizacion);
 router.get('/:id', cotizacionesController.getCotizacionById);
 
 router.delete('/:id', cotizacionesController.deleteCotizacion);
+
+router.put("/:id",cotizacionesController.updateCotizacion);
+
 export default router;
