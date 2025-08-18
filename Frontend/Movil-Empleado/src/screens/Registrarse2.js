@@ -11,6 +11,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
+import { useAuth } from '../Context/authContext'; // ✅ IMPORTAR DESDE EL CONTEXTO
 
 const Registrarse2Screen = ({ navigation }) => {
   const [nombreUsuario, setNombreUsuario] = useState('');
@@ -18,6 +19,8 @@ const Registrarse2Screen = ({ navigation }) => {
   const [fechaNacimiento, setFechaNacimiento] = useState('');
   const [direccion, setDireccion] = useState('');
   const [loading, setLoading] = useState(false);
+
+  const { register, isAuthenticated, hasCompletedOnboarding } = useAuth(); // ✅ USAR EL CONTEXTO
 
   const validateForm = () => {
     if (!nombreUsuario.trim()) {
@@ -49,10 +52,7 @@ const Registrarse2Screen = ({ navigation }) => {
   };
 
   const formatDUI = (text) => {
-    // Remover todo lo que no sea número
     const cleaned = text.replace(/\D/g, '');
-    
-    // Aplicar formato: 12345678-9
     if (cleaned.length >= 8) {
       return cleaned.substring(0, 8) + '-' + cleaned.substring(8, 9);
     }
@@ -60,10 +60,7 @@ const Registrarse2Screen = ({ navigation }) => {
   };
 
   const formatDate = (text) => {
-    // Remover todo lo que no sea número
     const cleaned = text.replace(/\D/g, '');
-    
-    // Aplicar formato: DD/MM/YYYY
     if (cleaned.length >= 4) {
       return cleaned.substring(0, 2) + '/' + cleaned.substring(2, 4) + '/' + cleaned.substring(4, 8);
     } else if (cleaned.length >= 2) {
@@ -73,36 +70,51 @@ const Registrarse2Screen = ({ navigation }) => {
   };
 
   const handleCreateAccount = async () => {
-    if (!validateForm()) return;
+    console.log('🚀 INICIANDO REGISTRO...');
+    console.log('📊 Estado actual:', { isAuthenticated, hasCompletedOnboarding });
+
+    if (!validateForm()) {
+      console.log('❌ Validación fallida');
+      return;
+    }
 
     setLoading(true);
     try {
-      console.log('Creando cuenta...', { 
+      const userData = { 
         nombreUsuario, 
         dui, 
         fechaNacimiento, 
         direccion 
-      });
+      };
       
-      // Simular llamada a API
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      console.log('📝 Datos a registrar:', userData);
+      console.log('📞 Llamando a register...');
       
-      Alert.alert(
-        'Éxito', 
-        '¡Cuenta creada exitosamente!', 
-        [
-          { 
-            text: 'Continuar', 
-            onPress: () => navigation.reset({
-              index: 0,
-              routes: [{ name: 'Main' }],
-            })
-          }
-        ]
-      );
+      const result = await register(userData);
+      console.log('📋 Resultado del registro:', result);
+      
+      if (result.success) {
+        console.log('✅ Registro exitoso!');
+        
+        Alert.alert(
+          'Éxito', 
+          '¡Cuenta creada exitosamente!', 
+          [
+            { 
+              text: 'Continuar', 
+              onPress: () => {
+                console.log('🎯 Usuario presionó Continuar - navegación automática debe activarse');
+              }
+            }
+          ]
+        );
+      } else {
+        console.error('❌ Error en el registro:', result.error);
+        Alert.alert('Error', 'No se pudo crear la cuenta. Intenta de nuevo.');
+      }
       
     } catch (error) {
-      console.error('Error creando cuenta:', error);
+      console.error('💥 Exception durante el registro:', error);
       Alert.alert('Error', 'No se pudo crear la cuenta. Intenta de nuevo.');
     } finally {
       setLoading(false);
@@ -110,7 +122,7 @@ const Registrarse2Screen = ({ navigation }) => {
   };
 
   const handleGoBack = () => {
-    console.log('Atrás pressed');
+    console.log('⬅️ Botón Atrás presionado');
     navigation.goBack();
   };
 
@@ -135,6 +147,13 @@ const Registrarse2Screen = ({ navigation }) => {
           <Text style={styles.subtitle}>
             Solo necesitamos algunos datos más para completar tu perfil
           </Text>
+          
+          {/* DEBUG: Mostrar estado actual */}
+          <View style={{ backgroundColor: '#f0f0f0', padding: 10, marginBottom: 10, borderRadius: 5 }}>
+            <Text style={{ fontSize: 12, color: '#333' }}>
+              DEBUG: Auth={String(isAuthenticated)}, Onboarding={String(hasCompletedOnboarding)}
+            </Text>
+          </View>
           
           {/* Campo Nombre del usuario */}
           <View style={styles.inputContainer}>
@@ -219,9 +238,7 @@ const Registrarse2Screen = ({ navigation }) => {
             </TouchableOpacity>
             
             <View style={styles.dotsContainer}>
-              {/* Indicador página anterior */}
               <View style={styles.dotInactive} />
-              {/* Indicador página actual */}
               <View style={styles.dotActive} />
             </View>
           </View>

@@ -1,13 +1,26 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { useAuth } from '../Context/authContext';
 
-const OnboardingScreen = () => {
+const OnboardingScreen1 = ({ navigation }) => {
+  const { completeOnboarding } = useAuth();
+
+  // Función para ir a la siguiente pantalla
+  const handleNext = () => {
+    navigation.navigate('Onboarding2');
+  };
+
+  // Función para saltar el onboarding
+  const handleSkip = async () => {
+    await completeOnboarding();
+  };
+
   return (
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.pageIndicator}>1/3</Text>
-        <TouchableOpacity style={styles.skipButton}>
+        <TouchableOpacity style={styles.skipButton} onPress={handleSkip}>
           <Text style={styles.skipButtonText}>Saltar</Text>
         </TouchableOpacity>
       </View>
@@ -69,7 +82,7 @@ const OnboardingScreen = () => {
           <View style={styles.dot} />
         </View>
         
-        <TouchableOpacity style={styles.nextButton}>
+        <TouchableOpacity style={styles.nextButton} onPress={handleNext}>
           <Text style={styles.nextButtonText}>Siguiente</Text>
         </TouchableOpacity>
       </View>
@@ -281,4 +294,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default OnboardingScreen;
+export default OnboardingScreen1;
