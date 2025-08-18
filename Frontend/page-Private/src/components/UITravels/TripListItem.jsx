@@ -34,8 +34,8 @@ const RealtimeProgressBar = ({ viajeId, initialProgress, status, enablePolling }
   );
 };
 
-// ✅ SOLO EL COMPONENTE INDIVIDUAL
-const TripListItem = ({ trip, index, onMenuClick }) => {
+// ✅ COMPONENTE INDIVIDUAL CORREGIDO
+const TripListItem = ({ trip, index, onEdit, onDelete }) => {
   return (
     <div className="flex items-center p-4 hover:bg-gray-50 rounded-xl transition-all duration-200 group border border-gray-100 mb-3">
       {/* Icono del estado */}
@@ -160,12 +160,12 @@ const TripListItem = ({ trip, index, onMenuClick }) => {
               <div className={`w-3 h-3 rounded-full ${trip.status}`}></div>
             </div>
 
-            {/* Menú contextual */}
+            {/* ✅ MENÚ CONTEXTUAL CORREGIDO */}
             <ContextMenu
               trip={trip}
               index={index}
-              onEdit={onMenuClick}
-              onDelete={onMenuClick}
+              onEdit={onEdit}      // ✅ Función directa para editar
+              onDelete={onDelete}  // ✅ Función directa para eliminar
             />
           </div>
         </div>
