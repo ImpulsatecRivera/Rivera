@@ -205,8 +205,9 @@ const DashboardTripsSection = () => {
     stats,
     
     // ✅ FUNCIONES DIRECTAS CORREGIDAS
-    onEdit,        // ✅ Nueva función directa para editar
-    onDelete,      // ✅ Nueva función directa para eliminar
+    onEdit,                    // ✅ Nueva función directa para editar
+    onDelete,                  // ✅ Nueva función directa para eliminar
+    handleDirectUpdate,        // ✅ Nueva función directa para actualización
     
     // Estados para los modales (mantener para compatibilidad)
     showModal,
@@ -512,14 +513,15 @@ const DashboardTripsSection = () => {
         onDelete={handleDelete}
       />
 
-      {/* Modal de edición */}
+      {/* ✅ MODAL DE EDICIÓN CORREGIDO */}
       <EditTripModal
         show={showEditModal}
         isClosing={isEditClosing}
         onClose={handleCloseEditModal}
-        onUpdate={handleUpdateTrip}
+        onConfirm={handleDirectUpdate} // ✅ USAR FUNCIÓN CORRECTA
         editForm={editForm}
         onInputChange={handleInputChange}
+        refreshTravels={refreshTravels}
       />
 
       {/* Modal de confirmación de edición */}
