@@ -174,6 +174,18 @@ const useTruckEdit = (fetchOptions, onUpdateSuccess) => {
     reader.readAsDataURL(file);
   }, []);
 
+  // Función auxiliar para sanitizar valores vacíos
+  const sanitizeValue = (value) => {
+    // Si el valor es una string vacía o solo espacios, devolver null
+    // Si es undefined, devolver null
+    // De lo contrario, devolver el valor tal como está
+    if (typeof value === 'string') {
+      const trimmed = value.trim();
+      return trimmed === '' ? null : trimmed;
+    }
+    return value || null;
+  };
+
   // Función para enviar formulario de edición
   const submitEdit = useCallback(async () => {
     if (!selectedTruck?.id) {
@@ -194,16 +206,30 @@ const useTruckEdit = (fetchOptions, onUpdateSuccess) => {
         
         const formDataToSend = new FormData();
         
-        // Agregar campos de texto
-        formDataToSend.append('name', formData.nombre);
-        formDataToSend.append('ciculatioCard', formData.tarjetaCirculacion);
-        formDataToSend.append('licensePlate', formData.placa);
-        if (formData.proveedor) formDataToSend.append('supplierId', formData.proveedor);
-        formDataToSend.append('description', formData.descripcion);
-        if (formData.motorista) formDataToSend.append('driverId', formData.motorista);
-        formDataToSend.append('brand', formData.marca);
-        formDataToSend.append('model', formData.modelo);
-        formDataToSend.append('age', formData.año);
+        // Agregar campos de texto con sanitización
+        formDataToSend.append('name', sanitizeValue(formData.nombre) || '');
+        formDataToSend.append('ciculatioCard', sanitizeValue(formData.tarjetaCirculacion) || '');
+        formDataToSend.append('licensePlate', sanitizeValue(formData.placa) || '');
+        
+        // Para campos opcionales, solo agregar si tienen valor
+        const supplierId = sanitizeValue(formData.proveedor);
+        if (supplierId) {
+          formDataToSend.append('supplierId', supplierId);
+        }
+        
+        const description = sanitizeValue(formData.descripcion);
+        if (description) {
+          formDataToSend.append('description', description);
+        }
+        
+        const driverId = sanitizeValue(formData.motorista);
+        if (driverId) {
+          formDataToSend.append('driverId', driverId);
+        }
+        
+        formDataToSend.append('brand', sanitizeValue(formData.marca) || '');
+        formDataToSend.append('model', sanitizeValue(formData.modelo) || '');
+        formDataToSend.append('age', sanitizeValue(formData.año) || '');
         formDataToSend.append('img', formData.imagen);
 
         console.log('=== ENVIANDO FORMDATA ===');
@@ -220,16 +246,29 @@ const useTruckEdit = (fetchOptions, onUpdateSuccess) => {
         console.log('=== USANDO JSON SIN IMAGEN ===');
         
         const updateData = {
-          name: formData.nombre,
-          ciculatioCard: formData.tarjetaCirculacion,
-          licensePlate: formData.placa,
-          supplierId: formData.proveedor || null,
-          description: formData.descripcion,
-          driverId: formData.motorista || null,
-          brand: formData.marca,
-          model: formData.modelo,
-          age: formData.año
+          name: sanitizeValue(formData.nombre) || '',
+          ciculatioCard: sanitizeValue(formData.tarjetaCirculacion) || '',
+          licensePlate: sanitizeValue(formData.placa) || '',
+          brand: sanitizeValue(formData.marca) || '',
+          model: sanitizeValue(formData.modelo) || '',
+          age: sanitizeValue(formData.año) || ''
         };
+
+        // Solo agregar campos opcionales si tienen valor
+        const supplierId = sanitizeValue(formData.proveedor);
+        if (supplierId) {
+          updateData.supplierId = supplierId;
+        }
+
+        const description = sanitizeValue(formData.descripcion);
+        if (description) {
+          updateData.description = description;
+        }
+
+        const driverId = sanitizeValue(formData.motorista);
+        if (driverId) {
+          updateData.driverId = driverId;
+        }
 
         console.log('=== DATOS JSON A ENVIAR ===', updateData);
 
@@ -244,14 +283,21 @@ const useTruckEdit = (fetchOptions, onUpdateSuccess) => {
       console.log('Status:', response.status);
 
       if (response.ok) {
-        const updatedTruckData = await response.json();
-        console.log('=== DATOS ACTUALIZADOS ===', updatedTruckData);
+        const responseData = await response.json();
+        console.log('=== RESPUESTA COMPLETA DEL SERVIDOR ===', responseData);
         
-        // Crear objeto camión actualizado
+        // Extraer los datos actualizados del campo 'data' si existe
+        const updatedTruckData = responseData.data || responseData;
+        console.log('=== DATOS ACTUALIZADOS EXTRAÍDOS ===', updatedTruckData);
+        
+        // Crear objeto camión actualizado manteniendo la estructura original
         const updatedTruck = {
           ...selectedTruck,
           ...updatedTruckData,
-          id: selectedTruck.id,
+          // Asegurar que mantenemos el ID correcto
+          id: selectedTruck.id || updatedTruckData._id || updatedTruckData.id,
+          _id: selectedTruck._id || updatedTruckData._id,
+          // Mapear los campos actualizados
           name: updatedTruckData.name || formData.nombre,
           brand: updatedTruckData.brand || formData.marca,
           model: updatedTruckData.model || formData.modelo,
@@ -259,10 +305,12 @@ const useTruckEdit = (fetchOptions, onUpdateSuccess) => {
           licensePlate: updatedTruckData.licensePlate || formData.placa,
           ciculatioCard: updatedTruckData.ciculatioCard || formData.tarjetaCirculacion,
           description: updatedTruckData.description || formData.descripcion,
-          supplierId: updatedTruckData.supplierId || formData.proveedor,
-          driverId: updatedTruckData.driverId || formData.motorista,
+          supplierId: updatedTruckData.supplierId || (formData.proveedor || null),
+          driverId: updatedTruckData.driverId || (formData.motorista || null),
           img: updatedTruckData.img || imagePreview || currentImage
         };
+        
+        console.log('=== CAMIÓN ACTUALIZADO FINAL ===', updatedTruck);
         
         // Llamar callback de éxito si existe
         if (onUpdateSuccess && typeof onUpdateSuccess === 'function') {

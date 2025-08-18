@@ -124,45 +124,61 @@ export const useTruckDetail = (truckId) => {
         }
       }
 
-      const data = await response.json();
-      console.log('Datos del camión con estadísticas recibidos:', data);
+      const apiResponse = await response.json();
+      console.log('Datos del camión con estadísticas recibidos:', apiResponse);
 
-      if (data) {
+      if (apiResponse && apiResponse.data) {
         console.log('=== ESTRUCTURA COMPLETA DE LA API ===');
-        console.log('Data raw:', JSON.stringify(data, null, 2));
-        console.log('Propiedades disponibles:', Object.keys(data));
+        console.log('Data raw:', JSON.stringify(apiResponse, null, 2));
+        console.log('Propiedades disponibles:', Object.keys(apiResponse));
+        
+        // FIXED: Usar apiResponse.data en lugar de data directamente
+        const data = apiResponse.data;
+        console.log('=== DATOS DEL CAMIÓN EXTRAÍDOS ===');
+        console.log('Truck data:', data);
         
         // Función para buscar un valor en múltiples campos posibles
         const findValue = (obj, possibleKeys, defaultValue = 'No especificado') => {
           for (let key of possibleKeys) {
-            if (obj[key] !== undefined && obj[key] !== null && obj[key] !== '') {
+            if (obj && obj[key] !== undefined && obj[key] !== null && obj[key] !== '') {
+              console.log(`Campo encontrado: ${key} = ${obj[key]}`);
               return obj[key];
             }
           }
+          console.log(`Valor por defecto usado para campos [${possibleKeys.join(', ')}]: ${defaultValue}`);
           return defaultValue;
         };
 
         // Obtener todos los motoristas
         const driversList = await fetchAllDrivers();
         
-        // Mapear los datos del API al formato esperado por el componente
+        console.log('=== INICIANDO MAPEO DE DATOS ===');
+        
+        // FIXED: Mapear los datos correctamente desde data (no apiResponse)
         const truckData = {
           // Datos básicos
           name: findValue(data, ['name', 'nombre', 'truck_name'], 'Sin nombre'),
           plate: findValue(data, ['licensePlate', 'placa', 'license_plate', 'plate']),
+          // FIXED: Manejar todas las variaciones de circulationCard que aparecen en tu JSON
           card: findValue(data, ['ciculatioCard', 'circulationCard', 'tarjeta_circulacion', 'circulation_card']), 
-          year: findValue(data, ['age', 'year', 'año', 'model_year']),
-          brand: findValue(data, ['brand', 'marca', 'manufacturer']),
-          model: findValue(data, ['model', 'modelo']),
+          year: findValue(data, ['age', 'año', 'year', 'model_year']),
+          // FIXED: Priorizar campos legacy que tienen más datos en tu JSON
+          brand: findValue(data, ['marca', 'brand', 'manufacturer']),
+          model: findValue(data, ['modelo', 'model']),
           
-          // STATUS
+          // STATUS - Manejar todas las variaciones de estado
           status: (() => {
-            const rawStatus = findValue(data, ['state', 'status', 'estado', 'condition'], null);
+            console.log('=== MAPEANDO STATUS ===');
+            // Priorizar 'state' sobre 'estado' ya que es el más consistente en tu JSON
+            const rawStatus = findValue(data, ['state', 'estado', 'status', 'condition'], null);
+            console.log('Raw status encontrado:', rawStatus);
             
             if (!rawStatus || rawStatus.trim() === '' || rawStatus === 'undefined' || rawStatus === 'null') {
+              console.log('Status final: Sin estado');
               return 'Sin estado';
             }
             
+            console.log('Status final:', rawStatus);
             return rawStatus;
           })(),
           
@@ -170,52 +186,102 @@ export const useTruckDetail = (truckId) => {
           
           // Motorista
           driver: (() => {
+            console.log('=== MAPEANDO MOTORISTA ===');
+            console.log('Driver ID:', data.driverId);
+            console.log('Tipo de Driver ID:', typeof data.driverId);
+            
             if (data.driverId && typeof data.driverId === 'string') {
+              console.log('Buscando motorista por ID string...');
               const foundDriverName = getDriverNameById(data.driverId, driversList);
-              return foundDriverName || getRandomDriver(driversList);
+              const finalDriver = foundDriverName || getRandomDriver(driversList);
+              console.log('Motorista final (ID string):', finalDriver);
+              return finalDriver;
             } else if (data.driverId && typeof data.driverId === 'object') {
+              console.log('Procesando motorista como objeto...');
               const firstName = data.driverId.name || data.driverId.firstName || data.driverId.nombre || '';
               const lastName = data.driverId.lastName || data.driverId.apellido || data.driverId.surname || '';
               const fullName = `${firstName} ${lastName}`.trim();
-              return fullName || getRandomDriver(driversList);
+              const finalDriver = fullName || getRandomDriver(driversList);
+              console.log('Motorista final (objeto):', finalDriver);
+              return finalDriver;
             } else {
-              return getRandomDriver(driversList);
+              console.log('Sin motorista, asignando aleatorio...');
+              const randomDriver = getRandomDriver(driversList);
+              console.log('Motorista aleatorio:', randomDriver);
+              return randomDriver;
             }
           })(),
           
           // Proveedor
           supplier: (() => {
+            console.log('=== MAPEANDO PROVEEDOR ===');
+            console.log('Supplier ID:', data.supplierId);
+            console.log('Tipo de Supplier ID:', typeof data.supplierId);
+            
             if (data.supplierId && typeof data.supplierId === 'object') {
-              return data.supplierId.companyName || data.supplierId.name || 'Sin proveedor';
+              const supplierName = data.supplierId.companyName || data.supplierId.name || 'Sin proveedor';
+              console.log('Proveedor (objeto):', supplierName);
+              return supplierName;
             }
-            return findValue(data, ['supplier', 'proveedor', 'provider'], 'Sin proveedor');
+            const fallbackSupplier = findValue(data, ['supplier', 'proveedor', 'provider'], 'Sin proveedor');
+            console.log('Proveedor (fallback):', fallbackSupplier);
+            return fallbackSupplier;
           })(),
           
           // Imágenes
           images: (() => {
+            console.log('=== MAPEANDO IMÁGENES ===');
             const imageValue = findValue(data, ['img', 'image', 'images', 'foto'], null);
+            console.log('Valor de imagen encontrado:', imageValue);
+            
             if (imageValue) {
-              return Array.isArray(imageValue) ? imageValue : [imageValue];
+              const finalImages = Array.isArray(imageValue) ? imageValue : [imageValue];
+              console.log('Imágenes finales:', finalImages);
+              return finalImages;
             }
-            return ["https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=800&h=600&fit=crop"];
+            
+            const defaultImages = ["https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=800&h=600&fit=crop"];
+            console.log('Usando imágenes por defecto:', defaultImages);
+            return defaultImages;
           })(),
           
-          // NUEVO: Usar las estadísticas que vienen del backend
-          stats: data.stats || {
-            kilometraje: { value: '97,528', percentage: 25 },
-            viajesRealizados: { value: '150', percentage: 60 },
-            visitasAlTaller: { value: '4', percentage: 15 },
-            combustible: { value: "100%", percentage: 100 },
-            vecesNoDisponible: { value: '35', percentage: 30 },
-          },
+          // ESTADÍSTICAS: Usar las estadísticas que vienen del backend
+          stats: (() => {
+            console.log('=== MAPEANDO ESTADÍSTICAS ===');
+            console.log('Stats del API:', data.stats);
+            
+            if (data.stats) {
+              console.log('Usando estadísticas del API');
+              return data.stats;
+            }
+            
+            console.log('Usando estadísticas por defecto');
+            return {
+              kilometraje: { value: '97,528', percentage: 25 },
+              viajesRealizados: { value: '150', percentage: 60 },
+              visitasAlTaller: { value: '4', percentage: 15 },
+              combustible: { value: "100%", percentage: 100 },
+              vecesNoDisponible: { value: '35', percentage: 30 },
+            };
+          })(),
           
           // ID original para referencias
           _id: data._id || data.id,
         };
 
-        console.log('=== DATOS MAPEADOS CON ESTADÍSTICAS ===');
-        console.log('Datos procesados:', truckData);
-        console.log('Estadísticas:', truckData.stats);
+        console.log('=== DATOS FINALES MAPEADOS ===');
+        console.log('Truck Data Completo:', JSON.stringify(truckData, null, 2));
+        console.log('Nombre:', truckData.name);
+        console.log('Placa:', truckData.plate);
+        console.log('Tarjeta:', truckData.card);
+        console.log('Año:', truckData.year);
+        console.log('Marca:', truckData.brand);
+        console.log('Modelo:', truckData.model);
+        console.log('Estado:', truckData.status);
+        console.log('Motorista:', truckData.driver);
+        console.log('Proveedor:', truckData.supplier);
+        console.log('Estadísticas disponibles:', Object.keys(truckData.stats));
+
         
         // Log detallado del combustible si está disponible
         if (truckData.stats.combustible?.details) {
@@ -228,9 +294,14 @@ export const useTruckDetail = (truckId) => {
           console.log('Distancia total:', truckData.stats.combustible.details.totalDistance);
         }
         
+        console.log('=== ESTABLECIENDO DATOS EN STATE ===');
         setTruck(truckData);
+        console.log('Datos establecidos exitosamente en el state');
+        
       } else {
-        throw new Error('No se encontraron datos del camión');
+        console.error('=== ERROR: ESTRUCTURA DE API INESPERADA ===');
+        console.error('Response completo:', apiResponse);
+        throw new Error('No se encontraron datos del camión en la respuesta del API');
       }
 
     } catch (error) {
