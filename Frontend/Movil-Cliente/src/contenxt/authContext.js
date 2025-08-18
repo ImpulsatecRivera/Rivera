@@ -1,11 +1,12 @@
 // src/context/AuthContext.js
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Alert } from 'react-native';
 
 // Crear el contexto
 const AuthContext = createContext();
 
-// ⏰ CONFIGURACIÓN DE EXPIRACIÓN
+// ⏰ CONFIGURACIÓN DE EXPIRACIÓN PARA CLIENTES
 const SESSION_TIMEOUT = 20 * 60 * 1000; // 20 minutos en milisegundos
 
 // Provider del contexto
@@ -31,14 +32,14 @@ export const AuthProvider = ({ children }) => {
   // 🔍 VERIFICAR SI HAY UNA SESIÓN GUARDADA
   const checkAuthStatus = async () => {
     try {
-      console.log('🔍 Verificando sesión guardada...');
+      console.log('🔍 Verificando sesión de cliente guardada...');
       
-      const token = await AsyncStorage.getItem('userToken');
-      const loginTime = await AsyncStorage.getItem('loginTime');
+      const token = await AsyncStorage.getItem('clientToken');
+      const loginTime = await AsyncStorage.getItem('clientLoginTime');
       const onboardingCompleted = await AsyncStorage.getItem('onboardingCompleted');
-      const userData = await AsyncStorage.getItem('userData');
-      const savedUserType = await AsyncStorage.getItem('userType');
-      const motoristaId = await AsyncStorage.getItem('motoristaId'); // ✅ Verificar ID
+      const userData = await AsyncStorage.getItem('clientData');
+      const savedUserType = await AsyncStorage.getItem('clientUserType');
+      const clientId = await AsyncStorage.getItem('clientId');
 
       if (token && loginTime) {
         const currentTime = Date.now();
@@ -50,7 +51,15 @@ export const AuthProvider = ({ children }) => {
         if (timeSinceLogin < SESSION_TIMEOUT) {
           const remainingTime = SESSION_TIMEOUT - timeSinceLogin;
           console.log(`✅ Sesión válida. Expira en: ${Math.round(remainingTime / 1000 / 60)} minutos`);
-          console.log(`📋 Motorista ID guardado: ${motoristaId}`);
+          console.log(`📋 Cliente ID guardado: ${clientId}`);
+          
+          // VALIDAR QUE SEA CLIENTE
+          if (savedUserType !== 'Cliente') {
+            console.log('🚫 Usuario no es cliente - cerrando sesión');
+            await clearAuthData();
+            setIsLoading(false);
+            return;
+          }
           
           // Restaurar estado
           setIsAuthenticated(true);
@@ -64,9 +73,16 @@ export const AuthProvider = ({ children }) => {
           // ❌ TOKEN EXPIRADO
           console.log('❌ Sesión expirada - limpiando datos');
           await clearAuthData();
+          
+          // Notificar al usuario que la sesión expiró
+          Alert.alert(
+            '⏰ Sesión Expirada',
+            'Tu sesión ha expirado por seguridad. Por favor inicia sesión nuevamente.',
+            [{ text: 'OK' }]
+          );
         }
       } else {
-        console.log('📭 No hay sesión guardada');
+        console.log('📭 No hay sesión de cliente guardada');
       }
       
       setIsLoading(false);
@@ -85,12 +101,12 @@ export const AuthProvider = ({ children }) => {
     }
 
     const timer = setTimeout(async () => {
-      console.log('⏰ Sesión expirada automáticamente - cerrando sesión');
+      console.log('⏰ Sesión de cliente expirada automáticamente');
       await autoLogout();
     }, timeoutDuration);
 
     setSessionTimer(timer);
-    console.log(`⏰ Timer de sesión iniciado: ${Math.round(timeoutDuration / 1000 / 60)} minutos`);
+    console.log(`⏰ Timer de cliente iniciado: ${Math.round(timeoutDuration / 1000 / 60)} minutos`);
   };
 
   // 🚪 AUTO-LOGOUT POR EXPIRACIÓN
@@ -99,11 +115,11 @@ export const AuthProvider = ({ children }) => {
       console.log('🔒 Cerrando sesión automáticamente por expiración');
       await clearAuthData();
       
-      // Aquí podrías mostrar una alerta al usuario
-      // Alert.alert(
-      //   'Sesión Expirada', 
-      //   'Tu sesión ha expirado por seguridad. Por favor inicia sesión nuevamente.'
-      // );
+      Alert.alert(
+        '⏰ Sesión Expirada', 
+        'Tu sesión ha expirado por seguridad. Por favor inicia sesión nuevamente.',
+        [{ text: 'OK' }]
+      );
     } catch (error) {
       console.error('❌ Error en auto-logout:', error);
     }
@@ -113,13 +129,13 @@ export const AuthProvider = ({ children }) => {
   const clearAuthData = async () => {
     try {
       await AsyncStorage.multiRemove([
-        'userToken',
-        'loginTime', 
+        'clientToken',
+        'clientLoginTime', 
         'onboardingCompleted',
-        'userData',
-        'userType',
-        'motoristaId', // ✅ Limpiar también el ID
-        'authToken'    // ✅ Limpiar token adicional
+        'clientData',
+        'clientUserType',
+        'clientId',
+        'authToken' // Para compatibilidad
       ]);
       
       setIsAuthenticated(false);
@@ -131,46 +147,57 @@ export const AuthProvider = ({ children }) => {
         clearTimeout(sessionTimer);
         setSessionTimer(null);
       }
+      
+      console.log('🧹 Datos de cliente limpiados');
     } catch (error) {
       console.error('❌ Error limpiando datos:', error);
     }
   };
 
-  // 🔐 LOGIN CON PERSISTENCIA
+  // 🔐 LOGIN CON PERSISTENCIA (SOLO CLIENTES)
   const login = async (loginData) => {
     try {
-      console.log('🔐 Procesando login exitoso:', loginData);
+      console.log('🔐 Procesando login de cliente:', loginData);
+      
+      // VALIDAR QUE SEA CLIENTE
+      if (loginData.userType !== 'Cliente') {
+        console.log('🚫 Usuario no es cliente:', loginData.userType);
+        return { 
+          success: false, 
+          error: `Acceso denegado. Esta aplicación es solo para clientes. Tu tipo: ${loginData.userType}` 
+        };
+      }
       
       const currentTime = Date.now();
       const userId = loginData.user._id || loginData.user.id;
       
       if (!userId) {
-        console.error('❌ No se encontró ID del usuario en loginData');
-        throw new Error('ID de usuario no disponible');
+        console.error('❌ No se encontró ID del cliente');
+        throw new Error('ID de cliente no disponible');
       }
       
       // 💾 GUARDAR EN ASYNCSTORAGE
       await AsyncStorage.multiSet([
-        ['userToken', loginData.token || 'temp-token'],
-        ['authToken', loginData.token || ''], // ✅ Para compatibilidad
-        ['loginTime', currentTime.toString()],
-        ['userData', JSON.stringify(loginData.user)],
-        ['userType', loginData.userType],
-        ['motoristaId', userId.toString()], // ✅ CRÍTICO: Guardar ID para useProfile
-        ['onboardingCompleted', 'true'] // Los motoristas que hacen login ya pasaron onboarding
+        ['clientToken', loginData.token || 'temp-client-token'],
+        ['authToken', loginData.token || ''], // Para compatibilidad
+        ['clientLoginTime', currentTime.toString()],
+        ['clientData', JSON.stringify(loginData.user)],
+        ['clientUserType', loginData.userType],
+        ['clientId', userId.toString()],
+        ['onboardingCompleted', 'true'] // Los clientes que hacen login ya pasaron onboarding
       ]);
       
       // 📱 ACTUALIZAR ESTADO
       setUser(loginData.user);
       setUserType(loginData.userType);
       setIsAuthenticated(true);
-      setHasCompletedOnboarding(true); // Motoristas existentes no necesitan onboarding
+      setHasCompletedOnboarding(true);
       
       // ⏰ INICIAR TIMER DE EXPIRACIÓN
       startSessionTimer();
       
-      console.log('✅ Login completado y guardado');
-      console.log('📋 Motorista ID guardado:', userId);
+      console.log('✅ Login de cliente completado y guardado');
+      console.log('📋 Cliente ID guardado:', userId);
       console.log('📊 Sesión expirará en 20 minutos');
       
       return { success: true };
@@ -180,41 +207,49 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // 📝 REGISTRO (USUARIOS NUEVOS)
+  // 📝 REGISTRO (USUARIOS NUEVOS - SOLO CLIENTES)
   const register = async (userData) => {
     try {
-      console.log('✅ Registro exitoso - activando pantallas de carga');
+      console.log('📝 Registrando nuevo cliente');
+      
+      // VALIDAR QUE SEA CLIENTE
+      if (userData.userType && userData.userType !== 'Cliente') {
+        return { 
+          success: false, 
+          error: `Solo se pueden registrar clientes en esta aplicación` 
+        };
+      }
       
       const currentTime = Date.now();
       const userId = userData._id || userData.id;
       
       if (!userId) {
-        console.error('❌ No se encontró ID del usuario en userData');
-        throw new Error('ID de usuario no disponible');
+        console.error('❌ No se encontró ID del cliente en registro');
+        throw new Error('ID de cliente no disponible');
       }
       
       // 💾 GUARDAR EN ASYNCSTORAGE
       await AsyncStorage.multiSet([
-        ['userToken', 'temp-register-token'],
-        ['authToken', ''], // ✅ Para compatibilidad
-        ['loginTime', currentTime.toString()],
-        ['userData', JSON.stringify(userData)],
-        ['userType', 'Motorista'],
-        ['motoristaId', userId.toString()], // ✅ CRÍTICO: Guardar ID para useProfile
+        ['clientToken', 'temp-register-token'],
+        ['authToken', ''], // Para compatibilidad
+        ['clientLoginTime', currentTime.toString()],
+        ['clientData', JSON.stringify(userData)],
+        ['clientUserType', 'Cliente'],
+        ['clientId', userId.toString()],
         ['onboardingCompleted', 'false'] // Usuarios nuevos SÍ necesitan onboarding
       ]);
       
       // 📱 ACTUALIZAR ESTADO
       setUser(userData);
-      setUserType('Motorista');
+      setUserType('Cliente');
       setIsAuthenticated(true);
-      setHasCompletedOnboarding(false); // ❌ Mostrar onboarding para nuevos usuarios
+      setHasCompletedOnboarding(false); // Mostrar onboarding para nuevos usuarios
       
       // ⏰ INICIAR TIMER DE EXPIRACIÓN
       startSessionTimer();
       
-      console.log('📊 Registro completado - mostrando onboarding');
-      console.log('📋 Motorista ID guardado:', userId);
+      console.log('📊 Registro de cliente completado');
+      console.log('📋 Cliente ID guardado:', userId);
       
       return { success: true };
     } catch (error) {
@@ -228,7 +263,7 @@ export const AuthProvider = ({ children }) => {
     try {
       await AsyncStorage.setItem('onboardingCompleted', 'true');
       setHasCompletedOnboarding(true);
-      console.log('🎉 Onboarding completado');
+      console.log('🎉 Onboarding de cliente completado');
       return { success: true };
     } catch (error) {
       console.error('❌ Complete onboarding error:', error);
@@ -239,7 +274,7 @@ export const AuthProvider = ({ children }) => {
   // 🚪 LOGOUT MANUAL
   const logout = async () => {
     try {
-      console.log('👋 Logout manual - limpiando sesión');
+      console.log('👋 Logout manual de cliente');
       await clearAuthData();
       return { success: true };
     } catch (error) {
@@ -248,15 +283,35 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // 🔄 RENOVAR SESIÓN (opcional - para extender tiempo)
+  // 🔄 RENOVAR SESIÓN (para extender tiempo)
   const refreshSession = async () => {
     try {
       const currentTime = Date.now();
-      await AsyncStorage.setItem('loginTime', currentTime.toString());
+      await AsyncStorage.setItem('clientLoginTime', currentTime.toString());
       startSessionTimer(); // Reiniciar timer
-      console.log('🔄 Sesión renovada por 20 minutos más');
+      console.log('🔄 Sesión de cliente renovada por 20 minutos más');
+      return { success: true };
     } catch (error) {
       console.error('❌ Error renovando sesión:', error);
+      return { success: false };
+    }
+  };
+
+  // ⏰ OBTENER TIEMPO RESTANTE DE SESIÓN
+  const getRemainingTime = async () => {
+    try {
+      const loginTime = await AsyncStorage.getItem('clientLoginTime');
+      if (loginTime) {
+        const currentTime = Date.now();
+        const timeSinceLogin = currentTime - parseInt(loginTime);
+        const remainingTime = Math.max(0, SESSION_TIMEOUT - timeSinceLogin);
+        const remainingMinutes = Math.round(remainingTime / 1000 / 60);
+        return remainingMinutes;
+      }
+      return 0;
+    } catch (error) {
+      console.error('❌ Error obteniendo tiempo restante:', error);
+      return 0;
     }
   };
 
@@ -270,7 +325,8 @@ export const AuthProvider = ({ children }) => {
     register,
     completeOnboarding,
     logout,
-    refreshSession, // Por si quieres renovar la sesión
+    refreshSession,
+    getRemainingTime, // Para mostrar tiempo restante en UI
   };
 
   return (

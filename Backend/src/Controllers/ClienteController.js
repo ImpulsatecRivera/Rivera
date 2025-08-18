@@ -176,6 +176,180 @@ clienteCon.get = async (req, res) => {
 };
 
 /**
+ * Obtener un cliente específico por su ID
+ * GET /clientes/:id
+ * 
+ * Este método permite obtener toda la información de un cliente específico
+ * utilizando su ID único. Incluye validaciones de seguridad y manejo de errores.
+ */
+clienteCon.getClienteById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // Validar que el ID sea válido
+    if (!isValidObjectId(id)) {
+      return res.status(400).json({
+        success: false,
+        message: "ID de cliente inválido",
+        error: "El ID proporcionado no tiene un formato válido de MongoDB"
+      });
+    }
+
+    // Buscar el cliente por ID, excluyendo la contraseña por seguridad
+    const cliente = await clienteModel.findById(id).select('-password');
+    
+    // Verificar si el cliente existe
+    if (!cliente) {
+      return res.status(404).json({
+        success: false,
+        message: "Cliente no encontrado",
+        error: `No existe un cliente con el ID: ${id}`
+      });
+    }
+
+    // Calcular información adicional útil
+    const fechaRegistro = new Date(cliente.createdAt);
+    const fechaActualizacion = cliente.updatedAt ? new Date(cliente.updatedAt) : null;
+    const ahora = new Date();
+    
+    // Calcular días desde el registro
+    const diasDesdeRegistro = Math.floor((ahora - fechaRegistro) / (1000 * 60 * 60 * 24));
+    
+    // Calcular edad si tiene fecha de nacimiento
+    let edad = null;
+    if (cliente.birthDate) {
+      const fechaNacimiento = new Date(cliente.birthDate);
+      edad = ahora.getFullYear() - fechaNacimiento.getFullYear();
+      const mesActual = ahora.getMonth();
+      const mesNacimiento = fechaNacimiento.getMonth();
+      
+      if (mesActual < mesNacimiento || (mesActual === mesNacimiento && ahora.getDate() < fechaNacimiento.getDate())) {
+        edad--;
+      }
+    }
+
+    // Determinar estado de actividad del cliente
+    const hace30Dias = new Date(ahora.getTime() - (30 * 24 * 60 * 60 * 1000));
+    const hace7Dias = new Date(ahora.getTime() - (7 * 24 * 60 * 60 * 1000));
+    const hace24Horas = new Date(ahora.getTime() - (24 * 60 * 60 * 1000));
+    
+    let estadoActividad = "inactivo";
+    let ultimaActividad = cliente.ultimoAcceso || cliente.updatedAt || cliente.createdAt;
+    
+    if (ultimaActividad >= hace24Horas) {
+      estadoActividad = "online";
+    } else if (ultimaActividad >= hace7Dias) {
+      estadoActividad = "activo";
+    } else if (ultimaActividad >= hace30Dias) {
+      estadoActividad = "poco_activo";
+    }
+
+    // Estructurar respuesta completa con información enriquecida
+    const response = {
+      success: true,
+      message: "Información del cliente obtenida exitosamente",
+      data: {
+        // Información básica del cliente
+        cliente: {
+          id: cliente._id,
+          firstName: cliente.firstName,
+          lastName: cliente.lastName,
+          nombreCompleto: `${cliente.firstName} ${cliente.lastName}`,
+          email: cliente.email,
+          phone: cliente.phone || "No registrado",
+          address: cliente.address || "No registrada",
+          idNumber: cliente.idNumber,
+          birthDate: cliente.birthDate,
+          edad: edad ? `${edad} años` : "No disponible"
+        },
+
+        // Información de fechas y actividad
+        actividad: {
+          estadoActividad,
+          fechaRegistro: fechaRegistro.toLocaleDateString('es-ES', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+          }),
+          diasDesdeRegistro,
+          ultimaActualizacion: fechaActualizacion ? fechaActualizacion.toLocaleDateString('es-ES', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+          }) : "Sin actualizaciones",
+          ultimoAcceso: cliente.ultimoAcceso ? new Date(cliente.ultimoAcceso).toLocaleDateString('es-ES', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+          }) : "No registrado"
+        },
+
+        // Metadatos útiles
+        metadatos: {
+          idOriginal: cliente._id,
+          tipoUsuario: "Cliente",
+          perfilCompleto: !!(cliente.firstName && cliente.lastName && cliente.email && cliente.phone && cliente.address),
+          camposCompletos: [
+            cliente.firstName ? "nombre" : null,
+            cliente.lastName ? "apellido" : null,
+            cliente.email ? "email" : null,
+            cliente.phone ? "teléfono" : null,
+            cliente.address ? "dirección" : null,
+            cliente.birthDate ? "fecha_nacimiento" : null,
+            cliente.idNumber ? "identificación" : null
+          ].filter(Boolean),
+          camposFaltantes: [
+            !cliente.firstName ? "nombre" : null,
+            !cliente.lastName ? "apellido" : null,
+            !cliente.email ? "email" : null,
+            !cliente.phone ? "teléfono" : null,
+            !cliente.address ? "dirección" : null,
+            !cliente.birthDate ? "fecha_nacimiento" : null,
+            !cliente.idNumber ? "identificación" : null
+          ].filter(Boolean)
+        }
+      },
+
+      // Información de la consulta
+      consultaInfo: {
+        fechaConsulta: ahora.toISOString(),
+        idConsultado: id,
+        tipoConsulta: "cliente_individual",
+        version: "1.0"
+      }
+    };
+
+    res.status(200).json(response);
+
+  } catch (error) {
+    // Manejo específico de errores de MongoDB
+    if (error.name === 'CastError') {
+      return res.status(400).json({
+        success: false,
+        message: "ID de cliente con formato inválido",
+        error: "El ID proporcionado no tiene el formato correcto de MongoDB"
+      });
+    }
+
+    res.status(500).json({
+      success: false,
+      message: "Error interno del servidor al obtener cliente",
+      error: error.message,
+      errorDetails: {
+        tipo: error.name,
+        codigo: error.code || "UNKNOWN"
+      }
+    });
+  }
+};
+
+/**
  * Actualizar cliente existente
  * PUT /clientes/:id
  */
