@@ -807,6 +807,482 @@ ViajesController.addViaje = async (req, res) => {
 };
 
 // =====================================================
+// PUT: Editar viaje existente
+// =====================================================
+ViajesController.editViaje = async (req, res) => {
+  try {
+    console.log("🔴 === INICIO editViaje ===");
+    console.log("📝 Body recibido:", JSON.stringify(req.body, null, 2));
+    
+    const { viajeId } = req.params;
+    
+    // 🔍 VERIFICAR CONEXIÓN MONGOOSE
+    if (mongoose.connection.readyState !== 1) {
+      console.error("❌ MongoDB no conectado. ReadyState:", mongoose.connection.readyState);
+      return res.status(500).json({
+        success: false,
+        message: "Base de datos no conectada",
+        readyState: mongoose.connection.readyState
+      });
+    }
+
+    // 🔍 VALIDAR ID DEL VIAJE
+    if (!mongoose.Types.ObjectId.isValid(viajeId)) {
+      return res.status(400).json({
+        success: false,
+        message: "ID de viaje inválido",
+        viajeId
+      });
+    }
+
+    const {
+      quoteId,
+      truckId, 
+      conductorId,
+      tripDescription,
+      departureTime,
+      arrivalTime,
+      condiciones,
+      observaciones
+    } = req.body;
+
+    // 🔍 BUSCAR VIAJE EXISTENTE
+    console.log("🔍 Buscando viaje existente...");
+    const viajeExistente = await ViajesModel.findById(viajeId);
+    
+    if (!viajeExistente) {
+      return res.status(404).json({
+        success: false,
+        message: "Viaje no encontrado",
+        viajeId
+      });
+    }
+
+    console.log("✅ Viaje encontrado:", viajeExistente._id);
+
+    // 🔍 VALIDACIONES OPCIONALES (solo si se envían)
+    if (quoteId && !mongoose.Types.ObjectId.isValid(quoteId)) {
+      return res.status(400).json({
+        success: false,
+        message: "ID de cotización inválido",
+        quoteId
+      });
+    }
+
+    if (truckId && !mongoose.Types.ObjectId.isValid(truckId)) {
+      return res.status(400).json({
+        success: false,
+        message: "ID de camión inválido",
+        truckId
+      });
+    }
+
+    if (conductorId && !mongoose.Types.ObjectId.isValid(conductorId)) {
+      return res.status(400).json({
+        success: false,
+        message: "ID de conductor inválido",
+        conductorId
+      });
+    }
+
+    // 📅 VALIDAR FECHAS SI SE PROPORCIONAN
+    if (departureTime || arrivalTime) {
+      const salidaDate = departureTime ? new Date(departureTime) : viajeExistente.departureTime;
+      const llegadaDate = arrivalTime ? new Date(arrivalTime) : viajeExistente.arrivalTime;
+
+      if (departureTime && isNaN(salidaDate.getTime())) {
+        return res.status(400).json({
+          success: false,
+          message: "Fecha de salida inválida",
+          departureTime
+        });
+      }
+
+      if (arrivalTime && isNaN(llegadaDate.getTime())) {
+        return res.status(400).json({
+          success: false,
+          message: "Fecha de llegada inválida", 
+          arrivalTime
+        });
+      }
+
+      if (salidaDate >= llegadaDate) {
+        return res.status(400).json({
+          success: false,
+          message: "La fecha de salida debe ser anterior a la de llegada"
+        });
+      }
+    }
+
+    // 🔍 VERIFICAR REFERENCIAS SI SE PROPORCIONAN
+    console.log("🔍 Verificando referencias...");
+    
+    let cotizacion, camion, conductor;
+    
+    try {
+      // ⚠️ VERIFICAR COTIZACIÓN SI SE CAMBIA
+      if (quoteId && quoteId !== viajeExistente.quoteId?.toString()) {
+        cotizacion = await CotizacionesModel.findOne({ _id: quoteId });
+        console.log("📋 Nueva cotización:", !!cotizacion, cotizacion?._id);
+        
+        if (!cotizacion) {
+          return res.status(404).json({
+            success: false,
+            message: "Cotización no encontrada",
+            quoteId
+          });
+        }
+      }
+      
+      // ⚠️ VERIFICAR CAMIÓN SI SE CAMBIA
+      if (truckId && truckId !== viajeExistente.truckId?.toString()) {
+        camion = await CamionesModel.findOne({ _id: truckId });
+        console.log("🚛 Nuevo camión:", !!camion, camion?._id);
+        
+        if (!camion) {
+          return res.status(404).json({
+            success: false,
+            message: "Camión no encontrado", 
+            truckId
+          });
+        }
+      }
+      
+      // ⚠️ VERIFICAR CONDUCTOR SI SE CAMBIA
+      if (conductorId && conductorId !== viajeExistente.conductorId?.toString()) {
+        conductor = await MotoristaModel.findOne({ _id: conductorId });
+        console.log("👤 Nuevo conductor:", !!conductor, conductor?._id);
+        
+        if (!conductor) {
+          return res.status(404).json({
+            success: false,
+            message: "Conductor no encontrado",
+            conductorId
+          });
+        }
+      }
+      
+    } catch (refError) {
+      console.error("❌ Error verificando referencias:", refError);
+      return res.status(500).json({
+        success: false,
+        message: "Error al verificar referencias",
+        error: refError.message
+      });
+    }
+
+    console.log("✅ Referencias verificadas");
+
+    // 📝 PREPARAR DATOS DE ACTUALIZACIÓN
+    const ahora = new Date();
+    const datosActualizacion = {};
+
+    // ⚠️ ACTUALIZAR SOLO LOS CAMPOS PROPORCIONADOS
+    if (quoteId) {
+      datosActualizacion.quoteId = new mongoose.Types.ObjectId(quoteId);
+    }
+    
+    if (truckId) {
+      datosActualizacion.truckId = new mongoose.Types.ObjectId(truckId);
+    }
+    
+    if (conductorId) {
+      datosActualizacion.conductorId = new mongoose.Types.ObjectId(conductorId);
+    }
+    
+    if (tripDescription !== undefined) {
+      datosActualizacion.tripDescription = tripDescription;
+    }
+    
+    if (departureTime) {
+      datosActualizacion.departureTime = new Date(departureTime);
+    }
+    
+    if (arrivalTime) {
+      datosActualizacion.arrivalTime = new Date(arrivalTime);
+    }
+
+    // 🔄 ACTUALIZAR CONDICIONES SI SE PROPORCIONAN
+    if (condiciones) {
+      datosActualizacion.condiciones = {
+        ...viajeExistente.condiciones,
+        clima: condiciones.clima || viajeExistente.condiciones?.clima || 'normal',
+        trafico: condiciones.trafico || viajeExistente.condiciones?.trafico || 'normal',
+        carretera: condiciones.carretera || viajeExistente.condiciones?.carretera || 'buena',
+        observaciones: observaciones || condiciones.observaciones || viajeExistente.condiciones?.observaciones || ''
+      };
+    } else if (observaciones) {
+      datosActualizacion.condiciones = {
+        ...viajeExistente.condiciones,
+        observaciones: observaciones
+      };
+    }
+
+    // 📊 AGREGAR TIMESTAMP DE ACTUALIZACIÓN
+    datosActualizacion['tiemposReales.ultimaActualizacion'] = ahora;
+
+    console.log("📝 Datos de actualización preparados:", Object.keys(datosActualizacion));
+
+    // 💾 ACTUALIZAR VIAJE
+    console.log("💾 === ACTUALIZANDO VIAJE ===");
+    
+    let viajeActualizado;
+    try {
+      viajeActualizado = await ViajesModel.findByIdAndUpdate(
+        viajeId,
+        datosActualizacion,
+        { 
+          new: true, 
+          runValidators: true,
+          select: '-tracking.checkpoints'
+        }
+      );
+
+      if (!viajeActualizado) {
+        return res.status(404).json({
+          success: false,
+          message: "No se pudo actualizar el viaje - viaje no encontrado"
+        });
+      }
+
+      console.log("🎉 VIAJE ACTUALIZADO con ID:", viajeActualizado._id);
+
+    } catch (updateError) {
+      console.error("❌ ERROR AL ACTUALIZAR:", updateError);
+      
+      if (updateError.name === 'ValidationError') {
+        const errores = Object.keys(updateError.errors).map(campo => ({
+          campo,
+          mensaje: updateError.errors[campo].message,
+          tipo: updateError.errors[campo].kind
+        }));
+        
+        return res.status(400).json({
+          success: false,
+          message: "Error de validación al actualizar",
+          errores
+        });
+      }
+      
+      return res.status(500).json({
+        success: false,
+        message: "Error al actualizar el viaje",
+        error: updateError.message,
+        tipo: updateError.name
+      });
+    }
+
+    // 🔄 ACTUALIZAR COTIZACIÓN SI SE CAMBIÓ
+    if (quoteId && cotizacion) {
+      try {
+        if (cotizacion.status !== 'ejecutada') {
+          await CotizacionesModel.findByIdAndUpdate(quoteId, { status: 'ejecutada' });
+          console.log("✅ Nueva cotización actualizada");
+        }
+      } catch (updateError) {
+        console.warn("⚠️ Error actualizando nueva cotización:", updateError.message);
+      }
+    }
+
+    // 📊 POBLAR DATOS PARA RESPUESTA
+    let viajeCompleto = viajeActualizado;
+    try {
+      viajeCompleto = await ViajesModel.findById(viajeActualizado._id)
+        .populate('truckId', 'brand model licensePlate name marca modelo placa')
+        .populate('conductorId', 'name phone nombre telefono') 
+        .populate('quoteId', 'quoteName quoteDescription price');
+    } catch (populateError) {
+      console.warn("⚠️ Error en populate:", populateError.message);
+    }
+
+    console.log("🎉 === VIAJE EDITADO EXITOSAMENTE ===");
+
+    // 🎯 RESPUESTA EXITOSA
+    res.status(200).json({
+      success: true,
+      data: {
+        viaje: viajeCompleto,
+        mensaje: "Viaje actualizado exitosamente",
+        detalles: {
+          viajeId: viajeActualizado._id,
+          estado: viajeActualizado.estado.actual,
+          tripDescription: viajeActualizado.tripDescription,
+          salida: viajeActualizado.departureTime ? new Date(viajeActualizado.departureTime).toLocaleString('es-ES') : null,
+          llegada: viajeActualizado.arrivalTime ? new Date(viajeActualizado.arrivalTime).toLocaleString('es-ES') : null,
+          ultimaActualizacion: ahora.toLocaleString('es-ES')
+        }
+      },
+      message: "Viaje editado exitosamente en el sistema"
+    });
+
+  } catch (error) {
+    console.error("❌ ERROR GENERAL:", error);
+    
+    res.status(500).json({
+      success: false,
+      message: "Error al editar el viaje",
+      error: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
+  }
+};
+
+// =====================================================
+// DELETE: Eliminar viaje
+// =====================================================
+ViajesController.deleteViaje = async (req, res) => {
+  try {
+    console.log("🔴 === INICIO deleteViaje ===");
+    
+    const { viajeId } = req.params;
+    
+    // 🔍 VERIFICAR CONEXIÓN MONGOOSE
+    if (mongoose.connection.readyState !== 1) {
+      console.error("❌ MongoDB no conectado. ReadyState:", mongoose.connection.readyState);
+      return res.status(500).json({
+        success: false,
+        message: "Base de datos no conectada",
+        readyState: mongoose.connection.readyState
+      });
+    }
+
+    // 🔍 VALIDAR ID DEL VIAJE
+    if (!mongoose.Types.ObjectId.isValid(viajeId)) {
+      return res.status(400).json({
+        success: false,
+        message: "ID de viaje inválido",
+        viajeId
+      });
+    }
+
+    // 🔍 BUSCAR VIAJE EXISTENTE
+    console.log("🔍 Buscando viaje a eliminar...");
+    const viajeExistente = await ViajesModel.findById(viajeId)
+      .populate('quoteId', '_id status')
+      .populate('truckId', 'brand model licensePlate name marca modelo placa')
+      .populate('conductorId', 'name nombre');
+    
+    if (!viajeExistente) {
+      return res.status(404).json({
+        success: false,
+        message: "Viaje no encontrado",
+        viajeId
+      });
+    }
+
+    console.log("✅ Viaje encontrado:", viajeExistente._id);
+
+    // 🔒 VERIFICAR SI EL VIAJE SE PUEDE ELIMINAR
+    if (viajeExistente.estado.actual === 'en_curso') {
+      return res.status(400).json({
+        success: false,
+        message: "No se puede eliminar un viaje en curso",
+        estado: viajeExistente.estado.actual
+      });
+    }
+
+    // ⚠️ ADVERTENCIA PARA VIAJES COMPLETADOS
+    if (viajeExistente.estado.actual === 'completado') {
+      console.warn("⚠️ Eliminando viaje completado - esto podría afectar el historial");
+    }
+
+    // 📊 DATOS DEL VIAJE PARA RESPUESTA
+    const datosViaje = {
+      viajeId: viajeExistente._id,
+      tripDescription: viajeExistente.tripDescription,
+      estado: viajeExistente.estado.actual,
+      salida: viajeExistente.departureTime ? new Date(viajeExistente.departureTime).toLocaleString('es-ES') : null,
+      llegada: viajeExistente.arrivalTime ? new Date(viajeExistente.arrivalTime).toLocaleString('es-ES') : null,
+      truck: viajeExistente.truckId ? {
+        id: viajeExistente.truckId._id,
+        info: `${viajeExistente.truckId.brand || viajeExistente.truckId.marca || ''} ${viajeExistente.truckId.model || viajeExistente.truckId.modelo || ''}`.trim() ||
+              `${viajeExistente.truckId.name || viajeExistente.truckId.nombre || ''}`.trim() ||
+              'Camión'
+      } : null,
+      driver: viajeExistente.conductorId ? {
+        id: viajeExistente.conductorId._id,
+        nombre: viajeExistente.conductorId.name || viajeExistente.conductorId.nombre || 'Conductor'
+      } : null,
+      cotizacionId: viajeExistente.quoteId?._id || null
+    };
+
+    console.log("📊 Datos del viaje a eliminar:", datosViaje);
+
+    // 💾 ELIMINAR VIAJE
+    console.log("💾 === ELIMINANDO VIAJE ===");
+    
+    try {
+      const viajeEliminado = await ViajesModel.findByIdAndDelete(viajeId);
+      
+      if (!viajeEliminado) {
+        return res.status(404).json({
+          success: false,
+          message: "No se pudo eliminar el viaje - viaje no encontrado"
+        });
+      }
+
+      console.log("🗑️ VIAJE ELIMINADO con ID:", viajeEliminado._id);
+
+    } catch (deleteError) {
+      console.error("❌ ERROR AL ELIMINAR:", deleteError);
+      
+      return res.status(500).json({
+        success: false,
+        message: "Error al eliminar el viaje de la base de datos",
+        error: deleteError.message,
+        tipo: deleteError.name
+      });
+    }
+
+    // 🔄 ACTUALIZAR COTIZACIÓN SI EXISTE
+    if (viajeExistente.quoteId) {
+      try {
+        const cotizacionId = viajeExistente.quoteId._id || viajeExistente.quoteId;
+        const estadoOriginal = viajeExistente.quoteId.status;
+        
+        // Cambiar estado de la cotización a pendiente si estaba ejecutada
+        if (estadoOriginal === 'ejecutada') {
+          await CotizacionesModel.findByIdAndUpdate(
+            cotizacionId, 
+            { status: 'aceptada' }
+          );
+          console.log("✅ Cotización revertida de 'ejecutada' a 'aceptada'");
+        }
+      } catch (updateError) {
+        console.warn("⚠️ Error actualizando cotización después de eliminar viaje:", updateError.message);
+      }
+    }
+
+    console.log("🎉 === VIAJE ELIMINADO EXITOSAMENTE ===");
+
+    // 🎯 RESPUESTA EXITOSA
+    res.status(200).json({
+      success: true,
+      data: {
+        viajeEliminado: datosViaje,
+        mensaje: "Viaje eliminado exitosamente",
+        detalles: {
+          fechaEliminacion: new Date().toLocaleString('es-ES'),
+          estadoAnterior: datosViaje.estado,
+          cotizacionAfectada: !!viajeExistente.quoteId
+        }
+      },
+      message: "Viaje eliminado exitosamente del sistema"
+    });
+
+  } catch (error) {
+    console.error("❌ ERROR GENERAL:", error);
+    
+    res.status(500).json({
+      success: false,
+      message: "Error al eliminar el viaje",
+      error: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
+  }
+};
+
+// =====================================================
 // GET: Análisis de distribución de cargas (VERSIÓN UNIFICADA)
 // =====================================================
 // =====================================================

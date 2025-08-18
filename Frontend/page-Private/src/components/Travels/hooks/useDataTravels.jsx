@@ -1,5 +1,5 @@
-// hooks/Travels/useTravels.js - VERSIÓN CORREGIDA CON ENDPOINT CORRECTO
-import { useState, useEffect } from 'react';
+// hooks/Travels/useTravels.js - VERSIÓN OPTIMIZADA PARA AUTO-REFRESH
+import { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 
 export const useTravels = () => {
@@ -67,10 +67,11 @@ export const useTravels = () => {
     observaciones: ''
   });
 
-  // 🆕 NUEVOS ESTADOS AL FINAL (POSICIONES 22-24) - AQUÍ NO HAY CONFLICTO
+  // 🆕 NUEVOS ESTADOS AL FINAL (POSICIONES 22-25) - AQUÍ NO HAY CONFLICTO
   const [apiTravels, setApiTravels] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [isRefreshing, setIsRefreshing] = useState(false); // 🆕 Estado para mostrar cuando se está refrescando
 
   // ⚠️ MANTENER EL useEffect ORIGINAL EN LA MISMA POSICIÓN
   // Funciones de animación (ORIGINAL - useEffect POSICIÓN 1)
@@ -103,25 +104,27 @@ export const useTravels = () => {
     animateProgress();
   }, []);
 
-  // 🆕 NUEVO useEffect PARA API (useEffect POSICIÓN 2) - AL FINAL
-  useEffect(() => {
-    fetchTravels();
-  }, []);
-
-  // 🔧 FUNCIÓN CORREGIDA PARA USAR EL MISMO ENDPOINT QUE RIVERA TRANSPORT
-  const fetchTravels = async () => {
+  // 🔧 FUNCIÓN OPTIMIZADA PARA USAR EL MISMO ENDPOINT QUE RIVERA TRANSPORT
+  const fetchTravels = useCallback(async (isManualRefresh = false) => {
     try {
-      setLoading(true);
+      if (isManualRefresh) {
+        setIsRefreshing(true);
+      } else {
+        setLoading(true);
+      }
       setError(null);
+      
       console.log("📊 useTravels: Cargando desde MISMO endpoint que Rivera Transport...");
       
-      // 🎯 USAR EL MISMO ENDPOINT QUE RIVERA TRANSPORT MAP
-      const response = await axios.get('http://localhost:4000/api/viajes/map-data', {
+      // 🎯 USAR EL MISMO ENDPOINT QUE RIVERA TRANSPORT MAP con cache-busting
+      const cacheBuster = new Date().getTime();
+      const response = await axios.get(`http://localhost:4000/api/viajes/map-data?t=${cacheBuster}`, {
         headers: {
           'Content-Type': 'application/json',
           'Cache-Control': 'no-cache',
           'Pragma': 'no-cache'
-        }
+        },
+        timeout: 10000 // 10 segundos timeout
       });
       
       console.log("🔍 useTravels: RESPUESTA de map-data:", response.data);
@@ -182,73 +185,174 @@ export const useTravels = () => {
         console.log("❌ useTravels: No se encontraron datos válidos en map-data");
         setApiTravels([]);
       }
+      
+      return true; // Indicar éxito
     } catch (error) {
       console.error('❌ useTravels: Error al cargar desde map-data:', error);
       setError('Error al cargar los viajes');
       setApiTravels([]);
+      return false; // Indicar fallo
     } finally {
       setLoading(false);
+      setIsRefreshing(false);
     }
-  };
+  }, []); // useCallback para evitar re-renders innecesarios
 
+  // 🆕 useEffect PARA API (useEffect POSICIÓN 2) - AL FINAL
+  useEffect(() => {
+    fetchTravels();
+  }, [fetchTravels]);
+
+  // 🔧 FUNCIÓN MEJORADA PARA AGREGAR VIAJE CON AUTO-REFRESH
   const addTravel = async (travelData) => {
     try {
       console.log("🆕 Creando viaje:", travelData);
-      const response = await axios.post('http://localhost:4000/api/viajes', travelData);
+      
+      // 🎯 PREPARAR DATOS SEGÚN EL FORMATO ESPERADO POR LA API
+      const dataToSend = {
+        quoteId: travelData.quoteId,
+        truckId: travelData.truckId,
+        conductorId: travelData.conductorId,
+        auxiliarId: travelData.auxiliarId || null,
+        tripDescription: travelData.tripDescription,
+        departureTime: travelData.departureTime,
+        arrivalTime: travelData.arrivalTime,
+        costosReales: travelData.costosReales || {
+          combustible: 0,
+          peajes: 0,
+          conductor: 0,
+          otros: 0,
+          total: 0
+        },
+        condiciones: travelData.condiciones || {
+          clima: 'normal',
+          trafico: 'normal',
+          carretera: 'buena'
+        },
+        observaciones: travelData.observaciones || '',
+        // 🆕 Campos adicionales para asegurar inicialización correcta
+        estado: {
+          actual: 'pendiente',
+          autoActualizar: true,
+          historial: [{
+            estado: 'pendiente',
+            fecha: new Date().toISOString(),
+            observaciones: 'Viaje programado desde la interfaz'
+          }]
+        },
+        tracking: {
+          ubicacionActual: {
+            lat: null,
+            lng: null,
+            velocidad: 0,
+            timestamp: new Date().toISOString()
+          },
+          progreso: {
+            porcentaje: 0,
+            calculoAutomatico: true,
+            ultimaActualizacion: new Date().toISOString()
+          },
+          checkpoints: []
+        }
+      };
+      
+      console.log("📤 Datos enviados a la API:", dataToSend);
+      
+      const response = await axios.post('http://localhost:4000/api/viajes', dataToSend, {
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        timeout: 15000 // 15 segundos timeout para crear viaje
+      });
       
       console.log("✅ Viaje creado exitosamente:", response.data);
-      await fetchTravels(); // Recargar datos
+      
+      // 🔄 REFRESCAR DATOS INMEDIATAMENTE DESPUÉS DE CREAR
+      console.log("🔄 Refrescando datos después de crear viaje...");
+      const refreshSuccess = await fetchTravels(true); // true = es refresh manual
+      
+      if (refreshSuccess) {
+        console.log("✅ Datos refrescados exitosamente tras crear viaje");
+      } else {
+        console.warn("⚠️ Advertencia: Error al refrescar datos tras crear viaje");
+      }
       
       return { success: true, data: response.data };
     } catch (error) {
       console.error('❌ Error al agregar viaje:', error);
       return { 
         success: false, 
-        error: error.response?.data?.message || 'Error al agregar viaje' 
+        error: error.response?.data?.message || error.message || 'Error al agregar viaje' 
       };
     }
   };
 
+  // 🔧 FUNCIÓN MEJORADA PARA ACTUALIZAR VIAJE CON AUTO-REFRESH
   const updateTravel = async (travelId, updateData) => {
     try {
       console.log("✏️ Actualizando viaje:", travelId, updateData);
-      const response = await axios.patch(`http://localhost:4000/api/viajes/${travelId}/progress`, updateData);
+      const response = await axios.patch(`http://localhost:4000/api/viajes/${travelId}/progress`, updateData, {
+        timeout: 10000
+      });
       
       console.log("✅ Viaje actualizado exitosamente:", response.data);
-      await fetchTravels(); // Recargar datos
+      
+      // 🔄 REFRESCAR DATOS INMEDIATAMENTE DESPUÉS DE ACTUALIZAR
+      console.log("🔄 Refrescando datos después de actualizar viaje...");
+      const refreshSuccess = await fetchTravels(true);
+      
+      if (refreshSuccess) {
+        console.log("✅ Datos refrescados exitosamente tras actualizar viaje");
+      }
       
       return { success: true, data: response.data };
     } catch (error) {
       console.error('❌ Error al actualizar viaje:', error);
       return { 
         success: false, 
-        error: error.response?.data?.message || 'Error al actualizar viaje' 
+        error: error.response?.data?.message || error.message || 'Error al actualizar viaje' 
       };
     }
   };
 
+  // 🔧 FUNCIÓN MEJORADA PARA ELIMINAR VIAJE CON AUTO-REFRESH
   const deleteTravel = async (travelId) => {
     try {
       console.log("🗑️ Cancelando viaje:", travelId);
       const response = await axios.patch(`http://localhost:4000/api/viajes/${travelId}/cancel`, {
         motivo: 'eliminado_por_usuario',
         observaciones: 'Viaje cancelado desde la interfaz'
+      }, {
+        timeout: 10000
       });
       
       console.log("✅ Viaje cancelado exitosamente:", response.data);
-      await fetchTravels(); // Recargar datos
+      
+      // 🔄 REFRESCAR DATOS INMEDIATAMENTE DESPUÉS DE CANCELAR
+      console.log("🔄 Refrescando datos después de cancelar viaje...");
+      const refreshSuccess = await fetchTravels(true);
+      
+      if (refreshSuccess) {
+        console.log("✅ Datos refrescados exitosamente tras cancelar viaje");
+      }
       
       return { success: true };
     } catch (error) {
       console.error('❌ Error al cancelar viaje:', error);
       return { 
         success: false, 
-        error: error.response?.data?.message || 'Error al cancelar viaje' 
+        error: error.response?.data?.message || error.message || 'Error al cancelar viaje' 
       };
     }
   };
 
-  // 🔄 DATOS PROCESADOS: Los viajes ya vienen procesados del endpoint /por-dias
+  // 🆕 FUNCIÓN PARA REFRESCAR MANUALMENTE (PARA USAR EN COMPONENTES)
+  const refreshTravels = useCallback(async () => {
+    console.log("🔄 Refresh manual iniciado...");
+    return await fetchTravels(true);
+  }, [fetchTravels]);
+
+  // 🔄 DATOS PROCESADOS: Los viajes ya vienen procesados del endpoint /map-data
   const scheduledTrips = apiTravels.map(travel => {
     console.log("🔄 Procesando viaje para vista:", travel);
     
@@ -296,7 +400,6 @@ export const useTravels = () => {
 
   // Estadísticas de API (de todos los viajes, no solo de hoy)
   const getStats = () => {
-    // Para las estadísticas, necesitamos todos los viajes, no solo los de hoy
     return {
       total: apiTravels.length,
       pendiente: apiTravels.filter(t => t.estado?.actual === 'pendiente').length,
@@ -307,7 +410,7 @@ export const useTravels = () => {
     };
   };
 
-  // ⚠️ MANTENER TODAS LAS FUNCIONES ORIGINALES SIN CAMBIOS
+  // ⚠️ MANTENER TODAS LAS FUNCIONES ORIGINALES SIN CAMBIOS (solo las que usan API fueron modificadas)
 
   // Funciones de manejo de modales (ORIGINALES)
   const handleTripMenuClick = (trip, index) => {
@@ -328,7 +431,6 @@ export const useTravels = () => {
   // Funciones de edición (MODIFICADAS PARA USAR API)
   const handleEdit = () => {
     if (selectedTrip) {
-      // Pre-llenar con datos del viaje seleccionado
       setEditForm({
         quoteId: selectedTrip.quoteId?._id || selectedTrip.quoteId || '',
         truckId: selectedTrip.truckId?._id || selectedTrip.truckId || '',
@@ -384,7 +486,6 @@ export const useTravels = () => {
           }, 300);
         }
       } else {
-        // Fallback al método original
         console.log('Actualizando viaje (modo local):', editForm);
         setIsConfirmEditClosing(true);
         setTimeout(() => {
@@ -470,7 +571,6 @@ export const useTravels = () => {
           }, 300);
         }
       } else {
-        // Fallback al método original
         console.log('Eliminando viaje (modo local):', selectedTrip);
         setIsDeleteClosing(true);
         setTimeout(() => {
@@ -504,7 +604,7 @@ export const useTravels = () => {
     }, 300);
   };
 
-  // Funciones de programar viaje (MODIFICADAS PARA USAR API)
+  // Funciones de programar viaje (MODIFICADAS PARA USAR API CON AUTO-REFRESH)
   const handleOpenProgramModal = () => {
     setShowProgramModal(true);
     setIsProgramClosing(false);
@@ -550,20 +650,24 @@ export const useTravels = () => {
     }
   };
 
+  // 🔧 FUNCIÓN MEJORADA PARA PROGRAMAR VIAJE CON AUTO-REFRESH
   const handleProgramTrip = async () => {
     try {
+      console.log("🚛 Programando viaje con datos:", programForm);
       const result = await addTravel(programForm);
       
       if (result.success) {
+        console.log("✅ Viaje programado exitosamente");
         setShowProgramSuccessModal(true);
         setIsProgramSuccessClosing(false);
+        return result; // Retornar resultado para que ProgramTripModal pueda manejarlo
+      } else {
+        console.error("❌ Error programando viaje:", result.error);
+        throw new Error(result.error);
       }
     } catch (error) {
       console.error('Error programando viaje:', error);
-      // Fallback al método original
-      console.log('Programando viaje (modo local):', programForm);
-      setShowProgramSuccessModal(true);
-      setIsProgramSuccessClosing(false);
+      throw error; // Re-lanzar para que ProgramTripModal pueda manejarlo
     }
   };
 
@@ -645,14 +749,15 @@ export const useTravels = () => {
     handleProgramTrip,
     handleCloseProgramSuccessModal,
 
-    // 🆕 NUEVOS CAMPOS AL FINAL
+    // 🆕 NUEVOS CAMPOS AL FINAL (OPTIMIZADOS)
     loading,
     error,
+    isRefreshing, // 🆕 Para mostrar estado de refresh
     travels: apiTravels,
     stats: getStats(),
-    refreshTravels: fetchTravels,
-    addTravel,
-    updateTravel,
-    deleteTravel
+    refreshTravels, // 🆕 Función optimizada con useCallback
+    addTravel,      // 🆕 Con auto-refresh integrado
+    updateTravel,   // 🆕 Con auto-refresh integrado
+    deleteTravel    // 🆕 Con auto-refresh integrado
   };
 };
