@@ -1,9 +1,10 @@
 import React from 'react';
 import { AlertTriangle, CheckCircle, Circle } from 'lucide-react';
-import { useTravels } from '../Travels/hooks/useDataTravels';
+import { useTravels } from '../Travels/hooks/useTravels'; // ✅ CORREGIDO: Cambiar useDataTravels por useTravels
 import TripListItem from './TripListItem';
 
-const DaySection = ({ day, onMenuClick }) => {
+// ✅ DAYSECTION CORREGIDO
+const DaySection = ({ day, onEdit, onDelete }) => {
   const [isExpanded, setIsExpanded] = React.useState(true);
 
   return (
@@ -59,7 +60,8 @@ const DaySection = ({ day, onMenuClick }) => {
                 key={trip.id}
                 trip={trip}
                 index={index}
-                onMenuClick={onMenuClick}
+                onEdit={onEdit}     // ✅ Función directa para editar
+                onDelete={onDelete} // ✅ Función directa para eliminar
               />
             ))
           ) : (
@@ -197,14 +199,50 @@ class TripListErrorBoundary extends React.Component {
   }
 }
 
+// ✅ COMPONENTE PRINCIPAL CORREGIDO
 const TripList = () => {
   const { 
     scheduledTrips, 
     loading, 
     error, 
     stats, 
-    handleTripMenuClick,
-    refreshTravels
+    onEdit,        // ✅ Nueva función directa para editar
+    onDelete,      // ✅ Nueva función directa para eliminar
+    refreshTravels,
+    
+    // ✅ AGREGAR TODOS LOS ESTADOS DE MODALES NECESARIOS
+    showModal,
+    selectedTrip,
+    isClosing,
+    handleCloseModal,
+    handleEdit,
+    handleDelete,
+    
+    // Estados para modal de edición
+    showEditModal,
+    isEditClosing,
+    editForm,
+    handleInputChange,
+    handleUpdateTrip,
+    handleCloseEditModal,
+    handleConfirmEdit,
+    handleCancelEdit,
+    showConfirmEditModal,
+    isConfirmEditClosing,
+    
+    // Estados para modal de éxito
+    showSuccessModal,
+    isSuccessClosing,
+    handleCloseSuccessModal,
+    
+    // Estados para modal de eliminación
+    showDeleteModal,
+    isDeleteClosing,
+    handleConfirmDelete,
+    handleCancelDelete,
+    showDeleteSuccessModal,
+    isDeleteSuccessClosing,
+    handleCloseDeleteSuccessModal
   } = useTravels();
 
   // Agrupar los viajes por días
@@ -315,13 +353,14 @@ const TripList = () => {
           </div>
         </div>
 
-        {/* Lista de días con viajes */}
+        {/* ✅ LISTA DE DÍAS CON FUNCIONES CORREGIDAS */}
         <div className="space-y-0">
           {viajesPorDias.map((day) => (
             <DaySection
               key={day.fechaKey}
               day={day}
-              onMenuClick={handleTripMenuClick}
+              onEdit={onEdit}      // ✅ Función directa para editar
+              onDelete={onDelete}  // ✅ Función directa para eliminar
             />
           ))}
         </div>
@@ -339,6 +378,7 @@ const TripList = () => {
             Última actualización: {new Date().toLocaleTimeString('es-ES')}
           </p>
         </div>
+
       </div>
     </TripListErrorBoundary>
   );

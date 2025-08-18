@@ -9,41 +9,13 @@ import CotizacionesRoutes from "./src/Routes/cotizacionesRoutes.js"
 
 
 
-//servicio de auto-actualización
 
-
-
-// ✅ SOLO esta línea para las rutas (sin importar el servicio)
 import autoUpdateRoutes from './src/Routes/autoUpdateRoutes.js';
-
-
-
-
-
-
-
-
 import LoginRoutes from "./src/Routes/LoginRoutes.js" 
-//servicio de auto-actualización
-
-
-
-
- 
-import LogoutRoutes from "./src/Routes/Logout.js" // ✅ Renombrado para claridad
-
-
+import LogoutRoutes from "./src/Routes/Logout.js" 
 import RecoveryRoutes from "./src/Routes/Recovery.js"
 import RegisterRoutes from "./src/Routes/RegisterRoute.js"
-
-
-
-
 import ViajesRoutes from "./src/Routes/ViajesRoutes.js"
-
-
-
-
 import cookieParser from "cookie-parser"
 import cors from "cors";
  
@@ -58,6 +30,7 @@ app.use(
     credentials: true,
   })
 );
+
  
 app.use("/api/camiones", camionesRoutes);
 app.use("/api/empleados", empleadoRoutes);

@@ -134,68 +134,132 @@ const useDataMotorista = () => {
     setShowConfirmDelete(false);
   };
 
-  // Editar motorista
+  // 📸 Editar motorista con soporte para imágenes
   const handleSaveEdit = async (formData) => {
     try {
       console.log('=== INICIANDO ACTUALIZACIÓN ===');
       console.log('Datos del formulario:', formData);
       console.log('Motorista seleccionado:', selectedMotorista);
+      console.log('¿Hay imagen?', !!formData.image);
       
-      // Preparar solo los campos que tienen valor
-      const updateData = {};
-      
-      if (formData.name && formData.name.trim()) {
-        updateData.name = formData.name.trim();
-      }
-      if (formData.lastName && formData.lastName.trim()) {
-        updateData.lastName = formData.lastName.trim();
-      }
-      if (formData.phone && formData.phone.trim()) {
-        updateData.phone = formData.phone.trim();
-      }
-      if (formData.address && formData.address.trim()) {
-        updateData.address = formData.address.trim();
-      }
-      if (formData.password && formData.password.trim()) {
-        updateData.password = formData.password.trim();
-      }
-      if (formData.circulationCard && formData.circulationCard.trim()) {
-        updateData.circulationCard = formData.circulationCard.trim();
-      }
-
-      console.log('Datos a enviar:', updateData);
-      
-      // Verificar que hay algo que actualizar
-      if (Object.keys(updateData).length === 0) {
-        setError('No hay cambios para guardar');
-        return;
-      }
-
-      const response = await axios.put(
-        `http://localhost:4000/api/motoristas/${selectedMotorista._id}`, 
-        updateData,
-        {
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          timeout: 10000
+      // 🖼️ Si hay imagen, usar FormData (multipart/form-data)
+      if (formData.image) {
+        console.log('📸 Enviando con imagen usando FormData');
+        
+        const submitData = new FormData();
+        
+        // Agregar campos de texto (solo los que tienen valor)
+        if (formData.name && formData.name.trim()) {
+          submitData.append('name', formData.name.trim());
         }
-      );
+        if (formData.lastName && formData.lastName.trim()) {
+          submitData.append('lastName', formData.lastName.trim());
+        }
+        if (formData.phone && formData.phone.trim()) {
+          submitData.append('phone', formData.phone.trim());
+        }
+        if (formData.address && formData.address.trim()) {
+          submitData.append('address', formData.address.trim());
+        }
+        if (formData.password && formData.password.trim()) {
+          submitData.append('password', formData.password.trim());
+        }
+        if (formData.circulationCard && formData.circulationCard.trim()) {
+          submitData.append('circulationCard', formData.circulationCard.trim());
+        }
+        
+        // Agregar imagen
+        submitData.append('img', formData.image);
+        
+        console.log('FormData creado, enviando...');
+        
+        // Enviar con fetch (axios tiene problemas con FormData a veces)
+        const response = await fetch(`http://localhost:4000/api/motoristas/${selectedMotorista._id}`, {
+          method: 'PUT',
+          body: submitData,
+          // No agregar Content-Type, el navegador lo maneja automáticamente para FormData
+          credentials: 'include'
+        });
+        
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || `HTTP ${response.status}`);
+        }
+        
+        const responseData = await response.json();
+        console.log('=== RESPUESTA EXITOSA (CON IMAGEN) ===');
+        console.log('Response:', responseData);
+        
+        // Actualizar la lista de motoristas
+        const motoristaActualizado = responseData.motorista || responseData.data || { ...selectedMotorista, ...formData };
+        
+        setMotoristas(motoristas.map(mot => 
+          mot._id === selectedMotorista._id ? motoristaActualizado : mot
+        ));
+        
+        // Actualizar el motorista seleccionado
+        setSelectedMotorista(motoristaActualizado);
+        
+      } else {
+        // 📝 Sin imagen, usar JSON normal
+        console.log('📝 Enviando sin imagen usando JSON');
+        
+        // Preparar solo los campos que tienen valor
+        const updateData = {};
+        
+        if (formData.name && formData.name.trim()) {
+          updateData.name = formData.name.trim();
+        }
+        if (formData.lastName && formData.lastName.trim()) {
+          updateData.lastName = formData.lastName.trim();
+        }
+        if (formData.phone && formData.phone.trim()) {
+          updateData.phone = formData.phone.trim();
+        }
+        if (formData.address && formData.address.trim()) {
+          updateData.address = formData.address.trim();
+        }
+        if (formData.password && formData.password.trim()) {
+          updateData.password = formData.password.trim();
+        }
+        if (formData.circulationCard && formData.circulationCard.trim()) {
+          updateData.circulationCard = formData.circulationCard.trim();
+        }
+
+        console.log('Datos a enviar:', updateData);
+        
+        // Verificar que hay algo que actualizar
+        if (Object.keys(updateData).length === 0) {
+          setError('No hay cambios para guardar');
+          return;
+        }
+
+        const response = await axios.put(
+          `http://localhost:4000/api/motoristas/${selectedMotorista._id}`, 
+          updateData,
+          {
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            timeout: 10000
+          }
+        );
+        
+        console.log('=== RESPUESTA EXITOSA (SIN IMAGEN) ===');
+        console.log('Response:', response.data);
+        
+        // Actualizar la lista de motoristas
+        const motoristaActualizado = response.data.motorista || response.data.data || { ...selectedMotorista, ...updateData };
+        
+        setMotoristas(motoristas.map(mot => 
+          mot._id === selectedMotorista._id ? motoristaActualizado : mot
+        ));
+        
+        // Actualizar el motorista seleccionado
+        setSelectedMotorista(motoristaActualizado);
+      }
       
-      console.log('=== RESPUESTA EXITOSA ===');
-      console.log('Response:', response.data);
-      
-      // Actualizar la lista de motoristas
-      const motoristaActualizado = response.data.motorista || { ...selectedMotorista, ...updateData };
-      
-      setMotoristas(motoristas.map(mot => 
-        mot._id === selectedMotorista._id ? motoristaActualizado : mot
-      ));
-      
-      // Actualizar el motorista seleccionado
-      setSelectedMotorista(motoristaActualizado);
-      
-      console.log("Motorista actualizado:", response.data);
+      console.log("✅ Motorista actualizado exitosamente");
       
       setShowEditAlert(false);
       setSuccessType('edit');
@@ -210,12 +274,12 @@ const useDataMotorista = () => {
         console.error('Data:', error.response.data);
         const errorMessage = error.response.data?.message || 'Error del servidor';
         setError(`Error: ${errorMessage}`);
-      } else if (error.request) {
-        console.error('No response:', error.request);
-        setError('No se pudo conectar con el servidor');
-      } else {
-        console.error('Error config:', error.message);
+      } else if (error.message) {
+        console.error('Error message:', error.message);
         setError(`Error: ${error.message}`);
+      } else {
+        console.error('Error desconocido');
+        setError('Error desconocido al actualizar motorista');
       }
     }
   };
