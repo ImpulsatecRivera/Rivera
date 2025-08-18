@@ -8,7 +8,7 @@ const useDataCliente = () => {
   const [showDetailView, setShowDetailView] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-
+  
   // Estados de filtros y búsqueda
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState('Newest');
@@ -23,338 +23,118 @@ const useDataCliente = () => {
     try {
       setLoading(true);
       setError(null);
-      
-      console.log('🚀 Iniciando petición a la API de clientes...');
-      
       const response = await axios.get('http://localhost:4000/api/clientes');
-<<<<<<< HEAD
-
-      // Siempre garantizar que sea un array
-      const clientsData = Array.isArray(response.data)
-        ? response.data
-        : response.data?.clientes || [];
+      
+      // Asegurar que siempre sea un array
+      const clientsData = Array.isArray(response.data) ? response.data : [];
       setClients(clientsData);
     } catch (error) {
       console.error('Error al cargar los clientes:', error);
       setError('Error al cargar los clientes');
-      setClients([]); // fallback seguro
-=======
-      
-      console.log('📡 Status de la respuesta:', response.status);
-      console.log('📋 Datos recibidos completos:', response.data);
-      console.log('📋 Tipo de datos recibidos:', typeof response.data);
-      
-      const clientsData = response.data;
-      
-      // Manejar diferentes estructuras de respuesta
-      let clientsArray = [];
-      
-      if (Array.isArray(clientsData)) {
-        // Si la respuesta es directamente un array
-        clientsArray = clientsData;
-        console.log('✅ Datos son un array directo');
-      } else if (clientsData && clientsData.data && Array.isArray(clientsData.data.clientes)) {
-        // Tu API devuelve: { data: { clientes: [...] } }
-        clientsArray = clientsData.data.clientes;
-        console.log('✅ Datos encontrados en data.clientes');
-      } else if (clientsData && Array.isArray(clientsData.clientes)) {
-        // Si está directamente en clientes
-        clientsArray = clientsData.clientes;
-        console.log('✅ Datos encontrados en clientes');
-      } else if (clientsData && Array.isArray(clientsData.data)) {
-        // Si está en data como array
-        clientsArray = clientsData.data;
-        console.log('✅ Datos encontrados en data');
-      } else {
-        console.warn('⚠️ Formato de datos no esperado:', clientsData);
-        console.warn('⚠️ Estructura recibida:', Object.keys(clientsData || {}));
-        throw new Error('Formato de datos no válido');
-      }
-
-      console.log(`📊 Cantidad de clientes encontrados: ${clientsArray.length}`);
-      
-      if (clientsArray.length === 0) {
-        console.log('⚠️ No se encontraron clientes en la respuesta');
-      } else {
-        console.log('📋 Primeros clientes:', clientsArray.slice(0, 2));
-      }
-
-      // Normalizar los datos de clientes
-      const normalizedClients = clientsArray.map((client, index) => {
-        console.log(`🔄 Normalizando cliente ${index + 1}:`, client);
-        
-        return {
-          ...client,
-          // Normalizar el campo firstName (tu API tiene "firtsName" con typo)
-          firstName: client.firstName || client.firtsName || '',
-          // Asegurar que todos los campos existan
-          lastName: client.lastName || '',
-          email: client.email || '',
-          idNumber: client.idNumber || '',
-          birthDate: client.birthDate || null,
-          phone: client.phone || '',
-          address: client.address || '',
-          _id: client._id || client.id || `temp-${index}`
-        };
-      });
-
-      console.log("✅ Clientes normalizados:", normalizedClients);
-      setClients(normalizedClients);
-      setError(null);
-      
-    } catch (error) {
-      console.error('❌ Error detallado:', error);
-      console.error('❌ Tipo de error:', error.name);
-      console.error('❌ Mensaje de error:', error.message);
-      
-      // Verificar si es un error de red
-      if (error.message.includes('Network') || error.code === 'ERR_NETWORK') {
-        setError('No se puede conectar al servidor. Verifica que esté ejecutándose en http://localhost:4000');
-      } else if (error.response) {
-        setError(`Error del servidor: ${error.response.status} - ${error.response.data?.message || 'Error desconocido'}`);
-      } else {
-        setError(`Error al cargar clientes: ${error.message}`);
-      }
-      setClients([]);
->>>>>>> master
+      setClients([]); // Asegurar que siempre sea un array
     } finally {
       setLoading(false);
-      console.log('🏁 Carga de clientes finalizada');
     }
   };
 
-  // Agregar cliente
+  // Función para agregar un nuevo cliente
   const addClient = async (clientData) => {
     try {
-<<<<<<< HEAD
-      const response = await axios.post(
-        'http://localhost:4000/api/clientes',
-        clientData
-      );
-      setClients((prev) =>
-        Array.isArray(prev) ? [...prev, response.data] : [response.data]
-      );
+      const response = await axios.post('http://localhost:4000/api/clientes', clientData);
+      setClients(prev => Array.isArray(prev) ? [...prev, response.data] : [response.data]);
       return { success: true, data: response.data };
     } catch (error) {
       console.error('Error al agregar cliente:', error);
-      return {
-        success: false,
-        error:
-          error.response?.data?.message || 'Error al agregar cliente',
-=======
-      console.log('➕ Agregando nuevo cliente:', clientData);
-      const response = await axios.post('http://localhost:4000/api/clientes', clientData);
-      
-      const newClient = response.data.data || response.data;
-      const normalizedClient = {
-        ...newClient,
-        firstName: newClient.firstName || newClient.firtsName || '',
-        lastName: newClient.lastName || '',
-        email: newClient.email || '',
-        idNumber: newClient.idNumber || '',
-        birthDate: newClient.birthDate || null,
-        phone: newClient.phone || '',
-        address: newClient.address || ''
-      };
-      
-      setClients(prev => Array.isArray(prev) ? [...prev, normalizedClient] : [normalizedClient]);
-      console.log('✅ Cliente agregado exitosamente');
-      return { success: true, data: normalizedClient };
-    } catch (error) {
-      console.error('❌ Error al agregar cliente:', error);
       return { 
         success: false, 
         error: error.response?.data?.message || 'Error al agregar cliente' 
->>>>>>> master
       };
     }
   };
 
-  // Actualizar cliente
+  // Función para actualizar un cliente
   const updateClient = async (clientId, updateData) => {
     try {
-<<<<<<< HEAD
-      const response = await axios.put(
-        `http://localhost:4000/api/clientes/${clientId}`,
-        updateData
-=======
-      console.log(`📝 Actualizando cliente ${clientId}:`, updateData);
       const response = await axios.put(`http://localhost:4000/api/clientes/${clientId}`, updateData);
-      
-      const updatedClientData = response.data.cliente || response.data.data || { ...selectedClient, ...updateData };
-      const updatedClient = {
-        ...updatedClientData,
-        firstName: updatedClientData.firstName || updatedClientData.firtsName || '',
-        lastName: updatedClientData.lastName || '',
-        email: updatedClientData.email || '',
-        idNumber: updatedClientData.idNumber || '',
-        birthDate: updatedClientData.birthDate || null,
-        phone: updatedClientData.phone || '',
-        address: updatedClientData.address || ''
-      };
+      const updatedClient = response.data.cliente || { ...selectedClient, ...updateData };
       
       setClients(prev => 
-        Array.isArray(prev) 
-          ? prev.map(client => client._id === clientId ? updatedClient : client)
-          : [updatedClient]
->>>>>>> master
+        Array.isArray(prev) ? prev.map(client => 
+          client._id === clientId ? updatedClient : client
+        ) : [updatedClient]
       );
-      const updatedClient = response.data.cliente || {
-        ...selectedClient,
-        ...updateData,
-      };
-
-      setClients((prev) =>
-        Array.isArray(prev)
-          ? prev.map((c) => (c._id === clientId ? updatedClient : c))
-          : [updatedClient]
-      );
-
+      
+      // Actualizar el cliente seleccionado si es el mismo
       if (selectedClient && selectedClient._id === clientId) {
         setSelectedClient(updatedClient);
       }
-<<<<<<< HEAD
-
+      
       return { success: true, data: updatedClient };
     } catch (error) {
       console.error('Error al actualizar cliente:', error);
-      return {
-        success: false,
-        error:
-          error.response?.data?.message || 'Error al actualizar cliente',
-=======
-      
-      console.log('✅ Cliente actualizado exitosamente');
-      return { success: true, data: updatedClient };
-    } catch (error) {
-      console.error('❌ Error al actualizar cliente:', error);
       return { 
         success: false, 
         error: error.response?.data?.message || 'Error al actualizar cliente' 
->>>>>>> master
       };
     }
   };
 
-  // Eliminar cliente
+  // Función para eliminar un cliente
   const deleteClient = async (clientId) => {
     try {
-<<<<<<< HEAD
-      await axios.delete(
-        `http://localhost:4000/api/clientes/${clientId}`
-      );
-      setClients((prev) =>
-        Array.isArray(prev)
-          ? prev.filter((c) => c._id !== clientId)
-          : []
-      );
-
-=======
-      console.log(`🗑️ Eliminando cliente ${clientId}`);
       await axios.delete(`http://localhost:4000/api/clientes/${clientId}`);
       setClients(prev => Array.isArray(prev) ? prev.filter(client => client._id !== clientId) : []);
       
       // Limpiar selección si se elimina el cliente seleccionado
->>>>>>> master
       if (selectedClient && selectedClient._id === clientId) {
         setSelectedClient(null);
         setShowDetailView(false);
       }
-<<<<<<< HEAD
-
+      
       return { success: true };
     } catch (error) {
       console.error('Error al eliminar cliente:', error);
-      return {
-        success: false,
-        error:
-          error.response?.data?.message || 'Error al eliminar cliente',
-=======
-      
-      console.log('✅ Cliente eliminado exitosamente');
-      return { success: true };
-    } catch (error) {
-      console.error('❌ Error al eliminar cliente:', error);
       return { 
         success: false, 
         error: error.response?.data?.message || 'Error al eliminar cliente' 
->>>>>>> master
       };
     }
   };
 
-<<<<<<< HEAD
-  // Filtrar clientes
-  const filteredClients = Array.isArray(clients)
-    ? clients.filter((c) => {
-        const firstName = c.firstName || c.nombre || '';
-        const lastName = c.lastName || c.apellido || '';
-        const idNumber = c.idNumber || '';
-        const email = c.email || '';
-
-        return [firstName, lastName, idNumber, email]
-          .join(' ')
-          .toLowerCase()
-          .includes(searchTerm.toLowerCase());
-      })
-    : [];
-
-  // Ordenar clientes
-  const sortedClients = [...filteredClients].sort((a, b) => {
-=======
-  // Función para filtrar clientes - WITH SAFETY CHECK
-  const filteredClients = Array.isArray(clients) ? clients.filter((client) =>
-    [client.firstName, client.lastName, client.idNumber, client.email]
+  // Función para filtrar clientes - CORREGIDA
+  const filteredClients = Array.isArray(clients) ? clients.filter((client) => {
+    // Verificar que el cliente tenga las propiedades necesarias
+    const firstName = client.firstName || '';
+    const lastName = client.lastName || '';
+    const idNumber = client.idNumber || '';
+    const email = client.email || '';
+    
+    return [firstName, lastName, idNumber, email]
       .join(' ')
       .toLowerCase()
-      .includes(searchTerm.toLowerCase())
-  ) : [];
+      .includes(searchTerm.toLowerCase());
+  }) : [];
 
-  // Función para ordenar clientes - WITH SAFETY CHECK
-  const sortedClients = Array.isArray(filteredClients) ? [...filteredClients].sort((a, b) => {
->>>>>>> master
+  // Función para ordenar clientes - CORREGIDA
+  const sortedClients = [...filteredClients].sort((a, b) => {
     switch (sortBy) {
       case 'Newest':
-        return (
-          new Date(b.createdAt || b._id || 0) -
-          new Date(a.createdAt || a._id || 0)
-        );
+        return new Date(b.createdAt || b._id || 0) - new Date(a.createdAt || a._id || 0);
       case 'Oldest':
-        return (
-          new Date(a.createdAt || a._id || 0) -
-          new Date(b.createdAt || b._id || 0)
-        );
+        return new Date(a.createdAt || a._id || 0) - new Date(b.createdAt || b._id || 0);
       case 'Name':
-        const nameA = `${a.firstName || a.nombre || ''} ${
-          a.lastName || a.apellido || ''
-        }`.trim();
-        const nameB = `${b.firstName || b.nombre || ''} ${
-          b.lastName || b.apellido || ''
-        }`.trim();
+        const nameA = `${a.firstName || ''} ${a.lastName || ''}`.trim();
+        const nameB = `${b.firstName || ''} ${b.lastName || ''}`.trim();
         return nameA.localeCompare(nameB);
       case 'Email':
         return (a.email || '').localeCompare(b.email || '');
       default:
         return 0;
     }
-  }) : [];
+  });
 
-<<<<<<< HEAD
-  // Stats seguros
-  const getStats = () => {
-    const clientsArray = Array.isArray(clients) ? clients : [];
-    const filteredArray = Array.isArray(filteredClients)
-      ? filteredClients
-      : [];
-
-    return {
-      total: clientsArray.length,
-      filtered: filteredArray.length,
-      hasResults: filteredArray.length > 0,
-=======
   // Función para seleccionar cliente y mostrar detalles
   const selectClient = (client) => {
-    console.log('👤 Cliente seleccionado:', client);
     setSelectedClient(client);
     setShowDetailView(true);
   };
@@ -367,7 +147,6 @@ const useDataCliente = () => {
 
   // Función para refrescar datos
   const refreshClients = () => {
-    console.log('🔄 Refrescando lista de clientes...');
     fetchClients();
   };
 
@@ -376,7 +155,7 @@ const useDataCliente = () => {
     setSearchTerm('');
   };
 
-  // Función para obtener estadísticas
+  // Función para obtener estadísticas - CORREGIDA
   const getStats = () => {
     const clientsArray = Array.isArray(clients) ? clients : [];
     const filteredArray = Array.isArray(filteredClients) ? filteredClients : [];
@@ -385,24 +164,11 @@ const useDataCliente = () => {
       total: clientsArray.length,
       filtered: filteredArray.length,
       hasResults: filteredArray.length > 0
->>>>>>> master
     };
   };
 
-  // Efecto para debugging en desarrollo
-  useEffect(() => {
-    if (process.env.NODE_ENV === 'development') {
-      console.log('📊 Estado actual de clientes:', {
-        count: clients.length,
-        loading,
-        error,
-        hasData: clients.length > 0,
-        clients: clients.slice(0, 2) // Solo mostrar los primeros 2
-      });
-    }
-  }, [clients, loading, error]);
-
   return {
+    // Estados
     clients: sortedClients,
     selectedClient,
     showDetailView,
@@ -410,23 +176,25 @@ const useDataCliente = () => {
     error,
     searchTerm,
     sortBy,
+    
+    // Acciones CRUD
     addClient,
     updateClient,
     deleteClient,
-    refreshClients: fetchClients,
-    selectClient: (c) => {
-      setSelectedClient(c);
-      setShowDetailView(true);
-    },
-    closeDetailView: () => {
-      setShowDetailView(false);
-      setSelectedClient(null);
-    },
-    clearSearch: () => setSearchTerm(''),
+    refreshClients,
+    
+    // Acciones de UI
+    selectClient,
+    closeDetailView,
+    clearSearch,
+    
+    // Setters para filtros
     setSearchTerm,
     setSortBy,
+    
+    // Utilidades
     filteredClients,
-    stats: getStats(),
+    stats: getStats()
   };
 };
 
