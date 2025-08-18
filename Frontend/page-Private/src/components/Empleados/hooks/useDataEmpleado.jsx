@@ -24,18 +24,95 @@ const useDataEmpleado = () => {
   
   const navigate = useNavigate();
 
-  // Función para cargar empleados (separada para reutilizar)
+  // Función para cargar empleados (CORREGIDA)
   const fetchEmpleados = async () => {
     try {
       setLoading(true);
-      const response = await axios.get('http://localhost:4000/api/empleados');
-      setEmpleados(response.data);
       setError(null);
+      
+      console.log('🚀 Iniciando petición a la API de empleados...');
+      
+      const response = await axios.get('http://localhost:4000/api/empleados');
+      
+      console.log('📡 Status de la respuesta:', response.status);
+      console.log('📋 Datos recibidos completos:', response.data);
+      console.log('📋 Tipo de datos recibidos:', typeof response.data);
+      
+      const responseData = response.data;
+      
+      // Manejar diferentes estructuras de respuesta
+      let empleadosArray = [];
+      
+      if (Array.isArray(responseData)) {
+        // Si la respuesta es directamente un array
+        empleadosArray = responseData;
+        console.log('✅ Datos son un array directo');
+      } else if (responseData && responseData.data && Array.isArray(responseData.data.empleados)) {
+        // Tu API devuelve: { data: { empleados: [...] } }
+        empleadosArray = responseData.data.empleados;
+        console.log('✅ Datos encontrados en data.empleados');
+      } else if (responseData && Array.isArray(responseData.empleados)) {
+        // Si está directamente en empleados
+        empleadosArray = responseData.empleados;
+        console.log('✅ Datos encontrados en empleados');
+      } else if (responseData && Array.isArray(responseData.data)) {
+        // Si está en data como array
+        empleadosArray = responseData.data;
+        console.log('✅ Datos encontrados en data');
+      } else {
+        console.warn('⚠️ Formato de datos no esperado:', responseData);
+        console.warn('⚠️ Estructura recibida:', Object.keys(responseData || {}));
+        throw new Error('Formato de datos no válido');
+      }
+
+      console.log(`📊 Cantidad de empleados encontrados: ${empleadosArray.length}`);
+      
+      if (empleadosArray.length === 0) {
+        console.log('⚠️ No se encontraron empleados en la respuesta');
+      } else {
+        console.log('📋 Primeros empleados:', empleadosArray.slice(0, 2));
+      }
+
+      // Normalizar los datos de empleados
+      const normalizedEmpleados = empleadosArray.map((empleado, index) => {
+        console.log(`🔄 Normalizando empleado ${index + 1}:`, empleado);
+        
+        return {
+          ...empleado,
+          // Asegurar que todos los campos existan
+          name: empleado.name || '',
+          lastName: empleado.lastName || '',
+          email: empleado.email || '',
+          dui: empleado.dui || '',
+          birthDate: empleado.birthDate || null,
+          phone: empleado.phone || '',
+          address: empleado.address || '',
+          img: empleado.img || null,
+          _id: empleado._id || empleado.id || `temp-${index}`
+        };
+      });
+
+      console.log("✅ Empleados normalizados:", normalizedEmpleados);
+      setEmpleados(normalizedEmpleados);
+      setError(null);
+      
     } catch (error) {
-      console.error('Error al cargar empleados:', error);
-      setError("Error al cargar los empleados");
+      console.error('❌ Error detallado:', error);
+      console.error('❌ Tipo de error:', error.name);
+      console.error('❌ Mensaje de error:', error.message);
+      
+      // Verificar si es un error de red
+      if (error.message.includes('Network') || error.code === 'ERR_NETWORK') {
+        setError('No se puede conectar al servidor. Verifica que esté ejecutándose en http://localhost:4000');
+      } else if (error.response) {
+        setError(`Error del servidor: ${error.response.status} - ${error.response.data?.message || 'Error desconocido'}`);
+      } else {
+        setError(`Error al cargar empleados: ${error.message}`);
+      }
+      setEmpleados([]); // Asegurar que siempre sea un array
     } finally {
       setLoading(false);
+      console.log('🏁 Carga de empleados finalizada');
     }
   };
 
@@ -44,13 +121,13 @@ const useDataEmpleado = () => {
     fetchEmpleados();
   }, []);
 
-  // Filtrar empleados
-  const filterEmpleados = empleados.filter((empleado) => 
+  // Filtrar empleados - WITH SAFETY CHECK
+  const filterEmpleados = Array.isArray(empleados) ? empleados.filter((empleado) => 
     [empleado.name, empleado.lastName, empleado.dui, empleado.email]
     .join(' ')
     .toLowerCase()
     .includes(searchTerm.toLowerCase())
-  );
+  ) : [];
 
   // Navegación
   const handleContinue = (e) => {
@@ -78,15 +155,23 @@ const useDataEmpleado = () => {
   const confirmDelete = async () => {
     setShowConfirmDelete(false);
     try {
+      console.log(`🗑️ Eliminando empleado ${selectedEmpleados._id}`);
       await axios.delete(`http://localhost:4000/api/empleados/${selectedEmpleados._id}`);
-      setEmpleados(empleados.filter(emp => emp._id !== selectedEmpleados._id));
-      console.log("Empleado eliminado:", selectedEmpleados);
+      
+      // Asegurar que empleados es un array antes de filtrar
+      setEmpleados(prevEmpleados => 
+        Array.isArray(prevEmpleados) 
+          ? prevEmpleados.filter(emp => emp._id !== selectedEmpleados._id)
+          : []
+      );
+      
+      console.log("✅ Empleado eliminado:", selectedEmpleados);
       setShowDetailView(false);
       setSelectedEmpleados(null);
       setSuccessType('delete');
       setShowSuccessAlert(true);
     } catch (error) {
-      console.error("Error al eliminar empleado:", error);
+      console.error("❌ Error al eliminar empleado:", error);
       setError("Error al eliminar el empleado");
     }
   };
@@ -102,7 +187,7 @@ const useDataEmpleado = () => {
     
     try {
       // Verificar qué campos están en el FormData para debug
-      console.log('Campos enviados:');
+      console.log('📝 Campos enviados:');
       for (let pair of formData.entries()) {
         console.log(pair[0] + ': ' + (pair[1] instanceof File ? 'Archivo de imagen' : pair[1]));
       }
@@ -119,26 +204,30 @@ const useDataEmpleado = () => {
       );
       
       // Usar la respuesta completa del servidor (incluye URL de Cloudinary)
-      const updatedEmployee = response.data.empleado;
+      const updatedEmployee = response.data.empleado || response.data.data || response.data;
       
-      // Actualizar la lista de empleados
-      setEmpleados(empleados.map(emp => 
-        emp._id === selectedEmpleados._id 
-          ? updatedEmployee
-          : emp
-      ));
+      // Actualizar la lista de empleados con safety check
+      setEmpleados(prevEmpleados => 
+        Array.isArray(prevEmpleados)
+          ? prevEmpleados.map(emp => 
+              emp._id === selectedEmpleados._id 
+                ? updatedEmployee
+                : emp
+            )
+          : [updatedEmployee]
+      );
       
       // Actualizar el empleado seleccionado
       setSelectedEmpleados(updatedEmployee);
       
-      console.log("Empleado actualizado:", updatedEmployee);
+      console.log("✅ Empleado actualizado:", updatedEmployee);
       
       setShowEditAlert(false);
       setSuccessType('edit');
       setShowSuccessAlert(true);
       
     } catch (error) {
-      console.error("Error al actualizar empleado:", error);
+      console.error("❌ Error al actualizar empleado:", error);
       setError("Error al actualizar el empleado");
     } finally {
       // IMPORTANTE: Siempre desactivar el estado de carga
@@ -161,6 +250,7 @@ const useDataEmpleado = () => {
 
   // Seleccionar empleado
   const selectEmpleado = (empleado) => {
+    console.log('👤 Empleado seleccionado:', empleado);
     setSelectedEmpleados(empleado);
     setShowDetailView(true);
   };
@@ -173,8 +263,34 @@ const useDataEmpleado = () => {
 
   // Refrescar datos (usa la función fetchEmpleados)
   const refreshEmpleados = async () => {
+    console.log('🔄 Refrescando lista de empleados...');
     await fetchEmpleados();
   };
+
+  // Función para obtener estadísticas
+  const getStats = () => {
+    const empleadosArray = Array.isArray(empleados) ? empleados : [];
+    const filteredArray = Array.isArray(filterEmpleados) ? filterEmpleados : [];
+    
+    return {
+      total: empleadosArray.length,
+      filtered: filteredArray.length,
+      hasResults: filteredArray.length > 0
+    };
+  };
+
+  // Efecto para debugging en desarrollo
+  useEffect(() => {
+    if (process.env.NODE_ENV === 'development') {
+      console.log('📊 Estado actual de empleados:', {
+        count: empleados.length,
+        loading,
+        error,
+        hasData: empleados.length > 0,
+        empleados: empleados.slice(0, 2) // Solo mostrar los primeros 2
+      });
+    }
+  }, [empleados, loading, error]);
 
   return {
     // Estados
@@ -214,6 +330,9 @@ const useDataEmpleado = () => {
     closeDetailView,
     refreshEmpleados,
     fetchEmpleados, // Exportar para usar en otros lugares si necesitas
+    
+    // Utilidades
+    stats: getStats()
   };
 };
 
