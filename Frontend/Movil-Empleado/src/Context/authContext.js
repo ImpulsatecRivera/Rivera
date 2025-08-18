@@ -38,6 +38,7 @@ export const AuthProvider = ({ children }) => {
       const onboardingCompleted = await AsyncStorage.getItem('onboardingCompleted');
       const userData = await AsyncStorage.getItem('userData');
       const savedUserType = await AsyncStorage.getItem('userType');
+      const motoristaId = await AsyncStorage.getItem('motoristaId'); // ✅ Verificar ID
 
       if (token && loginTime) {
         const currentTime = Date.now();
@@ -49,6 +50,7 @@ export const AuthProvider = ({ children }) => {
         if (timeSinceLogin < SESSION_TIMEOUT) {
           const remainingTime = SESSION_TIMEOUT - timeSinceLogin;
           console.log(`✅ Sesión válida. Expira en: ${Math.round(remainingTime / 1000 / 60)} minutos`);
+          console.log(`📋 Motorista ID guardado: ${motoristaId}`);
           
           // Restaurar estado
           setIsAuthenticated(true);
@@ -115,7 +117,9 @@ export const AuthProvider = ({ children }) => {
         'loginTime', 
         'onboardingCompleted',
         'userData',
-        'userType'
+        'userType',
+        'motoristaId', // ✅ Limpiar también el ID
+        'authToken'    // ✅ Limpiar token adicional
       ]);
       
       setIsAuthenticated(false);
@@ -138,13 +142,21 @@ export const AuthProvider = ({ children }) => {
       console.log('🔐 Procesando login exitoso:', loginData);
       
       const currentTime = Date.now();
+      const userId = loginData.user._id || loginData.user.id;
+      
+      if (!userId) {
+        console.error('❌ No se encontró ID del usuario en loginData');
+        throw new Error('ID de usuario no disponible');
+      }
       
       // 💾 GUARDAR EN ASYNCSTORAGE
       await AsyncStorage.multiSet([
         ['userToken', loginData.token || 'temp-token'],
+        ['authToken', loginData.token || ''], // ✅ Para compatibilidad
         ['loginTime', currentTime.toString()],
         ['userData', JSON.stringify(loginData.user)],
         ['userType', loginData.userType],
+        ['motoristaId', userId.toString()], // ✅ CRÍTICO: Guardar ID para useProfile
         ['onboardingCompleted', 'true'] // Los motoristas que hacen login ya pasaron onboarding
       ]);
       
@@ -158,6 +170,7 @@ export const AuthProvider = ({ children }) => {
       startSessionTimer();
       
       console.log('✅ Login completado y guardado');
+      console.log('📋 Motorista ID guardado:', userId);
       console.log('📊 Sesión expirará en 20 minutos');
       
       return { success: true };
@@ -173,13 +186,21 @@ export const AuthProvider = ({ children }) => {
       console.log('✅ Registro exitoso - activando pantallas de carga');
       
       const currentTime = Date.now();
+      const userId = userData._id || userData.id;
+      
+      if (!userId) {
+        console.error('❌ No se encontró ID del usuario en userData');
+        throw new Error('ID de usuario no disponible');
+      }
       
       // 💾 GUARDAR EN ASYNCSTORAGE
       await AsyncStorage.multiSet([
         ['userToken', 'temp-register-token'],
+        ['authToken', ''], // ✅ Para compatibilidad
         ['loginTime', currentTime.toString()],
         ['userData', JSON.stringify(userData)],
         ['userType', 'Motorista'],
+        ['motoristaId', userId.toString()], // ✅ CRÍTICO: Guardar ID para useProfile
         ['onboardingCompleted', 'false'] // Usuarios nuevos SÍ necesitan onboarding
       ]);
       
@@ -193,6 +214,7 @@ export const AuthProvider = ({ children }) => {
       startSessionTimer();
       
       console.log('📊 Registro completado - mostrando onboarding');
+      console.log('📋 Motorista ID guardado:', userId);
       
       return { success: true };
     } catch (error) {

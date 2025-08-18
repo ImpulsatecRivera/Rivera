@@ -10,6 +10,12 @@ import PerfilScreen from '../screens/PerfilScreen';
 import InfoViajeScreen from '../screens/InfoViajeScreen';
 import InicioSesionScreen from '../screens/InicioSesionScreen';
 
+// 🆕 NUEVA PANTALLA DE RECUPERACIÓN PRINCIPAL
+import elegirMetodoRecuperacionScreen from '../screens/elegirMetodoRecuperacionScreen';
+
+// 📱 NUEVA PANTALLA DE TELÉFONO
+import RecuperacionTelefonoScreen from '../screens/RecuperacionTelefonoScreens';
+
 // Pantallas existentes de recuperación
 import RecuperacionScreen from '../screens/RecuperacionScreen';
 import Recuperacion2Scereen from '../screens/Recuepracion2Screen';
@@ -130,10 +136,42 @@ const AppNavigator = () => {
           }}
         />
         
-        {/* PANTALLAS DE RECUPERACIÓN */}
+        {/* 🆕 NUEVA PANTALLA PRINCIPAL DE RECUPERACIÓN - ANTES QUE TODAS LAS DEMÁS */}
+        <Stack.Screen 
+          name="elegirMetodoRecuperacion" 
+          component={elegirMetodoRecuperacionScreen}
+          options={{
+            presentation: 'card',
+            gestureEnabled: true,
+            cardStyleInterpolator: ({ current, layouts }) => {
+              return {
+                cardStyle: {
+                  transform: [
+                    {
+                      translateX: current.progress.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [layouts.screen.width, 0],
+                      }),
+                    },
+                  ],
+                },
+              };
+            },
+          }}
+        />
+        
+        {/* PANTALLAS DE RECUPERACIÓN EXISTENTES */}
         <Stack.Screen 
           name="Recuperacion" 
           component={RecuperacionScreen}
+          options={{
+            presentation: 'card',
+            gestureEnabled: true,
+          }}
+        />
+        <Stack.Screen 
+          name="RecuperacionTelefono" 
+          component={RecuperacionTelefonoScreen}
           options={{
             presentation: 'card',
             gestureEnabled: true,

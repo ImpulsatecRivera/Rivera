@@ -1,4 +1,5 @@
 import EmpleadosModel from "../Models/Empleados.js";
+import MotoristasModel from "../Models/Motorista.js"
 import bcryptjs from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { EnviarEmail, html } from "../Utils/RecoveryPass.js";
@@ -6,6 +7,101 @@ import { config } from "../config.js";
 import { EnviarSms } from "../Utils/EnviarSms.js";
 
 const RecoveryPass = {};
+
+// Función auxiliar para buscar usuario en ambos modelos
+const buscarUsuario = async (criterio, valor) => {
+  let userFound = null;
+  let userType = null;
+
+  // Buscar en Empleados
+  if (criterio === "email") {
+    userFound = await EmpleadosModel.findOne({ 
+      email: { $regex: new RegExp(`^${valor}$`, 'i') } 
+    });
+    if (userFound) userType = "Empleado";
+  } else if (criterio === "phone") {
+    userFound = await EmpleadosModel.findOne({
+      $or: [
+        { phone: valor },
+        { phone: valor.replace('+503', '') },
+        { phone: valor.replace('+', '') }
+      ]
+    });
+    if (userFound) userType = "Empleado";
+  }
+
+  // Si no se encuentra en Empleados, buscar en Motoristas
+  if (!userFound) {
+    if (criterio === "email") {
+      userFound = await MotoristasModel.findOne({ 
+        email: { $regex: new RegExp(`^${valor}$`, 'i') } 
+      });
+      if (userFound) userType = "Motorista";
+    } else if (criterio === "phone") {
+      userFound = await MotoristasModel.findOne({
+        $or: [
+          { phone: valor },
+          { phone: valor.replace('+503', '') },
+          { phone: valor.replace('+', '') }
+        ]
+      });
+      if (userFound) userType = "Motorista";
+    }
+  }
+
+  return { userFound, userType };
+};
+
+// Función auxiliar para actualizar contraseña en ambos modelos
+const actualizarContrasena = async (decoded, hashedPassword) => {
+  let updatedUser = null;
+
+  // Intentar actualizar en el modelo correspondiente según userType
+  if (decoded.userType === "Empleado") {
+    updatedUser = await EmpleadosModel.findOneAndUpdate(
+      { $or: [{ email: decoded.email }, { _id: decoded.id }] },
+      { 
+        password: hashedPassword,
+        passwordUpdatedAt: new Date()
+      },
+      { new: true }
+    );
+  } else if (decoded.userType === "Motorista") {
+    updatedUser = await MotoristasModel.findOneAndUpdate(
+      { $or: [{ email: decoded.email }, { _id: decoded.id }] },
+      { 
+        password: hashedPassword,
+        passwordUpdatedAt: new Date()
+      },
+      { new: true }
+    );
+  }
+
+  // Si no se encuentra en el modelo específico, buscar en ambos
+  if (!updatedUser) {
+    updatedUser = await EmpleadosModel.findOneAndUpdate(
+      { $or: [{ email: decoded.email }, { _id: decoded.id }] },
+      { 
+        password: hashedPassword,
+        passwordUpdatedAt: new Date()
+      },
+      { new: true }
+    );
+
+    if (!updatedUser) {
+      updatedUser = await MotoristasModel.findOneAndUpdate(
+        { $or: [{ email: decoded.email }, { _id: decoded.id }] },
+        { 
+          password: hashedPassword,
+          passwordUpdatedAt: new Date()
+        },
+        { new: true }
+      );
+    }
+  }
+
+  return updatedUser;
+};
 
 // Solicitar código de recuperación
 RecoveryPass.requestCode = async (req, res) => {
@@ -27,7 +123,7 @@ RecoveryPass.requestCode = async (req, res) => {
       return res.status(400).json({ message: "Método de envío debe ser 'email' o 'sms'" });
     }
 
-    let userFound;
+    let userFound, userType;
     let searchCriteria;
 
     // Buscar usuario según el método seleccionado
@@ -35,10 +131,9 @@ RecoveryPass.requestCode = async (req, res) => {
       const normalizedEmail = email.trim().toLowerCase();
       console.log("🔍 Buscando usuario por email:", normalizedEmail);
       
-      // Búsqueda por email (case-insensitive)
-      userFound = await EmpleadosModel.findOne({ 
-        email: { $regex: new RegExp(`^${normalizedEmail}$`, 'i') } 
-      });
+      const result = await buscarUsuario("email", normalizedEmail);
+      userFound = result.userFound;
+      userType = result.userType;
       searchCriteria = `email: ${normalizedEmail}`;
       
     } else if (via === "sms") {
@@ -56,19 +151,14 @@ RecoveryPass.requestCode = async (req, res) => {
       
       console.log("🔍 Buscando usuario por teléfono:", normalizedPhone);
       
-      // Buscar por número exacto o sin código de país
-      userFound = await EmpleadosModel.findOne({
-        $or: [
-          { phone: normalizedPhone },
-          { phone: normalizedPhone.replace('+503', '') },
-          { phone: normalizedPhone.replace('+', '') }
-        ]
-      });
+      const result = await buscarUsuario("phone", normalizedPhone);
+      userFound = result.userFound;
+      userType = result.userType;
       searchCriteria = `phone: ${normalizedPhone}`;
     }
     
     console.log("🔍 Criterio de búsqueda:", searchCriteria);
-    console.log("👤 Usuario encontrado:", userFound ? `Sí (ID: ${userFound._id})` : "No");
+    console.log("👤 Usuario encontrado:", userFound ? `Sí (ID: ${userFound._id}, Tipo: ${userType})` : "No");
 
     // Si no se encuentra usuario
     if (!userFound) {
@@ -98,7 +188,7 @@ RecoveryPass.requestCode = async (req, res) => {
       phone: userFound.phone || null,
       id: userFound._id,
       codex, 
-      userType: "Empleado", 
+      userType: userType, // Usar el tipo detectado dinámicamente
       verified: false,
       via: via,
       createdAt: new Date().toISOString()
@@ -130,7 +220,8 @@ RecoveryPass.requestCode = async (req, res) => {
           message: "Código enviado vía SMS",
           success: true,
           sentTo: `***${phoneToUse.slice(-4)}`,
-          method: "sms"
+          method: "sms",
+          userType: userType
         });
         
       } else {
@@ -151,7 +242,8 @@ RecoveryPass.requestCode = async (req, res) => {
           message: "Código enviado vía email",
           success: true,
           sentTo: `***@${emailToUse.split('@')[1]}`,
-          method: "email"
+          method: "email",
+          userType: userType
         });
       }
     } catch (sendError) {
@@ -205,6 +297,7 @@ RecoveryPass.verifyCode = async (req, res) => {
       console.log("✅ Token decodificado:", { 
         email: decoded.email, 
         via: decoded.via,
+        userType: decoded.userType,
         createdAt: decoded.createdAt 
       });
     } catch (jwtError) {
@@ -251,11 +344,12 @@ RecoveryPass.verifyCode = async (req, res) => {
       sameSite: process.env.NODE_ENV === 'production' ? 'Strict' : 'Lax',
     });
 
-    console.log(`✅ Código verificado para: ${decoded.email || decoded.phone}`);
+    console.log(`✅ Código verificado para: ${decoded.email || decoded.phone} (${decoded.userType})`);
     res.status(200).json({
       message: "Código verificado exitosamente",
       success: true,
-      method: decoded.via
+      method: decoded.via,
+      userType: decoded.userType
     });
 
   } catch (error) {
@@ -300,20 +394,13 @@ RecoveryPass.newPassword = async (req, res) => {
       return res.status(400).json({ message: "Código no verificado" });
     }
 
-    console.log("🔍 Actualizando contraseña para usuario:", decoded.email);
+    console.log("🔍 Actualizando contraseña para usuario:", decoded.email, `(${decoded.userType})`);
 
     // Hashear nueva contraseña
     const hashedPassword = await bcryptjs.hash(newPassword, 10);
 
-    // Actualizar contraseña - buscar por email o ID
-    const updatedUser = await EmpleadosModel.findOneAndUpdate(
-      { $or: [{ email: decoded.email }, { _id: decoded.id }] },
-      { 
-        password: hashedPassword,
-        passwordUpdatedAt: new Date()
-      },
-      { new: true }
-    );
+    // Actualizar contraseña usando la función auxiliar
+    const updatedUser = await actualizarContrasena(decoded, hashedPassword);
 
     if (!updatedUser) {
       console.log("❌ Usuario no encontrado para actualizar contraseña");
@@ -323,10 +410,11 @@ RecoveryPass.newPassword = async (req, res) => {
     // Limpiar cookie
     res.clearCookie("tokenRecoveryCode");
 
-    console.log(`✅ Contraseña actualizada para: ${decoded.email || decoded.phone}`);
+    console.log(`✅ Contraseña actualizada para: ${decoded.email || decoded.phone} (${decoded.userType})`);
     res.status(200).json({ 
       message: "Contraseña actualizada exitosamente",
-      success: true 
+      success: true,
+      userType: decoded.userType
     });
 
   } catch (error) {
@@ -384,7 +472,7 @@ RecoveryPass.IniciarSesionConCodigo = async (req, res) => {
       sameSite: process.env.NODE_ENV === 'production' ? 'Strict' : 'Lax',
     });
 
-    console.log(`✅ Inicio de sesión exitoso para: ${decoded.email || decoded.phone}`);
+    console.log(`✅ Inicio de sesión exitoso para: ${decoded.email || decoded.phone} (${decoded.userType})`);
     return res.status(200).json({ 
       message: "Inicio de sesión exitoso", 
       success: true,
@@ -403,9 +491,20 @@ RecoveryPass.IniciarSesionConCodigo = async (req, res) => {
 // Función auxiliar para debugging (remover en producción)
 RecoveryPass.debugUsers = async (req, res) => {
   try {
-    const users = await EmpleadosModel.find({}, { email: 1, phone: 1, _id: 1 }).limit(10);
-    console.log("👥 Usuarios en DB:", users);
-    res.json({ users });
+    const empleados = await EmpleadosModel.find({}, { email: 1, phone: 1, _id: 1 }).limit(5);
+    const motoristas = await MotoristasModel.find({}, { email: 1, phone: 1, _id: 1 }).limit(5);
+    
+    console.log("👥 Empleados en DB:", empleados);
+    console.log("🏍️ Motoristas en DB:", motoristas);
+    
+    res.json({ 
+      empleados,
+      motoristas,
+      total: {
+        empleados: empleados.length,
+        motoristas: motoristas.length
+      }
+    });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
