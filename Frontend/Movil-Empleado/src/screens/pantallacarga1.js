@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Image } from 'react-native';
 import { useAuth } from '../Context/authContext';
+import AnimatedPagination from '../components/AnimatedPagination';
 
 const OnboardingScreen1 = ({ navigation }) => {
   const { completeOnboarding } = useAuth();
@@ -31,11 +32,11 @@ const OnboardingScreen1 = ({ navigation }) => {
         <View style={styles.imageContainer}>
           {/* AQUÍ PONDRÁS TU IMAGEN - Por ahora solo placeholder */}
           <View style={styles.imagePlaceholder}>
-            <Text style={styles.placeholderText}><Image 
+            <Image 
                source={require('../images/navegando.png')} 
                style={styles.characterImage}
-              resizeMode="contain"
-            /></Text>
+               resizeMode="contain"
+            />
           </View>
         </View>
       </View>
@@ -51,11 +52,8 @@ const OnboardingScreen1 = ({ navigation }) => {
 
       {/* Bottom Navigation */}
       <View style={styles.bottomContainer}>
-        <View style={styles.pagination}>
-          <View style={[styles.dot, styles.activeDot]} />
-          <View style={styles.dot} />
-          <View style={styles.dot} />
-        </View>
+        {/* Paginación animada */}
+        <AnimatedPagination currentIndex={0} />
         
         <TouchableOpacity style={styles.nextButton} onPress={handleNext}>
           <Text style={styles.nextButtonText}>Siguiente</Text>
@@ -105,7 +103,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-
+  characterImage: {
+    width: 250,
+    height: 250,
+  },
   // Placeholder temporal - eliminar cuando agregues tu imagen
   imagePlaceholder: {
     width: 250,
@@ -147,23 +148,9 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
     alignItems: 'center',
   },
-  pagination: {
-    flexDirection: 'row',
-    marginBottom: 30,
-  },
-  dot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: '#E0E0E0',
-    marginHorizontal: 5,
-  },
-  activeDot: {
-    backgroundColor: '#333333',
-    width: 30,
-  },
   nextButton: {
     alignSelf: 'flex-end',
+    marginTop: 30,
   },
   nextButtonText: {
     fontSize: 16,
