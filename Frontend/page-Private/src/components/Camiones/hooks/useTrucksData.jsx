@@ -1,10 +1,10 @@
-// Versión mejorada del hook con mejor debugging
+// Versión mejorada del hook con mejor debugging y actualización de estado
 import { useState, useEffect } from 'react';
 
 const useTrucksData = () => {
   const [trucks, setTrucks] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null); // Cambiar a null para mejor manejo
+  const [error, setError] = useState(null);
 
   const fetchOptions = {
     credentials: 'include',
@@ -19,16 +19,21 @@ const useTrucksData = () => {
     return {
       ...truck,
       id: id,
+      _id: truck._id || id, // Mantener ambos para compatibilidad
       name: truck.name || truck.nombre || 'Camión sin nombre',
       licensePlate: truck.licensePlate || truck.placa || 'N/A',
+      // Manejar todas las variaciones de estado que aparecen en tu JSON
       state: truck.state || truck.estado || 'SIN ESTADO',
       img: truck.img || truck.image || truck.foto || null,
+      // Priorizar campos nuevos sobre campos legacy
       brand: truck.brand || truck.marca || '',
       model: truck.model || truck.modelo || '',
       age: truck.age || truck.año || truck.year || '',
+      // Manejar todas las variaciones de circulationCard
       circulationCard: truck.circulationCard || truck.ciculatioCard || '',
+      ciculatioCard: truck.ciculatioCard || truck.circulationCard || '', // Mantener ambos
       description: truck.description || truck.descripcion || '',
-      // Campos adicionales que veo en tu API
+      // Manejar nivel de gasolina con diferentes nombres
       gasolineLevel: truck.gasolineLevel || truck.nivelGasolina || 0,
       supplierId: truck.supplierId || '',
       driverId: truck.driverId || ''
@@ -42,7 +47,6 @@ const useTrucksData = () => {
       
       console.log('🚚 Iniciando petición a la API...');
       
-      // Verificar si el servidor está disponible
       const response = await fetch('http://localhost:4000/api/camiones', fetchOptions);
       
       console.log('📡 Status de la respuesta:', response.status);
@@ -54,31 +58,21 @@ const useTrucksData = () => {
       
       const data = await response.json();
       console.log("📋 Datos recibidos del servidor:", data);
-      console.log("📋 Tipo de datos recibidos:", typeof data);
-      console.log("📋 Es array?", Array.isArray(data));
 
       // Manejar diferentes formatos de respuesta
       let camiones = [];
       if (Array.isArray(data)) {
         camiones = data;
       } else if (data.data && Array.isArray(data.data)) {
-        // Tu API devuelve los camiones en data.data
         camiones = data.data;
       } else if (data.camiones && Array.isArray(data.camiones)) {
         camiones = data.camiones;
       } else {
         console.warn('⚠️ Formato de datos no esperado:', data);
-        console.warn('⚠️ Estructura recibida:', Object.keys(data));
         throw new Error('Formato de datos no válido');
       }
 
       console.log(`📊 Cantidad de camiones encontrados: ${camiones.length}`);
-
-      if (camiones.length === 0) {
-        console.log('⚠️ No se encontraron camiones en la respuesta');
-        setTrucks([]);
-        return;
-      }
 
       // Normalizar datos
       const normalizedTrucks = camiones
@@ -95,17 +89,13 @@ const useTrucksData = () => {
         });
 
       console.log("✅ Camiones normalizados:", normalizedTrucks);
-      console.log(`✅ Total de camiones válidos: ${normalizedTrucks.length}`);
       
       setTrucks(normalizedTrucks);
       setError(null);
       
     } catch (err) {
       console.error('❌ Error detallado:', err);
-      console.error('❌ Tipo de error:', err.name);
-      console.error('❌ Mensaje de error:', err.message);
       
-      // Verificar si es un error de red
       if (err.message.includes('fetch')) {
         setError('No se puede conectar al servidor. Verifica que esté ejecutándose en http://localhost:4000');
       } else {
@@ -114,11 +104,9 @@ const useTrucksData = () => {
       setTrucks([]);
     } finally {
       setLoading(false);
-      console.log('🏁 Carga finalizada');
     }
   };
 
-  // Resto de funciones...
   const deleteTruck = async (truckId) => {
     try {
       console.log(`🗑️ Eliminando camión con ID: ${truckId}`);
@@ -150,12 +138,42 @@ const useTrucksData = () => {
   };
 
   const updateTruckInState = (updatedTruck) => {
-    setTrucks(prevTrucks => 
-      prevTrucks.map(t => 
-        t.id === updatedTruck.id ? { ...t, ...updatedTruck } : t
-      )
-    );
-    console.log('✅ Camión actualizado en el estado local:', updatedTruck);
+    console.log('🔄 Actualizando camión en estado:', updatedTruck);
+    
+    // Normalizar el camión actualizado para mantener consistencia
+    const normalizedUpdatedTruck = normalizeTruckData(updatedTruck);
+    console.log('🔄 Camión normalizado para actualización:', normalizedUpdatedTruck);
+    
+    setTrucks(prevTrucks => {
+      console.log('📋 Estado previo de camiones:', prevTrucks.length, 'camiones');
+      
+      // Buscar el camión por ID y _id para mayor compatibilidad
+      const truckIndex = prevTrucks.findIndex(t => 
+        t.id === normalizedUpdatedTruck.id || 
+        t._id === normalizedUpdatedTruck._id ||
+        t.id === normalizedUpdatedTruck._id ||
+        t._id === normalizedUpdatedTruck.id
+      );
+      
+      if (truckIndex === -1) {
+        console.warn('⚠️ No se encontró el camión para actualizar:', {
+          searchingFor: normalizedUpdatedTruck.id || normalizedUpdatedTruck._id,
+          availableIds: prevTrucks.map(t => ({ id: t.id, _id: t._id }))
+        });
+        return prevTrucks;
+      }
+      
+      console.log(`✅ Camión encontrado en índice ${truckIndex}, actualizando...`);
+      
+      const newTrucks = [...prevTrucks];
+      newTrucks[truckIndex] = {
+        ...prevTrucks[truckIndex],
+        ...normalizedUpdatedTruck
+      };
+      
+      console.log('✅ Estado actualizado, nuevo camión:', newTrucks[truckIndex]);
+      return newTrucks;
+    });
   };
 
   const addTruckToState = (newTruck) => {
@@ -170,7 +188,10 @@ const useTrucksData = () => {
   };
 
   const getTruckById = (truckId) => {
-    return trucks.find(truck => truck.id === truckId);
+    return trucks.find(truck => 
+      truck.id === truckId || 
+      truck._id === truckId
+    );
   };
 
   const existsTruckWithPlate = (licensePlate) => {
@@ -194,7 +215,11 @@ const useTrucksData = () => {
     });
     
     if (trucks.length > 0) {
-      console.log('📋 Primeros camiones:', trucks.slice(0, 2));
+      console.log('📋 IDs de camiones en estado:', trucks.map(t => ({ 
+        id: t.id, 
+        _id: t._id, 
+        name: t.name 
+      })));
     }
   }, [trucks, loading, error]);
 
