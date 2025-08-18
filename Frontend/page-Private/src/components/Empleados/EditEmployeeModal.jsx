@@ -26,21 +26,53 @@ const EditEmployeeModal = ({ isOpen, onClose, onSave, employee, uploading }) => 
     return `${cleanName}.${cleanLastName}@empresa.com`;
   };
 
+  // USEEFFECT PRINCIPAL - Cargar datos del empleado
   useEffect(() => {
     if (employee && isOpen) {
+      console.log('🔄 Cargando datos del empleado en el modal:', employee);
+      
       setFormData({
-        name: '',
-        lastName: '',
-        phone: '',
-        address: '',
+        name: employee.name || '',
+        lastName: employee.lastName || '',
+        phone: employee.phone || '',
+        address: employee.address || '',
+        password: '', // La contraseña siempre empieza vacía por seguridad
+        img: null,    // Para nuevas imágenes
+        email: employee.email || ''
+      });
+      
+      setShowPassword(false);
+      setImagePreview(employee.img || null);
+      
+      console.log('✅ Datos cargados en el formulario:', {
+        name: employee.name || '',
+        lastName: employee.lastName || '',
+        phone: employee.phone || '',
+        address: employee.address || '',
+        email: employee.email || ''
+      });
+    }
+  }, [employee, isOpen]);
+
+  // USEEFFECT ADICIONAL - Sincronizar con actualizaciones externas
+  useEffect(() => {
+    // Sincronizar cuando el empleado se actualiza externamente
+    if (employee && isOpen && !uploading) {
+      console.log('🔄 Sincronizando modal con datos actualizados del empleado:', employee);
+      
+      setFormData({
+        name: employee.name || '',
+        lastName: employee.lastName || '',
+        phone: employee.phone || '',
+        address: employee.address || '',
         password: '',
         img: null,
         email: employee.email || ''
       });
-      setShowPassword(false);
+      
       setImagePreview(employee.img || null);
     }
-  }, [employee, isOpen]);
+  }, [employee, isOpen, uploading]); // Incluir uploading para evitar conflictos
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -97,33 +129,58 @@ const EditEmployeeModal = ({ isOpen, onClose, onSave, employee, uploading }) => 
     }
   };
 
+  // FUNCIÓN HANDLESAVE OPTIMIZADA
   const handleSave = () => {
+    console.log('💾 Preparando datos para guardar...');
+    console.log('📋 FormData actual:', formData);
+    console.log('👤 Empleado original:', employee);
+    
     const formDataToSend = new FormData();
     
+    // Solo agregar campos que han cambiado o que tienen valor
     if (formData.name && formData.name.trim()) {
       formDataToSend.append('name', formData.name.trim());
+      console.log('✅ Agregando nombre:', formData.name.trim());
     }
     if (formData.lastName && formData.lastName.trim()) {
       formDataToSend.append('lastName', formData.lastName.trim());
+      console.log('✅ Agregando apellido:', formData.lastName.trim());
     }
     if (formData.phone && formData.phone.trim()) {
       formDataToSend.append('phone', formData.phone.trim());
+      console.log('✅ Agregando teléfono:', formData.phone.trim());
     }
     if (formData.address && formData.address.trim()) {
       formDataToSend.append('address', formData.address.trim());
+      console.log('✅ Agregando dirección:', formData.address.trim());
     }
     if (formData.password && formData.password.trim()) {
       formDataToSend.append('password', formData.password.trim());
+      console.log('✅ Agregando contraseña: [OCULTA]');
     }
     if (formData.email && formData.email.trim()) {
       formDataToSend.append('email', formData.email.trim());
+      console.log('✅ Agregando email:', formData.email.trim());
     }
     if (formData.img instanceof File) {
       formDataToSend.append('img', formData.img);
-    } else if (imagePreview) {
-      formDataToSend.append('img', employee.img);
+      console.log('✅ Agregando nueva imagen:', formData.img.name);
     }
     
+    // Debug: mostrar todos los campos que se van a enviar
+    console.log('📤 Campos a enviar:');
+    for (let pair of formDataToSend.entries()) {
+      console.log(pair[0] + ': ' + (pair[1] instanceof File ? `Archivo: ${pair[1].name}` : pair[1]));
+    }
+    
+    // Verificar que se está enviando algo
+    if (formDataToSend.entries().next().done) {
+      console.warn('⚠️ No hay campos para actualizar');
+      alert('No hay cambios para guardar');
+      return;
+    }
+    
+    // Llamar la función de guardado
     onSave(formDataToSend);
   };
 
@@ -131,31 +188,29 @@ const EditEmployeeModal = ({ isOpen, onClose, onSave, employee, uploading }) => 
 
   return (
     <>
-      <style>
-        {`
-          @keyframes slideInUp {
-            from {
-              transform: translateY(100px) scale(0.9);
-              opacity: 0;
-            }
-            to {
-              transform: translateY(0) scale(1);
-              opacity: 1;
-            }
+      <style>{`
+        @keyframes slideInUp {
+          from {
+            transform: translateY(100px) scale(0.9);
+            opacity: 0;
           }
-          
-          @keyframes fadeInUp {
-            from {
-              transform: translateY(20px);
-              opacity: 0;
-            }
-            to {
-              transform: translateY(0);
-              opacity: 1;
-            }
+          to {
+            transform: translateY(0) scale(1);
+            opacity: 1;
           }
-        `}
-      </style>
+        }
+        
+        @keyframes fadeInUp {
+          from {
+            transform: translateY(20px);
+            opacity: 0;
+          }
+          to {
+            transform: translateY(0);
+            opacity: 1;
+          }
+        }
+      `}</style>
       <div 
         className={`fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 transition-opacity duration-300 ${
           isOpen ? 'opacity-100' : 'opacity-0'
@@ -185,6 +240,11 @@ const EditEmployeeModal = ({ isOpen, onClose, onSave, employee, uploading }) => 
             >
               Editar Empleado
             </h3>
+            {employee && (
+              <p className="text-gray-600 mt-2">
+                Editando: {employee.name} {employee.lastName}
+              </p>
+            )}
           </div>
 
           <div 
@@ -244,7 +304,7 @@ const EditEmployeeModal = ({ isOpen, onClose, onSave, employee, uploading }) => 
                   value={formData.name}
                   onChange={handleInputChange}
                   className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 text-base text-gray-900 bg-white"
-                  placeholder="Carlos"
+                  placeholder={employee?.name || "Nombre del empleado"}
                 />
               </div>
               <div>
@@ -268,7 +328,7 @@ const EditEmployeeModal = ({ isOpen, onClose, onSave, employee, uploading }) => 
                   value={formData.lastName}
                   onChange={handleInputChange}
                   className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 text-base text-gray-900 bg-white"
-                  placeholder="Martinez"
+                  placeholder={employee?.lastName || "Apellido del empleado"}
                 />
               </div>
               <div>
@@ -325,7 +385,7 @@ const EditEmployeeModal = ({ isOpen, onClose, onSave, employee, uploading }) => 
                   value={formData.phone}
                   onChange={handleInputChange}
                   className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 text-base text-gray-900 bg-white"
-                  placeholder="7533-4567"
+                  placeholder={employee?.phone || "7533-4567"}
                 />
               </div>
             </div>
@@ -349,23 +409,40 @@ const EditEmployeeModal = ({ isOpen, onClose, onSave, employee, uploading }) => 
                 value={formData.address}
                 onChange={handleInputChange}
                 className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 text-base text-gray-900 bg-white"
-                placeholder="Calle Los Almendros #24, San Salvador"
+                placeholder={employee?.address || "Calle Los Almendros #24, San Salvador"}
               />
             </div>
           </div>
 
           <div 
-            className="mt-8 flex justify-center"
+            className="mt-8 flex justify-center space-x-4"
             style={{
               animation: isOpen ? 'fadeInUp 0.5s ease-out 0.5s both' : 'none'
             }}
           >
             <button
+              onClick={onClose}
+              disabled={uploading}
+              className="px-8 py-3 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg transition-all duration-200 transform hover:scale-105 font-medium text-lg disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Cancelar
+            </button>
+            <button
               onClick={handleSave}
               disabled={uploading}
-              className="px-10 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-all duration-200 transform hover:scale-105 hover:shadow-lg active:scale-95 font-medium text-lg disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-10 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-all duration-200 transform hover:scale-105 hover:shadow-lg active:scale-95 font-medium text-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
             >
-              {uploading ? 'Actualizando...' : 'Actualizar'}
+              {uploading ? (
+                <span className="flex items-center">
+                  <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Actualizando...
+                </span>
+              ) : (
+                'Actualizar'
+              )}
             </button>
           </div>
         </div>
