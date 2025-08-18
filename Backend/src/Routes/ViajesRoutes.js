@@ -87,10 +87,12 @@ if (process.env.NODE_ENV === 'development') {
 }
 
 // =====================================================
-// 🆕 RUTAS POST/PUT/PATCH
+// 🆕 RUTAS POST/PUT/PATCH/DELETE
 // =====================================================
 
 router.post("/", ViajesController.addViaje);
+router.put("/:viajeId", ViajesController.editViaje);
+router.delete("/:viajeId", ViajesController.deleteViaje);
 
 // =====================================================
 // 🛠️ RUTAS DE ACTUALIZACIÓN CON PARÁMETROS
