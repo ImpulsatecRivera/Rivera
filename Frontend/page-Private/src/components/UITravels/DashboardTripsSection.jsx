@@ -3,9 +3,11 @@ import { Clock, User, Truck, MapPin, AlertTriangle, RefreshCw, ChevronDown, Chev
 import { useNavigate } from 'react-router-dom';
 import { useTravels } from '../Travels/hooks/useDataTravels';
 import ContextMenu from '../UITravels/ContextMenu';
-import TripActionAlert from '../UITravels/TripActionAlert';
+import ActionModal from '../UITravels/ActionModal';
 import EditTripModal from '../FormsTravels/EditTripModal';
 import SuccessModal from '../UITravels/SuccessModal';
+import ConfirmationModal from '../UITravels/ConfirmationModal';
+import DeleteModal from '../UITravels/DeleteModal';
 
 // Componente para la barra de progreso compacta
 const CompactProgressBar = ({ progress, status }) => {
@@ -30,7 +32,7 @@ const CompactProgressBar = ({ progress, status }) => {
 };
 
 // Componente individual optimizado para el dashboard
-const DashboardTripItem = ({ trip, index, onMenuClick }) => {
+const DashboardTripItem = ({ trip, index, onEdit, onDelete }) => {
   return (
     <div className="flex items-center p-3 hover:bg-gray-50 rounded-xl transition-all duration-200 group border border-gray-100">
       {/* Icono del estado */}
@@ -110,12 +112,12 @@ const DashboardTripItem = ({ trip, index, onMenuClick }) => {
           <div className={`w-3 h-3 rounded-full ${trip.status}`}></div>
         </div>
 
-        {/* Menú contextual */}
+        {/* ✅ MENÚ CONTEXTUAL CORREGIDO */}
         <ContextMenu
           trip={trip}
           index={index}
-          onEdit={onMenuClick}
-          onDelete={onMenuClick}
+          onEdit={onEdit}    // ✅ Función directa para editar
+          onDelete={onDelete} // ✅ Función directa para eliminar
         />
       </div>
     </div>
@@ -199,16 +201,21 @@ const DashboardTripsSection = () => {
     loading,
     error,
     isRefreshing,
-    handleTripMenuClick,
     refreshTravels,
     stats,
-    // Estados para los modales
+    
+    // ✅ FUNCIONES DIRECTAS CORREGIDAS
+    onEdit,        // ✅ Nueva función directa para editar
+    onDelete,      // ✅ Nueva función directa para eliminar
+    
+    // Estados para los modales (mantener para compatibilidad)
     showModal,
     selectedTrip,
     isClosing,
     handleCloseModal,
     handleEdit,
     handleDelete,
+    
     // Estados para modal de edición
     showEditModal,
     isEditClosing,
@@ -216,10 +223,24 @@ const DashboardTripsSection = () => {
     handleInputChange,
     handleUpdateTrip,
     handleCloseEditModal,
+    handleConfirmEdit,
+    handleCancelEdit,
+    showConfirmEditModal,
+    isConfirmEditClosing,
+    
     // Estados para modal de éxito
     showSuccessModal,
     isSuccessClosing,
-    handleCloseSuccessModal
+    handleCloseSuccessModal,
+    
+    // Estados para modal de eliminación
+    showDeleteModal,
+    isDeleteClosing,
+    handleConfirmDelete,
+    handleCancelDelete,
+    showDeleteSuccessModal,
+    isDeleteSuccessClosing,
+    handleCloseDeleteSuccessModal
   } = useTravels();
 
   // 🔧 FILTRAR TODOS LOS VIAJES SEGÚN LOS FILTROS SELECCIONADOS
@@ -390,7 +411,6 @@ const DashboardTripsSection = () => {
             }
           </p>
         </div>
-        
       </div>
 
       {/* Lista de viajes */}
@@ -403,7 +423,8 @@ const DashboardTripsSection = () => {
                   key={trip.id || index}
                   trip={trip}
                   index={index}
-                  onMenuClick={handleTripMenuClick}
+                  onEdit={onEdit}      // ✅ Función directa para editar
+                  onDelete={onDelete}  // ✅ Función directa para eliminar
                 />
               ))}
               
@@ -480,15 +501,15 @@ const DashboardTripsSection = () => {
         </div>
       </div>
 
-      {/* 🆕 MODALES */}
+      {/* ✅ MODALES CORREGIDOS */}
       
       {/* Modal de selección de acción */}
-      <TripActionAlert
-        isOpen={showModal}
+      <ActionModal
+        show={showModal}
+        isClosing={isClosing}
         onClose={handleCloseModal}
         onEdit={handleEdit}
         onDelete={handleDelete}
-        trip={selectedTrip}
       />
 
       {/* Modal de edición */}
@@ -501,12 +522,44 @@ const DashboardTripsSection = () => {
         onInputChange={handleInputChange}
       />
 
-      {/* Modal de éxito */}
+      {/* Modal de confirmación de edición */}
+      <ConfirmationModal
+        show={showConfirmEditModal}
+        isClosing={isConfirmEditClosing}
+        onCancel={handleCancelEdit}
+        onConfirm={handleConfirmEdit}
+        title="¿Desea editar los datos?"
+        message="Elija la opción"
+        icon="?"
+        iconColor="blue"
+        cancelText="Cancelar"
+        confirmText="Continuar"
+      />
+
+      {/* Modal de éxito de edición */}
       <SuccessModal
-        isOpen={showSuccessModal}
+        show={showSuccessModal}
+        isClosing={isSuccessClosing}
         onClose={handleCloseSuccessModal}
-        type="edit"
-        message="Los cambios del viaje se han guardado correctamente. Los datos se han actualizado automáticamente."
+        title="Viaje actualizado con éxito"
+        message="Los cambios se han guardado correctamente"
+      />
+
+      {/* Modal de eliminación */}
+      <DeleteModal
+        show={showDeleteModal}
+        isClosing={isDeleteClosing}
+        onCancel={handleCancelDelete}
+        onConfirm={handleConfirmDelete}
+      />
+
+      {/* Modal de éxito de eliminación */}
+      <SuccessModal
+        show={showDeleteSuccessModal}
+        isClosing={isDeleteSuccessClosing}
+        onClose={handleCloseDeleteSuccessModal}
+        title="Viaje cancelado con éxito"
+        message="El viaje ha sido cancelado correctamente"
       />
     </div>
   );

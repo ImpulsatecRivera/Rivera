@@ -30,19 +30,23 @@ const ContextMenu = ({ trip, index, onEdit, onDelete }) => {
     setIsOpen(!isOpen);
   };
 
+  // ✅ FUNCIÓN CORREGIDA - LLAMADA DIRECTA A EDICIÓN
   const handleEdit = (e) => {
     e.stopPropagation();
     console.log('🖊️ Opción EDITAR seleccionada para:', trip.type);
     setIsOpen(false);
-    // Llamar la función onEdit que activará el ActionModal
+    
+    // ✅ LLAMAR DIRECTAMENTE LA FUNCIÓN DE EDICIÓN (NO ActionModal)
     onEdit(trip, index);
   };
 
+  // ✅ FUNCIÓN CORREGIDA - LLAMADA DIRECTA A ELIMINACIÓN
   const handleDelete = (e) => {
     e.stopPropagation();
     console.log('🗑️ Opción ELIMINAR seleccionada para:', trip.type);
     setIsOpen(false);
-    // Llamar la función onDelete que activará el ActionModal
+    
+    // ✅ LLAMAR DIRECTAMENTE LA FUNCIÓN DE ELIMINACIÓN (NO ActionModal)
     onDelete(trip, index);
   };
 
@@ -103,7 +107,7 @@ const ContextMenu = ({ trip, index, onEdit, onDelete }) => {
               }}
             >
               <div className="py-1">
-                {/* Opción Editar con icono y estilos completos */}
+                {/* ✅ OPCIÓN EDITAR - Llamada directa */}
                 <button
                   onClick={handleEdit}
                   className="w-full px-4 py-3 text-left text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700 flex items-center transition-all duration-200 transform hover:scale-[1.02] border-none bg-transparent cursor-pointer"
@@ -123,7 +127,7 @@ const ContextMenu = ({ trip, index, onEdit, onDelete }) => {
                   }}
                 />
                 
-                {/* Opción Eliminar con icono y estilos completos */}
+                {/* ✅ OPCIÓN ELIMINAR - Llamada directa */}
                 <button
                   onClick={handleDelete}
                   className="w-full px-4 py-3 text-left text-sm text-gray-700 hover:bg-red-50 hover:text-red-700 flex items-center transition-all duration-200 transform hover:scale-[1.02] border-none bg-transparent cursor-pointer"
