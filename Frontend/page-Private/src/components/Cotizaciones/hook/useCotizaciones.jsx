@@ -100,52 +100,102 @@ const useCotizaciones = () => {
       }
       
       const cotizacionesFormateadas = cotizacionesData.map((cotizacion) => {
-        // Extraer ID del cliente (manejar si es objeto o string)
-        let clienteId;
-        if (typeof cotizacion.clientId === 'object' && cotizacion.clientId !== null) {
-          clienteId = cotizacion.clientId._id || cotizacion.clientId.id;
-        } else {
-          clienteId = cotizacion.clientId;
+        console.log('=== PROCESANDO COTIZACIÓN ===');
+        console.log('Cotización completa:', cotizacion);
+        console.log('ClientId original:', cotizacion.clientId);
+        
+        // Extraer información del cliente de manera más robusta
+        let clienteData = {
+          id: null,
+          nombre: 'Cliente no encontrado',
+          firstName: '',
+          lastName: '',
+          email: 'No encontrado',
+          telefono: 'No encontrado'
+        };
+
+        if (cotizacion.clientId) {
+          if (typeof cotizacion.clientId === 'object' && cotizacion.clientId !== null) {
+            // El cliente viene como objeto anidado en la cotización
+            const clienteObj = cotizacion.clientId;
+            console.log('Cliente como objeto:', clienteObj);
+            
+            const clienteId = clienteObj._id || clienteObj.id;
+            
+            // SOLUCIÓN: Buscar primero en el mapa de clientes usando el ID
+            const clienteEnMapaPorId = clientesMap[clienteId];
+            
+            if (clienteEnMapaPorId) {
+              // Encontrado en el mapa, usar esa información completa
+              console.log('Cliente encontrado en mapa por ID:', clienteEnMapaPorId);
+              clienteData = clienteEnMapaPorId;
+            } else {
+              // No encontrado en mapa, usar lo que viene en la cotización
+              console.log('Cliente NO encontrado en mapa, usando datos básicos de cotización');
+              
+              // Intentar extraer el nombre de diferentes campos posibles
+              const firstName = clienteObj.firtsName || clienteObj.firstName || clienteObj.name || clienteObj.nombre || '';
+              const lastName = clienteObj.lastName || clienteObj.apellido || '';
+              const nombreCompleto = `${firstName} ${lastName}`.trim();
+              
+              // Si no hay nombre completo, usar el email como fallback
+              let nombreFinal = nombreCompleto;
+              if (!nombreFinal) {
+                // Usar el email como nombre si no hay otra opción
+                const email = clienteObj.email || '';
+                if (email) {
+                  // Extraer la parte antes del @ como nombre
+                  nombreFinal = email.split('@')[0] || 'Cliente sin nombre';
+                } else {
+                  nombreFinal = `Cliente #${clienteId ? clienteId.slice(-6) : 'Unknown'}`;
+                }
+              }
+              
+              clienteData = {
+                id: clienteId,
+                nombre: nombreFinal,
+                firstName: firstName,
+                lastName: lastName,
+                email: clienteObj.email || 'Sin email',
+                telefono: clienteObj.phone || clienteObj.telefono || clienteObj.celular || 'Sin teléfono'
+              };
+            }
+            
+            console.log('Cliente procesado desde objeto:', clienteData);
+          } else {
+            // El clientId es un string, buscar en el mapa de clientes
+            const clienteId = cotizacion.clientId;
+            console.log('Cliente como ID string:', clienteId);
+            
+            const clienteEncontrado = clientesMap[clienteId];
+            if (clienteEncontrado) {
+              clienteData = clienteEncontrado;
+              console.log('Cliente encontrado en mapa:', clienteData);
+            } else {
+              console.log('Cliente no encontrado en mapa para ID:', clienteId);
+              clienteData = {
+                id: clienteId,
+                nombre: `Cliente #${clienteId ? clienteId.slice(-6) : 'Unknown'}`,
+                firstName: '',
+                lastName: '',
+                email: 'No encontrado',
+                telefono: 'No encontrado'
+              };
+            }
+          }
         }
         
-        // Buscar info del cliente
-        const clienteInfo = clientesMap[clienteId] || null;
-        
-        // Si no encontramos en el mapa pero clientId es objeto, usar esa info
-        let clienteData;
-        if (clienteInfo) {
-          clienteData = clienteInfo;
-        } else if (typeof cotizacion.clientId === 'object' && cotizacion.clientId !== null) {
-          const obj = cotizacion.clientId;
-          const firstName = obj.firtsName || obj.firstName || obj.name || obj.nombre || '';
-          const lastName = obj.lastName || obj.apellido || '';
-          clienteData = {
-            id: obj._id || obj.id || clienteId,
-            nombre: `${firstName} ${lastName}`.trim() || 'Cliente sin nombre',
-            firstName: firstName,
-            lastName: lastName,
-            email: obj.email || 'Sin email',
-            telefono: obj.phone || obj.telefono || obj.celular || 'Sin teléfono'
-          };
-        } else {
-          clienteData = {
-            id: clienteId,
-            nombre: 'Cliente no encontrado',
-            firstName: '',
-            lastName: '',
-            email: 'No encontrado',
-            telefono: 'No encontrado'
-          };
-        }
+        console.log('Cliente final asignado:', clienteData);
+        console.log('===========================');
         
         return {
           id: cotizacion._id,
-          clientId: clienteId,
+          clientId: clienteData.id,
           quoteName: cotizacion.quoteName || 'Sin nombre de cotización',
           quoteDescription: cotizacion.quoteDescription || 'Sin descripción',
           numeroDetizacion: cotizacion._id ? `#${cotizacion._id.slice(-6).toUpperCase()}` : '#000000',
           
-          // Información del cliente
+          // Información del cliente - CORREGIDO
           cliente: clienteData.nombre,
           clienteCompleto: clienteData,
           telefono: clienteData.telefono,
@@ -227,6 +277,16 @@ const useCotizaciones = () => {
           
           ...cotizacion
         };
+      });
+
+      console.log('=== COTIZACIONES FINALES ===');
+      cotizacionesFormateadas.forEach((cot, index) => {
+        console.log(`Cotización ${index + 1}:`, {
+          id: cot.id,
+          quoteName: cot.quoteName,
+          cliente: cot.cliente,
+          clienteCompleto: cot.clienteCompleto
+        });
       });
 
       setCotizaciones(cotizacionesFormateadas);
@@ -656,7 +716,16 @@ const useCotizaciones = () => {
 
   // Filtrar cotizaciones
   const filteredCotizaciones = cotizaciones.filter(cotizacion => {
-    const cumpleFiltro = filtroEstado === 'Todos' || cotizacion.estado === filtroEstado;
+    // SOLUCIÓN: Hacer que "Rechazadas" incluya tanto rechazadas como canceladas
+    let cumpleFiltro;
+    if (filtroEstado === 'Todos') {
+      cumpleFiltro = true;
+    } else if (filtroEstado === 'Rechazada') {
+      // Incluir tanto rechazadas como canceladas en el filtro "Rechazada"
+      cumpleFiltro = cotizacion.estado === 'Rechazada' || cotizacion.estado === 'Cancelada';
+    } else {
+      cumpleFiltro = cotizacion.estado === filtroEstado;
+    }
     
     const cliente = (cotizacion.cliente || '').toString();
     const quoteName = (cotizacion.quoteName || '').toString();
@@ -738,12 +807,15 @@ const useCotizaciones = () => {
   };
 
   const getStats = () => {
+    // SOLUCIÓN: Contar rechazadas + canceladas juntas
+    const rechazadasYCanceladas = cotizaciones.filter(c => c.estado === 'Rechazada' || c.estado === 'Cancelada').length;
+    
     return {
       total: cotizaciones.length,
       filtered: filteredCotizaciones.length,
       aprobadas: cotizaciones.filter(c => c.estado === 'Aprobada').length,
       pendientes: cotizaciones.filter(c => c.estado === 'Pendiente').length,
-      rechazadas: cotizaciones.filter(c => c.estado === 'Rechazada').length,
+      rechazadas: rechazadasYCanceladas, // Incluye tanto rechazadas como canceladas
       enviadas: cotizaciones.filter(c => c.estado === 'Enviada').length,
       ejecutadas: cotizaciones.filter(c => c.estado === 'Ejecutada').length,
       canceladas: cotizaciones.filter(c => c.estado === 'Cancelada').length,
