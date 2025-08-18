@@ -11,56 +11,25 @@ import {
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 
-const RecuperacionScreen = ({ navigation }) => {
-  const [email, setEmail] = useState('');
-  const [emailError, setEmailError] = useState('');
+const RecuperacionTelefonoScreen = ({ navigation }) => {
+  const [telefono, setTelefono] = useState('');
   const [loading, setLoading] = useState(false);
-
-  // Validar formato de email
-  const validateEmail = (email) => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
-  };
-
-  // Verificar si contiene solo números
-  const isOnlyNumbers = (text) => {
-    return /^\d+$/.test(text.trim());
-  };
-
-  const handleEmailChange = (text) => {
-    setEmail(text);
-    setEmailError('');
-
-    // Validación en tiempo real
-    if (text.length > 0) {
-      if (isOnlyNumbers(text)) {
-        setEmailError('Ingresa un email, no un número de teléfono');
-      } else if (text.length > 3 && !validateEmail(text)) {
-        setEmailError('Formato de email inválido');
-      }
-    }
-  };
+  const [telefonoError, setTelefonoError] = useState('');
 
   const handleNext = async () => {
-    // Validaciones finales
-    if (!email) {
-      setEmailError('El email es requerido');
-      return;
-    }
-
-    if (isOnlyNumbers(email)) {
-      setEmailError('Ingresa un email válido, no un número');
-      return;
-    }
-
-    if (!validateEmail(email)) {
-      setEmailError('Formato de email inválido');
+    // Validación final
+    if (!isValidSalvadoranNumber(telefono)) {
+      setTelefonoError('Número de teléfono inválido');
       return;
     }
 
     setLoading(true);
     try {
-      console.log('🔐 Solicitando código de recuperación para:', email);
+      console.log('📱 Solicitando código SMS para:', telefono);
+      
+      // Construir número completo con prefijo +503
+      const fullPhoneNumber = `+503${telefono.replace('-', '')}`;
+      console.log('📞 Número completo:', fullPhoneNumber);
       
       // ✅ IP CONFIGURADA - Ajusta según tu configuración
       const API_URL = 'http://192.168.1.100:4000/api/recovery/requestCode';
@@ -73,12 +42,12 @@ const RecuperacionScreen = ({ navigation }) => {
           'Accept': 'application/json',
         },
         body: JSON.stringify({
-          email: email.trim().toLowerCase(),
+          phone: fullPhoneNumber,
+          via: "sms" // Especificar que queremos SMS
         }),
       });
 
       console.log('📡 Response status:', response.status);
-      console.log('📡 Response headers:', response.headers);
 
       // Verificar el contenido antes de parsear JSON
       const responseText = await response.text();
@@ -98,25 +67,28 @@ const RecuperacionScreen = ({ navigation }) => {
       }
 
       if (!response.ok) {
-        Alert.alert('Error', data.message || 'Error al enviar código de recuperación');
+        Alert.alert('Error', data.message || 'Error al enviar código SMS');
         return;
       }
 
-      console.log('✅ Código enviado exitosamente:', data);
+      console.log('✅ Código SMS enviado exitosamente:', data);
       
       Alert.alert(
         'Código Enviado', 
-        'Se ha enviado un código de recuperación a tu email. Revisa tu bandeja de entrada.',
+        `Se ha enviado un código de verificación por SMS al número ${data.sentTo || fullPhoneNumber}. Revisa tus mensajes.`,
         [
           { 
             text: 'Continuar', 
-            onPress: () => navigation.navigate('Recuperacion2', { email: email.trim() })
+            onPress: () => navigation.navigate('Recuperacion2', { 
+              phone: fullPhoneNumber,
+              via: 'sms'
+            })
           }
         ]
       );
 
     } catch (error) {
-      console.error('❌ Error al solicitar código:', error);
+      console.error('❌ Error al solicitar código SMS:', error);
       
       // Manejo específico de errores
       if (error.message.includes('HTML')) {
@@ -134,13 +106,8 @@ const RecuperacionScreen = ({ navigation }) => {
           '🔴 No se pudo conectar al servidor.\n\n' +
           'Verifica tu conexión a internet y que el servidor esté funcionando.'
         );
-      } else if (error.name === 'TypeError') {
-        Alert.alert(
-          'Error de Red', 
-          'Problema de conectividad. Verifica tu conexión a internet.'
-        );
       } else {
-        Alert.alert('Error', error.message || 'No se pudo enviar el código. Intenta de nuevo.');
+        Alert.alert('Error', error.message || 'No se pudo enviar el código SMS. Intenta de nuevo.');
       }
     } finally {
       setLoading(false);
@@ -151,8 +118,60 @@ const RecuperacionScreen = ({ navigation }) => {
     navigation.goBack();
   };
 
-  const isEmailValid = email && validateEmail(email) && !isOnlyNumbers(email);
-  const isButtonDisabled = !isEmailValid || loading;
+  // Validar que sea un número salvadoreño válido
+  const isValidSalvadoranNumber = (number) => {
+    // Remover guión para validación
+    const cleanNumber = number.replace('-', '');
+    
+    // Debe tener exactamente 8 dígitos
+    if (cleanNumber.length !== 8) return false;
+    
+    // Debe empezar con 2, 6, 7 (números válidos en El Salvador)
+    const firstDigit = cleanNumber[0];
+    if (!['2', '6', '7'].includes(firstDigit)) return false;
+    
+    // Solo dígitos
+    return /^\d{8}$/.test(cleanNumber);
+  };
+
+  const formatTelefono = (text) => {
+    // Remover todo excepto números
+    const cleaned = text.replace(/\D/g, '');
+    
+    // Limitar a 8 dígitos (formato salvadoreño)
+    const limited = cleaned.slice(0, 8);
+    
+    // Formatear con guiones (ej: 1234-5678)
+    if (limited.length >= 5) {
+      return limited.slice(0, 4) + '-' + limited.slice(4);
+    }
+    
+    return limited;
+  };
+
+  const handleTelefonoChange = (text) => {
+    const formatted = formatTelefono(text);
+    setTelefono(formatted);
+    setTelefonoError('');
+
+    // Validación en tiempo real
+    if (formatted.length > 0) {
+      const cleanNumber = formatted.replace('-', '');
+      
+      if (cleanNumber.length >= 1) {
+        const firstDigit = cleanNumber[0];
+        if (!['2', '6', '7'].includes(firstDigit)) {
+          setTelefonoError('Los números en El Salvador deben empezar con 2, 6 o 7');
+        }
+      }
+      
+      if (cleanNumber.length === 8 && !isValidSalvadoranNumber(formatted)) {
+        setTelefonoError('Número de teléfono no válido para El Salvador');
+      }
+    }
+  };
+
+  const isButtonDisabled = !telefono || telefono.length < 9 || telefonoError || loading || !isValidSalvadoranNumber(telefono);
 
   return (
     <View style={styles.container}>
@@ -176,42 +195,49 @@ const RecuperacionScreen = ({ navigation }) => {
       <View style={styles.content}>
         {/* Título */}
         <Text style={styles.title}>
-          ¿Olvidaste tu contraseña?
+          Verificación por SMS
         </Text>
 
         {/* Subtítulo */}
         <Text style={styles.subtitle}>
-          No te preocupes, puede pasar. Introduce tu correo electrónico y te enviaremos un código de recuperación.
+          No te preocupes, puede pasar. Introduce tu número de teléfono de El Salvador y te enviaremos un código de verificación por SMS.
         </Text>
 
-        {/* Campo de entrada */}
+        {/* Campo de entrada con prefijo */}
         <View style={styles.inputContainer}>
+          <View style={styles.prefixContainer}>
+            <Text style={styles.flagEmoji}>🇸🇻</Text>
+            <Text style={styles.prefixText}>+503</Text>
+          </View>
           <TextInput
-            style={[styles.input, emailError && styles.inputError]}
-            placeholder="ejemplo@correo.com"
-            value={email}
-            onChangeText={handleEmailChange}
-            keyboardType="email-address"
-            autoCapitalize="none"
+            style={[
+              styles.input,
+              telefonoError && styles.inputError
+            ]}
+            placeholder="2234-5678"
+            value={telefono}
+            onChangeText={handleTelefonoChange}
+            keyboardType="phone-pad"
+            maxLength={9} // 4 + 1 (guión) + 4
             autoCorrect={false}
-            placeholderTextColor="#9ca3af"
             editable={!loading}
+            placeholderTextColor="#9ca3af"
           />
-          
-          {/* Mensaje de error */}
-          {emailError ? (
-            <View style={styles.errorContainer}>
-              <Icon name="error-outline" size={16} color="#ef4444" />
-              <Text style={styles.errorText}>{emailError}</Text>
-            </View>
-          ) : null}
         </View>
 
-        {/* Ayuda adicional */}
+        {/* Mensaje de error */}
+        {telefonoError ? (
+          <View style={styles.errorContainer}>
+            <Icon name="error-outline" size={16} color="#ef4444" />
+            <Text style={styles.errorText}>{telefonoError}</Text>
+          </View>
+        ) : null}
+
+        {/* Texto de ayuda */}
         <View style={styles.helpContainer}>
           <Icon name="info-outline" size={16} color="#6b7280" />
           <Text style={styles.helpText}>
-            Solo se aceptan direcciones de email válidas
+            Números válidos empiezan con 2, 6 o 7 (ejemplo: 2234-5678, 6789-1234, 7456-7890)
           </Text>
         </View>
       </View>
@@ -237,7 +263,7 @@ const RecuperacionScreen = ({ navigation }) => {
             </View>
           ) : (
             <Text style={[styles.buttonText, isButtonDisabled && styles.buttonTextDisabled]}>
-              Enviar código
+              Enviar código SMS
             </Text>
           )}
         </TouchableOpacity>
@@ -292,15 +318,11 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   inputContainer: {
-    marginBottom: 16,
-  },
-  input: {
+    flexDirection: 'row',
     backgroundColor: '#f3f4f6',
     borderRadius: 8,
-    paddingVertical: 16,
-    paddingHorizontal: 16,
-    fontSize: 16,
-    color: '#374151',
+    marginBottom: 12,
+    alignItems: 'center',
     borderWidth: 1,
     borderColor: 'transparent',
   },
@@ -308,27 +330,54 @@ const styles = StyleSheet.create({
     borderColor: '#ef4444',
     backgroundColor: '#fef2f2',
   },
+  prefixContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingLeft: 16,
+    paddingRight: 12,
+    borderRightWidth: 1,
+    borderRightColor: '#d1d5db',
+  },
+  flagEmoji: {
+    fontSize: 18,
+    marginRight: 6,
+  },
+  prefixText: {
+    fontSize: 16,
+    color: '#374151',
+    fontWeight: '500',
+  },
+  input: {
+    flex: 1,
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+    fontSize: 16,
+    color: '#374151',
+  },
   errorContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 8,
+    marginBottom: 12,
     paddingHorizontal: 4,
   },
   errorText: {
     color: '#ef4444',
     fontSize: 14,
     marginLeft: 6,
+    flex: 1,
   },
   helpContainer: {
     flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 24,
+    alignItems: 'flex-start',
+    marginBottom: 20,
     paddingHorizontal: 4,
   },
   helpText: {
+    fontSize: 12,
     color: '#6b7280',
-    fontSize: 13,
     marginLeft: 6,
+    flex: 1,
+    lineHeight: 16,
   },
   progressContainer: {
     flexDirection: 'row',
@@ -396,4 +445,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default RecuperacionScreen;
+export default RecuperacionTelefonoScreen;

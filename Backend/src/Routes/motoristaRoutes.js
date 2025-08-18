@@ -15,5 +15,6 @@ router.route("/")
 router.route("/:id")
 .put(upload.single("img"),motoristasCon.put)
 .delete(motoristasCon.delete);
+router.get('/:id', motoristasCon.getById);
 
 export default router;

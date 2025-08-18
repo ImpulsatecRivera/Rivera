@@ -115,9 +115,9 @@ const InicioSesionScreen = ({ navigation }) => {
     }
   };
 
-  const handleForgotPassword = () => {
-    navigation.navigate('Recuperacion');
-  };
+ const handleForgotPassword = () => {
+  navigation.navigate('elegirMetodoRecuperacion'); // ✅ Ahora SÍ existe
+};
 
   return (
     <SafeAreaView style={styles.container}>

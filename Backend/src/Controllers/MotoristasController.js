@@ -1,4 +1,5 @@
 import motoristalModel from "../Models/Motorista.js";
+import camioneModel from "../Models/Camiones.js";
 import bcryptjs from "bcryptjs";
 import { v2 as cloudinary } from "cloudinary";
 import { config } from "../config.js";
@@ -17,6 +18,38 @@ motoristasCon.get = async (req, res) => {
     res.status(200).json(newMotorista);
   } catch (error) {
     res.status(500).json({ message: "Error al obtener motoristas", error: error.message });
+  }
+};
+
+
+// GET - Obtener un motorista específico con su camión
+motoristasCon.getById = async (req, res) => {
+  try {
+    const motorista = await motoristalModel.findById(req.params.id);
+    if (!motorista) {
+      return res.status(404).json({ message: "Motorista no encontrado" });
+    }
+
+    // Buscar el camión asignado a este motorista
+    const camion = await camioneModel.findOne({ driverId: motorista._id });
+    
+    const motoristaCompleto = {
+      ...motorista.toObject(),
+      camionAsignado: camion ? {
+        _id: camion._id,
+        name: camion.name,
+        brand: camion.brand,
+        model: camion.model,
+        licensePlate: camion.licensePlate,
+        state: camion.state,
+        gasolineLevel: camion.gasolineLevel,
+        img: camion.img
+      } : null
+    };
+    
+    res.status(200).json(motoristaCompleto);
+  } catch (error) {
+    res.status(500).json({ message: "Error al obtener motorista", error: error.message });
   }
 };
 
