@@ -1,4 +1,4 @@
-// useDataMotorista.js
+// useMotoristaManagement.js
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
@@ -186,58 +186,157 @@ const useMotoristaManagement = () => {
     }
   };
 
+  // 📸 FUNCIÓN ACTUALIZADA: Manejar edición con soporte para imágenes
   const handleSaveEdit = async (formData) => {
     if (!selectedMotorista) return;
 
     try {
-      const updateData = {};
-      
-      // Solo incluir campos que no estén vacíos
-      Object.keys(formData).forEach(key => {
-        if (formData[key] && formData[key].trim() !== '') {
-          updateData[key] = formData[key].trim();
-        }
-      });
+      console.log('=== INICIANDO ACTUALIZACIÓN (useMotoristaManagement) ===');
+      console.log('Form data recibido:', formData);
+      console.log('¿Hay imagen?', !!formData.image);
 
-      if (Object.keys(updateData).length === 0) {
-        alert('No hay cambios para guardar');
-        return;
+      let response;
+
+      // 🖼️ Si hay imagen, usar FormData (multipart/form-data)
+      if (formData.image) {
+        console.log('📸 Procesando actualización con imagen');
+        
+        const submitData = new FormData();
+        
+        // Agregar campos de texto (solo los que tienen valor)
+        Object.keys(formData).forEach(key => {
+          if (key !== 'image' && formData[key] && typeof formData[key] === 'string' && formData[key].trim() !== '') {
+            submitData.append(key, formData[key].trim());
+          }
+        });
+        
+        // Agregar imagen
+        submitData.append('img', formData.image);
+        
+        console.log('FormData preparado, enviando...');
+        
+        // Usar fetch para FormData (mejor compatibilidad que axios)
+        const fetchResponse = await fetch(
+          `http://localhost:4000/api/motoristas/${selectedMotorista._id || selectedMotorista.id}`,
+          {
+            method: 'PUT',
+            body: submitData,
+            // No agregar Content-Type, el navegador lo maneja automáticamente
+            credentials: 'include'
+          }
+        );
+        
+        console.log('Respuesta del servidor:', fetchResponse.status, fetchResponse.statusText);
+        
+        if (!fetchResponse.ok) {
+          // Intentar leer como JSON primero
+          let errorData;
+          const contentType = fetchResponse.headers.get('content-type');
+          
+          if (contentType && contentType.includes('application/json')) {
+            errorData = await fetchResponse.json();
+          } else {
+            // Si no es JSON, leer como texto para debug
+            const errorText = await fetchResponse.text();
+            console.error('Respuesta no-JSON del servidor:', errorText.substring(0, 500));
+            throw new Error(`Error ${fetchResponse.status}: El servidor devolvió HTML en lugar de JSON. Verifica los logs del backend.`);
+          }
+          
+          throw new Error(errorData.message || `HTTP ${fetchResponse.status}`);
+        }
+        
+        const responseData = await fetchResponse.json();
+        response = { data: responseData };
+        
+      } else {
+        // 📝 Sin imagen, usar JSON normal con axios
+        console.log('📝 Procesando actualización sin imagen');
+        
+        const updateData = {};
+        
+        // Solo incluir campos que no estén vacíos
+        Object.keys(formData).forEach(key => {
+          if (key !== 'image' && formData[key] && typeof formData[key] === 'string' && formData[key].trim() !== '') {
+            updateData[key] = formData[key].trim();
+          }
+        });
+
+        if (Object.keys(updateData).length === 0) {
+          alert('No hay cambios para guardar');
+          return;
+        }
+
+        console.log('Datos a enviar (sin imagen):', updateData);
+
+        response = await axios.put(
+          `http://localhost:4000/api/motoristas/${selectedMotorista._id || selectedMotorista.id}`,
+          updateData,
+          {
+            headers: {
+              'Content-Type': 'application/json',
+            }
+          }
+        );
       }
 
-      const response = await axios.put(
-        `http://localhost:4000/api/motoristas/${selectedMotorista._id || selectedMotorista.id}`,
-        updateData
-      );
+      console.log('=== RESPUESTA EXITOSA ===');
+      console.log('Response data:', response.data);
 
+      // Extraer datos actualizados
+      const updatedMotorista = response.data.motorista || response.data.data || response.data;
+      
       // Actualizar lista local
       setMotoristas(prevMotoristas =>
         prevMotoristas.map(m => 
           (m._id === selectedMotorista._id || m.id === selectedMotorista.id) 
-            ? { ...m, ...response.data }
+            ? { ...m, ...updatedMotorista }
             : m
         )
       );
 
       // Actualizar motorista seleccionado
-      setSelectedMotorista(prev => ({ ...prev, ...response.data }));
+      setSelectedMotorista(prev => ({ ...prev, ...updatedMotorista }));
       
       setShowEditAlert(false);
       setSuccessType('edit');
       setShowSuccessAlert(true);
       
+      console.log('✅ Motorista actualizado exitosamente');
+      
     } catch (error) {
-      console.error('Error al actualizar motorista:', error);
+      console.error('=== ERROR EN ACTUALIZACIÓN ===');
+      console.error('Error completo:', error);
       
       let errorMessage = 'Error al actualizar el motorista';
-      if (error.response?.status === 404) {
-        errorMessage = 'Motorista no encontrado';
-      } else if (error.response?.status === 400) {
-        errorMessage = 'Datos inválidos';
-      } else if (error.response?.status === 500) {
-        errorMessage = 'Error interno del servidor';
+      
+      if (error.response) {
+        // Error de axios
+        switch (error.response.status) {
+          case 404:
+            errorMessage = 'Motorista no encontrado';
+            break;
+          case 400:
+            errorMessage = error.response.data?.message || 'Datos inválidos';
+            break;
+          case 413:
+            errorMessage = 'Archivo demasiado grande. Máximo 5MB permitido.';
+            break;
+          case 415:
+            errorMessage = 'Tipo de archivo no permitido. Solo JPG, PNG, WEBP.';
+            break;
+          case 500:
+            errorMessage = 'Error interno del servidor';
+            break;
+          default:
+            errorMessage = error.response.data?.message || `Error del servidor: ${error.response.status}`;
+        }
+      } else if (error.message) {
+        // Error de fetch o general
+        errorMessage = error.message;
       }
       
       alert(errorMessage);
+      setError(errorMessage);
     }
   };
 
@@ -289,7 +388,7 @@ const useMotoristaManagement = () => {
     handleDelete,
     cancelDelete,
     confirmDelete,
-    handleSaveEdit,
+    handleSaveEdit, // 📸 Función actualizada para manejar imágenes
     closeSuccessAlert
   };
 };

@@ -1,4 +1,4 @@
-// hooks/Travels/useTravels.js - VERSIÓN OPTIMIZADA PARA AUTO-REFRESH
+// hooks/Travels/useTravels.js - VERSIÓN CORREGIDA PARA ELIMINAR Y ACTUALIZAR
 import { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 
@@ -36,11 +36,12 @@ export const useTravels = () => {
   const [showProgramSuccessModal, setShowProgramSuccessModal] = useState(false);
   const [isProgramSuccessClosing, setIsProgramSuccessClosing] = useState(false);
 
-  // Formularios (ORIGINALES - POSICIONES 20-21)
+  // Formularios (CORREGIDOS - POSICIONES 20-21)
   const [editForm, setEditForm] = useState({
     quoteId: '',
     truckId: '',
     conductorId: '',
+    auxiliarId: '',
     tripDescription: '',
     departureTime: '',
     arrivalTime: '',
@@ -56,6 +57,7 @@ export const useTravels = () => {
     quoteId: '',
     truckId: '',
     conductorId: '',
+    auxiliarId: '',
     tripDescription: '',
     departureTime: '',
     arrivalTime: '',
@@ -67,11 +69,11 @@ export const useTravels = () => {
     observaciones: ''
   });
 
-  // 🆕 NUEVOS ESTADOS AL FINAL (POSICIONES 22-25) - AQUÍ NO HAY CONFLICTO
+  // 🆕 NUEVOS ESTADOS AL FINAL (POSICIONES 22-25)
   const [apiTravels, setApiTravels] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [isRefreshing, setIsRefreshing] = useState(false); // 🆕 Estado para mostrar cuando se está refrescando
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   // ⚠️ MANTENER EL useEffect ORIGINAL EN LA MISMA POSICIÓN
   // Funciones de animación (ORIGINAL - useEffect POSICIÓN 1)
@@ -124,7 +126,7 @@ export const useTravels = () => {
           'Cache-Control': 'no-cache',
           'Pragma': 'no-cache'
         },
-        timeout: 10000 // 10 segundos timeout
+        timeout: 10000
       });
       
       console.log("🔍 useTravels: RESPUESTA de map-data:", response.data);
@@ -154,18 +156,31 @@ export const useTravels = () => {
                 progreso: route.tripInfo?.progress || 0
               },
               conductorId: {
+                _id: route.tripInfo?.driverId || null,
                 nombre: route.tripInfo?.driver || 'Conductor por asignar'
               },
               truckId: {
+                _id: route.tripInfo?.truckId || null,
                 patente: route.tripInfo?.truck || 'Camión por asignar'
               },
+              auxiliarId: route.tripInfo?.auxiliarId ? {
+                _id: route.tripInfo.auxiliarId,
+                nombre: route.tripInfo.auxiliar || 'Auxiliar'
+              } : null,
               quoteId: {
+                _id: route.quoteId || null,
                 ruta: {
                   origen: { nombre: route.route?.from || 'Origen' },
                   destino: { nombre: route.route?.to || 'Destino' }
                 }
               },
               distancia: route.distance,
+              observaciones: route.observaciones || '',
+              condiciones: route.condiciones || {
+                clima: 'normal',
+                trafico: 'normal',
+                carretera: 'buena'
+              },
               alertas: route.alerts && route.alerts.length > 0 ? {
                 count: route.alerts.length,
                 prioridad: route.alerts.some(a => a.priority === 'alta') ? 3 :
@@ -186,19 +201,19 @@ export const useTravels = () => {
         setApiTravels([]);
       }
       
-      return true; // Indicar éxito
+      return true;
     } catch (error) {
       console.error('❌ useTravels: Error al cargar desde map-data:', error);
       setError('Error al cargar los viajes');
       setApiTravels([]);
-      return false; // Indicar fallo
+      return false;
     } finally {
       setLoading(false);
       setIsRefreshing(false);
     }
-  }, []); // useCallback para evitar re-renders innecesarios
+  }, []);
 
-  // 🆕 useEffect PARA API (useEffect POSICIÓN 2) - AL FINAL
+  // 🆕 useEffect PARA API (useEffect POSICIÓN 2)
   useEffect(() => {
     fetchTravels();
   }, [fetchTravels]);
@@ -208,7 +223,6 @@ export const useTravels = () => {
     try {
       console.log("🆕 Creando viaje:", travelData);
       
-      // 🎯 PREPARAR DATOS SEGÚN EL FORMATO ESPERADO POR LA API
       const dataToSend = {
         quoteId: travelData.quoteId,
         truckId: travelData.truckId,
@@ -230,7 +244,6 @@ export const useTravels = () => {
           carretera: 'buena'
         },
         observaciones: travelData.observaciones || '',
-        // 🆕 Campos adicionales para asegurar inicialización correcta
         estado: {
           actual: 'pendiente',
           autoActualizar: true,
@@ -262,14 +275,14 @@ export const useTravels = () => {
         headers: {
           'Content-Type': 'application/json'
         },
-        timeout: 15000 // 15 segundos timeout para crear viaje
+        timeout: 15000
       });
       
       console.log("✅ Viaje creado exitosamente:", response.data);
       
       // 🔄 REFRESCAR DATOS INMEDIATAMENTE DESPUÉS DE CREAR
       console.log("🔄 Refrescando datos después de crear viaje...");
-      const refreshSuccess = await fetchTravels(true); // true = es refresh manual
+      const refreshSuccess = await fetchTravels(true);
       
       if (refreshSuccess) {
         console.log("✅ Datos refrescados exitosamente tras crear viaje");
@@ -287,27 +300,60 @@ export const useTravels = () => {
     }
   };
 
-  // 🔧 FUNCIÓN MEJORADA PARA ACTUALIZAR VIAJE CON AUTO-REFRESH
+  // 🚨 FUNCIÓN ACTUALIZAR COMPLETAMENTE CORREGIDA
   const updateTravel = async (travelId, updateData) => {
     try {
-      console.log("✏️ Actualizando viaje:", travelId, updateData);
-      const response = await axios.patch(`http://localhost:4000/api/viajes/${travelId}/progress`, updateData, {
+      console.log("✏️ Actualizando viaje:", travelId);
+      console.log("📝 Datos a enviar:", updateData);
+      
+      // Verificar que travelId existe
+      if (!travelId) {
+        throw new Error('ID del viaje no proporcionado');
+      }
+      
+      // ✅ USAR ENDPOINT CORRECTO CON PARÁMETRO :viajeId
+      const url = `http://localhost:4000/api/viajes/${travelId}`;
+      console.log("🌐 URL completa:", url);
+      
+      const response = await axios.put(url, updateData, {
+        headers: {
+          'Content-Type': 'application/json'
+        },
         timeout: 10000
       });
       
-      console.log("✅ Viaje actualizado exitosamente:", response.data);
+      console.log("✅ Respuesta del servidor:", response.data);
+      console.log("✅ Status code:", response.status);
       
-      // 🔄 REFRESCAR DATOS INMEDIATAMENTE DESPUÉS DE ACTUALIZAR
-      console.log("🔄 Refrescando datos después de actualizar viaje...");
-      const refreshSuccess = await fetchTravels(true);
-      
-      if (refreshSuccess) {
-        console.log("✅ Datos refrescados exitosamente tras actualizar viaje");
+      // Verificar que la respuesta sea exitosa
+      if (response.status >= 200 && response.status < 300) {
+        console.log("✅ Actualización exitosa confirmada");
+        
+        // 🔄 REFRESCAR DATOS INMEDIATAMENTE DESPUÉS DE ACTUALIZAR
+        console.log("🔄 Refrescando datos después de actualizar viaje...");
+        const refreshSuccess = await fetchTravels(true);
+        
+        if (refreshSuccess) {
+          console.log("✅ Datos refrescados exitosamente tras actualizar viaje");
+        } else {
+          console.warn("⚠️ Advertencia: Error al refrescar datos tras actualizar viaje");
+        }
+        
+        return { success: true, data: response.data };
+      } else {
+        throw new Error(`Respuesta inesperada del servidor: ${response.status}`);
       }
       
-      return { success: true, data: response.data };
     } catch (error) {
-      console.error('❌ Error al actualizar viaje:', error);
+      console.error('❌ Error detallado al actualizar viaje:', {
+        message: error.message,
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        url: error.config?.url,
+        method: error.config?.method
+      });
+      
       return { 
         success: false, 
         error: error.response?.data?.message || error.message || 'Error al actualizar viaje' 
@@ -315,44 +361,99 @@ export const useTravels = () => {
     }
   };
 
-  // 🔧 FUNCIÓN MEJORADA PARA ELIMINAR VIAJE CON AUTO-REFRESH
+  // 🚨 FUNCIÓN ELIMINAR CORREGIDA - USAR PARÁMETRO CORRECTO :viajeId
   const deleteTravel = async (travelId) => {
     try {
-      console.log("🗑️ Cancelando viaje:", travelId);
-      const response = await axios.patch(`http://localhost:4000/api/viajes/${travelId}/cancel`, {
-        motivo: 'eliminado_por_usuario',
-        observaciones: 'Viaje cancelado desde la interfaz'
-      }, {
-        timeout: 10000
-      });
+      console.log("🗑️ ELIMINANDO viaje (no cancelando):", travelId);
       
-      console.log("✅ Viaje cancelado exitosamente:", response.data);
+      if (!travelId) {
+        throw new Error('ID del viaje no proporcionado');
+      }
       
-      // 🔄 REFRESCAR DATOS INMEDIATAMENTE DESPUÉS DE CANCELAR
-      console.log("🔄 Refrescando datos después de cancelar viaje...");
+      let response;
+      let success = false;
+      
+      // 🎯 ESTRATEGIA 1: USAR DELETE DIRECTO CON PARÁMETRO CORRECTO :viajeId
+      try {
+        console.log(`🔄 Intentando DELETE /api/viajes/${travelId} (parámetro :viajeId)`);
+        
+        const url = `http://localhost:4000/api/viajes/${travelId}`;
+        response = await axios.delete(url, {
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          timeout: 10000
+        });
+        
+        console.log("✅ Éxito con DELETE - Viaje ELIMINADO completamente:", response.data);
+        success = true;
+        
+      } catch (deleteError) {
+        console.log("❌ DELETE falló:", deleteError.response?.status, deleteError.response?.data);
+        
+        // 🎯 ESTRATEGIA 2: FALLBACK - Usar endpoint de cancelación con parámetro correcto
+        try {
+          console.log(`🔄 Fallback: Intentando PATCH /api/viajes/${travelId}/cancel...`);
+          
+          const url = `http://localhost:4000/api/viajes/${travelId}/cancel`;
+          response = await axios.patch(url, {
+            motivo: 'eliminado_por_usuario',
+            observaciones: 'Viaje cancelado desde la interfaz (fallback de eliminación)'
+          }, {
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            timeout: 10000
+          });
+          
+          console.log("✅ Éxito con PATCH /cancel (fallback):", response.data);
+          success = true;
+          
+        } catch (cancelError) {
+          console.error("❌ Ambas estrategias fallaron:", {
+            deleteError: deleteError.response?.status || deleteError.message,
+            deleteData: deleteError.response?.data,
+            cancelError: cancelError.response?.status || cancelError.message,
+            cancelData: cancelError.response?.data
+          });
+          throw cancelError;
+        }
+      }
+      
+      if (!success) {
+        throw new Error('No se pudo eliminar el viaje con ningún método');
+      }
+      
+      console.log("✅ Viaje procesado exitosamente:", response.data);
+      
+      // 🔄 REFRESCAR DATOS INMEDIATAMENTE DESPUÉS DE ELIMINAR/CANCELAR
+      console.log("🔄 Refrescando datos después de eliminar viaje...");
       const refreshSuccess = await fetchTravels(true);
       
       if (refreshSuccess) {
-        console.log("✅ Datos refrescados exitosamente tras cancelar viaje");
+        console.log("✅ Datos refrescados exitosamente tras eliminar viaje");
       }
       
-      return { success: true };
+      return { success: true, data: response.data };
     } catch (error) {
-      console.error('❌ Error al cancelar viaje:', error);
+      console.error('❌ Error al eliminar viaje:', error);
+      console.error('❌ Response data:', error.response?.data);
+      console.error('❌ Response status:', error.response?.status);
+      
       return { 
         success: false, 
-        error: error.response?.data?.message || error.message || 'Error al cancelar viaje' 
+        error: error.response?.data?.message || error.message || 'Error al eliminar viaje' 
       };
     }
   };
 
-  // 🆕 FUNCIÓN PARA REFRESCAR MANUALMENTE (PARA USAR EN COMPONENTES)
+  // 🆕 FUNCIÓN PARA REFRESCAR MANUALMENTE
   const refreshTravels = useCallback(async () => {
     console.log("🔄 Refresh manual iniciado...");
     return await fetchTravels(true);
   }, [fetchTravels]);
 
-  // 🔄 DATOS PROCESADOS: Los viajes ya vienen procesados del endpoint /map-data
+  // 🔄 DATOS PROCESADOS
   const scheduledTrips = apiTravels.map(travel => {
     console.log("🔄 Procesando viaje para vista:", travel);
     
@@ -383,6 +484,16 @@ export const useTravels = () => {
       icon: travel.icon || '🚛',
       estado: travel.estado,
       alertas: travel.alertas,
+      // ✅ AGREGAR CAMPOS NECESARIOS PARA EDICIÓN
+      quoteId: travel.quoteId,
+      truckId: travel.truckId,
+      conductorId: travel.conductorId,
+      auxiliarId: travel.auxiliarId,
+      tripDescription: travel.tripDescription,
+      departureTime: travel.departureTime,
+      arrivalTime: travel.arrivalTime,
+      observaciones: travel.observaciones,
+      condiciones: travel.condiciones,
       ...travel
     };
   });
@@ -398,7 +509,7 @@ export const useTravels = () => {
     { category: 'Almacenaje', amount: '520,000', progress: animatedProgress[4], color: 'bg-gradient-to-r from-pink-500 to-pink-600' }
   ];
 
-  // Estadísticas de API (de todos los viajes, no solo de hoy)
+  // Estadísticas de API
   const getStats = () => {
     return {
       total: apiTravels.length,
@@ -410,13 +521,130 @@ export const useTravels = () => {
     };
   };
 
-  // ⚠️ MANTENER TODAS LAS FUNCIONES ORIGINALES SIN CAMBIOS (solo las que usan API fueron modificadas)
-
-  // Funciones de manejo de modales (ORIGINALES)
+  // ⚠️ FUNCIONES PARA FLUJO DIRECTO
+  
   const handleTripMenuClick = (trip, index) => {
     setSelectedTrip({ ...trip, index });
     setShowModal(true);
     setIsClosing(false);
+  };
+
+  // 🆕 NUEVAS FUNCIONES DIRECTAS PARA CONTEXTMENU - CORREGIDAS
+  const onEdit = (trip, index) => {
+    console.log("🔧 onEdit llamado directamente con viaje:", trip);
+    setSelectedTrip({ ...trip, index });
+    
+    const formData = {
+      quoteId: trip.quoteId?._id || trip.quoteId || '',
+      truckId: trip.truckId?._id || trip.truckId || '',
+      conductorId: trip.conductorId?._id || trip.conductorId || '',
+      auxiliarId: trip.auxiliarId?._id || trip.auxiliarId || '',
+      tripDescription: trip.description || trip.tripDescription || '',
+      departureTime: trip.departureTime || '',
+      arrivalTime: trip.arrivalTime || '',
+      condiciones: trip.condiciones || {
+        clima: 'normal',
+        trafico: 'normal',
+        carretera: 'buena'
+      },
+      observaciones: trip.observaciones || ''
+    };
+    
+    console.log("📝 Datos del formulario preparados:", formData);
+    setEditForm(formData);
+    
+    setShowEditModal(true);
+    setIsEditClosing(false);
+  };
+
+  const onDelete = (trip, index) => {
+    console.log("🗑️ onDelete llamado directamente:", trip);
+    setSelectedTrip({ ...trip, index });
+    
+    setShowDeleteModal(true);
+    setIsDeleteClosing(false);
+  };
+
+  // 🚨 NUEVA FUNCIÓN DIRECTA PARA ACTUALIZACIÓN (SIMPLIFICADA)
+  const handleDirectUpdate = async () => {
+    try {
+      console.log('🔄 Iniciando actualización directa del viaje...');
+      console.log('🆔 Viaje seleccionado:', selectedTrip);
+      console.log('📝 Datos del formulario:', editForm);
+      
+      if (!selectedTrip?.id && !selectedTrip?._id) {
+        throw new Error('No se encontró ID del viaje para actualizar');
+      }
+
+      const travelId = selectedTrip.id || selectedTrip._id;
+      
+      // Preparar solo los campos que cambiaron
+      const updateData = {};
+      
+      if (editForm.tripDescription !== (selectedTrip.description || selectedTrip.tripDescription || '')) {
+        updateData.tripDescription = editForm.tripDescription;
+      }
+      
+      if (editForm.truckId !== (selectedTrip.truckId?._id || selectedTrip.truckId || '')) {
+        updateData.truckId = editForm.truckId;
+      }
+      
+      if (editForm.conductorId !== (selectedTrip.conductorId?._id || selectedTrip.conductorId || '')) {
+        updateData.conductorId = editForm.conductorId;
+      }
+      
+      if (editForm.auxiliarId !== (selectedTrip.auxiliarId?._id || selectedTrip.auxiliarId || '')) {
+        updateData.auxiliarId = editForm.auxiliarId || null;
+      }
+      
+      if (editForm.departureTime !== (selectedTrip.departureTime || '')) {
+        updateData.departureTime = editForm.departureTime;
+      }
+      
+      if (editForm.arrivalTime !== (selectedTrip.arrivalTime || '')) {
+        updateData.arrivalTime = editForm.arrivalTime;
+      }
+      
+      if (editForm.observaciones !== (selectedTrip.observaciones || '')) {
+        updateData.observaciones = editForm.observaciones;
+      }
+      
+      const originalCondiciones = selectedTrip.condiciones || { clima: 'normal', trafico: 'normal', carretera: 'buena' };
+      const hasCondicionesChanged = 
+        editForm.condiciones.clima !== originalCondiciones.clima ||
+        editForm.condiciones.trafico !== originalCondiciones.trafico ||
+        editForm.condiciones.carretera !== originalCondiciones.carretera;
+      
+      if (hasCondicionesChanged) {
+        updateData.condiciones = editForm.condiciones;
+      }
+      
+      console.log('📤 Datos a actualizar (solo campos modificados):', updateData);
+      
+      if (Object.keys(updateData).length === 0) {
+        console.log('ℹ️ No hay cambios para actualizar');
+        throw new Error('No se detectaron cambios para actualizar');
+      }
+      
+      // Llamar a la función de actualización
+      const result = await updateTravel(travelId, updateData);
+      
+      if (!result.success) {
+        throw new Error(result.error || 'Error al actualizar viaje');
+      }
+
+      console.log('✅ Viaje actualizado exitosamente');
+      
+      // Cerrar modal de edición
+      setShowEditModal(false);
+      setIsEditClosing(false);
+      
+      return result;
+      
+    } catch (error) {
+      console.error('❌ Error en actualización directa:', error);
+      throw error;
+    }
   };
 
   const handleCloseModal = () => {
@@ -428,13 +656,14 @@ export const useTravels = () => {
     }, 300);
   };
 
-  // Funciones de edición (MODIFICADAS PARA USAR API)
+  // 🔧 FUNCIONES DE EDICIÓN ORIGINALES (COMPATIBILIDAD) - CORREGIDAS
   const handleEdit = () => {
     if (selectedTrip) {
       setEditForm({
         quoteId: selectedTrip.quoteId?._id || selectedTrip.quoteId || '',
         truckId: selectedTrip.truckId?._id || selectedTrip.truckId || '',
         conductorId: selectedTrip.conductorId?._id || selectedTrip.conductorId || '',
+        auxiliarId: selectedTrip.auxiliarId?._id || selectedTrip.auxiliarId || '',
         tripDescription: selectedTrip.description || selectedTrip.tripDescription || '',
         departureTime: selectedTrip.departureTime || '',
         arrivalTime: selectedTrip.arrivalTime || '',
@@ -467,16 +696,67 @@ export const useTravels = () => {
     }, 300);
   };
 
+  // 🚨 FUNCIÓN PRINCIPAL CORREGIDA
   const handleConfirmEdit = async () => {
     try {
+      console.log('🔄 Confirmando edición con datos del formulario:', editForm);
+      console.log('🆔 Viaje seleccionado original:', selectedTrip);
+      
       if (selectedTrip?.id || selectedTrip?._id) {
-        const result = await updateTravel(selectedTrip.id || selectedTrip._id, {
-          tripDescription: editForm.tripDescription,
-          condiciones: editForm.condiciones,
-          observaciones: editForm.observaciones
-        });
+        const travelId = selectedTrip.id || selectedTrip._id;
+        
+        const updateData = {};
+        
+        if (editForm.tripDescription !== (selectedTrip.description || selectedTrip.tripDescription || '')) {
+          updateData.tripDescription = editForm.tripDescription;
+        }
+        
+        if (editForm.truckId !== (selectedTrip.truckId?._id || selectedTrip.truckId || '')) {
+          updateData.truckId = editForm.truckId;
+        }
+        
+        if (editForm.conductorId !== (selectedTrip.conductorId?._id || selectedTrip.conductorId || '')) {
+          updateData.conductorId = editForm.conductorId;
+        }
+        
+        if (editForm.auxiliarId !== (selectedTrip.auxiliarId?._id || selectedTrip.auxiliarId || '')) {
+          updateData.auxiliarId = editForm.auxiliarId || null;
+        }
+        
+        if (editForm.departureTime !== (selectedTrip.departureTime || '')) {
+          updateData.departureTime = editForm.departureTime;
+        }
+        
+        if (editForm.arrivalTime !== (selectedTrip.arrivalTime || '')) {
+          updateData.arrivalTime = editForm.arrivalTime;
+        }
+        
+        if (editForm.observaciones !== (selectedTrip.observaciones || '')) {
+          updateData.observaciones = editForm.observaciones;
+        }
+        
+        const originalCondiciones = selectedTrip.condiciones || { clima: 'normal', trafico: 'normal', carretera: 'buena' };
+        const hasCondicionesChanged = 
+          editForm.condiciones.clima !== originalCondiciones.clima ||
+          editForm.condiciones.trafico !== originalCondiciones.trafico ||
+          editForm.condiciones.carretera !== originalCondiciones.carretera;
+        
+        if (hasCondicionesChanged) {
+          updateData.condiciones = editForm.condiciones;
+        }
+        
+        console.log('📤 Datos a actualizar (solo campos modificados):', updateData);
+        
+        if (Object.keys(updateData).length === 0) {
+          console.log('ℹ️ No hay cambios para actualizar');
+          alert('No se detectaron cambios para actualizar');
+          return;
+        }
+        
+        const result = await updateTravel(travelId, updateData);
         
         if (result.success) {
+          console.log('✅ Viaje actualizado exitosamente');
           setIsConfirmEditClosing(true);
           setTimeout(() => {
             setShowConfirmEditModal(false);
@@ -484,6 +764,9 @@ export const useTravels = () => {
             setShowSuccessModal(true);
             setIsSuccessClosing(false);
           }, 300);
+        } else {
+          console.error('❌ Error en resultado:', result.error);
+          alert(`Error al actualizar: ${result.error}`);
         }
       } else {
         console.log('Actualizando viaje (modo local):', editForm);
@@ -496,7 +779,8 @@ export const useTravels = () => {
         }, 300);
       }
     } catch (error) {
-      console.error('Error actualizando viaje:', error);
+      console.error('❌ Error actualizando viaje:', error);
+      alert(`Error actualizando viaje: ${error.message}`);
     }
   };
 
@@ -544,7 +828,7 @@ export const useTravels = () => {
     }
   };
 
-  // Funciones de eliminación (MODIFICADAS PARA USAR API)
+  // 🔧 FUNCIONES DE ELIMINACIÓN ORIGINALES (COMPATIBILIDAD)
   const handleDelete = () => {
     setIsClosing(true);
     setTimeout(() => {
@@ -559,9 +843,12 @@ export const useTravels = () => {
   const handleConfirmDelete = async () => {
     try {
       if (selectedTrip?.id || selectedTrip?._id) {
+        console.log('🗑️ Confirmando eliminación del viaje:', selectedTrip.id || selectedTrip._id);
+        
         const result = await deleteTravel(selectedTrip.id || selectedTrip._id);
         
         if (result.success) {
+          console.log('✅ Viaje eliminado exitosamente');
           setIsDeleteClosing(true);
           setTimeout(() => {
             setShowDeleteModal(false);
@@ -569,6 +856,9 @@ export const useTravels = () => {
             setShowDeleteSuccessModal(true);
             setIsDeleteSuccessClosing(false);
           }, 300);
+        } else {
+          console.error('❌ Error eliminando viaje:', result.error);
+          alert(`Error al eliminar: ${result.error}`);
         }
       } else {
         console.log('Eliminando viaje (modo local):', selectedTrip);
@@ -581,7 +871,8 @@ export const useTravels = () => {
         }, 300);
       }
     } catch (error) {
-      console.error('Error eliminando viaje:', error);
+      console.error('❌ Error eliminando viaje:', error);
+      alert(`Error eliminando viaje: ${error.message}`);
     }
   };
 
@@ -604,7 +895,7 @@ export const useTravels = () => {
     }, 300);
   };
 
-  // Funciones de programar viaje (MODIFICADAS PARA USAR API CON AUTO-REFRESH)
+  // 🔧 FUNCIONES DE PROGRAMAR VIAJE (MODIFICADAS PARA USAR API CON AUTO-REFRESH)
   const handleOpenProgramModal = () => {
     setShowProgramModal(true);
     setIsProgramClosing(false);
@@ -619,6 +910,7 @@ export const useTravels = () => {
         quoteId: '',
         truckId: '',
         conductorId: '',
+        auxiliarId: '',
         tripDescription: '',
         departureTime: '',
         arrivalTime: '',
@@ -660,14 +952,14 @@ export const useTravels = () => {
         console.log("✅ Viaje programado exitosamente");
         setShowProgramSuccessModal(true);
         setIsProgramSuccessClosing(false);
-        return result; // Retornar resultado para que ProgramTripModal pueda manejarlo
+        return result;
       } else {
         console.error("❌ Error programando viaje:", result.error);
         throw new Error(result.error);
       }
     } catch (error) {
       console.error('Error programando viaje:', error);
-      throw error; // Re-lanzar para que ProgramTripModal pueda manejarlo
+      throw error;
     }
   };
 
@@ -684,6 +976,7 @@ export const useTravels = () => {
           quoteId: '',
           truckId: '',
           conductorId: '',
+          auxiliarId: '',
           tripDescription: '',
           departureTime: '',
           arrivalTime: '',
@@ -729,7 +1022,7 @@ export const useTravels = () => {
     earningsData,
     barHeights,
     
-    // Funciones originales
+    // 🔧 FUNCIONES COMPATIBILIDAD HACIA ATRÁS (originales)
     handleTripMenuClick,
     handleCloseModal,
     handleEdit,
@@ -749,15 +1042,20 @@ export const useTravels = () => {
     handleProgramTrip,
     handleCloseProgramSuccessModal,
 
+    // 🆕 NUEVAS FUNCIONES DIRECTAS PARA CONTEXTMENU
+    onEdit,        // ✅ Nueva función directa para editar
+    onDelete,      // ✅ Nueva función directa para eliminar
+    handleDirectUpdate, // ✅ Nueva función directa para actualización
+
     // 🆕 NUEVOS CAMPOS AL FINAL (OPTIMIZADOS)
     loading,
     error,
-    isRefreshing, // 🆕 Para mostrar estado de refresh
+    isRefreshing,
     travels: apiTravels,
     stats: getStats(),
-    refreshTravels, // 🆕 Función optimizada con useCallback
-    addTravel,      // 🆕 Con auto-refresh integrado
-    updateTravel,   // 🆕 Con auto-refresh integrado
-    deleteTravel    // 🆕 Con auto-refresh integrado
+    refreshTravels,
+    addTravel,
+    updateTravel,
+    deleteTravel
   };
 };

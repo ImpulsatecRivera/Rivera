@@ -4,7 +4,7 @@ import { Plus } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 // Hooks
-import { useTravels } from '../components/Travels/hooks/useDataTravels';
+import { useTravels } from '../components/Travels/hooks/useDataTravels'; // ✅ CORREGIDO: useDataTravels → useTravels
 import { useAnimations } from '../components/UITravels/Animation';
 
 // Components
@@ -54,8 +54,9 @@ const TravelDashboard = () => {
     loading,
     error,
     stats,
+    isRefreshing, // ✅ AGREGAR isRefreshing del hook corregido
     
-    // Funciones
+    // Funciones (mantener las originales para compatibilidad)
     handleTripMenuClick,
     handleCloseModal,
     handleEdit,
@@ -74,7 +75,11 @@ const TravelDashboard = () => {
     handleProgramInputChange,
     handleProgramTrip,
     handleCloseProgramSuccessModal,
-    refreshTravels
+    refreshTravels,
+    
+    // ✅ FUNCIONES DIRECTAS PARA CONTEXTMENU (por si se necesitan)
+    onEdit,
+    onDelete
   } = useTravels();
 
   const handleAddTruck = () => navigate('/viajes/maps');
@@ -113,6 +118,7 @@ const TravelDashboard = () => {
                   <p className="text-gray-500 text-sm">
                     {loading ? 'Cargando datos...' : 
                      error ? 'Error en los datos' : 
+                     isRefreshing ? 'Actualizando datos...' : // ✅ AGREGAR estado de refreshing
                      `${stats.total} viajes totales - ${stats.en_curso} en curso`}
                   </p>
                 </div>
@@ -132,14 +138,16 @@ const TravelDashboard = () => {
                 <div className="mt-4 px-8">
                   <button 
                     onClick={handleOpenProgramModal}
-                    disabled={loading}
+                    disabled={loading || isRefreshing} // ✅ DESHABILITAR también durante refresh
                     className="w-full p-4 text-gray-900 hover:bg-gray-50 rounded-xl transition-colors flex items-center justify-start disabled:opacity-50"
                   >
                     <div className="w-6 h-6 bg-black rounded-full flex items-center justify-center mr-3">
                       <Plus size={14} className="text-white" />
                     </div>
                     <span className="font-medium">
-                      {loading ? 'Cargando...' : 'Programar un viaje'}
+                      {loading ? 'Cargando...' : 
+                       isRefreshing ? 'Actualizando...' : 
+                       'Programar un viaje'}
                     </span>
                   </button>
                 </div>
@@ -154,25 +162,46 @@ const TravelDashboard = () => {
               {/* Routes Card con datos reales */}
               <RoutesCard onAddTruck={handleAddTruck} />
               
-              {/* 🆕 Información de estado de la conexión */}
+              {/* 🆕 Información de estado de la conexión MEJORADA */}
               <div className="mt-auto p-4 bg-gray-50 rounded-xl">
                 <div className="text-xs text-gray-500">
                   {loading && (
                     <div className="flex items-center">
-                      <div className="w-2 h-2 bg-yellow-500 rounded-full mr-2"></div>
-                      Conectando a la base de datos...
+                      <div className="w-2 h-2 bg-yellow-500 rounded-full mr-2 animate-pulse"></div>
+                      Conectando a Rivera Transport...
                     </div>
                   )}
-                  {error && (
+                  {isRefreshing && !loading && (
+                    <div className="flex items-center">
+                      <div className="w-2 h-2 bg-blue-500 rounded-full mr-2 animate-pulse"></div>
+                      Actualizando datos...
+                    </div>
+                  )}
+                  {error && !loading && (
                     <div className="flex items-center">
                       <div className="w-2 h-2 bg-red-500 rounded-full mr-2"></div>
-                      Error de conexión
+                      Error de conexión - 
+                      <button 
+                        onClick={refreshTravels}
+                        className="ml-1 text-blue-500 hover:text-blue-600 underline"
+                      >
+                        Reintentar
+                      </button>
                     </div>
                   )}
-                  {!loading && !error && (
-                    <div className="flex items-center">
-                      <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
-                      Conectado - {stats.total} viajes
+                  {!loading && !error && !isRefreshing && (
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center">
+                        <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
+                        Conectado - {stats.total} viajes
+                      </div>
+                      <button
+                        onClick={refreshTravels}
+                        className="text-xs text-blue-500 hover:text-blue-600"
+                        title="Actualizar datos"
+                      >
+                        🔄
+                      </button>
                     </div>
                   )}
                 </div>
@@ -231,8 +260,8 @@ const TravelDashboard = () => {
           show={showDeleteSuccessModal}
           isClosing={isDeleteSuccessClosing}
           onClose={handleCloseDeleteSuccessModal}
-          title="Viaje cancelado con éxito"
-          message="El viaje ha sido cancelado correctamente"
+          title="Viaje eliminado con éxito"
+          message="El viaje ha sido eliminado correctamente del sistema" 
         />
 
         <ProgramTripModal
