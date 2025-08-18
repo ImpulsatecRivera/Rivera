@@ -6,29 +6,108 @@ import MotoristaModel from "../Models/Motorista.js";
 
 const LoginController = {};
 
+// 🔒 SISTEMA DE INTENTOS FALLIDOS
+const failedAttempts = new Map(); // Almacena { email: { attempts: number, blockedUntil: Date } }
+
+// 🛡️ Función para verificar si el usuario está bloqueado
+const isBlocked = (email) => {
+  const attemptData = failedAttempts.get(email);
+  if (!attemptData) return false;
+  
+  // Si está bloqueado, verificar si ya pasaron los 5 minutos
+  if (attemptData.blockedUntil && new Date() < attemptData.blockedUntil) {
+    return true;
+  }
+  
+  // Si ya pasó el tiempo de bloqueo, reiniciar intentos
+  if (attemptData.blockedUntil && new Date() >= attemptData.blockedUntil) {
+    failedAttempts.delete(email);
+    return false;
+  }
+  
+  return false;
+};
+
+// 📊 Función para registrar intento fallido
+const recordFailedAttempt = (email) => {
+  const attemptData = failedAttempts.get(email) || { attempts: 0, blockedUntil: null };
+  attemptData.attempts += 1;
+  
+  // Si alcanza 4 intentos, bloquear por 5 minutos
+  if (attemptData.attempts >= 4) {
+    attemptData.blockedUntil = new Date(Date.now() + 5 * 60 * 1000); // 5 minutos
+    console.log(`🔒 Usuario ${email} bloqueado hasta ${attemptData.blockedUntil}`);
+  }
+  
+  failedAttempts.set(email, attemptData);
+  return attemptData;
+};
+
+// ✅ Función para limpiar intentos exitosos
+const clearFailedAttempts = (email) => {
+  failedAttempts.delete(email);
+};
+
+// 📈 Función para obtener tiempo restante de bloqueo
+const getBlockTimeRemaining = (email) => {
+  const attemptData = failedAttempts.get(email);
+  if (!attemptData || !attemptData.blockedUntil) return 0;
+  
+  const remaining = attemptData.blockedUntil.getTime() - Date.now();
+  return Math.max(0, Math.ceil(remaining / 1000)); // en segundos
+};
+
 LoginController.Login = async (req, res) => {
   const { email, password } = req.body;
 
   try {
+    // 🔒 VERIFICAR SI EL USUARIO ESTÁ BLOQUEADO
+    if (isBlocked(email)) {
+      const timeRemaining = getBlockTimeRemaining(email);
+      const minutesRemaining = Math.ceil(timeRemaining / 60);
+      
+      return res.status(429).json({ 
+        message: `Demasiados intentos fallidos. Intenta de nuevo en ${minutesRemaining} minuto(s).`,
+        blocked: true,
+        timeRemaining: timeRemaining
+      });
+    }
+
     let userFound;
     let userType;
+    let isPasswordValid = false;
 
     // 1️⃣ Verificar si es el administrador
     if (email === config.ADMIN.emailAdmin) {
       if (password !== config.ADMIN.password) {
-        return res.status(400).json({ message: "Contraseña incorrecta" });
+        // ❌ REGISTRAR INTENTO FALLIDO
+        const attemptData = recordFailedAttempt(email);
+        const remaining = 4 - attemptData.attempts;
+        
+        return res.status(400).json({ 
+          message: `Contraseña incorrecta. Te quedan ${remaining} intento(s).`,
+          attemptsRemaining: remaining
+        });
       }
 
       userType = "Administrador";
       userFound = { _id: "admin", email };
+      isPasswordValid = true;
     } else {
       // 2️⃣ Buscar en Empleados
       userFound = await EmpleadoModel.findOne({ email });
 
       if (userFound) {
-        const isMatch = await bcryptjs.compare(password, userFound.password);
-        if (!isMatch) {
-          return res.status(400).json({ message: "Contraseña incorrecta" });
+        isPasswordValid = await bcryptjs.compare(password, userFound.password);
+        if (!isPasswordValid) {
+          // ❌ REGISTRAR INTENTO FALLIDO
+          const attemptData = recordFailedAttempt(email);
+          const remaining = 4 - attemptData.attempts;
+          
+          return res.status(400).json({ 
+            message: `Contraseña incorrecta. Te quedan ${remaining} intento(s).`,
+            attemptsRemaining: remaining
+          });
         }
         userType = "Empleado";
       } else {
@@ -36,16 +115,33 @@ LoginController.Login = async (req, res) => {
         userFound = await MotoristaModel.findOne({ email });
 
         if (!userFound) {
-          return res.status(400).json({ message: "Usuario no encontrado" });
+          // ❌ REGISTRAR INTENTO FALLIDO
+          const attemptData = recordFailedAttempt(email);
+          const remaining = 4 - attemptData.attempts;
+          
+          return res.status(400).json({ 
+            message: `Usuario no encontrado. Te quedan ${remaining} intento(s).`,
+            attemptsRemaining: remaining
+          });
         }
 
-        const isMatch = await bcryptjs.compare(password, userFound.password);
-        if (!isMatch) {
-          return res.status(400).json({ message: "Contraseña incorrecta" });
+        isPasswordValid = await bcryptjs.compare(password, userFound.password);
+        if (!isPasswordValid) {
+          // ❌ REGISTRAR INTENTO FALLIDO
+          const attemptData = recordFailedAttempt(email);
+          const remaining = 4 - attemptData.attempts;
+          
+          return res.status(400).json({ 
+            message: `Contraseña incorrecta. Te quedan ${remaining} intento(s).`,
+            attemptsRemaining: remaining
+          });
         }
         userType = "Motorista";
       }
     }
+
+    // ✅ LOGIN EXITOSO - LIMPIAR INTENTOS FALLIDOS
+    clearFailedAttempts(email);
 
     if (!config.JWT.secret) {
       console.error("Falta JWT secret en config.js");
@@ -151,6 +247,18 @@ LoginController.checkAuth = async (req, res) => {
     console.error("Error en checkAuth:", error);
     res.status(500).json({ message: "Error interno del servidor" });
   }
+};
+
+// 🆕 FUNCIÓN OPCIONAL PARA VER ESTADÍSTICAS DE INTENTOS (SOLO PARA DEBUG)
+LoginController.getAttemptStats = (req, res) => {
+  const stats = Array.from(failedAttempts.entries()).map(([email, data]) => ({
+    email,
+    attempts: data.attempts,
+    blockedUntil: data.blockedUntil,
+    isCurrentlyBlocked: isBlocked(email)
+  }));
+  
+  res.json({ stats });
 };
 
 export default LoginController;
