@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Phone, Mail, User, ArrowLeft, ChevronDown, ChevronLeft, ChevronRight, Users, MapPin, Calendar, CreditCard, Plus } from 'lucide-react';
-import useDataCliente from '../components/Clientes/hooks/useDataCliente'; // Ajusta la ruta según tu estructura
+import useClients from '../components/Clientes/hooks/useDataCliente'; // Ajusta la ruta según tu estructura
 
-const Clientes = () => {
-  // Usar el hook corregido
+const Clientes= () => {
   const {
     clients,
     selectedClient,
@@ -17,7 +16,7 @@ const Clientes = () => {
     selectClient,
     closeDetailView,
     stats
-  } = useDataCliente(); // Nombre corregido del hook
+  } = useClients();
 
   // Estados para paginación
   const [currentPage, setCurrentPage] = useState(1);
@@ -40,14 +39,13 @@ const Clientes = () => {
 
   // Obtener clientes para la página actual
   const getCurrentPageClients = () => {
-    if (!Array.isArray(clients)) return [];
     const startIndex = (currentPage - 1) * itemsPerPage;
     const endIndex = startIndex + itemsPerPage;
     return clients.slice(startIndex, endIndex);
   };
 
   // Calcular número total de páginas
-  const totalPages = Math.max(1, Math.ceil((clients?.length || 0) / itemsPerPage));
+  const totalPages = Math.ceil(clients.length / itemsPerPage);
 
   // Función para cambiar página
   const handlePageChange = (page) => {
@@ -97,26 +95,6 @@ const Clientes = () => {
     setCurrentPage(1);
   }, [searchTerm, sortBy]);
 
-  // Función para formatear fecha
-  const formatDate = (dateString) => {
-    if (!dateString) return 'No disponible';
-    try {
-      return new Date(dateString).toLocaleDateString('es-ES', {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit'
-      });
-    } catch (error) {
-      return 'Fecha inválida';
-    }
-  };
-
-  // Función para formatear teléfono
-  const formatPhone = (phone) => {
-    if (!phone) return 'No disponible';
-    return phone.toString();
-  };
-
   return (
     <div className="min-h-screen" style={{background: 'linear-gradient(135deg, #34353A 0%, #2a2b30 100%)'}}>
       <div className="container mx-auto px-6 py-8">
@@ -141,7 +119,7 @@ const Clientes = () => {
                     <h2 className="text-xl font-semibold text-white mb-1">Directorio de Clientes</h2>
                     <div className="text-blue-100 flex items-center">
                       <span className="bg-white bg-opacity-20 px-3 py-1 rounded-full text-sm font-medium">
-                        {stats?.total > 0 ? `${stats.total} Registrados` : 'Sin clientes registrados'}
+                        {stats.total > 0 ? `${stats.total} Registrados` : 'Clientes registrados'}
                       </span>
                     </div>
                   </div>
@@ -157,21 +135,6 @@ const Clientes = () => {
                       onChange={(e) => setSearchTerm(e.target.value)}
                       className="w-full pl-12 pr-4 py-3 bg-white border-0 rounded-xl focus:outline-none focus:ring-2 focus:ring-white focus:ring-opacity-50 text-gray-700 placeholder-gray-400 shadow-lg"
                     />
-                  </div>
-                  
-                  {/* Dropdown de ordenamiento */}
-                  <div className="relative">
-                    <select
-                      value={sortBy}
-                      onChange={(e) => setSortBy(e.target.value)}
-                      className="appearance-none bg-white border-0 rounded-xl px-4 py-3 pr-10 text-gray-700 shadow-lg focus:outline-none focus:ring-2 focus:ring-white focus:ring-opacity-50"
-                    >
-                      <option value="Newest">Más recientes</option>
-                      <option value="Oldest">Más antiguos</option>
-                      <option value="Name">Por nombre</option>
-                      <option value="Email">Por email</option>
-                    </select>
-                    <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
                   </div>
                 </div>
               </div>
@@ -232,7 +195,7 @@ const Clientes = () => {
                       </button>
                     </div>
                   </div>
-                ) : !stats?.hasResults ? (
+                ) : !stats.hasResults ? (
                   <div className="text-center py-12">
                     <div className="bg-gray-50 border border-gray-200 rounded-xl p-8">
                       <Users className="w-16 h-16 text-gray-300 mx-auto mb-4" />
@@ -254,7 +217,7 @@ const Clientes = () => {
                   <div className="space-y-2 pt-4">
                     {getCurrentPageClients().map((client, index) => (
                       <div
-                        key={client._id || client.id || index}
+                        key={client._id || index}
                         className={`grid ${showDetailView ? 'grid-cols-4' : 'grid-cols-6'} gap-6 py-4 px-6 rounded-xl cursor-pointer transition-all duration-200 border-2 ${
                           selectedClient && selectedClient._id === client._id 
                             ? 'shadow-lg transform scale-[1.02]' 
@@ -273,31 +236,35 @@ const Clientes = () => {
                           }`} style={{backgroundColor: selectedClient && selectedClient._id === client._id ? 'rgba(255,255,255,0.2)' : '#5F8EAD'}}>
                             <User className={`w-5 h-5 ${selectedClient && selectedClient._id === client._id ? 'text-white' : 'text-white'}`} />
                           </div>
-                          <span className="truncate">
-                            {`${client.firstName || ''} ${client.lastName || ''}`.trim() || 'Sin nombre'}
-                          </span>
+                          <span className="truncate">{client.firstName} {client.lastName}</span>
                         </div>
                         <div className="flex items-center truncate">
                           <Mail className={`w-4 h-4 mr-2 ${selectedClient && selectedClient._id === client._id ? 'text-white' : 'text-gray-400'}`} />
-                          <span className="truncate">{client.email || 'Sin email'}</span>
+                          <span className="truncate">{client.email}</span>
                         </div>
                         <div className="flex items-center truncate">
                           <CreditCard className={`w-4 h-4 mr-2 ${selectedClient && selectedClient._id === client._id ? 'text-white' : 'text-gray-400'}`} />
-                          <span className="truncate">{client.idNumber || 'Sin DUI'}</span>
+                          <span className="truncate">{client.idNumber}</span>
                         </div>
                         <div className="flex items-center truncate">
                           <Calendar className={`w-4 h-4 mr-2 ${selectedClient && selectedClient._id === client._id ? 'text-white' : 'text-gray-400'}`} />
-                          <span className="truncate">{formatDate(client.birthDate)}</span>
+                          <span className="truncate">
+                            {client.birthDate ? new Date(client.birthDate).toLocaleDateString() : 'No disponible'}
+                          </span>
                         </div>
                         {!showDetailView && (
                           <>
                             <div className="flex items-center truncate">
                               <Phone className={`w-4 h-4 mr-2 ${selectedClient && selectedClient._id === client._id ? 'text-white' : 'text-gray-400'}`} />
-                              <span className="truncate">{formatPhone(client.phone)}</span>
+                              <span className="truncate">
+                                {client.phone ? client.phone.toString() : 'No disponible'}
+                              </span>
                             </div>
                             <div className="flex items-center truncate">
                               <MapPin className={`w-4 h-4 mr-2 ${selectedClient && selectedClient._id === client._id ? 'text-white' : 'text-gray-400'}`} />
-                              <span className="truncate">{client.address || 'Sin dirección'}</span>
+                              <span className="truncate">
+                                {client.address || 'No disponible'}
+                              </span>
                             </div>
                           </>
                         )}
@@ -308,56 +275,52 @@ const Clientes = () => {
               </div>
             </div>
 
-            {/* Footer con paginación */}
-            {stats?.hasResults && (
-              <div className="p-8 pt-4 border-t border-gray-100" style={{backgroundColor: '#f8fafc'}}>
-                <div className="flex items-center justify-between">
-                  <div className="text-sm text-gray-500">
-                    Mostrando {(currentPage - 1) * itemsPerPage + 1} a {Math.min(currentPage * itemsPerPage, clients?.length || 0)} de {clients?.length || 0} clientes
-                    {searchTerm && ` (filtrado de ${stats?.total || 0} total)`}
+            {/* Footer */}
+            <div className="p-8 pt-4 border-t border-gray-100" style={{backgroundColor: '#f8fafc'}}>
+              <div className="flex items-center justify-between">
+                <div className="text-sm text-gray-500">
+                  Mostrando {(currentPage - 1) * itemsPerPage + 1} a {Math.min(currentPage * itemsPerPage, clients.length)} de {clients.length} clientes
+                  {searchTerm && ` (filtrado de ${stats.total} total)`}
+                </div>
+                
+                <div className="flex items-center space-x-1">
+                  <button 
+                    onClick={() => handlePageChange(currentPage - 1)}
+                    disabled={currentPage === 1}
+                    className="p-3 hover:bg-white rounded-xl transition-colors shadow-sm border border-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <ChevronLeft className="w-4 h-4 text-gray-500" />
+                  </button>
+                  <div className="flex space-x-1">
+                    {getPageNumbers().map((page, index) => (
+                      page === '...' ? (
+                        <span key={index} className="w-10 h-10 flex items-center justify-center text-gray-400">...</span>
+                      ) : (
+                        <button 
+                          key={index}
+                          onClick={() => handlePageChange(page)}
+                          className={`w-10 h-10 rounded-xl text-sm font-medium transition-colors ${
+                            currentPage === page
+                              ? 'text-white shadow-sm'
+                              : 'text-gray-700 border border-gray-200 hover:bg-white'
+                          }`}
+                          style={currentPage === page ? {backgroundColor: '#5F8EAD'} : {}}
+                        >
+                          {page}
+                        </button>
+                      )
+                    ))}
                   </div>
-                  
-                  {totalPages > 1 && (
-                    <div className="flex items-center space-x-1">
-                      <button 
-                        onClick={() => handlePageChange(currentPage - 1)}
-                        disabled={currentPage === 1}
-                        className="p-3 hover:bg-white rounded-xl transition-colors shadow-sm border border-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        <ChevronLeft className="w-4 h-4 text-gray-500" />
-                      </button>
-                      <div className="flex space-x-1">
-                        {getPageNumbers().map((page, index) => (
-                          page === '...' ? (
-                            <span key={index} className="w-10 h-10 flex items-center justify-center text-gray-400">...</span>
-                          ) : (
-                            <button 
-                              key={index}
-                              onClick={() => handlePageChange(page)}
-                              className={`w-10 h-10 rounded-xl text-sm font-medium transition-colors ${
-                                currentPage === page
-                                  ? 'text-white shadow-sm'
-                                  : 'text-gray-700 border border-gray-200 hover:bg-white'
-                              }`}
-                              style={currentPage === page ? {backgroundColor: '#5F8EAD'} : {}}
-                            >
-                              {page}
-                            </button>
-                          )
-                        ))}
-                      </div>
-                      <button 
-                        onClick={() => handlePageChange(currentPage + 1)}
-                        disabled={currentPage === totalPages}
-                        className="p-3 hover:bg-white rounded-xl transition-colors shadow-sm border border-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        <ChevronRight className="w-4 h-4 text-gray-500" />
-                      </button>
-                    </div>
-                  )}
+                  <button 
+                    onClick={() => handlePageChange(currentPage + 1)}
+                    disabled={currentPage === totalPages}
+                    className="p-3 hover:bg-white rounded-xl transition-colors shadow-sm border border-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <ChevronRight className="w-4 h-4 text-gray-500" />
+                  </button>
                 </div>
               </div>
-            )}
+            </div>
           </div>
 
           {/* Panel de Detalles */}
@@ -564,20 +527,16 @@ const Clientes = () => {
                         </div>
                       </div>
                       <h3 className="font-bold text-xl mb-2 text-gray-900">
-                        {`${selectedClient.firstName || ''} ${selectedClient.lastName || ''}`.trim() || 'Sin nombre'}
+                        {selectedClient.firstName} {selectedClient.lastName}
                       </h3>
                       
                       <div className="flex justify-center space-x-3">
-                        {selectedClient.phone && (
-                          <button className="p-3 rounded-xl transition-all duration-200 hover:scale-110 shadow-md" style={{backgroundColor: '#5D9646'}}>
-                            <Phone className="w-5 h-5 text-white" />
-                          </button>
-                        )}
-                        {selectedClient.email && (
-                          <button className="p-3 rounded-xl transition-all duration-200 hover:scale-110 shadow-md" style={{backgroundColor: '#5F8EAD'}}>
-                            <Mail className="w-5 h-5 text-white" />
-                          </button>
-                        )}
+                        <button className="p-3 rounded-xl transition-all duration-200 hover:scale-110 shadow-md" style={{backgroundColor: '#5D9646'}}>
+                          <Phone className="w-5 h-5 text-white" />
+                        </button>
+                        <button className="p-3 rounded-xl transition-all duration-200 hover:scale-110 shadow-md" style={{backgroundColor: '#5F8EAD'}}>
+                          <Mail className="w-5 h-5 text-white" />
+                        </button>
                       </div>
                     </div>
 
@@ -595,94 +554,49 @@ const Clientes = () => {
                         <div className="space-y-4">
                           <div>
                             <div className="text-sm font-medium text-gray-700 mb-1">Correo Electrónico</div>
-                            <div className="text-sm text-gray-600 break-words bg-white p-3 rounded-lg border">
-                              {selectedClient.email || 'No disponible'}
-                            </div>
+                            <div className="text-sm text-gray-600 break-words bg-white p-3 rounded-lg border">{selectedClient.email}</div>
                           </div>
                           <div>
                             <div className="text-sm font-medium text-gray-700 mb-1">DUI</div>
-                            <div className="text-sm text-gray-600 bg-white p-3 rounded-lg border">
-                              {selectedClient.idNumber || 'No disponible'}
-                            </div>
+                            <div className="text-sm text-gray-600 bg-white p-3 rounded-lg border">{selectedClient.idNumber}</div>
                           </div>
                         </div>
                       </div>
 
-                     {/* Información de Contacto */}
+                      {/* Información de Contacto */}
                       <div className="bg-gradient-to-r from-green-50 to-green-100 rounded-xl p-6 border border-green-200">
                         <div className="flex items-center space-x-3 mb-4">
                           <div className="p-2 rounded-lg" style={{backgroundColor: '#5D9646'}}>
                             <Phone className="w-5 h-5 text-white" />
                           </div>
-                          <span className="font-semibold text-gray-900">Información de Contacto</span>
+                          <span className="font-semibold text-gray-900">Contacto y Ubicación</span>
                         </div>
 
                         <div className="space-y-4">
                           <div>
+                            <div className="text-sm font-medium text-gray-700 mb-1">Fecha de Nacimiento</div>
+                            <div className="text-sm text-gray-600 bg-white p-3 rounded-lg border flex items-center">
+                              <Calendar className="w-4 h-4 mr-2" style={{color: '#5D9646'}} />
+                              {selectedClient.birthDate ? 
+                                new Date(selectedClient.birthDate).toLocaleDateString() : 
+                                'No disponible'
+                              }
+                            </div>
+                          </div>
+                          <div>
                             <div className="text-sm font-medium text-gray-700 mb-1">Teléfono</div>
-                            <div className="text-sm text-gray-600 bg-white p-3 rounded-lg border">
-                              {formatPhone(selectedClient.phone)}
+                            <div className="text-sm text-gray-600 bg-white p-3 rounded-lg border flex items-center">
+                              <Phone className="w-4 h-4 mr-2" style={{color: '#5D9646'}} />
+                              {selectedClient.phone ? selectedClient.phone.toString() : 'No disponible'}
                             </div>
                           </div>
                           <div>
                             <div className="text-sm font-medium text-gray-700 mb-1">Dirección</div>
-                            <div className="text-sm text-gray-600 bg-white p-3 rounded-lg border">
+                            <div className="text-sm text-gray-600 bg-white p-3 rounded-lg border flex items-center">
+                              <MapPin className="w-4 h-4 mr-2" style={{color: '#5D9646'}} />
                               {selectedClient.address || 'No disponible'}
                             </div>
                           </div>
-                          <div>
-                            <div className="text-sm font-medium text-gray-700 mb-1">Fecha de Nacimiento</div>
-                            <div className="text-sm text-gray-600 bg-white p-3 rounded-lg border">
-                              {formatDate(selectedClient.birthDate)}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Información Adicional */}
-                      <div className="bg-gradient-to-r from-purple-50 to-purple-100 rounded-xl p-6 border border-purple-200">
-                        <div className="flex items-center space-x-3 mb-4">
-                          <div className="p-2 rounded-lg" style={{backgroundColor: '#8B5CF6'}}>
-                            <Calendar className="w-5 h-5 text-white" />
-                          </div>
-                          <span className="font-semibold text-gray-900">Información Adicional</span>
-                        </div>
-
-                        <div className="space-y-4">
-                          <div>
-                            <div className="text-sm font-medium text-gray-700 mb-1">Fecha de Registro</div>
-                            <div className="text-sm text-gray-600 bg-white p-3 rounded-lg border">
-                              {formatDate(selectedClient.createdAt) || 'No disponible'}
-                            </div>
-                          </div>
-                          <div>
-                            <div className="text-sm font-medium text-gray-700 mb-1">Última Actualización</div>
-                            <div className="text-sm text-gray-600 bg-white p-3 rounded-lg border">
-                              {formatDate(selectedClient.updatedAt) || 'No disponible'}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Botones de Acción */}
-                      <div className="bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl p-6 border border-gray-200">
-                        <div className="flex items-center space-x-3 mb-4">
-                          <div className="p-2 rounded-lg bg-gray-600">
-                            <User className="w-5 h-5 text-white" />
-                          </div>
-                          <span className="font-semibold text-gray-900">Acciones</span>
-                        </div>
-
-                        <div className="flex space-x-3">
-                          <button className="flex-1 flex items-center justify-center space-x-2 py-3 px-4 rounded-lg text-white font-medium transition-all duration-200 hover:shadow-lg hover:scale-105"
-                                  style={{backgroundColor: '#5F8EAD'}}>
-                            <Edit className="w-4 h-4" />
-                            <span>Editar</span>
-                          </button>
-                          <button className="flex-1 flex items-center justify-center space-x-2 py-3 px-4 bg-red-500 rounded-lg text-white font-medium transition-all duration-200 hover:bg-red-600 hover:shadow-lg hover:scale-105">
-                            <Trash2 className="w-4 h-4" />
-                            <span>Eliminar</span>
-                          </button>
                         </div>
                       </div>
                     </div>
