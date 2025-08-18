@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Dimensions } from 'react-native';
 import { useAuth } from '../Context/authContext';
+import AnimatedPagination from '../components/AnimatedPagination';
 
 const { height } = Dimensions.get('window');
 
@@ -74,11 +75,8 @@ const OnboardingScreen2 = ({ navigation }) => {
             <Text style={styles.backButtonText}>Atrás</Text>
           </TouchableOpacity>
           
-          <View style={styles.pagination}>
-            <View style={styles.dot} />
-            <View style={[styles.dot, styles.activeDot]} />
-            <View style={styles.dot} />
-          </View>
+          {/* Paginación animada */}
+          <AnimatedPagination currentIndex={1} />
           
           <TouchableOpacity style={styles.nextButton} onPress={handleNext}>
             <Text style={styles.nextButtonText}>Siguiente</Text>
@@ -239,20 +237,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#CCCCCC',
-  },
-  pagination: {
-    flexDirection: 'row',
-  },
-  dot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: '#E0E0E0',
-    marginHorizontal: 5,
-  },
-  activeDot: {
-    backgroundColor: '#333333',
-    width: 30,
   },
   nextButton: {
     // TouchableOpacity styles can be empty

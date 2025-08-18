@@ -1,6 +1,7 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Image } from 'react-native';
 import { useAuth } from '../Context/authContext';
+import AnimatedPagination from '../components/AnimatedPagination';
 
 const OnboardingScreen1 = ({ navigation }) => {
   const { completeOnboarding } = useAuth();
@@ -27,41 +28,16 @@ const OnboardingScreen1 = ({ navigation }) => {
 
       {/* Illustration Container */}
       <View style={styles.illustrationContainer}>
-        {/* Person illustration */}
-        <View style={styles.personContainer}>
-          {/* Head */}
-          <View style={styles.head}>
-            <View style={styles.hair} />
+        {/* Contenedor para tu imagen manual */}
+        <View style={styles.imageContainer}>
+          {/* AQUÍ PONDRÁS TU IMAGEN - Por ahora solo placeholder */}
+          <View style={styles.imagePlaceholder}>
+            <Image 
+               source={require('../images/navegando.png')} 
+               style={styles.characterImage}
+               resizeMode="contain"
+            />
           </View>
-          
-          {/* Body */}
-          <View style={styles.body} />
-          
-          {/* Laptop */}
-          <View style={styles.laptop}>
-            <View style={styles.laptopScreen}>
-              <View style={styles.appleLogo} />
-            </View>
-          </View>
-        </View>
-
-        {/* Earth illustration */}
-        <View style={styles.earthContainer}>
-          <View style={styles.earth}>
-            <View style={styles.continent1} />
-            <View style={styles.continent2} />
-            <View style={styles.continent3} />
-          </View>
-        </View>
-
-        {/* Desk */}
-        <View style={styles.desk}>
-          <View style={styles.deskTop} />
-          <View style={styles.deskLegs}>
-            <View style={styles.leftLeg} />
-            <View style={styles.rightLeg} />
-          </View>
-          <View style={styles.deskDrawer} />
         </View>
       </View>
 
@@ -76,11 +52,8 @@ const OnboardingScreen1 = ({ navigation }) => {
 
       {/* Bottom Navigation */}
       <View style={styles.bottomContainer}>
-        <View style={styles.pagination}>
-          <View style={[styles.dot, styles.activeDot]} />
-          <View style={styles.dot} />
-          <View style={styles.dot} />
-        </View>
+        {/* Paginación animada */}
+        <AnimatedPagination currentIndex={0} />
         
         <TouchableOpacity style={styles.nextButton} onPress={handleNext}>
           <Text style={styles.nextButtonText}>Siguiente</Text>
@@ -126,125 +99,31 @@ const styles = StyleSheet.create({
     paddingHorizontal: 40,
     minHeight: 400,
   },
-  personContainer: {
+  imageContainer: {
     alignItems: 'center',
-    zIndex: 2,
+    justifyContent: 'center',
   },
-  head: {
-    width: 60,
-    height: 60,
-    backgroundColor: '#F5C6A0',
-    borderRadius: 30,
-    marginBottom: 5,
+  characterImage: {
+    width: 250,
+    height: 250,
   },
-  hair: {
-    width: 50,
-    height: 30,
-    backgroundColor: '#B8860B',
-    borderRadius: 25,
-    position: 'absolute',
-    top: -5,
-    left: 5,
-  },
-  body: {
-    width: 80,
-    height: 60,
-    backgroundColor: '#FF8C42',
-    borderRadius: 15,
-    marginBottom: 10,
-  },
-  laptop: {
-    backgroundColor: '#E0E0E0',
-    borderRadius: 8,
-    padding: 8,
-  },
-  laptopScreen: {
-    width: 100,
-    height: 70,
-    backgroundColor: '#333333',
-    borderRadius: 4,
+  // Placeholder temporal - eliminar cuando agregues tu imagen
+  imagePlaceholder: {
+    width: 250,
+    height: 250,
+    backgroundColor: '#F0F0F0',
+    borderRadius: 125,
     justifyContent: 'center',
     alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#E0E0E0',
+    borderStyle: 'dashed',
   },
-  appleLogo: {
-    width: 8,
-    height: 8,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 4,
-  },
-  earthContainer: {
-    position: 'absolute',
-    right: 40,
-    top: 50,
-  },
-  earth: {
-    width: 80,
-    height: 80,
-    backgroundColor: '#4A90E2',
-    borderRadius: 40,
-    overflow: 'hidden',
-  },
-  continent1: {
-    width: 35,
-    height: 25,
-    backgroundColor: '#7ED321',
-    borderRadius: 15,
-    position: 'absolute',
-    top: 15,
-    left: 10,
-  },
-  continent2: {
-    width: 25,
-    height: 20,
-    backgroundColor: '#7ED321',
-    borderRadius: 12,
-    position: 'absolute',
-    bottom: 20,
-    right: 15,
-  },
-  continent3: {
-    width: 20,
-    height: 15,
-    backgroundColor: '#7ED321',
-    borderRadius: 8,
-    position: 'absolute',
-    top: 45,
-    left: 45,
-  },
-  desk: {
-    position: 'absolute',
-    bottom: -20,
-    width: 200,
-    alignItems: 'center',
-  },
-  deskTop: {
-    width: 200,
-    height: 20,
-    backgroundColor: '#D2B48C',
-    borderRadius: 10,
-  },
-  deskLegs: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    width: 180,
-    marginTop: 5,
-  },
-  leftLeg: {
-    width: 15,
-    height: 40,
-    backgroundColor: '#D2B48C',
-  },
-  rightLeg: {
-    width: 15,
-    height: 40,
-    backgroundColor: '#D2B48C',
-  },
-  deskDrawer: {
-    width: 100,
-    height: 15,
-    backgroundColor: '#F0E68C',
-    position: 'absolute',
-    bottom: 20,
+  placeholderText: {
+    color: '#999999',
+    fontSize: 16,
+    textAlign: 'center',
+    fontWeight: '500',
   },
   content: {
     paddingHorizontal: 40,
@@ -269,23 +148,9 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
     alignItems: 'center',
   },
-  pagination: {
-    flexDirection: 'row',
-    marginBottom: 30,
-  },
-  dot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: '#E0E0E0',
-    marginHorizontal: 5,
-  },
-  activeDot: {
-    backgroundColor: '#333333',
-    width: 30,
-  },
   nextButton: {
     alignSelf: 'flex-end',
+    marginTop: 30,
   },
   nextButtonText: {
     fontSize: 16,
