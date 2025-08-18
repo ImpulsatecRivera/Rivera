@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Image } from 'react-native';
 import { useAuth } from '../Context/authContext';
+import AnimatedPagination from '../components/AnimatedPagination';
 
 const OnboardingScreen3 = ({ navigation }) => {
   const { completeOnboarding } = useAuth();
@@ -41,11 +42,11 @@ const OnboardingScreen3 = ({ navigation }) => {
         {/* Contenedor para tu imagen manual */}
         <View style={styles.imageContainer}>
           <View style={styles.imagePlaceholder}>
-            <Text style={styles.placeholderText}>P<Image 
+            <Image 
                source={require('../images/billetin.png')} 
                 style={styles.characterImage}
                 resizeMode="contain"
-           /></Text>
+           />
           </View>
         </View>
       </View>
@@ -66,11 +67,8 @@ const OnboardingScreen3 = ({ navigation }) => {
             <Text style={styles.backButtonText}>Atrás</Text>
           </TouchableOpacity>
           
-          <View style={styles.pagination}>
-            <View style={styles.dot} />
-            <View style={styles.dot} />
-            <View style={[styles.dot, styles.activeDot]} />
-          </View>
+          {/* Paginación animada */}
+          <AnimatedPagination currentIndex={2} />
           
           <TouchableOpacity style={styles.nextButton} onPress={handleComplete}>
             <Text style={styles.nextButtonText}>Comenzar</Text>
@@ -180,20 +178,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#CCCCCC',
-  },
-  pagination: {
-    flexDirection: 'row',
-  },
-  dot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: '#E0E0E0',
-    marginHorizontal: 5,
-  },
-  activeDot: {
-    backgroundColor: '#333333',
-    width: 30,
   },
   nextButton: {
     // TouchableOpacity styles can be empty
