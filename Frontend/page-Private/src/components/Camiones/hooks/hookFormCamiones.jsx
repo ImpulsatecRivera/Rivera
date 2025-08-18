@@ -60,6 +60,15 @@ export const useTruckForm = (onSuccess) => {
     try {
       console.log('=== DATOS RECIBIDOS EN HOOK ===');
       console.log('Data completa:', data);
+      console.log('Claves disponibles:', Object.keys(data));
+      
+      // Debug específico para campos críticos
+      console.log('=== CAMPOS CRÍTICOS ===');
+      console.log('nivelGasolina:', data.nivelGasolina, 'tipo:', typeof data.nivelGasolina);
+      console.log('gasolineLevel:', data.gasolineLevel, 'tipo:', typeof data.gasolineLevel);
+      console.log('name:', data.name, 'tipo:', typeof data.name);
+      console.log('marca:', data.marca, 'tipo:', typeof data.marca);
+      console.log('brand:', data.brand, 'tipo:', typeof data.brand);
       console.log('================================');
 
       // ✅ VALIDACIÓN CRÍTICA: Verificar imagen
@@ -78,11 +87,99 @@ export const useTruckForm = (onSuccess) => {
       });
       formData.append('img', imageFile);
 
-      // ✅ AGREGAR OTROS CAMPOS (excluyendo img)
+      // ✅ MAPEAR CAMPOS CORRECTAMENTE SEGÚN TU API
+      const fieldMapping = {
+        // Mapeo de nombres de formulario a nombres de API
+        name: 'name',
+        nombre: 'name',
+        marca: 'brand',
+        brand: 'brand',
+        modelo: 'model',
+        model: 'model',
+        año: 'age',
+        age: 'age',
+        year: 'age',
+        placa: 'licensePlate',
+        licensePlate: 'licensePlate',
+        tarjetaCirculacion: 'ciculatioCard',
+        circulationCard: 'ciculatioCard',
+        ciculatioCard: 'ciculatioCard',
+        descripcion: 'description',
+        description: 'description',
+        // MÚLTIPLES VARIACIONES PARA NIVEL DE GASOLINA
+        nivelGasolina: 'gasolineLevel',
+        gasolineLevel: 'gasolineLevel',
+        gasoline: 'gasolineLevel',
+        gas: 'gasolineLevel',
+        fuel: 'gasolineLevel',
+        estado: 'state',
+        state: 'state',
+        proveedor: 'supplierId',
+        supplierId: 'supplierId',
+        supplier: 'supplierId',
+        motorista: 'driverId',
+        driverId: 'driverId',
+        driver: 'driverId'
+      };
+
+      // ✅ AGREGAR CAMPOS MAPEADOS (excluyendo img)
       Object.entries(data).forEach(([key, value]) => {
         if (key !== 'img') {
-          console.log(`Agregando a FormData: ${key} =`, value);
-          formData.append(key, value || '');
+          // Usar el mapeo si existe, sino usar el key original
+          const apiFieldName = fieldMapping[key] || key;
+          
+          // Validaciones específicas
+          if (apiFieldName === 'gasolineLevel') {
+            console.log('=== DEBUG NIVEL DE GASOLINA ===');
+            console.log('Valor original:', value);
+            console.log('Tipo original:', typeof value);
+            console.log('Es string vacío?', value === '');
+            console.log('Es undefined?', value === undefined);
+            console.log('Es null?', value === null);
+            
+            // Manejar casos especiales
+            let gasLevel;
+            if (value === '' || value === undefined || value === null || value === 'undefined') {
+              gasLevel = 0; // Valor por defecto
+              console.log('Usando valor por defecto: 0');
+            } else {
+              gasLevel = parseFloat(value);
+              console.log('Valor parseado:', gasLevel);
+              
+              if (isNaN(gasLevel)) {
+                gasLevel = 0;
+                console.log('NaN detectado, usando 0');
+              }
+            }
+            
+            // Validar rango
+            if (gasLevel < 0 || gasLevel > 100) {
+              console.error('Nivel de gasolina fuera de rango:', gasLevel);
+              throw new Error(`El nivel de gasolina debe estar entre 0 y 100. Valor recibido: ${gasLevel}`);
+            }
+            
+            console.log(`Valor final a enviar: ${gasLevel}`);
+            console.log('=== FIN DEBUG GASOLINA ===');
+            formData.append(apiFieldName, gasLevel.toString());
+          } else if (apiFieldName === 'age') {
+            // Asegurar que el año sea un número
+            const year = parseInt(value) || new Date().getFullYear();
+            console.log(`Agregando a FormData: ${apiFieldName} = ${year} (año)`);
+            formData.append(apiFieldName, year.toString());
+          } else if (apiFieldName === 'supplierId' || apiFieldName === 'driverId') {
+            // Solo agregar IDs si tienen valor
+            if (value && value.trim() !== '') {
+              console.log(`Agregando a FormData: ${apiFieldName} = ${value} (ID)`);
+              formData.append(apiFieldName, value.trim());
+            } else {
+              console.log(`Saltando campo vacío: ${apiFieldName}`);
+            }
+          } else {
+            // Campos de texto normales
+            const fieldValue = value || '';
+            console.log(`Agregando a FormData: ${apiFieldName} = ${fieldValue}`);
+            formData.append(apiFieldName, fieldValue);
+          }
         }
       });
 
@@ -91,7 +188,7 @@ export const useTruckForm = (onSuccess) => {
       console.log('Método: POST');
       
       // Debug FormData
-      console.log('=== CONTENIDO FORMDATA ===');
+      console.log('=== CONTENIDO FORMDATA FINAL ===');
       for (let [key, value] of formData.entries()) {
         if (key === 'img') {
           console.log(`${key}: File(${value.name}, ${value.size} bytes)`);
@@ -104,6 +201,7 @@ export const useTruckForm = (onSuccess) => {
         method: "POST",
         body: formData,
         // NO incluir Content-Type para FormData
+        credentials: 'include', // Agregar credenciales si es necesario
       });
 
       console.log('=== RESPUESTA RECIBIDA ===');
