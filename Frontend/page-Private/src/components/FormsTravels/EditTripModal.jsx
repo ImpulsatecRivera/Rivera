@@ -1,10 +1,10 @@
-// FormsTravels/EditTripModal.jsx - VERSIÓN SIMPLIFICADA PARA EDICIÓN
+// FormsTravels/EditTripModal.jsx - VERSIÓN COMPLETAMENTE CORREGIDA
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Truck, User, Calendar, Clock, AlertCircle, X, Edit } from 'lucide-react';
 import Swal from 'sweetalert2';
 
 // 🎉 FUNCIÓN PARA MOSTRAR ALERTA DE ÉXITO
-export const showUpdateSuccessAlert = (onConfirm) => {
+const showUpdateSuccessAlert = (onConfirm) => {
   Swal.fire({
     title: '¡Viaje actualizado con éxito!',
     text: 'Los cambios han sido guardados correctamente',
@@ -26,7 +26,7 @@ const EditTripModal = ({
   show, 
   isClosing, 
   onClose, 
-  onUpdate, 
+  onConfirm, // ✅ CAMBIADO DE onUpdate A onConfirm
   editForm, 
   onInputChange,
   refreshTravels
@@ -35,6 +35,7 @@ const EditTripModal = ({
   const [conductores, setConductores] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [isUpdating, setIsUpdating] = useState(false); // ✅ Nuevo estado para el botón
 
   // Cargar datos al abrir el modal
   useEffect(() => {
@@ -116,51 +117,59 @@ const EditTripModal = ({
     }
   };
 
-  // 🎉 MANEJAR ÉXITO AL ACTUALIZAR VIAJE
-  const handleUpdateSuccess = async () => {
-    console.log('✅ Viaje actualizado exitosamente');
-    
-    // Mostrar alerta de éxito
-    showUpdateSuccessAlert(async () => {
-      console.log('🔄 Refrescando datos después de actualizar viaje...');
-      
-      try {
-        if (refreshTravels) {
-          await refreshTravels();
-          console.log('✅ Datos refrescados exitosamente');
-        }
-        
-        setTimeout(() => {
-          console.log('🚪 Cerrando modal...');
-          onClose();
-        }, 300);
-        
-      } catch (error) {
-        console.error('❌ Error refrescando datos:', error);
-        onClose();
-      }
-    });
-  };
-
-  // 🔄 MANEJAR ACTUALIZAR VIAJE CON ALERTA
+  // 🚨 FUNCIÓN PRINCIPAL CORREGIDA PARA ACTUALIZAR VIAJE
   const handleUpdateViaje = async () => {
+    // Validaciones básicas
+    if (!editForm.tripDescription || !editForm.truckId || !editForm.conductorId || !editForm.departureTime || !editForm.arrivalTime) {
+      Swal.fire({
+        title: '¡Campos incompletos!',
+        text: 'Por favor, completa todos los campos obligatorios.',
+        icon: 'warning',
+        confirmButtonText: 'Entendido',
+        confirmButtonColor: '#F59E0B'
+      });
+      return;
+    }
+
+    setIsUpdating(true); // ✅ Mostrar loading en el botón
+    
     try {
-      console.log('🔄 Iniciando actualización de viaje...');
+      console.log('🔄 Iniciando actualización de viaje desde modal...');
+      console.log('📝 Datos del formulario:', editForm);
       
-      const result = await onUpdate();
+      // ✅ LLAMAR DIRECTAMENTE A LA FUNCIÓN QUE ACTUALIZA (onConfirm)
+      await onConfirm();
       
-      console.log('✅ Resultado de actualización:', result);
+      console.log('✅ Actualización completada desde modal');
       
-      setTimeout(() => {
-        handleUpdateSuccess();
-      }, 500);
+      // 🎉 MOSTRAR ALERTA DE ÉXITO
+      showUpdateSuccessAlert(async () => {
+        console.log('🔄 Refrescando datos después de actualizar viaje...');
+        
+        try {
+          if (refreshTravels) {
+            await refreshTravels();
+            console.log('✅ Datos refrescados exitosamente');
+          }
+          
+          // Cerrar modal con delay
+          setTimeout(() => {
+            console.log('🚪 Cerrando modal...');
+            onClose();
+          }, 300);
+          
+        } catch (error) {
+          console.error('❌ Error refrescando datos:', error);
+          onClose();
+        }
+      });
       
     } catch (error) {
-      console.error('❌ Error actualizando viaje:', error);
+      console.error('❌ Error actualizando viaje desde modal:', error);
       
       Swal.fire({
         title: '¡Error al actualizar viaje!',
-        text: 'Hubo un problema al guardar los cambios. Por favor, inténtalo de nuevo.',
+        text: error.message || 'Hubo un problema al guardar los cambios. Por favor, inténtalo de nuevo.',
         icon: 'error',
         confirmButtonText: 'Reintentar',
         confirmButtonColor: '#EF4444',
@@ -168,6 +177,8 @@ const EditTripModal = ({
           popup: 'animated shakeX'
         }
       });
+    } finally {
+      setIsUpdating(false); // ✅ Ocultar loading del botón
     }
   };
 
@@ -193,6 +204,7 @@ const EditTripModal = ({
           <button 
             onClick={onClose}
             className="p-2 hover:bg-gray-100 rounded-full transition-all duration-200 hover:scale-110 active:scale-95"
+            disabled={isUpdating}
           >
             <ArrowLeft size={24} className="text-gray-600" />
           </button>
@@ -205,6 +217,7 @@ const EditTripModal = ({
           <button 
             onClick={onClose}
             className="p-2 hover:bg-gray-100 rounded-full transition-all duration-200 hover:scale-110 active:scale-95"
+            disabled={isUpdating}
           >
             <X size={24} className="text-gray-600" />
           </button>
@@ -229,6 +242,7 @@ const EditTripModal = ({
                 <button 
                   onClick={cargarRecursos}
                   className="mt-3 px-4 py-2 bg-red-600 text-white rounded text-sm hover:bg-red-700"
+                  disabled={loading || isUpdating}
                 >
                   🔄 Reintentar
                 </button>
@@ -237,7 +251,7 @@ const EditTripModal = ({
           </div>
         )}
 
-        <form className="space-y-8">
+        <form className="space-y-8" onSubmit={(e) => e.preventDefault()}>
           {/* 📝 DESCRIPCIÓN DEL VIAJE */}
           <div className="bg-blue-50 p-6 rounded-xl animate-fade-in-up" style={{animationDelay: '0.1s'}}>
             <h3 className="text-xl font-semibold text-gray-800 mb-4 flex items-center">
@@ -256,6 +270,7 @@ const EditTripModal = ({
                 placeholder="Descripción detallada del viaje"
                 rows={4}
                 required
+                disabled={isUpdating}
               />
             </div>
           </div>
@@ -278,7 +293,7 @@ const EditTripModal = ({
                   onChange={(e) => onInputChange('truckId', e.target.value)}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 hover:scale-105 focus:scale-105 transition-all duration-200"
                   required
-                  disabled={loading}
+                  disabled={loading || isUpdating}
                 >
                   <option value="">Seleccionar camión</option>
                   {camiones.map((camion) => (
@@ -299,7 +314,7 @@ const EditTripModal = ({
                   onChange={(e) => onInputChange('conductorId', e.target.value)}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 hover:scale-105 focus:scale-105 transition-all duration-200"
                   required
-                  disabled={loading}
+                  disabled={loading || isUpdating}
                 >
                   <option value="">Seleccionar conductor</option>
                   {conductores.map((conductor) => (
@@ -319,7 +334,7 @@ const EditTripModal = ({
                   value={editForm.auxiliarId || ''}
                   onChange={(e) => onInputChange('auxiliarId', e.target.value)}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 hover:scale-105 focus:scale-105 transition-all duration-200"
-                  disabled={loading}
+                  disabled={loading || isUpdating}
                 >
                   <option value="">Sin auxiliar asignado</option>
                   {conductores.map((conductor) => (
@@ -350,6 +365,7 @@ const EditTripModal = ({
                   onChange={(e) => onInputChange('departureTime', e.target.value)}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 hover:scale-105 focus:scale-105 transition-all duration-200"
                   required
+                  disabled={isUpdating}
                 />
               </div>
 
@@ -363,13 +379,14 @@ const EditTripModal = ({
                   onChange={(e) => onInputChange('arrivalTime', e.target.value)}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 hover:scale-105 focus:scale-105 transition-all duration-200"
                   required
+                  disabled={isUpdating}
                 />
               </div>
             </div>
           </div>
 
           {/* 📝 OBSERVACIONES */}
-          <div className="bg-orange-50 p-6 rounded-xl animate-fade-in-up" style={{animationDelay: '0.4s'}}>
+          <div className="bg-orange-50 p-6 rounded-xl animate-fade-in-up" style={{animationDelay: '0.5s'}}>
             <h3 className="text-xl font-semibold text-gray-800 mb-4 flex items-center">
               <AlertCircle className="mr-2" size={20} />
               Observaciones
@@ -385,26 +402,28 @@ const EditTripModal = ({
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 hover:scale-105 focus:scale-105 transition-all duration-200"
                 placeholder="Observaciones importantes del viaje, cambios de planes, instrucciones especiales..."
                 rows={3}
+                disabled={isUpdating}
               />
             </div>
           </div>
 
           {/* Botones */}
-          <div className="flex justify-center space-x-4 pt-6 animate-fade-in-up" style={{animationDelay: '0.5s'}}>
+          <div className="flex justify-center space-x-4 pt-6 animate-fade-in-up" style={{animationDelay: '0.6s'}}>
             <button 
               type="button"
               onClick={onClose}
-              className="bg-gray-500 hover:bg-gray-600 text-white py-4 px-8 rounded-2xl font-semibold transition-all duration-200 hover:scale-105 active:scale-95"
+              disabled={isUpdating}
+              className="bg-gray-500 hover:bg-gray-600 disabled:bg-gray-400 disabled:cursor-not-allowed text-white py-4 px-8 rounded-2xl font-semibold transition-all duration-200 hover:scale-105 active:scale-95"
             >
               ❌ Cancelar
             </button>
             <button 
               type="button"
               onClick={handleUpdateViaje}
-              disabled={loading || !editForm.tripDescription || !editForm.truckId || !editForm.conductorId || !editForm.departureTime || !editForm.arrivalTime}
-              className="bg-green-600 hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white py-4 px-8 rounded-2xl font-semibold flex items-center transition-all duration-200 hover:scale-105 active:scale-95 transform hover:shadow-green-300 active:animate-pulse"
+              disabled={loading || isUpdating || !editForm.tripDescription || !editForm.truckId || !editForm.conductorId || !editForm.departureTime || !editForm.arrivalTime}
+              className="bg-green-600 hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white py-4 px-8 rounded-2xl font-semibold flex items-center transition-all duration-200 hover:scale-105 active:scale-95 transform hover:shadow-green-300"
             >
-              {loading ? (
+              {isUpdating ? (
                 <>
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
                   Actualizando...
