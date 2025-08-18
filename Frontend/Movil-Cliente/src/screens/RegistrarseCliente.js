@@ -55,25 +55,17 @@ const RegistrarseScreen = ({ navigation }) => {
 
     setLoading(true);
     try {
-      console.log('Registrando usuario...', { email, password });
+      console.log('✅ Datos validados, pasando a segunda pantalla:', { email });
       
-      // Simular llamada a API
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      Alert.alert(
-        'Éxito', 
-        'Cuenta creada exitosamente', 
-        [
-          { 
-            text: 'OK', 
-            onPress: () => navigation.navigate('RegistrarseCliente2') 
-          }
-        ]
-      );
+      // ✅ PASAR DATOS A LA SEGUNDA PANTALLA
+      navigation.navigate('RegistrarseCliente2', {
+        email: email.trim(),
+        password: password.trim()
+      });
       
     } catch (error) {
-      console.error('Error en registro:', error);
-      Alert.alert('Error', 'No se pudo crear la cuenta. Intenta de nuevo.');
+      console.error('Error:', error);
+      Alert.alert('Error', 'Ocurrió un error inesperado');
     } finally {
       setLoading(false);
     }

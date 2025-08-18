@@ -66,7 +66,7 @@ app.use("/api/proveedores", proveedoresRoutes);
 app.use("/api/clientes", ClientesRoutes);
 app.use("/api/login", LoginRoutes);
 app.use("/api/logout", LogoutRoutes);
-app.use("/api/resgister",RegisterClienteRoutes);
+app.use("/api/register", RegisterClienteRoutes);
 app.use("/api/cotizaciones",CotizacionesRoutes);
 
 
