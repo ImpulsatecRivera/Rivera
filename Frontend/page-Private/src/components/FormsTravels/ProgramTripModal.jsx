@@ -1,6 +1,26 @@
-// FormsTravels/ProgramTripModal.jsx - COTIZACIONES CORREGIDO
+// FormsTravels/ProgramTripModal.jsx - COMPLETO CON TODOS LOS CAMPOS DEL MODELO
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, MapPin, Truck, User, Package, Calendar, Clock, DollarSign, AlertCircle } from 'lucide-react';
+import { ArrowLeft, MapPin, Truck, User, Package, Calendar, Clock, DollarSign, AlertCircle, CloudRain, Car, Navigation } from 'lucide-react';
+import Swal from 'sweetalert2';
+
+// 🎉 FUNCIÓN PARA MOSTRAR ALERTA DE ÉXITO
+export const showSuccessAlert = (onConfirm) => {
+  Swal.fire({
+    title: '¡Viaje programado con éxito!',
+    text: 'El viaje ha sido agregado correctamente al sistema',
+    icon: 'success',
+    confirmButtonText: 'Continuar',
+    confirmButtonColor: '#10B981', // Verde
+    allowOutsideClick: false,
+    customClass: {
+      popup: 'animated bounceIn'
+    }
+  }).then((result) => {
+    if (result.isConfirmed && onConfirm) {
+      onConfirm();
+    }
+  });
+};
 
 const ProgramTripModal = ({ 
   show, 
@@ -8,7 +28,8 @@ const ProgramTripModal = ({
   onClose, 
   onProgram, 
   programForm, 
-  onInputChange 
+  onInputChange,
+  refreshTravels  // ← Nueva prop para refrescar datos
 }) => {
   const [camiones, setCamiones] = useState([]);
   const [conductores, setConductores] = useState([]);
@@ -185,37 +206,29 @@ const ProgramTripModal = ({
     }
   };
 
-  // Función para llenar datos desde cotización
+  // 🔄 FUNCIÓN MEJORADA PARA AUTO-LLENAR DESDE COTIZACIÓN
   const llenarDatosDesdeCotizacion = (cotizacion) => {
-    console.log('🔄 Auto-llenando desde cotización:', cotizacion);
+    console.log('🔄 Auto-llenando TODOS los datos desde cotización:', cotizacion);
 
     try {
-      // Descripción del viaje
+      // ✅ 1. DESCRIPCIÓN DEL VIAJE
       if (cotizacion.quoteDescription || cotizacion.descripcion) {
         onInputChange('tripDescription', cotizacion.quoteDescription || cotizacion.descripcion);
       }
 
-      // Origen
-      if (cotizacion.ruta?.origen) {
-        onInputChange('origen', {
-          nombre: cotizacion.ruta.origen.nombre || '',
-          lat: cotizacion.ruta.origen.coordenadas?.lat || cotizacion.ruta.origen.lat || '',
-          lng: cotizacion.ruta.origen.coordenadas?.lng || cotizacion.ruta.origen.lng || '',
-          tipo: cotizacion.ruta.origen.tipo || 'ciudad'
-        });
+      // ✅ 2. CAMIÓN Y CONDUCTOR AUTO-ASIGNADOS DESDE COTIZACIÓN
+      if (cotizacion.truckId) {
+        onInputChange('truckId', cotizacion.truckId._id || cotizacion.truckId);
+        console.log('🚛 Camión auto-asignado desde cotización:', cotizacion.truckId);
       }
 
-      // Destino
-      if (cotizacion.ruta?.destino) {
-        onInputChange('destino', {
-          nombre: cotizacion.ruta.destino.nombre || '',
-          lat: cotizacion.ruta.destino.coordenadas?.lat || cotizacion.ruta.destino.lat || '',
-          lng: cotizacion.ruta.destino.coordenadas?.lng || cotizacion.ruta.destino.lng || '',
-          tipo: cotizacion.ruta.destino.tipo || 'ciudad'
-        });
+      if (cotizacion.conductorId || cotizacion.driverId) {
+        const conductorId = cotizacion.conductorId?._id || cotizacion.conductorId || cotizacion.driverId?._id || cotizacion.driverId;
+        onInputChange('conductorId', conductorId);
+        console.log('👤 Conductor auto-asignado desde cotización:', conductorId);
       }
 
-      // Horarios
+      // ✅ 3. HORARIOS PRINCIPALES
       if (cotizacion.horarios?.fechaSalida) {
         const fechaSalida = new Date(cotizacion.horarios.fechaSalida);
         onInputChange('departureTime', fechaSalida.toISOString().slice(0, 16));
@@ -224,26 +237,55 @@ const ProgramTripModal = ({
       if (cotizacion.horarios?.fechaLlegadaEstimada) {
         const fechaLlegada = new Date(cotizacion.horarios.fechaLlegadaEstimada);
         onInputChange('arrivalTime', fechaLlegada.toISOString().slice(0, 16));
+      } else if (cotizacion.horarios?.fechaSalida && cotizacion.horarios?.tiempoEstimadoViaje) {
+        // Calcular llegada basada en tiempo estimado
+        const fechaSalida = new Date(cotizacion.horarios.fechaSalida);
+        const tiempoEstimado = cotizacion.horarios.tiempoEstimadoViaje; // en horas
+        const fechaLlegada = new Date(fechaSalida.getTime() + (tiempoEstimado * 60 * 60 * 1000));
+        onInputChange('arrivalTime', fechaLlegada.toISOString().slice(0, 16));
       }
 
-      // Carga
-      if (cotizacion.carga) {
-        onInputChange('carga', {
-          descripcion: cotizacion.carga.descripcion || '',
-          categoria: cotizacion.carga.categoria || 'general',
-          peso: {
-            valor: cotizacion.carga.peso?.valor || '',
-            unidad: cotizacion.carga.peso?.unidad || 'kg'
-          }
+      // ✅ 4. COSTOS REALES (inicializar con costos estimados de la cotización)
+      if (cotizacion.costos) {
+        onInputChange('costosReales', {
+          combustible: cotizacion.costos.combustible || 0,
+          peajes: cotizacion.costos.peajes || 0,
+          conductor: cotizacion.costos.conductor || 0,
+          otros: cotizacion.costos.otros || 0,
+          total: cotizacion.costos.total || 0
         });
       }
 
-      // Observaciones
-      if (cotizacion.observaciones) {
-        onInputChange('observaciones', cotizacion.observaciones);
-      }
+      // ✅ 5. CONDICIONES DEL VIAJE (valores por defecto inteligentes)
+      onInputChange('condiciones', {
+        clima: 'normal',
+        trafico: 'normal', 
+        carretera: 'buena',
+        observaciones: cotizacion.observaciones || ''
+      });
 
-      console.log('✅ Auto-llenado completado');
+      // ✅ 6. TRACKING (inicializar)
+      onInputChange('tracking', {
+        ubicacionActual: {
+          lat: cotizacion.ruta?.origen?.coordenadas?.lat || null,
+          lng: cotizacion.ruta?.origen?.coordenadas?.lng || null,
+          velocidad: 0
+        },
+        progreso: {
+          porcentaje: 0,
+          calculoAutomatico: true
+        },
+        checkpoints: []
+      });
+
+      // ✅ 7. ESTADO DEL VIAJE (inicializar)
+      onInputChange('estado', {
+        actual: 'pendiente',
+        autoActualizar: true,
+        historial: []
+      });
+
+      console.log('✅ Auto-llenado COMPLETO desde cotización - Camión y conductor asignados automáticamente');
     } catch (error) {
       console.error('❌ Error en auto-llenado:', error);
     }
@@ -261,6 +303,70 @@ const ProgramTripModal = ({
       }
     } else {
       setCotizacionSeleccionada(null);
+    }
+  };
+
+  // 🎉 MANEJAR ÉXITO AL PROGRAMAR VIAJE
+  const handleProgramSuccess = async () => {
+    console.log('✅ Viaje programado exitosamente');
+    
+    // Mostrar alerta de éxito
+    showSuccessAlert(async () => {
+      // 🔄 REFRESCAR DATOS DESPUÉS DE CERRAR MODAL
+      console.log('🔄 Refrescando datos después de programar viaje...');
+      
+      try {
+        // Refrescar datos ANTES de cerrar el modal
+        if (refreshTravels) {
+          console.log('📡 Llamando refreshTravels...');
+          await refreshTravels();
+          console.log('✅ Datos refrescados exitosamente');
+        }
+        
+        // Esperar un momento para que se actualice la UI
+        setTimeout(() => {
+          console.log('🚪 Cerrando modal...');
+          onClose();
+        }, 300);
+        
+      } catch (error) {
+        console.error('❌ Error refrescando datos:', error);
+        // Cerrar modal aunque falle el refresh
+        onClose();
+      }
+    });
+  };
+
+  // 🔄 MANEJAR PROGRAMAR VIAJE CON ALERTA
+  const handleProgramViaje = async () => {
+    try {
+      console.log('🚛 Iniciando programación de viaje...');
+      
+      // Llamar la función original de programar
+      const result = await onProgram();
+      
+      // Si llegamos aquí, el viaje se programó exitosamente
+      console.log('✅ Resultado de programación:', result);
+      
+      // Esperar un poco para que se complete la transacción
+      setTimeout(() => {
+        handleProgramSuccess();
+      }, 500);
+      
+    } catch (error) {
+      console.error('❌ Error programando viaje:', error);
+      
+      // Mostrar alerta de error
+      Swal.fire({
+        title: '¡Error al programar viaje!',
+        text: 'Hubo un problema al guardar el viaje. Por favor, inténtalo de nuevo.',
+        icon: 'error',
+        confirmButtonText: 'Reintentar',
+        confirmButtonColor: '#EF4444', // Rojo
+        customClass: {
+          popup: 'animated shakeX'
+        }
+      });
     }
   };
 
@@ -287,7 +393,7 @@ const ProgramTripModal = ({
       <div className="bg-white rounded-t-3xl mt-4 mx-4 mb-4 p-8 min-h-[calc(100vh-6rem)] relative">
         {/* Header del formulario */}
         <div className="flex items-center mb-8">
-          <h1 className="text-3xl font-normal text-black mr-6">Programar viaje</h1>
+          <h1 className="text-3xl font-normal text-black mr-6">Programar viaje completo</h1>
         </div>
 
         {/* Estado de recursos - MEJORADO CON DEBUG INFO */}
@@ -299,18 +405,10 @@ const ProgramTripModal = ({
               👤 Motoristas: {conductores.length} | 
               📋 Cotizaciones: {cotizaciones.length}
             </p>
-            {/* Información adicional de debug */}
-            {cotizaciones.length > 0 && (
-              <details className="mt-2">
-                <summary className="text-blue-600 cursor-pointer text-xs">Ver detalles de cotizaciones</summary>
-                <div className="mt-1 text-xs text-blue-600">
-                  {cotizaciones.map((cot, index) => (
-                    <div key={cot._id}>
-                      {index + 1}. {cot.quoteName || `Cot ${cot._id.slice(-6)}`} - Status: {cot.status || cot.estado || 'sin estado'}
-                    </div>
-                  ))}
-                </div>
-              </details>
+            {cotizacionSeleccionada && (
+              <p className="text-green-700 mt-2">
+                ✅ Cotización seleccionada: {cotizacionSeleccionada.quoteName} - Datos auto-llenados
+              </p>
             )}
           </div>
         </div>
@@ -346,26 +444,27 @@ const ProgramTripModal = ({
         )}
 
         <form className="space-y-8">
-          {/* Información Básica */}
+          {/* 📋 SECCIÓN 1: INFORMACIÓN BÁSICA */}
           <div className="bg-gray-50 p-6 rounded-xl">
             <h2 className="text-xl font-semibold text-gray-800 mb-6 flex items-center">
               <Calendar className="mr-2" size={20} />
-              Información Básica del Viaje
+              1. Información Básica del Viaje
             </h2>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Cotización */}
-              <div>
+              {/* Cotización - PRINCIPAL */}
+              <div className="md:col-span-2">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Cotización (Auto-llena el formulario)
+                  Cotización * (Auto-llena todo el formulario)
                 </label>
                 <select
                   value={programForm.quoteId || ''}
                   onChange={(e) => handleCotizacionChange(e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-blue-50"
                   disabled={loading}
+                  required
                 >
-                  <option value="">Seleccionar cotización</option>
+                  <option value="">🔽 Seleccionar cotización (OBLIGATORIO)</option>
                   {cotizaciones.map((cotizacion) => (
                     <option key={cotizacion._id} value={cotizacion._id}>
                       📋 {cotizacion.quoteName || cotizacion.nombre || `Cotización ${cotizacion._id.slice(-6)}`}
@@ -381,40 +480,40 @@ const ProgramTripModal = ({
                 )}
               </div>
 
-              {/* Descripción */}
-              <div>
+              {/* Descripción del viaje */}
+              <div className="md:col-span-2">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Descripción del viaje *
+                  Descripción del viaje * (Auto-llenado desde cotización)
                 </label>
-                <input
-                  type="text"
+                <textarea
                   value={programForm.tripDescription || ''}
                   onChange={(e) => onInputChange('tripDescription', e.target.value)}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Descripción del viaje"
+                  placeholder="Descripción detallada del viaje"
+                  rows={3}
                   required
                 />
               </div>
             </div>
           </div>
 
-          {/* Recursos */}
+          {/* 🚛 SECCIÓN 2: ASIGNACIÓN DE RECURSOS */}
           <div className="bg-purple-50 p-6 rounded-xl">
             <h2 className="text-xl font-semibold text-gray-800 mb-6 flex items-center">
               <Truck className="mr-2" size={20} />
-              Asignación de Recursos
+              2. Asignación de Recursos (Auto-asignados desde cotización)
             </h2>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Camión */}
+              {/* Camión - AUTO-ASIGNADO */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Camión *
+                  Camión * (Auto-asignado desde cotización)
                 </label>
                 <select
                   value={programForm.truckId || ''}
                   onChange={(e) => onInputChange('truckId', e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-green-50"
                   required
                   disabled={loading}
                 >
@@ -425,17 +524,22 @@ const ProgramTripModal = ({
                     </option>
                   ))}
                 </select>
+                {cotizacionSeleccionada && programForm.truckId && (
+                  <p className="text-xs text-green-600 mt-1">
+                    ✅ Camión asignado automáticamente desde la cotización
+                  </p>
+                )}
               </div>
 
-              {/* Conductor */}
+              {/* Conductor - AUTO-ASIGNADO */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Conductor *
+                  Conductor * (Auto-asignado desde cotización)
                 </label>
                 <select
                   value={programForm.conductorId || ''}
                   onChange={(e) => onInputChange('conductorId', e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-green-50"
                   required
                   disabled={loading}
                 >
@@ -446,15 +550,43 @@ const ProgramTripModal = ({
                     </option>
                   ))}
                 </select>
+                {cotizacionSeleccionada && programForm.conductorId && (
+                  <p className="text-xs text-green-600 mt-1">
+                    ✅ Conductor asignado automáticamente desde la cotización
+                  </p>
+                )}
+              </div>
+
+              {/* Auxiliar - OPCIONAL Y MANUAL */}
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Auxiliar (Opcional - Selección manual)
+                </label>
+                <select
+                  value={programForm.auxiliarId || ''}
+                  onChange={(e) => onInputChange('auxiliarId', e.target.value)}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-blue-50"
+                  disabled={loading}
+                >
+                  <option value="">Sin auxiliar asignado</option>
+                  {conductores.map((conductor) => (
+                    <option key={conductor._id} value={conductor._id}>
+                      👥 {conductor.name || conductor.nombre} - {conductor.phone || conductor.telefono}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-xs text-gray-500 mt-1">
+                  El auxiliar es opcional y se selecciona manualmente
+                </p>
               </div>
             </div>
           </div>
 
-          {/* Horarios */}
+          {/* ⏰ SECCIÓN 3: HORARIOS */}
           <div className="bg-green-50 p-6 rounded-xl">
             <h2 className="text-xl font-semibold text-gray-800 mb-6 flex items-center">
               <Clock className="mr-2" size={20} />
-              Horarios
+              3. Horarios (Auto-llenado desde cotización)
             </h2>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -473,7 +605,7 @@ const ProgramTripModal = ({
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Fecha y hora de llegada *
+                  Fecha y hora de llegada estimada *
                 </label>
                 <input
                   type="datetime-local"
@@ -486,28 +618,107 @@ const ProgramTripModal = ({
             </div>
           </div>
 
+          {/* 💰 SECCIÓN 4: COSTOS REALES */}
+          <div className="bg-yellow-50 p-6 rounded-xl">
+            <h2 className="text-xl font-semibold text-gray-800 mb-6 flex items-center">
+              <DollarSign className="mr-2" size={20} />
+              4. Costos Reales (Inicializados desde cotización)
+            </h2>
+            
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Combustible ($)
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={programForm.costosReales?.combustible || ''}
+                  onChange={(e) => onInputChange('costosReales.combustible', parseFloat(e.target.value) || 0)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="0.00"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Peajes ($)
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={programForm.costosReales?.peajes || ''}
+                  onChange={(e) => onInputChange('costosReales.peajes', parseFloat(e.target.value) || 0)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="0.00"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Conductor ($)
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={programForm.costosReales?.conductor || ''}
+                  onChange={(e) => onInputChange('costosReales.conductor', parseFloat(e.target.value) || 0)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="0.00"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Otros ($)
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={programForm.costosReales?.otros || ''}
+                  onChange={(e) => onInputChange('costosReales.otros', parseFloat(e.target.value) || 0)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="0.00"
+                />
+              </div>
+            </div>
+
+            {/* Total calculado automáticamente */}
+            <div className="mt-4 p-3 bg-green-100 border border-green-300 rounded-lg">
+              <div className="flex justify-between items-center">
+                <span className="font-medium text-green-800">Total estimado:</span>
+                <span className="text-xl font-bold text-green-900">
+                  ${((programForm.costosReales?.combustible || 0) + 
+                     (programForm.costosReales?.peajes || 0) + 
+                     (programForm.costosReales?.conductor || 0) + 
+                     (programForm.costosReales?.otros || 0)).toFixed(2)}
+                </span>
+              </div>
+            </div>
+          </div>
+
           {/* Botones */}
           <div className="flex justify-center space-x-4 pt-6">
             <button 
               type="button"
               onClick={onClose}
-              className="bg-gray-500 hover:bg-gray-600 text-white py-3 px-8 rounded-lg font-medium"
+              className="bg-gray-500 hover:bg-gray-600 text-white py-3 px-8 rounded-lg font-medium transition-colors"
             >
-              Cancelar
+              ❌ Cancelar
             </button>
             <button 
               type="button"
-              onClick={onProgram}
-              disabled={loading || !programForm.quoteId || !programForm.truckId || !programForm.conductorId}
-              className="bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white py-3 px-8 rounded-lg font-medium flex items-center"
+              onClick={handleProgramViaje}
+              disabled={loading || !programForm.quoteId || !programForm.truckId || !programForm.conductorId || !programForm.tripDescription || !programForm.departureTime || !programForm.arrivalTime}
+              className="bg-green-600 hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white py-3 px-8 rounded-lg font-medium flex items-center transition-colors"
             >
               {loading ? (
                 <>
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                  Guardando...
+                  Guardando viaje...
                 </>
               ) : (
-                '🚛 Programar Viaje'
+                '🚛 Programar Viaje Completo'
               )}
             </button>
           </div>

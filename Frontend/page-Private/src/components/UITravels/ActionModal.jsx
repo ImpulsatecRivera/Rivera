@@ -1,62 +1,121 @@
-// components/ActionModal.jsx
+// components/UITravels/ActionModal.jsx
 import React from 'react';
-import { ArrowLeft } from 'lucide-react';
 
 const ActionModal = ({ show, isClosing, onClose, onEdit, onDelete }) => {
   if (!show) return null;
 
   return (
-    <div 
-      className={`fixed inset-0 bg-black z-50 flex items-center justify-center transition-all duration-300 ease-out ${
-        isClosing ? 'bg-opacity-0' : 'bg-opacity-50'
-      }`}
-      onClick={onClose}
-    >
+    <>
+      <style>
+        {`
+          @keyframes slideInUp {
+            from {
+              transform: translateY(100px) scale(0.9);
+              opacity: 0;
+            }
+            to {
+              transform: translateY(0) scale(1);
+              opacity: 1;
+            }
+          }
+          
+          @keyframes bounceIn {
+            0% {
+              transform: scale(0.3);
+              opacity: 0;
+            }
+            50% {
+              transform: scale(1.05);
+            }
+            70% {
+              transform: scale(0.9);
+            }
+            100% {
+              transform: scale(1);
+              opacity: 1;
+            }
+          }
+          
+          @keyframes fadeInUp {
+            from {
+              transform: translateY(20px);
+              opacity: 0;
+            }
+            to {
+              transform: translateY(0);
+              opacity: 1;
+            }
+          }
+        `}
+      </style>
       <div 
-        className={`bg-white rounded-3xl p-8 max-w-md w-full mx-4 relative transform transition-all duration-300 ease-out ${
-          isClosing 
-            ? 'scale-95 opacity-0 translate-y-4' 
-            : 'scale-100 opacity-100 translate-y-0'
+        className={`fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 transition-opacity duration-300 ${
+          show && !isClosing ? 'opacity-100' : 'opacity-0'
         }`}
-        onClick={(e) => e.stopPropagation()}
       >
-        <button 
-          onClick={onClose}
-          className="absolute top-6 left-6 p-2 hover:bg-gray-100 rounded-full transition-all duration-200 hover:scale-110 active:scale-95"
+        <div 
+          className={`bg-white rounded-lg p-6 max-w-sm w-full mx-4 shadow-xl relative transform transition-all duration-300 ${
+            show && !isClosing ? 'scale-100 translate-y-0' : 'scale-95 translate-y-4'
+          }`}
+          style={{
+            animation: show && !isClosing ? 'slideInUp 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)' : 'none'
+          }}
         >
-          <ArrowLeft size={20} className="text-gray-600" />
-        </button>
-        
-        <div className="text-center mt-8">
-          <div className="w-20 h-20 bg-gray-600 rounded-full flex items-center justify-center mx-auto mb-6 transform transition-all duration-500 animate-wiggle animate-gray-pulse">
-            <span className="text-white text-3xl font-bold animate-heartbeat">?</span>
-          </div>
+          <button
+            onClick={onClose}
+            className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-xl font-bold transition-colors duration-200 hover:scale-110 transform"
+          >
+            ×
+          </button>
           
-          <h2 className="text-2xl font-bold text-gray-900 mb-4 transform transition-all duration-300 delay-100 animate-fade-in-up">
-            ¿Deseas editar o eliminar un viaje?
-          </h2>
-          
-          <p className="text-gray-600 mb-8 transform transition-all duration-300 delay-200 animate-fade-in-up">
-            Elija la opción
-          </p>
-          
-          <div className="flex space-x-4 transform transition-all duration-300 delay-300 animate-fade-in-up">
-            <button 
-              onClick={onDelete}
-              className="flex-1 bg-red-500 hover:bg-red-600 text-white py-4 px-6 rounded-2xl font-semibold transition-all duration-200 hover:scale-105 hover:shadow-lg active:scale-95 transform hover:rotate-1 hover:shadow-red-300 active:animate-pulse"
+          <div className="text-center">
+            <div 
+              className="w-16 h-16 bg-gray-200 rounded-full mx-auto mb-4 flex items-center justify-center transition-all duration-300 hover:bg-gray-300"
+              style={{
+                animation: show && !isClosing ? 'bounceIn 0.6s ease-out 0.2s both' : 'none'
+              }}
             >
-              Eliminar
-            </button>
-            <button 
-              onClick={onEdit}
-              className="flex-1 bg-green-600 hover:bg-green-700 text-white py-4 px-6 rounded-2xl font-semibold transition-all duration-200 hover:scale-105 hover:shadow-lg active:scale-95 transform hover:-rotate-1 hover:shadow-green-300 active:animate-pulse"
+              <span className="text-2xl text-gray-600">?</span>
+            </div>
+            <h3 
+              className="text-lg font-semibold text-gray-900 mb-2 transition-all duration-300"
+              style={{
+                animation: show && !isClosing ? 'fadeInUp 0.5s ease-out 0.3s both' : 'none'
+              }}
             >
-              Editar
-            </button>
+              ¿Deseas eliminar o actualizar este viaje?
+            </h3>
+            <p 
+              className="text-gray-600 mb-6 transition-all duration-300"
+              style={{
+                animation: show && !isClosing ? 'fadeInUp 0.5s ease-out 0.4s both' : 'none'
+              }}
+            >
+              Elija la opción
+            </p>
+            <div 
+              className="flex space-x-3"
+              style={{
+                animation: show && !isClosing ? 'fadeInUp 0.5s ease-out 0.5s both' : 'none'
+              }}
+            >
+              <button
+                onClick={onDelete}
+                className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-all duration-200 transform hover:scale-105 hover:shadow-lg active:scale-95"
+              >
+                Eliminar
+              </button>
+              <button
+                onClick={onEdit}
+                className="flex-1 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-all duration-200 transform hover:scale-105 hover:shadow-lg active:scale-95"
+              >
+                Actualizar
+              </button>
+            </div>
           </div>
         </div>
       </div>
-    </div>
+    </>
   );
 };
 
