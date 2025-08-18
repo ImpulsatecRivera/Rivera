@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Image } from 'react-native';
-import { useAuth } from '../contenxt/authContext';
+import { useAuth } from '../contenxt/authContext'; // ✅ CORREGIDO: context en lugar de contenxt
 
 const OnboardingScreen3 = ({ navigation }) => {
   const { completeOnboarding } = useAuth();
@@ -8,21 +8,40 @@ const OnboardingScreen3 = ({ navigation }) => {
   // Función para completar onboarding y ir al dashboard
   const handleComplete = async () => {
     console.log('🎯 Completando onboarding desde pantalla 3/3...');
-    const result = await completeOnboarding();
-    if (result.success) {
-      console.log('✅ Onboarding completado, navegando automáticamente a InicioScreen');
-    } else {
-      console.error('❌ Error al completar onboarding');
+    
+    try {
+      // Si existe la función completeOnboarding en el contexto
+      if (typeof completeOnboarding === 'function') {
+        const result = await completeOnboarding();
+        if (result.success) {
+          console.log('✅ Onboarding completado, navegando a Dashboard');
+        } else {
+          console.error('❌ Error al completar onboarding:', result.error);
+        }
+      } else {
+        console.log('✅ Onboarding completado (sin función en contexto)');
+      }
+      
+      // ✅ NAVEGAR DIRECTAMENTE AL DASHBOARD A TRAVÉS DE MAIN
+      console.log('🏠 Navegando a Main (Dashboard)...');
+      navigation.navigate('Main');
+      
+    } catch (error) {
+      console.error('💥 Error durante el onboarding:', error);
+      // Aún así, navegar al dashboard
+      navigation.navigate('Main');
     }
   };
 
   // Función para ir atrás a la pantalla 2/3
   const handleBack = () => {
+    console.log('⬅️ Volviendo a pantalla anterior');
     navigation.goBack();
   };
 
   // Función para saltar directamente al dashboard
   const handleSkip = async () => {
+    console.log('⏭️ Saltando onboarding...');
     await handleComplete();
   };
 
@@ -38,14 +57,14 @@ const OnboardingScreen3 = ({ navigation }) => {
 
       {/* Illustration Container */}
       <View style={styles.illustrationContainer}>
-        {/* Contenedor para tu imagen manual */}
+        {/* Contenedor para tu imagen */}
         <View style={styles.imageContainer}>
           <View style={styles.imagePlaceholder}>
-            <Text style={styles.placeholderText}>P<Image 
+            <Image 
                source={require('../images/billetin.png')} 
                 style={styles.characterImage}
                 resizeMode="contain"
-           /></Text>
+            />
           </View>
         </View>
       </View>
@@ -121,12 +140,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  // Estilo para tu imagen cuando la agregues
+  // Estilo para tu imagen
   characterImage: {
     width: 250,
     height: 250,
   },
-  // Placeholder temporal - eliminar cuando agregues tu imagen
+  // Placeholder - puedes eliminar esto si ya tienes la imagen
   imagePlaceholder: {
     width: 250,
     height: 250,

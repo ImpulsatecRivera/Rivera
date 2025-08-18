@@ -26,7 +26,8 @@ const LoginScreen = () => {
 
   const handleForgotPassword = () => {
     console.log('Forgot password pressed');
-    // Aquí iría la lógica de recuperar contraseña
+    // Navegar a la primera pantalla de recuperación de contraseña
+    navigation.navigate('InicioRecuperar');
   };
 
   const handleGoogleLogin = () => {
