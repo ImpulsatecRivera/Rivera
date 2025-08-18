@@ -1,43 +1,89 @@
-export const validateEmployeeForm = (formData) => {
-  const newErrors = {};
-  
-  if (!formData.name) newErrors.name = "El nombre es obligatorio";
-  if (!formData.lastName) newErrors.lastName = "El apellido es obligatorio";
-  if (!formData.dui) newErrors.dui = "El DUI es obligatorio";
-  if (formData.dui && formData.dui.replace(/\D/g, '').length !== 9) {
-    newErrors.dui = "El DUI debe tener exactamente 9 dígitos";
-  }
-  if (!formData.birthDate) newErrors.birthDate = "La fecha de nacimiento es obligatoria";
-  if (!formData.password) newErrors.password = "La contraseña es obligatoria";
-  if (!formData.phone) newErrors.phone = "El teléfono es obligatorio";
-  if (formData.phone && formData.phone.replace(/\D/g, '').length !== 8) {
-    newErrors.phone = "El teléfono debe tener exactamente 8 dígitos";
-  }
-  if (!formData.address) newErrors.address = "La dirección es obligatoria";
+// FormValidation.js
 
-  return newErrors;
+export const validateEmployeeForm = (formData) => {
+  const errors = {};
+
+  // Validar nombre
+  if (!formData.name || !formData.name.trim()) {
+    errors.name = 'El nombre es obligatorio';
+  }
+
+  // Validar apellido
+  if (!formData.lastName || !formData.lastName.trim()) {
+    errors.lastName = 'El apellido es obligatorio';
+  }
+
+  // Validar DUI
+  if (!formData.dui || !formData.dui.trim()) {
+    errors.dui = 'El DUI es obligatorio';
+  } else if (!/^\d{8}-\d$/.test(formData.dui)) {
+    errors.dui = 'El DUI debe tener el formato 00000000-0';
+  }
+
+  // Validar fecha de nacimiento
+  if (!formData.birthDate) {
+    errors.birthDate = 'La fecha de nacimiento es obligatoria';
+  }
+
+  // Validar contraseña - COINCIDE CON EL BACKEND
+  if (!formData.password || !formData.password.trim()) {
+    errors.password = 'La contraseña es obligatoria';
+  } else if (formData.password.length < 8) {
+    errors.password = 'La contraseña debe tener al menos 8 caracteres';
+  } else {
+    // Validar requisitos específicos de contraseña (igual que el backend)
+    const hasUpperCase = /[A-Z]/.test(formData.password);
+    const hasLowerCase = /[a-z]/.test(formData.password);
+    const hasNumber = /\d/.test(formData.password);
+    
+    if (!hasUpperCase || !hasLowerCase || !hasNumber) {
+      errors.password = 'La contraseña debe contener al menos una letra mayúscula, una minúscula y un número';
+    }
+  }
+
+  // Validar teléfono
+  if (!formData.phone || !formData.phone.trim()) {
+    errors.phone = 'El teléfono es obligatorio';
+  } else if (!/^\d{4}-\d{4}$/.test(formData.phone)) {
+    errors.phone = 'El teléfono debe tener el formato 0000-0000';
+  }
+
+  // Validar dirección
+  if (!formData.address || !formData.address.trim()) {
+    errors.address = 'La dirección es obligatoria';
+  }
+
+  return errors;
 };
 
 export const formatInput = (name, value) => {
-  let formattedValue = value;
+  switch (name) {
+    case 'dui':
+      // Formato DUI: 00000000-0
+      const duiNumbers = value.replace(/\D/g, '');
+      if (duiNumbers.length <= 8) {
+        return duiNumbers;
+      } else if (duiNumbers.length === 9) {
+        return `${duiNumbers.slice(0, 8)}-${duiNumbers.slice(8)}`;
+      }
+      return value;
 
-  if (name === 'phone') {
-    const numbers = value.replace(/\D/g, '');
-    if (numbers.length > 4) {
-      formattedValue = numbers.slice(0, 4) + '-' + numbers.slice(4, 8);
-    } else {
-      formattedValue = numbers;
-    }
+    case 'phone':
+      // Formato teléfono: 0000-0000
+      const phoneNumbers = value.replace(/\D/g, '');
+      if (phoneNumbers.length <= 4) {
+        return phoneNumbers;
+      } else if (phoneNumbers.length <= 8) {
+        return `${phoneNumbers.slice(0, 4)}-${phoneNumbers.slice(4)}`;
+      }
+      return value;
+
+    case 'name':
+    case 'lastName':
+      // Solo permitir letras y espacios
+      return value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/g, '');
+
+    default:
+      return value;
   }
-
-  if (name === 'dui') {
-    const numbers = value.replace(/\D/g, '');
-    if (numbers.length > 8) {
-      formattedValue = numbers.slice(0, 8) + '-' + numbers.slice(8, 9);
-    } else {
-      formattedValue = numbers;
-    }
-  }
-
-  return formattedValue;
 };

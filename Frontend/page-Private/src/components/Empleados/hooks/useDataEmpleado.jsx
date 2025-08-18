@@ -180,19 +180,44 @@ const useDataEmpleado = () => {
     setShowConfirmDelete(false);
   };
 
-  // Editar empleado - FUNCIÓN CORREGIDA
+  // FUNCIÓN HANDLESAVEEDIT MEJORADA PARA ACTUALIZACIÓN INSTANTÁNEA
   const handleSaveEdit = async (formData) => {
+    // VALIDACIÓN CRÍTICA - Verificar empleado seleccionado
+    if (!selectedEmpleados) {
+      console.error('❌ No hay empleado seleccionado');
+      setError('No hay empleado seleccionado para actualizar');
+      return;
+    }
+    
+    if (!selectedEmpleados._id) {
+      console.error('❌ El empleado seleccionado no tiene ID:', selectedEmpleados);
+      setError('El empleado seleccionado no tiene un ID válido');
+      return;
+    }
+    
+    console.log('🎯 Empleado ANTES de actualizar:', selectedEmpleados);
+    
+    // Verificar que el FormData no esté vacío
+    let hasData = false;
+    for (let pair of formData.entries()) {
+      hasData = true;
+      break;
+    }
+    
+    if (!hasData) {
+      console.error('❌ No hay datos para actualizar');
+      setError('No hay cambios para guardar');
+      return;
+    }
+    
     // Activar estado de carga
     setUploading(true);
     
     try {
-      // Verificar qué campos están en el FormData para debug
-      console.log('📝 Campos enviados:');
-      for (let pair of formData.entries()) {
-        console.log(pair[0] + ': ' + (pair[1] instanceof File ? 'Archivo de imagen' : pair[1]));
-      }
+      // Log detallado de lo que se está enviando
+      console.log('📤 Enviando actualización a:', `http://localhost:4000/api/empleados/${selectedEmpleados._id}`);
 
-      // formData ya viene como FormData del componente
+      // Realizar la actualización
       const response = await axios.put(
         `http://localhost:4000/api/empleados/${selectedEmpleados._id}`, 
         formData,
@@ -203,32 +228,69 @@ const useDataEmpleado = () => {
         }
       );
       
-      // Usar la respuesta completa del servidor (incluye URL de Cloudinary)
-      const updatedEmployee = response.data.empleado || response.data.data || response.data;
+      console.log("✅ Respuesta COMPLETA del servidor:", response.data);
       
-      // Actualizar la lista de empleados con safety check
+      // Extraer datos del servidor
+      const updatedEmployeeFromServer = response.data.empleado || response.data.data || response.data;
+      
+      // 🎯 CRÍTICO: Combinar datos del servidor con datos existentes para preservar campos
+      const fullyUpdatedEmployee = {
+        // Empezar con los datos originales para preservar TODO
+        ...selectedEmpleados,
+        // Sobrescribir SOLO con los datos que vienen del servidor
+        ...updatedEmployeeFromServer,
+        // Asegurar que estos campos críticos NO se pierdan
+        _id: selectedEmpleados._id,
+        dui: selectedEmpleados.dui || updatedEmployeeFromServer.dui,
+        birthDate: selectedEmpleados.birthDate || updatedEmployeeFromServer.birthDate,
+        // Si el servidor no devuelve ciertos campos, mantener los originales
+        email: updatedEmployeeFromServer.email || selectedEmpleados.email,
+        name: updatedEmployeeFromServer.name || selectedEmpleados.name,
+        lastName: updatedEmployeeFromServer.lastName || selectedEmpleados.lastName,
+        phone: updatedEmployeeFromServer.phone || selectedEmpleados.phone,
+        address: updatedEmployeeFromServer.address || selectedEmpleados.address,
+        img: updatedEmployeeFromServer.img || selectedEmpleados.img
+      };
+      
+      console.log("✅ Empleado COMBINADO final:", fullyUpdatedEmployee);
+      
+      // 🚀 ACTUALIZACIÓN INMEDIATA - Primero actualizar selectedEmpleados
+      setSelectedEmpleados(fullyUpdatedEmployee);
+      
+      // Después actualizar la lista de empleados
       setEmpleados(prevEmpleados => 
         Array.isArray(prevEmpleados)
           ? prevEmpleados.map(emp => 
               emp._id === selectedEmpleados._id 
-                ? updatedEmployee
+                ? fullyUpdatedEmployee
                 : emp
             )
-          : [updatedEmployee]
+          : [fullyUpdatedEmployee]
       );
       
-      // Actualizar el empleado seleccionado
-      setSelectedEmpleados(updatedEmployee);
+      console.log("✅ ACTUALIZACIÓN INSTANTÁNEA COMPLETADA");
       
-      console.log("✅ Empleado actualizado:", updatedEmployee);
-      
+      // Cerrar el modal y mostrar éxito
       setShowEditAlert(false);
       setSuccessType('edit');
       setShowSuccessAlert(true);
       
     } catch (error) {
-      console.error("❌ Error al actualizar empleado:", error);
-      setError("Error al actualizar el empleado");
+      console.error("❌ Error completo al actualizar empleado:", error);
+      console.error("❌ Response data:", error.response?.data);
+      console.error("❌ Response status:", error.response?.status);
+      
+      let errorMessage = 'Error al actualizar el empleado';
+      
+      if (error.response) {
+        errorMessage = `Error ${error.response.status}: ${error.response.data?.message || 'Error del servidor'}`;
+      } else if (error.request) {
+        errorMessage = 'No se pudo conectar con el servidor';
+      } else {
+        errorMessage = error.message;
+      }
+      
+      setError(errorMessage);
     } finally {
       // IMPORTANTE: Siempre desactivar el estado de carga
       setUploading(false);
@@ -248,9 +310,17 @@ const useDataEmpleado = () => {
     setShowEditAlert(false);
   };
 
-  // Seleccionar empleado
+  // Seleccionar empleado - CON VALIDACIÓN
   const selectEmpleado = (empleado) => {
     console.log('👤 Empleado seleccionado:', empleado);
+    console.log('👤 ID del empleado:', empleado?._id);
+    
+    if (!empleado || !empleado._id) {
+      console.error('❌ Empleado inválido seleccionado');
+      setError('Empleado inválido seleccionado');
+      return;
+    }
+    
     setSelectedEmpleados(empleado);
     setShowDetailView(true);
   };
@@ -291,6 +361,15 @@ const useDataEmpleado = () => {
       });
     }
   }, [empleados, loading, error]);
+
+  // Efecto para monitorear selectedEmpleados
+  useEffect(() => {
+    console.log('🔍 Estado de selectedEmpleados cambió:', {
+      empleado: selectedEmpleados,
+      tieneId: selectedEmpleados?._id,
+      id: selectedEmpleados?._id
+    });
+  }, [selectedEmpleados]);
 
   return {
     // Estados
