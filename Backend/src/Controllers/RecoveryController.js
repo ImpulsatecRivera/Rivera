@@ -216,7 +216,8 @@ RecoveryPass.requestCode = async (req, res) => {
         
         console.log("✅ SMS enviado exitosamente");
         
-        res.status(200).json({ 
+        // ✅ AGREGADO: return aquí para terminar la función
+        return res.status(200).json({ 
           message: "Código enviado vía SMS",
           success: true,
           sentTo: `***${phoneToUse.slice(-4)}`,
@@ -238,7 +239,8 @@ RecoveryPass.requestCode = async (req, res) => {
         
         console.log("✅ Email enviado exitosamente");
         
-        res.status(200).json({ 
+        // ✅ AGREGADO: return aquí para terminar la función
+        return res.status(200).json({ 
           message: "Código enviado vía email",
           success: true,
           sentTo: `***@${emailToUse.split('@')[1]}`,
@@ -255,13 +257,14 @@ RecoveryPass.requestCode = async (req, res) => {
       const errorMessage = via === "sms" 
         ? "Error enviando SMS. Verifica que el número sea correcto." 
         : "Error enviando email. Verifica que el email sea correcto.";
-        
-      res.status(500).json({ message: errorMessage });
+      
+      // ✅ AGREGADO: return aquí para terminar la función
+      return res.status(500).json({ message: errorMessage });
     }
 
   } catch (error) {
     console.error("❌ Error general en requestCode:", error);
-    res.status(500).json({ message: "Error interno del servidor" });
+    return res.status(500).json({ message: "Error interno del servidor" });
   }
 };
 
