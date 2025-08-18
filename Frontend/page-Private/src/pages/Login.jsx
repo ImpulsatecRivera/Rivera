@@ -37,6 +37,7 @@ const Login = () => {
       interval = setInterval(() => {
         setBlockTimeRemaining((prev) => {
           if (prev <= 1) {
+            // ✅ Restablecer completamente el estado al desbloquear
             setIsBlocked(false);
             setAttemptsRemaining(4);
             return 0;
@@ -47,12 +48,16 @@ const Login = () => {
     }
     return () => clearInterval(interval);
   }, [isBlocked, blockTimeRemaining]);
- 
-  const showSuccessAlert = () => {
-    // ✅ Resetear estado de intentos al login exitoso
+
+  // 🆕 Función para resetear estado de intentos (reutilizable)
+  const resetAttemptsState = () => {
     setIsBlocked(false);
     setAttemptsRemaining(4);
     setBlockTimeRemaining(0);
+  };
+ 
+  const showSuccessAlert = () => {
+    resetAttemptsState(); // ✅ Usar función centralizada
 
     Swal.fire({
       title: 'Inicio de sesión con éxito!',
@@ -63,10 +68,6 @@ const Login = () => {
       allowOutsideClick: false,
       customClass: {
         popup: 'animated bounceIn'
-      }
-    }).then((result) => {
-      if (result.isConfirmed) {
-        // Opcional: hacer algo como volver a menú
       }
     });
   };
@@ -157,6 +158,23 @@ const Login = () => {
       }
     });
   };
+
+  // 🆕 Función centralizada para manejar respuestas del login
+  const handleLoginResponse = (result) => {
+    if (result?.blocked) {
+      // Usuario bloqueado
+      setIsBlocked(true);
+      setBlockTimeRemaining(result.timeRemaining || 300);
+      showBlockedAlert(result.message, result.timeRemaining || 300);
+    } else if (result?.attemptsRemaining !== undefined) {
+      // Intento fallido con contador
+      setAttemptsRemaining(result.attemptsRemaining);
+      showAttemptsErrorAlert(result.message, result.attemptsRemaining);
+    } else {
+      // Error genérico
+      showErrorAlert(result?.message || "Credenciales incorrectas");
+    }
+  };
  
   const onSubmit = async (e) => {
     e.preventDefault();
@@ -183,41 +201,16 @@ const Login = () => {
       if (result?.success) {
         showSuccessAlert();
       } else {
-        // 🆕 Manejar diferentes tipos de errores del backend
-        if (result?.blocked) {
-          // Usuario bloqueado
-          setIsBlocked(true);
-          setBlockTimeRemaining(result.timeRemaining || 300);
-          showBlockedAlert(result.message, result.timeRemaining || 300);
-        } else if (result?.attemptsRemaining !== undefined) {
-          // Intento fallido con contador
-          setAttemptsRemaining(result.attemptsRemaining);
-          showAttemptsErrorAlert(result.message, result.attemptsRemaining);
-        } else {
-          // Error genérico
-          showErrorAlert(result?.message || "Credenciales incorrectas");
-        }
+        // ✅ Usar función centralizada para manejar errores
+        handleLoginResponse(result);
       }
     } catch (error) {
       Swal.close();
+      console.error('Error inesperado en login:', error);
       
-      // 🆕 Manejar errores de red/servidor que podrían incluir info de intentos
-      if (error?.response?.data) {
-        const errorData = error.response.data;
-        
-        if (errorData.blocked) {
-          setIsBlocked(true);
-          setBlockTimeRemaining(errorData.timeRemaining || 300);
-          showBlockedAlert(errorData.message, errorData.timeRemaining || 300);
-        } else if (errorData.attemptsRemaining !== undefined) {
-          setAttemptsRemaining(errorData.attemptsRemaining);
-          showAttemptsErrorAlert(errorData.message, errorData.attemptsRemaining);
-        } else {
-          showErrorAlert(errorData.message || "Ocurrió un error inesperado");
-        }
-      } else {
-        showErrorAlert(error?.message || "Ocurrió un error inesperado");
-      }
+      // 🚨 Con el hook mejorado, los errores ya están manejados
+      // Solo mostrar error genérico para casos inesperados
+      showErrorAlert("Ocurrió un error inesperado. Por favor, intenta de nuevo.");
     }
   };
 
@@ -226,6 +219,22 @@ const Login = () => {
     const minutes = Math.floor(seconds / 60);
     const remainingSeconds = seconds % 60;
     return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+  };
+
+  // 🎨 Función para determinar el texto del botón
+  const getButtonText = () => {
+    if (isBlocked) {
+      return `Bloqueado (${formatTimeRemaining(blockTimeRemaining)})`;
+    }
+    if (loading) {
+      return "Iniciando sesión...";
+    }
+    return "Iniciar sesión";
+  };
+
+  // 🎨 Función para determinar si mostrar advertencia de intentos
+  const shouldShowAttemptsWarning = () => {
+    return !isBlocked && attemptsRemaining < 4 && attemptsRemaining > 0;
   };
  
   return (
@@ -236,18 +245,21 @@ const Login = () => {
 
         {/* 🆕 Indicador de estado de bloqueo */}
         {isBlocked && (
-          <div className="w-full max-w-md mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+          <div className="w-full max-w-md mb-4 p-4 bg-red-50 border border-red-200 rounded-lg animate-pulse">
             <div className="text-center">
               <p className="text-red-800 font-semibold">🔒 Cuenta bloqueada</p>
               <p className="text-red-600 text-sm mt-1">
                 Tiempo restante: {formatTimeRemaining(blockTimeRemaining)}
+              </p>
+              <p className="text-red-500 text-xs mt-2">
+                La página se desbloqueará automáticamente cuando termine el tiempo
               </p>
             </div>
           </div>
         )}
 
         {/* 🆕 Indicador de intentos restantes */}
-        {!isBlocked && attemptsRemaining < 4 && (
+        {shouldShowAttemptsWarning() && (
           <div className="w-full max-w-md mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
             <div className="text-center">
               <p className="text-yellow-800 font-semibold">⚠️ Intentos restantes: {attemptsRemaining}</p>
@@ -265,7 +277,8 @@ const Login = () => {
             placeholder="ejemplo@email.com"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            disabled={isBlocked} // 🔒 Deshabilitar cuando esté bloqueado
+            disabled={isBlocked}
+            className={isBlocked ? "opacity-50 cursor-not-allowed" : ""}
           />
           <Input
             label="Contraseña"
@@ -273,25 +286,36 @@ const Login = () => {
             placeholder="Al menos 8 caracteres"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            disabled={isBlocked} // 🔒 Deshabilitar cuando esté bloqueado
+            disabled={isBlocked}
+            className={isBlocked ? "opacity-50 cursor-not-allowed" : ""}
           />
           <div className="text-right text-sm">
-            <Link to="/recuperar" className="text-blue-600 hover:underline">
+            <Link 
+              to="/recuperar" 
+              className={`text-blue-600 hover:underline ${isBlocked ? 'pointer-events-none opacity-50' : ''}`}
+            >
               ¿Olvidaste tu contraseña?
             </Link>
           </div>
           <Button 
             type="submit" 
-            disabled={loading || isBlocked} // 🔒 Deshabilitar cuando esté bloqueado
+            disabled={loading || isBlocked}
+            className={`w-full ${isBlocked ? 'bg-red-400 cursor-not-allowed' : ''}`}
           >
-            {isBlocked 
-              ? `Bloqueado (${formatTimeRemaining(blockTimeRemaining)})` 
-              : loading 
-                ? "Iniciando sesión..." 
-                : "Iniciar sesión"
-            }
+            {getButtonText()}
           </Button>
         </form>
+
+        {/* 🆕 Información adicional cuando está bloqueado */}
+        {isBlocked && (
+          <div className="w-full max-w-md mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+            <div className="text-center">
+              <p className="text-blue-800 text-sm">
+                💡 <strong>Mientras esperas:</strong> Verifica que tengas las credenciales correctas
+              </p>
+            </div>
+          </div>
+        )}
       </div>
  
       <div className="w-full lg:w-[30%] flex justify-center p-4">

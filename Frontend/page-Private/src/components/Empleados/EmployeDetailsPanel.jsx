@@ -67,7 +67,7 @@ const EmployeeDetailPanel = ({
                 Cargando Perfil
               </h2>
               <p className="text-gray-300 text-lg">
-                Preparando informaciÃ³n del empleado
+                Preparando información del empleado
               </p>
             </div>
 
@@ -284,12 +284,12 @@ const EmployeeDetailPanel = ({
               <div className="p-2 rounded-lg" style={{backgroundColor: '#5F8EAD'}}>
                 <User className="w-5 h-5 text-white" />
               </div>
-              <span className="font-semibold text-gray-900">InformaciÃ³n Personal</span>
+              <span className="font-semibold text-gray-900">Información Personal</span>
             </div>
 
             <div className="space-y-4">
               <div>
-                <div className="text-sm font-medium text-gray-700 mb-1">Correo ElectrÃ³nico</div>
+                <div className="text-sm font-medium text-gray-700 mb-1">Correo Electronico</div>
                 <div className="text-sm text-gray-600 break-words bg-white p-3 rounded-lg border">{selectedEmpleados.email}</div>
               </div>
               <div>
@@ -305,7 +305,7 @@ const EmployeeDetailPanel = ({
               <div className="p-2 rounded-lg" style={{backgroundColor: '#5D9646'}}>
                 <Phone className="w-5 h-5 text-white" />
               </div>
-              <span className="font-semibold text-gray-900">Contacto y UbicaciÃ³n</span>
+              <span className="font-semibold text-gray-900">Contacto y Ubicación</span>
             </div>
 
             <div className="space-y-4">
