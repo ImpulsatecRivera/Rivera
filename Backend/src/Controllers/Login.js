@@ -2,10 +2,12 @@ import jwt from "jsonwebtoken";
 import bcryptjs from "bcryptjs";
 import { config } from "../config.js";
 import EmpleadoModel from "../Models/Empleados.js";
-import MotoristaModel from "../Models/Motorista.js";
+import MotoristaModel from "../Models/Motorista.js"; // Asegúrate de que este modelo existe
+import ClienteModel from "../Models/Clientes.js"; // Asegúrate de que este modelo existe
 
 const LoginController = {};
 
+<<<<<<< HEAD
 // 🔒 SISTEMA DE INTENTOS FALLIDOS
 const failedAttempts = new Map(); // Almacena { email: { attempts: number, blockedUntil: Date } }
 
@@ -57,10 +59,13 @@ const getBlockTimeRemaining = (email) => {
   return Math.max(0, Math.ceil(remaining / 1000)); // en segundos
 };
 
+=======
+>>>>>>> master
 LoginController.Login = async (req, res) => {
   const { email, password } = req.body;
 
   try {
+<<<<<<< HEAD
     // 🔒 VERIFICAR SI EL USUARIO ESTÁ BLOQUEADO
     if (isBlocked(email)) {
       const timeRemaining = getBlockTimeRemaining(email);
@@ -88,10 +93,20 @@ LoginController.Login = async (req, res) => {
           message: `Contraseña incorrecta. Te quedan ${remaining} intento(s).`,
           attemptsRemaining: remaining
         });
+=======
+    let userFound;
+    let userType;
+
+    // Verificar si es administrador
+    if (email === config.ADMIN.emailAdmin) {
+      if (password !== config.ADMIN.password) {
+        return res.status(400).json({ message: "Contraseña incorrecta" });
+>>>>>>> master
       }
 
       userType = "Administrador";
       userFound = { _id: "admin", email };
+<<<<<<< HEAD
       isPasswordValid = true;
     } else {
       // 2️⃣ Buscar en Empleados
@@ -143,6 +158,42 @@ LoginController.Login = async (req, res) => {
     // ✅ LOGIN EXITOSO - LIMPIAR INTENTOS FALLIDOS
     clearFailedAttempts(email);
 
+=======
+    } else {
+      // Buscar en empleados
+      userFound = await EmpleadoModel.findOne({ email });
+      if (userFound) {
+        const isMatch = await bcryptjs.compare(password, userFound.password);
+        if (!isMatch) {
+          return res.status(400).json({ message: "Contraseña incorrecta" });
+        }
+        userType = "Empleado";
+      } else {
+        // Buscar en motoristas
+        userFound = await MotoristaModel.findOne({ email });
+        if (userFound) {
+          const isMatch = await bcryptjs.compare(password, userFound.password);
+          if (!isMatch) {
+            return res.status(400).json({ message: "Contraseña incorrecta" });
+          }
+          userType = "Motorista";
+        } else {
+          // Buscar en clientes
+          userFound = await ClienteModel.findOne({ email });
+          if (userFound) {
+            const isMatch = await bcryptjs.compare(password, userFound.password);
+            if (!isMatch) {
+              return res.status(400).json({ message: "Contraseña incorrecta" });
+            }
+            userType = "Cliente";
+          } else {
+            return res.status(400).json({ message: "Usuario no encontrado" });
+          }
+        }
+      }
+    }
+
+>>>>>>> master
     if (!config.JWT.secret) {
       console.error("Falta JWT secret en config.js");
       return res.status(500).json({ message: "Error del servidor: JWT" });
@@ -170,6 +221,11 @@ LoginController.Login = async (req, res) => {
           user: {
             id: userFound._id,
             email: userFound.email || email,
+<<<<<<< HEAD
+=======
+            // Agregar información adicional según el tipo de usuario
+            nombre: userFound.nombre || userFound.name || null,
+>>>>>>> master
           },
         });
       }
@@ -195,7 +251,6 @@ LoginController.checkAuth = async (req, res) => {
 
       const { id, userType } = decoded;
 
-      // 1️⃣ Si es administrador
       if (userType === "Administrador") {
         return res.status(200).json({
           user: {
@@ -205,6 +260,7 @@ LoginController.checkAuth = async (req, res) => {
           },
         });
       }
+<<<<<<< HEAD
 
       // 2️⃣ Si es empleado
       if (userType === "Empleado") {
@@ -242,11 +298,49 @@ LoginController.checkAuth = async (req, res) => {
 
       // 4️⃣ Si el userType no es reconocido
       return res.status(400).json({ message: "Tipo de usuario no válido" });
+=======
+
+      let userFound;
+      let Model;
+
+      // Seleccionar el modelo correcto según el tipo de usuario
+      switch (userType) {
+        case "Empleado":
+          Model = EmpleadoModel;
+          break;
+        case "Motorista":
+          Model = MotoristaModel;
+          break;
+        case "Cliente":
+          Model = ClienteModel;
+          break;
+        default:
+          return res.status(400).json({ message: "Tipo de usuario inválido" });
+      }
+
+      userFound = await Model.findById(id).select("email nombre name");
+
+      if (!userFound) {
+        return res.status(404).json({ 
+          message: `${userType} no encontrado` 
+        });
+      }
+
+      return res.status(200).json({
+        user: {
+          id: userFound._id,
+          email: userFound.email,
+          userType,
+          nombre: userFound.nombre || userFound.name || null,
+        },
+      });
+>>>>>>> master
     });
   } catch (error) {
     console.error("Error en checkAuth:", error);
     res.status(500).json({ message: "Error interno del servidor" });
   }
+<<<<<<< HEAD
 };
 
 // 🆕 FUNCIÓN OPCIONAL PARA VER ESTADÍSTICAS DE INTENTOS (SOLO PARA DEBUG)
@@ -259,6 +353,8 @@ LoginController.getAttemptStats = (req, res) => {
   }));
   
   res.json({ stats });
+=======
+>>>>>>> master
 };
 
 export default LoginController;

@@ -1,95 +1,138 @@
 import React, { useEffect, useRef } from 'react';
 import {
   View,
+  Text,
   StyleSheet,
+  SafeAreaView,
   Animated,
-  Easing,
-  StatusBar,
-  Dimensions,
-  Image,
 } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 
-const { width, height } = Dimensions.get('window');
-
-const LOGO_WIDTH = Math.max(Math.min(width * 0.85, 460), 260); 
-
-const SplashScreen = ({ navigation }) => {
-
-  const progress = useRef(new Animated.Value(0)).current;
+const SplashScreen = () => {
+  const navigation = useNavigation();
+  
+  // Animaciones
+  const letterScale = useRef(new Animated.Value(0.8)).current;
+  const letterOpacity = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    const anim = Animated.timing(progress, {
-      toValue: 1,
-      duration: 900,
-      easing: Easing.inOut(Easing.cubic),
-      useNativeDriver: true,
-    });
+    // Animación de la letra R
+    const letterAnimation = Animated.sequence([
+      // Fade in y scale up
+      Animated.parallel([
+        Animated.timing(letterOpacity, {
+          toValue: 1,
+          duration: 800,
+          useNativeDriver: true,
+        }),
+        Animated.timing(letterScale, {
+          toValue: 1,
+          duration: 800,
+          useNativeDriver: true,
+        }),
+      ]),
+      // Pequeña animación de "pulso"
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(letterScale, {
+            toValue: 1.05,
+            duration: 1000,
+            useNativeDriver: true,
+          }),
+          Animated.timing(letterScale, {
+            toValue: 1,
+            duration: 1000,
+            useNativeDriver: true,
+          }),
+        ])
+      ),
+    ]);
 
-    anim.start(() => {
-      setTimeout(() => {
-        navigation.reset({ index: 0, routes: [{ name: 'Main' }] });
-      }, 150);
-    });
+    letterAnimation.start();
 
-    return () => anim.stop && anim.stop();
-  }, [navigation, progress]);
+    // Navegación después de la animación
+    const checkAuthAndNavigate = async () => {
+      try {
+        // Aquí puedes verificar si el usuario ya está logueado
+        // const userToken = await AsyncStorage.getItem('userToken');
+        // const isLoggedIn = userToken !== null;
+        
+        const isLoggedIn = false;
+        
+        setTimeout(() => {
+          if (isLoggedIn) {
+            navigation.replace('Main');
+          } else {
+            navigation.replace('Login');
+          }
+        }, 3000); // 3 segundos
+        
+      } catch (error) {
+        console.error('Error checking auth status:', error);
+        setTimeout(() => {
+          navigation.replace('Login');
+        }, 3000);
+      }
+    };
 
-  // El panel “cubre” la pantalla y se desliza hacia arriba
-  const translateY = progress.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0, -height], // de cubrir todo a salir por arriba
-  });
-
-  const overlayOpacity = progress.interpolate({
-    inputRange: [0, 0.7, 1],
-    outputRange: [1, 0.35, 0],
-  });
+    checkAuthAndNavigate();
+  }, [navigation]);
 
   return (
-    <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
-
-      {/* Logo fijo, grande, centrado */}
-      <Image
-        source={require('../images/logo.png')}
-        style={styles.logo}
-        resizeMode="contain"
-        accessibilityLabel="Logo"
-      />
-
-      {/* Panel de fondo animado (la transición sucede aquí) */}
-      <Animated.View
-        pointerEvents="none"
-        style={[
-          styles.overlay,
-          {
-            opacity: overlayOpacity,
-            transform: [{ translateY }],
-          },
-        ]}
-      />
-    </View>
+    <SafeAreaView style={styles.container}>
+      <View style={styles.content}>
+        
+        {/* Letra R animada */}
+        <Animated.View 
+          style={[
+            styles.letterContainer,
+            { 
+              opacity: letterOpacity,
+              transform: [{ scale: letterScale }]
+            }
+          ]}
+        >
+          <Text style={styles.letter}>R</Text>
+        </Animated.View>
+        
+      </View>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF', 
-    alignItems: 'center',
+    backgroundColor: '#FFFFFF', // Fondo blanco como PedidosYa
+  },
+  content: {
+    flex: 1,
     justifyContent: 'center',
+    alignItems: 'center',
   },
-  logo: {
-    width: LOGO_WIDTH,
-    height: undefined,
-    aspectRatio: 2.8, 
+  letterContainer: {
+    width: 120,
+    height: 120,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 20,
+    // Opcional: agregar sombra
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    backgroundColor: '#FFFFFF',
   },
-  overlay: {
-    position: 'absolute',
-    top: 0, left: 0, right: 0, bottom: 0,
-    backgroundColor: '#F2F4F7', 
-    zIndex: 2,
+  letter: {
+    fontSize: 72,
+    fontWeight: 'bold',
+    color: '#E91E63', // Color rosa/magenta como en la imagen
+    textAlign: 'center',
   },
 });
 
-export default SplashScreen;
+export default SplashScreen;  

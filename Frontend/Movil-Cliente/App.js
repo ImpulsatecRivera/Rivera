@@ -1,11 +1,16 @@
 import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
-import AppNavigator from './src/navigation/AppNavigator';
+import { AuthProvider } from './src/contenxt/authContext'; // Ajusta la ruta según tu estructura
+import AppNavigator from './src/navigation/AppNavigator'; // Ajusta la ruta según tu estructura
 
-export default function App() {
+const App = () => {
   return (
-    <NavigationContainer>
-      <AppNavigator />
-    </NavigationContainer>
+    <AuthProvider>
+      <NavigationContainer>
+        <AppNavigator />
+      </NavigationContainer>
+    </AuthProvider>
   );
-}
+};
+
+export default App;
