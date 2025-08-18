@@ -1,94 +1,136 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect } from 'react';
 import {
   View,
+  Text,
   StyleSheet,
-  Animated,
-  Easing,
-  StatusBar,
-  Dimensions,
-  Image,
+  SafeAreaView,
 } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 
-const { width, height } = Dimensions.get('window');
-
-const LOGO_WIDTH = Math.max(Math.min(width * 0.85, 460), 260); 
-
-const SplashScreen = ({ navigation }) => {
-
-  const progress = useRef(new Animated.Value(0)).current;
+const SplashScreen = () => {
+  const navigation = useNavigation();
 
   useEffect(() => {
-    const anim = Animated.timing(progress, {
-      toValue: 1,
-      duration: 900,
-      easing: Easing.inOut(Easing.cubic),
-      useNativeDriver: true,
-    });
+    const checkAuthAndNavigate = async () => {
+      try {
+        // Aquí puedes verificar si el usuario ya está logueado
+        // const userToken = await AsyncStorage.getItem('userToken');
+        // const isLoggedIn = userToken !== null;
+        
+        // Por ahora, simulamos que no está logueado
+        const isLoggedIn = false;
 
-    anim.start(() => {
-      setTimeout(() => {
-        navigation.reset({ index: 0, routes: [{ name: 'Main' }] });
-      }, 150);
-    });
+        // Mostrar splash por 2-3 segundos
+        setTimeout(() => {
+          if (isLoggedIn) {
+            // Si está logueado, ir directo al dashboard
+            navigation.replace('Main');
+          } else {
+            // Si no está logueado, ir al login
+            navigation.replace('Login');
+          }
+        }, 2500); // 2.5 segundos
 
-    return () => anim.stop && anim.stop();
-  }, [navigation, progress]);
+      } catch (error) {
+        console.error('Error checking auth status:', error);
+        // En caso de error, ir al login
+        setTimeout(() => {
+          navigation.replace('Login');
+        }, 2500);
+      }
+    };
 
-  // El panel “cubre” la pantalla y se desliza hacia arriba
-  const translateY = progress.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0, -height], // de cubrir todo a salir por arriba
-  });
-
-  const overlayOpacity = progress.interpolate({
-    inputRange: [0, 0.7, 1],
-    outputRange: [1, 0.35, 0],
-  });
+    checkAuthAndNavigate();
+  }, [navigation]);
 
   return (
-    <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+    <SafeAreaView style={styles.container}>
+      <View style={styles.content}>
+        {/* Logo o imagen de splash */}
+        <View style={styles.logoContainer}>
+          <View style={styles.logoPlaceholder}>
+            <Text style={styles.logoText}>LOGO</Text>
+          </View>
+          {/* Si tienes un logo:
+          <Image 
+            source={require('../assets/splash-logo.png')} 
+            style={styles.logo}
+            resizeMode="contain"
+          />
+          */}
+        </View>
 
-      {/* Logo fijo, grande, centrado */}
-      <Image
-        source={require('../images/logo.png')}
-        style={styles.logo}
-        resizeMode="contain"
-        accessibilityLabel="Logo"
-      />
-
-      {/* Panel de fondo animado (la transición sucede aquí) */}
-      <Animated.View
-        pointerEvents="none"
-        style={[
-          styles.overlay,
-          {
-            opacity: overlayOpacity,
-            transform: [{ translateY }],
-          },
-        ]}
-      />
-    </View>
+        {/* Nombre de la app */}
+        <Text style={styles.appName}>Mi App</Text>
+        
+        {/* Indicador de carga */}
+        <View style={styles.loadingContainer}>
+          <View style={styles.loadingDot} />
+          <View style={styles.loadingDot} />
+          <View style={styles.loadingDot} />
+        </View>
+      </View>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF', 
-    alignItems: 'center',
+    backgroundColor: '#4CAF50',
+  },
+  content: {
+    flex: 1,
     justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+  },
+  logoContainer: {
+    marginBottom: 30,
+  },
+  logoPlaceholder: {
+    width: 150,
+    height: 150,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 75,
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+  },
+  logoText: {
+    color: '#4CAF50',
+    fontSize: 24,
+    fontWeight: 'bold',
   },
   logo: {
-    width: LOGO_WIDTH,
-    height: undefined,
-    aspectRatio: 2.8, 
+    width: 150,
+    height: 150,
   },
-  overlay: {
-    position: 'absolute',
-    top: 0, left: 0, right: 0, bottom: 0,
-    backgroundColor: '#F2F4F7', 
-    zIndex: 2,
+  appName: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+    marginBottom: 50,
+  },
+  loadingContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: '#FFFFFF',
+    marginHorizontal: 4,
+    opacity: 0.7,
   },
 });
 
