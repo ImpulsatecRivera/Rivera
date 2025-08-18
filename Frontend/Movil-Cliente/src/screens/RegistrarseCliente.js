@@ -66,7 +66,7 @@ const RegistrarseScreen = ({ navigation }) => {
         [
           { 
             text: 'OK', 
-            onPress: () => navigation.navigate('Registrarse2') 
+            onPress: () => navigation.navigate('RegistrarseCliente2') 
           }
         ]
       );

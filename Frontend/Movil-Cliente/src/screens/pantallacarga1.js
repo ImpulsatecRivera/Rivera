@@ -7,7 +7,7 @@ const OnboardingScreen1 = ({ navigation }) => {
 
   // Función para ir a la siguiente pantalla
   const handleNext = () => {
-    navigation.navigate('Onboarding2');
+    navigation.navigate('pantallacarga2');
   };
 
   // Función para saltar el onboarding
