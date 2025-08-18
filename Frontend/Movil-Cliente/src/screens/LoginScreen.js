@@ -7,37 +7,47 @@ import {
   SafeAreaView,
   ScrollView,
 } from 'react-native';
-import CustomInput from './CustomInput';
-import CustomButton from './CustomButton';
-import SocialButton from './SocialButton';
+import { useNavigation } from '@react-navigation/native';
+import CustomInput from '../components/CustomInput';
+import CustomButton from '../components/CustomButton';
+import SocialButton from '../components/SocialButton';
 
 const LoginScreen = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const navigation = useNavigation();
 
   const handleLogin = () => {
     console.log('Login pressed');
     // Aquí iría la lógica de login
+    // Si el login es exitoso, navegar a Main
+    navigation.navigate('Main');
   };
 
   const handleForgotPassword = () => {
     console.log('Forgot password pressed');
-    // Aquí iría la lógica de recuperar contraseña
+    // Navegar a la primera pantalla de recuperación de contraseña
+    navigation.navigate('InicioRecuperar');
   };
 
   const handleGoogleLogin = () => {
     console.log('Google login pressed');
     // Aquí iría la lógica de login con Google
+    // Si el login es exitoso, navegar a Main
+    // navigation.navigate('Main');
   };
 
   const handleFacebookLogin = () => {
     console.log('Facebook login pressed');
     // Aquí iría la lógica de login con Facebook
+    // Si el login es exitoso, navegar a Main
+    // navigation.navigate('Main');
   };
 
   const handleRegister = () => {
     console.log('Register pressed');
-    // Aquí iría la navegación a pantalla de registro
+    // Navegar a la primera pantalla de registro
+    navigation.navigate('RegistrarseCliente');
   };
 
   return (
