@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Eye, EyeOff } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Eye, EyeOff, Camera, Upload, X } from 'lucide-react';
 
 const EditMotoristaAlert = ({ isOpen, onClose, onSave, motorista }) => {
   const [formData, setFormData] = useState({
@@ -9,10 +9,14 @@ const EditMotoristaAlert = ({ isOpen, onClose, onSave, motorista }) => {
     address: '',
     password: '',
     circulationCard: '',
-    email: ''
+    email: '',
+    image: null // Nueva propiedad para la imagen
   });
 
   const [showPassword, setShowPassword] = useState(false);
+  const [imagePreview, setImagePreview] = useState(null);
+  const [isDragOver, setIsDragOver] = useState(false);
+  const fileInputRef = useRef(null);
 
   useEffect(() => {
     if (motorista && isOpen) {
@@ -23,9 +27,12 @@ const EditMotoristaAlert = ({ isOpen, onClose, onSave, motorista }) => {
         address: '',
         password: '',
         circulationCard: '',
-        email: ''
+        email: '',
+        image: null
       });
       setShowPassword(false);
+      // Mostrar imagen actual del motorista si existe
+      setImagePreview(motorista.image || null);
     }
   }, [motorista, isOpen]);
 
@@ -54,6 +61,84 @@ const EditMotoristaAlert = ({ isOpen, onClose, onSave, motorista }) => {
     }));
   };
 
+  // 📸 Manejar selección de imagen
+  const handleImageChange = (file) => {
+    if (file) {
+      // Validar tipo de archivo
+      const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+      if (!validTypes.includes(file.type)) {
+        alert('Por favor selecciona una imagen válida (JPG, PNG, WEBP)');
+        return;
+      }
+
+      // Validar tamaño (máximo 5MB)
+      const maxSize = 5 * 1024 * 1024; // 5MB
+      if (file.size > maxSize) {
+        alert('La imagen es demasiado grande. Máximo 5MB permitido.');
+        return;
+      }
+
+      // Crear preview
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setImagePreview(e.target.result);
+      };
+      reader.readAsDataURL(file);
+
+      // Guardar archivo en formData
+      setFormData(prev => ({
+        ...prev,
+        image: file
+      }));
+    }
+  };
+
+  // 🖱️ Manejar input de archivo
+  const handleFileInputChange = (e) => {
+    const file = e.target.files[0];
+    handleImageChange(file);
+  };
+
+  // 🎯 Manejar click en área de imagen
+  const handleImageAreaClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  // 🗑️ Eliminar imagen
+  const handleRemoveImage = (e) => {
+    e.stopPropagation(); // Evitar que active el click del área
+    setImagePreview(null);
+    setFormData(prev => ({
+      ...prev,
+      image: null
+    }));
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  // 📂 Manejar drag and drop
+  const handleDragEnter = (e) => {
+    e.preventDefault();
+    setIsDragOver(true);
+  };
+
+  const handleDragLeave = (e) => {
+    e.preventDefault();
+    setIsDragOver(false);
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    setIsDragOver(false);
+    const file = e.dataTransfer.files[0];
+    handleImageChange(file);
+  };
+
   const handleSave = () => {
     onSave(formData);
   };
@@ -67,7 +152,7 @@ const EditMotoristaAlert = ({ isOpen, onClose, onSave, motorista }) => {
       }`}
     >
       <div 
-        className={`bg-white rounded-lg p-8 max-w-2xl w-full mx-4 shadow-xl relative transform transition-all duration-300 max-h-[90vh] overflow-y-auto ${
+        className={`bg-white rounded-lg p-8 max-w-3xl w-full mx-4 shadow-xl relative transform transition-all duration-300 max-h-[90vh] overflow-y-auto ${
           isOpen ? 'scale-100 translate-y-0' : 'scale-95 translate-y-4'
         }`}
         style={{
@@ -98,10 +183,84 @@ const EditMotoristaAlert = ({ isOpen, onClose, onSave, motorista }) => {
             animation: isOpen ? 'fadeInUp 0.5s ease-out 0.3s both' : 'none'
           }}
         >
+          {/* 📸 SECCIÓN DE IMAGEN MEJORADA - ESTILO EMPLEADO */}
+          <div className="flex justify-center mb-8">
+            <div className="text-center">
+              <label className="block text-lg font-semibold text-gray-800 mb-6">Imagen del motorista</label>
+              
+              {/* Vista previa de imagen actual */}
+              {imagePreview && (
+                <div className="mb-6">
+                  <div className="relative inline-block">
+                    <img
+                      src={imagePreview}
+                      alt="Vista previa"
+                      className="w-24 h-24 rounded-full object-cover border-4 border-white shadow-lg"
+                    />
+                    <button
+                      onClick={handleRemoveImage}
+                      className="absolute -top-1 -right-1 bg-red-500 hover:bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm transition-colors duration-200"
+                      title="Eliminar imagen"
+                    >
+                      ×
+                    </button>
+                  </div>
+                </div>
+              )}
+              
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 mb-4">Cambiar imagen</label>
+                
+                {/* Área de selección de archivo estilo empleado */}
+                <div
+                  onClick={handleImageAreaClick}
+                  onDragEnter={handleDragEnter}
+                  onDragLeave={handleDragLeave}
+                  onDragOver={handleDragOver}
+                  onDrop={handleDrop}
+                  className={`relative w-full max-w-md mx-auto border-2 border-dashed rounded-lg p-8 cursor-pointer transition-all duration-200 ${
+                    isDragOver 
+                      ? 'border-blue-500 bg-blue-50' 
+                      : 'border-gray-300 bg-gray-50 hover:border-gray-400 hover:bg-gray-100'
+                  }`}
+                >
+                  <div className="text-center">
+                    <Upload className="w-8 h-8 text-gray-400 mx-auto mb-4" />
+                    <div className="text-sm text-gray-600 mb-2">
+                      <span className="font-medium text-green-600 hover:text-green-500 cursor-pointer">
+                        Elegir archivo
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-500">
+                      {formData.image ? formData.image.name : 'No se ha seleccionado ningún archivo'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Input oculto */}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleFileInputChange}
+                className="hidden"
+              />
+
+              {/* Información adicional */}
+              <p className="text-xs text-gray-500 mb-4">
+                La imagen se subirá automáticamente a Cloudinary cuando actualices
+              </p>
+              <p className="text-xs text-gray-400">
+                JPG, PNG, WEBP • Máximo 5MB
+              </p>
+            </div>
+          </div>
+
           {/* Primera fila: Apellido y Nombre */}
           <div className="grid grid-cols-2 gap-6">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Apellido</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Nombre</label>
               <input
                 type="text"
                 name="lastName"
@@ -112,7 +271,7 @@ const EditMotoristaAlert = ({ isOpen, onClose, onSave, motorista }) => {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Nombre</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Apellido</label>
               <input
                 type="text"
                 name="name"
