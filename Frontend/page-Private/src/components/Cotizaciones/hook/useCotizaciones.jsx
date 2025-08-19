@@ -47,7 +47,7 @@ const useCotizaciones = () => {
   // Función para cargar clientes
   const fetchClientesSync = async () => {
     try {
-      const response = await axios.get('http://localhost:4000/api/clientes');
+      const response = await axios.get('https://riveraproject-5.onrender.com/api/clientes');
       
       const clientesArray = Array.isArray(response.data) ? response.data : 
                            response.data.clientes ? response.data.clientes :

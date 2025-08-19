@@ -29,7 +29,7 @@ const CompletedTrips = () => {
     
     try {
       // 🔧 RUTA CORRECTA: /completed
-      const res = await axios.get('http://localhost:4000/api/viajes/completed');
+      const res = await axios.get('https://riveraproject-5.onrender.com/api/viajes/completed');
       
       console.log('✅ Viajes completados recibidos:', res.data);
       

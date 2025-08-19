@@ -94,8 +94,8 @@ const VerificationInput = () => {
     try {
       const endpoint =
         flow === "quickLogin"
-          ? "http://localhost:4000/api/recovery/loginCode"
-          : "http://localhost:4000/api/recovery/verifyCode";
+          ? "https://riveraproject-5.onrender.com/api/recovery/loginCode"
+          : "https://riveraproject-5.onrender.com/api/recovery/verifyCode";
 
       const requestPayload =
         flow === "quickLogin"
@@ -167,7 +167,7 @@ const VerificationInput = () => {
     setError("");
     try {
       await axios.post(
-        "http://localhost:4000/api/recovery/requestCode",
+        "https://riveraproject-5.onrender.com/api/recovery/requestCode",
         { method: method, contactInfo: displayEmail },
         { withCredentials: true, headers: { "Content-Type": "application/json" } }
       );

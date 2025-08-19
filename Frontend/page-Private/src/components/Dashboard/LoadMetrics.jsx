@@ -16,7 +16,7 @@ const LoadMetrics = () => {
       console.log('📊 Obteniendo distribución de cargas...');
       
       // 🔧 RUTA CORRECTA: carga-distribution
-      const response = await fetch('http://localhost:4000/api/viajes/carga-distribution');
+      const response = await fetch('https://riveraproject-5.onrender.com/api/viajes/carga-distribution');
       
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);

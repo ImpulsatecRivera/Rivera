@@ -105,7 +105,7 @@ const RecoverPassword = () => {
     setError("");
 
     try {
-      const endpoint = "http://localhost:4000/api/recovery/requestCode";
+      const endpoint = "https://riveraproject-5.onrender.com/api/recovery/requestCode";
 
       let requestPayload;
       
