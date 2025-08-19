@@ -1,4 +1,4 @@
-import avatar from "../../images/avatar.png";
+import avatar from "../../images/Avatar.png";
 
 const Avatar = () => (
   <div className="flex justify-center mb-6">
