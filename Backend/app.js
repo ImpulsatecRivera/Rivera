@@ -26,9 +26,7 @@ app.use(
   cors({
     origin: [
        'https://rivera-project-ecru.vercel.app', 
-       'https://rivera-project-uhuf.vercel.app',
-       'http://localhost:3000',
-       'http://localhost:5173'
+       'https://rivera-project-uhuf.vercel.app'
     ],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
@@ -49,9 +47,7 @@ app.use((req, res, next) => {
   const origin = req.headers.origin;
   const allowedOrigins = [
     'https://rivera-project-ecru.vercel.app',
-    'https://rivera-project-uhuf.vercel.app',
-    'http://localhost:3000',
-    'http://localhost:5173'
+    'https://rivera-project-uhuf.vercel.app'
   ];
   
   if (allowedOrigins.includes(origin)) {
