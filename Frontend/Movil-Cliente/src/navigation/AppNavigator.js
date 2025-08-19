@@ -14,7 +14,7 @@ import RegistrarseCliente2 from "../screens/RegistrarseCliente2";
 import CustomTabBar from '../components/CustomTabBar';
 
 // Pantallas de recuperación de contraseña
-import InicioRecuperar from "../screens/InicioRecuperarScren";
+import InicioRecuperar from "../screens/InicioRecuperarScren"; // inicio de recuperación
 import elegirMetodoRecuperacionScreen from '../screens/elegirMetodoRecuperacionScreen';
 import RecuperacionScreen from "../screens/RecuperacionScreen"; // Recuperación por email
 import Recuperacion2Screen from "../screens/Recuepracion2Screen"; // Segundo paso 
