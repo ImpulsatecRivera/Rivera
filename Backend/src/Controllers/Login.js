@@ -61,12 +61,14 @@ const getBlockTimeRemaining = (email) => {
 
 LoginController.Login = async (req, res) => {
   const { email, password } = req.body;
+  console.log('🔐 [LOGIN] Intento de login para email:', email);
 
   try {
     // 🔒 VERIFICAR SI EL USUARIO ESTÁ BLOQUEADO
     if (isBlocked(email)) {
       const timeRemaining = getBlockTimeRemaining(email);
       const minutesRemaining = Math.ceil(timeRemaining / 60);
+      console.log('🚫 [LOGIN] Usuario bloqueado:', email, 'Tiempo restante:', timeRemaining);
       
       return res.status(429).json({ 
         message: `Demasiados intentos fallidos. Intenta de nuevo en ${minutesRemaining} minuto(s).`,
@@ -102,7 +104,9 @@ LoginController.Login = async (req, res) => {
 
     // 1️⃣ Verificar si es el administrador
     if (email === config.ADMIN.emailAdmin) {
+      console.log('👑 [LOGIN] Verificando credenciales de administrador');
       if (password !== config.ADMIN.password) {
+        console.log('❌ [LOGIN] Contraseña incorrecta para administrador');
         // ❌ REGISTRAR INTENTO FALLIDO
         const attemptData = recordFailedAttempt(email);
         // 🔧 CORREGIR EL CÁLCULO DE INTENTOS RESTANTES
@@ -119,11 +123,14 @@ LoginController.Login = async (req, res) => {
       isPasswordValid = true;
     } else {
       // 2️⃣ Buscar en Empleados
+      console.log('👥 [LOGIN] Buscando en empleados...');
       userFound = await EmpleadoModel.findOne({ email });
 
       if (userFound) {
+        console.log('✅ [LOGIN] Usuario encontrado en empleados');
         isPasswordValid = await bcryptjs.compare(password, userFound.password);
         if (!isPasswordValid) {
+          console.log('❌ [LOGIN] Contraseña incorrecta para empleado');
           // ❌ REGISTRAR INTENTO FALLIDO
           const attemptData = recordFailedAttempt(email);
           // 🔧 CORREGIR EL CÁLCULO DE INTENTOS RESTANTES
@@ -137,11 +144,14 @@ LoginController.Login = async (req, res) => {
         userType = "Empleado";
       } else {
         // 3️⃣ Si no es empleado, buscar en Motoristas
+        console.log('🚛 [LOGIN] Buscando en motoristas...');
         userFound = await MotoristaModel.findOne({ email });
 
         if (userFound) {
+          console.log('✅ [LOGIN] Usuario encontrado en motoristas');
           isPasswordValid = await bcryptjs.compare(password, userFound.password);
           if (!isPasswordValid) {
+            console.log('❌ [LOGIN] Contraseña incorrecta para motorista');
             // ❌ REGISTRAR INTENTO FALLIDO
             const attemptData = recordFailedAttempt(email);
             // 🔧 CORREGIR EL CÁLCULO DE INTENTOS RESTANTES
@@ -155,9 +165,11 @@ LoginController.Login = async (req, res) => {
           userType = "Motorista";
         } else {
           // 4️⃣ Si no es motorista, buscar en Clientes
+          console.log('👤 [LOGIN] Buscando en clientes...');
           userFound = await ClienteModel.findOne({ email });
 
           if (!userFound) {
+            console.log('❌ [LOGIN] Usuario no encontrado en ninguna colección');
             // ❌ REGISTRAR INTENTO FALLIDO
             const attemptData = recordFailedAttempt(email);
             // 🔧 CORREGIR EL CÁLCULO DE INTENTOS RESTANTES
@@ -169,8 +181,10 @@ LoginController.Login = async (req, res) => {
             });
           }
 
+          console.log('✅ [LOGIN] Usuario encontrado en clientes');
           isPasswordValid = await bcryptjs.compare(password, userFound.password);
           if (!isPasswordValid) {
+            console.log('❌ [LOGIN] Contraseña incorrecta para cliente');
             // ❌ REGISTRAR INTENTO FALLIDO
             const attemptData = recordFailedAttempt(email);
             // 🔧 CORREGIR EL CÁLCULO DE INTENTOS RESTANTES
@@ -187,28 +201,44 @@ LoginController.Login = async (req, res) => {
     }
 
     // ✅ LOGIN EXITOSO - LIMPIAR INTENTOS FALLIDOS
+    console.log('🎉 [LOGIN] Login exitoso para:', email, 'Tipo:', userType);
     clearFailedAttempts(email);
 
     if (!config.JWT.secret) {
-      console.error("Falta JWT secret en config.js");
+      console.error("❌ [LOGIN] Falta JWT secret en config.js");
       return res.status(500).json({ message: "Error del servidor: JWT" });
     }
 
+    console.log('🔑 [LOGIN] Generando token JWT...');
     jwt.sign(
       { id: userFound._id, userType },
       config.JWT.secret,
       { expiresIn: config.JWT.expiresIn },
       (error, token) => {
         if (error) {
-          console.error("Error al firmar token:", error);
+          console.error("❌ [LOGIN] Error al firmar token:", error);
           return res.status(500).json({ message: "Error al generar token" });
         }
 
-        res.cookie("authToken", token, {
+        console.log('✅ [LOGIN] Token generado correctamente');
+        
+        // 🍪 CONFIGURACIÓN MEJORADA DE COOKIES PARA PRODUCCIÓN
+        const cookieOptions = {
           httpOnly: true,
-          sameSite: "Lax",
-          secure: false, // cámbialo a true si usas HTTPS en producción
-        });
+          sameSite: process.env.NODE_ENV === 'production' ? 'None' : 'Lax',
+          secure: process.env.NODE_ENV === 'production', // HTTPS solo en producción
+          maxAge: 24 * 60 * 60 * 1000, // 24 horas
+          path: '/',
+        };
+
+        console.log('🍪 [LOGIN] Configurando cookie con opciones:', cookieOptions);
+        
+        res.cookie("authToken", token, cookieOptions);
+
+        // 🔄 TAMBIÉN ENVIAR EL TOKEN EN EL HEADER PARA MAYOR COMPATIBILIDAD
+        res.setHeader('Authorization', `Bearer ${token}`);
+        
+        console.log('📤 [LOGIN] Enviando respuesta exitosa con cookie y header');
 
         res.status(200).json({
           message: "Inicio de sesión completado",
@@ -218,31 +248,39 @@ LoginController.Login = async (req, res) => {
             email: userFound.email || email,
             nombre: userFound.nombre || userFound.name || null,
           },
+          // 🆕 ENVIAR TOKEN PARA PERSISTENCIA EN LOCALSTORAGE SI ES NECESARIO
+          token: token
         });
       }
     );
   } catch (error) {
-    console.error("Error en login:", error);
+    console.error("❌ [LOGIN] Error en login:", error);
     res.status(500).json({ message: "Error interno del servidor" });
   }
 };
 
 LoginController.checkAuth = async (req, res) => {
   try {
+    console.log("🔍 [checkAuth] Iniciando verificación de autenticación");
     const token = req.cookies.authToken;
+    console.log("🍪 [checkAuth] Token de cookie:", token ? "Presente" : "No encontrado");
 
     if (!token) {
+      console.log("❌ [checkAuth] No hay token en cookies");
       return res.status(401).json({ message: "No autorizado" });
     }
 
     jwt.verify(token, config.JWT.secret, async (err, decoded) => {
       if (err) {
+        console.log("❌ [checkAuth] Token inválido:", err.message);
         return res.status(401).json({ message: "Token inválido" });
       }
 
+      console.log("✅ [checkAuth] Token válido, datos decodificados:", { id: decoded.id, userType: decoded.userType });
       const { id, userType } = decoded;
 
       if (userType === "Administrador") {
+        console.log("👑 [checkAuth] Usuario administrador autenticado");
         return res.status(200).json({
           user: {
             id,
@@ -267,16 +305,25 @@ LoginController.checkAuth = async (req, res) => {
           Model = ClienteModel;
           break;
         default:
+          console.log("❌ [checkAuth] Tipo de usuario inválido:", userType);
           return res.status(400).json({ message: "Tipo de usuario inválido" });
       }
 
+      console.log(`🔍 [checkAuth] Buscando ${userType} con ID:`, id);
       userFound = await Model.findById(id).select("email nombre name");
 
       if (!userFound) {
+        console.log(`❌ [checkAuth] ${userType} no encontrado en base de datos`);
         return res.status(404).json({ 
           message: `${userType} no encontrado` 
         });
       }
+
+      console.log(`✅ [checkAuth] ${userType} encontrado:`, {
+        id: userFound._id,
+        email: userFound.email,
+        nombre: userFound.nombre || userFound.name
+      });
 
       return res.status(200).json({
         user: {
@@ -288,7 +335,7 @@ LoginController.checkAuth = async (req, res) => {
       });
     });
   } catch (error) {
-    console.error("Error en checkAuth:", error);
+    console.error("💥 [checkAuth] Error interno del servidor:", error);
     res.status(500).json({ message: "Error interno del servidor" });
   }
 };
