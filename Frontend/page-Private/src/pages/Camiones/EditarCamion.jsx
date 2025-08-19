@@ -38,19 +38,19 @@ export default function EditarCamion() {
         setLoading(true);
 
         // Todas las peticiones incluyen cookies
-        const truckResponse = await fetch(`http://localhost:4000/api/camiones/${id}`, {
+        const truckResponse = await fetch(`https://riveraproject-5.onrender.com/api/camiones/${id}`, {
           method: 'GET',
           ...fetchOptions
         });
         const truckData = await truckResponse.json();
 
-        const proveedoresResponse = await fetch('http://localhost:4000/api/proveedores', {
+        const proveedoresResponse = await fetch('https://riveraproject-5.onrender.com/api/proveedores', {
           method: 'GET',
           ...fetchOptions
         });
         const proveedoresData = await proveedoresResponse.json();
 
-        const motoristasResponse = await fetch('http://localhost:4000/api/motoristas', {
+        const motoristasResponse = await fetch('https://riveraproject-5.onrender.com/api/motoristas', {
           method: 'GET',
           ...fetchOptions
         });
@@ -105,7 +105,7 @@ export default function EditarCamion() {
         age: formData.año
       };
 
-      const response = await fetch(`http://localhost:4000/api/camiones/${id}`, {
+      const response = await fetch(`https://riveraproject-5.onrender.com/api/camiones/${id}`, {
         method: 'PUT',
         ...fetchOptions,
         body: JSON.stringify(updateData)

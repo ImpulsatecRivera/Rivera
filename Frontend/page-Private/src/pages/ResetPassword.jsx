@@ -75,7 +75,7 @@ const ResetPassword = () => {
       console.log("Email:", email);
       console.log("Enviando nueva contraseña...");
 
-      const response = await axios.post("http://localhost:4000/api/recovery/newPassword", {
+      const response = await axios.post("https://riveraproject-5.onrender.com/api/recovery/newPassword", {
         newPassword: newPassword
       }, {
         withCredentials: true, // Para enviar cookies con el token

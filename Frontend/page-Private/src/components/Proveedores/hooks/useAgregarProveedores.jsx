@@ -179,9 +179,9 @@ const useSupplierForm = () => {
       console.log('Datos completos:', dataToSend);
 
       console.log('=== ENVIANDO PETICIÓN ===');
-      console.log('URL:', 'http://localhost:4000/api/proveedores');
+      console.log('URL:', 'https://riveraproject-5.onrender.com/api/proveedores');
 
-      const response = await fetch('http://localhost:4000/api/proveedores', {
+      const response = await fetch('https://riveraproject-5.onrender.com/api/proveedores', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
