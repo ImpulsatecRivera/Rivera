@@ -257,14 +257,14 @@ const EditMotoristaAlert = ({ isOpen, onClose, onSave, motorista }) => {
             </div>
           </div>
 
-          {/* Primera fila: Apellido y Nombre */}
+          {/* Primera fila: Nombre y Apellido (CORREGIDO) */}
           <div className="grid grid-cols-2 gap-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Nombre</label>
               <input
                 type="text"
-                name="lastName"
-                value={formData.lastName}
+                name="name"                
+                value={formData.name}      
                 onChange={handleInputChange}
                 className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 text-base text-gray-900 bg-white"
                 placeholder="Martinez"
@@ -274,10 +274,10 @@ const EditMotoristaAlert = ({ isOpen, onClose, onSave, motorista }) => {
               <label className="block text-sm font-medium text-gray-700 mb-2">Apellido</label>
               <input
                 type="text"
-                name="name"
-                value={formData.name}
+                name="lastName"             
+                value={formData.lastName}   
                 onChange={handleInputChange}
-                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 text-base text-gray-900 bg-white"
+                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duración-200 text-base text-gray-900 bg-white"
                 placeholder="Martinez"
               />
             </div>
@@ -349,7 +349,7 @@ const EditMotoristaAlert = ({ isOpen, onClose, onSave, motorista }) => {
                 name="phone"
                 value={formData.phone}
                 onChange={handleInputChange}
-                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 text-base text-gray-900 bg-white"
+                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duración-200 text-base text-gray-900 bg-white"
                 placeholder="7533-4567"
               />
             </div>
@@ -374,7 +374,7 @@ const EditMotoristaAlert = ({ isOpen, onClose, onSave, motorista }) => {
                 name="circulationCard"
                 value={formData.circulationCard}
                 onChange={handleInputChange}
-                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 text-base text-gray-900 bg-white"
+                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duración-200 text-base text-gray-900 bg-white"
                 placeholder="ABC123-DEF"
                 maxLength="15"
               />
@@ -389,7 +389,7 @@ const EditMotoristaAlert = ({ isOpen, onClose, onSave, motorista }) => {
               name="address"
               value={formData.address}
               onChange={handleInputChange}
-              className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 text-base text-gray-900 bg-white"
+              className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duración-200 text-base text-gray-900 bg-white"
               placeholder="Calle Los Almendros #24, San Salvador"
             />
           </div>
@@ -403,7 +403,7 @@ const EditMotoristaAlert = ({ isOpen, onClose, onSave, motorista }) => {
         >
           <button
             onClick={handleSave}
-            className="px-10 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-all duration-200 transform hover:scale-105 hover:shadow-lg active:scale-95 font-medium text-lg"
+            className="px-10 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-all duración-200 transform hover:scale-105 hover:shadow-lg active:scale-95 font-medium text-lg"
           >
             Actualizar
           </button>
