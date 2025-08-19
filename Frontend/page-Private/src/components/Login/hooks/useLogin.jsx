@@ -4,14 +4,14 @@ import { useNavigate } from "react-router-dom";
 
 const useLogin = () => {
   const [loading, setLoading] = useState(false);
-  const { login } = useAuth();
+  const { setUser, setIsLoggedIn } = useAuth(); // Solo necesitamos los setters
   const navigate = useNavigate();
 
   const handleLogin = async (email, password) => {
     setLoading(true);
     
     try {
-      // 🔄 Llamar directamente al API
+      // 🔄 UNA SOLA llamada al API
       const response = await fetch('https://riveraproject-5.onrender.com/api/login', {
         method: 'POST',
         headers: {
@@ -25,8 +25,15 @@ const useLogin = () => {
       
       // ✅ LOGIN EXITOSO (200)
       if (response.ok && response.status === 200) {
-        // Actualizar el contexto de autenticación
-        await login(email, password);
+        // Guardar en localStorage para persistencia
+        localStorage.setItem('user', JSON.stringify(data.user));
+        localStorage.setItem('userType', data.userType);
+        localStorage.setItem('isLoggedIn', 'true');
+        
+        // Actualizar el contexto
+        setUser(data.user);
+        setIsLoggedIn(true);
+        
         navigate("/dashboard");
         
         return {
@@ -71,15 +78,12 @@ const useLogin = () => {
     } catch (error) {
       console.error('🌐 Error de red:', error);
       
-      // ⚠️ IMPORTANTE: fetch() no rechaza automáticamente para códigos 4xx/5xx
-      // Solo rechaza para errores de red reales
       return {
         success: false,
         blocked: false,
         message: "Error de conexión con el servidor. Verifica tu conexión a internet."
       };
     } finally {
-      // ✅ SIEMPRE establecer loading en false
       setLoading(false);
     }
   };
