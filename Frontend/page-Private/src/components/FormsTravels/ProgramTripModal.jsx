@@ -114,9 +114,9 @@ const ProgramTripModal = ({
 
       // Cargar todos los recursos en paralelo
       const [camionesData, conductoresData, cotizacionesData] = await Promise.allSettled([
-        cargarDatos('http://localhost:4000/api/camiones', 'Camiones'),
-        cargarDatos('http://localhost:4000/api/motoristas', 'Motoristas'),
-        cargarDatos('http://localhost:4000/api/cotizaciones', 'Cotizaciones')
+        cargarDatos('https://riveraproject-5.onrender.com/api/camiones', 'Camiones'),
+        cargarDatos('https://riveraproject-5.onrender.com/api/motoristas', 'Motoristas'),
+        cargarDatos('https://riveraproject-5.onrender.com/api/cotizaciones', 'Cotizaciones')
       ]);
 
       // Procesar camiones

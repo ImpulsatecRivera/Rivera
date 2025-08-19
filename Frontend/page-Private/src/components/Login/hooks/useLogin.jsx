@@ -4,15 +4,17 @@ import { useNavigate } from "react-router-dom";
 
 const useLogin = () => {
   const [loading, setLoading] = useState(false);
-  const { login } = useAuth();
+  const { setUser, setIsLoggedIn } = useAuth(); // Solo necesitamos los setters
   const navigate = useNavigate();
 
   const handleLogin = async (email, password) => {
+    console.log("🔑 [useLogin] Iniciando handleLogin con email:", email);
     setLoading(true);
     
     try {
-      // 🔄 Llamar directamente al API
-      const response = await fetch('http://localhost:4000/api/login', {
+      // 🔄 UNA SOLA llamada al API
+      console.log("🌐 [useLogin] Enviando petición al servidor");
+      const response = await fetch('https://riveraproject-5.onrender.com/api/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -21,12 +23,26 @@ const useLogin = () => {
         credentials: 'include', // Para incluir cookies
       });
 
+      console.log("📨 [useLogin] Respuesta recibida, status:", response.status);
       const data = await response.json();
+      console.log("📨 [useLogin] Datos de respuesta:", data);
       
       // ✅ LOGIN EXITOSO (200)
       if (response.ok && response.status === 200) {
-        // Actualizar el contexto de autenticación
-        await login(email, password);
+        console.log("✅ [useLogin] Login exitoso, guardando datos");
+        
+        // Guardar en localStorage para persistencia
+        localStorage.setItem('user', JSON.stringify(data.user));
+        localStorage.setItem('userType', data.userType);
+        localStorage.setItem('isLoggedIn', 'true');
+        console.log("💾 [useLogin] Datos guardados en localStorage");
+        
+        // Actualizar el contexto
+        setUser(data.user);
+        setIsLoggedIn(true);
+        console.log("🔄 [useLogin] Contexto actualizado");
+        
+        console.log("🧭 [useLogin] Navegando a dashboard");
         navigate("/dashboard");
         
         return {
@@ -39,7 +55,7 @@ const useLogin = () => {
 
       // 🔒 USUARIO BLOQUEADO (429 - Too Many Requests)
       if (response.status === 429) {
-        console.log('🔒 Usuario bloqueado:', data);
+        console.log('🔒 [useLogin] Usuario bloqueado:', data);
         return {
           success: false,
           blocked: true,
@@ -51,7 +67,7 @@ const useLogin = () => {
 
       // ❌ CREDENCIALES INCORRECTAS CON INTENTOS RESTANTES (400)
       if (response.status === 400) {
-        console.log('❌ Intento fallido:', data);
+        console.log('❌ [useLogin] Intento fallido:', data);
         return {
           success: false,
           blocked: false,
@@ -61,7 +77,7 @@ const useLogin = () => {
       }
 
       // 🚨 OTROS ERRORES DEL SERVIDOR
-      console.log('🚨 Error del servidor:', response.status, data);
+      console.log('🚨 [useLogin] Error del servidor:', response.status, data);
       return {
         success: false,
         blocked: false,
@@ -69,17 +85,15 @@ const useLogin = () => {
       };
 
     } catch (error) {
-      console.error('🌐 Error de red:', error);
+      console.error('🌐 [useLogin] Error de red:', error);
       
-      // ⚠️ IMPORTANTE: fetch() no rechaza automáticamente para códigos 4xx/5xx
-      // Solo rechaza para errores de red reales
       return {
         success: false,
         blocked: false,
         message: "Error de conexión con el servidor. Verifica tu conexión a internet."
       };
     } finally {
-      // ✅ SIEMPRE establecer loading en false
+      console.log("🏁 [useLogin] Finalizando handleLogin");
       setLoading(false);
     }
   };

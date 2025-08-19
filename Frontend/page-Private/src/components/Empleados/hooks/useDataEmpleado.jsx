@@ -32,7 +32,7 @@ const useDataEmpleado = () => {
       
       console.log('🚀 Iniciando petición a la API de empleados...');
       
-      const response = await axios.get('http://localhost:4000/api/empleados');
+      const response = await axios.get('https://riveraproject-5.onrender.com/api/empleados');
       
       console.log('📡 Status de la respuesta:', response.status);
       console.log('📋 Datos recibidos completos:', response.data);
@@ -103,7 +103,7 @@ const useDataEmpleado = () => {
       
       // Verificar si es un error de red
       if (error.message.includes('Network') || error.code === 'ERR_NETWORK') {
-        setError('No se puede conectar al servidor. Verifica que esté ejecutándose en http://localhost:4000');
+        setError('No se puede conectar al servidor. Verifica que esté ejecutándose en https://riveraproject-5.onrender.com');
       } else if (error.response) {
         setError(`Error del servidor: ${error.response.status} - ${error.response.data?.message || 'Error desconocido'}`);
       } else {
@@ -156,7 +156,7 @@ const useDataEmpleado = () => {
     setShowConfirmDelete(false);
     try {
       console.log(`🗑️ Eliminando empleado ${selectedEmpleados._id}`);
-      await axios.delete(`http://localhost:4000/api/empleados/${selectedEmpleados._id}`);
+      await axios.delete(`https://riveraproject-5.onrender.com/api/empleados/${selectedEmpleados._id}`);
       
       // Asegurar que empleados es un array antes de filtrar
       setEmpleados(prevEmpleados => 
@@ -215,11 +215,11 @@ const useDataEmpleado = () => {
     
     try {
       // Log detallado de lo que se está enviando
-      console.log('📤 Enviando actualización a:', `http://localhost:4000/api/empleados/${selectedEmpleados._id}`);
+      console.log('📤 Enviando actualización a:', `https://riveraproject-5.onrender.com/api/empleados/${selectedEmpleados._id}`);
 
       // Realizar la actualización
       const response = await axios.put(
-        `http://localhost:4000/api/empleados/${selectedEmpleados._id}`, 
+        `https://riveraproject-5.onrender.com/api/empleados/${selectedEmpleados._id}`, 
         formData,
         {
           headers: {

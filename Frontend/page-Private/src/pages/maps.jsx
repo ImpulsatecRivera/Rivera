@@ -180,7 +180,7 @@ const RiveraTransportMapDemo = () => {
     try {
       setLoading(true);
       setError(null);
-      const apiUrl = 'http://localhost:4000/api/viajes/map-data';
+      const apiUrl = 'https://riveraproject-5.onrender.com/api/viajes/map-data';
       const response = await fetch(apiUrl, {
         method: 'GET',
         headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' }

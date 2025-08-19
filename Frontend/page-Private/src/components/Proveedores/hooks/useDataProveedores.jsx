@@ -26,7 +26,7 @@ const useDataProveedores = () => {
     const fetchProveedores = async () => {
       try {
         setLoading(true);
-        const response = await axios.get('http://localhost:4000/api/proveedores');
+        const response = await axios.get('https://riveraproject-5.onrender.com/api/proveedores');
         setProveedores(response.data);
         setError(null);
       } catch (error) {
@@ -74,7 +74,7 @@ const useDataProveedores = () => {
   const confirmDelete = async () => {
     setShowConfirmDelete(false);
     try {
-      await axios.delete(`http://localhost:4000/api/proveedores/${selectedProveedor._id}`);
+      await axios.delete(`https://riveraproject-5.onrender.com/api/proveedores/${selectedProveedor._id}`);
       setProveedores(proveedores.filter(prov => prov._id !== selectedProveedor._id));
       console.log("Proveedor eliminado:", selectedProveedor);
       setShowDetailView(false);
@@ -118,7 +118,7 @@ const useDataProveedores = () => {
       }
 
       const response = await axios.put(
-        `http://localhost:4000/api/proveedores/${selectedProveedor._id}`, 
+        `https://riveraproject-5.onrender.com/api/proveedores/${selectedProveedor._id}`, 
         updatedData
       );
       
@@ -172,7 +172,7 @@ const useDataProveedores = () => {
   const refreshProveedores = async () => {
     try {
       setLoading(true);
-      const response = await axios.get('http://localhost:4000/api/proveedores');
+      const response = await axios.get('https://riveraproject-5.onrender.com/api/proveedores');
       setProveedores(response.data);
       setError(null);
     } catch (error) {
