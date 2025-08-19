@@ -291,7 +291,7 @@ const RiveraTransportMapDemo = () => {
       }
       setError(null);
       
-      const apiUrl = 'http://localhost:4000/api/viajes/map-data';
+      const apiUrl = 'https://riveraproject-5.onrender.com/api/viajes/map-data';
       console.log('🗺️ Obteniendo datos del mapa...', isAutoRefresh ? '(auto-refresh)' : '(manual)');
       
       const response = await fetch(apiUrl, {
