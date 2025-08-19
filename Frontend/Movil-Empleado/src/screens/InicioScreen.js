@@ -2,6 +2,7 @@ import React from 'react';
 import { View, StyleSheet, ScrollView, Text, TouchableOpacity } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useTrips } from '../hooks/useTrips';
+import { useProfile } from '../hooks/useProfile'; // Tu hook existente
 
 // Components
 import LogoHeader from '../components/LogoHeader';
@@ -12,6 +13,24 @@ import DestinationCard from '../components/DestinationCard';
 
 const InicioScreen = ({ navigation }) => {
   const { trips, totalTrips, proximosDestinos } = useTrips();
+  const { profile, loading } = useProfile(); // Obtener datos del perfil del usuario
+
+  // Función para obtener las iniciales del nombre
+  const getInitials = (name) => {
+    if (!name) return 'U';
+    return name
+      .split(' ')
+      .map(word => word.charAt(0))
+      .join('')
+      .toUpperCase()
+      .substring(0, 2);
+  };
+
+  // Función para obtener solo el primer nombre
+  const getFirstName = (fullName) => {
+    if (!fullName) return 'Usuario';
+    return fullName.split(' ')[0];
+  };
 
   const handleTripPress = (trip) => {
     navigation.navigate('InfoViaje', { trip });
@@ -34,10 +53,10 @@ const InicioScreen = ({ navigation }) => {
       <ScrollView style={styles.content}>
         <LogoHeader />
         
-        <GreetingSection 
-          name="Wilfredo"
+        <GreetingSection
+          name={getFirstName(profile.nombre)}
           subtitle="estos son tus viajes para el día de Hoy"
-          avatarText="W"
+          avatarText={getInitials(profile.nombre)}
         />
 
         {/* Service Cards */}
