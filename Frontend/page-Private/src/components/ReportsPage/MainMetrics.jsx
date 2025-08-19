@@ -26,7 +26,7 @@ const MainMetrics = () => {
     try {
       setUsuariosActivos(prev => ({ ...prev, loading: true, error: null }));
       
-      const response = await fetch('http://localhost:4000/api/clientes/resumen-usuarios');
+      const response = await fetch('https://riveraproject-5.onrender.com/api/clientes/resumen-usuarios');
       
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -59,7 +59,7 @@ const MainMetrics = () => {
     try {
       setCargasEntregadas(prev => ({ ...prev, loading: true, error: null }));
       
-      const response = await fetch('http://localhost:4000/api/viajes/completed');
+      const response = await fetch('https://riveraproject-5.onrender.com/api/viajes/completed');
       
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -105,7 +105,7 @@ const MainMetrics = () => {
     try {
       setTiempoPromedio(prev => ({ ...prev, loading: true, error: null }));
       
-      const response = await fetch('http://localhost:4000/api/viajes/tiempo-promedio');
+      const response = await fetch('https://riveraproject-5.onrender.com/api/viajes/tiempo-promedio');
       
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);

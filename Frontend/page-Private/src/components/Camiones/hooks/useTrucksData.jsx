@@ -47,7 +47,7 @@ const useTrucksData = () => {
       
       console.log('🚚 Iniciando petición a la API...');
       
-      const response = await fetch('http://localhost:4000/api/camiones', fetchOptions);
+      const response = await fetch('https://riveraproject-5.onrender.com/api/camiones', fetchOptions);
       
       console.log('📡 Status de la respuesta:', response.status);
       console.log('📡 Response OK:', response.ok);
@@ -111,7 +111,7 @@ const useTrucksData = () => {
     try {
       console.log(`🗑️ Eliminando camión con ID: ${truckId}`);
       
-      const response = await fetch(`http://localhost:4000/api/camiones/${truckId}`, {
+      const response = await fetch(`https://riveraproject-5.onrender.com/api/camiones/${truckId}`, {
         method: 'DELETE',
         ...fetchOptions,
       });

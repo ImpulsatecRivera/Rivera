@@ -89,8 +89,8 @@ const EditTripModal = ({
 
       // Cargar solo camiones y conductores
       const [camionesData, conductoresData] = await Promise.allSettled([
-        cargarDatos('http://localhost:4000/api/camiones', 'Camiones'),
-        cargarDatos('http://localhost:4000/api/motoristas', 'Motoristas')
+        cargarDatos('https://riveraproject-5.onrender.com/api/camiones', 'Camiones'),
+        cargarDatos('https://riveraproject-5.onrender.com/api/motoristas', 'Motoristas')
       ]);
 
       // Procesar camiones

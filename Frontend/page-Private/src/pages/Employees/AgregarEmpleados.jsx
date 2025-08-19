@@ -136,10 +136,10 @@ const AgregarEmpleado = () => {
       console.log('Incluye imagen:', !!formData.img);
 
       console.log('=== ENVIANDO PETICIÓN ===');
-      console.log('URL:', 'http://localhost:4000/api/empleados');
+      console.log('URL:', 'https://riveraproject-5.onrender.com/api/empleados');
 
       // Enviar petición
-      const response = await axios.post('http://localhost:4000/api/empleados', formDataToSend, {
+      const response = await axios.post('https://riveraproject-5.onrender.com/api/empleados', formDataToSend, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
