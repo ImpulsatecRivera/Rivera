@@ -1,8 +1,8 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
 import Icon from 'react-native-vector-icons/MaterialIcons';
-import { useAuth } from '../Context/authContext'; // 🔥 USAR EL CONTEXTO CORRECTO
+import { useAuth } from '../Context/authContext';
 
 import InicioScreen from '../screens/InicioScreen';
 import ViajesScreen from '../screens/ViajesScreen';
@@ -10,23 +10,22 @@ import PerfilScreen from '../screens/PerfilScreen';
 import InfoViajeScreen from '../screens/InfoViajeScreen';
 import InicioSesionScreen from '../screens/InicioSesionScreen';
 
-// 🆕 NUEVA PANTALLA DE RECUPERACIÓN PRINCIPAL
+// 🆕 IMPORTAR TU PANTALLA DE CARGA AQUÍ
+import PremiumLoadingScreen from '../screens/splashScreens'; // O CreativeTruckLoading
+
+// Pantallas de recuperación
 import elegirMetodoRecuperacionScreen from '../screens/elegirMetodoRecuperacionScreen';
-
-// 📱 NUEVA PANTALLA DE TELÉFONO
 import RecuperacionTelefonoScreen from '../screens/RecuperacionTelefonoScreens';
-
-// Pantallas existentes de recuperación
 import RecuperacionScreen from '../screens/RecuperacionScreen';
 import Recuperacion2Scereen from '../screens/Recuepracion2Screen';
 import Recuperacion3 from '../screens/Recuperacion3';
 import Recuperacion4 from '../screens/Recuperacion4';
 import Recuperacion5 from '../screens/Recuperacion5';
 
-// IMPORTAR LAS 3 PANTALLAS DE ONBOARDING/CARGA
-import OnboardingScreen1 from '../screens/pantallacarga1'; // 1/3 - Cotiza Viajes
-import OnboardingScreen2 from '../screens/pantallacarga2'; // 2/3 - Elige tu forma de pago
-import OnboardingScreen3 from '../screens/pantallacarga3'; // 3/3 - Realiza cotizaciones
+// Pantallas de onboarding
+import OnboardingScreen1 from '../screens/pantallacarga1';
+import OnboardingScreen2 from '../screens/pantallacarga2';
+import OnboardingScreen3 from '../screens/pantallacarga3';
 
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
@@ -100,21 +99,49 @@ const TabNavigator = () => {
   );
 };
 
-// Componente principal del navegador - USANDO EL CONTEXTO CORRECTO
+// Componente principal del navegador
 const AppNavigator = () => {
-  // 🔥 USAR EL CONTEXTO REAL, NO EL LOCAL
   const { isAuthenticated, hasCompletedOnboarding, isLoading } = useAuth();
+  
+  // 🆕 ESTADO PARA CONTROLAR LA PANTALLA DE CARGA INICIAL
+  const [showInitialLoading, setShowInitialLoading] = useState(true);
   
   console.log('🔄 AppNavigator render:', { 
     isAuthenticated, 
     hasCompletedOnboarding, 
-    isLoading 
+    isLoading,
+    showInitialLoading
   });
+
+  // 🆕 EFECTO PARA OCULTAR LA PANTALLA DE CARGA DESPUÉS DE UN TIEMPO
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setShowInitialLoading(false);
+    }, 3000); // 3 segundos - ajusta según necesites
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  // 🆕 MOSTRAR PANTALLA DE CARGA INICIAL PRIMERO
+  if (showInitialLoading) {
+    console.log('🚚 Mostrando pantalla de carga inicial...');
+    return (
+      <PremiumLoadingScreen 
+        message="Carga patita"
+        subtitle="Iniciando tu experiencia..."
+      />
+    );
+  }
   
-  // Mostrar loading si está cargando
+  // Mostrar loading del contexto si está cargando
   if (isLoading) {
-    console.log('⏳ Mostrando loading...');
-    return null; // O una pantalla de loading
+    console.log('⏳ Mostrando loading del contexto...');
+    return (
+      <PremiumLoadingScreen 
+        message="Carga patita"
+        subtitle="Verificando sesión..."
+      />
+    );
   }
   
   // 1️⃣ SI NO ESTÁ AUTENTICADO: Mostrar pantallas de login
@@ -136,7 +163,6 @@ const AppNavigator = () => {
           }}
         />
         
-        {/* 🆕 NUEVA PANTALLA PRINCIPAL DE RECUPERACIÓN - ANTES QUE TODAS LAS DEMÁS */}
         <Stack.Screen 
           name="elegirMetodoRecuperacion" 
           component={elegirMetodoRecuperacionScreen}
@@ -160,55 +186,12 @@ const AppNavigator = () => {
           }}
         />
         
-        {/* PANTALLAS DE RECUPERACIÓN EXISTENTES */}
-        <Stack.Screen 
-          name="Recuperacion" 
-          component={RecuperacionScreen}
-          options={{
-            presentation: 'card',
-            gestureEnabled: true,
-          }}
-        />
-        <Stack.Screen 
-          name="RecuperacionTelefono" 
-          component={RecuperacionTelefonoScreen}
-          options={{
-            presentation: 'card',
-            gestureEnabled: true,
-          }}
-        />
-        <Stack.Screen 
-          name="Recuperacion2" 
-          component={Recuperacion2Scereen}
-          options={{
-            presentation: 'card',
-            gestureEnabled: true,
-          }}
-        />
-        <Stack.Screen 
-          name="Recuperacion3" 
-          component={Recuperacion3}
-          options={{
-            presentation: 'card',
-            gestureEnabled: true,
-          }}
-        />
-        <Stack.Screen 
-          name="Recuperacion4" 
-          component={Recuperacion4}
-          options={{
-            presentation: 'card',
-            gestureEnabled: true,
-          }}
-        />
-        <Stack.Screen 
-          name="Recuperacion5" 
-          component={Recuperacion5}
-          options={{
-            presentation: 'card',
-            gestureEnabled: true,
-          }}
-        />
+        <Stack.Screen name="Recuperacion" component={RecuperacionScreen} options={{ presentation: 'card', gestureEnabled: true }} />
+        <Stack.Screen name="RecuperacionTelefono" component={RecuperacionTelefonoScreen} options={{ presentation: 'card', gestureEnabled: true }} />
+        <Stack.Screen name="Recuperacion2" component={Recuperacion2Scereen} options={{ presentation: 'card', gestureEnabled: true }} />
+        <Stack.Screen name="Recuperacion3" component={Recuperacion3} options={{ presentation: 'card', gestureEnabled: true }} />
+        <Stack.Screen name="Recuperacion4" component={Recuperacion4} options={{ presentation: 'card', gestureEnabled: true }} />
+        <Stack.Screen name="Recuperacion5" component={Recuperacion5} options={{ presentation: 'card', gestureEnabled: true }} />
       </Stack.Navigator>
     );
   }
@@ -229,7 +212,7 @@ const AppNavigator = () => {
           component={OnboardingScreen1}
           options={{
             presentation: 'card',
-            gestureEnabled: false, // No permitir retroceder
+            gestureEnabled: false,
           }}
         />
         <Stack.Screen 
