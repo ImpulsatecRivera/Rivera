@@ -27,7 +27,7 @@ app.use(cookieParser());
 app.use(
   cors({
     origin: ["http://localhost:5173","http://localhost:5174",
-       'https://rivera-project-s2pd.vercel.app', 'https://rivera-project-uhuf.vercel.app'],
+       'https://rivera-project-ecru.vercel.app', 'https://rivera-project-uhuf.vercel.app'],
     credentials: true,
   })
 );
