@@ -1,475 +1,22 @@
-// hooks/Travels/useTravels.js - VERSIÓN FINAL OPTIMIZADA PARA TU CONFIGURACIÓN
+// hooks/Travels/useTravels.js - VERSIÓN CORREGIDA PARA ELIMINAR Y ACTUALIZAR
 import { useState, useEffect, useCallback } from 'react';
-
-// 🌐 CONFIGURACIÓN EXACTA PARA TU BACKEND RENDER + VERCEL
-const API_CONFIG = {
-  BASE_URL: 'https://riveraproject-5.onrender.com',
-  ENDPOINTS: {
-    MAP_DATA: '/api/viajes/map-data',
-    VIAJES: '/api/viajes',
-    HEALTH: '/api/viajes/health'
-  },
-  TIMEOUT: 12000, // 12 segundos para Render
-  MAX_RETRIES: 2,
-  RETRY_DELAY: 3000 // 3 segundos entre reintentos
-};
-
-// 🛠️ FUNCIÓN PARA CONSTRUIR URLs CON CACHE BUSTING
-const buildUrl = (endpoint, params = {}) => {
-  const url = new URL(`${API_CONFIG.BASE_URL}${endpoint}`);
-  
-  // Cache busting automático
-  url.searchParams.set('t', Date.now().toString());
-  
-  // Agregar parámetros adicionales
-  Object.entries(params).forEach(([key, value]) => {
-    url.searchParams.set(key, value);
-  });
-  
-  return url.toString();
-};
-
-// 🔄 FUNCIÓN DE FETCH ESPECÍFICA PARA TU CONFIGURACIÓN
-const performFetch = async (endpoint, options = {}) => {
-  const startTime = Date.now();
-  let lastError = null;
-  
-  console.log(`🌐 [performFetch] Iniciando fetch a: ${endpoint}`);
-  
-  // 🎯 ESTRATEGIA PRINCIPAL: FETCH CON TU CONFIGURACIÓN CORS
-  for (let attempt = 1; attempt <= API_CONFIG.MAX_RETRIES; attempt++) {
-    try {
-      console.log(`🔄 [performFetch] Intento ${attempt}/${API_CONFIG.MAX_RETRIES}`);
-      
-      const url = buildUrl(endpoint);
-      console.log(`📡 [performFetch] URL completa: ${url}`);
-      
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => {
-        console.log(`⏰ [performFetch] Timeout después de ${API_CONFIG.TIMEOUT}ms`);
-        controller.abort();
-      }, API_CONFIG.TIMEOUT);
-      
-      const fetchOptions = {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          'Cache-Control': 'no-cache',
-          'Pragma': 'no-cache'
-        },
-        mode: 'cors',
-        credentials: 'include', // Para cookies si las necesitas
-        signal: controller.signal,
-        ...options
-      };
-      
-      console.log(`📤 [performFetch] Enviando request con headers:`, fetchOptions.headers);
-      
-      const response = await fetch(url, fetchOptions);
-      clearTimeout(timeoutId);
-      
-      console.log(`📨 [performFetch] Respuesta recibida: ${response.status} ${response.statusText}`);
-      
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-      
-      const data = await response.json();
-      const duration = Date.now() - startTime;
-      
-      console.log(`✅ [performFetch] Éxito en ${duration}ms`);
-      console.log(`📊 [performFetch] Datos recibidos:`, {
-        success: data.success,
-        dataType: typeof data.data,
-        routesCount: data.data?.routes?.length || 0
-      });
-      
-      return data;
-      
-    } catch (error) {
-      const duration = Date.now() - startTime;
-      console.error(`❌ [performFetch] Intento ${attempt} falló después de ${duration}ms:`, {
-        name: error.name,
-        message: error.message,
-        cause: error.cause || 'No cause'
-      });
-      
-      lastError = error;
-      
-      // Si no es el último intento, esperar antes del siguiente
-      if (attempt < API_CONFIG.MAX_RETRIES) {
-        console.log(`⏳ [performFetch] Esperando ${API_CONFIG.RETRY_DELAY}ms antes del siguiente intento...`);
-        await new Promise(resolve => setTimeout(resolve, API_CONFIG.RETRY_DELAY));
-      }
-    }
-  }
-  
-  // Si llegamos aquí, todos los intentos fallaron
-  const totalDuration = Date.now() - startTime;
-  console.error(`💥 [performFetch] Todos los intentos fallaron después de ${totalDuration}ms`);
-  throw lastError || new Error('Fetch failed after all retries');
-};
-
-// 🎯 DATOS MOCK PARA FALLBACK (USANDO TUS DATOS REALES COMO BASE)
-const getMockData = () => {
-  console.log('📋 [getMockData] Generando datos mock basados en tu estructura real');
-  
-  return {
-    success: true,
-    data: {
-      locations: [
-        {
-          name: "Terminal Principal Rivera",
-          coords: [13.8833, -89.1],
-          type: "red",
-          number: "HQ",
-          description: "Centro de operaciones principal",
-          tripCount: 0,
-          isTerminal: true,
-          details: "Base principal de Rivera Transport"
-        },
-        {
-          name: "Bodega Central TechStore, San Salvador",
-          coords: [13.6929, -89.2182],
-          type: "green",
-          number: "3",
-          description: "3 viajes programados",
-          tripCount: 3,
-          isTerminal: false,
-          details: "bodega en San Salvador"
-        },
-        {
-          name: "Mall Plaza La Libertad, La Libertad",
-          coords: [13.4883, -89.3222],
-          type: "green",
-          number: "3",
-          description: "3 viajes programados", 
-          tripCount: 3,
-          isTerminal: false,
-          details: "cliente en La Libertad"
-        }
-      ],
-      routes: [
-        {
-          id: "demo_1",
-          coordinates: [[13.6929, -89.2182], [13.4883, -89.3222]],
-          status: "in_progress",
-          statusText: "En tránsito",
-          frequency: "high",
-          distance: "45.8 km",
-          estimatedTime: "1h 30min",
-          tripInfo: {
-            driver: "Carlos Demo",
-            driverPhone: "1234-5678",
-            truck: "Demo Toyota (ABC-123)",
-            cargo: "Productos electrónicos de demostración - 850 kg",
-            departure: "12:00",
-            arrival: "14:30",
-            estimatedArrival: "14:30",
-            progress: 75,
-            currentLocation: "75% completado",
-            realDeparture: "12:05",
-            realArrival: null
-          },
-          description: "Transporte de equipos electrónicos - MODO DEMOSTRACIÓN",
-          route: {
-            from: "Bodega Central TechStore, San Salvador",
-            to: "Mall Plaza La Libertad, La Libertad",
-            fromType: "bodega",
-            toType: "cliente",
-            totalPoints: 2,
-            currentPoint: 1
-          },
-          alerts: [],
-          costs: {
-            fuel: 85,
-            tolls: 12.5,
-            driver: 120,
-            others: 25,
-            total: 242.5
-          },
-          conditions: {
-            weather: "normal",
-            traffic: "normal",
-            road: "buena"
-          },
-          quotation: {
-            _id: "demo_quote_1",
-            quoteName: "Demo Electrónicos",
-            ruta: {
-              origen: {
-                nombre: "Bodega Central TechStore, San Salvador",
-                coordenadas: { lat: 13.6929, lng: -89.2182 },
-                tipo: "bodega"
-              },
-              destino: {
-                nombre: "Mall Plaza La Libertad, La Libertad", 
-                coordenadas: { lat: 13.4883, lng: -89.3222 },
-                tipo: "cliente"
-              }
-            }
-          },
-          integration: {
-            hasCotizacion: true,
-            hasRuta: true,
-            hasHorarios: true,
-            hasCliente: false,
-            hasCarga: true,
-            autoUpdateEnabled: true,
-            progressMethod: "time_based"
-          }
-        },
-        {
-          id: "demo_2", 
-          coordinates: [[13.6929, -89.2182], [13.4883, -89.3222]],
-          status: "completed",
-          statusText: "Completado",
-          frequency: "medium",
-          distance: "45.8 km",
-          estimatedTime: "1h 30min",
-          tripInfo: {
-            driver: "María Demo",
-            driverPhone: "1234-5679",
-            truck: "Demo Mercedes (XYZ-456)",
-            cargo: "Productos completados - 800 kg",
-            departure: "08:00",
-            arrival: "09:30",
-            estimatedArrival: "09:30",
-            progress: 100,
-            currentLocation: "Mall Plaza La Libertad, La Libertad",
-            realDeparture: "08:00",
-            realArrival: "09:25"
-          },
-          description: "Viaje completado exitosamente - MODO DEMOSTRACIÓN",
-          route: {
-            from: "Bodega Central TechStore, San Salvador",
-            to: "Mall Plaza La Libertad, La Libertad",
-            fromType: "bodega", 
-            toType: "cliente",
-            totalPoints: 2,
-            currentPoint: 2
-          },
-          alerts: [],
-          costs: {
-            fuel: 85,
-            tolls: 12.5,
-            driver: 120,
-            others: 25,
-            total: 242.5
-          },
-          conditions: {
-            weather: "normal",
-            traffic: "ligero",
-            road: "buena"
-          },
-          quotation: {
-            _id: "demo_quote_2",
-            quoteName: "Demo Completado",
-            ruta: {
-              origen: {
-                nombre: "Bodega Central TechStore, San Salvador",
-                coordenadas: { lat: 13.6929, lng: -89.2182 },
-                tipo: "bodega"
-              },
-              destino: {
-                nombre: "Mall Plaza La Libertad, La Libertad",
-                coordenadas: { lat: 13.4883, lng: -89.3222 },
-                tipo: "cliente"
-              }
-            }
-          },
-          integration: {
-            hasCotizacion: true,
-            hasRuta: true,
-            hasHorarios: true,
-            hasCliente: false,
-            hasCarga: true,
-            autoUpdateEnabled: false,
-            progressMethod: "gps"
-          }
-        },
-        {
-          id: "demo_3",
-          coordinates: [[13.6929, -89.2182], [13.4883, -89.3222]], 
-          status: "scheduled",
-          statusText: "Programado",
-          frequency: "medium",
-          distance: "45.8 km",
-          estimatedTime: "1h 30min",
-          tripInfo: {
-            driver: "Juan Demo",
-            driverPhone: "1234-5680",
-            truck: "Demo Kenworth (DEF-789)",
-            cargo: "Productos programados - 900 kg",
-            departure: "16:00",
-            arrival: "17:30",
-            estimatedArrival: "17:30",
-            progress: 0,
-            currentLocation: "Bodega Central TechStore, San Salvador",
-            realDeparture: null,
-            realArrival: null
-          },
-          description: "Viaje programado para hoy - MODO DEMOSTRACIÓN",
-          route: {
-            from: "Bodega Central TechStore, San Salvador",
-            to: "Mall Plaza La Libertad, La Libertad",
-            fromType: "bodega",
-            toType: "cliente", 
-            totalPoints: 2,
-            currentPoint: 0
-          },
-          alerts: [],
-          costs: {
-            fuel: 85,
-            tolls: 12.5,
-            driver: 120,
-            others: 25,
-            total: 242.5
-          },
-          conditions: {
-            weather: "normal",
-            traffic: "normal",
-            road: "buena"
-          },
-          quotation: {
-            _id: "demo_quote_3",
-            quoteName: "Demo Programado",
-            ruta: {
-              origen: {
-                nombre: "Bodega Central TechStore, San Salvador",
-                coordenadas: { lat: 13.6929, lng: -89.2182 },
-                tipo: "bodega"
-              },
-              destino: {
-                nombre: "Mall Plaza La Libertad, La Libertad",
-                coordenadas: { lat: 13.4883, lng: -89.3222 },
-                tipo: "cliente"
-              }
-            }
-          },
-          integration: {
-            hasCotizacion: true,
-            hasRuta: true,
-            hasHorarios: true,
-            hasCliente: false,
-            hasCarga: true,
-            autoUpdateEnabled: true,
-            progressMethod: "time_based"
-          }
-        }
-      ],
-      cities: [
-        { name: "San Salvador", coords: [13.6929, -89.2182] },
-        { name: "Santa Ana", coords: [13.9942, -89.5592] },
-        { name: "San Miguel", coords: [13.4833, -88.1833] },
-        { name: "La Libertad", coords: [13.4883, -89.3222] }
-      ],
-      statistics: {
-        total_routes: 3,
-        active_routes: 1,
-        completed_routes: 1,
-        pending_routes: 1,
-        delayed_routes: 0,
-        cancelled_routes: 0,
-        completion_rate: 33,
-        on_time_rate: 100,
-        average_progress: 58,
-        total_drivers: 3,
-        total_trucks: 3,
-        today_trips: 3,
-        active_alerts: 0,
-        total_revenue: 727.5,
-        growth_percentage: 25
-      },
-      lastUpdate: new Date().toISOString(),
-      autoUpdateEnabled: true,
-      refreshInterval: 180000,
-      dataSource: "mock_demo_mode"
-    },
-    message: "Datos de demostración - Sistema funcionando sin conexión al servidor"
-  };
-};
-
-// 🔧 FUNCIONES AUXILIARES PARA MAPEO DE ESTADOS
-const mapStatusToDbStatus = (status) => {
-  const statusMap = {
-    'scheduled': 'pendiente',
-    'in_progress': 'en_curso',
-    'completed': 'completado',
-    'cancelled': 'cancelado',
-    'delayed': 'retrasado'
-  };
-  return statusMap[status] || 'pendiente';
-};
-
-const getIconByStatus = (status) => {
-  const iconMap = {
-    'scheduled': '📋',
-    'in_progress': '🚛',
-    'completed': '✅',
-    'cancelled': '❌',
-    'delayed': '⏰'
-  };
-  return iconMap[status] || '📋';
-};
-
-const getColorByStatus = (status) => {
-  const colorMap = {
-    'scheduled': 'bg-gray-500',
-    'in_progress': 'bg-blue-500',
-    'completed': 'bg-green-500',
-    'cancelled': 'bg-red-500',
-    'delayed': 'bg-yellow-500'
-  };
-  return colorMap[status] || 'bg-gray-500';
-};
-
-const getStatusColorByStatus = (status) => {
-  const statusColorMap = {
-    'scheduled': 'bg-gray-400',
-    'in_progress': 'bg-blue-400',
-    'completed': 'bg-green-400',
-    'cancelled': 'bg-red-400',
-    'delayed': 'bg-yellow-400'
-  };
-  return statusColorMap[status] || 'bg-gray-400';
-};
-
-const getTextColorByStatus = (status) => {
-  const textColorMap = {
-    'scheduled': 'text-gray-600',
-    'in_progress': 'text-blue-600',
-    'completed': 'text-green-600',
-    'cancelled': 'text-red-600',
-    'delayed': 'text-yellow-600'
-  };
-  return textColorMap[status] || 'text-gray-600';
-};
-
-const getPriorityValue = (priority) => {
-  const priorityMap = {
-    'baja': 1,
-    'media': 2,
-    'alta': 3,
-    'critica': 4
-  };
-  return priorityMap[priority] || 1;
-};
+import axios from 'axios';
 
 export const useTravels = () => {
-  console.log("🚀 [useTravels] Hook final optimizado inicializado");
-
-  // ⚠️ MANTENER TODOS LOS ESTADOS ORIGINALES EN EL MISMO ORDEN
+  // ⚠️ MANTENER EL ORDEN EXACTO ORIGINAL - NO CAMBIAR NADA AQUÍ
+  
+  // Estados para las animaciones de gráficos (ORIGINALES - POSICIONES 1-2)
   const barHeights = [60, 80, 45, 90, 120, 70, 50, 85, 95, 110, 140, 75, 65, 100];
   const progressValues = [85, 70, 55, 40, 30];
   const [animatedBars, setAnimatedBars] = useState(Array(14).fill(0));
   const [animatedProgress, setAnimatedProgress] = useState(Array(5).fill(0));
 
+  // Estados para modales (ORIGINALES - POSICIONES 3-5)
   const [showModal, setShowModal] = useState(false);
   const [selectedTrip, setSelectedTrip] = useState(null);
   const [isClosing, setIsClosing] = useState(false);
   
+  // Estados para modal de edición (ORIGINALES - POSICIONES 6-11)
   const [showEditModal, setShowEditModal] = useState(false);
   const [isEditClosing, setIsEditClosing] = useState(false);
   const [showConfirmEditModal, setShowConfirmEditModal] = useState(false);
@@ -477,16 +24,19 @@ export const useTravels = () => {
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [isSuccessClosing, setIsSuccessClosing] = useState(false);
   
+  // Estados para modal de eliminación (ORIGINALES - POSICIONES 12-15)
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [isDeleteClosing, setIsDeleteClosing] = useState(false);
   const [showDeleteSuccessModal, setShowDeleteSuccessModal] = useState(false);
   const [isDeleteSuccessClosing, setIsDeleteSuccessClosing] = useState(false);
   
+  // Estados para modal de programar (ORIGINALES - POSICIONES 16-19)
   const [showProgramModal, setShowProgramModal] = useState(false);
   const [isProgramClosing, setIsProgramClosing] = useState(false);
   const [showProgramSuccessModal, setShowProgramSuccessModal] = useState(false);
   const [isProgramSuccessClosing, setIsProgramSuccessClosing] = useState(false);
 
+  // Formularios (CORREGIDOS - POSICIONES 20-21)
   const [editForm, setEditForm] = useState({
     quoteId: '',
     truckId: '',
@@ -519,19 +69,15 @@ export const useTravels = () => {
     observaciones: ''
   });
 
-  // 🆕 ESTADOS PARA API CON INDICADORES DE CONEXIÓN
+  // 🆕 NUEVOS ESTADOS AL FINAL (POSICIONES 22-25)
   const [apiTravels, setApiTravels] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [connectionStatus, setConnectionStatus] = useState('connecting'); // 'connecting', 'online', 'offline', 'demo'
-  const [lastFetchSuccess, setLastFetchSuccess] = useState(null);
-  const [fetchAttempts, setFetchAttempts] = useState(0);
 
-  // ⚠️ useEffect ORIGINAL PARA ANIMACIONES
+  // ⚠️ MANTENER EL useEffect ORIGINAL EN LA MISMA POSICIÓN
+  // Funciones de animación (ORIGINAL - useEffect POSICIÓN 1)
   useEffect(() => {
-    console.log("🎨 [useTravels] Iniciando animaciones de gráficos");
-    
     const animateBars = () => {
       barHeights.forEach((height, index) => {
         setTimeout(() => {
@@ -560,276 +106,548 @@ export const useTravels = () => {
     animateProgress();
   }, []);
 
-  // 🔧 FUNCIÓN PRINCIPAL DE FETCH OPTIMIZADA
+  // 🔧 FUNCIÓN OPTIMIZADA PARA USAR EL MISMO ENDPOINT QUE RIVERA TRANSPORT
   const fetchTravels = useCallback(async (isManualRefresh = false) => {
-    const startTime = Date.now();
-    console.log(`📊 [fetchTravels] Iniciando - Manual: ${isManualRefresh}, Intento: ${fetchAttempts + 1}`);
-
     try {
       if (isManualRefresh) {
         setIsRefreshing(true);
-        console.log("🔄 [fetchTravels] Refresh manual iniciado");
       } else {
         setLoading(true);
-        console.log("⏳ [fetchTravels] Carga inicial iniciada");
       }
-      
       setError(null);
-      setFetchAttempts(prev => prev + 1);
-
-      // 🎯 INTENTAR CONEXIÓN CON EL SERVIDOR REAL
-      console.log('🌐 [fetchTravels] Conectando con Render...');
-      setConnectionStatus('connecting');
       
-      const data = await performFetch(API_CONFIG.ENDPOINTS.MAP_DATA);
+      console.log("📊 useTravels: Cargando desde MISMO endpoint que Rivera Transport...");
       
-      console.log(`✅ [fetchTravels] Conexión exitosa en ${Date.now() - startTime}ms`);
+      // 🎯 USAR EL MISMO ENDPOINT QUE RIVERA TRANSPORT MAP con cache-busting
+      const cacheBuster = new Date().getTime();
+      const response = await axios.get(`https://riveraproject-5.onrender.com/api/viajes/map-data?t=${cacheBuster}`, {
+        headers: {
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache'
+        },
+        timeout: 10000
+      });
       
-      if (data?.success && data?.data) {
-        const mapData = data.data;
-        console.log(`📦 [fetchTravels] Procesando datos reales: ${mapData.routes?.length || 0} rutas`);
-
-        const viajesExtraidos = processRoutes(mapData.routes || []);
+      console.log("🔍 useTravels: RESPUESTA de map-data:", response.data);
+      
+      if (response.data.success && response.data.data) {
+        const mapData = response.data.data;
+        console.log("📅 useTravels: Procesando map-data:", mapData);
         
+        // 🆕 EXTRAER VIAJES DE LAS RUTAS DEL MAP-DATA
+        const viajesExtraidos = [];
+        
+        if (mapData.routes && Array.isArray(mapData.routes)) {
+          mapData.routes.forEach(route => {
+            const viaje = {
+              _id: route.id,
+              id: route.id,
+              type: `${route.route?.from || 'Origen'} → ${route.route?.to || 'Destino'}`,
+              tripDescription: route.description || route.tripInfo?.cargo || 'Sin descripción',
+              departureTime: route.tripInfo?.departure,
+              arrivalTime: route.tripInfo?.arrival,
+              estado: {
+                actual: route.status === 'in_progress' ? 'en_curso' :
+                       route.status === 'completed' ? 'completado' :
+                       route.status === 'delayed' ? 'retrasado' :
+                       route.status === 'cancelled' ? 'cancelado' :
+                       route.status === 'scheduled' ? 'pendiente' : 'pendiente',
+                progreso: route.tripInfo?.progress || 0
+              },
+              conductorId: {
+                _id: route.tripInfo?.driverId || null,
+                nombre: route.tripInfo?.driver || 'Conductor por asignar'
+              },
+              truckId: {
+                _id: route.tripInfo?.truckId || null,
+                patente: route.tripInfo?.truck || 'Camión por asignar'
+              },
+              auxiliarId: route.tripInfo?.auxiliarId ? {
+                _id: route.tripInfo.auxiliarId,
+                nombre: route.tripInfo.auxiliar || 'Auxiliar'
+              } : null,
+              quoteId: {
+                _id: route.quoteId || null,
+                ruta: {
+                  origen: { nombre: route.route?.from || 'Origen' },
+                  destino: { nombre: route.route?.to || 'Destino' }
+                }
+              },
+              distancia: route.distance,
+              observaciones: route.observaciones || '',
+              condiciones: route.condiciones || {
+                clima: 'normal',
+                trafico: 'normal',
+                carretera: 'buena'
+              },
+              alertas: route.alerts && route.alerts.length > 0 ? {
+                count: route.alerts.length,
+                prioridad: route.alerts.some(a => a.priority === 'alta') ? 3 :
+                          route.alerts.some(a => a.priority === 'media') ? 2 : 1
+              } : null
+            };
+            
+            console.log(`  🚛 useTravels: Procesando ${viaje.type} - Estado: ${viaje.estado?.actual}`);
+            viajesExtraidos.push(viaje);
+          });
+        }
+        
+        console.log(`✅ useTravels: Total viajes extraídos de map-data: ${viajesExtraidos.length}`);
         setApiTravels(viajesExtraidos);
-        setConnectionStatus('online');
-        setLastFetchSuccess(new Date());
-        
-        console.log(`✅ [fetchTravels] ${viajesExtraidos.length} viajes reales cargados exitosamente`);
-        return { success: true, source: 'server', count: viajesExtraidos.length };
         
       } else {
-        throw new Error('Respuesta del servidor sin datos válidos');
+        console.log("❌ useTravels: No se encontraron datos válidos en map-data");
+        setApiTravels([]);
       }
       
+      return true;
     } catch (error) {
-      const duration = Date.now() - startTime;
-      console.warn(`⚠️ [fetchTravels] Error de servidor después de ${duration}ms:`, error.message);
-      
-      // 🎯 ACTIVAR MODO DEMOSTRACIÓN
-      console.log('🔄 [fetchTravels] Activando modo demostración con datos realistas');
-      
-      const mockData = getMockData();
-      const viajesExtraidos = processRoutes(mockData.data.routes);
-      
-      setApiTravels(viajesExtraidos);
-      setConnectionStatus('demo');
-      setError(`Modo demostración activo: ${error.message}`);
-      
-      console.log(`📋 [fetchTravels] ${viajesExtraidos.length} viajes demo cargados`);
-      return { success: false, source: 'demo', count: viajesExtraidos.length, error: error.message };
-      
+      console.error('❌ useTravels: Error al cargar desde map-data:', error);
+      setError('Error al cargar los viajes');
+      setApiTravels([]);
+      return false;
     } finally {
-      const totalDuration = Date.now() - startTime;
-      console.log(`🏁 [fetchTravels] Completado en ${totalDuration}ms`);
       setLoading(false);
       setIsRefreshing(false);
     }
-  }, [fetchAttempts]);
+  }, []);
 
-  // 🔄 FUNCIÓN PARA PROCESAR RUTAS A VIAJES
-  const processRoutes = (routes) => {
-    console.log(`🔄 [processRoutes] Procesando ${routes.length} rutas`);
-    
-    return routes.map((route, index) => {
-      try {
-        return {
-          _id: route.id,
-          id: route.id,
-          type: `${route.route?.from || 'Origen'} → ${route.route?.to || 'Destino'}`,
-          description: route.description || 'Sin descripción',
-          tripDescription: route.description || 'Sin descripción',
-          
-          departureTime: route.tripInfo?.departure || route.tripInfo?.realDeparture,
-          arrivalTime: route.tripInfo?.arrival || route.tripInfo?.estimatedArrival,
-          time: route.tripInfo?.departure || 'Sin hora',
-          endTime: route.tripInfo?.arrival || route.tripInfo?.estimatedArrival,
-          
-          estado: {
-            actual: mapStatusToDbStatus(route.status),
-            progreso: route.tripInfo?.progress || 0,
-            label: route.statusText || 'Desconocido'
-          },
-          
-          conductorId: {
-            _id: route.tripInfo?.conductorId || `temp_driver_${index}`,
-            nombre: route.tripInfo?.driver || 'Conductor por asignar'
-          },
-          truckId: {
-            _id: route.tripInfo?.truckId || `temp_truck_${index}`,
-            patente: route.tripInfo?.truck || 'Camión por asignar'
-          },
-          auxiliarId: route.tripInfo?.auxiliarId ? {
-            _id: route.tripInfo.auxiliarId,
-            nombre: route.tripInfo.auxiliar || 'Auxiliar'
-          } : null,
-          
-          quoteId: route.quotation || {
-            _id: route.route?.quoteId || null,
-            ruta: {
-              origen: { nombre: route.route?.from || 'Origen' },
-              destino: { nombre: route.route?.to || 'Destino' }
-            }
-          },
-          
-          distancia: route.distance || 'N/A',
-          observaciones: route.observaciones || '',
-          condiciones: route.conditions || route.condiciones || {
-            weather: 'normal',
-            traffic: 'normal',
-            road: 'buena'
-          },
-          
-          alertas: route.alerts?.length > 0 ? {
-            count: route.alerts.length,
-            prioridad: Math.max(...route.alerts.map(a => getPriorityValue(a.priority || 'baja')))
-          } : null,
-          
-          icon: getIconByStatus(route.status),
-          color: getColorByStatus(route.status),
-          status: getStatusColorByStatus(route.status),
-          textColor: getTextColorByStatus(route.status),
-          
-          originalRoute: route
-        };
-      } catch (routeError) {
-        console.error(`❌ [processRoutes] Error procesando ruta ${index}:`, routeError);
-        return null;
-      }
-    }).filter(Boolean);
-  };
-
-  // 🆕 useEffect PARA CARGA INICIAL Y AUTO-REFRESH INTELIGENTE
+  // 🆕 useEffect PARA API (useEffect POSICIÓN 2)
   useEffect(() => {
-    console.log("🚀 [useTravels] Iniciando carga inicial de datos");
     fetchTravels();
+  }, [fetchTravels]);
 
-    // ⏰ AUTO-REFRESH INTELIGENTE
-    const autoRefreshInterval = setInterval(() => {
-      // Solo auto-refresh si está online o si han pasado más de 5 minutos en modo demo
-      const shouldRefresh = connectionStatus === 'online' || 
-        (connectionStatus === 'demo' && lastFetchSuccess && 
-         Date.now() - lastFetchSuccess.getTime() > 300000); // 5 minutos
-      
-      if (shouldRefresh) {
-        console.log(`⏰ [useTravels] Auto-refresh programado (status: ${connectionStatus})`);
-        fetchTravels(true);
-      }
-    }, 180000); // 3 minutos
-
-    return () => {
-      console.log("🧹 [useTravels] Limpiando auto-refresh interval");
-      clearInterval(autoRefreshInterval);
-    };
-  }, [fetchTravels, connectionStatus, lastFetchSuccess]);
-
-  // 🔧 FUNCIONES CRUD SIMPLIFICADAS
+  // 🔧 FUNCIÓN MEJORADA PARA AGREGAR VIAJE CON AUTO-REFRESH
   const addTravel = async (travelData) => {
-    console.log("🆕 [addTravel] Agregando viaje:", travelData);
-    
-    const nuevoViaje = {
-      _id: `local_${Date.now()}`,
-      id: `local_${Date.now()}`,
-      type: `${travelData.origen || 'Origen'} → ${travelData.destino || 'Destino'}`,
-      description: travelData.tripDescription || 'Nuevo viaje',
-      tripDescription: travelData.tripDescription || 'Nuevo viaje',
-      departureTime: travelData.departureTime,
-      arrivalTime: travelData.arrivalTime,
-      time: travelData.departureTime ? 
-        new Date(travelData.departureTime).toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" }) : 
-        'Sin hora',
-      endTime: travelData.arrivalTime ? 
-        new Date(travelData.arrivalTime).toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" }) : 
-        null,
+    try {
+      console.log("🆕 Creando viaje:", travelData);
       
-      estado: {
-        actual: 'pendiente',
-        progreso: 0,
-        label: 'Programado'
-      },
-      
-      conductorId: {
-        _id: travelData.conductorId || 'temp_conductor',
-        nombre: 'Conductor asignado'
-      },
-      truckId: {
-        _id: travelData.truckId || 'temp_truck',
-        patente: 'Camión asignado'
-      },
-      auxiliarId: travelData.auxiliarId ? {
-        _id: travelData.auxiliarId,
-        nombre: 'Auxiliar asignado'
-      } : null,
-      
-      quoteId: {
-        _id: travelData.quoteId || null,
-        ruta: {
-          origen: { nombre: travelData.origen || 'Origen' },
-          destino: { nombre: travelData.destino || 'Destino' }
+      const dataToSend = {
+        quoteId: travelData.quoteId,
+        truckId: travelData.truckId,
+        conductorId: travelData.conductorId,
+        auxiliarId: travelData.auxiliarId || null,
+        tripDescription: travelData.tripDescription,
+        departureTime: travelData.departureTime,
+        arrivalTime: travelData.arrivalTime,
+        costosReales: travelData.costosReales || {
+          combustible: 0,
+          peajes: 0,
+          conductor: 0,
+          otros: 0,
+          total: 0
+        },
+        condiciones: travelData.condiciones || {
+          clima: 'normal',
+          trafico: 'normal',
+          carretera: 'buena'
+        },
+        observaciones: travelData.observaciones || '',
+        estado: {
+          actual: 'pendiente',
+          autoActualizar: true,
+          historial: [{
+            estado: 'pendiente',
+            fecha: new Date().toISOString(),
+            observaciones: 'Viaje programado desde la interfaz'
+          }]
+        },
+        tracking: {
+          ubicacionActual: {
+            lat: null,
+            lng: null,
+            velocidad: 0,
+            timestamp: new Date().toISOString()
+          },
+          progreso: {
+            porcentaje: 0,
+            calculoAutomatico: true,
+            ultimaActualizacion: new Date().toISOString()
+          },
+          checkpoints: []
         }
-      },
+      };
       
-      distancia: 'N/A',
-      observaciones: travelData.observaciones || '',
-      condiciones: travelData.condiciones || {
-        clima: 'normal',
-        trafico: 'normal',
-        carretera: 'buena'
-      },
+      console.log("📤 Datos enviados a la API:", dataToSend);
       
-      alertas: null,
-      icon: '📋',
-      color: 'bg-gray-500',
-      status: 'bg-gray-400',
-      textColor: 'text-gray-600'
-    };
-    
-    setApiTravels(prev => [...prev, nuevoViaje]);
-    console.log("✅ [addTravel] Viaje agregado exitosamente");
-    return { success: true, data: nuevoViaje };
-  };
-
-  const updateTravel = async (travelId, updateData) => {
-    console.log(`✏️ [updateTravel] Actualizando viaje ${travelId}:`, updateData);
-    
-    setApiTravels(prev => prev.map(travel => {
-      if (travel.id === travelId || travel._id === travelId) {
-        return {
-          ...travel,
-          ...updateData,
-          tripDescription: updateData.tripDescription || travel.tripDescription,
-          observaciones: updateData.observaciones || travel.observaciones,
-          condiciones: updateData.condiciones || travel.condiciones
-        };
+      const response = await axios.post('https://riveraproject-5.onrender.com/api/viajes', dataToSend, {
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        timeout: 15000
+      });
+      
+      console.log("✅ Viaje creado exitosamente:", response.data);
+      
+      // 🔄 REFRESCAR DATOS INMEDIATAMENTE DESPUÉS DE CREAR
+      console.log("🔄 Refrescando datos después de crear viaje...");
+      const refreshSuccess = await fetchTravels(true);
+      
+      if (refreshSuccess) {
+        console.log("✅ Datos refrescados exitosamente tras crear viaje");
+      } else {
+        console.warn("⚠️ Advertencia: Error al refrescar datos tras crear viaje");
       }
-      return travel;
-    }));
-    
-    console.log("✅ [updateTravel] Viaje actualizado exitosamente");
-    return { success: true, data: updateData };
+      
+      return { success: true, data: response.data };
+    } catch (error) {
+      console.error('❌ Error al agregar viaje:', error);
+      return { 
+        success: false, 
+        error: error.response?.data?.message || error.message || 'Error al agregar viaje' 
+      };
+    }
   };
 
+  // 🚨 FUNCIÓN ACTUALIZAR COMPLETAMENTE CORREGIDA
+  const updateTravel = async (travelId, updateData) => {
+    try {
+      console.log("✏️ Actualizando viaje:", travelId);
+      console.log("📝 Datos a enviar:", updateData);
+      
+      // Verificar que travelId existe
+      if (!travelId) {
+        throw new Error('ID del viaje no proporcionado');
+      }
+      
+      // ✅ USAR ENDPOINT CORRECTO CON PARÁMETRO :viajeId
+      const url = `https://riveraproject-5.onrender.com/api/viajes/${travelId}`;
+      console.log("🌐 URL completa:", url);
+      
+      const response = await axios.put(url, updateData, {
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        timeout: 10000
+      });
+      
+      console.log("✅ Respuesta del servidor:", response.data);
+      console.log("✅ Status code:", response.status);
+      
+      // Verificar que la respuesta sea exitosa
+      if (response.status >= 200 && response.status < 300) {
+        console.log("✅ Actualización exitosa confirmada");
+        
+        // 🔄 REFRESCAR DATOS INMEDIATAMENTE DESPUÉS DE ACTUALIZAR
+        console.log("🔄 Refrescando datos después de actualizar viaje...");
+        const refreshSuccess = await fetchTravels(true);
+        
+        if (refreshSuccess) {
+          console.log("✅ Datos refrescados exitosamente tras actualizar viaje");
+        } else {
+          console.warn("⚠️ Advertencia: Error al refrescar datos tras actualizar viaje");
+        }
+        
+        return { success: true, data: response.data };
+      } else {
+        throw new Error(`Respuesta inesperada del servidor: ${response.status}`);
+      }
+      
+    } catch (error) {
+      console.error('❌ Error detallado al actualizar viaje:', {
+        message: error.message,
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        url: error.config?.url,
+        method: error.config?.method
+      });
+      
+      return { 
+        success: false, 
+        error: error.response?.data?.message || error.message || 'Error al actualizar viaje' 
+      };
+    }
+  };
+
+  // 🚨 FUNCIÓN ELIMINAR CORREGIDA - USAR PARÁMETRO CORRECTO :viajeId
   const deleteTravel = async (travelId) => {
-    console.log(`🗑️ [deleteTravel] Eliminando viaje ${travelId}`);
-    
-    setApiTravels(prev => prev.filter(travel => 
-      travel.id !== travelId && travel._id !== travelId
-    ));
-    
-    console.log("✅ [deleteTravel] Viaje eliminado exitosamente");
-    return { success: true };
+    try {
+      console.log("🗑️ ELIMINANDO viaje (no cancelando):", travelId);
+      
+      if (!travelId) {
+        throw new Error('ID del viaje no proporcionado');
+      }
+      
+      let response;
+      let success = false;
+      
+      // 🎯 ESTRATEGIA 1: USAR DELETE DIRECTO CON PARÁMETRO CORRECTO :viajeId
+      try {
+        console.log(`🔄 Intentando DELETE /api/viajes/${travelId} (parámetro :viajeId)`);
+        
+        const url = `https://riveraproject-5.onrender.com/api/viajes/${travelId}`;
+        response = await axios.delete(url, {
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          timeout: 10000
+        });
+        
+        console.log("✅ Éxito con DELETE - Viaje ELIMINADO completamente:", response.data);
+        success = true;
+        
+      } catch (deleteError) {
+        console.log("❌ DELETE falló:", deleteError.response?.status, deleteError.response?.data);
+        
+        // 🎯 ESTRATEGIA 2: FALLBACK - Usar endpoint de cancelación con parámetro correcto
+        try {
+          console.log(`🔄 Fallback: Intentando PATCH /api/viajes/${travelId}/cancel...`);
+          
+          const url = `https://riveraproject-5.onrender.com/api/viajes/${travelId}/cancel`;
+          response = await axios.patch(url, {
+            motivo: 'eliminado_por_usuario',
+            observaciones: 'Viaje cancelado desde la interfaz (fallback de eliminación)'
+          }, {
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            timeout: 10000
+          });
+          
+          console.log("✅ Éxito con PATCH /cancel (fallback):", response.data);
+          success = true;
+          
+        } catch (cancelError) {
+          console.error("❌ Ambas estrategias fallaron:", {
+            deleteError: deleteError.response?.status || deleteError.message,
+            deleteData: deleteError.response?.data,
+            cancelError: cancelError.response?.status || cancelError.message,
+            cancelData: cancelError.response?.data
+          });
+          throw cancelError;
+        }
+      }
+      
+      if (!success) {
+        throw new Error('No se pudo eliminar el viaje con ningún método');
+      }
+      
+      console.log("✅ Viaje procesado exitosamente:", response.data);
+      
+      // 🔄 REFRESCAR DATOS INMEDIATAMENTE DESPUÉS DE ELIMINAR/CANCELAR
+      console.log("🔄 Refrescando datos después de eliminar viaje...");
+      const refreshSuccess = await fetchTravels(true);
+      
+      if (refreshSuccess) {
+        console.log("✅ Datos refrescados exitosamente tras eliminar viaje");
+      }
+      
+      return { success: true, data: response.data };
+    } catch (error) {
+      console.error('❌ Error al eliminar viaje:', error);
+      console.error('❌ Response data:', error.response?.data);
+      console.error('❌ Response status:', error.response?.status);
+      
+      return { 
+        success: false, 
+        error: error.response?.data?.message || error.message || 'Error al eliminar viaje' 
+      };
+    }
   };
 
-  // 🔧 FUNCIONES PARA MANEJO DE MODALES CON ANIMACIONES
-  const openModal = (trip) => {
-    console.log("🪟 [openModal] Abriendo modal para viaje:", trip?.id);
-    setSelectedTrip(trip);
+  // 🆕 FUNCIÓN PARA REFRESCAR MANUALMENTE
+  const refreshTravels = useCallback(async () => {
+    console.log("🔄 Refresh manual iniciado...");
+    return await fetchTravels(true);
+  }, [fetchTravels]);
+
+  // 🔄 DATOS PROCESADOS
+  const scheduledTrips = apiTravels.map(travel => {
+    console.log("🔄 Procesando viaje para vista:", travel);
+    
+    return {
+      id: travel._id || travel.id,
+      type: travel.type || `${travel.quoteId?.ruta?.origen?.nombre || 'Origen'} → ${travel.quoteId?.ruta?.destino?.nombre || 'Destino'}`,
+      color: travel.estado?.actual === 'completado' ? 'bg-green-500' : 
+             travel.estado?.actual === 'en_curso' ? 'bg-blue-500' :
+             travel.estado?.actual === 'retrasado' ? 'bg-orange-500' :
+             travel.estado?.actual === 'cancelado' ? 'bg-red-500' : 
+             travel.estado?.actual === 'pendiente' ? 'bg-gray-500' : 'bg-gray-400',
+      status: travel.estado?.actual === 'completado' ? 'bg-green-400' : 
+              travel.estado?.actual === 'en_curso' ? 'bg-blue-400' :
+              travel.estado?.actual === 'retrasado' ? 'bg-orange-400' :
+              travel.estado?.actual === 'cancelado' ? 'bg-red-400' : 
+              travel.estado?.actual === 'pendiente' ? 'bg-gray-400' : 'bg-gray-300',
+      textColor: travel.estado?.actual === 'completado' ? 'text-green-600' : 
+                 travel.estado?.actual === 'en_curso' ? 'text-blue-600' :
+                 travel.estado?.actual === 'retrasado' ? 'text-orange-600' :
+                 travel.estado?.actual === 'cancelado' ? 'text-red-600' : 
+                 travel.estado?.actual === 'pendiente' ? 'text-gray-600' : 'text-gray-500',
+      time: travel.time || (travel.departureTime ? new Date(travel.departureTime).toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" }) : 'Sin hora'),
+      endTime: travel.endTime || (travel.arrivalTime ? new Date(travel.arrivalTime).toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" }) : null),
+      description: travel.description || travel.tripDescription || 'Sin descripción',
+      driver: travel.driver || travel.conductorId?.nombre || 'Conductor por asignar',
+      truck: travel.truck || travel.truckId?.patente || 'Camión por asignar',
+      distancia: travel.distancia,
+      icon: travel.icon || '🚛',
+      estado: travel.estado,
+      alertas: travel.alertas,
+      // ✅ AGREGAR CAMPOS NECESARIOS PARA EDICIÓN
+      quoteId: travel.quoteId,
+      truckId: travel.truckId,
+      conductorId: travel.conductorId,
+      auxiliarId: travel.auxiliarId,
+      tripDescription: travel.tripDescription,
+      departureTime: travel.departureTime,
+      arrivalTime: travel.arrivalTime,
+      observaciones: travel.observaciones,
+      condiciones: travel.condiciones,
+      ...travel
+    };
+  });
+
+  console.log("📋 SCHEDULED TRIPS FINAL:", scheduledTrips);
+
+  // Datos de earnings (mantener originales)
+  const earningsData = [
+    { category: 'Transporte de Carga', amount: '879,400', progress: animatedProgress[0], color: 'bg-gradient-to-r from-emerald-500 to-emerald-600' },
+    { category: 'Servicios Express', amount: '1,378,200', progress: animatedProgress[1], color: 'bg-gradient-to-r from-purple-500 to-purple-600' },
+    { category: 'Logística', amount: '928,500', progress: animatedProgress[2], color: 'bg-gradient-to-r from-orange-500 to-orange-600' },
+    { category: 'Distribución', amount: '420,700', progress: animatedProgress[3], color: 'bg-gradient-to-r from-cyan-500 to-cyan-600' },
+    { category: 'Almacenaje', amount: '520,000', progress: animatedProgress[4], color: 'bg-gradient-to-r from-pink-500 to-pink-600' }
+  ];
+
+  // Estadísticas de API
+  const getStats = () => {
+    return {
+      total: apiTravels.length,
+      pendiente: apiTravels.filter(t => t.estado?.actual === 'pendiente').length,
+      en_curso: apiTravels.filter(t => t.estado?.actual === 'en_curso').length,
+      completado: apiTravels.filter(t => t.estado?.actual === 'completado').length,
+      retrasado: apiTravels.filter(t => t.estado?.actual === 'retrasado').length,
+      cancelado: apiTravels.filter(t => t.estado?.actual === 'cancelado').length
+    };
+  };
+
+  // ⚠️ FUNCIONES PARA FLUJO DIRECTO
+  
+  const handleTripMenuClick = (trip, index) => {
+    setSelectedTrip({ ...trip, index });
     setShowModal(true);
     setIsClosing(false);
   };
 
-  const closeModal = () => {
-    console.log("🔒 [closeModal] Cerrando modal principal");
+  // 🆕 NUEVAS FUNCIONES DIRECTAS PARA CONTEXTMENU - CORREGIDAS
+  const onEdit = (trip, index) => {
+    console.log("🔧 onEdit llamado directamente con viaje:", trip);
+    setSelectedTrip({ ...trip, index });
+    
+    const formData = {
+      quoteId: trip.quoteId?._id || trip.quoteId || '',
+      truckId: trip.truckId?._id || trip.truckId || '',
+      conductorId: trip.conductorId?._id || trip.conductorId || '',
+      auxiliarId: trip.auxiliarId?._id || trip.auxiliarId || '',
+      tripDescription: trip.description || trip.tripDescription || '',
+      departureTime: trip.departureTime || '',
+      arrivalTime: trip.arrivalTime || '',
+      condiciones: trip.condiciones || {
+        clima: 'normal',
+        trafico: 'normal',
+        carretera: 'buena'
+      },
+      observaciones: trip.observaciones || ''
+    };
+    
+    console.log("📝 Datos del formulario preparados:", formData);
+    setEditForm(formData);
+    
+    setShowEditModal(true);
+    setIsEditClosing(false);
+  };
+
+  const onDelete = (trip, index) => {
+    console.log("🗑️ onDelete llamado directamente:", trip);
+    setSelectedTrip({ ...trip, index });
+    
+    setShowDeleteModal(true);
+    setIsDeleteClosing(false);
+  };
+
+  // 🚨 NUEVA FUNCIÓN DIRECTA PARA ACTUALIZACIÓN (SIMPLIFICADA)
+  const handleDirectUpdate = async () => {
+    try {
+      console.log('🔄 Iniciando actualización directa del viaje...');
+      console.log('🆔 Viaje seleccionado:', selectedTrip);
+      console.log('📝 Datos del formulario:', editForm);
+      
+      if (!selectedTrip?.id && !selectedTrip?._id) {
+        throw new Error('No se encontró ID del viaje para actualizar');
+      }
+
+      const travelId = selectedTrip.id || selectedTrip._id;
+      
+      // Preparar solo los campos que cambiaron
+      const updateData = {};
+      
+      if (editForm.tripDescription !== (selectedTrip.description || selectedTrip.tripDescription || '')) {
+        updateData.tripDescription = editForm.tripDescription;
+      }
+      
+      if (editForm.truckId !== (selectedTrip.truckId?._id || selectedTrip.truckId || '')) {
+        updateData.truckId = editForm.truckId;
+      }
+      
+      if (editForm.conductorId !== (selectedTrip.conductorId?._id || selectedTrip.conductorId || '')) {
+        updateData.conductorId = editForm.conductorId;
+      }
+      
+      if (editForm.auxiliarId !== (selectedTrip.auxiliarId?._id || selectedTrip.auxiliarId || '')) {
+        updateData.auxiliarId = editForm.auxiliarId || null;
+      }
+      
+      if (editForm.departureTime !== (selectedTrip.departureTime || '')) {
+        updateData.departureTime = editForm.departureTime;
+      }
+      
+      if (editForm.arrivalTime !== (selectedTrip.arrivalTime || '')) {
+        updateData.arrivalTime = editForm.arrivalTime;
+      }
+      
+      if (editForm.observaciones !== (selectedTrip.observaciones || '')) {
+        updateData.observaciones = editForm.observaciones;
+      }
+      
+      const originalCondiciones = selectedTrip.condiciones || { clima: 'normal', trafico: 'normal', carretera: 'buena' };
+      const hasCondicionesChanged = 
+        editForm.condiciones.clima !== originalCondiciones.clima ||
+        editForm.condiciones.trafico !== originalCondiciones.trafico ||
+        editForm.condiciones.carretera !== originalCondiciones.carretera;
+      
+      if (hasCondicionesChanged) {
+        updateData.condiciones = editForm.condiciones;
+      }
+      
+      console.log('📤 Datos a actualizar (solo campos modificados):', updateData);
+      
+      if (Object.keys(updateData).length === 0) {
+        console.log('ℹ️ No hay cambios para actualizar');
+        throw new Error('No se detectaron cambios para actualizar');
+      }
+      
+      // Llamar a la función de actualización
+      const result = await updateTravel(travelId, updateData);
+      
+      if (!result.success) {
+        throw new Error(result.error || 'Error al actualizar viaje');
+      }
+
+      console.log('✅ Viaje actualizado exitosamente');
+      
+      // Cerrar modal de edición
+      setShowEditModal(false);
+      setIsEditClosing(false);
+      
+      return result;
+      
+    } catch (error) {
+      console.error('❌ Error en actualización directa:', error);
+      throw error;
+    }
+  };
+
+  const handleCloseModal = () => {
     setIsClosing(true);
     setTimeout(() => {
       setShowModal(false);
@@ -838,61 +656,145 @@ export const useTravels = () => {
     }, 300);
   };
 
-  const openEditModal = (trip) => {
-    console.log("✏️ [openEditModal] Abriendo modal de edición:", trip?.id);
-    setSelectedTrip(trip);
-    setEditForm({
-      quoteId: trip?.quoteId?._id || '',
-      truckId: trip?.truckId?._id || '',
-      conductorId: trip?.conductorId?._id || '',
-      auxiliarId: trip?.auxiliarId?._id || '',
-      tripDescription: trip?.tripDescription || '',
-      departureTime: trip?.departureTime || '',
-      arrivalTime: trip?.arrivalTime || '',
-      condiciones: trip?.condiciones || {
-        clima: 'normal',
-        trafico: 'normal',
-        carretera: 'buena'
-      },
-      observaciones: trip?.observaciones || ''
-    });
-    setShowEditModal(true);
-    setIsEditClosing(false);
-  };
-
-  const closeEditModal = () => {
-    console.log("🔒 [closeEditModal] Cerrando modal de edición");
-    setIsEditClosing(true);
+  // 🔧 FUNCIONES DE EDICIÓN ORIGINALES (COMPATIBILIDAD) - CORREGIDAS
+  const handleEdit = () => {
+    if (selectedTrip) {
+      setEditForm({
+        quoteId: selectedTrip.quoteId?._id || selectedTrip.quoteId || '',
+        truckId: selectedTrip.truckId?._id || selectedTrip.truckId || '',
+        conductorId: selectedTrip.conductorId?._id || selectedTrip.conductorId || '',
+        auxiliarId: selectedTrip.auxiliarId?._id || selectedTrip.auxiliarId || '',
+        tripDescription: selectedTrip.description || selectedTrip.tripDescription || '',
+        departureTime: selectedTrip.departureTime || '',
+        arrivalTime: selectedTrip.arrivalTime || '',
+        condiciones: selectedTrip.condiciones || {
+          clima: 'normal',
+          trafico: 'normal',
+          carretera: 'buena'
+        },
+        observaciones: selectedTrip.observaciones || ''
+      });
+    }
+    
+    setIsClosing(true);
     setTimeout(() => {
-      setShowEditModal(false);
+      setShowModal(false);
       setSelectedTrip(null);
+      setIsClosing(false);
+      setShowEditModal(true);
       setIsEditClosing(false);
     }, 300);
   };
 
-  const openConfirmEditModal = () => {
-    console.log("✅ [openConfirmEditModal] Abriendo confirmación de edición");
-    setShowConfirmEditModal(true);
-    setIsConfirmEditClosing(false);
-  };
-
-  const closeConfirmEditModal = () => {
-    console.log("🔒 [closeConfirmEditModal] Cerrando confirmación de edición");
-    setIsConfirmEditClosing(true);
+  const handleUpdateTrip = () => {
+    setIsEditClosing(true);
     setTimeout(() => {
-      setShowConfirmEditModal(false);
+      setShowEditModal(false);
+      setIsEditClosing(false);
+      setShowConfirmEditModal(true);
       setIsConfirmEditClosing(false);
     }, 300);
   };
 
-  const openSuccessModal = () => {
-    console.log("🎉 [openSuccessModal] Abriendo modal de éxito");
-    setShowSuccessModal(true);
-    setIsSuccessClosing(false);
+  // 🚨 FUNCIÓN PRINCIPAL CORREGIDA
+  const handleConfirmEdit = async () => {
+    try {
+      console.log('🔄 Confirmando edición con datos del formulario:', editForm);
+      console.log('🆔 Viaje seleccionado original:', selectedTrip);
+      
+      if (selectedTrip?.id || selectedTrip?._id) {
+        const travelId = selectedTrip.id || selectedTrip._id;
+        
+        const updateData = {};
+        
+        if (editForm.tripDescription !== (selectedTrip.description || selectedTrip.tripDescription || '')) {
+          updateData.tripDescription = editForm.tripDescription;
+        }
+        
+        if (editForm.truckId !== (selectedTrip.truckId?._id || selectedTrip.truckId || '')) {
+          updateData.truckId = editForm.truckId;
+        }
+        
+        if (editForm.conductorId !== (selectedTrip.conductorId?._id || selectedTrip.conductorId || '')) {
+          updateData.conductorId = editForm.conductorId;
+        }
+        
+        if (editForm.auxiliarId !== (selectedTrip.auxiliarId?._id || selectedTrip.auxiliarId || '')) {
+          updateData.auxiliarId = editForm.auxiliarId || null;
+        }
+        
+        if (editForm.departureTime !== (selectedTrip.departureTime || '')) {
+          updateData.departureTime = editForm.departureTime;
+        }
+        
+        if (editForm.arrivalTime !== (selectedTrip.arrivalTime || '')) {
+          updateData.arrivalTime = editForm.arrivalTime;
+        }
+        
+        if (editForm.observaciones !== (selectedTrip.observaciones || '')) {
+          updateData.observaciones = editForm.observaciones;
+        }
+        
+        const originalCondiciones = selectedTrip.condiciones || { clima: 'normal', trafico: 'normal', carretera: 'buena' };
+        const hasCondicionesChanged = 
+          editForm.condiciones.clima !== originalCondiciones.clima ||
+          editForm.condiciones.trafico !== originalCondiciones.trafico ||
+          editForm.condiciones.carretera !== originalCondiciones.carretera;
+        
+        if (hasCondicionesChanged) {
+          updateData.condiciones = editForm.condiciones;
+        }
+        
+        console.log('📤 Datos a actualizar (solo campos modificados):', updateData);
+        
+        if (Object.keys(updateData).length === 0) {
+          console.log('ℹ️ No hay cambios para actualizar');
+          alert('No se detectaron cambios para actualizar');
+          return;
+        }
+        
+        const result = await updateTravel(travelId, updateData);
+        
+        if (result.success) {
+          console.log('✅ Viaje actualizado exitosamente');
+          setIsConfirmEditClosing(true);
+          setTimeout(() => {
+            setShowConfirmEditModal(false);
+            setIsConfirmEditClosing(false);
+            setShowSuccessModal(true);
+            setIsSuccessClosing(false);
+          }, 300);
+        } else {
+          console.error('❌ Error en resultado:', result.error);
+          alert(`Error al actualizar: ${result.error}`);
+        }
+      } else {
+        console.log('Actualizando viaje (modo local):', editForm);
+        setIsConfirmEditClosing(true);
+        setTimeout(() => {
+          setShowConfirmEditModal(false);
+          setIsConfirmEditClosing(false);
+          setShowSuccessModal(true);
+          setIsSuccessClosing(false);
+        }, 300);
+      }
+    } catch (error) {
+      console.error('❌ Error actualizando viaje:', error);
+      alert(`Error actualizando viaje: ${error.message}`);
+    }
   };
 
-  const closeSuccessModal = () => {
-    console.log("🔒 [closeSuccessModal] Cerrando modal de éxito");
+  const handleCancelEdit = () => {
+    setIsConfirmEditClosing(true);
+    setTimeout(() => {
+      setShowConfirmEditModal(false);
+      setIsConfirmEditClosing(false);
+      setShowEditModal(true);
+      setIsEditClosing(false);
+    }, 300);
+  };
+
+  const handleCloseSuccessModal = () => {
     setIsSuccessClosing(true);
     setTimeout(() => {
       setShowSuccessModal(false);
@@ -900,311 +802,260 @@ export const useTravels = () => {
     }, 300);
   };
 
-  const openDeleteModal = (trip) => {
-    console.log("🗑️ [openDeleteModal] Abriendo modal de eliminación:", trip?.id);
-    setSelectedTrip(trip);
-    setShowDeleteModal(true);
-    setIsDeleteClosing(false);
+  const handleCloseEditModal = () => {
+    setIsEditClosing(true);
+    setTimeout(() => {
+      setShowEditModal(false);
+      setIsEditClosing(false);
+    }, 300);
   };
 
-  const closeDeleteModal = () => {
-    console.log("🔒 [closeDeleteModal] Cerrando modal de eliminación");
-    setIsDeleteClosing(true);
+  const handleInputChange = (field, value) => {
+    if (field.includes('.')) {
+      const [parent, child] = field.split('.');
+      setEditForm(prev => ({
+        ...prev,
+        [parent]: {
+          ...prev[parent],
+          [child]: value
+        }
+      }));
+    } else {
+      setEditForm(prev => ({
+        ...prev,
+        [field]: value
+      }));
+    }
+  };
+
+  // 🔧 FUNCIONES DE ELIMINACIÓN ORIGINALES (COMPATIBILIDAD)
+  const handleDelete = () => {
+    setIsClosing(true);
     setTimeout(() => {
-      setShowDeleteModal(false);
+      setShowModal(false);
       setSelectedTrip(null);
+      setIsClosing(false);
+      setShowDeleteModal(true);
       setIsDeleteClosing(false);
     }, 300);
   };
 
-  const openDeleteSuccessModal = () => {
-    console.log("🎉 [openDeleteSuccessModal] Abriendo modal de eliminación exitosa");
-    setShowDeleteSuccessModal(true);
-    setIsDeleteSuccessClosing(false);
+  const handleConfirmDelete = async () => {
+    try {
+      if (selectedTrip?.id || selectedTrip?._id) {
+        console.log('🗑️ Confirmando eliminación del viaje:', selectedTrip.id || selectedTrip._id);
+        
+        const result = await deleteTravel(selectedTrip.id || selectedTrip._id);
+        
+        if (result.success) {
+          console.log('✅ Viaje eliminado exitosamente');
+          setIsDeleteClosing(true);
+          setTimeout(() => {
+            setShowDeleteModal(false);
+            setIsDeleteClosing(false);
+            setShowDeleteSuccessModal(true);
+            setIsDeleteSuccessClosing(false);
+          }, 300);
+        } else {
+          console.error('❌ Error eliminando viaje:', result.error);
+          alert(`Error al eliminar: ${result.error}`);
+        }
+      } else {
+        console.log('Eliminando viaje (modo local):', selectedTrip);
+        setIsDeleteClosing(true);
+        setTimeout(() => {
+          setShowDeleteModal(false);
+          setIsDeleteClosing(false);
+          setShowDeleteSuccessModal(true);
+          setIsDeleteSuccessClosing(false);
+        }, 300);
+      }
+    } catch (error) {
+      console.error('❌ Error eliminando viaje:', error);
+      alert(`Error eliminando viaje: ${error.message}`);
+    }
   };
 
-  const closeDeleteSuccessModal = () => {
-    console.log("🔒 [closeDeleteSuccessModal] Cerrando modal de eliminación exitosa");
+  const handleCloseDeleteSuccessModal = () => {
     setIsDeleteSuccessClosing(true);
     setTimeout(() => {
       setShowDeleteSuccessModal(false);
       setIsDeleteSuccessClosing(false);
+      setSelectedTrip(null);
     }, 300);
   };
 
-  const openProgramModal = () => {
-    console.log("📋 [openProgramModal] Abriendo modal de programación");
-    setProgramForm({
-      quoteId: '',
-      truckId: '',
-      conductorId: '',
-      auxiliarId: '',
-      tripDescription: '',
-      departureTime: '',
-      arrivalTime: '',
-      condiciones: {
-        clima: 'normal',
-        trafico: 'normal',
-        carretera: 'buena'
-      },
-      observaciones: ''
-    });
+  const handleCancelDelete = () => {
+    setIsDeleteClosing(true);
+    setTimeout(() => {
+      setShowDeleteModal(false);
+      setIsDeleteClosing(false);
+      setShowModal(true);
+      setIsClosing(false);
+    }, 300);
+  };
+
+  // 🔧 FUNCIONES DE PROGRAMAR VIAJE (MODIFICADAS PARA USAR API CON AUTO-REFRESH)
+  const handleOpenProgramModal = () => {
     setShowProgramModal(true);
     setIsProgramClosing(false);
   };
 
-  const closeProgramModal = () => {
-    console.log("🔒 [closeProgramModal] Cerrando modal de programación");
+  const handleCloseProgramModal = () => {
     setIsProgramClosing(true);
     setTimeout(() => {
       setShowProgramModal(false);
       setIsProgramClosing(false);
+      setProgramForm({
+        quoteId: '',
+        truckId: '',
+        conductorId: '',
+        auxiliarId: '',
+        tripDescription: '',
+        departureTime: '',
+        arrivalTime: '',
+        condiciones: {
+          clima: 'normal',
+          trafico: 'normal',
+          carretera: 'buena'
+        },
+        observaciones: ''
+      });
     }, 300);
   };
 
-  const openProgramSuccessModal = () => {
-    console.log("🎉 [openProgramSuccessModal] Abriendo modal de programación exitosa");
-    setShowProgramSuccessModal(true);
-    setIsProgramSuccessClosing(false);
+  const handleProgramInputChange = (field, value) => {
+    if (field.includes('.')) {
+      const [parent, child] = field.split('.');
+      setProgramForm(prev => ({
+        ...prev,
+        [parent]: {
+          ...prev[parent],
+          [child]: value
+        }
+      }));
+    } else {
+      setProgramForm(prev => ({
+        ...prev,
+        [field]: value
+      }));
+    }
   };
 
-  const closeProgramSuccessModal = () => {
-    console.log("🔒 [closeProgramSuccessModal] Cerrando modal de programación exitosa");
+  // 🔧 FUNCIÓN MEJORADA PARA PROGRAMAR VIAJE CON AUTO-REFRESH
+  const handleProgramTrip = async () => {
+    try {
+      console.log("🚛 Programando viaje con datos:", programForm);
+      const result = await addTravel(programForm);
+      
+      if (result.success) {
+        console.log("✅ Viaje programado exitosamente");
+        setShowProgramSuccessModal(true);
+        setIsProgramSuccessClosing(false);
+        return result;
+      } else {
+        console.error("❌ Error programando viaje:", result.error);
+        throw new Error(result.error);
+      }
+    } catch (error) {
+      console.error('Error programando viaje:', error);
+      throw error;
+    }
+  };
+
+  const handleCloseProgramSuccessModal = () => {
     setIsProgramSuccessClosing(true);
     setTimeout(() => {
       setShowProgramSuccessModal(false);
       setIsProgramSuccessClosing(false);
+      setIsProgramClosing(true);
+      setTimeout(() => {
+        setShowProgramModal(false);
+        setIsProgramClosing(false);
+        setProgramForm({
+          quoteId: '',
+          truckId: '',
+          conductorId: '',
+          auxiliarId: '',
+          tripDescription: '',
+          departureTime: '',
+          arrivalTime: '',
+          condiciones: {
+            clima: 'normal',
+            trafico: 'normal',
+            carretera: 'buena'
+          },
+          observaciones: ''
+        });
+      }, 300);
     }, 300);
   };
 
-  // 🔧 FUNCIONES PARA MANEJO DE FORMULARIOS
-  const handleEditFormChange = (field, value) => {
-    console.log(`📝 [handleEditFormChange] Actualizando campo: ${field}`);
-    setEditForm(prev => ({
-      ...prev,
-      [field]: value
-    }));
-  };
-
-  const handleEditConditionsChange = (field, value) => {
-    console.log(`🌦️ [handleEditConditionsChange] Actualizando condición: ${field} = ${value}`);
-    setEditForm(prev => ({
-      ...prev,
-      condiciones: {
-        ...prev.condiciones,
-        [field]: value
-      }
-    }));
-  };
-
-  const handleProgramFormChange = (field, value) => {
-    console.log(`📝 [handleProgramFormChange] Actualizando campo: ${field}`);
-    setProgramForm(prev => ({
-      ...prev,
-      [field]: value
-    }));
-  };
-
-  const handleProgramConditionsChange = (field, value) => {
-    console.log(`🌦️ [handleProgramConditionsChange] Actualizando condición: ${field} = ${value}`);
-    setProgramForm(prev => ({
-      ...prev,
-      condiciones: {
-        ...prev.condiciones,
-        [field]: value
-      }
-    }));
-  };
-
-  // 🔧 FUNCIONES PRINCIPALES DE ACCIÓN
-  const handleEditConfirm = async () => {
-    console.log("💾 [handleEditConfirm] Confirmando edición de viaje");
-    
-    try {
-      const result = await updateTravel(selectedTrip.id, editForm);
-      
-      if (result.success) {
-        closeConfirmEditModal();
-        closeEditModal();
-        openSuccessModal();
-        console.log("✅ [handleEditConfirm] Viaje editado exitosamente");
-      } else {
-        console.error("❌ [handleEditConfirm] Error editando viaje:", result.error);
-      }
-    } catch (error) {
-      console.error("❌ [handleEditConfirm] Error inesperado:", error);
-    }
-  };
-
-  const handleDeleteConfirm = async () => {
-    console.log("🗑️ [handleDeleteConfirm] Confirmando eliminación de viaje");
-    
-    try {
-      const result = await deleteTravel(selectedTrip.id);
-      
-      if (result.success) {
-        closeDeleteModal();
-        openDeleteSuccessModal();
-        console.log("✅ [handleDeleteConfirm] Viaje eliminado exitosamente");
-      } else {
-        console.error("❌ [handleDeleteConfirm] Error eliminando viaje:", result.error);
-      }
-    } catch (error) {
-      console.error("❌ [handleDeleteConfirm] Error inesperado:", error);
-    }
-  };
-
-  const handleProgramConfirm = async () => {
-    console.log("📋 [handleProgramConfirm] Confirmando programación de viaje");
-    
-    try {
-      const result = await addTravel(programForm);
-      
-      if (result.success) {
-        closeProgramModal();
-        openProgramSuccessModal();
-        console.log("✅ [handleProgramConfirm] Viaje programado exitosamente");
-      } else {
-        console.error("❌ [handleProgramConfirm] Error programando viaje:", result.error);
-      }
-    } catch (error) {
-      console.error("❌ [handleProgramConfirm] Error inesperado:", error);
-    }
-  };
-
-  // 🔧 FUNCIÓN PARA REFRESH MANUAL
-  const handleRefresh = async () => {
-    console.log("🔄 [handleRefresh] Refresh manual solicitado");
-    await fetchTravels(true);
-  };
-
-  // 🎯 FUNCIÓN PARA OBTENER ESTADÍSTICAS DINÁMICAS
-  const getStatistics = useCallback(() => {
-    const totalTravels = apiTravels.length;
-    const activeTravels = apiTravels.filter(travel => 
-      travel.estado?.actual === 'en_curso'
-    ).length;
-    const completedTravels = apiTravels.filter(travel => 
-      travel.estado?.actual === 'completado'
-    ).length;
-    const pendingTravels = apiTravels.filter(travel => 
-      travel.estado?.actual === 'pendiente'
-    ).length;
-    const delayedTravels = apiTravels.filter(travel => 
-      travel.estado?.actual === 'retrasado'
-    ).length;
-    
-    const completionRate = totalTravels > 0 ? 
-      Math.round((completedTravels / totalTravels) * 100) : 0;
-    
-    const averageProgress = totalTravels > 0 ? 
-      Math.round(apiTravels.reduce((sum, travel) => 
-        sum + (travel.estado?.progreso || 0), 0) / totalTravels) : 0;
-
-    return {
-      total_routes: totalTravels,
-      active_routes: activeTravels,
-      completed_routes: completedTravels,
-      pending_routes: pendingTravels,
-      delayed_routes: delayedTravels,
-      cancelled_routes: 0,
-      completion_rate: completionRate,
-      on_time_rate: 100,
-      average_progress: averageProgress,
-      total_drivers: new Set(apiTravels.map(t => t.conductorId?._id)).size,
-      total_trucks: new Set(apiTravels.map(t => t.truckId?._id)).size,
-      today_trips: totalTravels,
-      active_alerts: apiTravels.filter(t => t.alertas?.count > 0).length,
-      total_revenue: 0,
-      growth_percentage: 0
-    };
-  }, [apiTravels]);
-
-  // 📊 RETORNO DEL HOOK CON TODAS LAS FUNCIONALIDADES
   return {
-    // 📊 DATOS PRINCIPALES
-    travels: apiTravels,
-    statistics: getStatistics(),
+    // ⚠️ MANTENER EL RETURN ORIGINAL + NUEVOS CAMPOS AL FINAL
     
-    // 🔄 ESTADOS DE CARGA Y CONEXIÓN
-    loading,
-    isRefreshing,
-    error,
-    connectionStatus,
-    lastFetchSuccess,
-    fetchAttempts,
-    
-    // 🎨 DATOS DE ANIMACIONES
+    // Estados originales
     animatedBars,
     animatedProgress,
-    barHeights,
-    progressValues,
-    
-    // 🪟 ESTADOS DE MODALES PRINCIPALES
     showModal,
     selectedTrip,
     isClosing,
-    
-    // ✏️ ESTADOS DE EDICIÓN
     showEditModal,
     isEditClosing,
     showConfirmEditModal,
     isConfirmEditClosing,
     showSuccessModal,
     isSuccessClosing,
-    editForm,
-    
-    // 🗑️ ESTADOS DE ELIMINACIÓN
     showDeleteModal,
     isDeleteClosing,
     showDeleteSuccessModal,
     isDeleteSuccessClosing,
-    
-    // 📋 ESTADOS DE PROGRAMACIÓN
     showProgramModal,
     isProgramClosing,
     showProgramSuccessModal,
     isProgramSuccessClosing,
+    editForm,
     programForm,
     
-    // 🔧 FUNCIONES DE MODALES
-    openModal,
-    closeModal,
-    openEditModal,
-    closeEditModal,
-    openConfirmEditModal,
-    closeConfirmEditModal,
-    openSuccessModal,
-    closeSuccessModal,
-    openDeleteModal,
-    closeDeleteModal,
-    openDeleteSuccessModal,
-    closeDeleteSuccessModal,
-    openProgramModal,
-    closeProgramModal,
-    openProgramSuccessModal,
-    closeProgramSuccessModal,
+    // Datos (modificados para usar API)
+    scheduledTrips,
+    earningsData,
+    barHeights,
     
-    // 📝 FUNCIONES DE FORMULARIOS
-    handleEditFormChange,
-    handleEditConditionsChange,
-    handleProgramFormChange,
-    handleProgramConditionsChange,
-    
-    // 🎯 FUNCIONES PRINCIPALES DE ACCIÓN
-    handleEditConfirm,
-    handleDeleteConfirm,
-    handleProgramConfirm,
-    
-    // 🔄 FUNCIONES DE DATOS
-    fetchTravels,
-    handleRefresh,
+    // 🔧 FUNCIONES COMPATIBILIDAD HACIA ATRÁS (originales)
+    handleTripMenuClick,
+    handleCloseModal,
+    handleEdit,
+    handleUpdateTrip,
+    handleConfirmEdit,
+    handleCancelEdit,
+    handleCloseSuccessModal,
+    handleCloseEditModal,
+    handleInputChange,
+    handleDelete,
+    handleConfirmDelete,
+    handleCloseDeleteSuccessModal,
+    handleCancelDelete,
+    handleOpenProgramModal,
+    handleCloseProgramModal,
+    handleProgramInputChange,
+    handleProgramTrip,
+    handleCloseProgramSuccessModal,
+
+    // 🆕 NUEVAS FUNCIONES DIRECTAS PARA CONTEXTMENU
+    onEdit,        // ✅ Nueva función directa para editar
+    onDelete,      // ✅ Nueva función directa para eliminar
+    handleDirectUpdate, // ✅ Nueva función directa para actualización
+
+    // 🆕 NUEVOS CAMPOS AL FINAL (OPTIMIZADOS)
+    loading,
+    error,
+    isRefreshing,
+    travels: apiTravels,
+    stats: getStats(),
+    refreshTravels,
     addTravel,
     updateTravel,
-    deleteTravel,
-    
-    // 🛠️ FUNCIONES AUXILIARES
-    processRoutes,
-    getMockData: getMockData()
+    deleteTravel
   };
 };
