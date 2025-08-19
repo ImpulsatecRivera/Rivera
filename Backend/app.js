@@ -35,7 +35,11 @@ app.use(
       'Authorization', 
       'Cookie',
       'Set-Cookie',
-      'Access-Control-Allow-Credentials'
+      'Access-Control-Allow-Credentials',
+      'cache-control',        // ← AGREGADO
+      'x-requested-with',     // ← AGREGADO (recomendado)
+      'accept',               // ← AGREGADO (recomendado)
+      'origin'                // ← AGREGADO (recomendado)
     ],
     exposedHeaders: ['Set-Cookie'],
     optionsSuccessStatus: 200
@@ -53,6 +57,8 @@ app.use((req, res, next) => {
   if (allowedOrigins.includes(origin)) {
     res.header('Access-Control-Allow-Origin', origin);
     res.header('Access-Control-Allow-Credentials', 'true');
+    // ← AGREGADO: Headers adicionales para evitar problemas CORS
+    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Cookie, Set-Cookie, Access-Control-Allow-Credentials, cache-control, x-requested-with, accept, origin');
     console.log('🔑 [APP] Headers CORS configurados para origin:', origin);
   }
   next();
