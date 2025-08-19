@@ -5,6 +5,7 @@ import {
   StyleSheet,
   SafeAreaView,
   Animated,
+  Image,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 
@@ -16,7 +17,7 @@ const SplashScreen = () => {
   const letterOpacity = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    // Animación de la letra R
+    // Animación de la imagen/logo
     const letterAnimation = Animated.sequence([
       // Fade in y scale up
       Animated.parallel([
@@ -82,17 +83,26 @@ const SplashScreen = () => {
     <SafeAreaView style={styles.container}>
       <View style={styles.content}>
         
-        {/* Letra R animada */}
+        {/* Logo/Imagen animada */}
         <Animated.View 
           style={[
-            styles.letterContainer,
+            styles.logoContainer,
             { 
               opacity: letterOpacity,
               transform: [{ scale: letterScale }]
             }
           ]}
         >
-          <Text style={styles.letter}>R</Text>
+          {/* Reemplaza 'tu-imagen.png' con la ruta de tu imagen */}
+          <Image 
+            source={require('../images/logo.png')} // Para imagen local
+            // source={{uri: 'https://tu-url.com/imagen.png'}} // Para imagen remota
+            style={styles.logoImage}
+            resizeMode="contain"
+          />
+          
+          {/* Si quieres mantener también la letra R junto con la imagen, descomenta esto: */}
+          {/* <Text style={styles.letter}>R</Text> */}
         </Animated.View>
         
       </View>
@@ -110,7 +120,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  letterContainer: {
+  logoContainer: {
     width: 120,
     height: 120,
     justifyContent: 'center',
@@ -127,12 +137,19 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     backgroundColor: '#FFFFFF',
   },
+  logoImage: {
+    width: 80,
+    height: 80,
+    // Si tu imagen es circular, puedes agregar:
+    // borderRadius: 40,
+  },
   letter: {
     fontSize: 72,
     fontWeight: 'bold',
     color: '#E91E63', // Color rosa/magenta como en la imagen
     textAlign: 'center',
+    marginTop: 10, // Si quieres espacio entre imagen y letra
   },
 });
 
-export default SplashScreen;  
+export default SplashScreen;
