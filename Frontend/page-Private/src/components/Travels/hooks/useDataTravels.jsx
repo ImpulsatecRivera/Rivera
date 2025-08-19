@@ -1,22 +1,60 @@
-// hooks/Travels/useTravels.js - VERSIÓN CORREGIDA PARA ELIMINAR Y ACTUALIZAR
+// hooks/Travels/useTravels.js - VERSIÓN OPTIMIZADA PARA PRODUCCIÓN
 import { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 
+// 🌐 CONFIGURACIÓN DE API CENTRALIZADA
+const API_CONFIG = {
+  BASE_URL: 'https://riveraproject-5.onrender.com',
+  ENDPOINTS: {
+    MAP_DATA: '/api/viajes/map-data',
+    VIAJES: '/api/viajes',
+    TRIP_STATS: '/api/viajes/trip-stats',
+    CARGA_DISTRIBUTION: '/api/viajes/carga-distribution'
+  },
+  TIMEOUT: 15000,
+  RETRY_ATTEMPTS: 3,
+  RETRY_DELAY: 2000
+};
+
+// 🛠️ FUNCIÓN HELPER PARA CONSTRUIR URLs
+const buildApiUrl = (endpoint) => {
+  const url = `${API_CONFIG.BASE_URL}${endpoint}`;
+  console.log(`🔗 [buildApiUrl] URL construida: ${url}`);
+  return url;
+};
+
+// 🔄 FUNCIÓN HELPER PARA REINTENTOS
+const withRetry = async (fn, attempts = API_CONFIG.RETRY_ATTEMPTS) => {
+  for (let i = 0; i < attempts; i++) {
+    try {
+      console.log(`🔄 [withRetry] Intento ${i + 1}/${attempts}`);
+      return await fn();
+    } catch (error) {
+      console.error(`❌ [withRetry] Intento ${i + 1} falló:`, error.message);
+      
+      if (i === attempts - 1) {
+        throw error; // Último intento, propagar error
+      }
+      
+      // Esperar antes del siguiente intento
+      await new Promise(resolve => setTimeout(resolve, API_CONFIG.RETRY_DELAY));
+    }
+  }
+};
+
 export const useTravels = () => {
-  // ⚠️ MANTENER EL ORDEN EXACTO ORIGINAL - NO CAMBIAR NADA AQUÍ
-  
-  // Estados para las animaciones de gráficos (ORIGINALES - POSICIONES 1-2)
+  console.log("🚀 [useTravels] Hook inicializado");
+
+  // ⚠️ MANTENER TODOS LOS ESTADOS ORIGINALES EN EL MISMO ORDEN
   const barHeights = [60, 80, 45, 90, 120, 70, 50, 85, 95, 110, 140, 75, 65, 100];
   const progressValues = [85, 70, 55, 40, 30];
   const [animatedBars, setAnimatedBars] = useState(Array(14).fill(0));
   const [animatedProgress, setAnimatedProgress] = useState(Array(5).fill(0));
 
-  // Estados para modales (ORIGINALES - POSICIONES 3-5)
   const [showModal, setShowModal] = useState(false);
   const [selectedTrip, setSelectedTrip] = useState(null);
   const [isClosing, setIsClosing] = useState(false);
   
-  // Estados para modal de edición (ORIGINALES - POSICIONES 6-11)
   const [showEditModal, setShowEditModal] = useState(false);
   const [isEditClosing, setIsEditClosing] = useState(false);
   const [showConfirmEditModal, setShowConfirmEditModal] = useState(false);
@@ -24,19 +62,16 @@ export const useTravels = () => {
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [isSuccessClosing, setIsSuccessClosing] = useState(false);
   
-  // Estados para modal de eliminación (ORIGINALES - POSICIONES 12-15)
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [isDeleteClosing, setIsDeleteClosing] = useState(false);
   const [showDeleteSuccessModal, setShowDeleteSuccessModal] = useState(false);
   const [isDeleteSuccessClosing, setIsDeleteSuccessClosing] = useState(false);
   
-  // Estados para modal de programar (ORIGINALES - POSICIONES 16-19)
   const [showProgramModal, setShowProgramModal] = useState(false);
   const [isProgramClosing, setIsProgramClosing] = useState(false);
   const [showProgramSuccessModal, setShowProgramSuccessModal] = useState(false);
   const [isProgramSuccessClosing, setIsProgramSuccessClosing] = useState(false);
 
-  // Formularios (CORREGIDOS - POSICIONES 20-21)
   const [editForm, setEditForm] = useState({
     quoteId: '',
     truckId: '',
@@ -69,15 +104,17 @@ export const useTravels = () => {
     observaciones: ''
   });
 
-  // 🆕 NUEVOS ESTADOS AL FINAL (POSICIONES 22-25)
+  // 🆕 ESTADOS PARA API
   const [apiTravels, setApiTravels] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [lastFetchTime, setLastFetchTime] = useState(null);
 
-  // ⚠️ MANTENER EL useEffect ORIGINAL EN LA MISMA POSICIÓN
-  // Funciones de animación (ORIGINAL - useEffect POSICIÓN 1)
+  // ⚠️ MANTENER useEffect ORIGINAL PARA ANIMACIONES
   useEffect(() => {
+    console.log("🎨 [useTravels] Iniciando animaciones");
+    
     const animateBars = () => {
       barHeights.forEach((height, index) => {
         setTimeout(() => {
@@ -106,254 +143,267 @@ export const useTravels = () => {
     animateProgress();
   }, []);
 
-  // 🔧 FUNCIÓN OPTIMIZADA PARA USAR EL MISMO ENDPOINT QUE RIVERA TRANSPORT
+  // 🔧 FUNCIÓN OPTIMIZADA PARA OBTENER DATOS DEL MAPA
   const fetchTravels = useCallback(async (isManualRefresh = false) => {
+    const startTime = Date.now();
+    console.log(`📊 [fetchTravels] Iniciando carga de viajes - Manual: ${isManualRefresh}`);
+
     try {
       if (isManualRefresh) {
         setIsRefreshing(true);
+        console.log("🔄 [fetchTravels] Refresh manual iniciado");
       } else {
         setLoading(true);
+        console.log("⏳ [fetchTravels] Carga inicial iniciada");
       }
+      
       setError(null);
-      
-      console.log("📊 useTravels: Cargando desde MISMO endpoint que Rivera Transport...");
-      
-      // 🎯 USAR EL MISMO ENDPOINT QUE RIVERA TRANSPORT MAP con cache-busting
-      const cacheBuster = new Date().getTime();
-      const response = await axios.get(`https://riveraproject-5.onrender.com/api/viajes/map-data?t=${cacheBuster}`, {
-        headers: {
-          'Content-Type': 'application/json',
-          'Cache-Control': 'no-cache',
-          'Pragma': 'no-cache'
-        },
-        timeout: 10000
-      });
-      
-      console.log("🔍 useTravels: RESPUESTA de map-data:", response.data);
-      
-      if (response.data.success && response.data.data) {
-        const mapData = response.data.data;
-        console.log("📅 useTravels: Procesando map-data:", mapData);
+
+      // 🎯 USAR FUNCIÓN CON REINTENTOS
+      const response = await withRetry(async () => {
+        const cacheBuster = Date.now();
+        const url = buildApiUrl(`${API_CONFIG.ENDPOINTS.MAP_DATA}?t=${cacheBuster}`);
         
-        // 🆕 EXTRAER VIAJES DE LAS RUTAS DEL MAP-DATA
+        console.log(`🌐 [fetchTravels] Solicitando datos a: ${url}`);
+        
+        return await axios.get(url, {
+          headers: {
+            'Content-Type': 'application/json',
+            'Cache-Control': 'no-cache',
+            'Pragma': 'no-cache',
+            'Accept': 'application/json'
+          },
+          timeout: API_CONFIG.TIMEOUT,
+          withCredentials: false // Simplificar para producción
+        });
+      });
+
+      console.log(`✅ [fetchTravels] Respuesta recibida en ${Date.now() - startTime}ms`);
+      console.log(`📋 [fetchTravels] Status: ${response.status}, Data success: ${response.data?.success}`);
+
+      if (response.data?.success && response.data?.data) {
+        const mapData = response.data.data;
+        console.log(`📦 [fetchTravels] Procesando ${mapData.routes?.length || 0} rutas`);
+
+        // 🔄 PROCESAR RUTAS A VIAJES
         const viajesExtraidos = [];
         
         if (mapData.routes && Array.isArray(mapData.routes)) {
-          mapData.routes.forEach(route => {
-            const viaje = {
-              _id: route.id,
-              id: route.id,
-              type: `${route.route?.from || 'Origen'} → ${route.route?.to || 'Destino'}`,
-              tripDescription: route.description || route.tripInfo?.cargo || 'Sin descripción',
-              departureTime: route.tripInfo?.departure,
-              arrivalTime: route.tripInfo?.arrival,
-              estado: {
-                actual: route.status === 'in_progress' ? 'en_curso' :
-                       route.status === 'completed' ? 'completado' :
-                       route.status === 'delayed' ? 'retrasado' :
-                       route.status === 'cancelled' ? 'cancelado' :
-                       route.status === 'scheduled' ? 'pendiente' : 'pendiente',
-                progreso: route.tripInfo?.progress || 0
-              },
-              conductorId: {
-                _id: route.tripInfo?.driverId || null,
-                nombre: route.tripInfo?.driver || 'Conductor por asignar'
-              },
-              truckId: {
-                _id: route.tripInfo?.truckId || null,
-                patente: route.tripInfo?.truck || 'Camión por asignar'
-              },
-              auxiliarId: route.tripInfo?.auxiliarId ? {
-                _id: route.tripInfo.auxiliarId,
-                nombre: route.tripInfo.auxiliar || 'Auxiliar'
-              } : null,
-              quoteId: {
-                _id: route.quoteId || null,
-                ruta: {
-                  origen: { nombre: route.route?.from || 'Origen' },
-                  destino: { nombre: route.route?.to || 'Destino' }
-                }
-              },
-              distancia: route.distance,
-              observaciones: route.observaciones || '',
-              condiciones: route.condiciones || {
-                clima: 'normal',
-                trafico: 'normal',
-                carretera: 'buena'
-              },
-              alertas: route.alerts && route.alerts.length > 0 ? {
-                count: route.alerts.length,
-                prioridad: route.alerts.some(a => a.priority === 'alta') ? 3 :
-                          route.alerts.some(a => a.priority === 'media') ? 2 : 1
-              } : null
-            };
-            
-            console.log(`  🚛 useTravels: Procesando ${viaje.type} - Estado: ${viaje.estado?.actual}`);
-            viajesExtraidos.push(viaje);
+          mapData.routes.forEach((route, index) => {
+            try {
+              const viaje = {
+                // ✅ IDs
+                _id: route.id,
+                id: route.id,
+                
+                // ✅ INFORMACIÓN BÁSICA
+                type: `${route.route?.from || 'Origen'} → ${route.route?.to || 'Destino'}`,
+                description: route.description || 'Sin descripción',
+                tripDescription: route.description || 'Sin descripción',
+                
+                // ✅ HORARIOS (MEJORADO)
+                departureTime: route.tripInfo?.departure || route.tripInfo?.realDeparture,
+                arrivalTime: route.tripInfo?.arrival || route.tripInfo?.estimatedArrival,
+                time: route.tripInfo?.departure || 'Sin hora',
+                endTime: route.tripInfo?.arrival || route.tripInfo?.estimatedArrival,
+                
+                // ✅ ESTADO (CONSISTENTE)
+                estado: {
+                  actual: mapStatusToDbStatus(route.status),
+                  progreso: route.tripInfo?.progress || 0,
+                  label: route.statusText || 'Desconocido'
+                },
+                
+                // ✅ RECURSOS HUMANOS Y MATERIALES
+                conductorId: {
+                  _id: route.tripInfo?.conductorId || generateId(),
+                  nombre: route.tripInfo?.driver || 'Conductor por asignar'
+                },
+                truckId: {
+                  _id: route.tripInfo?.truckId || generateId(),
+                  patente: route.tripInfo?.truck || 'Camión por asignar'
+                },
+                auxiliarId: route.tripInfo?.auxiliarId ? {
+                  _id: route.tripInfo.auxiliarId,
+                  nombre: route.tripInfo.auxiliar || 'Auxiliar'
+                } : null,
+                
+                // ✅ INFORMACIÓN DE RUTA
+                quoteId: route.quotation ? {
+                  _id: route.quotation._id,
+                  ruta: {
+                    origen: { 
+                      nombre: route.quotation.ruta?.origen?.nombre || route.route?.from || 'Origen' 
+                    },
+                    destino: { 
+                      nombre: route.quotation.ruta?.destino?.nombre || route.route?.to || 'Destino' 
+                    }
+                  }
+                } : {
+                  _id: route.route?.quoteId || null,
+                  ruta: {
+                    origen: { nombre: route.route?.from || 'Origen' },
+                    destino: { nombre: route.route?.to || 'Destino' }
+                  }
+                },
+                
+                // ✅ INFORMACIÓN ADICIONAL
+                distancia: route.distance || 'N/A',
+                observaciones: route.observaciones || '',
+                condiciones: route.conditions || route.condiciones || {
+                  weather: 'normal',
+                  traffic: 'normal',
+                  road: 'buena'
+                },
+                
+                // ✅ ALERTAS
+                alertas: route.alerts && route.alerts.length > 0 ? {
+                  count: route.alerts.length,
+                  prioridad: getMaxPriority(route.alerts)
+                } : null,
+                
+                // ✅ INFORMACIÓN VISUAL
+                icon: getIconByStatus(route.status),
+                color: getColorByStatus(route.status),
+                status: getStatusColorByStatus(route.status),
+                textColor: getTextColorByStatus(route.status),
+                
+                // ✅ DATOS ORIGINALES
+                originalRoute: route
+              };
+
+              console.log(`  📄 [fetchTravels] Procesado: ${viaje.type} (${viaje.estado.actual})`);
+              viajesExtraidos.push(viaje);
+              
+            } catch (routeError) {
+              console.error(`❌ [fetchTravels] Error procesando ruta ${index}:`, routeError);
+            }
           });
         }
         
-        console.log(`✅ useTravels: Total viajes extraídos de map-data: ${viajesExtraidos.length}`);
+        console.log(`✅ [fetchTravels] Total procesados: ${viajesExtraidos.length} viajes`);
         setApiTravels(viajesExtraidos);
+        setLastFetchTime(new Date());
         
+        return true;
       } else {
-        console.log("❌ useTravels: No se encontraron datos válidos en map-data");
+        console.warn("⚠️ [fetchTravels] Respuesta sin datos válidos");
         setApiTravels([]);
+        return false;
       }
       
-      return true;
     } catch (error) {
-      console.error('❌ useTravels: Error al cargar desde map-data:', error);
-      setError('Error al cargar los viajes');
+      console.error(`❌ [fetchTravels] Error después de ${Date.now() - startTime}ms:`, {
+        message: error.message,
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data
+      });
+      
+      setError(`Error al cargar viajes: ${error.message}`);
       setApiTravels([]);
       return false;
+      
     } finally {
+      console.log(`🏁 [fetchTravels] Finalizando después de ${Date.now() - startTime}ms`);
       setLoading(false);
       setIsRefreshing(false);
     }
   }, []);
 
-  // 🆕 useEffect PARA API (useEffect POSICIÓN 2)
+  // 🆕 useEffect PARA CARGA INICIAL Y AUTO-REFRESH
   useEffect(() => {
+    console.log("🚀 [useTravels] Montando hook, iniciando carga inicial");
     fetchTravels();
+
+    // ⏰ AUTO-REFRESH CADA 2 MINUTOS
+    const autoRefreshInterval = setInterval(() => {
+      console.log("⏰ [useTravels] Auto-refresh activado");
+      fetchTravels(true);
+    }, 120000); // 2 minutos
+
+    return () => {
+      console.log("🧹 [useTravels] Limpiando interval");
+      clearInterval(autoRefreshInterval);
+    };
   }, [fetchTravels]);
 
-  // 🔧 FUNCIÓN MEJORADA PARA AGREGAR VIAJE CON AUTO-REFRESH
+  // 🔧 FUNCIÓN MEJORADA PARA AGREGAR VIAJE
   const addTravel = async (travelData) => {
+    const startTime = Date.now();
+    console.log("🆕 [addTravel] Iniciando creación de viaje:", travelData);
+    
     try {
-      console.log("🆕 Creando viaje:", travelData);
-      
       const dataToSend = {
-        quoteId: travelData.quoteId,
-        truckId: travelData.truckId,
-        conductorId: travelData.conductorId,
+        quoteId: travelData.quoteId || null,
+        truckId: travelData.truckId || null,
+        conductorId: travelData.conductorId || null,
         auxiliarId: travelData.auxiliarId || null,
-        tripDescription: travelData.tripDescription,
+        tripDescription: travelData.tripDescription || 'Viaje sin descripción',
         departureTime: travelData.departureTime,
         arrivalTime: travelData.arrivalTime,
-        costosReales: travelData.costosReales || {
-          combustible: 0,
-          peajes: 0,
-          conductor: 0,
-          otros: 0,
-          total: 0
-        },
         condiciones: travelData.condiciones || {
           clima: 'normal',
           trafico: 'normal',
           carretera: 'buena'
         },
-        observaciones: travelData.observaciones || '',
-        estado: {
-          actual: 'pendiente',
-          autoActualizar: true,
-          historial: [{
-            estado: 'pendiente',
-            fecha: new Date().toISOString(),
-            observaciones: 'Viaje programado desde la interfaz'
-          }]
-        },
-        tracking: {
-          ubicacionActual: {
-            lat: null,
-            lng: null,
-            velocidad: 0,
-            timestamp: new Date().toISOString()
-          },
-          progreso: {
-            porcentaje: 0,
-            calculoAutomatico: true,
-            ultimaActualizacion: new Date().toISOString()
-          },
-          checkpoints: []
-        }
+        observaciones: travelData.observaciones || ''
       };
       
-      console.log("📤 Datos enviados a la API:", dataToSend);
+      console.log("📤 [addTravel] Enviando datos:", dataToSend);
       
-      const response = await axios.post('https://riveraproject-5.onrender.com/api/viajes', dataToSend, {
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        timeout: 15000
+      const response = await withRetry(async () => {
+        return await axios.post(buildApiUrl(API_CONFIG.ENDPOINTS.VIAJES), dataToSend, {
+          headers: { 'Content-Type': 'application/json' },
+          timeout: API_CONFIG.TIMEOUT
+        });
       });
       
-      console.log("✅ Viaje creado exitosamente:", response.data);
+      console.log(`✅ [addTravel] Viaje creado en ${Date.now() - startTime}ms:`, response.data);
       
-      // 🔄 REFRESCAR DATOS INMEDIATAMENTE DESPUÉS DE CREAR
-      console.log("🔄 Refrescando datos después de crear viaje...");
-      const refreshSuccess = await fetchTravels(true);
-      
-      if (refreshSuccess) {
-        console.log("✅ Datos refrescados exitosamente tras crear viaje");
-      } else {
-        console.warn("⚠️ Advertencia: Error al refrescar datos tras crear viaje");
-      }
+      // 🔄 AUTO-REFRESH DESPUÉS DE CREAR
+      console.log("🔄 [addTravel] Auto-refresh después de crear");
+      setTimeout(() => fetchTravels(true), 1000);
       
       return { success: true, data: response.data };
+      
     } catch (error) {
-      console.error('❌ Error al agregar viaje:', error);
+      console.error(`❌ [addTravel] Error después de ${Date.now() - startTime}ms:`, error);
       return { 
         success: false, 
-        error: error.response?.data?.message || error.message || 'Error al agregar viaje' 
+        error: error.response?.data?.message || error.message || 'Error al crear viaje' 
       };
     }
   };
 
-  // 🚨 FUNCIÓN ACTUALIZAR COMPLETAMENTE CORREGIDA
+  // 🔧 FUNCIÓN MEJORADA PARA ACTUALIZAR VIAJE
   const updateTravel = async (travelId, updateData) => {
+    const startTime = Date.now();
+    console.log(`✏️ [updateTravel] Actualizando viaje ${travelId}:`, updateData);
+    
     try {
-      console.log("✏️ Actualizando viaje:", travelId);
-      console.log("📝 Datos a enviar:", updateData);
-      
-      // Verificar que travelId existe
       if (!travelId) {
-        throw new Error('ID del viaje no proporcionado');
+        throw new Error('ID del viaje requerido');
       }
       
-      // ✅ USAR ENDPOINT CORRECTO CON PARÁMETRO :viajeId
-      const url = `https://riveraproject-5.onrender.com/api/viajes/${travelId}`;
-      console.log("🌐 URL completa:", url);
-      
-      const response = await axios.put(url, updateData, {
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        timeout: 10000
+      const response = await withRetry(async () => {
+        const url = buildApiUrl(`${API_CONFIG.ENDPOINTS.VIAJES}/${travelId}`);
+        return await axios.put(url, updateData, {
+          headers: { 'Content-Type': 'application/json' },
+          timeout: API_CONFIG.TIMEOUT
+        });
       });
       
-      console.log("✅ Respuesta del servidor:", response.data);
-      console.log("✅ Status code:", response.status);
+      console.log(`✅ [updateTravel] Viaje actualizado en ${Date.now() - startTime}ms:`, response.data);
       
-      // Verificar que la respuesta sea exitosa
-      if (response.status >= 200 && response.status < 300) {
-        console.log("✅ Actualización exitosa confirmada");
-        
-        // 🔄 REFRESCAR DATOS INMEDIATAMENTE DESPUÉS DE ACTUALIZAR
-        console.log("🔄 Refrescando datos después de actualizar viaje...");
-        const refreshSuccess = await fetchTravels(true);
-        
-        if (refreshSuccess) {
-          console.log("✅ Datos refrescados exitosamente tras actualizar viaje");
-        } else {
-          console.warn("⚠️ Advertencia: Error al refrescar datos tras actualizar viaje");
-        }
-        
-        return { success: true, data: response.data };
-      } else {
-        throw new Error(`Respuesta inesperada del servidor: ${response.status}`);
-      }
+      // 🔄 AUTO-REFRESH DESPUÉS DE ACTUALIZAR
+      console.log("🔄 [updateTravel] Auto-refresh después de actualizar");
+      setTimeout(() => fetchTravels(true), 1000);
+      
+      return { success: true, data: response.data };
       
     } catch (error) {
-      console.error('❌ Error detallado al actualizar viaje:', {
-        message: error.message,
-        status: error.response?.status,
-        statusText: error.response?.statusText,
-        data: error.response?.data,
-        url: error.config?.url,
-        method: error.config?.method
-      });
-      
+      console.error(`❌ [updateTravel] Error después de ${Date.now() - startTime}ms:`, error);
       return { 
         success: false, 
         error: error.response?.data?.message || error.message || 'Error al actualizar viaje' 
@@ -361,146 +411,107 @@ export const useTravels = () => {
     }
   };
 
-  // 🚨 FUNCIÓN ELIMINAR CORREGIDA - USAR PARÁMETRO CORRECTO :viajeId
+  // 🔧 FUNCIÓN MEJORADA PARA ELIMINAR VIAJE
   const deleteTravel = async (travelId) => {
+    const startTime = Date.now();
+    console.log(`🗑️ [deleteTravel] Eliminando viaje ${travelId}`);
+    
     try {
-      console.log("🗑️ ELIMINANDO viaje (no cancelando):", travelId);
-      
       if (!travelId) {
-        throw new Error('ID del viaje no proporcionado');
+        throw new Error('ID del viaje requerido');
       }
       
-      let response;
-      let success = false;
-      
-      // 🎯 ESTRATEGIA 1: USAR DELETE DIRECTO CON PARÁMETRO CORRECTO :viajeId
-      try {
-        console.log(`🔄 Intentando DELETE /api/viajes/${travelId} (parámetro :viajeId)`);
-        
-        const url = `https://riveraproject-5.onrender.com/api/viajes/${travelId}`;
-        response = await axios.delete(url, {
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          timeout: 10000
+      const response = await withRetry(async () => {
+        const url = buildApiUrl(`${API_CONFIG.ENDPOINTS.VIAJES}/${travelId}`);
+        return await axios.delete(url, {
+          headers: { 'Content-Type': 'application/json' },
+          timeout: API_CONFIG.TIMEOUT
         });
-        
-        console.log("✅ Éxito con DELETE - Viaje ELIMINADO completamente:", response.data);
-        success = true;
-        
-      } catch (deleteError) {
-        console.log("❌ DELETE falló:", deleteError.response?.status, deleteError.response?.data);
-        
-        // 🎯 ESTRATEGIA 2: FALLBACK - Usar endpoint de cancelación con parámetro correcto
-        try {
-          console.log(`🔄 Fallback: Intentando PATCH /api/viajes/${travelId}/cancel...`);
-          
-          const url = `https://riveraproject-5.onrender.com/api/viajes/${travelId}/cancel`;
-          response = await axios.patch(url, {
-            motivo: 'eliminado_por_usuario',
-            observaciones: 'Viaje cancelado desde la interfaz (fallback de eliminación)'
-          }, {
-            headers: {
-              'Content-Type': 'application/json'
-            },
-            timeout: 10000
-          });
-          
-          console.log("✅ Éxito con PATCH /cancel (fallback):", response.data);
-          success = true;
-          
-        } catch (cancelError) {
-          console.error("❌ Ambas estrategias fallaron:", {
-            deleteError: deleteError.response?.status || deleteError.message,
-            deleteData: deleteError.response?.data,
-            cancelError: cancelError.response?.status || cancelError.message,
-            cancelData: cancelError.response?.data
-          });
-          throw cancelError;
-        }
-      }
+      });
       
-      if (!success) {
-        throw new Error('No se pudo eliminar el viaje con ningún método');
-      }
+      console.log(`✅ [deleteTravel] Viaje eliminado en ${Date.now() - startTime}ms:`, response.data);
       
-      console.log("✅ Viaje procesado exitosamente:", response.data);
-      
-      // 🔄 REFRESCAR DATOS INMEDIATAMENTE DESPUÉS DE ELIMINAR/CANCELAR
-      console.log("🔄 Refrescando datos después de eliminar viaje...");
-      const refreshSuccess = await fetchTravels(true);
-      
-      if (refreshSuccess) {
-        console.log("✅ Datos refrescados exitosamente tras eliminar viaje");
-      }
+      // 🔄 AUTO-REFRESH DESPUÉS DE ELIMINAR
+      console.log("🔄 [deleteTravel] Auto-refresh después de eliminar");
+      setTimeout(() => fetchTravels(true), 1000);
       
       return { success: true, data: response.data };
-    } catch (error) {
-      console.error('❌ Error al eliminar viaje:', error);
-      console.error('❌ Response data:', error.response?.data);
-      console.error('❌ Response status:', error.response?.status);
       
-      return { 
-        success: false, 
-        error: error.response?.data?.message || error.message || 'Error al eliminar viaje' 
-      };
+    } catch (error) {
+      console.error(`❌ [deleteTravel] Error después de ${Date.now() - startTime}ms:`, error);
+      
+      // 🎯 FALLBACK: Intentar cancelar si eliminar falla
+      try {
+        console.log("🔄 [deleteTravel] Intentando cancelar como fallback");
+        const cancelUrl = buildApiUrl(`${API_CONFIG.ENDPOINTS.VIAJES}/${travelId}/cancel`);
+        const cancelResponse = await axios.patch(cancelUrl, {
+          motivo: 'eliminado_por_usuario',
+          observaciones: 'Viaje cancelado desde interfaz (fallback de eliminación)'
+        }, {
+          headers: { 'Content-Type': 'application/json' },
+          timeout: API_CONFIG.TIMEOUT
+        });
+        
+        console.log("✅ [deleteTravel] Viaje cancelado exitosamente:", cancelResponse.data);
+        setTimeout(() => fetchTravels(true), 1000);
+        return { success: true, data: cancelResponse.data };
+        
+      } catch (fallbackError) {
+        console.error("❌ [deleteTravel] Fallback también falló:", fallbackError);
+        return { 
+          success: false, 
+          error: error.response?.data?.message || error.message || 'Error al eliminar viaje' 
+        };
+      }
     }
   };
 
-  // 🆕 FUNCIÓN PARA REFRESCAR MANUALMENTE
+  // 🔄 FUNCIÓN PARA REFRESH MANUAL
   const refreshTravels = useCallback(async () => {
-    console.log("🔄 Refresh manual iniciado...");
+    console.log("🔄 [refreshTravels] Refresh manual solicitado");
     return await fetchTravels(true);
   }, [fetchTravels]);
 
-  // 🔄 DATOS PROCESADOS
-  const scheduledTrips = apiTravels.map(travel => {
-    console.log("🔄 Procesando viaje para vista:", travel);
-    
-    return {
-      id: travel._id || travel.id,
-      type: travel.type || `${travel.quoteId?.ruta?.origen?.nombre || 'Origen'} → ${travel.quoteId?.ruta?.destino?.nombre || 'Destino'}`,
-      color: travel.estado?.actual === 'completado' ? 'bg-green-500' : 
-             travel.estado?.actual === 'en_curso' ? 'bg-blue-500' :
-             travel.estado?.actual === 'retrasado' ? 'bg-orange-500' :
-             travel.estado?.actual === 'cancelado' ? 'bg-red-500' : 
-             travel.estado?.actual === 'pendiente' ? 'bg-gray-500' : 'bg-gray-400',
-      status: travel.estado?.actual === 'completado' ? 'bg-green-400' : 
-              travel.estado?.actual === 'en_curso' ? 'bg-blue-400' :
-              travel.estado?.actual === 'retrasado' ? 'bg-orange-400' :
-              travel.estado?.actual === 'cancelado' ? 'bg-red-400' : 
-              travel.estado?.actual === 'pendiente' ? 'bg-gray-400' : 'bg-gray-300',
-      textColor: travel.estado?.actual === 'completado' ? 'text-green-600' : 
-                 travel.estado?.actual === 'en_curso' ? 'text-blue-600' :
-                 travel.estado?.actual === 'retrasado' ? 'text-orange-600' :
-                 travel.estado?.actual === 'cancelado' ? 'text-red-600' : 
-                 travel.estado?.actual === 'pendiente' ? 'text-gray-600' : 'text-gray-500',
-      time: travel.time || (travel.departureTime ? new Date(travel.departureTime).toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" }) : 'Sin hora'),
-      endTime: travel.endTime || (travel.arrivalTime ? new Date(travel.arrivalTime).toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" }) : null),
-      description: travel.description || travel.tripDescription || 'Sin descripción',
-      driver: travel.driver || travel.conductorId?.nombre || 'Conductor por asignar',
-      truck: travel.truck || travel.truckId?.patente || 'Camión por asignar',
-      distancia: travel.distancia,
-      icon: travel.icon || '🚛',
-      estado: travel.estado,
-      alertas: travel.alertas,
-      // ✅ AGREGAR CAMPOS NECESARIOS PARA EDICIÓN
-      quoteId: travel.quoteId,
-      truckId: travel.truckId,
-      conductorId: travel.conductorId,
-      auxiliarId: travel.auxiliarId,
-      tripDescription: travel.tripDescription,
-      departureTime: travel.departureTime,
-      arrivalTime: travel.arrivalTime,
-      observaciones: travel.observaciones,
-      condiciones: travel.condiciones,
-      ...travel
-    };
+  // 📊 DATOS PROCESADOS PARA LA VISTA
+  const scheduledTrips = apiTravels.map(travel => ({
+    id: travel._id || travel.id,
+    type: travel.type,
+    color: travel.color,
+    status: travel.status,
+    textColor: travel.textColor,
+    time: travel.time,
+    endTime: travel.endTime,
+    description: travel.description,
+    driver: travel.conductorId?.nombre || 'Conductor por asignar',
+    truck: travel.truckId?.patente || 'Camión por asignar',
+    distancia: travel.distancia,
+    icon: travel.icon,
+    estado: travel.estado,
+    alertas: travel.alertas,
+    // ✅ CAMPOS PARA EDICIÓN
+    quoteId: travel.quoteId,
+    truckId: travel.truckId,
+    conductorId: travel.conductorId,
+    auxiliarId: travel.auxiliarId,
+    tripDescription: travel.tripDescription,
+    departureTime: travel.departureTime,
+    arrivalTime: travel.arrivalTime,
+    observaciones: travel.observaciones,
+    condiciones: travel.condiciones,
+    ...travel
+  }));
+
+  // 📊 ESTADÍSTICAS
+  const getStats = () => ({
+    total: apiTravels.length,
+    pendiente: apiTravels.filter(t => t.estado?.actual === 'pendiente').length,
+    en_curso: apiTravels.filter(t => t.estado?.actual === 'en_curso').length,
+    completado: apiTravels.filter(t => t.estado?.actual === 'completado').length,
+    retrasado: apiTravels.filter(t => t.estado?.actual === 'retrasado').length,
+    cancelado: apiTravels.filter(t => t.estado?.actual === 'cancelado').length
   });
 
-  console.log("📋 SCHEDULED TRIPS FINAL:", scheduledTrips);
-
-  // Datos de earnings (mantener originales)
+  // 📊 DATOS DE EARNINGS (MANTENER ORIGINALES)
   const earningsData = [
     { category: 'Transporte de Carga', amount: '879,400', progress: animatedProgress[0], color: 'bg-gradient-to-r from-emerald-500 to-emerald-600' },
     { category: 'Servicios Express', amount: '1,378,200', progress: animatedProgress[1], color: 'bg-gradient-to-r from-purple-500 to-purple-600' },
@@ -509,29 +520,15 @@ export const useTravels = () => {
     { category: 'Almacenaje', amount: '520,000', progress: animatedProgress[4], color: 'bg-gradient-to-r from-pink-500 to-pink-600' }
   ];
 
-  // Estadísticas de API
-  const getStats = () => {
-    return {
-      total: apiTravels.length,
-      pendiente: apiTravels.filter(t => t.estado?.actual === 'pendiente').length,
-      en_curso: apiTravels.filter(t => t.estado?.actual === 'en_curso').length,
-      completado: apiTravels.filter(t => t.estado?.actual === 'completado').length,
-      retrasado: apiTravels.filter(t => t.estado?.actual === 'retrasado').length,
-      cancelado: apiTravels.filter(t => t.estado?.actual === 'cancelado').length
-    };
-  };
-
-  // ⚠️ FUNCIONES PARA FLUJO DIRECTO
-  
+  // 🔧 TODAS LAS FUNCIONES ORIGINALES (MANTENER PARA COMPATIBILIDAD)
   const handleTripMenuClick = (trip, index) => {
     setSelectedTrip({ ...trip, index });
     setShowModal(true);
     setIsClosing(false);
   };
 
-  // 🆕 NUEVAS FUNCIONES DIRECTAS PARA CONTEXTMENU - CORREGIDAS
   const onEdit = (trip, index) => {
-    console.log("🔧 onEdit llamado directamente con viaje:", trip);
+    console.log("🔧 [onEdit] Editando viaje:", trip);
     setSelectedTrip({ ...trip, index });
     
     const formData = {
@@ -550,103 +547,41 @@ export const useTravels = () => {
       observaciones: trip.observaciones || ''
     };
     
-    console.log("📝 Datos del formulario preparados:", formData);
     setEditForm(formData);
-    
     setShowEditModal(true);
     setIsEditClosing(false);
   };
 
   const onDelete = (trip, index) => {
-    console.log("🗑️ onDelete llamado directamente:", trip);
+    console.log("🗑️ [onDelete] Eliminando viaje:", trip);
     setSelectedTrip({ ...trip, index });
-    
     setShowDeleteModal(true);
     setIsDeleteClosing(false);
   };
 
-  // 🚨 NUEVA FUNCIÓN DIRECTA PARA ACTUALIZACIÓN (SIMPLIFICADA)
   const handleDirectUpdate = async () => {
     try {
-      console.log('🔄 Iniciando actualización directa del viaje...');
-      console.log('🆔 Viaje seleccionado:', selectedTrip);
-      console.log('📝 Datos del formulario:', editForm);
-      
       if (!selectedTrip?.id && !selectedTrip?._id) {
         throw new Error('No se encontró ID del viaje para actualizar');
       }
 
       const travelId = selectedTrip.id || selectedTrip._id;
+      const result = await updateTravel(travelId, editForm);
       
-      // Preparar solo los campos que cambiaron
-      const updateData = {};
-      
-      if (editForm.tripDescription !== (selectedTrip.description || selectedTrip.tripDescription || '')) {
-        updateData.tripDescription = editForm.tripDescription;
+      if (result.success) {
+        setShowEditModal(false);
+        setIsEditClosing(false);
+        return result;
+      } else {
+        throw new Error(result.error);
       }
-      
-      if (editForm.truckId !== (selectedTrip.truckId?._id || selectedTrip.truckId || '')) {
-        updateData.truckId = editForm.truckId;
-      }
-      
-      if (editForm.conductorId !== (selectedTrip.conductorId?._id || selectedTrip.conductorId || '')) {
-        updateData.conductorId = editForm.conductorId;
-      }
-      
-      if (editForm.auxiliarId !== (selectedTrip.auxiliarId?._id || selectedTrip.auxiliarId || '')) {
-        updateData.auxiliarId = editForm.auxiliarId || null;
-      }
-      
-      if (editForm.departureTime !== (selectedTrip.departureTime || '')) {
-        updateData.departureTime = editForm.departureTime;
-      }
-      
-      if (editForm.arrivalTime !== (selectedTrip.arrivalTime || '')) {
-        updateData.arrivalTime = editForm.arrivalTime;
-      }
-      
-      if (editForm.observaciones !== (selectedTrip.observaciones || '')) {
-        updateData.observaciones = editForm.observaciones;
-      }
-      
-      const originalCondiciones = selectedTrip.condiciones || { clima: 'normal', trafico: 'normal', carretera: 'buena' };
-      const hasCondicionesChanged = 
-        editForm.condiciones.clima !== originalCondiciones.clima ||
-        editForm.condiciones.trafico !== originalCondiciones.trafico ||
-        editForm.condiciones.carretera !== originalCondiciones.carretera;
-      
-      if (hasCondicionesChanged) {
-        updateData.condiciones = editForm.condiciones;
-      }
-      
-      console.log('📤 Datos a actualizar (solo campos modificados):', updateData);
-      
-      if (Object.keys(updateData).length === 0) {
-        console.log('ℹ️ No hay cambios para actualizar');
-        throw new Error('No se detectaron cambios para actualizar');
-      }
-      
-      // Llamar a la función de actualización
-      const result = await updateTravel(travelId, updateData);
-      
-      if (!result.success) {
-        throw new Error(result.error || 'Error al actualizar viaje');
-      }
-
-      console.log('✅ Viaje actualizado exitosamente');
-      
-      // Cerrar modal de edición
-      setShowEditModal(false);
-      setIsEditClosing(false);
-      
-      return result;
-      
     } catch (error) {
-      console.error('❌ Error en actualización directa:', error);
+      console.error('❌ [handleDirectUpdate] Error:', error);
       throw error;
     }
   };
 
+  // ⚠️ MANTENER TODAS LAS FUNCIONES ORIGINALES...
   const handleCloseModal = () => {
     setIsClosing(true);
     setTimeout(() => {
@@ -656,7 +591,6 @@ export const useTravels = () => {
     }, 300);
   };
 
-  // 🔧 FUNCIONES DE EDICIÓN ORIGINALES (COMPATIBILIDAD) - CORREGIDAS
   const handleEdit = () => {
     if (selectedTrip) {
       setEditForm({
@@ -696,67 +630,13 @@ export const useTravels = () => {
     }, 300);
   };
 
-  // 🚨 FUNCIÓN PRINCIPAL CORREGIDA
   const handleConfirmEdit = async () => {
     try {
-      console.log('🔄 Confirmando edición con datos del formulario:', editForm);
-      console.log('🆔 Viaje seleccionado original:', selectedTrip);
-      
       if (selectedTrip?.id || selectedTrip?._id) {
         const travelId = selectedTrip.id || selectedTrip._id;
-        
-        const updateData = {};
-        
-        if (editForm.tripDescription !== (selectedTrip.description || selectedTrip.tripDescription || '')) {
-          updateData.tripDescription = editForm.tripDescription;
-        }
-        
-        if (editForm.truckId !== (selectedTrip.truckId?._id || selectedTrip.truckId || '')) {
-          updateData.truckId = editForm.truckId;
-        }
-        
-        if (editForm.conductorId !== (selectedTrip.conductorId?._id || selectedTrip.conductorId || '')) {
-          updateData.conductorId = editForm.conductorId;
-        }
-        
-        if (editForm.auxiliarId !== (selectedTrip.auxiliarId?._id || selectedTrip.auxiliarId || '')) {
-          updateData.auxiliarId = editForm.auxiliarId || null;
-        }
-        
-        if (editForm.departureTime !== (selectedTrip.departureTime || '')) {
-          updateData.departureTime = editForm.departureTime;
-        }
-        
-        if (editForm.arrivalTime !== (selectedTrip.arrivalTime || '')) {
-          updateData.arrivalTime = editForm.arrivalTime;
-        }
-        
-        if (editForm.observaciones !== (selectedTrip.observaciones || '')) {
-          updateData.observaciones = editForm.observaciones;
-        }
-        
-        const originalCondiciones = selectedTrip.condiciones || { clima: 'normal', trafico: 'normal', carretera: 'buena' };
-        const hasCondicionesChanged = 
-          editForm.condiciones.clima !== originalCondiciones.clima ||
-          editForm.condiciones.trafico !== originalCondiciones.trafico ||
-          editForm.condiciones.carretera !== originalCondiciones.carretera;
-        
-        if (hasCondicionesChanged) {
-          updateData.condiciones = editForm.condiciones;
-        }
-        
-        console.log('📤 Datos a actualizar (solo campos modificados):', updateData);
-        
-        if (Object.keys(updateData).length === 0) {
-          console.log('ℹ️ No hay cambios para actualizar');
-          alert('No se detectaron cambios para actualizar');
-          return;
-        }
-        
-        const result = await updateTravel(travelId, updateData);
+        const result = await updateTravel(travelId, editForm);
         
         if (result.success) {
-          console.log('✅ Viaje actualizado exitosamente');
           setIsConfirmEditClosing(true);
           setTimeout(() => {
             setShowConfirmEditModal(false);
@@ -765,18 +645,8 @@ export const useTravels = () => {
             setIsSuccessClosing(false);
           }, 300);
         } else {
-          console.error('❌ Error en resultado:', result.error);
           alert(`Error al actualizar: ${result.error}`);
         }
-      } else {
-        console.log('Actualizando viaje (modo local):', editForm);
-        setIsConfirmEditClosing(true);
-        setTimeout(() => {
-          setShowConfirmEditModal(false);
-          setIsConfirmEditClosing(false);
-          setShowSuccessModal(true);
-          setIsSuccessClosing(false);
-        }, 300);
       }
     } catch (error) {
       console.error('❌ Error actualizando viaje:', error);
@@ -828,7 +698,6 @@ export const useTravels = () => {
     }
   };
 
-  // 🔧 FUNCIONES DE ELIMINACIÓN ORIGINALES (COMPATIBILIDAD)
   const handleDelete = () => {
     setIsClosing(true);
     setTimeout(() => {
@@ -843,12 +712,9 @@ export const useTravels = () => {
   const handleConfirmDelete = async () => {
     try {
       if (selectedTrip?.id || selectedTrip?._id) {
-        console.log('🗑️ Confirmando eliminación del viaje:', selectedTrip.id || selectedTrip._id);
-        
         const result = await deleteTravel(selectedTrip.id || selectedTrip._id);
         
         if (result.success) {
-          console.log('✅ Viaje eliminado exitosamente');
           setIsDeleteClosing(true);
           setTimeout(() => {
             setShowDeleteModal(false);
@@ -857,18 +723,8 @@ export const useTravels = () => {
             setIsDeleteSuccessClosing(false);
           }, 300);
         } else {
-          console.error('❌ Error eliminando viaje:', result.error);
           alert(`Error al eliminar: ${result.error}`);
         }
-      } else {
-        console.log('Eliminando viaje (modo local):', selectedTrip);
-        setIsDeleteClosing(true);
-        setTimeout(() => {
-          setShowDeleteModal(false);
-          setIsDeleteClosing(false);
-          setShowDeleteSuccessModal(true);
-          setIsDeleteSuccessClosing(false);
-        }, 300);
       }
     } catch (error) {
       console.error('❌ Error eliminando viaje:', error);
@@ -895,7 +751,6 @@ export const useTravels = () => {
     }, 300);
   };
 
-  // 🔧 FUNCIONES DE PROGRAMAR VIAJE (MODIFICADAS PARA USAR API CON AUTO-REFRESH)
   const handleOpenProgramModal = () => {
     setShowProgramModal(true);
     setIsProgramClosing(false);
@@ -942,19 +797,15 @@ export const useTravels = () => {
     }
   };
 
-  // 🔧 FUNCIÓN MEJORADA PARA PROGRAMAR VIAJE CON AUTO-REFRESH
   const handleProgramTrip = async () => {
     try {
-      console.log("🚛 Programando viaje con datos:", programForm);
       const result = await addTravel(programForm);
       
       if (result.success) {
-        console.log("✅ Viaje programado exitosamente");
         setShowProgramSuccessModal(true);
         setIsProgramSuccessClosing(false);
         return result;
       } else {
-        console.error("❌ Error programando viaje:", result.error);
         throw new Error(result.error);
       }
     } catch (error) {
@@ -991,10 +842,26 @@ export const useTravels = () => {
     }, 300);
   };
 
+  // ⚡ INFORMACIÓN DE DEBUG
+  const debugInfo = {
+    apiConfig: API_CONFIG,
+    lastFetchTime,
+    travelsCount: apiTravels.length,
+    loading,
+    error,
+    isRefreshing
+  };
+
+  console.log("📊 [useTravels] Estado actual:", {
+    travels: apiTravels.length,
+    loading,
+    error: !!error,
+    isRefreshing,
+    lastFetch: lastFetchTime?.toLocaleTimeString()
+  });
+
   return {
-    // ⚠️ MANTENER EL RETURN ORIGINAL + NUEVOS CAMPOS AL FINAL
-    
-    // Estados originales
+    // ✅ ESTADOS ORIGINALES (COMPATIBILIDAD TOTAL)
     animatedBars,
     animatedProgress,
     showModal,
@@ -1017,12 +884,12 @@ export const useTravels = () => {
     editForm,
     programForm,
     
-    // Datos (modificados para usar API)
+    // ✅ DATOS (OPTIMIZADOS PARA API)
     scheduledTrips,
     earningsData,
     barHeights,
     
-    // 🔧 FUNCIONES COMPATIBILIDAD HACIA ATRÁS (originales)
+    // ✅ FUNCIONES ORIGINALES (COMPATIBILIDAD TOTAL)
     handleTripMenuClick,
     handleCloseModal,
     handleEdit,
@@ -1042,12 +909,12 @@ export const useTravels = () => {
     handleProgramTrip,
     handleCloseProgramSuccessModal,
 
-    // 🆕 NUEVAS FUNCIONES DIRECTAS PARA CONTEXTMENU
-    onEdit,        // ✅ Nueva función directa para editar
-    onDelete,      // ✅ Nueva función directa para eliminar
-    handleDirectUpdate, // ✅ Nueva función directa para actualización
+    // ✅ FUNCIONES DIRECTAS PARA CONTEXTMENU
+    onEdit,
+    onDelete,
+    handleDirectUpdate,
 
-    // 🆕 NUEVOS CAMPOS AL FINAL (OPTIMIZADOS)
+    // ✅ ESTADO Y FUNCIONES DE API (OPTIMIZADAS)
     loading,
     error,
     isRefreshing,
@@ -1056,6 +923,90 @@ export const useTravels = () => {
     refreshTravels,
     addTravel,
     updateTravel,
-    deleteTravel
+    deleteTravel,
+    
+    // 🆕 INFORMACIÓN DE DEBUG Y MONITOREO
+    debugInfo,
+    lastFetchTime
   };
+};
+
+// 🛠️ FUNCIONES HELPER PARA MAPEO DE DATOS
+
+// Mapear estados del mapa a estados de BD
+const mapStatusToDbStatus = (mapStatus) => {
+  const statusMap = {
+    'in_progress': 'en_curso',
+    'completed': 'completado',
+    'delayed': 'retrasado',
+    'cancelled': 'cancelado',
+    'scheduled': 'pendiente'
+  };
+  return statusMap[mapStatus] || 'pendiente';
+};
+
+// Obtener prioridad máxima de alertas
+const getMaxPriority = (alerts) => {
+  if (!alerts || alerts.length === 0) return 1;
+  return Math.max(...alerts.map(alert => {
+    switch (alert.priority) {
+      case 'alta': return 3;
+      case 'media': return 2;
+      case 'baja': return 1;
+      default: return 1;
+    }
+  }));
+};
+
+// Obtener icono por estado
+const getIconByStatus = (status) => {
+  const iconMap = {
+    'in_progress': '🚛',
+    'completed': '✅',
+    'delayed': '⏰',
+    'cancelled': '❌',
+    'scheduled': '📋'
+  };
+  return iconMap[status] || '🚛';
+};
+
+// Obtener color por estado
+const getColorByStatus = (status) => {
+  const colorMap = {
+    'in_progress': 'bg-blue-500',
+    'completed': 'bg-green-500',
+    'delayed': 'bg-orange-500',
+    'cancelled': 'bg-red-500',
+    'scheduled': 'bg-gray-500'
+  };
+  return colorMap[status] || 'bg-gray-400';
+};
+
+// Obtener color de status por estado
+const getStatusColorByStatus = (status) => {
+  const colorMap = {
+    'in_progress': 'bg-blue-400',
+    'completed': 'bg-green-400',
+    'delayed': 'bg-orange-400',
+    'cancelled': 'bg-red-400',
+    'scheduled': 'bg-gray-400'
+  };
+  return colorMap[status] || 'bg-gray-300';
+};
+
+// Obtener color de texto por estado
+const getTextColorByStatus = (status) => {
+  const colorMap = {
+    'in_progress': 'text-blue-600',
+    'completed': 'text-green-600',
+    'delayed': 'text-orange-600',
+    'cancelled': 'text-red-600',
+    'scheduled': 'text-gray-600'
+  };
+  return colorMap[status] || 'text-gray-500';
+};
+
+// Generar ID temporal
+const generateId = () => {
+  return 'temp_' + Math.random().toString(36).substr(2, 9);
 };
