@@ -1,18 +1,22 @@
-import empleadosCon from "../Controllers/EmpleadosController.js";
 import express from "express";
-import multer from "multer";
+import clienteCon from "../Controllers/ClienteController.js";
 
 const router = express.Router();
 
-const upload= multer({dest: "public/"})
+// ✅ Rutas generales (sin parámetros) van PRIMERO
+router.route("/").get(clienteCon.get);
 
-// Rutas para empleados
-router.route("/")
-    .get(empleadosCon.get)
-    .post(upload.single("img"),empleadosCon.post);
+// ✅ Rutas específicas con nombres van ANTES que las rutas con parámetros
+router.get('/usuarios-activos', clienteCon.getUsuariosActivos);
+router.get('/resumen-usuarios', clienteCon.getResumenUsuarios);
 
+// ✅ CORRECCIÓN: Rutas con parámetros van AL FINAL
 router.route("/:id")
-    .put(upload.single("img"),empleadosCon.put)
-    .delete(empleadosCon.delete);
+  .get(clienteCon.getClienteById)    // 🔥 AGREGADO: GET para obtener cliente por ID
+  .put(clienteCon.PutClientes)       // ✅ PUT para actualizar
+  .delete(clienteCon.deleteClientes) // ✅ DELETE para eliminar
+
+// ❌ REMOVER ESTA LÍNEA (estaba duplicada y mal ubicada):
+// router.get('/clientes/:id', clienteCon.getClienteById);
 
 export default router;
