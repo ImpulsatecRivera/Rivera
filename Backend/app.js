@@ -1,6 +1,7 @@
 import express from "express";
 import cookieParser from "cookie-parser";
 import cors from "cors";
+import ViajesRoutes from "./src/Routes/ViajesRoutes.js"
 
 const app = express();
 
@@ -20,5 +21,7 @@ app.get("/health", (req, res) => {
     timestamp: new Date().toISOString()
   });
 });
+
+app.use("/api/viajes", ViajesRoutes);
 
 export default app;
