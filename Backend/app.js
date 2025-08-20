@@ -140,9 +140,10 @@ app.use("/api/docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
 // ===================== Rutas de la API =====================
 // 🔍 DEBUGGING: Solo mantener rutas esenciales para encontrar el error
-app.use("/api/viajes", ViajesRoutes);
+// ===================== Rutas de la API =====================
+// 🚨 TODAS LAS RUTAS COMENTADAS PARA DEBUGGING:
 
-// 🚨 COMENTADAS TEMPORALMENTE PARA DEBUGGING:
+// app.use("/api/viajes", ViajesRoutes);
 // app.use("/api/camiones", camionesRoutes);
 // app.use("/api/empleados", empleadoRoutes);
 // app.use("/api/motoristas", motoristasRoutes);
@@ -155,6 +156,11 @@ app.use("/api/viajes", ViajesRoutes);
 // app.use("/api/cotizaciones", CotizacionesRoutes);
 // app.use("/api/recovery", RecoveryRoutes);
 // app.use("/api/auto-update", autoUpdateRoutes);
+
+// Solo rutas básicas:
+app.get("/test", (req, res) => {
+  res.json({ message: "Server working" });
+});
 
 // ===================== Health Check =====================
 app.get("/health", (req, res) => {
