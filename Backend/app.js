@@ -33,6 +33,7 @@ app.use(cookieParser());
 // Orígenes permitidos explícitos
 const ALLOWED_ORIGINS = [
   "http://localhost:5173",                     // Dev Vite
+  "http://localhost:3000",                     // Dev React/Next
   "https://rivera-project-ecru.vercel.app",    // Prod/preview
   "https://rivera-project-uhuf.vercel.app",    // Otro preview
 ];
@@ -40,76 +41,98 @@ const ALLOWED_ORIGINS = [
 // Regex para permitir otros previews en Vercel si los usas
 const ORIGIN_REGEX = /^https:\/\/[a-z0-9-]+\.vercel\.app$/i;
 
-// Headers de petición permitidos (no pongas Set-Cookie aquí; es de respuesta)
+// Headers de petición permitidos - ACTUALIZADOS CON CACHE-CONTROL
 const ALLOWED_REQ_HEADERS = [
   "Content-Type",
   "Authorization",
   "Accept",
   "Origin",
   "X-Requested-With",
+  "cache-control",           // ← AGREGADO: Resuelve el error CORS
+  "pragma",                  // ← AGREGADO: Para control de cache
+  "expires",                 // ← AGREGADO: Para control de cache
+  "if-modified-since",       // ← AGREGADO: Para cache condicional
+  "if-none-match",          // ← AGREGADO: Para ETags
+  "x-api-key",              // ← AGREGADO: Por si usas API keys
+  "user-agent"              // ← AGREGADO: Información del cliente
 ];
 
-// CORS principal
+// CORS principal - CONFIGURACIÓN UNIFICADA
 app.use(
   cors({
     origin(origin, cb) {
-      if (!origin) return cb(null, true); // móviles/curl
-      const ok =
+      // Permitir peticiones sin origin (móviles, Postman, curl)
+      if (!origin) return cb(null, true);
+      
+      // Verificar si el origin está permitido
+      const isAllowed =
         ALLOWED_ORIGINS.includes(origin) || ORIGIN_REGEX.test(origin);
-      return ok ? cb(null, true) : cb(new Error("No permitido por CORS"));
+      
+      if (isAllowed) {
+        return cb(null, true);
+      } else {
+        console.warn(`🚫 CORS: Origin no permitido: ${origin}`);
+        return cb(new Error("No permitido por CORS"));
+      }
     },
-    credentials: true,
+    credentials: true, // Permitir cookies y headers de auth
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: ALLOWED_REQ_HEADERS,
-    exposedHeaders: ["Authorization"], // Set-Cookie no se puede leer en JS
-    maxAge: 86400, // cache del preflight
+    exposedHeaders: ["Authorization"], // Headers que el frontend puede leer
+    maxAge: 86400, // Cache del preflight por 24 horas
+    preflightContinue: false, // Manejar preflight automáticamente
+    optionsSuccessStatus: 204 // Para navegadores legacy
   })
 );
 
-// Complemento: fijar headers y Vary: Origin (para respuestas cacheables con origen dinámico)
+// ===================== Middleware de Headers Adicionales =====================
 app.use((req, res, next) => {
-  const origin = req.headers.origin;
-  const ok =
-    origin &&
-    (ALLOWED_ORIGINS.includes(origin) || ORIGIN_REGEX.test(origin));
-
-  if (ok) {
-    res.header("Access-Control-Allow-Origin", origin);
-    res.header("Vary", "Origin");
-    res.header("Access-Control-Allow-Credentials", "true");
-    res.header(
-      "Access-Control-Allow-Headers",
-      ALLOWED_REQ_HEADERS.join(", ")
-    );
-    res.header(
-      "Access-Control-Allow-Methods",
-      "GET,POST,PUT,PATCH,DELETE,OPTIONS"
-    );
-  }
-
-  if (req.method === "OPTIONS") return res.sendStatus(204);
-  next();
-});
-
-// ===================== Seguridad básica =====================
-app.use((req, res, next) => {
+  // Headers de seguridad
   res.header("X-Content-Type-Options", "nosniff");
   res.header("X-Frame-Options", "DENY");
   res.header("X-XSS-Protection", "1; mode=block");
+  
+  // Header Vary para cache correcto con múltiples origins
+  res.header("Vary", "Origin");
+  
+  // Log para debugging (eliminar en producción)
+  if (process.env.NODE_ENV !== 'production') {
+    console.log(`📡 ${req.method} ${req.path} - Origin: ${req.headers.origin || 'none'}`);
+  }
+  
   next();
 });
 
 // ===================== Swagger =====================
-let swaggerDocument = { openapi: "3.0.0", info: { title: "API", version: "1.0.0" }, paths: {} };
+let swaggerDocument = { 
+  openapi: "3.0.0", 
+  info: { 
+    title: "Rivera Project API", 
+    version: "1.0.0",
+    description: "API para gestión de transportes y logística"
+  }, 
+  paths: {},
+  servers: [
+    {
+      url: process.env.NODE_ENV === 'production' 
+        ? 'https://riveraproject-5.onrender.com'
+        : 'http://localhost:3000',
+      description: process.env.NODE_ENV === 'production' ? 'Servidor de Producción' : 'Servidor de Desarrollo'
+    }
+  ]
+};
+
 try {
   const raw = fs.readFileSync(path.resolve("./Documentacion.json"), "utf-8");
   swaggerDocument = JSON.parse(raw);
+  console.log("✅ Documentación Swagger cargada correctamente");
 } catch (e) {
-  console.warn("⚠️  No se pudo cargar Documentacion.json, usando stub básico.");
+  console.warn("⚠️  No se pudo cargar Documentacion.json, usando configuración básica.");
 }
+
 app.use("/api/docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
-// ===================== Rutas =====================
+// ===================== Rutas de la API =====================
 app.use("/api/camiones", camionesRoutes);
 app.use("/api/empleados", empleadoRoutes);
 app.use("/api/motoristas", motoristasRoutes);
@@ -129,19 +152,56 @@ app.get("/health", (req, res) => {
   res.status(200).json({
     status: "OK",
     timestamp: new Date().toISOString(),
-    cors: "Configured",
+    cors: "Configured with cache-control support",
+    environment: process.env.NODE_ENV || 'development',
+    allowedOrigins: ALLOWED_ORIGINS.length,
+    allowedHeaders: ALLOWED_REQ_HEADERS.length
   });
 });
 
-// ===================== Manejo de error CORS =====================
+// ===================== Ruta de información CORS (para debugging) =====================
+app.get("/api/cors-info", (req, res) => {
+  res.status(200).json({
+    allowedOrigins: ALLOWED_ORIGINS,
+    allowedHeaders: ALLOWED_REQ_HEADERS,
+    requestOrigin: req.headers.origin || null,
+    userAgent: req.headers['user-agent'] || null
+  });
+});
+
+// ===================== Manejo de errores =====================
+// Error handler para CORS
 app.use((error, req, res, next) => {
   if (error && error.message === "No permitido por CORS") {
     return res.status(403).json({
       error: "CORS: Origen no permitido",
       origin: req.headers.origin || null,
+      message: "Tu dominio no está autorizado para acceder a esta API",
+      allowedOrigins: process.env.NODE_ENV !== 'production' ? ALLOWED_ORIGINS : undefined
     });
   }
   next(error);
+});
+
+// Error handler general
+app.use((error, req, res, next) => {
+  console.error("❌ Error no manejado:", error);
+  res.status(500).json({
+    error: "Error interno del servidor",
+    message: process.env.NODE_ENV === 'production' 
+      ? "Algo salió mal en el servidor" 
+      : error.message
+  });
+});
+
+// Ruta 404 para rutas no encontradas
+app.use("*", (req, res) => {
+  res.status(404).json({
+    error: "Ruta no encontrada",
+    path: req.originalUrl,
+    method: req.method,
+    message: "La ruta solicitada no existe en esta API"
+  });
 });
 
 export default app;
