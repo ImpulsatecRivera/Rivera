@@ -30,7 +30,6 @@ const ALLOWED_ORIGINS = [
     // Para Vite en desarrollo
 ];
 
-<<<<<<< HEAD
 //Traemos el archivo json
 const swaggerDocument = JSON.parse(
     fs.readFileSync(
@@ -40,7 +39,6 @@ const swaggerDocument = JSON.parse(
 );
 
 // 🔧 MIDDLEWARE ADICIONAL PARA HEADERS DE COOKIES
-=======
 // 🔧 LISTA COMPLETA DE HEADERS COMUNES QUE AXIOS PUEDE ENVIAR
 const ALLOWED_HEADERS = [
   // Headers básicos
@@ -97,7 +95,6 @@ app.use(cors({
 }));
 
 // 🔧 MIDDLEWARE MANUAL PARA CASOS EDGE
->>>>>>> 055b9f9d93818b2ee40652521e0e9644a9aff446
 app.use((req, res, next) => {
   const origin = req.headers.origin;
   
