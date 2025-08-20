@@ -26,7 +26,6 @@ LogoutController.logout = async (req, res) => {
     appendDelete(res, { name: "authToken", path: "/api", isProd, withPartitioned: true });
     appendDelete(res, { name: "authToken", path: "/api", isProd, withPartitioned: false });
 
-
     return res.status(200).json({ Message: "Sesión cerrada" });
   } catch (e) {
     console.error("💥 [logout] Error:", e);
