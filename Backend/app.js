@@ -25,6 +25,7 @@ app.use(cookieParser());
 
 // 🔧 CONFIGURACIÓN DE DOMINIOS PERMITIDOS
 const ALLOWED_ORIGINS = [
+  
   'https://rivera-project-ecru.vercel.app', 
   'https://rivera-project-uhuf.vercel.app',
     // Para Vite en desarrollo
