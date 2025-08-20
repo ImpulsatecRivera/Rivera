@@ -2,6 +2,8 @@ import express from "express";
 import cookieParser from "cookie-parser";
 import cors from "cors";
 import ViajesRoutes from "./src/Routes/ViajesRoutes.js"
+import LoginRoutes from "./src/Routes/LoginRoutes.js";
+import LogoutRoutes from "./src/Routes/Logout.js";
 
 const app = express();
 
@@ -33,5 +35,7 @@ app.get("/health", (req, res) => {
 });
 
 app.use("/api/viajes", ViajesRoutes);
+app.use("/api/login", LoginRoutes);
+app.use("/api/logout", LogoutRoutes);
 
 export default app;
