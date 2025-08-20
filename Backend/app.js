@@ -140,19 +140,22 @@ try {
 app.use("/api/docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
 // ===================== Rutas de la API =====================
-app.use("/api/camiones", camionesRoutes);
-app.use("/api/empleados", empleadoRoutes);
-app.use("/api/motoristas", motoristasRoutes);
-app.use("/api/proveedores", proveedoresRoutes);
-app.use("/api/clientes", ClientesRoutes);
-app.use("/api/login", LoginRoutes);
-app.use("/api/logout", LogoutRoutes);
-app.use("/api/register", RegisterRoutes);
-app.use("/api/register-cliente", RegisterClienteRoutes);
-app.use("/api/cotizaciones", CotizacionesRoutes);
-app.use("/api/recovery", RecoveryRoutes);
-app.use("/api/auto-update", autoUpdateRoutes);
+// 🔍 DEBUGGING: Solo mantener rutas esenciales para encontrar el error
 app.use("/api/viajes", ViajesRoutes);
+
+// 🚨 COMENTADAS TEMPORALMENTE PARA DEBUGGING:
+// app.use("/api/camiones", camionesRoutes);
+// app.use("/api/empleados", empleadoRoutes);
+// app.use("/api/motoristas", motoristasRoutes);
+// app.use("/api/proveedores", proveedoresRoutes);
+// app.use("/api/clientes", ClientesRoutes);
+// app.use("/api/login", LoginRoutes);
+// app.use("/api/logout", LogoutRoutes);
+// app.use("/api/register", RegisterRoutes);
+// app.use("/api/register-cliente", RegisterClienteRoutes);
+// app.use("/api/cotizaciones", CotizacionesRoutes);
+// app.use("/api/recovery", RecoveryRoutes);
+// app.use("/api/auto-update", autoUpdateRoutes);
 
 // ===================== Health Check =====================
 app.get("/health", (req, res) => {
