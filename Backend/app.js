@@ -14,5 +14,11 @@ app.use(cors({
 app.get("/test", (req, res) => {
   res.json({ message: "Test with cookieParser" });
 });
+app.get("/health", (req, res) => {
+  res.status(200).json({
+    status: "OK",
+    timestamp: new Date().toISOString()
+  });
+});
 
 export default app;
