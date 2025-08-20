@@ -32,8 +32,7 @@ app.use(cookieParser());
 // ===================== CORS =====================
 // Orígenes permitidos explícitos
 const ALLOWED_ORIGINS = [
-  "http://localhost:5173",                     // Dev Vite
-  "http://localhost:3000",                     // Dev React/Next
+                       // Dev React/Next
   "https://rivera-project-ecru.vercel.app",    // Prod/preview
   "https://rivera-project-uhuf.vercel.app",    // Otro preview
 ];
