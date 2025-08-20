@@ -41,19 +41,21 @@ const getBlockTimeRemaining = (email) => {
 };
 
 // ===================== Utils de Cookie =====================
-// Set-Cookie manual para poder incluir 'Partitioned' en producción
+// Creamos Set-Cookie manual para poder incluir 'Partitioned' en producción
 const setAuthCookie = (res, token) => {
   const isProd = process.env.NODE_ENV === "production";
-  const parts = [
+  const cookieStr = [
     `authToken=${token}`,
     "Path=/",
     "HttpOnly",
-    `Max-Age=${24 * 60 * 60}`,
+    `Max-Age=${24 * 60 * 60}`,        // 24h
     isProd ? "SameSite=None" : "SameSite=Lax",
     isProd ? "Secure" : "",
-    isProd ? "Partitioned" : "", // CHIPS
-  ].filter(Boolean);
-  const cookieStr = parts.join("; ");
+    isProd ? "Partitioned" : "",      // CHIPS (cross-site)
+  ]
+    .filter(Boolean)
+    .join("; ");
+
   console.log("🍪 [LOGIN] Set-Cookie:", cookieStr);
   res.append("Set-Cookie", cookieStr);
 };
