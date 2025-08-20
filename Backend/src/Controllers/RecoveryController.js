@@ -104,11 +104,10 @@ const actualizarContrasena = async (decoded, hashedPassword) => {
 };
 
 // Solicitar código de recuperación
-// Solicitar código de recuperación
 RecoveryPass.requestCode = async (req, res) => {
   const { email, phone, via = "email" } = req.body;
 
-  console.log("📧 Solicitud de código recibida:", { email, phone, via });
+  console.log("Solicitud de código recibida:", { email, phone, via });
 
   try {
     // Validaciones de entrada según el método
@@ -130,7 +129,7 @@ RecoveryPass.requestCode = async (req, res) => {
     // Buscar usuario según el método seleccionado
     if (via === "email") {
       const normalizedEmail = email.trim().toLowerCase();
-      console.log("🔍 Buscando usuario por email:", normalizedEmail);
+      console.log("Buscando usuario por email:", normalizedEmail);
       
       const result = await buscarUsuario("email", normalizedEmail);
       userFound = result.userFound;
@@ -150,7 +149,7 @@ RecoveryPass.requestCode = async (req, res) => {
         }
       }
       
-      console.log("🔍 Buscando usuario por teléfono:", normalizedPhone);
+      console.log("Buscando usuario por teléfono:", normalizedPhone);
       
       const result = await buscarUsuario("phone", normalizedPhone);
       userFound = result.userFound;
@@ -158,13 +157,13 @@ RecoveryPass.requestCode = async (req, res) => {
       searchCriteria = `phone: ${normalizedPhone}`;
     }
     
-    console.log("🔍 Criterio de búsqueda:", searchCriteria);
-    console.log("👤 Usuario encontrado:", userFound ? `Sí (ID: ${userFound._id}, Tipo: ${userType})` : "No");
+    console.log("Criterio de búsqueda:", searchCriteria);
+    console.log("Usuario encontrado:", userFound ? `Sí (ID: ${userFound._id}, Tipo: ${userType})` : "No");
 
     // Si no se encuentra usuario
     if (!userFound) {
       const searchTerm = via === "email" ? "email" : "número de teléfono";
-      console.log(`❌ Usuario no encontrado con ${searchTerm}:`, via === "email" ? email : phone);
+      console.log(`Usuario no encontrado con ${searchTerm}:`, via === "email" ? email : phone);
       
       return res.status(400).json({ 
         message: `Usuario no encontrado con ese ${searchTerm}` 
@@ -173,7 +172,7 @@ RecoveryPass.requestCode = async (req, res) => {
 
     // Verificación adicional para SMS: usuario debe tener teléfono registrado
     if (via === "sms" && !userFound.phone) {
-      console.log("❌ Usuario encontrado pero sin teléfono registrado");
+      console.log("Usuario encontrado pero sin teléfono registrado");
       return res.status(400).json({
         message: "La cuenta no tiene número de teléfono registrado. Usa recuperación por email."
       });
@@ -181,7 +180,7 @@ RecoveryPass.requestCode = async (req, res) => {
 
     // Generar código de 5 dígitos
     const codex = Math.floor(10000 + Math.random() * 90000).toString();
-    console.log("🔢 Código generado:", codex);
+    console.log("Código generado:", codex);
 
     // Crear token JWT
     const tokenPayload = { 
@@ -189,7 +188,7 @@ RecoveryPass.requestCode = async (req, res) => {
       phone: userFound.phone || null,
       id: userFound._id,
       codex, 
-      userType: userType, // Usar el tipo detectado dinámicamente
+      userType: userType,
       verified: false,
       via: via,
       createdAt: new Date().toISOString()
@@ -197,41 +196,42 @@ RecoveryPass.requestCode = async (req, res) => {
 
     const token = jwt.sign(tokenPayload, config.JWT.secret, { expiresIn: "20m" });
 
-    // Enviar token en cookie
-    res.cookie("tokenRecoveryCode", token, {
-      maxAge: 20 * 60 * 1000, // 20 minutos
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: process.env.NODE_ENV === "production" ? "Strict" : "Lax",
-    });
+    // NO usar cookies - enviar token en response JSON
 
     // Enviar código según método seleccionado
     try {
       if (via === "sms") {
-        // Usar el teléfono del usuario encontrado (no el enviado en la request)
-        const phoneToUse = userFound.phone;
-        const smsMessage = `🔐 Tu código de verificación es: ${codex}. Válido por 20 minutos.`;
+        // Usar el teléfono del usuario encontrado
+        let phoneToUse = userFound.phone;
         
-        console.log("📱 Enviando SMS a:", phoneToUse);
+        // Agregar código de país si no lo tiene
+        if (!phoneToUse.startsWith('+')) {
+          if (phoneToUse.startsWith('503')) {
+            phoneToUse = '+' + phoneToUse;
+          } else {
+            phoneToUse = '+503' + phoneToUse;
+          }
+        }
         
-        // 🚀 VERIFICAR EL RESULTADO DEL SMS
+        const smsMessage = `Tu código de verificación es: ${codex}. Válido por 20 minutos.`;
+        
+        console.log("Enviando SMS a:", phoneToUse);
+        
+        // Verificar el resultado del SMS
         const smsResult = await EnviarSms(phoneToUse, smsMessage);
         
         if (!smsResult.success) {
-          console.error("❌ Error real enviando SMS:", smsResult.error);
-          
-          // Limpiar cookie si falla el envío
-          res.clearCookie("tokenRecoveryCode");
+          console.error("Error real enviando SMS:", smsResult.error);
           
           return res.status(500).json({ 
-            message: "Error enviando SMS. Verifica las credenciales de Twilio.",
+            message: "Error enviando SMS.",
             success: false,
             error: smsResult.error,
             twilioCode: smsResult.code
           });
         }
         
-        console.log("✅ SMS confirmado enviado:", smsResult.messageId);
+        console.log("SMS confirmado enviado:", smsResult.messageId);
         
         return res.status(200).json({ 
           message: "Código enviado vía SMS",
@@ -239,55 +239,54 @@ RecoveryPass.requestCode = async (req, res) => {
           sentTo: `***${phoneToUse.slice(-4)}`,
           method: "sms",
           userType: userType,
-          messageId: smsResult.messageId
+          messageId: smsResult.messageId,
+          recoveryToken: token  // ENVIAR TOKEN EN RESPONSE
         });
         
       } else {
         // Para EMAIL
         const emailToUse = userFound.email;
         
-        console.log("📧 Enviando email a:", emailToUse);
+        console.log("Enviando email a:", emailToUse);
         await EnviarEmail(
           emailToUse,
-          "🔐 Tu código de verificación",
+          "Tu código de verificación",
           "Hola, este es tu código de verificación para recuperar tu contraseña.",
           html(codex)
         );
         
-        console.log("✅ Email enviado exitosamente");
+        console.log("Email enviado exitosamente");
         
         return res.status(200).json({ 
           message: "Código enviado vía email",
           success: true,
           sentTo: `***@${emailToUse.split('@')[1]}`,
           method: "email",
-          userType: userType
+          userType: userType,
+          recoveryToken: token  // ENVIAR TOKEN EN RESPONSE
         });
       }
     } catch (sendError) {
-      console.error("❌ Error enviando código:", sendError);
-      
-      // Limpiar cookie si falla el envío
-      res.clearCookie("tokenRecoveryCode");
+      console.error("Error enviando código:", sendError);
       
       const errorMessage = via === "sms" 
-        ? "Error enviando SMS. Verifica que el número sea correcto." 
-        : "Error enviando email. Verifica que el email sea correcto.";
+        ? "Error enviando SMS." 
+        : "Error enviando email.";
       
       return res.status(500).json({ message: errorMessage });
     }
 
   } catch (error) {
-    console.error("❌ Error general en requestCode:", error);
+    console.error("Error general en requestCode:", error);
     return res.status(500).json({ message: "Error interno del servidor" });
   }
 };
 
 // Verificar código
 RecoveryPass.verifyCode = async (req, res) => {
-  const { code } = req.body;
+  const { code, recoveryToken } = req.body;  // RECIBIR TOKEN DEL BODY
 
-  console.log("🔍 Verificando código:", code);
+  console.log("Verificando código:", code);
 
   try {
     // Validaciones básicas
@@ -295,31 +294,28 @@ RecoveryPass.verifyCode = async (req, res) => {
       return res.status(400).json({ message: "Código requerido" });
     }
 
+    if (!recoveryToken) {
+      return res.status(400).json({ 
+        message: "Token de recuperación requerido. Solicita un nuevo código." 
+      });
+    }
+
     if (code.length !== 5 || !/^\d{5}$/.test(code)) {
       return res.status(400).json({ message: "El código debe tener 5 dígitos" });
     }
 
-    // Obtener token de cookie
-    const token = req.cookies.tokenRecoveryCode;
-    if (!token) {
-      console.log("❌ Token no encontrado en cookies");
-      return res.status(401).json({ 
-        message: "No se encontró token de verificación. Solicita un nuevo código." 
-      });
-    }
-
-    // Verificar token
+    // Verificar token JWT
     let decoded;
     try {
-      decoded = jwt.verify(token, config.JWT.secret);
-      console.log("✅ Token decodificado:", { 
+      decoded = jwt.verify(recoveryToken, config.JWT.secret);
+      console.log("Token decodificado:", { 
         email: decoded.email, 
         via: decoded.via,
         userType: decoded.userType,
         createdAt: decoded.createdAt 
       });
     } catch (jwtError) {
-      console.log("❌ Error JWT:", jwtError.message);
+      console.log("Error JWT:", jwtError.message);
       if (jwtError.name === 'TokenExpiredError') {
         return res.status(401).json({ 
           message: "El código ha expirado. Solicita un nuevo código." 
@@ -332,13 +328,13 @@ RecoveryPass.verifyCode = async (req, res) => {
 
     // Verificar código
     if (decoded.codex !== code) {
-      console.log("❌ Código incorrecto:", { enviado: code, esperado: decoded.codex });
+      console.log("Código incorrecto:", { enviado: code, esperado: decoded.codex });
       return res.status(400).json({ 
         message: "Código inválido. Verifica e inténtalo de nuevo." 
       });
     }
 
-    console.log("✅ Código verificado correctamente");
+    console.log("Código verificado correctamente");
 
     // Crear nuevo token con código verificado
     const newTokenPayload = {
@@ -354,38 +350,35 @@ RecoveryPass.verifyCode = async (req, res) => {
 
     const newToken = jwt.sign(newTokenPayload, config.JWT.secret, { expiresIn: "20m" });
 
-    // Actualizar cookie
-    res.cookie("tokenRecoveryCode", newToken, {
-      maxAge: 20 * 60 * 1000,
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: process.env.NODE_ENV === 'production' ? 'Strict' : 'Lax',
-    });
-
-    console.log(`✅ Código verificado para: ${decoded.email || decoded.phone} (${decoded.userType})`);
+    console.log(`Código verificado para: ${decoded.email || decoded.phone} (${decoded.userType})`);
     res.status(200).json({
       message: "Código verificado exitosamente",
       success: true,
       method: decoded.via,
-      userType: decoded.userType
+      userType: decoded.userType,
+      verifiedToken: newToken  // DEVOLVER NUEVO TOKEN
     });
 
   } catch (error) {
-    console.error("❌ Error en verifyCode:", error);
+    console.error("Error en verifyCode:", error);
     res.status(500).json({ message: "Error interno del servidor" });
   }
 };
 
 // Cambiar contraseña
 RecoveryPass.newPassword = async (req, res) => {
-  const { newPassword } = req.body;
+  const { newPassword, verifiedToken } = req.body;  // RECIBIR TOKEN DEL BODY
 
-  console.log("🔐 Solicitud de cambio de contraseña");
+  console.log("Solicitud de cambio de contraseña");
 
   try {
     // Validaciones
     if (!newPassword) {
       return res.status(400).json({ message: "Nueva contraseña es requerida" });
+    }
+
+    if (!verifiedToken) {
+      return res.status(400).json({ message: "Token de verificación requerido" });
     }
 
     if (newPassword.length < 6) {
@@ -395,16 +388,11 @@ RecoveryPass.newPassword = async (req, res) => {
     }
 
     // Verificar token
-    const token = req.cookies.tokenRecoveryCode;
-    if (!token) {
-      return res.status(401).json({ message: "Token no encontrado" });
-    }
-
     let decoded;
     try {
-      decoded = jwt.verify(token, config.JWT.secret);
+      decoded = jwt.verify(verifiedToken, config.JWT.secret);
     } catch (jwtError) {
-      console.log("❌ Error JWT en newPassword:", jwtError.message);
+      console.log("Error JWT en newPassword:", jwtError.message);
       return res.status(401).json({ message: "Token inválido o expirado" });
     }
 
@@ -412,7 +400,7 @@ RecoveryPass.newPassword = async (req, res) => {
       return res.status(400).json({ message: "Código no verificado" });
     }
 
-    console.log("🔍 Actualizando contraseña para usuario:", decoded.email, `(${decoded.userType})`);
+    console.log("Actualizando contraseña para usuario:", decoded.email, `(${decoded.userType})`);
 
     // Hashear nueva contraseña
     const hashedPassword = await bcryptjs.hash(newPassword, 10);
@@ -421,14 +409,11 @@ RecoveryPass.newPassword = async (req, res) => {
     const updatedUser = await actualizarContrasena(decoded, hashedPassword);
 
     if (!updatedUser) {
-      console.log("❌ Usuario no encontrado para actualizar contraseña");
+      console.log("Usuario no encontrado para actualizar contraseña");
       return res.status(404).json({ message: "Usuario no encontrado" });
     }
 
-    // Limpiar cookie
-    res.clearCookie("tokenRecoveryCode");
-
-    console.log(`✅ Contraseña actualizada para: ${decoded.email || decoded.phone} (${decoded.userType})`);
+    console.log(`Contraseña actualizada para: ${decoded.email || decoded.phone} (${decoded.userType})`);
     res.status(200).json({ 
       message: "Contraseña actualizada exitosamente",
       success: true,
@@ -436,30 +421,29 @@ RecoveryPass.newPassword = async (req, res) => {
     });
 
   } catch (error) {
-    console.error("❌ Error en newPassword:", error);
+    console.error("Error en newPassword:", error);
     res.status(500).json({ message: "Error interno del servidor" });
   }
 };
 
-// Iniciar sesión con código (sin cambiar contraseña)
+// Iniciar sesión con código (sin cambiar contraseña) - ACTUALIZADO
 RecoveryPass.IniciarSesionConCodigo = async (req, res) => {
-  const { code } = req.body;
-  const token = req.cookies.tokenRecoveryCode;
+  const { code, verifiedToken } = req.body;  // RECIBIR TOKEN DEL BODY
 
-  console.log("🚀 Intento de inicio de sesión con código");
+  console.log("Intento de inicio de sesión con código");
 
-  if (!code || !token) {
+  if (!code || !verifiedToken) {
     return res.status(400).json({ 
-      message: "Faltan datos o token no encontrado" 
+      message: "Faltan datos requeridos" 
     });
   }
 
   try {
     // Verificar token y código
-    const decoded = jwt.verify(token, config.JWT.secret);
+    const decoded = jwt.verify(verifiedToken, config.JWT.secret);
     
     if (decoded.codex !== code) {
-      console.log("❌ Código incorrecto en inicio de sesión");
+      console.log("Código incorrecto en inicio de sesión");
       return res.status(400).json({ message: "Código incorrecto" });
     }
 
@@ -478,30 +462,22 @@ RecoveryPass.IniciarSesionConCodigo = async (req, res) => {
       loginAt: new Date().toISOString()
     },
     config.JWT.secret,
-    { expiresIn: "8h" } // Sesión más larga
+    { expiresIn: "8h" }
     );
 
-    // Limpiar token temporal y establecer token de sesión
-    res.clearCookie("tokenRecoveryCode");
-    res.cookie("authToken", authToken, {
-      maxAge: 8 * 60 * 60 * 1000, // 8 horas
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: process.env.NODE_ENV === 'production' ? 'Strict' : 'Lax',
-    });
-
-    console.log(`✅ Inicio de sesión exitoso para: ${decoded.email || decoded.phone} (${decoded.userType})`);
+    console.log(`Inicio de sesión exitoso para: ${decoded.email || decoded.phone} (${decoded.userType})`);
     return res.status(200).json({ 
       message: "Inicio de sesión exitoso", 
       success: true,
       user: {
         email: decoded.email,
         userType: decoded.userType
-      }
+      },
+      authToken: authToken  // DEVOLVER TOKEN DE AUTENTICACIÓN
     });
 
   } catch (error) {
-    console.error("❌ Error en IniciarSesionConCodigo:", error);
+    console.error("Error en IniciarSesionConCodigo:", error);
     return res.status(500).json({ message: "Error al iniciar sesión" });
   }
 };
@@ -512,8 +488,8 @@ RecoveryPass.debugUsers = async (req, res) => {
     const empleados = await EmpleadosModel.find({}, { email: 1, phone: 1, _id: 1 }).limit(5);
     const motoristas = await MotoristasModel.find({}, { email: 1, phone: 1, _id: 1 }).limit(5);
     
-    console.log("👥 Empleados en DB:", empleados);
-    console.log("🏍️ Motoristas en DB:", motoristas);
+    console.log("Empleados en DB:", empleados);
+    console.log("Motoristas en DB:", motoristas);
     
     res.json({ 
       empleados,
