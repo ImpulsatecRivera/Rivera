@@ -15,9 +15,10 @@ const VerificationInput = () => {
 
   const navigate = useNavigate();
   const location = useLocation();
-  const { checkAuth, setUser, setIsLoggedIn } = useAuth(); // usamos setters aquí
+  const { checkAuth, setUser, setIsLoggedIn } = useAuth();
 
-  const { method, contactInfo, email, maskedInfo, flow } = location.state || {};
+  // ✅ Extraer el recoveryToken del state
+  const { method, contactInfo, email, maskedInfo, flow, recoveryToken } = location.state || {};
   const displayEmail = email || contactInfo;
 
   const inputRefs = [useRef(), useRef(), useRef(), useRef(), useRef()];
@@ -29,9 +30,26 @@ const VerificationInput = () => {
       email,
       maskedInfo,
       flow,
-      displayEmail
+      displayEmail,
+      recoveryToken: recoveryToken ? "✅ Presente" : "❌ Faltante"
     });
-  }, []);
+
+    // ✅ Validar que tenemos los datos necesarios
+    if (!displayEmail) {
+      console.error("❌ Email/contactInfo faltante, redirigiendo...");
+      navigate("/recuperar");
+      return;
+    }
+
+    // ✅ Para flujos de recuperación normal, verificar que tenemos el recoveryToken
+    if (flow !== "quickLogin" && !recoveryToken) {
+      console.error("❌ Recovery token faltante para flujo de recuperación");
+      setError("Sesión expirada. Solicita un nuevo código.");
+      setTimeout(() => {
+        navigate("/recuperar");
+      }, 2000);
+    }
+  }, [displayEmail, navigate, flow, recoveryToken]);
 
   useEffect(() => {
     const timer = counter > 0 && setInterval(() => setCounter(counter - 1), 1000);
@@ -88,6 +106,19 @@ const VerificationInput = () => {
       return;
     }
 
+    // 🔍 DEBUG: Mostrar todo el state que recibimos
+    console.log("🔍 DEBUG - State completo recibido:", location.state);
+    console.log("🔍 DEBUG - recoveryToken:", recoveryToken);
+    console.log("🔍 DEBUG - Tipo de recoveryToken:", typeof recoveryToken);
+
+    // ✅ Validar que tenemos el token antes de proceder
+    if (flow !== "quickLogin" && !recoveryToken) {
+      console.error("❌ Token faltante - State actual:", location.state);
+      setError("Token de sesión faltante. Solicita un nuevo código.");
+      setTimeout(() => navigate("/recuperar"), 2000);
+      return;
+    }
+
     setLoading(true);
     setError("");
 
@@ -97,15 +128,35 @@ const VerificationInput = () => {
           ? "https://riveraproject-5.onrender.com/api/recovery/loginCode"
           : "https://riveraproject-5.onrender.com/api/recovery/verifyCode";
 
-      const requestPayload =
-        flow === "quickLogin"
-          ? { code: verificationCode }
-          : { code: verificationCode, method: method, contactInfo: displayEmail };
+      // ✅ Preparar payload correcto según el flujo
+      let requestPayload;
+      
+      if (flow === "quickLogin") {
+        // Para quickLogin, usar verifiedToken (según tu backend)
+        requestPayload = { 
+          code: verificationCode,
+          verifiedToken: recoveryToken || "" // Usa verifiedToken para este flujo
+        };
+      } else {
+        // Para verificación normal, usar recoveryToken
+        requestPayload = { 
+          code: verificationCode, 
+          recoveryToken: recoveryToken // ✅ Incluir el token de recuperación
+        };
+      }
+
+      // 🔍 DEBUG: Mostrar el payload completo que se va a enviar
+      console.log("📤 DEBUG - Payload completo:", requestPayload);
+      console.log("📤 DEBUG - Endpoint:", endpoint);
+      console.log("📤 DEBUG - recoveryToken presente:", !!recoveryToken);
+      console.log("📤 DEBUG - recoveryToken valor:", recoveryToken);
 
       const response = await axios.post(endpoint, requestPayload, {
         withCredentials: true,
         headers: { "Content-Type": "application/json" },
       });
+
+      console.log("✅ Respuesta exitosa:", response.status);
 
       if (response.status === 200) {
         if (flow === "quickLogin") {
@@ -118,30 +169,46 @@ const VerificationInput = () => {
           }
           navigate("/dashboard", { replace: true });
         } else {
+          // ✅ Para flujo normal, pasar el token verificado al siguiente paso
+          const verifiedToken = response.data.verifiedToken;
           navigate("/reset-password", {
-            state: { email: displayEmail, method: method, verified: true },
+            state: { 
+              email: displayEmail, 
+              method: method, 
+              verified: true,
+              verifiedToken: verifiedToken // ✅ Pasar el token verificado
+            },
           });
         }
       }
     } catch (error) {
       console.error("❌ Error al verificar código:", error);
+      
+      // ✅ Manejo mejorado de errores
       if (error.response?.status === 401) {
-        setError("Sesión expirada. Solicita un nuevo código.");
-        setTimeout(() => {
-          navigate("/recuperar");
-        }, 3000);
+        const errorMsg = error.response?.data?.message;
+        if (errorMsg?.includes("expirado")) {
+          setError("El código ha expirado. Solicita un nuevo código.");
+        } else {
+          setError("Token inválido. Solicita un nuevo código.");
+        }
+        setTimeout(() => navigate("/recuperar"), 3000);
+        
       } else if (error.response?.status === 400) {
         const errorMessage = error.response?.data?.message;
-        if (errorMessage === "Codigo incorrecto") {
-          setError("Código incorrecto. Verifica e inténtalo de nuevo.");
-        } else if (errorMessage === "Faltan datos o token no encontrado") {
+        
+        if (errorMessage?.includes("Token de recuperación requerido")) {
           setError("Sesión expirada. Solicita un nuevo código.");
-          setTimeout(() => {
-            navigate("/recuperar");
-          }, 2000);
+          setTimeout(() => navigate("/recuperar"), 2000);
+        } else if (errorMessage?.includes("Código inválido") || errorMessage?.includes("incorrecto")) {
+          setError("Código incorrecto. Verifica e inténtalo de nuevo.");
+        } else if (errorMessage?.includes("Faltan datos")) {
+          setError("Sesión expirada. Solicita un nuevo código.");
+          setTimeout(() => navigate("/recuperar"), 2000);
         } else {
           setError(errorMessage || "Código inválido");
         }
+        
       } else if (error.response?.status === 404) {
         setError("Servicio no disponible");
       } else if (
@@ -154,6 +221,8 @@ const VerificationInput = () => {
       } else {
         setError("Error al verificar el código. Inténtalo de nuevo.");
       }
+      
+      // Limpiar código en caso de error
       setCode(["", "", "", "", ""]);
       inputRefs[0].current?.focus();
     } finally {
@@ -165,28 +234,48 @@ const VerificationInput = () => {
     if (counter > 0) return;
     setLoading(true);
     setError("");
+    
     try {
-      await axios.post(
+      // ✅ Adaptar la petición según tu backend
+      const resendPayload = {
+        email: displayEmail,
+        via: method === "sms" ? "sms" : "email"
+      };
+
+      console.log("📤 Reenviando código:", resendPayload);
+
+      const response = await axios.post(
         "https://riveraproject-5.onrender.com/api/recovery/requestCode",
-        { method: method, contactInfo: displayEmail },
-        { withCredentials: true, headers: { "Content-Type": "application/json" } }
+        resendPayload,
+        { 
+          withCredentials: true, 
+          headers: { "Content-Type": "application/json" } 
+        }
       );
-      setCounter(60);
-      setCode(["", "", "", "", ""]);
-      inputRefs[0].current?.focus();
+
+      if (response.data.success) {
+        // ✅ Actualizar el token si el backend devuelve uno nuevo
+        const newRecoveryToken = response.data.recoveryToken;
+        if (newRecoveryToken) {
+          // Actualizar el state de navegación con el nuevo token
+          window.history.replaceState({
+            ...location.state,
+            recoveryToken: newRecoveryToken
+          }, "");
+        }
+        
+        setCounter(60);
+        setCode(["", "", "", "", ""]);
+        inputRefs[0].current?.focus();
+        console.log("✅ Código reenviado exitosamente");
+      }
     } catch (error) {
       console.error("❌ Error al reenviar código:", error);
-      setError("Error al reenviar el código");
+      setError("Error al reenviar el código. Inténtalo de nuevo.");
     } finally {
       setLoading(false);
     }
   };
-
-  useEffect(() => {
-    if (!displayEmail) {
-      navigate("/recuperar");
-    }
-  }, [displayEmail, navigate]);
 
   return (
     <div className="min-h-screen flex flex-col lg:flex-row">
@@ -207,6 +296,15 @@ const VerificationInput = () => {
           <div className="bg-[#a100f2]/20 border border-[#a100f2] rounded-lg p-2 text-center">
             <p className="text-xs text-[#a100f2]">
               ⚡ Acceso instantáneo - Te logearás automáticamente
+            </p>
+          </div>
+        )}
+
+        {/* ✅ Mostrar advertencia si falta el token */}
+        {flow !== "quickLogin" && !recoveryToken && (
+          <div className="bg-red-500/20 border border-red-400 rounded-lg p-2 text-center">
+            <p className="text-xs text-red-400">
+              ⚠️ Sesión expirada - Serás redirigido para solicitar un nuevo código
             </p>
           </div>
         )}
@@ -235,7 +333,11 @@ const VerificationInput = () => {
           ))}
         </div>
 
-        {error && <p className="text-red-400 text-sm">{error}</p>}
+        {error && (
+          <div className="bg-red-500/20 border border-red-400 rounded-lg p-3 text-center max-w-sm">
+            <p className="text-red-400 text-sm">{error}</p>
+          </div>
+        )}
 
         <div className="text-center">
           {counter > 0 ? (
@@ -246,7 +348,7 @@ const VerificationInput = () => {
             <button
               onClick={handleResendCode}
               disabled={loading}
-              className="text-xs text-[#a100f2] hover:text-[#7d00c1] underline"
+              className="text-xs text-[#a100f2] hover:text-[#7d00c1] underline disabled:opacity-50"
             >
               {loading ? "Enviando..." : "Reenviar código"}
             </button>
@@ -255,10 +357,10 @@ const VerificationInput = () => {
 
         <Button
           onClick={handleVerify}
-          disabled={!isComplete || loading}
+          disabled={!isComplete || loading || (flow !== "quickLogin" && !recoveryToken)}
           className={`
-            bg-[#a100f2] hover:bg-[#7d00c1]
-            ${(!isComplete || loading) ? "opacity-50 cursor-not-allowed" : ""}
+            bg-[#a100f2] hover:bg-[#7d00c1] transition-colors
+            ${(!isComplete || loading || (flow !== "quickLogin" && !recoveryToken)) ? "opacity-50 cursor-not-allowed" : ""}
           `}
         >
           {loading ? "Verificando..." : flow === "quickLogin" ? "Iniciar sesión" : "Confirmar"}
@@ -266,7 +368,7 @@ const VerificationInput = () => {
 
         <button
           onClick={() => navigate("/recuperar")}
-          className="text-sm text-gray-400 hover:text-white underline"
+          className="text-sm text-gray-400 hover:text-white underline transition-colors"
         >
           ¿Información incorrecta? Cambiar
         </button>
