@@ -1,14 +1,13 @@
-// app.js - VERSION MINIMA PARA DEBUGGING
 import express from "express";
+import cookieParser from "cookie-parser";
 
 const app = express();
 
-// Solo middleware básico de Express
 app.use(express.json());
+app.use(cookieParser());
 
-// Una ruta de prueba simple
 app.get("/test", (req, res) => {
-  res.json({ message: "Test working" });
+  res.json({ message: "Test with cookieParser" });
 });
 
 export default app;
