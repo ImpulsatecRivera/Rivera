@@ -136,7 +136,20 @@ const RecoverPassword = () => {
 
       console.log("✅ Respuesta del servidor:", response.data);
 
-      // Navegar a verificación
+      // ✅ CRÍTICO: Extraer el recoveryToken de la respuesta
+      const recoveryToken = response.data.recoveryToken;
+      
+      console.log("🔑 Token extraído:", recoveryToken);
+      console.log("🔑 Tipo de token:", typeof recoveryToken);
+
+      // ✅ Validar que el token existe antes de navegar
+      if (!recoveryToken) {
+        console.error("❌ ERROR: No se recibió recoveryToken del servidor");
+        setError("Error del servidor: no se generó el token de verificación");
+        return;
+      }
+
+      // Navegar a verificación CON el token
       navigate("/verification-input", {
         state: {
           method: selectedMethod,
@@ -145,8 +158,15 @@ const RecoverPassword = () => {
           phone: selectedMethod === "sms" ? normalizePhone(contactInfo) : null,
           maskedInfo: maskContactInfo(selectedMethod, contactInfo),
           flow: "reset",
-          verificationEndpoint: "/api/recovery/verifyCode"
+          verificationEndpoint: "/api/recovery/verifyCode",
+          recoveryToken: recoveryToken  // ✅ AÑADIR EL TOKEN AQUÍ
         }
+      });
+
+      console.log("🎯 Navegando con token:", {
+        method: selectedMethod,
+        hasToken: !!recoveryToken,
+        tokenLength: recoveryToken?.length
       });
 
     } catch (error) {
