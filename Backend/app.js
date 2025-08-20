@@ -41,20 +41,27 @@ const ALLOWED_ORIGINS = [
 // Regex para permitir otros previews en Vercel si los usas
 const ORIGIN_REGEX = /^https:\/\/[a-z0-9-]+\.vercel\.app$/i;
 
-// Headers de petición permitidos - ACTUALIZADOS CON CACHE-CONTROL
+// Headers de petición permitidos - CORREGIDOS CON CASE CORRECTO
 const ALLOWED_REQ_HEADERS = [
   "Content-Type",
-  "Authorization",
+  "Authorization", 
   "Accept",
   "Origin",
   "X-Requested-With",
-  "cache-control",           // ← AGREGADO: Resuelve el error CORS
-  "pragma",                  // ← AGREGADO: Para control de cache
-  "expires",                 // ← AGREGADO: Para control de cache
-  "if-modified-since",       // ← AGREGADO: Para cache condicional
-  "if-none-match",          // ← AGREGADO: Para ETags
-  "x-api-key",              // ← AGREGADO: Por si usas API keys
-  "user-agent"              // ← AGREGADO: Información del cliente
+  "Cache-Control",           // ← CORREGIDO: Con mayúscula como envía el frontend
+  "cache-control",           // ← MANTENER: Por compatibilidad
+  "Pragma",                  // ← CORREGIDO: Con mayúscula como envía el frontend  
+  "pragma",                  // ← MANTENER: Por compatibilidad
+  "Expires",
+  "expires", 
+  "If-Modified-Since",
+  "if-modified-since",
+  "If-None-Match",
+  "if-none-match",
+  "X-API-Key",
+  "x-api-key",
+  "User-Agent",
+  "user-agent"
 ];
 
 // CORS principal - CONFIGURACIÓN UNIFICADA
