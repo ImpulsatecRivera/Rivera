@@ -2,18 +2,20 @@ import React, { createContext, useContext, useState, useEffect } from "react";
 import axios from "axios";
 import { toast } from "react-toastify";
 
+axios.defaults.withCredentials = true;
+
 const AuthContext = createContext();
 
 // ===================== Utils de Cookies =====================
 const cookie = {
   set(name, value, options = {}) {
     const {
-      days,          // preferido para expiración
-      maxAge,        // alternativa en segundos
+      days,             // preferido para expiración
+      maxAge,           // alternativa en segundos
       path = "/",
       sameSite = "Lax", // Lax es seguro para la mayoría de SPA
       secure = (typeof window !== "undefined" ? window.location.protocol === "https:" : true),
-      domain,        // opcional si quieres compartir subdominios
+      domain,           // opcional si quieres compartir subdominios
     } = options;
 
     let cookieStr = `${name}=${encodeURIComponent(value)}`;
@@ -44,13 +46,28 @@ const cookie = {
 
   remove(name, options = {}) {
     // Para borrar: Max-Age=0 y misma Path/Domain
-    const { path = "/", domain, sameSite = "Lax", secure = (typeof window !== "undefined" ? window.location.protocol === "https:" : true) } = options;
+    const {
+      path = "/",
+      domain,
+      sameSite = "Lax",
+      secure = (typeof window !== "undefined" ? window.location.protocol === "https:" : true),
+    } = options;
     let cookieStr = `${name}=; Max-Age=0; Path=${path}`;
     if (domain) cookieStr += `; Domain=${domain}`;
     if (sameSite) cookieStr += `; SameSite=${sameSite}`;
     if (secure) cookieStr += `; Secure`;
     document.cookie = cookieStr;
   },
+};
+
+// CAMBIO: util para “matar” todas las variantes comunes (evita que quede alguna rezagada)
+const nukeCookie = (name) => {
+  const paths = ["/", "/api"];
+  const attrs = ["", "; SameSite=Lax", "; SameSite=None; Secure"];
+  const exp = "; Expires=Thu, 01 Jan 1970 00:00:00 GMT; Max-Age=0";
+  for (const p of paths) for (const a of attrs) {
+    document.cookie = `${name}=${exp}; Path=${p}${a}`;
+  }
 };
 
 // Restringimos lo que guardamos del usuario para no llenar la cookie
@@ -65,7 +82,7 @@ const toUserPreview = (user) => {
 };
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);         // objeto completo desde servidor
+  const [user, setUser] = useState(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [loading, setLoading] = useState(true);
 
@@ -73,7 +90,7 @@ export const AuthProvider = ({ children }) => {
   const loadFromCookies = () => {
     console.log("🍪 [loadFromCookies] Leyendo estado desde cookies");
     try {
-      const isLogged = cookie.get("isLoggedIn") === "true";
+      const isLogged = cookie.get("isLoggedIn") === "true"; // CAMBIO: ya NO se usa para activar sesión
       const userPreviewRaw = cookie.get("userPreview");
       const userType = cookie.get("userType");
 
@@ -83,41 +100,41 @@ export const AuthProvider = ({ children }) => {
         userType,
       });
 
-      if (isLogged) {
-        let preview = null;
-        if (userPreviewRaw) {
-          try {
-            preview = JSON.parse(userPreviewRaw);
-          } catch {
-            console.warn("⚠️ [loadFromCookies] userPreview inválido, ignorando");
-          }
+      // CAMBIO: cargar “preview” para la UI, pero NO activar sesión aquí
+      if (userPreviewRaw) {
+        try {
+          const preview = JSON.parse(userPreviewRaw);
+          setUser(preview);
+          console.log("✅ [loadFromCookies] Preview cargado para UI:", preview);
+        } catch {
+          console.warn("⚠️ [loadFromCookies] userPreview inválido, ignorando");
         }
-        // Restauramos un "usuario ligero" solo para UI inicial;
-        // luego checkAuth lo actualizará con el usuario real del servidor.
-        setUser(preview);
-        setIsLoggedIn(true);
-        return true;
       }
-      return false;
+      return Boolean(userPreviewRaw);
     } catch (e) {
       console.error("💥 [loadFromCookies] Error leyendo cookies:", e);
       return false;
     }
   };
 
+  // CAMBIO: borrar todas las variantes de cookies de UI
   const clearCookies = () => {
-    console.log("🧹 [clearCookies] Borrando cookies de estado");
-    cookie.remove("isLoggedIn");
-    cookie.remove("userType");
-    cookie.remove("userPreview");
+    console.log("🧹 [clearCookies] Borrando cookies de estado (todas las variantes)");
+    try {
+      nukeCookie("isLoggedIn");
+      nukeCookie("userType");
+      nukeCookie("userPreview");
+    } catch (e) {
+      console.warn("⚠️ [clearCookies] error al borrar variantes:", e?.message || e);
+    }
   };
 
   const saveToCookies = (userData, userType) => {
     console.log("💾 [saveToCookies] Guardando estado mínimo en cookies");
-    const preview = toUserPreview(userData);
-    cookie.set("isLoggedIn", "true", { days: 7 });
+    const preview = toUserPreview(userData) || {};
+    // CAMBIO: NO guardamos isLoggedIn (evita sesión fantasma al refrescar)
+    cookie.set("userPreview", JSON.stringify(preview), { days: 7 });
     if (userType) cookie.set("userType", String(userType), { days: 7 });
-    cookie.set("userPreview", JSON.stringify(preview || {}), { days: 7 });
   };
 
   // ===================== Login =====================
@@ -140,9 +157,11 @@ export const AuthProvider = ({ children }) => {
         setUser(response.data.user);
         setIsLoggedIn(true);
 
+        console.log("✅ [login] Login OK -> estado activado");
         toast.success("Inicio de sesión exitoso.");
         return { success: true, data: response.data };
       } else {
+        console.log("❌ [login] No se recibió usuario");
         toast.error("No se pudo iniciar sesión.");
         return { success: false };
       }
@@ -181,18 +200,15 @@ export const AuthProvider = ({ children }) => {
         { withCredentials: true }
       );
       console.log("✅ [logOut] Logout en servidor ok");
-
-      clearCookies();
-      setUser(null);
-      setIsLoggedIn(false);
-      toast.success("Sesión cerrada.");
     } catch (error) {
-      console.error("💥 [logOut] Error:", error);
-      // Aunque falle, limpiamos estado local
+      console.error("💥 [logOut] Error al llamar al backend:", error?.message || error);
+    } finally {
+      // CAMBIO: limpiar SIEMPRE cookies UI y estado (aunque el server falle)
       clearCookies();
       setUser(null);
       setIsLoggedIn(false);
-      toast.error("Error al cerrar sesión, pero se limpió la sesión local.");
+      console.log("🧹 [logOut] Estado local limpiado");
+      toast.success("Sesión cerrada.");
     }
   };
 
@@ -200,8 +216,8 @@ export const AuthProvider = ({ children }) => {
   const checkAuth = async () => {
     console.log("🔍 [checkAuth] Verificando autenticación");
 
-    // 1) Restaurar desde cookies para UI inmediata
-    const hasCookieData = loadFromCookies();
+    // 1) Cargar preview para que la UI no parpadee (NO activa sesión)
+    loadFromCookies();
 
     try {
       // 2) Validar contra servidor (usa cookie httpOnly de tu backend)
@@ -213,52 +229,27 @@ export const AuthProvider = ({ children }) => {
       console.log("📨 [checkAuth] Respuesta servidor:", res.data);
 
       if (res.data?.user) {
-        // Sincronizamos cookies por si cambiaron
+        // Sincroniza cookies UI (informativas)
         saveToCookies(res.data.user, res.data.user.userType);
 
+        // Activar sesión REAL (solo si el server confirma)
         setUser(res.data.user);
         setIsLoggedIn(true);
-        console.log("✅ [checkAuth] Usuario válido");
+        console.log("✅ [checkAuth] Usuario válido -> sesión activa");
       } else {
         console.log("❌ [checkAuth] Servidor no devolvió usuario");
-        if (!hasCookieData) {
-          clearCookies();
-          setUser(null);
-          setIsLoggedIn(false);
-        }
+        clearCookies();
+        setUser(null);
+        setIsLoggedIn(false);
       }
     } catch (err) {
-      console.error("💥 [checkAuth] Error:", err);
+      console.error("💥 [checkAuth] Error:", err?.message || err);
 
-      if (err.response?.status === 401) {
-        console.log("🔒 [checkAuth] 401 - sesión inválida");
-        // Si las cookies locales no dicen nada, limpiamos todo
-        if (!hasCookieData) {
-          clearCookies();
-          setUser(null);
-          setIsLoggedIn(false);
-        } else {
-          console.log("📂 [checkAuth] Manteniendo UI por cookies (posible error temporal)");
-        }
-      } else if (err.code === "ECONNABORTED" || String(err.message || "").includes("timeout")) {
-        console.log("⏰ [checkAuth] Timeout - usando cookies locales");
-        if (!hasCookieData) {
-          setUser(null);
-          setIsLoggedIn(false);
-        }
-      } else if (err.code === "ERR_NETWORK" || !err.response) {
-        console.log("🌐 [checkAuth] Error de red - mantener estado de cookies si existe");
-        if (!hasCookieData) {
-          setUser(null);
-          setIsLoggedIn(false);
-        }
-      } else {
-        console.log("⚠️ [checkAuth] Error inesperado - fallback cookies");
-        if (!hasCookieData) {
-          setUser(null);
-          setIsLoggedIn(false);
-        }
-      }
+      // CAMBIO: ante 401 / timeout / red / lo que sea -> sesión OFF
+      clearCookies();
+      setUser(null);
+      setIsLoggedIn(false);
+      console.log("🛑 [checkAuth] Sesión desactivada por error/401");
     } finally {
       setLoading(false);
       console.log("🏁 [checkAuth] Fin verificación. loading=false");
@@ -278,11 +269,14 @@ export const AuthProvider = ({ children }) => {
         saveToCookies(res.data.user, res.data.user.userType);
         setUser(res.data.user);
         setIsLoggedIn(true);
+        console.log("✅ [syncWithServer] Sincronización OK");
         return true;
+      } else {
+        console.log("❌ [syncWithServer] Server no devolvió usuario");
+        return false;
       }
-      return false;
     } catch (error) {
-      console.error("💥 [syncWithServer] Error:", error);
+      console.error("💥 [syncWithServer] Error:", error?.message || error);
       return false;
     }
   };
@@ -323,7 +317,11 @@ export const AuthProvider = ({ children }) => {
     loading,
   });
 
-  return <AuthContext.Provider value={contextValue}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={contextValue}>
+      {children}
+    </AuthContext.Provider>
+  );
 };
 
 export const useAuth = () => useContext(AuthContext);
