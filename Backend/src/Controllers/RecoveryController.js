@@ -105,6 +105,7 @@ const actualizarContrasena = async (decoded, hashedPassword) => {
 
 // Solicitar código de recuperación
 // Solicitar código de recuperación
+// Solicitar código de recuperación
 RecoveryPass.requestCode = async (req, res) => {
   const { email, phone, via = "email" } = req.body;
 
@@ -208,17 +209,27 @@ RecoveryPass.requestCode = async (req, res) => {
     // Enviar código según método seleccionado
     try {
       if (via === "sms") {
-        // Usar el teléfono del usuario encontrado (no el enviado en la request)
-        const phoneToUse = userFound.phone;
-        const smsMessage = `🔐 Tu código de verificación es: ${codex}. Válido por 20 minutos.`;
+        // Usar el teléfono del usuario encontrado
+        let phoneToUse = userFound.phone;
         
-        console.log("📱 Enviando SMS a:", phoneToUse);
+        // Agregar código de país si no lo tiene
+        if (!phoneToUse.startsWith('+')) {
+          if (phoneToUse.startsWith('503')) {
+            phoneToUse = '+' + phoneToUse;
+          } else {
+            phoneToUse = '+503' + phoneToUse;
+          }
+        }
         
-        // 🚀 VERIFICAR EL RESULTADO DEL SMS
+        const smsMessage = `Tu código de verificación es: ${codex}. Válido por 20 minutos.`;
+        
+        console.log("Enviando SMS a:", phoneToUse);
+        
+        // Verificar el resultado del SMS
         const smsResult = await EnviarSms(phoneToUse, smsMessage);
         
         if (!smsResult.success) {
-          console.error("❌ Error real enviando SMS:", smsResult.error);
+          console.error("Error real enviando SMS:", smsResult.error);
           
           // Limpiar cookie si falla el envío
           res.clearCookie("tokenRecoveryCode");
@@ -231,7 +242,7 @@ RecoveryPass.requestCode = async (req, res) => {
           });
         }
         
-        console.log("✅ SMS confirmado enviado:", smsResult.messageId);
+        console.log("SMS confirmado enviado:", smsResult.messageId);
         
         return res.status(200).json({ 
           message: "Código enviado vía SMS",
