@@ -1,7 +1,7 @@
 // src/Routes/ViajesRoutes.js - NUEVO DESDE CERO
 import express from "express";
-import ViajesController from "../Controllers/Viajes.js";
-
+// import ViajesController from "../Controllers/Viajes.js";
+import ViajesController from "../Controllers/controllerdummy.js";
 const router = express.Router();
 
 // =====================================================
