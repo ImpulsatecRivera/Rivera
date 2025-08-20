@@ -10,12 +10,12 @@ const AuthContext = createContext();
 const cookie = {
   set(name, value, options = {}) {
     const {
-      days,             // preferido para expiración
-      maxAge,           // alternativa en segundos
+      days,
+      maxAge,
       path = "/",
-      sameSite = "Lax", // Lax es seguro para la mayoría de SPA
+      sameSite = "Lax",
       secure = (typeof window !== "undefined" ? window.location.protocol === "https:" : true),
-      domain,           // opcional si quieres compartir subdominios
+      domain,
     } = options;
 
     let cookieStr = `${name}=${encodeURIComponent(value)}`;
@@ -39,13 +39,12 @@ const cookie = {
   get(name) {
     const value = document.cookie
       .split("; ")
-      .find((row) => row.startsWith(`${name}=`))
+      .find(row => row.startsWith(`${name}=`))
       ?.split("=")[1];
     return value ? decodeURIComponent(value) : undefined;
   },
 
   remove(name, options = {}) {
-    // Para borrar: Max-Age=0 y misma Path/Domain
     const {
       path = "/",
       domain,
@@ -60,7 +59,7 @@ const cookie = {
   },
 };
 
-// util para “matar” todas las variantes comunes (evita que quede alguna rezagada)
+// Mata todas las variantes comunes de una cookie en el dominio del FRONTEND
 const nukeCookie = (name) => {
   const paths = ["/", "/api"];
   const attrs = ["", "; SameSite=Lax", "; SameSite=None; Secure"];
@@ -70,7 +69,7 @@ const nukeCookie = (name) => {
   }
 };
 
-// Restringimos lo que guardamos del usuario para no llenar la cookie
+// Solo guardamos lo mínimo del usuario
 const toUserPreview = (user) => {
   if (!user) return null;
   return {
@@ -86,106 +85,62 @@ export const AuthProvider = ({ children }) => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  // ===================== Carga desde cookies (UI inmediata) =====================
+  // ===================== Carga desde cookies (solo preview) =====================
   const loadFromCookies = () => {
-    console.log("🍪 [loadFromCookies] Leyendo estado desde cookies");
     try {
-      const isLogged = cookie.get("isLoggedIn") === "true"; // solo para logging
       const userPreviewRaw = cookie.get("userPreview");
-      const userType = cookie.get("userType");
-
-      console.log("🍪 [loadFromCookies] Cookies encontradas:", {
-        isLogged,
-        hasUserPreview: Boolean(userPreviewRaw),
-        userType,
-      });
-
-      // cargar “preview” para la UI, pero NO activar sesión aquí
       if (userPreviewRaw) {
-        try {
-          const preview = JSON.parse(userPreviewRaw);
-          setUser(preview);
-          console.log("✅ [loadFromCookies] Preview cargado para UI:", preview);
-        } catch {
-          console.warn("⚠️ [loadFromCookies] userPreview inválido, ignorando");
-        }
+        try { setUser(JSON.parse(userPreviewRaw)); } catch {}
       }
       return Boolean(userPreviewRaw);
-    } catch (e) {
-      console.error("💥 [loadFromCookies] Error leyendo cookies:", e);
+    } catch {
       return false;
     }
   };
 
-  // borrar todas las variantes de cookies de UI + authToken del FRONTEND
+  // Borra cookies UI + authToken del FRONTEND
   const clearCookies = () => {
-    console.log("🧹 [clearCookies] Borrando cookies de estado (todas las variantes)");
     try {
-      nukeCookie("authToken");   // ⬅️ NUEVO: elimina el token del dominio del FRONTEND
+      nukeCookie("authToken");  // <-- IMPORTANTE
       nukeCookie("isLoggedIn");
       nukeCookie("userType");
       nukeCookie("userPreview");
-    } catch (e) {
-      console.warn("⚠️ [clearCookies] error al borrar variantes:", e?.message || e);
-    }
+    } catch {}
   };
 
   const saveToCookies = (userData, userType) => {
-    console.log("💾 [saveToCookies] Guardando estado mínimo en cookies");
     const preview = toUserPreview(userData) || {};
-    // NO guardamos isLoggedIn (evita sesión fantasma al refrescar)
     cookie.set("userPreview", JSON.stringify(preview), { days: 7 });
     if (userType) cookie.set("userType", String(userType), { days: 7 });
   };
 
   // ===================== Login =====================
   const login = async (email, password) => {
-    console.log("🔑 [login] Iniciando login", email);
     try {
-      const response = await axios.post(
+      const { data } = await axios.post(
         "https://riveraproject-5.onrender.com/api/login",
         { email, password },
         { withCredentials: true }
       );
 
-      console.log("📨 [login] Respuesta:", response.data);
-
-      if (response.data?.user) {
-        // Guardamos estado en cookies (no el token)
-        saveToCookies(response.data.user, response.data.userType);
-
-        // Estado completo en memoria
-        setUser(response.data.user);
+      if (data?.user) {
+        saveToCookies(data.user, data.userType);
+        setUser(data.user);
         setIsLoggedIn(true);
-
-        console.log("✅ [login] Login OK -> estado activado");
         toast.success("Inicio de sesión exitoso.");
-        return { success: true, data: response.data };
-      } else {
-        console.log("❌ [login] No se recibió usuario");
-        toast.error("No se pudo iniciar sesión.");
-        return { success: false };
+        return { success: true, data };
       }
+      toast.error("No se pudo iniciar sesión.");
+      return { success: false };
     } catch (error) {
-      console.error("💥 [login] Error:", error.response?.data || error.message);
-
       if (error.response?.status === 429) {
         toast.error(error.response.data.message || "Demasiados intentos fallidos");
-        return {
-          success: false,
-          blocked: true,
-          timeRemaining: error.response.data.timeRemaining,
-        };
+        return { success: false, blocked: true, timeRemaining: error.response.data.timeRemaining };
       }
-
       if (error.response?.data?.attemptsRemaining !== undefined) {
         toast.error(error.response.data.message);
-        return {
-          success: false,
-          attemptsRemaining: error.response.data.attemptsRemaining,
-        };
+        return { success: false, attemptsRemaining: error.response.data.attemptsRemaining };
       }
-
       toast.error("Credenciales inválidas.");
       return { success: false };
     }
@@ -193,111 +148,70 @@ export const AuthProvider = ({ children }) => {
 
   // ===================== Logout =====================
   const logOut = async () => {
-    console.log("🚪 [logOut] Cerrando sesión");
     try {
-      await axios.post(
-        "https://riveraproject-5.onrender.com/api/logout",
-        {},
-        { withCredentials: true }
-      );
-      console.log("✅ [logOut] Logout en servidor ok");
-    } catch (error) {
-      console.error("💥 [logOut] Error al llamar al backend:", error?.message || error);
+      await axios.post("https://riveraproject-5.onrender.com/api/logout", {}, { withCredentials: true });
     } finally {
-      // limpiar SIEMPRE cookies UI y estado (aunque el server falle)
       clearCookies();
       setUser(null);
       setIsLoggedIn(false);
-      console.log("🧹 [logOut] Estado local limpiado");
       toast.success("Sesión cerrada.");
     }
   };
 
-  // ===================== Verificar autenticación =====================
+  // ===================== Verificar autenticación (solo server decide) =====================
   const checkAuth = async () => {
-    console.log("🔍 [checkAuth] Verificando autenticación");
-
-    // 1) Cargar preview para que la UI no parpadee (NO activa sesión)
-    loadFromCookies();
+    setLoading(true);
+    loadFromCookies(); // solo preview
 
     try {
-      // 2) Validar contra servidor (usa cookie httpOnly de tu backend)
       const res = await axios.get(
         "https://riveraproject-5.onrender.com/api/login/check-auth",
         { withCredentials: true, timeout: 10000 }
       );
 
-      console.log("📨 [checkAuth] Respuesta servidor:", res.data);
-
       if (res.data?.user) {
-        // Sincroniza cookies UI (informativas)
         saveToCookies(res.data.user, res.data.user.userType);
-
-        // Activar sesión REAL (solo si el server confirma)
         setUser(res.data.user);
         setIsLoggedIn(true);
-        console.log("✅ [checkAuth] Usuario válido -> sesión activa");
       } else {
-        console.log("❌ [checkAuth] Servidor no devolvió usuario");
         clearCookies();
         setUser(null);
         setIsLoggedIn(false);
       }
-    } catch (err) {
-      console.error("💥 [checkAuth] Error:", err?.message || err);
-
-      // ante 401 / timeout / red / lo que sea -> sesión OFF
+    } catch {
       clearCookies();
       setUser(null);
       setIsLoggedIn(false);
-      console.log("🛑 [checkAuth] Sesión desactivada por error/401");
     } finally {
       setLoading(false);
-      console.log("🏁 [checkAuth] Fin verificación. loading=false");
     }
   };
 
   // ===================== Sync manual =====================
   const syncWithServer = async () => {
-    console.log("🔄 [syncWithServer] Forzando sincronización");
     try {
       const res = await axios.get(
         "https://riveraproject-5.onrender.com/api/login/check-auth",
         { withCredentials: true, timeout: 5000 }
       );
-
       if (res.data?.user) {
         saveToCookies(res.data.user, res.data.user.userType);
         setUser(res.data.user);
         setIsLoggedIn(true);
-        console.log("✅ [syncWithServer] Sincronización OK");
         return true;
-      } else {
-        console.log("❌ [syncWithServer] Server no devolvió usuario");
-        return false;
       }
-    } catch (error) {
-      console.error("💥 [syncWithServer] Error:", error?.message || error);
+      return false;
+    } catch {
       return false;
     }
   };
 
   // ===================== Efectos =====================
+  useEffect(() => { checkAuth(); }, []);
   useEffect(() => {
-    console.log("🚀 [AuthProvider] Montado -> checkAuth");
-    checkAuth();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (!document.hidden && isLoggedIn) {
-        console.log("👁️ [AuthProvider] Tab visible -> sync");
-        syncWithServer();
-      }
-    };
-    document.addEventListener("visibilitychange", handleVisibilityChange);
-    return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
+    const onVis = () => { if (!document.hidden && isLoggedIn) syncWithServer(); };
+    document.addEventListener("visibilitychange", onVis);
+    return () => document.removeEventListener("visibilitychange", onVis);
   }, [isLoggedIn]);
 
   const contextValue = {
@@ -312,17 +226,7 @@ export const AuthProvider = ({ children }) => {
     checkAuth,
   };
 
-  console.log("🔄 [AuthProvider] Render:", {
-    user: user ? (user.email || user.name || "user") : "No user",
-    isLoggedIn,
-    loading,
-  });
-
-  return (
-    <AuthContext.Provider value={contextValue}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={contextValue}>{children}</AuthContext.Provider>;
 };
 
 export const useAuth = () => useContext(AuthContext);
