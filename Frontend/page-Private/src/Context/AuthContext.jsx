@@ -4,65 +4,125 @@ import { toast } from "react-toastify";
 
 const AuthContext = createContext();
 
+// ===================== Utils de Cookies =====================
+const cookie = {
+  set(name, value, options = {}) {
+    const {
+      days,          // preferido para expiración
+      maxAge,        // alternativa en segundos
+      path = "/",
+      sameSite = "Lax", // Lax es seguro para la mayoría de SPA
+      secure = (typeof window !== "undefined" ? window.location.protocol === "https:" : true),
+      domain,        // opcional si quieres compartir subdominios
+    } = options;
+
+    let cookieStr = `${name}=${encodeURIComponent(value)}`;
+
+    if (typeof days === "number") {
+      const date = new Date();
+      date.setTime(date.getTime() + days * 24 * 60 * 60 * 1000);
+      cookieStr += `; Expires=${date.toUTCString()}`;
+    } else if (typeof maxAge === "number") {
+      cookieStr += `; Max-Age=${maxAge}`;
+    }
+
+    cookieStr += `; Path=${path}`;
+    if (domain) cookieStr += `; Domain=${domain}`;
+    if (sameSite) cookieStr += `; SameSite=${sameSite}`;
+    if (secure) cookieStr += `; Secure`;
+
+    document.cookie = cookieStr;
+  },
+
+  get(name) {
+    const value = document.cookie
+      .split("; ")
+      .find((row) => row.startsWith(`${name}=`))
+      ?.split("=")[1];
+    return value ? decodeURIComponent(value) : undefined;
+  },
+
+  remove(name, options = {}) {
+    // Para borrar: Max-Age=0 y misma Path/Domain
+    const { path = "/", domain, sameSite = "Lax", secure = (typeof window !== "undefined" ? window.location.protocol === "https:" : true) } = options;
+    let cookieStr = `${name}=; Max-Age=0; Path=${path}`;
+    if (domain) cookieStr += `; Domain=${domain}`;
+    if (sameSite) cookieStr += `; SameSite=${sameSite}`;
+    if (secure) cookieStr += `; Secure`;
+    document.cookie = cookieStr;
+  },
+};
+
+// Restringimos lo que guardamos del usuario para no llenar la cookie
+const toUserPreview = (user) => {
+  if (!user) return null;
+  return {
+    id: user.id || user._id || undefined,
+    email: user.email || undefined,
+    name: user.name || user.nombre || user.username || undefined,
+    userType: user.userType || user.role || undefined,
+  };
+};
+
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState(null);         // objeto completo desde servidor
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  // 🔄 Función mejorada para cargar datos desde localStorage
-  const loadFromLocalStorage = () => {
-    console.log("📂 [loadFromLocalStorage] Iniciando carga desde localStorage");
+  // ===================== Carga desde cookies (UI inmediata) =====================
+  const loadFromCookies = () => {
+    console.log("🍪 [loadFromCookies] Leyendo estado desde cookies");
     try {
-      const storedUser = localStorage.getItem('user');
-      const storedIsLoggedIn = localStorage.getItem('isLoggedIn');
-      
-      console.log("📂 [loadFromLocalStorage] Datos encontrados:", {
-        user: storedUser ? "Presente" : "No encontrado",
-        isLoggedIn: storedIsLoggedIn
+      const isLogged = cookie.get("isLoggedIn") === "true";
+      const userPreviewRaw = cookie.get("userPreview");
+      const userType = cookie.get("userType");
+
+      console.log("🍪 [loadFromCookies] Cookies encontradas:", {
+        isLogged,
+        hasUserPreview: Boolean(userPreviewRaw),
+        userType,
       });
-      
-      if (storedUser && storedIsLoggedIn === 'true') {
-        const parsedUser = JSON.parse(storedUser);
-        console.log("✅ [loadFromLocalStorage] Restaurando usuario desde localStorage:", parsedUser);
-        
-        setUser(parsedUser);
+
+      if (isLogged) {
+        let preview = null;
+        if (userPreviewRaw) {
+          try {
+            preview = JSON.parse(userPreviewRaw);
+          } catch {
+            console.warn("⚠️ [loadFromCookies] userPreview inválido, ignorando");
+          }
+        }
+        // Restauramos un "usuario ligero" solo para UI inicial;
+        // luego checkAuth lo actualizará con el usuario real del servidor.
+        setUser(preview);
         setIsLoggedIn(true);
         return true;
       }
-      
-      console.log("❌ [loadFromLocalStorage] No hay datos válidos en localStorage");
       return false;
-    } catch (error) {
-      console.error("💥 [loadFromLocalStorage] Error al cargar desde localStorage:", error);
+    } catch (e) {
+      console.error("💥 [loadFromCookies] Error leyendo cookies:", e);
       return false;
     }
   };
 
-  // 🧹 Función para limpiar localStorage
-  const clearLocalStorage = () => {
-    console.log("🧹 [clearLocalStorage] Limpiando datos de localStorage");
-    localStorage.removeItem('user');
-    localStorage.removeItem('userType');
-    localStorage.removeItem('isLoggedIn');
+  const clearCookies = () => {
+    console.log("🧹 [clearCookies] Borrando cookies de estado");
+    cookie.remove("isLoggedIn");
+    cookie.remove("userType");
+    cookie.remove("userPreview");
   };
 
-  // 💾 Función para guardar en localStorage
-  const saveToLocalStorage = (userData, userType) => {
-    console.log("💾 [saveToLocalStorage] Guardando datos:", { userData, userType });
-    try {
-      localStorage.setItem('user', JSON.stringify(userData));
-      localStorage.setItem('userType', userType);
-      localStorage.setItem('isLoggedIn', 'true');
-      console.log("✅ [saveToLocalStorage] Datos guardados exitosamente");
-    } catch (error) {
-      console.error("💥 [saveToLocalStorage] Error al guardar en localStorage:", error);
-    }
+  const saveToCookies = (userData, userType) => {
+    console.log("💾 [saveToCookies] Guardando estado mínimo en cookies");
+    const preview = toUserPreview(userData);
+    cookie.set("isLoggedIn", "true", { days: 7 });
+    if (userType) cookie.set("userType", String(userType), { days: 7 });
+    cookie.set("userPreview", JSON.stringify(preview || {}), { days: 7 });
   };
 
-  // ⚠️ DEPRECADO: Esta función ya no se usa para login principal
-  // Solo mantenerla para compatibilidad si es necesaria
+  // ===================== Login =====================
   const login = async (email, password) => {
-    console.log("🔑 [login] Iniciando proceso de login con email:", email);
+    console.log("🔑 [login] Iniciando login", email);
     try {
       const response = await axios.post(
         "https://riveraproject-5.onrender.com/api/login",
@@ -70,239 +130,200 @@ export const AuthProvider = ({ children }) => {
         { withCredentials: true }
       );
 
-      console.log("📨 [login] Respuesta del servidor:", response.data);
+      console.log("📨 [login] Respuesta:", response.data);
 
       if (response.data?.user) {
-        // Guardar en localStorage usando función centralizada
-        saveToLocalStorage(response.data.user, response.data.userType);
-        
+        // Guardamos estado en cookies (no el token)
+        saveToCookies(response.data.user, response.data.userType);
+
+        // Estado completo en memoria
         setUser(response.data.user);
         setIsLoggedIn(true);
-        console.log("✅ [login] Login exitoso, usuario establecido");
+
         toast.success("Inicio de sesión exitoso.");
         return { success: true, data: response.data };
       } else {
-        console.log("❌ [login] Respuesta sin datos de usuario");
         toast.error("No se pudo iniciar sesión.");
         return { success: false };
       }
     } catch (error) {
-      console.error("💥 [login] Error en login:", error.response?.data || error.message);
-      
+      console.error("💥 [login] Error:", error.response?.data || error.message);
+
       if (error.response?.status === 429) {
-        console.log("🔒 [login] Usuario bloqueado por demasiados intentos");
         toast.error(error.response.data.message || "Demasiados intentos fallidos");
-        return { 
-          success: false, 
-          blocked: true, 
-          timeRemaining: error.response.data.timeRemaining 
+        return {
+          success: false,
+          blocked: true,
+          timeRemaining: error.response.data.timeRemaining,
         };
       }
-      
+
       if (error.response?.data?.attemptsRemaining !== undefined) {
-        console.log("⚠️ [login] Intento fallido con intentos restantes:", error.response.data.attemptsRemaining);
         toast.error(error.response.data.message);
-        return { 
-          success: false, 
-          attemptsRemaining: error.response.data.attemptsRemaining 
+        return {
+          success: false,
+          attemptsRemaining: error.response.data.attemptsRemaining,
         };
       }
-      
-      console.log("❌ [login] Error genérico de credenciales");
+
       toast.error("Credenciales inválidas.");
       return { success: false };
     }
   };
 
+  // ===================== Logout =====================
   const logOut = async () => {
-    console.log("🚪 [logOut] Iniciando proceso de logout");
+    console.log("🚪 [logOut] Cerrando sesión");
     try {
-      // Intentar logout en servidor
-      await axios.post("https://riveraproject-5.onrender.com/api/logout", {}, { 
-        withCredentials: true 
-      });
-      console.log("✅ [logOut] Logout exitoso en servidor");
-      
-      // Limpiar estado local
-      clearLocalStorage();
+      await axios.post(
+        "https://riveraproject-5.onrender.com/api/logout",
+        {},
+        { withCredentials: true }
+      );
+      console.log("✅ [logOut] Logout en servidor ok");
+
+      clearCookies();
       setUser(null);
       setIsLoggedIn(false);
-      console.log("✅ [logOut] Estado local limpiado");
       toast.success("Sesión cerrada.");
     } catch (error) {
-      console.error("💥 [logOut] Error al cerrar sesión:", error);
-      
-      // Incluso si hay error, limpiamos el estado local
-      clearLocalStorage();
+      console.error("💥 [logOut] Error:", error);
+      // Aunque falle, limpiamos estado local
+      clearCookies();
       setUser(null);
       setIsLoggedIn(false);
-      console.log("🧹 [logOut] Estado local limpiado a pesar del error");
       toast.error("Error al cerrar sesión, pero se limpió la sesión local.");
     }
   };
 
-  // 🔍 Verificar autenticación con el servidor MEJORADA
+  // ===================== Verificar autenticación =====================
   const checkAuth = async () => {
-    console.log("🔍 [checkAuth] Iniciando verificación de autenticación");
+    console.log("🔍 [checkAuth] Verificando autenticación");
+
+    // 1) Restaurar desde cookies para UI inmediata
+    const hasCookieData = loadFromCookies();
+
     try {
-      // 1️⃣ Primero cargar desde localStorage para UI inmediata
-      console.log("📂 [checkAuth] Paso 1: Cargando desde localStorage");
-      const hasLocalData = loadFromLocalStorage();
-      
-      if (hasLocalData) {
-        console.log("✅ [checkAuth] Datos encontrados en localStorage, UI restaurada");
-        // No terminar aquí, continuar con verificación del servidor
-      } else {
-        console.log("❌ [checkAuth] No hay datos en localStorage");
-      }
+      // 2) Validar contra servidor (usa cookie httpOnly de tu backend)
+      const res = await axios.get(
+        "https://riveraproject-5.onrender.com/api/login/check-auth",
+        { withCredentials: true, timeout: 10000 }
+      );
 
-      // 2️⃣ Verificar con el servidor si hay cookie válida
-      console.log("🌐 [checkAuth] Paso 2: Verificando con servidor");
-      const res = await axios.get("https://riveraproject-5.onrender.com/api/login/check-auth", {
-        withCredentials: true,
-        timeout: 10000 // 10 segundos de timeout
-      });
-
-      console.log("📨 [checkAuth] Respuesta del servidor:", res.data);
+      console.log("📨 [checkAuth] Respuesta servidor:", res.data);
 
       if (res.data?.user) {
-        console.log("✅ [checkAuth] Usuario válido desde servidor");
-        
-        // Actualizar localStorage con datos del servidor (por si hay diferencias)
-        saveToLocalStorage(res.data.user, res.data.user.userType);
-        
-        // Actualizar estado si hay diferencias
+        // Sincronizamos cookies por si cambiaron
+        saveToCookies(res.data.user, res.data.user.userType);
+
         setUser(res.data.user);
         setIsLoggedIn(true);
-        console.log("✅ [checkAuth] Estado actualizado con datos del servidor");
+        console.log("✅ [checkAuth] Usuario válido");
       } else {
-        console.log("❌ [checkAuth] Servidor no devolvió usuario válido");
-        if (!hasLocalData) {
-          // No hay datos ni en servidor ni en localStorage
-          console.log("🧹 [checkAuth] Limpiando estado - no hay datos válidos");
-          clearLocalStorage();
+        console.log("❌ [checkAuth] Servidor no devolvió usuario");
+        if (!hasCookieData) {
+          clearCookies();
           setUser(null);
           setIsLoggedIn(false);
-        } else {
-          console.log("📂 [checkAuth] Manteniendo datos de localStorage a pesar de error del servidor");
-          // Mantener la sesión local si existe
         }
       }
-      
     } catch (err) {
-      console.error("💥 [checkAuth] Error en verificación:", err);
-      
+      console.error("💥 [checkAuth] Error:", err);
+
       if (err.response?.status === 401) {
-        console.log("🔒 [checkAuth] Token inválido (401)");
-        // Token inválido en servidor
-        const hasLocalData = loadFromLocalStorage();
-        if (!hasLocalData) {
-          console.log("🧹 [checkAuth] No hay datos locales, limpiando estado");
+        console.log("🔒 [checkAuth] 401 - sesión inválida");
+        // Si las cookies locales no dicen nada, limpiamos todo
+        if (!hasCookieData) {
+          clearCookies();
           setUser(null);
           setIsLoggedIn(false);
         } else {
-          console.log("📂 [checkAuth] Manteniendo sesión local a pesar de token inválido");
-          // Mantener localStorage para que el usuario no pierda la sesión por problemas de red
+          console.log("📂 [checkAuth] Manteniendo UI por cookies (posible error temporal)");
         }
-      } else if (err.code === 'ECONNABORTED' || err.message.includes('timeout')) {
-        console.log("⏰ [checkAuth] Timeout de conexión, usando datos locales");
-        // Timeout o problemas de red - usar localStorage
-        const hasLocalData = loadFromLocalStorage();
-        if (!hasLocalData) {
-          console.log("❌ [checkAuth] No hay datos locales para usar en caso de timeout");
+      } else if (err.code === "ECONNABORTED" || String(err.message || "").includes("timeout")) {
+        console.log("⏰ [checkAuth] Timeout - usando cookies locales");
+        if (!hasCookieData) {
           setUser(null);
           setIsLoggedIn(false);
         }
-      } else if (err.code === 'ERR_NETWORK' || !err.response) {
-        console.log("🌐 [checkAuth] Error de red, manteniendo sesión local");
-        // Error de red - mantener sesión local si existe
-        const hasLocalData = loadFromLocalStorage();
-        if (!hasLocalData) {
-          console.log("❌ [checkAuth] No hay datos locales para mantener");
+      } else if (err.code === "ERR_NETWORK" || !err.response) {
+        console.log("🌐 [checkAuth] Error de red - mantener estado de cookies si existe");
+        if (!hasCookieData) {
           setUser(null);
           setIsLoggedIn(false);
         }
       } else {
-        console.error("💥 [checkAuth] Error inesperado:", err);
-        // En caso de error inesperado, usar localStorage si existe
-        const hasLocalData = loadFromLocalStorage();
-        if (!hasLocalData) {
+        console.log("⚠️ [checkAuth] Error inesperado - fallback cookies");
+        if (!hasCookieData) {
           setUser(null);
           setIsLoggedIn(false);
         }
       }
     } finally {
-      console.log("🏁 [checkAuth] Finalizando verificación, loading = false");
       setLoading(false);
+      console.log("🏁 [checkAuth] Fin verificación. loading=false");
     }
   };
 
-  // 🔄 Función para sincronizar manualmente con el servidor
+  // ===================== Sync manual =====================
   const syncWithServer = async () => {
-    console.log("🔄 [syncWithServer] Sincronizando manualmente con servidor");
+    console.log("🔄 [syncWithServer] Forzando sincronización");
     try {
-      const res = await axios.get("https://riveraproject-5.onrender.com/api/login/check-auth", {
-        withCredentials: true,
-        timeout: 5000
-      });
+      const res = await axios.get(
+        "https://riveraproject-5.onrender.com/api/login/check-auth",
+        { withCredentials: true, timeout: 5000 }
+      );
 
       if (res.data?.user) {
-        console.log("✅ [syncWithServer] Sincronización exitosa");
-        saveToLocalStorage(res.data.user, res.data.user.userType);
+        saveToCookies(res.data.user, res.data.user.userType);
         setUser(res.data.user);
         setIsLoggedIn(true);
         return true;
-      } else {
-        console.log("❌ [syncWithServer] Servidor no devolvió usuario válido");
-        return false;
       }
+      return false;
     } catch (error) {
-      console.error("💥 [syncWithServer] Error en sincronización:", error);
+      console.error("💥 [syncWithServer] Error:", error);
       return false;
     }
   };
 
+  // ===================== Efectos =====================
   useEffect(() => {
-    console.log("🚀 [AuthProvider] Componente montado, iniciando checkAuth");
+    console.log("🚀 [AuthProvider] Montado -> checkAuth");
     checkAuth();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // 🔄 Agregar listener para cambios de visibilidad (cuando el usuario vuelve a la pestaña)
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (!document.hidden && isLoggedIn) {
-        console.log("👁️ [AuthProvider] Pestaña visible de nuevo, sincronizando con servidor");
+        console.log("👁️ [AuthProvider] Tab visible -> sync");
         syncWithServer();
       }
     };
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
   }, [isLoggedIn]);
 
   const contextValue = {
-    user, 
-    login, 
-    logOut, 
-    isLoggedIn, 
+    user,
+    login,
+    logOut,
+    isLoggedIn,
     loading,
     setUser,
     setIsLoggedIn,
-    syncWithServer, // Exponer función de sincronización manual
-    checkAuth // Exponer función de verificación manual
+    syncWithServer,
+    checkAuth,
   };
 
-  console.log("🔄 [AuthProvider] Renderizando con estado:", {
-    user: user ? user.email : "No user",
+  console.log("🔄 [AuthProvider] Render:", {
+    user: user ? (user.email || user.name || "user") : "No user",
     isLoggedIn,
-    loading
+    loading,
   });
 
-  return (
-    <AuthContext.Provider value={contextValue}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={contextValue}>{children}</AuthContext.Provider>;
 };
 
 export const useAuth = () => useContext(AuthContext);
