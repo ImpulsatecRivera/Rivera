@@ -60,7 +60,7 @@ const cookie = {
   },
 };
 
-// CAMBIO: util para “matar” todas las variantes comunes (evita que quede alguna rezagada)
+// util para “matar” todas las variantes comunes (evita que quede alguna rezagada)
 const nukeCookie = (name) => {
   const paths = ["/", "/api"];
   const attrs = ["", "; SameSite=Lax", "; SameSite=None; Secure"];
@@ -90,7 +90,7 @@ export const AuthProvider = ({ children }) => {
   const loadFromCookies = () => {
     console.log("🍪 [loadFromCookies] Leyendo estado desde cookies");
     try {
-      const isLogged = cookie.get("isLoggedIn") === "true"; // CAMBIO: ya NO se usa para activar sesión
+      const isLogged = cookie.get("isLoggedIn") === "true"; // solo para logging
       const userPreviewRaw = cookie.get("userPreview");
       const userType = cookie.get("userType");
 
@@ -100,7 +100,7 @@ export const AuthProvider = ({ children }) => {
         userType,
       });
 
-      // CAMBIO: cargar “preview” para la UI, pero NO activar sesión aquí
+      // cargar “preview” para la UI, pero NO activar sesión aquí
       if (userPreviewRaw) {
         try {
           const preview = JSON.parse(userPreviewRaw);
@@ -117,10 +117,11 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // CAMBIO: borrar todas las variantes de cookies de UI
+  // borrar todas las variantes de cookies de UI + authToken del FRONTEND
   const clearCookies = () => {
     console.log("🧹 [clearCookies] Borrando cookies de estado (todas las variantes)");
     try {
+      nukeCookie("authToken");   // ⬅️ NUEVO: elimina el token del dominio del FRONTEND
       nukeCookie("isLoggedIn");
       nukeCookie("userType");
       nukeCookie("userPreview");
@@ -132,7 +133,7 @@ export const AuthProvider = ({ children }) => {
   const saveToCookies = (userData, userType) => {
     console.log("💾 [saveToCookies] Guardando estado mínimo en cookies");
     const preview = toUserPreview(userData) || {};
-    // CAMBIO: NO guardamos isLoggedIn (evita sesión fantasma al refrescar)
+    // NO guardamos isLoggedIn (evita sesión fantasma al refrescar)
     cookie.set("userPreview", JSON.stringify(preview), { days: 7 });
     if (userType) cookie.set("userType", String(userType), { days: 7 });
   };
@@ -203,7 +204,7 @@ export const AuthProvider = ({ children }) => {
     } catch (error) {
       console.error("💥 [logOut] Error al llamar al backend:", error?.message || error);
     } finally {
-      // CAMBIO: limpiar SIEMPRE cookies UI y estado (aunque el server falle)
+      // limpiar SIEMPRE cookies UI y estado (aunque el server falle)
       clearCookies();
       setUser(null);
       setIsLoggedIn(false);
@@ -245,7 +246,7 @@ export const AuthProvider = ({ children }) => {
     } catch (err) {
       console.error("💥 [checkAuth] Error:", err?.message || err);
 
-      // CAMBIO: ante 401 / timeout / red / lo que sea -> sesión OFF
+      // ante 401 / timeout / red / lo que sea -> sesión OFF
       clearCookies();
       setUser(null);
       setIsLoggedIn(false);
