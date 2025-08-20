@@ -14,6 +14,9 @@ import RegisterRoutes from "./src/Routes/RegisterRoute.js"
 import ViajesRoutes from "./src/Routes/ViajesRoutes.js"
 import cookieParser from "cookie-parser"
 import cors from "cors";
+import swaggerUi from "swagger-ui-express";
+import fs from "fs";
+import path from "path";
  
 const app = express();
 
@@ -40,6 +43,14 @@ app.use(
     exposedHeaders: ['Set-Cookie'],
     optionsSuccessStatus: 200
   })
+);
+
+//Traemos el archivo json
+const swaggerDocument = JSON.parse(
+    fs.readFileSync(
+        path.resolve("./Documentacion.json"),
+        "utf-8"
+    )
 );
 
 // 🔧 MIDDLEWARE ADICIONAL PARA HEADERS DE COOKIES
@@ -80,5 +91,6 @@ app.use("/api/cotizaciones", CotizacionesRoutes);
 app.use("/api/recovery", RecoveryRoutes);
 app.use('/api/auto-update', autoUpdateRoutes);
 app.use("/api/viajes", ViajesRoutes);
+app.use("/api/docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
 export default app;

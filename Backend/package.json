@@ -26,6 +26,7 @@
     "multer-storage-cloudinary": "^4.0.0",
     "node-cron": "^4.2.1",
     "nodemailer": "^7.0.3",
+    "swagger-ui-express": "^5.0.1",
     "twilio": "^5.7.3"
   }
 }
