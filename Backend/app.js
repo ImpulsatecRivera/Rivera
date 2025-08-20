@@ -9,6 +9,8 @@ import ClientesRoutes from "./src/Routes/clienteRoutes.js";
 import RecoveryRoutes from "./src/Routes/Recovery.js";
 import CotizacionesRoutes from "./src/Routes/cotizacionesRoutes.js";    
 import RegisterClienteRoutes from "./src/Routes/RegisterClienteRouter.js";
+import camionesRoutes from "./src/Routes/camionesRoutes.js";
+import empleadoRoutes from "./src/Routes/empleadosRoutes.js";
 
 const app = express();
 
@@ -51,5 +53,7 @@ app.use("/api/clientes", ClientesRoutes);
 app.use("/api/recovery", RecoveryRoutes);
 app.use("/api/cotizaciones", CotizacionesRoutes);
 app.use("/api/register-cliente", RegisterClienteRoutes);
+app.use("/api/camiones", camionesRoutes);
+app.use("/api/empleados", empleadoRoutes);
 
 export default app;
