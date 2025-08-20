@@ -1,0 +1,4234 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Rivera Transport API",
+    "description": "API para sistema de gestión de transporte y logística, la empresa se dedica a la prestación de servicio de transporte de Carga Empresarial a Nivel Nacional y distribución.",
+    "contact": {
+      "name": "Rivera Transport",
+      "email": "soporte@rivera-transporte.com"
+    },
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "https://virtserver.swaggerhub.com/rical-890/RiveraProject/1.0.0",
+      "description": "SwaggerHub API Auto Mocking"
+    },
+    {
+      "url": "http://localhost:4000/api",
+      "description": "Servidor de desarrollo"
+    },
+    {
+      "url": "https://rivera-project-ecru.vercel.app/api",
+      "description": "Servidor de producción"
+    }
+  ],
+  "security": [
+    {
+      "cookieAuth": []
+    }
+  ],
+  "tags": [
+    {
+      "name": "Autenticación",
+      "description": "Operaciones de login y logout"
+    },
+    {
+      "name": "Recuperación",
+      "description": "Recuperación de contraseñas"
+    },
+    {
+      "name": "Registro",
+      "description": "Registro de nuevos usuarios"
+    },
+    {
+      "name": "Camiones",
+      "description": "Gestión de vehículos de la flota"
+    },
+    {
+      "name": "Empleados",
+      "description": "Gestión de empleados del sistema"
+    },
+    {
+      "name": "Motoristas",
+      "description": "Gestión de conductores"
+    },
+    {
+      "name": "Proveedores",
+      "description": "Gestión de proveedores de servicios"
+    },
+    {
+      "name": "Clientes",
+      "description": "Gestión de clientes del sistema"
+    },
+    {
+      "name": "Cotizaciones",
+      "description": "Gestión de cotizaciones de transporte"
+    },
+    {
+      "name": "Viajes",
+      "description": "Gestión y seguimiento de viajes"
+    },
+    {
+      "name": "Auto-Update",
+      "description": "Sistema de actualización automática de viajes"
+    }
+  ],
+  "paths": {
+    "/login": {
+      "post": {
+        "tags": [
+          "Autenticación"
+        ],
+        "summary": "Iniciar sesión",
+        "operationId": "login",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/login_body"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Login exitoso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/inline_response_200"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Credenciales incorrectas"
+          },
+          "429": {
+            "description": "Demasiados intentos fallidos"
+          }
+        }
+      }
+    },
+    "/login/check-auth": {
+      "get": {
+        "tags": [
+          "Autenticación"
+        ],
+        "summary": "Verificar autenticación",
+        "operationId": "checkAuth",
+        "responses": {
+          "200": {
+            "description": "Usuario autenticado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/inline_response_200_1"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autorizado"
+          }
+        }
+      }
+    },
+    "/logout": {
+      "post": {
+        "tags": [
+          "Autenticación"
+        ],
+        "summary": "Cerrar sesión",
+        "operationId": "logout",
+        "responses": {
+          "200": {
+            "description": "Sesión cerrada exitosamente"
+          }
+        }
+      }
+    },
+    "/recovery/requestCode": {
+      "post": {
+        "tags": [
+          "Recuperación"
+        ],
+        "summary": "Solicitar código de recuperación",
+        "operationId": "requestRecoveryCode",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/recovery_requestCode_body"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Código enviado exitosamente"
+          }
+        }
+      }
+    },
+    "/recovery/verifyCode": {
+      "post": {
+        "tags": [
+          "Recuperación"
+        ],
+        "summary": "Verificar código de recuperación",
+        "operationId": "verifyRecoveryCode",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/recovery_verifyCode_body"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Código verificado exitosamente"
+          }
+        }
+      }
+    },
+    "/recovery/newPassword": {
+      "post": {
+        "tags": [
+          "Recuperación"
+        ],
+        "summary": "Establecer nueva contraseña",
+        "operationId": "setNewPassword",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/recovery_newPassword_body"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Contraseña actualizada exitosamente"
+          }
+        }
+      }
+    },
+    "/camiones": {
+      "get": {
+        "tags": [
+          "Camiones"
+        ],
+        "summary": "Obtener todos los camiones",
+        "operationId": "getCamiones",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 1
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 50
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista de camiones",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/inline_response_200_2"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Camiones"
+        ],
+        "summary": "Agregar nuevo camión",
+        "operationId": "addCamion",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/camiones_body"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Camión agregado exitosamente"
+          },
+          "400": {
+            "description": "Datos inválidos"
+          },
+          "409": {
+            "description": "Placa duplicada"
+          }
+        }
+      }
+    },
+    "/camiones/{id}": {
+      "get": {
+        "tags": [
+          "Camiones"
+        ],
+        "summary": "Obtener camión por ID",
+        "operationId": "getCamionById",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "507f1f77bcf86cd799439011"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Camión encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/inline_response_200_3"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Camión no encontrado"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Camiones"
+        ],
+        "summary": "Actualizar camión",
+        "operationId": "updateCamion",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/camiones_id_body"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Camión actualizado exitosamente"
+          },
+          "404": {
+            "description": "Camión no encontrado"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Camiones"
+        ],
+        "summary": "Eliminar camión",
+        "operationId": "deleteCamion",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Camión eliminado exitosamente"
+          },
+          "404": {
+            "description": "Camión no encontrado"
+          }
+        }
+      }
+    },
+    "/camiones/{id}/stats": {
+      "get": {
+        "tags": [
+          "Camiones"
+        ],
+        "summary": "Obtener estadísticas del camión",
+        "operationId": "getCamionStats",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Estadísticas del camión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/inline_response_200_4"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/empleados": {
+      "get": {
+        "tags": [
+          "Empleados"
+        ],
+        "summary": "Obtener todos los empleados",
+        "operationId": "getEmpleados",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 1
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 50
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista de empleados",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/inline_response_200_5"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Empleados"
+        ],
+        "summary": "Registrar nuevo empleado",
+        "operationId": "addEmpleado",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/empleados_body"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Empleado registrado exitosamente"
+          },
+          "400": {
+            "description": "Datos inválidos"
+          },
+          "409": {
+            "description": "DUI o email duplicado"
+          }
+        }
+      }
+    },
+    "/empleados/{id}": {
+      "put": {
+        "tags": [
+          "Empleados"
+        ],
+        "summary": "Actualizar empleado",
+        "operationId": "updateEmpleado",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/empleados_id_body"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Empleado actualizado exitosamente"
+          },
+          "404": {
+            "description": "Empleado no encontrado"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Empleados"
+        ],
+        "summary": "Eliminar empleado",
+        "operationId": "deleteEmpleado",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Empleado eliminado exitosamente"
+          },
+          "404": {
+            "description": "Empleado no encontrado"
+          }
+        }
+      }
+    },
+    "/motoristas": {
+      "get": {
+        "tags": [
+          "Motoristas"
+        ],
+        "summary": "Obtener todos los motoristas",
+        "operationId": "getMotoristas",
+        "responses": {
+          "200": {
+            "description": "Lista de motoristas",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Motorista"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Motoristas"
+        ],
+        "summary": "Registrar nuevo motorista",
+        "operationId": "addMotorista",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/motoristas_body"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Motorista registrado exitosamente"
+          },
+          "400": {
+            "description": "Datos inválidos"
+          }
+        }
+      }
+    },
+    "/motoristas/{id}": {
+      "get": {
+        "tags": [
+          "Motoristas"
+        ],
+        "summary": "Obtener motorista por ID",
+        "operationId": "getMotoristaById",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Motorista encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MotoristaCompleto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Motorista no encontrado"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Motoristas"
+        ],
+        "summary": "Actualizar motorista",
+        "operationId": "updateMotorista",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/motoristas_id_body"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Motorista actualizado exitosamente"
+          },
+          "404": {
+            "description": "Motorista no encontrado"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Motoristas"
+        ],
+        "summary": "Eliminar motorista",
+        "operationId": "deleteMotorista",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Motorista eliminado exitosamente"
+          },
+          "400": {
+            "description": "Motorista no encontrado"
+          }
+        }
+      }
+    },
+    "/proveedores": {
+      "get": {
+        "tags": [
+          "Proveedores"
+        ],
+        "summary": "Obtener todos los proveedores",
+        "operationId": "getProveedores",
+        "responses": {
+          "200": {
+            "description": "Lista de proveedores",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Proveedor"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Proveedores"
+        ],
+        "summary": "Registrar nuevo proveedor",
+        "operationId": "addProveedor",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/proveedores_body"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Proveedor registrado exitosamente"
+          }
+        }
+      }
+    },
+    "/proveedores/{id}": {
+      "put": {
+        "tags": [
+          "Proveedores"
+        ],
+        "summary": "Actualizar proveedor",
+        "operationId": "updateProveedor",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/proveedores_id_body"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Proveedor actualizado exitosamente"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Proveedores"
+        ],
+        "summary": "Eliminar proveedor",
+        "operationId": "deleteProveedor",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Proveedor eliminado exitosamente"
+          },
+          "400": {
+            "description": "Proveedor no encontrado"
+          }
+        }
+      }
+    },
+    "/clientes": {
+      "get": {
+        "tags": [
+          "Clientes"
+        ],
+        "summary": "Obtener todos los clientes",
+        "operationId": "getClientes",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 1
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 50
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista de clientes",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/inline_response_200_6"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/clientes/{id}": {
+      "get": {
+        "tags": [
+          "Clientes"
+        ],
+        "summary": "Obtener cliente por ID",
+        "operationId": "getClienteById",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Cliente encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/inline_response_200_7"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Clientes"
+        ],
+        "summary": "Actualizar cliente",
+        "operationId": "updateCliente",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/clientes_id_body"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Cliente actualizado exitosamente"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Clientes"
+        ],
+        "summary": "Eliminar cliente",
+        "operationId": "deleteCliente",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Cliente eliminado exitosamente"
+          }
+        }
+      }
+    },
+    "/clientes/usuarios-activos": {
+      "get": {
+        "tags": [
+          "Clientes"
+        ],
+        "summary": "Obtener métricas de usuarios activos",
+        "operationId": "getUsuariosActivos",
+        "responses": {
+          "200": {
+            "description": "Métricas de usuarios activos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/inline_response_200_8"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/clientes/resumen-usuarios": {
+      "get": {
+        "tags": [
+          "Clientes"
+        ],
+        "summary": "Obtener resumen de usuarios",
+        "operationId": "getResumenUsuarios",
+        "responses": {
+          "200": {
+            "description": "Resumen de usuarios",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/inline_response_200_9"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/register": {
+      "post": {
+        "tags": [
+          "Registro"
+        ],
+        "summary": "Registrar nuevo cliente",
+        "operationId": "registerCliente",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/register_body"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Cliente registrado exitosamente"
+          },
+          "500": {
+            "description": "Usuario ya registrado"
+          }
+        }
+      }
+    },
+    "/cotizaciones": {
+      "get": {
+        "tags": [
+          "Cotizaciones"
+        ],
+        "summary": "Obtener todas las cotizaciones",
+        "operationId": "getAllCotizaciones",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 1
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 10
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "pendiente",
+                "enviada",
+                "aceptada",
+                "rechazada",
+                "ejecutada",
+                "cancelada"
+              ]
+            }
+          },
+          {
+            "name": "clientId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sortBy",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "createdAt",
+              "enum": [
+                "createdAt",
+                "deliveryDate",
+                "price",
+                "quoteName",
+                "status"
+              ]
+            }
+          },
+          {
+            "name": "sortOrder",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "desc",
+              "enum": [
+                "asc",
+                "desc"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista de cotizaciones",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/inline_response_200_10"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Cotizaciones"
+        ],
+        "summary": "Crear nueva cotización",
+        "operationId": "createCotizacion",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CotizacionCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Cotización creada exitosamente"
+          },
+          "400": {
+            "description": "Error de validación"
+          }
+        }
+      }
+    },
+    "/cotizaciones/{id}": {
+      "get": {
+        "tags": [
+          "Cotizaciones"
+        ],
+        "summary": "Obtener cotización por ID",
+        "operationId": "getCotizacionById",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Cotización encontrada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/inline_response_200_11"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Cotización no encontrada"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Cotizaciones"
+        ],
+        "summary": "Actualizar cotización",
+        "operationId": "updateCotizacion",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/cotizaciones_id_body"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Cotización actualizada exitosamente"
+          },
+          "404": {
+            "description": "Cotización no encontrada"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Cotizaciones"
+        ],
+        "summary": "Eliminar cotización",
+        "operationId": "deleteCotizacion",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Cotización eliminada exitosamente"
+          },
+          "404": {
+            "description": "Cotización no encontrada"
+          }
+        }
+      }
+    },
+    "/viajes": {
+      "get": {
+        "tags": [
+          "Viajes"
+        ],
+        "summary": "Obtener todos los viajes",
+        "operationId": "getAllViajes",
+        "responses": {
+          "200": {
+            "description": "Lista de viajes",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Viaje"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Viajes"
+        ],
+        "summary": "Crear nuevo viaje",
+        "operationId": "addViaje",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/viajes_body"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Viaje creado exitosamente"
+          },
+          "400": {
+            "description": "Datos inválidos"
+          },
+          "404": {
+            "description": "Recurso no encontrado"
+          }
+        }
+      }
+    },
+    "/viajes/{viajeId}": {
+      "get": {
+        "tags": [
+          "Viajes"
+        ],
+        "summary": "Obtener detalles del viaje",
+        "operationId": "getTripDetails",
+        "parameters": [
+          {
+            "name": "viajeId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Detalles del viaje",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/inline_response_200_12"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Viajes"
+        ],
+        "summary": "Actualizar viaje",
+        "operationId": "editViaje",
+        "parameters": [
+          {
+            "name": "viajeId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/viajes_viajeId_body"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Viaje actualizado exitosamente"
+          },
+          "404": {
+            "description": "Viaje no encontrado"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Viajes"
+        ],
+        "summary": "Eliminar viaje",
+        "operationId": "deleteViaje",
+        "parameters": [
+          {
+            "name": "viajeId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Viaje eliminado exitosamente"
+          },
+          "404": {
+            "description": "Viaje no encontrado"
+          }
+        }
+      }
+    },
+    "/viajes/map-data": {
+      "get": {
+        "tags": [
+          "Viajes"
+        ],
+        "summary": "Obtener datos para el mapa",
+        "operationId": "getMapData",
+        "responses": {
+          "200": {
+            "description": "Datos del mapa",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/inline_response_200_13"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/viajes/trip-stats": {
+      "get": {
+        "tags": [
+          "Viajes"
+        ],
+        "summary": "Obtener estadísticas de viajes",
+        "operationId": "getTripStats",
+        "parameters": [
+          {
+            "name": "periodo",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "mes",
+              "enum": [
+                "dia",
+                "semana",
+                "mes",
+                "año"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Estadísticas de viajes",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/inline_response_200_14"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/viajes/carga-distribution": {
+      "get": {
+        "tags": [
+          "Viajes"
+        ],
+        "summary": "Obtener distribución de cargas",
+        "operationId": "getCargaDistribution",
+        "responses": {
+          "200": {
+            "description": "Distribución de tipos de carga",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/inline_response_200_15"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/viajes/dashboard/data": {
+      "get": {
+        "tags": [
+          "Viajes"
+        ],
+        "summary": "Obtener datos del dashboard",
+        "operationId": "getDashboardData",
+        "responses": {
+          "200": {
+            "description": "Datos completos del dashboard",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/inline_response_200_16"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/viajes/metrics/realtime": {
+      "get": {
+        "tags": [
+          "Viajes"
+        ],
+        "summary": "Obtener métricas en tiempo real",
+        "operationId": "getRealTimeMetrics",
+        "responses": {
+          "200": {
+            "description": "Métricas en tiempo real",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/inline_response_200_17"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/viajes/metrics/average-time": {
+      "get": {
+        "tags": [
+          "Viajes"
+        ],
+        "summary": "Obtener tiempo promedio de viaje",
+        "operationId": "getTiempoPromedioViaje",
+        "responses": {
+          "200": {
+            "description": "Tiempo promedio de viaje",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/inline_response_200_18"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/viajes/por-dias": {
+      "get": {
+        "tags": [
+          "Viajes"
+        ],
+        "summary": "Obtener viajes organizados por días",
+        "operationId": "getViajesPorDias",
+        "parameters": [
+          {
+            "name": "diasAdelante",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 7
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Viajes organizados por días",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/inline_response_200_19"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/viajes/search/advanced": {
+      "get": {
+        "tags": [
+          "Viajes"
+        ],
+        "summary": "Búsqueda avanzada de viajes",
+        "operationId": "searchViajes",
+        "parameters": [
+          {
+            "name": "estado",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "fechaInicio",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "fechaFin",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "conductorId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "truckId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "origen",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "destino",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 1
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 20
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Resultados de búsqueda",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/inline_response_200_20"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/viajes/{viajeId}/progress": {
+      "patch": {
+        "tags": [
+          "Viajes"
+        ],
+        "summary": "Actualizar progreso del viaje",
+        "operationId": "updateTripProgress",
+        "parameters": [
+          {
+            "name": "viajeId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/viajeId_progress_body"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Progreso actualizado exitosamente"
+          }
+        }
+      }
+    },
+    "/viajes/{viajeId}/complete": {
+      "patch": {
+        "tags": [
+          "Viajes"
+        ],
+        "summary": "Completar viaje manualmente",
+        "operationId": "completeTrip",
+        "parameters": [
+          {
+            "name": "viajeId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/viajeId_complete_body"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Viaje completado exitosamente"
+          }
+        }
+      }
+    },
+    "/viajes/{viajeId}/cancel": {
+      "patch": {
+        "tags": [
+          "Viajes"
+        ],
+        "summary": "Cancelar viaje",
+        "operationId": "cancelTrip",
+        "parameters": [
+          {
+            "name": "viajeId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/viajeId_cancel_body"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Viaje cancelado exitosamente"
+          }
+        }
+      }
+    },
+    "/viajes/{viajeId}/history": {
+      "get": {
+        "tags": [
+          "Viajes"
+        ],
+        "summary": "Obtener historial del viaje",
+        "operationId": "getTripHistory",
+        "parameters": [
+          {
+            "name": "viajeId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Historial del viaje",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/inline_response_200_21"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auto-update/start": {
+      "post": {
+        "tags": [
+          "Auto-Update"
+        ],
+        "summary": "Iniciar servicio de actualización automática",
+        "operationId": "startAutoUpdate",
+        "responses": {
+          "200": {
+            "description": "Servicio iniciado exitosamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/inline_response_200_22"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auto-update/stop": {
+      "post": {
+        "tags": [
+          "Auto-Update"
+        ],
+        "summary": "Detener servicio de actualización automática",
+        "operationId": "stopAutoUpdate",
+        "responses": {
+          "200": {
+            "description": "Servicio detenido exitosamente"
+          }
+        }
+      }
+    },
+    "/auto-update/status": {
+      "get": {
+        "tags": [
+          "Auto-Update"
+        ],
+        "summary": "Obtener estado del servicio",
+        "operationId": "getAutoUpdateStatus",
+        "responses": {
+          "200": {
+            "description": "Estado del servicio",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/inline_response_200_23"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auto-update/active-trips": {
+      "get": {
+        "tags": [
+          "Auto-Update"
+        ],
+        "summary": "Obtener viajes activos",
+        "operationId": "getActiveTrips",
+        "responses": {
+          "200": {
+            "description": "Lista de viajes activos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/inline_response_200_24"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auto-update/trip/{viajeId}": {
+      "patch": {
+        "tags": [
+          "Auto-Update"
+        ],
+        "summary": "Actualizar viaje específico",
+        "operationId": "updateSpecificTrip",
+        "parameters": [
+          {
+            "name": "viajeId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/trip_viajeId_body"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Viaje actualizado exitosamente"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Camion": {
+        "type": "object",
+        "properties": {
+          "_id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "brand": {
+            "type": "string"
+          },
+          "model": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "DISPONIBLE",
+              "EN RUTA",
+              "MANTENIMIENTO",
+              "FUERA DE SERVICIO"
+            ]
+          },
+          "gasolineLevel": {
+            "maximum": 4,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "age": {
+            "type": "integer"
+          },
+          "ciculatioCard": {
+            "type": "string"
+          },
+          "licensePlate": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "supplierId": {
+            "type": "string"
+          },
+          "driverId": {
+            "type": "string"
+          },
+          "img": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "Empleado": {
+        "type": "object",
+        "properties": {
+          "_id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "lastName": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "dui": {
+            "type": "string"
+          },
+          "birthDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "phone": {
+            "type": "string"
+          },
+          "address": {
+            "type": "string"
+          },
+          "img": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "Motorista": {
+        "type": "object",
+        "properties": {
+          "_id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "lastName": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "id": {
+            "type": "string"
+          },
+          "birthDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "phone": {
+            "type": "string"
+          },
+          "address": {
+            "type": "string"
+          },
+          "circulationCard": {
+            "type": "string"
+          },
+          "img": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "MotoristaCompleto": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Motorista"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "camionAsignado": {
+                "$ref": "#/components/schemas/MotoristaCompleto_camionAsignado"
+              }
+            }
+          }
+        ]
+      },
+      "Proveedor": {
+        "type": "object",
+        "properties": {
+          "_id": {
+            "type": "string"
+          },
+          "companyName": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "phone": {
+            "type": "string"
+          },
+          "partDescription": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "Cliente": {
+        "type": "object",
+        "properties": {
+          "_id": {
+            "type": "string"
+          },
+          "firtsName": {
+            "type": "string"
+          },
+          "lastName": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "idNumber": {
+            "type": "string"
+          },
+          "birthDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "phone": {
+            "type": "string"
+          },
+          "address": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "ClienteDetallado": {
+        "type": "object",
+        "properties": {
+          "cliente": {
+            "$ref": "#/components/schemas/Cliente"
+          },
+          "actividad": {
+            "$ref": "#/components/schemas/ClienteDetallado_actividad"
+          },
+          "metadatos": {
+            "$ref": "#/components/schemas/ClienteDetallado_metadatos"
+          }
+        }
+      },
+      "Cotizacion": {
+        "type": "object",
+        "properties": {
+          "_id": {
+            "type": "string"
+          },
+          "clientId": {
+            "type": "string"
+          },
+          "quoteDescription": {
+            "type": "string"
+          },
+          "quoteName": {
+            "type": "string"
+          },
+          "travelLocations": {
+            "type": "string"
+          },
+          "truckType": {
+            "type": "string"
+          },
+          "deliveryDate": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "paymentMethod": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "price": {
+            "type": "number"
+          },
+          "ruta": {
+            "$ref": "#/components/schemas/Ruta"
+          },
+          "carga": {
+            "$ref": "#/components/schemas/Carga"
+          },
+          "horarios": {
+            "$ref": "#/components/schemas/Horarios"
+          },
+          "costos": {
+            "$ref": "#/components/schemas/Costos"
+          },
+          "fechaEnvio": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "fechaAceptacion": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "fechaRechazo": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "motivoRechazo": {
+            "type": "string"
+          },
+          "observaciones": {
+            "type": "string"
+          },
+          "notasInternas": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "CotizacionCreate": {
+        "required": [
+          "carga",
+          "clientId",
+          "costos",
+          "deliveryDate",
+          "horarios",
+          "price",
+          "quoteDescription",
+          "quoteName",
+          "ruta",
+          "travelLocations"
+        ],
+        "type": "object",
+        "properties": {
+          "clientId": {
+            "type": "string",
+            "example": "507f1f77bcf86cd799439011"
+          },
+          "quoteDescription": {
+            "type": "string",
+            "example": "Transporte de mercancía especial"
+          },
+          "quoteName": {
+            "type": "string",
+            "example": "Cotización Enero 2024"
+          },
+          "travelLocations": {
+            "type": "string",
+            "example": "San Salvador - Guatemala"
+          },
+          "truckType": {
+            "type": "string",
+            "example": "electronicos",
+            "enum": [
+              "alimentos_perecederos",
+              "electronicos",
+              "otros"
+            ]
+          },
+          "deliveryDate": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2024-01-20T09:00:00Z"
+          },
+          "paymentMethod": {
+            "type": "string",
+            "example": "transferencia",
+            "enum": [
+              "efectivo",
+              "transferencia",
+              "cheque",
+              "credito",
+              "tarjeta"
+            ]
+          },
+          "price": {
+            "minimum": 0,
+            "type": "number",
+            "example": 1500
+          },
+          "ruta": {
+            "$ref": "#/components/schemas/Ruta"
+          },
+          "carga": {
+            "$ref": "#/components/schemas/Carga"
+          },
+          "horarios": {
+            "$ref": "#/components/schemas/Horarios"
+          },
+          "costos": {
+            "$ref": "#/components/schemas/Costos"
+          },
+          "observaciones": {
+            "type": "string"
+          },
+          "notasInternas": {
+            "type": "string"
+          }
+        }
+      },
+      "Ruta": {
+        "required": [
+          "destino",
+          "origen"
+        ],
+        "type": "object",
+        "properties": {
+          "origen": {
+            "$ref": "#/components/schemas/Ruta_origen"
+          },
+          "destino": {
+            "$ref": "#/components/schemas/Ruta_destino"
+          },
+          "distanciaTotal": {
+            "minimum": 0,
+            "type": "number",
+            "example": 285
+          },
+          "tiempoEstimado": {
+            "minimum": 0,
+            "type": "number",
+            "example": 4.5
+          }
+        }
+      },
+      "Carga": {
+        "required": [
+          "descripcion"
+        ],
+        "type": "object",
+        "properties": {
+          "categoria": {
+            "type": "string",
+            "default": "otros",
+            "enum": [
+              "alimentos_perecederos",
+              "electronicos",
+              "textiles",
+              "otros"
+            ]
+          },
+          "subcategoria": {
+            "type": "string",
+            "example": "smartphones"
+          },
+          "descripcion": {
+            "type": "string",
+            "example": "Equipos electrónicos - 50 smartphones"
+          },
+          "peso": {
+            "$ref": "#/components/schemas/Carga_peso"
+          },
+          "volumen": {
+            "$ref": "#/components/schemas/Carga_volumen"
+          },
+          "clasificacionRiesgo": {
+            "type": "string",
+            "default": "normal",
+            "enum": [
+              "normal",
+              "fragil",
+              "peligroso",
+              "perecedero",
+              "biologico"
+            ]
+          },
+          "condicionesEspeciales": {
+            "$ref": "#/components/schemas/Carga_condicionesEspeciales"
+          },
+          "valorDeclarado": {
+            "$ref": "#/components/schemas/Carga_valorDeclarado"
+          }
+        }
+      },
+      "Horarios": {
+        "type": "object",
+        "properties": {
+          "fechaSalida": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2024-01-15T08:00:00Z"
+          },
+          "fechaLlegadaEstimada": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2024-01-15T16:30:00Z"
+          },
+          "tiempoEstimadoViaje": {
+            "minimum": 0,
+            "type": "number",
+            "example": 4.5
+          },
+          "flexibilidadHoraria": {
+            "$ref": "#/components/schemas/Horarios_flexibilidadHoraria"
+          },
+          "horarioPreferido": {
+            "$ref": "#/components/schemas/Horarios_horarioPreferido"
+          }
+        }
+      },
+      "Costos": {
+        "type": "object",
+        "properties": {
+          "combustible": {
+            "minimum": 0,
+            "type": "number",
+            "example": 150
+          },
+          "peajes": {
+            "minimum": 0,
+            "type": "number",
+            "example": 25
+          },
+          "conductor": {
+            "minimum": 0,
+            "type": "number",
+            "example": 200
+          },
+          "otros": {
+            "minimum": 0,
+            "type": "number",
+            "default": 0
+          },
+          "subtotal": {
+            "minimum": 0,
+            "type": "number"
+          },
+          "impuestos": {
+            "minimum": 0,
+            "type": "number",
+            "default": 0
+          },
+          "total": {
+            "minimum": 0,
+            "type": "number"
+          },
+          "moneda": {
+            "type": "string",
+            "default": "USD",
+            "enum": [
+              "USD",
+              "SVC"
+            ]
+          },
+          "validezCotizacion": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "Viaje": {
+        "type": "object",
+        "properties": {
+          "_id": {
+            "type": "string"
+          },
+          "quoteId": {
+            "type": "string"
+          },
+          "truckId": {
+            "type": "string"
+          },
+          "conductorId": {
+            "type": "string"
+          },
+          "tripDescription": {
+            "type": "string"
+          },
+          "departureTime": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "arrivalTime": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "tiemposReales": {
+            "$ref": "#/components/schemas/Viaje_tiemposReales"
+          },
+          "estado": {
+            "$ref": "#/components/schemas/Viaje_estado"
+          },
+          "tracking": {
+            "$ref": "#/components/schemas/Viaje_tracking"
+          },
+          "costosReales": {
+            "$ref": "#/components/schemas/Viaje_costosReales"
+          },
+          "alertas": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Viaje_alertas"
+            }
+          },
+          "condiciones": {
+            "$ref": "#/components/schemas/Viaje_condiciones"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "Pagination": {
+        "type": "object",
+        "properties": {
+          "currentPage": {
+            "type": "integer"
+          },
+          "totalPages": {
+            "type": "integer"
+          },
+          "totalItems": {
+            "type": "integer"
+          },
+          "itemsPerPage": {
+            "type": "integer"
+          },
+          "hasNextPage": {
+            "type": "boolean"
+          },
+          "hasPrevPage": {
+            "type": "boolean"
+          }
+        }
+      },
+      "Error": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": false
+          },
+          "message": {
+            "type": "string",
+            "example": "Error description"
+          },
+          "error": {
+            "type": "string",
+            "example": "Detailed error message"
+          }
+        }
+      },
+      "login_body": {
+        "required": [
+          "email",
+          "password"
+        ],
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "example": "admin@rivera.com"
+          },
+          "password": {
+            "type": "string",
+            "example": "password123"
+          }
+        }
+      },
+      "inline_response_200": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "example": "Inicio de sesión completado"
+          },
+          "userType": {
+            "type": "string",
+            "example": "Empleado"
+          },
+          "user": {
+            "$ref": "#/components/schemas/inline_response_200_user"
+          },
+          "token": {
+            "type": "string"
+          }
+        }
+      },
+      "inline_response_200_1": {
+        "type": "object",
+        "properties": {
+          "user": {
+            "$ref": "#/components/schemas/inline_response_200_1_user"
+          }
+        }
+      },
+      "recovery_requestCode_body": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "example": "usuario@rivera.com"
+          },
+          "phone": {
+            "type": "string",
+            "example": "50312345678"
+          },
+          "via": {
+            "type": "string",
+            "example": "email",
+            "enum": [
+              "email",
+              "sms"
+            ]
+          }
+        }
+      },
+      "recovery_verifyCode_body": {
+        "required": [
+          "code"
+        ],
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "example": "12345"
+          }
+        }
+      },
+      "recovery_newPassword_body": {
+        "required": [
+          "newPassword"
+        ],
+        "type": "object",
+        "properties": {
+          "newPassword": {
+            "type": "string",
+            "example": "newPassword123"
+          }
+        }
+      },
+      "inline_response_200_2": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string"
+          },
+          "count": {
+            "type": "integer"
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Camion"
+            }
+          }
+        }
+      },
+      "camiones_body": {
+        "required": [
+          "brand",
+          "licensePlate",
+          "model",
+          "name"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "Camión 001"
+          },
+          "brand": {
+            "type": "string",
+            "example": "Ford"
+          },
+          "model": {
+            "type": "string",
+            "example": "F-150"
+          },
+          "state": {
+            "type": "string",
+            "example": "DISPONIBLE",
+            "enum": [
+              "DISPONIBLE",
+              "EN RUTA",
+              "MANTENIMIENTO",
+              "FUERA DE SERVICIO"
+            ]
+          },
+          "gasolineLevel": {
+            "maximum": 4,
+            "minimum": 1,
+            "type": "integer",
+            "example": 4
+          },
+          "age": {
+            "type": "integer",
+            "example": 2020
+          },
+          "ciculatioCard": {
+            "type": "string",
+            "example": "TC123456"
+          },
+          "licensePlate": {
+            "type": "string",
+            "example": "ABC123"
+          },
+          "description": {
+            "type": "string",
+            "example": "Camión para carga pesada"
+          },
+          "supplierId": {
+            "type": "string",
+            "example": "507f1f77bcf86cd799439011"
+          },
+          "driverId": {
+            "type": "string",
+            "example": "507f1f77bcf86cd799439012"
+          },
+          "img": {
+            "type": "string",
+            "format": "binary"
+          }
+        }
+      },
+      "inline_response_200_3": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "$ref": "#/components/schemas/Camion"
+          }
+        }
+      },
+      "camiones_id_body": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "brand": {
+            "type": "string"
+          },
+          "model": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string"
+          },
+          "gasolineLevel": {
+            "type": "integer"
+          },
+          "age": {
+            "type": "integer"
+          },
+          "ciculatioCard": {
+            "type": "string"
+          },
+          "licensePlate": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "supplierId": {
+            "type": "string"
+          },
+          "driverId": {
+            "type": "string"
+          },
+          "img": {
+            "type": "string",
+            "format": "binary"
+          }
+        }
+      },
+      "inline_response_200_4": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "$ref": "#/components/schemas/inline_response_200_4_data"
+          }
+        }
+      },
+      "inline_response_200_5": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "$ref": "#/components/schemas/inline_response_200_5_data"
+          }
+        }
+      },
+      "empleados_body": {
+        "required": [
+          "address",
+          "birthDate",
+          "dui",
+          "lastName",
+          "name",
+          "password",
+          "phone"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "Juan"
+          },
+          "lastName": {
+            "type": "string",
+            "example": "Pérez"
+          },
+          "dui": {
+            "type": "string",
+            "example": "123456789"
+          },
+          "birthDate": {
+            "type": "string",
+            "format": "date",
+            "example": "1990-01-01"
+          },
+          "password": {
+            "type": "string",
+            "example": "password123"
+          },
+          "phone": {
+            "type": "string",
+            "example": "12345678"
+          },
+          "address": {
+            "type": "string",
+            "example": "San Salvador, El Salvador"
+          },
+          "img": {
+            "type": "string",
+            "format": "binary"
+          }
+        }
+      },
+      "empleados_id_body": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "lastName": {
+            "type": "string"
+          },
+          "dui": {
+            "type": "string"
+          },
+          "birthDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "password": {
+            "type": "string"
+          },
+          "phone": {
+            "type": "string"
+          },
+          "address": {
+            "type": "string"
+          },
+          "img": {
+            "type": "string",
+            "format": "binary"
+          }
+        }
+      },
+      "motoristas_body": {
+        "required": [
+          "address",
+          "birthDate",
+          "circulationCard",
+          "id",
+          "lastName",
+          "name",
+          "password",
+          "phone"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "Carlos"
+          },
+          "lastName": {
+            "type": "string",
+            "example": "García"
+          },
+          "id": {
+            "type": "string",
+            "example": "123456789"
+          },
+          "birthDate": {
+            "type": "string",
+            "format": "date",
+            "example": "1985-01-01"
+          },
+          "password": {
+            "type": "string",
+            "example": "password123"
+          },
+          "phone": {
+            "type": "string",
+            "example": "12345678"
+          },
+          "address": {
+            "type": "string",
+            "example": "San Salvador, El Salvador"
+          },
+          "circulationCard": {
+            "type": "string",
+            "example": "LIC123456"
+          },
+          "img": {
+            "type": "string",
+            "format": "binary"
+          }
+        }
+      },
+      "motoristas_id_body": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "lastName": {
+            "type": "string"
+          },
+          "password": {
+            "type": "string"
+          },
+          "phone": {
+            "type": "string"
+          },
+          "address": {
+            "type": "string"
+          },
+          "circulationCard": {
+            "type": "string"
+          },
+          "img": {
+            "type": "string",
+            "format": "binary"
+          }
+        }
+      },
+      "proveedores_body": {
+        "required": [
+          "companyName",
+          "email",
+          "partDescription",
+          "phone"
+        ],
+        "type": "object",
+        "properties": {
+          "companyName": {
+            "type": "string",
+            "example": "Proveedor ABC"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "example": "contacto@proveedorabc.com"
+          },
+          "phone": {
+            "type": "string",
+            "example": "12345678"
+          },
+          "partDescription": {
+            "type": "string",
+            "example": "Repuestos para camiones"
+          }
+        }
+      },
+      "proveedores_id_body": {
+        "type": "object",
+        "properties": {
+          "companyName": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "phone": {
+            "type": "string"
+          },
+          "partDescription": {
+            "type": "string"
+          }
+        }
+      },
+      "inline_response_200_6": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "$ref": "#/components/schemas/inline_response_200_6_data"
+          }
+        }
+      },
+      "inline_response_200_7": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "$ref": "#/components/schemas/ClienteDetallado"
+          }
+        }
+      },
+      "clientes_id_body": {
+        "type": "object",
+        "properties": {
+          "firstName": {
+            "type": "string"
+          },
+          "lastName": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "idNumber": {
+            "type": "string"
+          },
+          "birthDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "password": {
+            "type": "string"
+          },
+          "phone": {
+            "type": "string"
+          },
+          "address": {
+            "type": "string"
+          }
+        }
+      },
+      "inline_response_200_8": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "data": {
+            "$ref": "#/components/schemas/inline_response_200_8_data"
+          }
+        }
+      },
+      "inline_response_200_9": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "data": {
+            "$ref": "#/components/schemas/inline_response_200_9_data"
+          }
+        }
+      },
+      "register_body": {
+        "required": [
+          "address",
+          "birthDate",
+          "email",
+          "firtsName",
+          "idNumber",
+          "lastName",
+          "password",
+          "phone"
+        ],
+        "type": "object",
+        "properties": {
+          "firtsName": {
+            "type": "string",
+            "example": "María"
+          },
+          "lastName": {
+            "type": "string",
+            "example": "González"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "example": "maria@example.com"
+          },
+          "idNumber": {
+            "type": "string",
+            "example": "123456789"
+          },
+          "birthDate": {
+            "type": "string",
+            "format": "date",
+            "example": "1992-01-01"
+          },
+          "password": {
+            "type": "string",
+            "example": "password123"
+          },
+          "phone": {
+            "type": "string",
+            "example": "12345678"
+          },
+          "address": {
+            "type": "string",
+            "example": "San Salvador, El Salvador"
+          }
+        }
+      },
+      "inline_response_200_10": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Cotizacion"
+            }
+          },
+          "pagination": {
+            "$ref": "#/components/schemas/Pagination"
+          }
+        }
+      },
+      "inline_response_200_11": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "$ref": "#/components/schemas/Cotizacion"
+          }
+        }
+      },
+      "cotizaciones_id_body": {
+        "type": "object",
+        "properties": {
+          "price": {
+            "minimum": 0,
+            "type": "number"
+          },
+          "costos": {
+            "$ref": "#/components/schemas/Costos"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pendiente",
+              "enviada",
+              "aceptada",
+              "rechazada",
+              "ejecutada",
+              "cancelada"
+            ]
+          },
+          "motivoRechazo": {
+            "type": "string"
+          }
+        }
+      },
+      "viajes_condiciones": {
+        "type": "object",
+        "properties": {
+          "clima": {
+            "type": "string",
+            "example": "normal"
+          },
+          "trafico": {
+            "type": "string",
+            "example": "normal"
+          },
+          "carretera": {
+            "type": "string",
+            "example": "buena"
+          }
+        }
+      },
+      "viajes_body": {
+        "required": [
+          "arrivalTime",
+          "conductorId",
+          "departureTime",
+          "quoteId",
+          "truckId"
+        ],
+        "type": "object",
+        "properties": {
+          "quoteId": {
+            "type": "string",
+            "example": "507f1f77bcf86cd799439011"
+          },
+          "truckId": {
+            "type": "string",
+            "example": "507f1f77bcf86cd799439012"
+          },
+          "conductorId": {
+            "type": "string",
+            "example": "507f1f77bcf86cd799439013"
+          },
+          "tripDescription": {
+            "type": "string",
+            "example": "Entrega de mercancía a Guatemala"
+          },
+          "departureTime": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2024-01-15T08:00:00Z"
+          },
+          "arrivalTime": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2024-01-15T18:00:00Z"
+          },
+          "condiciones": {
+            "$ref": "#/components/schemas/viajes_condiciones"
+          },
+          "observaciones": {
+            "type": "string",
+            "example": "Viaje programado para horario matutino"
+          }
+        }
+      },
+      "inline_response_200_12": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "data": {
+            "$ref": "#/components/schemas/Viaje"
+          }
+        }
+      },
+      "viajes_viajeId_body": {
+        "type": "object",
+        "properties": {
+          "quoteId": {
+            "type": "string"
+          },
+          "truckId": {
+            "type": "string"
+          },
+          "conductorId": {
+            "type": "string"
+          },
+          "tripDescription": {
+            "type": "string"
+          },
+          "departureTime": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "arrivalTime": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "condiciones": {
+            "type": "object"
+          },
+          "observaciones": {
+            "type": "string"
+          }
+        }
+      },
+      "inline_response_200_13": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "data": {
+            "$ref": "#/components/schemas/inline_response_200_13_data"
+          }
+        }
+      },
+      "inline_response_200_14": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/inline_response_200_14_data"
+            }
+          }
+        }
+      },
+      "inline_response_200_15": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/inline_response_200_15_data"
+            }
+          }
+        }
+      },
+      "inline_response_200_16": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "data": {
+            "$ref": "#/components/schemas/inline_response_200_16_data"
+          }
+        }
+      },
+      "inline_response_200_17": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "data": {
+            "$ref": "#/components/schemas/inline_response_200_17_data"
+          }
+        }
+      },
+      "inline_response_200_18": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "data": {
+            "$ref": "#/components/schemas/inline_response_200_18_data"
+          }
+        }
+      },
+      "inline_response_200_19": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/inline_response_200_19_data"
+            }
+          }
+        }
+      },
+      "inline_response_200_20": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "data": {
+            "$ref": "#/components/schemas/inline_response_200_20_data"
+          }
+        }
+      },
+      "viajeId_progress_body": {
+        "type": "object",
+        "properties": {
+          "progreso": {
+            "maximum": 100,
+            "minimum": 0,
+            "type": "number"
+          },
+          "estado": {
+            "type": "string",
+            "enum": [
+              "pendiente",
+              "en_curso",
+              "completado",
+              "cancelado",
+              "retrasado"
+            ]
+          },
+          "observaciones": {
+            "type": "string"
+          }
+        }
+      },
+      "viajeId_complete_body": {
+        "type": "object",
+        "properties": {
+          "observaciones": {
+            "type": "string"
+          }
+        }
+      },
+      "viajeId_cancel_body": {
+        "required": [
+          "motivo"
+        ],
+        "type": "object",
+        "properties": {
+          "motivo": {
+            "type": "string"
+          },
+          "observaciones": {
+            "type": "string"
+          }
+        }
+      },
+      "inline_response_200_21": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "data": {
+            "$ref": "#/components/schemas/inline_response_200_21_data"
+          }
+        }
+      },
+      "inline_response_200_22": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "message": {
+            "type": "string"
+          },
+          "status": {
+            "type": "object"
+          }
+        }
+      },
+      "inline_response_200_23": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "data": {
+            "$ref": "#/components/schemas/inline_response_200_23_data"
+          }
+        }
+      },
+      "inline_response_200_24": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "count": {
+            "type": "integer"
+          }
+        }
+      },
+      "trip_viajeId_body": {
+        "required": [
+          "action"
+        ],
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": [
+              "start",
+              "complete",
+              "progress",
+              "checkpoint",
+              "route_point"
+            ]
+          },
+          "progress": {
+            "maximum": 100,
+            "minimum": 0,
+            "type": "number"
+          },
+          "descripcion": {
+            "type": "string"
+          },
+          "puntoRuta": {
+            "type": "integer"
+          },
+          "tipo": {
+            "type": "string"
+          }
+        }
+      },
+      "MotoristaCompleto_camionAsignado": {
+        "type": "object",
+        "properties": {
+          "_id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "brand": {
+            "type": "string"
+          },
+          "model": {
+            "type": "string"
+          },
+          "licensePlate": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string"
+          },
+          "gasolineLevel": {
+            "type": "integer"
+          },
+          "img": {
+            "type": "string"
+          }
+        }
+      },
+      "ClienteDetallado_actividad": {
+        "type": "object",
+        "properties": {
+          "estadoActividad": {
+            "type": "string"
+          },
+          "fechaRegistro": {
+            "type": "string"
+          },
+          "diasDesdeRegistro": {
+            "type": "integer"
+          },
+          "ultimaActualizacion": {
+            "type": "string"
+          },
+          "ultimoAcceso": {
+            "type": "string"
+          }
+        }
+      },
+      "ClienteDetallado_metadatos": {
+        "type": "object",
+        "properties": {
+          "idOriginal": {
+            "type": "string"
+          },
+          "tipoUsuario": {
+            "type": "string"
+          },
+          "perfilCompleto": {
+            "type": "boolean"
+          },
+          "camposCompletos": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "camposFaltantes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "Ruta_origen_coordenadas": {
+        "type": "object",
+        "properties": {
+          "lat": {
+            "type": "number",
+            "example": 13.6929
+          },
+          "lng": {
+            "type": "number",
+            "example": -89.2182
+          }
+        }
+      },
+      "Ruta_origen": {
+        "required": [
+          "nombre"
+        ],
+        "type": "object",
+        "properties": {
+          "nombre": {
+            "type": "string",
+            "example": "San Salvador"
+          },
+          "coordenadas": {
+            "$ref": "#/components/schemas/Ruta_origen_coordenadas"
+          },
+          "tipo": {
+            "type": "string",
+            "default": "ciudad",
+            "enum": [
+              "terminal",
+              "ciudad",
+              "puerto",
+              "bodega",
+              "cliente"
+            ]
+          }
+        }
+      },
+      "Ruta_destino_coordenadas": {
+        "type": "object",
+        "properties": {
+          "lat": {
+            "type": "number",
+            "example": 14.6349
+          },
+          "lng": {
+            "type": "number",
+            "example": -90.5069
+          }
+        }
+      },
+      "Ruta_destino": {
+        "required": [
+          "nombre"
+        ],
+        "type": "object",
+        "properties": {
+          "nombre": {
+            "type": "string",
+            "example": "Guatemala City"
+          },
+          "coordenadas": {
+            "$ref": "#/components/schemas/Ruta_destino_coordenadas"
+          },
+          "tipo": {
+            "type": "string",
+            "default": "ciudad",
+            "enum": [
+              "terminal",
+              "ciudad",
+              "puerto",
+              "bodega",
+              "cliente"
+            ]
+          }
+        }
+      },
+      "Carga_peso": {
+        "type": "object",
+        "properties": {
+          "valor": {
+            "minimum": 0,
+            "type": "number",
+            "example": 25
+          },
+          "unidad": {
+            "type": "string",
+            "default": "kg",
+            "enum": [
+              "kg",
+              "ton",
+              "lb"
+            ]
+          }
+        }
+      },
+      "Carga_volumen": {
+        "type": "object",
+        "properties": {
+          "valor": {
+            "minimum": 0,
+            "type": "number",
+            "example": 2.5
+          },
+          "unidad": {
+            "type": "string",
+            "default": "m3",
+            "enum": [
+              "m3",
+              "ft3"
+            ]
+          }
+        }
+      },
+      "Carga_condicionesEspeciales": {
+        "type": "object",
+        "properties": {
+          "temperaturaMinima": {
+            "type": "number"
+          },
+          "temperaturaMaxima": {
+            "type": "number"
+          },
+          "requiereRefrigeracion": {
+            "type": "boolean",
+            "default": false
+          },
+          "esFragil": {
+            "type": "boolean",
+            "default": false
+          }
+        }
+      },
+      "Carga_valorDeclarado": {
+        "type": "object",
+        "properties": {
+          "monto": {
+            "minimum": 0,
+            "type": "number",
+            "example": 25000
+          },
+          "moneda": {
+            "type": "string",
+            "default": "USD",
+            "enum": [
+              "USD",
+              "SVC"
+            ]
+          }
+        }
+      },
+      "Horarios_flexibilidadHoraria": {
+        "type": "object",
+        "properties": {
+          "permitida": {
+            "type": "boolean",
+            "default": true
+          },
+          "rangoTolerancia": {
+            "type": "number",
+            "default": 2
+          }
+        }
+      },
+      "Horarios_horarioPreferido": {
+        "type": "object",
+        "properties": {
+          "inicio": {
+            "type": "string",
+            "example": "08:00"
+          },
+          "fin": {
+            "type": "string",
+            "example": "1020"
+          }
+        }
+      },
+      "Viaje_tiemposReales": {
+        "type": "object",
+        "properties": {
+          "ultimaActualizacion": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "salidaReal": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "llegadaReal": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "tiempoRealViaje": {
+            "type": "number"
+          }
+        }
+      },
+      "Viaje_estado": {
+        "type": "object",
+        "properties": {
+          "actual": {
+            "type": "string",
+            "enum": [
+              "pendiente",
+              "en_curso",
+              "completado",
+              "cancelado",
+              "retrasado"
+            ]
+          },
+          "fechaCambio": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "autoActualizar": {
+            "type": "boolean"
+          },
+          "historial": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "Viaje_tracking_ubicacionActual": {
+        "type": "object",
+        "properties": {
+          "lat": {
+            "type": "number"
+          },
+          "lng": {
+            "type": "number"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "velocidad": {
+            "type": "number"
+          }
+        }
+      },
+      "Viaje_tracking_progreso": {
+        "type": "object",
+        "properties": {
+          "porcentaje": {
+            "maximum": 100,
+            "minimum": 0,
+            "type": "number"
+          },
+          "ultimaActualizacion": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "calculoAutomatico": {
+            "type": "boolean"
+          }
+        }
+      },
+      "Viaje_tracking": {
+        "type": "object",
+        "properties": {
+          "ubicacionActual": {
+            "$ref": "#/components/schemas/Viaje_tracking_ubicacionActual"
+          },
+          "progreso": {
+            "$ref": "#/components/schemas/Viaje_tracking_progreso"
+          },
+          "checkpoints": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "Viaje_costosReales": {
+        "type": "object",
+        "properties": {
+          "combustible": {
+            "type": "number"
+          },
+          "peajes": {
+            "type": "number"
+          },
+          "conductor": {
+            "type": "number"
+          },
+          "otros": {
+            "type": "number"
+          },
+          "total": {
+            "type": "number"
+          }
+        }
+      },
+      "Viaje_alertas": {
+        "type": "object",
+        "properties": {
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "retraso",
+              "emergencia",
+              "llegada",
+              "salida",
+              "urgencia"
+            ]
+          },
+          "mensaje": {
+            "type": "string"
+          },
+          "fecha": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "resuelta": {
+            "type": "boolean"
+          },
+          "prioridad": {
+            "type": "string",
+            "enum": [
+              "baja",
+              "media",
+              "alta",
+              "critica"
+            ]
+          }
+        }
+      },
+      "Viaje_condiciones": {
+        "type": "object",
+        "properties": {
+          "clima": {
+            "type": "string"
+          },
+          "trafico": {
+            "type": "string"
+          },
+          "carretera": {
+            "type": "string"
+          },
+          "observaciones": {
+            "type": "string"
+          }
+        }
+      },
+      "inline_response_200_user": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "nombre": {
+            "type": "string"
+          }
+        }
+      },
+      "inline_response_200_1_user": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "userType": {
+            "type": "string"
+          },
+          "nombre": {
+            "type": "string"
+          }
+        }
+      },
+      "inline_response_200_4_data": {
+        "type": "object",
+        "properties": {
+          "stats": {
+            "type": "object"
+          }
+        }
+      },
+      "inline_response_200_5_data": {
+        "type": "object",
+        "properties": {
+          "empleados": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Empleado"
+            }
+          },
+          "pagination": {
+            "$ref": "#/components/schemas/Pagination"
+          }
+        }
+      },
+      "inline_response_200_6_data": {
+        "type": "object",
+        "properties": {
+          "clientes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Cliente"
+            }
+          },
+          "pagination": {
+            "$ref": "#/components/schemas/Pagination"
+          }
+        }
+      },
+      "inline_response_200_8_data_usuariosActivos": {
+        "type": "object",
+        "properties": {
+          "total": {
+            "type": "integer"
+          },
+          "porcentaje": {
+            "type": "string"
+          },
+          "tendencia": {
+            "type": "string"
+          },
+          "tipoCambio": {
+            "type": "string"
+          }
+        }
+      },
+      "inline_response_200_8_data": {
+        "type": "object",
+        "properties": {
+          "usuariosActivos": {
+            "$ref": "#/components/schemas/inline_response_200_8_data_usuariosActivos"
+          }
+        }
+      },
+      "inline_response_200_9_data": {
+        "type": "object",
+        "properties": {
+          "usuariosActivos": {
+            "type": "string"
+          },
+          "totalUsuarios": {
+            "type": "string"
+          },
+          "porcentajeActividad": {
+            "type": "string"
+          },
+          "tendencia": {
+            "type": "string"
+          },
+          "cambio": {
+            "type": "string"
+          }
+        }
+      },
+      "inline_response_200_13_data": {
+        "type": "object",
+        "properties": {
+          "locations": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "routes": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "statistics": {
+            "type": "object"
+          }
+        }
+      },
+      "inline_response_200_14_data": {
+        "type": "object",
+        "properties": {
+          "_id": {
+            "type": "string"
+          },
+          "totalViajes": {
+            "type": "integer"
+          },
+          "completados": {
+            "type": "integer"
+          },
+          "pendientes": {
+            "type": "integer"
+          },
+          "enCurso": {
+            "type": "integer"
+          },
+          "retrasados": {
+            "type": "integer"
+          },
+          "progresoPromedio": {
+            "type": "number"
+          }
+        }
+      },
+      "inline_response_200_15_data": {
+        "type": "object",
+        "properties": {
+          "categoria": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "count": {
+            "type": "integer"
+          },
+          "porcentaje": {
+            "type": "integer"
+          }
+        }
+      },
+      "inline_response_200_16_data": {
+        "type": "object",
+        "properties": {
+          "resumen": {
+            "type": "object"
+          },
+          "viajesActivos": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Viaje"
+            }
+          },
+          "topRutas": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "topConductores": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "inline_response_200_17_data": {
+        "type": "object",
+        "properties": {
+          "hoy": {
+            "type": "object"
+          },
+          "general": {
+            "type": "object"
+          }
+        }
+      },
+      "inline_response_200_18_data": {
+        "type": "object",
+        "properties": {
+          "tiempoPromedio": {
+            "type": "string",
+            "example": "2h 34m"
+          },
+          "tiempoPromedioMinutos": {
+            "type": "integer"
+          },
+          "tendencia": {
+            "type": "string",
+            "enum": [
+              "positive",
+              "negative",
+              "neutral"
+            ]
+          },
+          "cambio": {
+            "type": "string"
+          }
+        }
+      },
+      "inline_response_200_19_data": {
+        "type": "object",
+        "properties": {
+          "fecha": {
+            "type": "string",
+            "format": "date"
+          },
+          "label": {
+            "type": "string"
+          },
+          "viajes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Viaje"
+            }
+          },
+          "estadisticas": {
+            "type": "object"
+          }
+        }
+      },
+      "inline_response_200_20_data": {
+        "type": "object",
+        "properties": {
+          "viajes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Viaje"
+            }
+          },
+          "pagination": {
+            "$ref": "#/components/schemas/Pagination"
+          }
+        }
+      },
+      "inline_response_200_21_data_eventos": {
+        "type": "object",
+        "properties": {
+          "tipo": {
+            "type": "string"
+          },
+          "fecha": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "descripcion": {
+            "type": "string"
+          },
+          "prioridad": {
+            "type": "string"
+          }
+        }
+      },
+      "inline_response_200_21_data": {
+        "type": "object",
+        "properties": {
+          "viajeId": {
+            "type": "string"
+          },
+          "eventos": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/inline_response_200_21_data_eventos"
+            }
+          }
+        }
+      },
+      "inline_response_200_23_data": {
+        "type": "object",
+        "properties": {
+          "service": {
+            "type": "object"
+          },
+          "activeTrips": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "totalActiveTrips": {
+            "type": "integer"
+          }
+        }
+      }
+    },
+    "securitySchemes": {
+      "cookieAuth": {
+        "type": "apiKey",
+        "name": "authToken",
+        "in": "cookie"
+      }
+    }
+  }
+}
