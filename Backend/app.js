@@ -8,8 +8,18 @@ const app = express();
 app.use(express.json());
 app.use(cookieParser());
 app.use(cors({
-  origin: ["https://rivera-project-ecru.vercel.app"],
-  credentials: true
+  origin: [
+    "https://rivera-project-ecru.vercel.app",
+    "https://rivera-project-uhuf.vercel.app"
+  ],
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+  allowedHeaders: [
+    "Content-Type",
+    "Authorization", 
+    "Cache-Control",
+    "cache-control"
+  ]
 }));
 
 app.get("/test", (req, res) => {
