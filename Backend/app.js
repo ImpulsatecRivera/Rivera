@@ -8,6 +8,7 @@ import RegisterRoutes from "./src/Routes/RegisterRoute.js";
 import ClientesRoutes from "./src/Routes/clienteRoutes.js";
 import RecoveryRoutes from "./src/Routes/Recovery.js";
 import CotizacionesRoutes from "./src/Routes/cotizacionesRoutes.js";    
+import RegisterClienteRoutes from "./src/Routes/RegisterClienteRouter.js";
 
 const app = express();
 
@@ -49,5 +50,6 @@ app.use("/api/register", RegisterRoutes);
 app.use("/api/clientes", ClientesRoutes);
 app.use("/api/recovery", RecoveryRoutes);
 app.use("/api/cotizaciones", CotizacionesRoutes);
+app.use("/api/register-cliente", RegisterClienteRoutes);
 
 export default app;
