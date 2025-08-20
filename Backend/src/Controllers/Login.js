@@ -7,7 +7,7 @@ import ClienteModel from "../Models/Clientes.js";
 
 const LoginController = {};
 
-// ===================== Intentos fallidos (igual que tenías) =====================
+// ===================== Intentos fallidos =====================
 const failedAttempts = new Map(); // { email: { attempts: number, blockedUntil: Date } }
 
 const isBlocked = (email) => {
@@ -41,7 +41,7 @@ const getBlockTimeRemaining = (email) => {
 };
 
 // ===================== Utils de Cookie =====================
-// Construimos Set-Cookie manual para incluir Partitioned en producción
+// Set-Cookie manual para poder incluir 'Partitioned' en producción
 const setAuthCookie = (res, token) => {
   const isProd = process.env.NODE_ENV === "production";
   const parts = [
@@ -180,7 +180,7 @@ LoginController.Login = async (req, res) => {
         // Cookie httpOnly (cross-site ok)
         setAuthCookie(res, token);
 
-        // Mantengo el header por compatibilidad (opcional)
+        // Header opcional (compatibilidad)
         res.setHeader("Authorization", `Bearer ${token}`);
 
         return res.status(200).json({
