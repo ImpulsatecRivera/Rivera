@@ -104,6 +104,7 @@ const actualizarContrasena = async (decoded, hashedPassword) => {
 };
 
 // Solicitar código de recuperación
+// Solicitar código de recuperación
 RecoveryPass.requestCode = async (req, res) => {
   const { email, phone, via = "email" } = req.body;
 
@@ -212,17 +213,33 @@ RecoveryPass.requestCode = async (req, res) => {
         const smsMessage = `🔐 Tu código de verificación es: ${codex}. Válido por 20 minutos.`;
         
         console.log("📱 Enviando SMS a:", phoneToUse);
-        await EnviarSms(phoneToUse, smsMessage);
         
-        console.log("✅ SMS enviado exitosamente");
+        // 🚀 VERIFICAR EL RESULTADO DEL SMS
+        const smsResult = await EnviarSms(phoneToUse, smsMessage);
         
-        // ✅ AGREGADO: return aquí para terminar la función
+        if (!smsResult.success) {
+          console.error("❌ Error real enviando SMS:", smsResult.error);
+          
+          // Limpiar cookie si falla el envío
+          res.clearCookie("tokenRecoveryCode");
+          
+          return res.status(500).json({ 
+            message: "Error enviando SMS. Verifica las credenciales de Twilio.",
+            success: false,
+            error: smsResult.error,
+            twilioCode: smsResult.code
+          });
+        }
+        
+        console.log("✅ SMS confirmado enviado:", smsResult.messageId);
+        
         return res.status(200).json({ 
           message: "Código enviado vía SMS",
           success: true,
           sentTo: `***${phoneToUse.slice(-4)}`,
           method: "sms",
-          userType: userType
+          userType: userType,
+          messageId: smsResult.messageId
         });
         
       } else {
@@ -239,7 +256,6 @@ RecoveryPass.requestCode = async (req, res) => {
         
         console.log("✅ Email enviado exitosamente");
         
-        // ✅ AGREGADO: return aquí para terminar la función
         return res.status(200).json({ 
           message: "Código enviado vía email",
           success: true,
@@ -258,7 +274,6 @@ RecoveryPass.requestCode = async (req, res) => {
         ? "Error enviando SMS. Verifica que el número sea correcto." 
         : "Error enviando email. Verifica que el email sea correcto.";
       
-      // ✅ AGREGADO: return aquí para terminar la función
       return res.status(500).json({ message: errorMessage });
     }
 
