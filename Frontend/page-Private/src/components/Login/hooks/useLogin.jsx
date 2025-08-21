@@ -10,11 +10,16 @@ const useLogin = () => {
   const handleLogin = useCallback(async (email, password) => {
     setLoading(true);
     try {
-      const res = await login(email, password);
-      if (res?.success) {
+      const result = await login(email, password); // llama al AuthContext
+      if (result?.success) {
+        // replace para que el botón “atrás” no regrese al login
         navigate("/dashboard", { replace: true });
       }
-      return res;
+      // Garantiza un objeto consistente al caller
+      return result ?? { success: false };
+    } catch {
+      // Nunca propagues errores crudos al UI
+      return { success: false, message: "Error inesperado al iniciar sesión" };
     } finally {
       setLoading(false);
     }
