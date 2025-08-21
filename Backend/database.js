@@ -46,29 +46,38 @@ connection.on("error", (error) => {
   // }
 });
 
-// 🚨 COMENTAR TODAS LAS REFERENCIAS A autoUpdateService
-process.on('SIGINT', () => {
+// ✅ CORREGIDO: Usar async/await en lugar de callbacks
+process.on('SIGINT', async () => {
   console.log('🛑 SIGINT recibido. Cerrando aplicación...');
   
   // if (autoUpdateService) {
   //   autoUpdateService.stop();
   // }
   
-  mongoose.connection.close(() => {
+  try {
+    await mongoose.connection.close();
     console.log('✅ Conexión a MongoDB cerrada');
     process.exit(0);
-  });
+  } catch (error) {
+    console.error('❌ Error cerrando conexión:', error);
+    process.exit(1);
+  }
 });
 
-process.on('SIGTERM', () => {
+// ✅ CORREGIDO: Usar async/await en lugar de callbacks
+process.on('SIGTERM', async () => {
   console.log('🛑 SIGTERM recibido. Cerrando aplicación...');
   
   // if (autoUpdateService) {
   //   autoUpdateService.stop();
   // }
   
-  mongoose.connection.close(() => {
+  try {
+    await mongoose.connection.close();
     console.log('✅ Conexión a MongoDB cerrada');
     process.exit(0);
-  });
+  } catch (error) {
+    console.error('❌ Error cerrando conexión:', error);
+    process.exit(1);
+  }
 });
