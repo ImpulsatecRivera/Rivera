@@ -1,31 +1,37 @@
 const LogoutController = {};
 
-const appendDelete = (res, { name, path, isProd, withPartitioned }) => {
-  const parts = [
-    `${name}=`,
+const buildDelete = ({ isProd, path, cookieDomain, partitioned }) => {
+  return [
+    "authToken=",
     `Path=${path}`,
+    cookieDomain ? `Domain=${cookieDomain}` : "",
     "HttpOnly",
     isProd ? "SameSite=None" : "SameSite=Lax",
     isProd ? "Secure" : "",
-    withPartitioned && isProd ? "Partitioned" : "",
+    partitioned && isProd ? "Partitioned" : "",
     "Expires=Thu, 01 Jan 1970 00:00:00 GMT",
     "Max-Age=0",
-  ].filter(Boolean);
-  res.append("Set-Cookie", parts.join("; "));
+  ]
+    .filter(Boolean)
+    .join("; ");
 };
 
 LogoutController.logout = async (req, res) => {
   try {
     const isProd = process.env.NODE_ENV === "production";
+    const cookieDomain = process.env.COOKIE_DOMAIN?.trim() || undefined; // DEBE coincidir con el usado en login (o no usar ninguno)
 
-    // 1) Borrar la cookie con Path=/ (la más común)
-    appendDelete(res, { name: "authToken", path: "/", isProd, withPartitioned: true });
-    appendDelete(res, { name: "authToken", path: "/", isProd, withPartitioned: false });
+    console.log("🚪 [logout] host:", req.get("host"), "| cookieDomain:", cookieDomain || "(host-only)");
 
-    // 2) Por si alguna vez se creó con Path=/api
-    appendDelete(res, { name: "authToken", path: "/api", isProd, withPartitioned: true });
-    appendDelete(res, { name: "authToken", path: "/api", isProd, withPartitioned: false });
+    // Enviamos varias variantes para asegurar el borrado
+    const deletes = [];
+    for (const path of ["/", "/api"]) {
+      deletes.push(buildDelete({ isProd, path, cookieDomain, partitioned: true }));  // calza con login
+      deletes.push(buildDelete({ isProd, path, cookieDomain, partitioned: false })); // fallback
+    }
 
+    res.setHeader("Set-Cookie", deletes);
+    res.setHeader("Cache-Control", "no-store");
 
     return res.status(200).json({ Message: "Sesión cerrada" });
   } catch (e) {
