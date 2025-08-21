@@ -53,13 +53,20 @@ const cookie = {
   },
 };
 
-// “Mata” variantes locales (no afecta la httpOnly del backend)
+// "Mata" variantes locales (no afecta la httpOnly del backend)
 const nukeCookie = (name) => {
   const paths = ["/", "/api"];
+  const domains = ["", window.location.hostname, `.${window.location.hostname}`];
   const attrs = ["", "; SameSite=Lax", "; SameSite=None; Secure"];
   const exp = "; Expires=Thu, 01 Jan 1970 00:00:00 GMT; Max-Age=0";
-  for (const p of paths) for (const a of attrs) {
-    document.cookie = `${name}=${exp}; Path=${p}${a}`;
+  
+  for (const p of paths) {
+    for (const d of domains) {
+      for (const a of attrs) {
+        const domainPart = d ? `; Domain=${d}` : "";
+        document.cookie = `${name}=${exp}; Path=${p}${domainPart}${a}`;
+      }
+    }
   }
 };
 

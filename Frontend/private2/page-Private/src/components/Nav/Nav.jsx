@@ -104,7 +104,7 @@ const SidebarNav = () => {
     { id:'Motoristas',name: 'Motoristas', route: '/motoristas' },
     { id:'Proveedores',name: 'Proveedores', route: '/proveedores' },
     { id:'Camiones',name: 'Camiones', route: '/camiones' },
-    { id:'clientes',name: 'clientes', route: '/clientes' },
+    { id:'clientes',name: 'Clientes', route: '/clientes' },
   ];
 
   const handleNavClick = (event, itemName, route) => {
