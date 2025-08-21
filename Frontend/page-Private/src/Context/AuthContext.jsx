@@ -2,7 +2,10 @@ import React, { createContext, useContext, useState, useEffect } from "react";
 import axios from "axios";
 import { toast } from "react-toastify";
 
+// ✅ siempre enviar/recibir cookies
 axios.defaults.withCredentials = true;
+// ✅ usa baseURL relativa (ideal con proxy en Vite/Vercel). Si tienes un backend local, ponlo en VITE_API_BASE_URL.
+axios.defaults.baseURL = import.meta.env.VITE_API_BASE_URL || "";
 
 const AuthContext = createContext();
 
@@ -14,7 +17,10 @@ const cookie = {
       maxAge,
       path = "/",
       sameSite = "Lax",
-      secure = (typeof window !== "undefined" ? window.location.protocol === "https:" : true),
+      secure =
+        typeof window !== "undefined"
+          ? window.location.protocol === "https:"
+          : true,
       domain,
     } = options;
 
@@ -39,7 +45,7 @@ const cookie = {
   get(name) {
     const value = document.cookie
       .split("; ")
-      .find(row => row.startsWith(`${name}=`))
+      .find((row) => row.startsWith(`${name}=`))
       ?.split("=")[1];
     return value ? decodeURIComponent(value) : undefined;
   },
@@ -49,7 +55,10 @@ const cookie = {
       path = "/",
       domain,
       sameSite = "Lax",
-      secure = (typeof window !== "undefined" ? window.location.protocol === "https:" : true),
+      secure =
+        typeof window !== "undefined"
+          ? window.location.protocol === "https:"
+          : true,
     } = options;
     let cookieStr = `${name}=; Max-Age=0; Path=${path}`;
     if (domain) cookieStr += `; Domain=${domain}`;
@@ -59,7 +68,7 @@ const cookie = {
   },
 };
 
-// Mata todas las variantes comunes de una cookie en el dominio del FRONTEND
+// ❌ Mata todas las variantes comunes en el dominio del FRONTEND
 const nukeCookie = (name) => {
   const paths = ["/", "/api"];
   const attrs = ["", "; SameSite=Lax", "; SameSite=None; Secure"];
@@ -90,7 +99,9 @@ export const AuthProvider = ({ children }) => {
     try {
       const userPreviewRaw = cookie.get("userPreview");
       if (userPreviewRaw) {
-        try { setUser(JSON.parse(userPreviewRaw)); } catch {}
+        try {
+          setUser(JSON.parse(userPreviewRaw));
+        } catch {}
       }
       return Boolean(userPreviewRaw);
     } catch {
@@ -98,10 +109,10 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // Borra cookies UI + authToken del FRONTEND
+  // Borra cookies UI + intenta authToken en el dominio del FRONTEND
   const clearCookies = () => {
     try {
-      nukeCookie("authToken");  // <-- IMPORTANTE
+      nukeCookie("authToken"); // no borra httpOnly del backend, pero limpia variantes locales
       nukeCookie("isLoggedIn");
       nukeCookie("userType");
       nukeCookie("userPreview");
@@ -117,11 +128,7 @@ export const AuthProvider = ({ children }) => {
   // ===================== Login =====================
   const login = async (email, password) => {
     try {
-      const { data } = await axios.post(
-        "https://riveraproject-5.onrender.com/api/login",
-        { email, password },
-        { withCredentials: true }
-      );
+      const { data } = await axios.post("/api/login", { email, password });
 
       if (data?.user) {
         saveToCookies(data.user, data.userType);
@@ -135,11 +142,18 @@ export const AuthProvider = ({ children }) => {
     } catch (error) {
       if (error.response?.status === 429) {
         toast.error(error.response.data.message || "Demasiados intentos fallidos");
-        return { success: false, blocked: true, timeRemaining: error.response.data.timeRemaining };
+        return {
+          success: false,
+          blocked: true,
+          timeRemaining: error.response.data.timeRemaining,
+        };
       }
       if (error.response?.data?.attemptsRemaining !== undefined) {
         toast.error(error.response.data.message);
-        return { success: false, attemptsRemaining: error.response.data.attemptsRemaining };
+        return {
+          success: false,
+          attemptsRemaining: error.response.data.attemptsRemaining,
+        };
       }
       toast.error("Credenciales inválidas.");
       return { success: false };
@@ -149,7 +163,7 @@ export const AuthProvider = ({ children }) => {
   // ===================== Logout =====================
   const logOut = async () => {
     try {
-      await axios.post("https://riveraproject-5.onrender.com/api/logout", {}, { withCredentials: true });
+      await axios.post("/api/logout");
     } finally {
       clearCookies();
       setUser(null);
@@ -164,10 +178,7 @@ export const AuthProvider = ({ children }) => {
     loadFromCookies(); // solo preview
 
     try {
-      const res = await axios.get(
-        "https://riveraproject-5.onrender.com/api/login/check-auth",
-        { withCredentials: true, timeout: 10000 }
-      );
+      const res = await axios.get("/api/login/check-auth", { timeout: 10000 });
 
       if (res.data?.user) {
         saveToCookies(res.data.user, res.data.user.userType);
@@ -190,10 +201,7 @@ export const AuthProvider = ({ children }) => {
   // ===================== Sync manual =====================
   const syncWithServer = async () => {
     try {
-      const res = await axios.get(
-        "https://riveraproject-5.onrender.com/api/login/check-auth",
-        { withCredentials: true, timeout: 5000 }
-      );
+      const res = await axios.get("/api/login/check-auth", { timeout: 5000 });
       if (res.data?.user) {
         saveToCookies(res.data.user, res.data.user.userType);
         setUser(res.data.user);
@@ -206,10 +214,35 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // ===================== Efectos =====================
-  useEffect(() => { checkAuth(); }, []);
+  // ===================== Interceptor 401 (corta sesión al instante) =====================
   useEffect(() => {
-    const onVis = () => { if (!document.hidden && isLoggedIn) syncWithServer(); };
+    const id = axios.interceptors.response.use(
+      (r) => r,
+      (err) => {
+        if (err?.response?.status === 401) {
+          try {
+            nukeCookie("userPreview");
+            nukeCookie("userType");
+          } catch {}
+          setUser(null);
+          setIsLoggedIn(false);
+        }
+        return Promise.reject(err);
+      }
+    );
+    return () => axios.interceptors.response.eject(id);
+  }, []);
+
+  // ===================== Efectos =====================
+  useEffect(() => {
+    checkAuth();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    const onVis = () => {
+      if (!document.hidden && isLoggedIn) syncWithServer();
+    };
     document.addEventListener("visibilitychange", onVis);
     return () => document.removeEventListener("visibilitychange", onVis);
   }, [isLoggedIn]);
