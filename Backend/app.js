@@ -22,7 +22,7 @@ import path from "path";
 //Traemos el archivo json
 const swaggerDocument = JSON.parse(
     fs.readFileSync(
-        path.resolve("./Documentacion.json"),
+        path.resolve("../Backend/Documentacion.json"),
         "utf-8"
     )
 );
