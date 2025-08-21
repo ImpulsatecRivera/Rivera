@@ -9,75 +9,23 @@ const api = axios.create({
 
 const AuthContext = createContext();
 
-// ===================== Utils de Cookies (solo UI) =====================
-const cookie = {
-  set(name, value, options = {}) {
-    const {
-      days,
-      maxAge,
-      path = "/",
-      sameSite = "Lax",
-      secure = typeof window !== "undefined" ? window.location.protocol === "https:" : true,
-      domain,
-    } = options;
-    let s = `${name}=${encodeURIComponent(value)}`;
-    if (typeof days === "number") {
-      const d = new Date();
-      d.setTime(d.getTime() + days * 24 * 60 * 60 * 1000);
-      s += `; Expires=${d.toUTCString()}`;
-    } else if (typeof maxAge === "number") {
-      s += `; Max-Age=${maxAge}`;
-    }
-    s += `; Path=${path}`;
-    if (domain) s += `; Domain=${domain}`;
-    if (sameSite) s += `; SameSite=${sameSite}`;
-    if (secure) s += `; Secure`;
-    document.cookie = s;
-  },
-  get(name) {
-    const v = document.cookie.split("; ").find(r => r.startsWith(`${name}=`))?.split("=")[1];
-    return v ? decodeURIComponent(v) : undefined;
-  },
-  remove(name, options = {}) {
-    const {
-      path = "/",
-      domain,
-      sameSite = "Lax",
-      secure = typeof window !== "undefined" ? window.location.protocol === "https:" : true,
-    } = options;
-    let s = `${name}=; Max-Age=0; Path=${path}`;
-    if (domain) s += `; Domain=${domain}`;
-    if (sameSite) s += `; SameSite=${sameSite}`;
-    if (secure) s += `; Secure`;
-    document.cookie = s;
-  },
-};
-
-// "Mata" variantes locales (no afecta la httpOnly del backend)
-const nukeCookie = (name) => {
-  const paths = ["/", "/api"];
-  const domains = ["", window.location.hostname, `.${window.location.hostname}`];
-  const attrs = ["", "; SameSite=Lax", "; SameSite=None; Secure"];
-  const exp = "; Expires=Thu, 01 Jan 1970 00:00:00 GMT; Max-Age=0";
+// ===================== Función simple para eliminar TODAS las cookies =====================
+const clearAllCookies = () => {
+  console.log("🍪 Eliminando todas las cookies...");
   
-  for (const p of paths) {
-    for (const d of domains) {
-      for (const a of attrs) {
-        const domainPart = d ? `; Domain=${d}` : "";
-        document.cookie = `${name}=${exp}; Path=${p}${domainPart}${a}`;
-      }
-    }
-  }
-};
-
-const toUserPreview = (user) => {
-  if (!user) return null;
-  return {
-    id: user.id || user._id || undefined,
-    email: user.email || undefined,
-    name: user.name || user.nombre || user.username || undefined,
-    userType: user.userType || user.role || undefined,
-  };
+  const cookiesToDelete = ["authToken", "userPreview", "userType"];
+  
+  cookiesToDelete.forEach(cookieName => {
+    // Múltiples intentos de eliminación para asegurar que se borren
+    document.cookie = `${cookieName}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/`;
+    document.cookie = `${cookieName}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; domain=${window.location.hostname}`;
+    document.cookie = `${cookieName}=; Max-Age=0; path=/`;
+    document.cookie = `${cookieName}=; Max-Age=0; path=/; domain=${window.location.hostname}`;
+    document.cookie = `${cookieName}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; SameSite=Lax`;
+    document.cookie = `${cookieName}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; SameSite=None; Secure`;
+  });
+  
+  console.log("🍪 Cookies después de limpiar:", document.cookie);
 };
 
 export const AuthProvider = ({ children }) => {
@@ -241,10 +189,8 @@ export const AuthProvider = ({ children }) => {
     try {
       const { data } = await api.post("/api/login", { email, password });
       if (data?.user) {
-        // ❌ NO guardar en cookies del frontend - el servidor ya maneja authToken
-        // saveToCookies(data.user, data.userType);
-        
-        // ✅ Solo actualizar estado en memoria
+        // ✅ Guardar en cookies del frontend para persistencia
+        saveToCookies(data.user, data.userType);
         setUser(data.user);
         setIsLoggedIn(true);
         toast.success("Inicio de sesión exitoso.");
@@ -315,31 +261,26 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // ===================== Check Auth SIMPLIFICADO =====================
+  // ===================== Check Auth =====================
   const checkAuth = async () => {
     setLoading(true);
-    
-    // ❌ NO cargar desde cookies del frontend
-    // let hasLocalState = false;
-    // if (isLoggedIn !== false) {
-    //   hasLocalState = loadFromCookies();
-    // }
     
     try {
       const { data } = await api.get("/api/login/check-auth", { timeout: 10000 });
       if (data?.user) {
-        // ✅ Solo actualizar estado - no cookies
+        // ✅ Actualizar estado y cookies
+        saveToCookies(data.user, data.user.userType);
         setUser(data.user);
         setIsLoggedIn(true);
       } else {
-        // ❌ Servidor dice que NO hay sesión válida
-        console.log("🔒 Servidor confirma: sin sesión válida");
+        // ❌ No hay sesión válida - limpiar todo
+        clearAllCookies();
         setUser(null);
         setIsLoggedIn(false);
       }
     } catch (error) {
       console.error("❌ Error verificando auth:", error);
-      // Sin estado local, simplemente desloguear
+      clearAllCookies();
       setUser(null);
       setIsLoggedIn(false);
     } finally {
@@ -347,11 +288,12 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // ===================== Sync manual SIMPLIFICADO =====================
+  // ===================== Sync manual =====================
   const syncWithServer = async () => {
     try {
       const { data } = await api.get("/api/login/check-auth", { timeout: 5000 });
       if (data?.user) {
+        saveToCookies(data.user, data.user.userType);
         setUser(data.user);
         setIsLoggedIn(true);
         return true;
@@ -362,13 +304,14 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // ===================== Interceptor 401 SIMPLIFICADO =====================
+  // ===================== Interceptor 401 =====================
   useEffect(() => {
     const id = api.interceptors.response.use(
       (r) => r,
       (err) => {
         if (err?.response?.status === 401) {
-          console.log("🚫 401 detectado - limpiando estado");
+          console.log("🚫 401 detectado - limpiando todo");
+          clearAllCookies();
           setUser(null);
           setIsLoggedIn(false);
         }
@@ -394,7 +337,7 @@ export const AuthProvider = ({ children }) => {
     <AuthContext.Provider value={{
       user, login, logOut, isLoggedIn, loading,
       setUser, setIsLoggedIn, syncWithServer, checkAuth,
-      debugCookies, // Para debugging
+      debugCookies, // Solo para debugging
     }}>
       {children}
     </AuthContext.Provider>
