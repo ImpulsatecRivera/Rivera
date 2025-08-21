@@ -1,23 +1,17 @@
 {
   "name": "backend",
   "version": "1.0.0",
-  "description": "API para gestión de transportes y logística",
+  "description": "",
   "main": "index.js",
   "type": "module",
   "scripts": {
     "start": "node index.js",
     "dev": "node --watch index.js",
-    "build": "echo 'No build step required'",
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "vercel-build": "echo 'Vercel build complete'"
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "keywords": ["express", "nodejs", "api", "logistics", "transport"],
+  "keywords": [],
   "author": "",
   "license": "ISC",
-  "engines": {
-    "node": ">=18.0.0",
-    "npm": ">=8.0.0"
-  },
   "dependencies": {
     "@vonage/server-sdk": "^3.22.1",
     "bcryptjs": "^3.0.2",

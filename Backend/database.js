@@ -1,4 +1,3 @@
-// database.js
 import dotenv from 'dotenv';
 dotenv.config();
 import mongoose from "mongoose";
@@ -9,29 +8,14 @@ import {config} from "./src/config.js";
 
 const URI = config.db.URI;
 
-// Configuración mejorada para MongoDB
-const mongooseOptions = {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-  serverSelectionTimeoutMS: 5000, // Timeout después de 5s en lugar del default de 30s
-  socketTimeoutMS: 45000, // Cerrar sockets después de 45s de inactividad
-  maxPoolSize: 10, // Mantener hasta 10 conexiones socket
-  minPoolSize: 2, // Mantener un mínimo de 2 conexiones socket
-  maxIdleTimeMS: 30000, // Cerrar conexiones después de 30s de inactividad
-  bufferMaxEntries: 0,
-  bufferCommands: false,
-};
-
-// Conectar con manejo de errores mejorado
-mongoose.connect(URI, mongooseOptions);
+mongoose.connect(URI);
 
 const connection = mongoose.connection;
 
 connection.once("open", () => {
-  console.log("✅ DB conectada exitosamente");
-  console.log(`📍 Conectado a: ${URI.replace(/\/\/.*@/, '//***@')}`); // Ocultar credenciales en logs
+  console.log("DB conectada");
   
-  // 🚨 COMENTAR TODA LA INICIALIZACIÓN DEL SERVICIO HASTA QUE FUNCIONE EL DEPLOY BÁSICO
+  // 🚨 COMENTAR TODA LA INICIALIZACIÓN DEL SERVICIO
   // setTimeout(() => {
   //   try {
   //     console.log('🔄 Iniciando servicio de actualización automática...');
@@ -44,7 +28,7 @@ connection.once("open", () => {
 });
 
 connection.on("disconnected", () => {
-  console.log("⚠️ DB desconectada");
+  console.log("DB is desconectada");
   
   // 🚨 COMENTAR
   // if (autoUpdateService) {
@@ -54,7 +38,7 @@ connection.on("disconnected", () => {
 });
 
 connection.on("error", (error) => {
-  console.error("❌ Error de conexión a DB:", error.message);
+  console.log("error encontrado" + error);
   
   // 🚨 COMENTAR
   // if (autoUpdateService) {
@@ -62,52 +46,29 @@ connection.on("error", (error) => {
   // }
 });
 
-// ✅ CORREGIDO: Usar async/await y manejo de errores mejorado
-process.on('SIGINT', async () => {
-  console.log('🛑 SIGINT recibido. Cerrando aplicación gracefully...');
+// 🚨 COMENTAR TODAS LAS REFERENCIAS A autoUpdateService
+process.on('SIGINT', () => {
+  console.log('🛑 SIGINT recibido. Cerrando aplicación...');
   
   // if (autoUpdateService) {
   //   autoUpdateService.stop();
   // }
   
-  try {
-    await mongoose.connection.close();
-    console.log('✅ Conexión a MongoDB cerrada correctamente');
+  mongoose.connection.close(() => {
+    console.log('✅ Conexión a MongoDB cerrada');
     process.exit(0);
-  } catch (error) {
-    console.error('❌ Error cerrando conexión a MongoDB:', error.message);
-    process.exit(1);
-  }
+  });
 });
 
-// ✅ CORREGIDO: Usar async/await y manejo de errores mejorado  
-process.on('SIGTERM', async () => {
-  console.log('🛑 SIGTERM recibido. Cerrando aplicación gracefully...');
+process.on('SIGTERM', () => {
+  console.log('🛑 SIGTERM recibido. Cerrando aplicación...');
   
   // if (autoUpdateService) {
   //   autoUpdateService.stop();
   // }
   
-  try {
-    await mongoose.connection.close();
-    console.log('✅ Conexión a MongoDB cerrada correctamente');
+  mongoose.connection.close(() => {
+    console.log('✅ Conexión a MongoDB cerrada');
     process.exit(0);
-  } catch (error) {
-    console.error('❌ Error cerrando conexión a MongoDB:', error.message);
-    process.exit(1);
-  }
+  });
 });
-
-// Manejo de errores no capturados
-process.on('unhandledRejection', (error) => {
-  console.error('❌ Unhandled Promise Rejection:', error.message);
-  console.error('Stack:', error.stack);
-});
-
-process.on('uncaughtException', (error) => {
-  console.error('❌ Uncaught Exception:', error.message);
-  console.error('Stack:', error.stack);
-  process.exit(1);
-});
-
-export default mongoose;
