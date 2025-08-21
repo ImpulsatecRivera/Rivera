@@ -89,19 +89,54 @@ export const AuthProvider = ({ children }) => {
     try {
       const raw = cookie.get("userPreview");
       if (raw) {
-        try { setUser(JSON.parse(raw)); } catch {}
+        try { 
+          const userData = JSON.parse(raw);
+          setUser(userData);
+          setIsLoggedIn(true);
+          return true;
+        } catch {}
       }
-      return Boolean(raw);
-    } catch { return false; }
+      return false;
+    } catch { 
+      return false; 
+    }
   };
 
   const clearCookies = () => {
     try {
+      // Eliminar con nukeCookie (múltiples variantes)
       nukeCookie("authToken");
       nukeCookie("isLoggedIn");
       nukeCookie("userType");
       nukeCookie("userPreview");
-    } catch {}
+      
+      // ADEMÁS: Eliminar explícitamente con cookie.remove
+      cookie.remove("userPreview");
+      cookie.remove("userType");
+      cookie.remove("isLoggedIn");
+      
+      // También intentar eliminar con diferentes paths y dominios
+      const cookiesToClear = ["userPreview", "userType", "isLoggedIn", "authToken"];
+      const paths = ["/", "/api", "/dashboard"];
+      
+      cookiesToClear.forEach(name => {
+        paths.forEach(path => {
+          // Sin dominio
+          document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=${path}`;
+          // Con dominio actual
+          document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=${path}; domain=${window.location.hostname}`;
+          // Con dominio wildcard
+          if (window.location.hostname.includes('.')) {
+            const rootDomain = window.location.hostname.split('.').slice(-2).join('.');
+            document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=${path}; domain=.${rootDomain}`;
+          }
+        });
+      });
+      
+      console.log("🍪 Todas las cookies eliminadas");
+    } catch (error) {
+      console.error("Error limpiando cookies:", error);
+    }
   };
 
   const saveToCookies = (userData, userType) => {
@@ -109,6 +144,19 @@ export const AuthProvider = ({ children }) => {
     cookie.set("userPreview", JSON.stringify(preview), { days: 7 });
     if (userType) cookie.set("userType", String(userType), { days: 7 });
   };
+
+  // ===================== DEBUG: Verificar cookies =====================
+  const debugCookies = () => {
+    console.log("🍪 [DEBUG] Todas las cookies:", document.cookie);
+    console.log("🍪 [DEBUG] userPreview:", cookie.get("userPreview"));
+    console.log("🍪 [DEBUG] userType:", cookie.get("userType"));
+    console.log("🍪 [DEBUG] Estado actual:", { user, isLoggedIn, loading });
+  };
+
+  // Exponer para debugging en consola
+  if (typeof window !== "undefined") {
+    window.debugAuth = debugCookies;
+  }
 
   // ===================== Login =====================
   const login = async (email, password) => {
@@ -137,37 +185,59 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // ===================== Logout =====================
+  // ===================== Logout MEJORADO =====================
   const logOut = async () => {
     try {
       await api.post("/api/logout");
+    } catch (error) {
+      console.log("Error en logout del servidor:", error);
     } finally {
       clearCookies();
       setUser(null);
       setIsLoggedIn(false);
       toast.success("Sesión cerrada.");
+      
+      // FORZAR verificación después de 100ms para asegurar limpieza
+      setTimeout(() => {
+        checkAuth();
+      }, 100);
     }
   };
 
-  // ===================== Check Auth (server decide) =====================
+  // ===================== Check Auth MEJORADO =====================
   const checkAuth = async () => {
     setLoading(true);
-    loadFromCookies(); // sólo preview
+    
+    // Cargar estado desde cookies para UI rápida
+    const hasLocalState = loadFromCookies();
+    
     try {
       const { data } = await api.get("/api/login/check-auth", { timeout: 10000 });
       if (data?.user) {
+        // ✅ Servidor confirma autenticación
         saveToCookies(data.user, data.user.userType);
         setUser(data.user);
         setIsLoggedIn(true);
       } else {
+        // ❌ Servidor dice que NO hay sesión válida
+        console.log("🔒 Servidor confirma: sin sesión válida");
+        clearCookies(); // Limpiar TODO
+        setUser(null);
+        setIsLoggedIn(false);
+      }
+    } catch (error) {
+      console.error("❌ Error verificando auth:", error);
+      
+      // Si hay estado local pero servidor no responde, mantener temporalmente
+      if (hasLocalState) {
+        console.log("📱 Manteniendo estado local por error de red");
+        setIsLoggedIn(true); // Mantener estado local
+      } else {
+        // No hay estado local y servidor no responde
         clearCookies();
         setUser(null);
         setIsLoggedIn(false);
       }
-    } catch {
-      clearCookies();
-      setUser(null);
-      setIsLoggedIn(false);
     } finally {
       setLoading(false);
     }
@@ -184,16 +254,19 @@ export const AuthProvider = ({ children }) => {
         return true;
       }
       return false;
-    } catch { return false; }
+    } catch { 
+      return false; 
+    }
   };
 
-  // ===================== Interceptor 401 =====================
+  // ===================== Interceptor 401 MEJORADO =====================
   useEffect(() => {
     const id = api.interceptors.response.use(
       (r) => r,
       (err) => {
         if (err?.response?.status === 401) {
-          try { nukeCookie("userPreview"); nukeCookie("userType"); } catch {}
+          console.log("🚫 401 detectado - limpiando TODO el estado");
+          clearCookies(); // Usar la función mejorada
           setUser(null);
           setIsLoggedIn(false);
         }
@@ -204,8 +277,13 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   useEffect(() => { checkAuth(); }, []);
+  
   useEffect(() => {
-    const onVis = () => { if (!document.hidden && isLoggedIn) syncWithServer(); };
+    const onVis = () => { 
+      if (!document.hidden && isLoggedIn) {
+        syncWithServer();
+      }
+    };
     document.addEventListener("visibilitychange", onVis);
     return () => document.removeEventListener("visibilitychange", onVis);
   }, [isLoggedIn]);
@@ -214,6 +292,7 @@ export const AuthProvider = ({ children }) => {
     <AuthContext.Provider value={{
       user, login, logOut, isLoggedIn, loading,
       setUser, setIsLoggedIn, syncWithServer, checkAuth,
+      debugCookies, // Para debugging
     }}>
       {children}
     </AuthContext.Provider>
