@@ -19,17 +19,16 @@ const buildDelete = ({ name, path = "/", sameSite, partitioned }) => {
 
 LogoutController.logout = async (req, res) => {
   try {
-    // borramos todas las variantes posibles (por si la cookie fue creada con otros atributos)
-    const variants = [
-      buildDelete({ name: "authToken", path: "/", sameSite: "SameSite=None", partitioned: true }),
-      buildDelete({ name: "authToken", path: "/", sameSite: "SameSite=None", partitioned: false }),
-      buildDelete({ name: "authToken", path: "/", sameSite: "SameSite=Lax", partitioned: false }),
-      buildDelete({ name: "authToken", path: "/api", sameSite: "SameSite=None", partitioned: true }),
-      buildDelete({ name: "authToken", path: "/api", sameSite: "SameSite=None", partitioned: false }),
-      buildDelete({ name: "authToken", path: "/api", sameSite: "SameSite=Lax", partitioned: false }),
-    ];
+    // Usar exactamente los mismos parámetros que en setAuthCookie del LoginController
+    const deleteCookie = buildDelete({ 
+      name: "authToken", 
+      path: "/", 
+      sameSite: isProd ? "SameSite=None" : "SameSite=Lax",
+      partitioned: isProd // Solo en producción, igual que el login
+    });
 
-    res.setHeader("Set-Cookie", variants);
+    console.log("🍪 [LOGOUT] Delete-Cookie:", deleteCookie);
+    res.setHeader("Set-Cookie", deleteCookie);
     return res.status(200).json({ Message: "Sesión cerrada" });
   } catch (e) {
     console.error("💥 [logout] Error:", e);
