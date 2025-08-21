@@ -85,14 +85,45 @@ export const AuthProvider = ({ children }) => {
   // ===================== Logout =====================
   const logOut = async () => {
     try {
-      await api.post("/api/logout");
+      console.log("🚪 Iniciando logout...");
+      
+      // 1. Llamar al backend para limpiar cookies httpOnly
+      const response = await api.post("/api/logout", {}, {
+        validateStatus: (status) => status < 500 // No fallar en 4xx
+      });
+      
+      console.log("✅ Logout del servidor exitoso:", response.data);
+      
     } catch (error) {
-      console.log("Error en logout del servidor:", error);
+      console.log("⚠️ Error en logout del servidor:", error.message);
+      // Continuar con limpieza local aunque falle el servidor
     } finally {
-      // Limpiar estado inmediatamente
+      // 2. Limpiar estado local inmediatamente
       setUser(null);
       setIsLoggedIn(false);
       clearStorage();
+      
+      // 3. Verificar que las cookies se eliminaron
+      setTimeout(() => {
+        console.log("🔍 Verificando cookies después del logout...");
+        
+        // Si estás en desarrollo, puedes hacer una verificación adicional
+        if (process.env.NODE_ENV === "development") {
+          // Intentar hacer una petición autenticada para verificar que el logout funcionó
+          api.get("/api/login/check-auth", { timeout: 3000 })
+            .then((res) => {
+              if (res.data?.user) {
+                console.warn("⚠️ Usuario aún autenticado después del logout");
+              } else {
+                console.log("✅ Logout verificado - no hay sesión activa");
+              }
+            })
+            .catch(() => {
+              console.log("✅ Logout verificado - token inválido");
+            });
+        }
+      }, 500);
+      
       toast.success("Sesión cerrada.");
     }
   };
