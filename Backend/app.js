@@ -14,6 +14,18 @@ import empleadoRoutes from "./src/Routes/empleadosRoutes.js";
 import motoristasRoutes from "./src/Routes/motoristaRoutes.js";
 import proveedoresRoutes from "./src/Routes/proveedoresRoutes.js";
 import autoUpdateRoutes from "./src/Routes/autoUpdateRoutes.js";
+import swaggerUi from "swagger-ui-express";
+import fs from "fs";
+import path from "path";
+
+
+//Traemos el archivo json
+const swaggerDocument = JSON.parse(
+    fs.readFileSync(
+        path.resolve("./Documentacion.json"),
+        "utf-8"
+    )
+);
 
 const app = express();
 
@@ -65,5 +77,6 @@ app.use("/api/empleados", empleadoRoutes);
 app.use("/api/motoristas", motoristasRoutes);
 app.use("/api/proveedores", proveedoresRoutes);
 app.use("/api/auto-update", autoUpdateRoutes);
+app.use("/api/docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
 export default app;
