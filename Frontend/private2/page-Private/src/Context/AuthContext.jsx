@@ -104,38 +104,68 @@ export const AuthProvider = ({ children }) => {
 
   const clearCookies = () => {
     try {
-      // Eliminar con nukeCookie (múltiples variantes)
+      console.log("🍪 [CLEAR] Iniciando limpieza de cookies...");
+      
+      // 1. Eliminar con nukeCookie (múltiples variantes)
       nukeCookie("authToken");
       nukeCookie("isLoggedIn");
       nukeCookie("userType");
       nukeCookie("userPreview");
       
-      // ADEMÁS: Eliminar explícitamente con cookie.remove
+      // 2. Eliminar explícitamente con cookie.remove
       cookie.remove("userPreview");
       cookie.remove("userType");
       cookie.remove("isLoggedIn");
       
-      // También intentar eliminar con diferentes paths y dominios
+      // 3. Eliminar con document.cookie directamente - múltiples variantes
       const cookiesToClear = ["userPreview", "userType", "isLoggedIn", "authToken"];
-      const paths = ["/", "/api", "/dashboard"];
+      const paths = ["/", "/api", "/dashboard", "/login"];
+      const domains = [
+        "", 
+        window.location.hostname, 
+        `.${window.location.hostname}`,
+        // Si estás en subdominio, también el dominio raíz
+        window.location.hostname.includes('.') ? `.${window.location.hostname.split('.').slice(-2).join('.')}` : null
+      ].filter(Boolean);
       
       cookiesToClear.forEach(name => {
+        // Eliminar sin atributos específicos
+        document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
+        
         paths.forEach(path => {
-          // Sin dominio
-          document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=${path}`;
-          // Con dominio actual
-          document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=${path}; domain=${window.location.hostname}`;
-          // Con dominio wildcard
-          if (window.location.hostname.includes('.')) {
-            const rootDomain = window.location.hostname.split('.').slice(-2).join('.');
-            document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=${path}; domain=.${rootDomain}`;
-          }
+          domains.forEach(domain => {
+            // Combinaciones de SameSite y Secure
+            const variants = [
+              `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=${path}; domain=${domain}`,
+              `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=${path}; domain=${domain}; SameSite=Lax`,
+              `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=${path}; domain=${domain}; SameSite=None; Secure`,
+              `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=${path}; domain=${domain}; SameSite=Strict`,
+              `${name}=; Max-Age=0; path=${path}; domain=${domain}`,
+              `${name}=; Max-Age=0; path=${path}; domain=${domain}; SameSite=Lax`,
+              `${name}=; Max-Age=0; path=${path}; domain=${domain}; SameSite=None; Secure`,
+            ];
+            
+            variants.forEach(cookieStr => {
+              try {
+                document.cookie = cookieStr;
+              } catch {}
+            });
+          });
         });
       });
       
-      console.log("🍪 Todas las cookies eliminadas");
+      // 4. Verificación final
+      const remainingCookies = document.cookie;
+      console.log("🍪 [CLEAR] Cookies después de limpieza:", remainingCookies);
+      
+      if (remainingCookies.includes('userPreview') || remainingCookies.includes('userType')) {
+        console.warn("🚨 [CLEAR] Algunas cookies no se eliminaron completamente");
+      } else {
+        console.log("✅ [CLEAR] Todas las cookies eliminadas correctamente");
+      }
+      
     } catch (error) {
-      console.error("Error limpiando cookies:", error);
+      console.error("❌ [CLEAR] Error limpiando cookies:", error);
     }
   };
 
@@ -192,15 +222,30 @@ export const AuthProvider = ({ children }) => {
     } catch (error) {
       console.log("Error en logout del servidor:", error);
     } finally {
-      clearCookies();
+      // 1. PRIMERO: Limpiar estado inmediatamente
       setUser(null);
       setIsLoggedIn(false);
+      
+      // 2. SEGUNDO: Limpiar cookies
+      clearCookies();
+      
+      // 3. TERCERO: Mostrar mensaje
       toast.success("Sesión cerrada.");
       
-      // FORZAR verificación después de 100ms para asegurar limpieza
+      // 4. ❌ NO llamar checkAuth() - ya sabemos que no hay sesión
+      // setTimeout(() => { checkAuth(); }, 100); // ELIMINAR ESTA LÍNEA
+      
+      // 5. Verificar que realmente se eliminaron las cookies
       setTimeout(() => {
-        checkAuth();
-      }, 100);
+        const remainingCookies = document.cookie;
+        console.log("🍪 [LOGOUT] Cookies restantes:", remainingCookies);
+        
+        // Si quedan cookies sospechosas, eliminarlas de nuevo
+        if (remainingCookies.includes('userPreview') || remainingCookies.includes('userType')) {
+          console.log("🚨 [LOGOUT] Detectadas cookies residuales - eliminando de nuevo");
+          clearCookies();
+        }
+      }, 50);
     }
   };
 
@@ -208,8 +253,11 @@ export const AuthProvider = ({ children }) => {
   const checkAuth = async () => {
     setLoading(true);
     
-    // Cargar estado desde cookies para UI rápida
-    const hasLocalState = loadFromCookies();
+    // 🚫 NO cargar desde cookies si ya estamos en estado de logout
+    let hasLocalState = false;
+    if (isLoggedIn !== false) {
+      hasLocalState = loadFromCookies();
+    }
     
     try {
       const { data } = await api.get("/api/login/check-auth", { timeout: 10000 });
@@ -229,7 +277,8 @@ export const AuthProvider = ({ children }) => {
       console.error("❌ Error verificando auth:", error);
       
       // Si hay estado local pero servidor no responde, mantener temporalmente
-      if (hasLocalState) {
+      // PERO solo si no estamos en proceso de logout
+      if (hasLocalState && isLoggedIn !== false) {
         console.log("📱 Manteniendo estado local por error de red");
         setIsLoggedIn(true); // Mantener estado local
       } else {
