@@ -105,6 +105,7 @@ export const AuthProvider = ({ children }) => {
   const clearCookies = () => {
     try {
       console.log("🍪 [CLEAR] Iniciando limpieza de cookies...");
+      console.log("🍪 [CLEAR] Cookies antes:", document.cookie);
       
       // 1. Eliminar con nukeCookie (múltiples variantes)
       nukeCookie("authToken");
@@ -112,57 +113,104 @@ export const AuthProvider = ({ children }) => {
       nukeCookie("userType");
       nukeCookie("userPreview");
       
-      // 2. Eliminar explícitamente con cookie.remove
-      cookie.remove("userPreview");
-      cookie.remove("userType");
-      cookie.remove("isLoggedIn");
+      // 2. Eliminar explícitamente con cookie.remove (diferentes variaciones)
+      const removeOptions = [
+        {},
+        { path: "/" },
+        { path: "/", domain: window.location.hostname },
+        { path: "/", domain: `.${window.location.hostname}` },
+        { path: "/", sameSite: "Lax" },
+        { path: "/", sameSite: "None", secure: true },
+        { path: "/", sameSite: "Strict" },
+      ];
       
-      // 3. Eliminar con document.cookie directamente - múltiples variantes
+      removeOptions.forEach(options => {
+        try {
+          cookie.remove("userPreview", options);
+          cookie.remove("userType", options);
+          cookie.remove("isLoggedIn", options);
+        } catch {}
+      });
+      
+      // 3. CLAVE: Eliminar con document.cookie directamente (método más agresivo)
       const cookiesToClear = ["userPreview", "userType", "isLoggedIn", "authToken"];
       const paths = ["/", "/api", "/dashboard", "/login"];
       const domains = [
         "", 
         window.location.hostname, 
         `.${window.location.hostname}`,
-        // Si estás en subdominio, también el dominio raíz
         window.location.hostname.includes('.') ? `.${window.location.hostname.split('.').slice(-2).join('.')}` : null
       ].filter(Boolean);
       
+      // Para cada cookie, probar TODAS las combinaciones posibles
       cookiesToClear.forEach(name => {
-        // Eliminar sin atributos específicos
+        // Básico sin atributos
         document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
+        document.cookie = `${name}=; Max-Age=0`;
         
         paths.forEach(path => {
           domains.forEach(domain => {
-            // Combinaciones de SameSite y Secure
-            const variants = [
+            // Múltiples variantes de eliminación
+            const deleteStrings = [
+              `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=${path}`,
               `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=${path}; domain=${domain}`,
+              `${name}=; Max-Age=0; path=${path}`,
+              `${name}=; Max-Age=0; path=${path}; domain=${domain}`,
               `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=${path}; domain=${domain}; SameSite=Lax`,
               `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=${path}; domain=${domain}; SameSite=None; Secure`,
               `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=${path}; domain=${domain}; SameSite=Strict`,
-              `${name}=; Max-Age=0; path=${path}; domain=${domain}`,
               `${name}=; Max-Age=0; path=${path}; domain=${domain}; SameSite=Lax`,
               `${name}=; Max-Age=0; path=${path}; domain=${domain}; SameSite=None; Secure`,
+              `${name}=; Max-Age=0; path=${path}; domain=${domain}; SameSite=Strict`,
             ];
             
-            variants.forEach(cookieStr => {
+            deleteStrings.forEach(deleteStr => {
               try {
-                document.cookie = cookieStr;
+                document.cookie = deleteStr;
               } catch {}
             });
           });
         });
       });
       
-      // 4. Verificación final
-      const remainingCookies = document.cookie;
-      console.log("🍪 [CLEAR] Cookies después de limpieza:", remainingCookies);
+      // 4. NUEVO: Forzar eliminación leyendo y reescribiendo todas las cookies
+      const allCookies = document.cookie.split(';');
+      allCookies.forEach(cookie => {
+        const cookieName = cookie.split('=')[0].trim();
+        if (cookiesToClear.includes(cookieName)) {
+          console.log(`🚨 [CLEAR] Forzando eliminación de: ${cookieName}`);
+          // Múltiples intentos de eliminación forzada
+          document.cookie = `${cookieName}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/`;
+          document.cookie = `${cookieName}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; domain=${window.location.hostname}`;
+          document.cookie = `${cookieName}=; Max-Age=0; path=/`;
+          document.cookie = `${cookieName}=; Max-Age=0; path=/; domain=${window.location.hostname}`;
+        }
+      });
       
-      if (remainingCookies.includes('userPreview') || remainingCookies.includes('userType')) {
-        console.warn("🚨 [CLEAR] Algunas cookies no se eliminaron completamente");
-      } else {
-        console.log("✅ [CLEAR] Todas las cookies eliminadas correctamente");
-      }
+      // 5. Verificación final con más detalle
+      setTimeout(() => {
+        const remainingCookies = document.cookie;
+        console.log("🍪 [CLEAR] Cookies después de limpieza:", remainingCookies);
+        
+        const problemCookies = [];
+        if (remainingCookies.includes('userPreview')) problemCookies.push('userPreview');
+        if (remainingCookies.includes('userType')) problemCookies.push('userType');
+        if (remainingCookies.includes('authToken')) problemCookies.push('authToken');
+        
+        if (problemCookies.length > 0) {
+          console.warn(`🚨 [CLEAR] Cookies problemáticas restantes: ${problemCookies.join(', ')}`);
+          
+          // Último intento: eliminación nuclear
+          problemCookies.forEach(cookieName => {
+            for (let i = 0; i < 10; i++) {
+              document.cookie = `${cookieName}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/`;
+              document.cookie = `${cookieName}=; Max-Age=0; path=/`;
+            }
+          });
+        } else {
+          console.log("✅ [CLEAR] Todas las cookies eliminadas correctamente");
+        }
+      }, 100);
       
     } catch (error) {
       console.error("❌ [CLEAR] Error limpiando cookies:", error);
@@ -193,7 +241,10 @@ export const AuthProvider = ({ children }) => {
     try {
       const { data } = await api.post("/api/login", { email, password });
       if (data?.user) {
-        saveToCookies(data.user, data.userType);
+        // ❌ NO guardar en cookies del frontend - el servidor ya maneja authToken
+        // saveToCookies(data.user, data.userType);
+        
+        // ✅ Solo actualizar estado en memoria
         setUser(data.user);
         setIsLoggedIn(true);
         toast.success("Inicio de sesión exitoso.");
@@ -226,78 +277,81 @@ export const AuthProvider = ({ children }) => {
       setUser(null);
       setIsLoggedIn(false);
       
-      // 2. SEGUNDO: Limpiar cookies
+      // 2. SEGUNDO: Limpiar cookies (primera vez)
       clearCookies();
       
-      // 3. TERCERO: Mostrar mensaje
-      toast.success("Sesión cerrada.");
-      
-      // 4. ❌ NO llamar checkAuth() - ya sabemos que no hay sesión
-      // setTimeout(() => { checkAuth(); }, 100); // ELIMINAR ESTA LÍNEA
-      
-      // 5. Verificar que realmente se eliminaron las cookies
+      // 3. TERCERO: Verificación adicional después de un momento
       setTimeout(() => {
         const remainingCookies = document.cookie;
-        console.log("🍪 [LOGOUT] Cookies restantes:", remainingCookies);
+        console.log("🍪 [LOGOUT] Verificación post-limpieza:", remainingCookies);
         
-        // Si quedan cookies sospechosas, eliminarlas de nuevo
+        // Si TODAVÍA quedan cookies, eliminarlas de nuevo más agresivamente
         if (remainingCookies.includes('userPreview') || remainingCookies.includes('userType')) {
-          console.log("🚨 [LOGOUT] Detectadas cookies residuales - eliminando de nuevo");
-          clearCookies();
+          console.log("🚨 [LOGOUT] Cookies persistentes detectadas - eliminación agresiva");
+          
+          // Eliminación nuclear específica para estas cookies problemáticas
+          ['userPreview', 'userType', 'authToken'].forEach(cookieName => {
+            // Múltiples intentos con diferentes métodos
+            for (let i = 0; i < 5; i++) {
+              document.cookie = `${cookieName}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/`;
+              document.cookie = `${cookieName}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; domain=${window.location.hostname}`;
+              document.cookie = `${cookieName}=; Max-Age=0; path=/`;
+              document.cookie = `${cookieName}=; Max-Age=0; path=/; domain=${window.location.hostname}`;
+              document.cookie = `${cookieName}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; SameSite=Lax`;
+              document.cookie = `${cookieName}=; Max-Age=0; path=/; SameSite=Lax`;
+            }
+          });
+          
+          // Verificación final
+          setTimeout(() => {
+            const finalCheck = document.cookie;
+            console.log("🍪 [LOGOUT] Estado final de cookies:", finalCheck);
+          }, 100);
         }
-      }, 50);
+      }, 150);
+      
+      // 4. CUARTO: Mostrar mensaje
+      toast.success("Sesión cerrada.");
     }
   };
 
-  // ===================== Check Auth MEJORADO =====================
+  // ===================== Check Auth SIMPLIFICADO =====================
   const checkAuth = async () => {
     setLoading(true);
     
-    // 🚫 NO cargar desde cookies si ya estamos en estado de logout
-    let hasLocalState = false;
-    if (isLoggedIn !== false) {
-      hasLocalState = loadFromCookies();
-    }
+    // ❌ NO cargar desde cookies del frontend
+    // let hasLocalState = false;
+    // if (isLoggedIn !== false) {
+    //   hasLocalState = loadFromCookies();
+    // }
     
     try {
       const { data } = await api.get("/api/login/check-auth", { timeout: 10000 });
       if (data?.user) {
-        // ✅ Servidor confirma autenticación
-        saveToCookies(data.user, data.user.userType);
+        // ✅ Solo actualizar estado - no cookies
         setUser(data.user);
         setIsLoggedIn(true);
       } else {
         // ❌ Servidor dice que NO hay sesión válida
         console.log("🔒 Servidor confirma: sin sesión válida");
-        clearCookies(); // Limpiar TODO
         setUser(null);
         setIsLoggedIn(false);
       }
     } catch (error) {
       console.error("❌ Error verificando auth:", error);
-      
-      // Si hay estado local pero servidor no responde, mantener temporalmente
-      // PERO solo si no estamos en proceso de logout
-      if (hasLocalState && isLoggedIn !== false) {
-        console.log("📱 Manteniendo estado local por error de red");
-        setIsLoggedIn(true); // Mantener estado local
-      } else {
-        // No hay estado local y servidor no responde
-        clearCookies();
-        setUser(null);
-        setIsLoggedIn(false);
-      }
+      // Sin estado local, simplemente desloguear
+      setUser(null);
+      setIsLoggedIn(false);
     } finally {
       setLoading(false);
     }
   };
 
-  // ===================== Sync manual =====================
+  // ===================== Sync manual SIMPLIFICADO =====================
   const syncWithServer = async () => {
     try {
       const { data } = await api.get("/api/login/check-auth", { timeout: 5000 });
       if (data?.user) {
-        saveToCookies(data.user, data.user.userType);
         setUser(data.user);
         setIsLoggedIn(true);
         return true;
@@ -308,14 +362,13 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // ===================== Interceptor 401 MEJORADO =====================
+  // ===================== Interceptor 401 SIMPLIFICADO =====================
   useEffect(() => {
     const id = api.interceptors.response.use(
       (r) => r,
       (err) => {
         if (err?.response?.status === 401) {
-          console.log("🚫 401 detectado - limpiando TODO el estado");
-          clearCookies(); // Usar la función mejorada
+          console.log("🚫 401 detectado - limpiando estado");
           setUser(null);
           setIsLoggedIn(false);
         }
