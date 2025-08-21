@@ -2,14 +2,14 @@ import React, { createContext, useContext, useState, useEffect } from "react";
 import axios from "axios";
 import { toast } from "react-toastify";
 
-// ✅ siempre enviar/recibir cookies
-axios.defaults.withCredentials = true;
-// ✅ usa baseURL relativa (ideal con proxy en Vite/Vercel). Si tienes un backend local, ponlo en VITE_API_BASE_URL.
-axios.defaults.baseURL = import.meta.env.VITE_API_BASE_URL || "";
+const api = axios.create({
+  baseURL: import.meta.env.VITE_API_BASE_URL || "https://riveraproject-5.onrender.com",
+  withCredentials: true,
+});
 
 const AuthContext = createContext();
 
-// ===================== Utils de Cookies =====================
+// ===================== Utils de Cookies (solo UI) =====================
 const cookie = {
   set(name, value, options = {}) {
     const {
@@ -17,58 +17,43 @@ const cookie = {
       maxAge,
       path = "/",
       sameSite = "Lax",
-      secure =
-        typeof window !== "undefined"
-          ? window.location.protocol === "https:"
-          : true,
+      secure = typeof window !== "undefined" ? window.location.protocol === "https:" : true,
       domain,
     } = options;
-
-    let cookieStr = `${name}=${encodeURIComponent(value)}`;
-
+    let s = `${name}=${encodeURIComponent(value)}`;
     if (typeof days === "number") {
-      const date = new Date();
-      date.setTime(date.getTime() + days * 24 * 60 * 60 * 1000);
-      cookieStr += `; Expires=${date.toUTCString()}`;
+      const d = new Date();
+      d.setTime(d.getTime() + days * 24 * 60 * 60 * 1000);
+      s += `; Expires=${d.toUTCString()}`;
     } else if (typeof maxAge === "number") {
-      cookieStr += `; Max-Age=${maxAge}`;
+      s += `; Max-Age=${maxAge}`;
     }
-
-    cookieStr += `; Path=${path}`;
-    if (domain) cookieStr += `; Domain=${domain}`;
-    if (sameSite) cookieStr += `; SameSite=${sameSite}`;
-    if (secure) cookieStr += `; Secure`;
-
-    document.cookie = cookieStr;
+    s += `; Path=${path}`;
+    if (domain) s += `; Domain=${domain}`;
+    if (sameSite) s += `; SameSite=${sameSite}`;
+    if (secure) s += `; Secure`;
+    document.cookie = s;
   },
-
   get(name) {
-    const value = document.cookie
-      .split("; ")
-      .find((row) => row.startsWith(`${name}=`))
-      ?.split("=")[1];
-    return value ? decodeURIComponent(value) : undefined;
+    const v = document.cookie.split("; ").find(r => r.startsWith(`${name}=`))?.split("=")[1];
+    return v ? decodeURIComponent(v) : undefined;
   },
-
   remove(name, options = {}) {
     const {
       path = "/",
       domain,
       sameSite = "Lax",
-      secure =
-        typeof window !== "undefined"
-          ? window.location.protocol === "https:"
-          : true,
+      secure = typeof window !== "undefined" ? window.location.protocol === "https:" : true,
     } = options;
-    let cookieStr = `${name}=; Max-Age=0; Path=${path}`;
-    if (domain) cookieStr += `; Domain=${domain}`;
-    if (sameSite) cookieStr += `; SameSite=${sameSite}`;
-    if (secure) cookieStr += `; Secure`;
-    document.cookie = cookieStr;
+    let s = `${name}=; Max-Age=0; Path=${path}`;
+    if (domain) s += `; Domain=${domain}`;
+    if (sameSite) s += `; SameSite=${sameSite}`;
+    if (secure) s += `; Secure`;
+    document.cookie = s;
   },
 };
 
-// ❌ Mata todas las variantes comunes en el dominio del FRONTEND
+// “Mata” variantes locales (no afecta la httpOnly del backend)
 const nukeCookie = (name) => {
   const paths = ["/", "/api"];
   const attrs = ["", "; SameSite=Lax", "; SameSite=None; Secure"];
@@ -78,7 +63,6 @@ const nukeCookie = (name) => {
   }
 };
 
-// Solo guardamos lo mínimo del usuario
 const toUserPreview = (user) => {
   if (!user) return null;
   return {
@@ -94,25 +78,19 @@ export const AuthProvider = ({ children }) => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  // ===================== Carga desde cookies (solo preview) =====================
   const loadFromCookies = () => {
     try {
-      const userPreviewRaw = cookie.get("userPreview");
-      if (userPreviewRaw) {
-        try {
-          setUser(JSON.parse(userPreviewRaw));
-        } catch {}
+      const raw = cookie.get("userPreview");
+      if (raw) {
+        try { setUser(JSON.parse(raw)); } catch {}
       }
-      return Boolean(userPreviewRaw);
-    } catch {
-      return false;
-    }
+      return Boolean(raw);
+    } catch { return false; }
   };
 
-  // Borra cookies UI + intenta authToken en el dominio del FRONTEND
   const clearCookies = () => {
     try {
-      nukeCookie("authToken"); // no borra httpOnly del backend, pero limpia variantes locales
+      nukeCookie("authToken");
       nukeCookie("isLoggedIn");
       nukeCookie("userType");
       nukeCookie("userPreview");
@@ -128,8 +106,7 @@ export const AuthProvider = ({ children }) => {
   // ===================== Login =====================
   const login = async (email, password) => {
     try {
-      const { data } = await axios.post("/api/login", { email, password });
-
+      const { data } = await api.post("/api/login", { email, password });
       if (data?.user) {
         saveToCookies(data.user, data.userType);
         setUser(data.user);
@@ -142,18 +119,11 @@ export const AuthProvider = ({ children }) => {
     } catch (error) {
       if (error.response?.status === 429) {
         toast.error(error.response.data.message || "Demasiados intentos fallidos");
-        return {
-          success: false,
-          blocked: true,
-          timeRemaining: error.response.data.timeRemaining,
-        };
+        return { success: false, blocked: true, timeRemaining: error.response.data.timeRemaining };
       }
       if (error.response?.data?.attemptsRemaining !== undefined) {
         toast.error(error.response.data.message);
-        return {
-          success: false,
-          attemptsRemaining: error.response.data.attemptsRemaining,
-        };
+        return { success: false, attemptsRemaining: error.response.data.attemptsRemaining };
       }
       toast.error("Credenciales inválidas.");
       return { success: false };
@@ -163,7 +133,7 @@ export const AuthProvider = ({ children }) => {
   // ===================== Logout =====================
   const logOut = async () => {
     try {
-      await axios.post("/api/logout");
+      await api.post("/api/logout");
     } finally {
       clearCookies();
       setUser(null);
@@ -172,17 +142,15 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // ===================== Verificar autenticación (solo server decide) =====================
+  // ===================== Check Auth (server decide) =====================
   const checkAuth = async () => {
     setLoading(true);
-    loadFromCookies(); // solo preview
-
+    loadFromCookies(); // sólo preview
     try {
-      const res = await axios.get("/api/login/check-auth", { timeout: 10000 });
-
-      if (res.data?.user) {
-        saveToCookies(res.data.user, res.data.user.userType);
-        setUser(res.data.user);
+      const { data } = await api.get("/api/login/check-auth", { timeout: 10000 });
+      if (data?.user) {
+        saveToCookies(data.user, data.user.userType);
+        setUser(data.user);
         setIsLoggedIn(true);
       } else {
         clearCookies();
@@ -201,65 +169,48 @@ export const AuthProvider = ({ children }) => {
   // ===================== Sync manual =====================
   const syncWithServer = async () => {
     try {
-      const res = await axios.get("/api/login/check-auth", { timeout: 5000 });
-      if (res.data?.user) {
-        saveToCookies(res.data.user, res.data.user.userType);
-        setUser(res.data.user);
+      const { data } = await api.get("/api/login/check-auth", { timeout: 5000 });
+      if (data?.user) {
+        saveToCookies(data.user, data.user.userType);
+        setUser(data.user);
         setIsLoggedIn(true);
         return true;
       }
       return false;
-    } catch {
-      return false;
-    }
+    } catch { return false; }
   };
 
-  // ===================== Interceptor 401 (corta sesión al instante) =====================
+  // ===================== Interceptor 401 =====================
   useEffect(() => {
-    const id = axios.interceptors.response.use(
+    const id = api.interceptors.response.use(
       (r) => r,
       (err) => {
         if (err?.response?.status === 401) {
-          try {
-            nukeCookie("userPreview");
-            nukeCookie("userType");
-          } catch {}
+          try { nukeCookie("userPreview"); nukeCookie("userType"); } catch {}
           setUser(null);
           setIsLoggedIn(false);
         }
         return Promise.reject(err);
       }
     );
-    return () => axios.interceptors.response.eject(id);
+    return () => api.interceptors.response.eject(id);
   }, []);
 
-  // ===================== Efectos =====================
+  useEffect(() => { checkAuth(); }, []);
   useEffect(() => {
-    checkAuth();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  useEffect(() => {
-    const onVis = () => {
-      if (!document.hidden && isLoggedIn) syncWithServer();
-    };
+    const onVis = () => { if (!document.hidden && isLoggedIn) syncWithServer(); };
     document.addEventListener("visibilitychange", onVis);
     return () => document.removeEventListener("visibilitychange", onVis);
   }, [isLoggedIn]);
 
-  const contextValue = {
-    user,
-    login,
-    logOut,
-    isLoggedIn,
-    loading,
-    setUser,
-    setIsLoggedIn,
-    syncWithServer,
-    checkAuth,
-  };
-
-  return <AuthContext.Provider value={contextValue}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={{
+      user, login, logOut, isLoggedIn, loading,
+      setUser, setIsLoggedIn, syncWithServer, checkAuth,
+    }}>
+      {children}
+    </AuthContext.Provider>
+  );
 };
 
 export const useAuth = () => useContext(AuthContext);
