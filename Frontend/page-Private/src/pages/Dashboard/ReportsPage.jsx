@@ -14,7 +14,7 @@ const ReportsPage = () => {
         <div className="bg-white rounded-lg h-full overflow-hidden">
           
           {/* Contenedor con scroll personalizado */}
-          <div className="h-full overflow-y-auto reports-scroll p-3 sm:p-4 md:p-5 lg:p-6 xl:p-8">
+          <div className="h-full overflow-y-scroll overflow-x-hidden reports-scroll p-3 sm:p-4 md:p-5 lg:p-6 xl:p-8">
             
             {/* Header - Fijo en la parte superior */}
             <div className="sticky top-0 bg-white z-10 pb-3 sm:pb-4 md:pb-5 lg:pb-6 mb-3 sm:mb-4 md:mb-5 lg:mb-6">
@@ -22,7 +22,7 @@ const ReportsPage = () => {
             </div>
             
             {/* Contenido principal */}
-            <div className="min-h-fit">
+            <div className="min-h-[150vh]">
               
               {/* Layout responsivo */}
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 sm:gap-4 md:gap-5 lg:gap-6 xl:gap-8">
@@ -76,8 +76,8 @@ const ReportsPage = () => {
                 <BottomMetrics />
               </div>
               
-              {/* Padding bottom para espacio adicional */}
-              <div className="h-4 sm:h-6 md:h-8"></div>
+              {/* Padding bottom para espacio adicional y forzar scroll */}
+              <div className="h-20 sm:h-24 md:h-32 lg:h-40"></div>
             </div>
           </div>
         </div>
@@ -86,29 +86,38 @@ const ReportsPage = () => {
       {/* Estilos para responsive y scroll personalizado */}
       <style dangerouslySetInnerHTML={{
         __html: `
-          /* Scroll personalizado */
+          /* Scroll personalizado - FORZADO */
           .reports-scroll {
             scrollbar-width: thin;
-            scrollbar-color: #CBD5E0 #F7FAFC;
+            scrollbar-color: #94A3B8 #E2E8F0;
+            scroll-behavior: smooth;
           }
           
           .reports-scroll::-webkit-scrollbar {
-            width: 8px;
+            width: 12px;
+            background: #F1F5F9;
           }
           
           .reports-scroll::-webkit-scrollbar-track {
-            background: #F7FAFC;
-            border-radius: 4px;
+            background: #E2E8F0;
+            border-radius: 6px;
+            margin: 4px;
           }
           
           .reports-scroll::-webkit-scrollbar-thumb {
-            background: #CBD5E0;
-            border-radius: 4px;
-            transition: background 0.2s ease;
+            background: #94A3B8;
+            border-radius: 6px;
+            border: 2px solid #E2E8F0;
+            transition: all 0.2s ease;
           }
           
           .reports-scroll::-webkit-scrollbar-thumb:hover {
-            background: #A0AEC0;
+            background: #64748B;
+            border-color: #CBD5E1;
+          }
+          
+          .reports-scroll::-webkit-scrollbar-thumb:active {
+            background: #475569;
           }
           
           /* Optimizaciones para móviles muy pequeños */
