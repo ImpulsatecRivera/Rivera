@@ -13,7 +13,7 @@ const AuthContext = createContext();
 const clearAllCookies = () => {
   console.log("🍪 Eliminando todas las cookies...");
   
-  const cookiesToDelete = ["authToken", "userPreview", "userType"];
+  const cookiesToDelete = ["authToken", "authToken", "userType"];
   
   cookiesToDelete.forEach(cookieName => {
     // Múltiples intentos de eliminación para asegurar que se borren
@@ -35,7 +35,7 @@ export const AuthProvider = ({ children }) => {
 
   const loadFromCookies = () => {
     try {
-      const raw = cookie.get("userPreview");
+      const raw = cookie.get("authToken");
       if (raw) {
         try { 
           const userData = JSON.parse(raw);
@@ -59,7 +59,7 @@ export const AuthProvider = ({ children }) => {
       nukeCookie("authToken");
       nukeCookie("isLoggedIn");
       nukeCookie("userType");
-      nukeCookie("userPreview");
+      nukeCookie("authToken");
       
       // 2. Eliminar explícitamente con cookie.remove (diferentes variaciones)
       const removeOptions = [
@@ -74,14 +74,14 @@ export const AuthProvider = ({ children }) => {
       
       removeOptions.forEach(options => {
         try {
-          cookie.remove("userPreview", options);
+          cookie.remove("authToken", options);
           cookie.remove("userType", options);
           cookie.remove("isLoggedIn", options);
         } catch {}
       });
       
       // 3. CLAVE: Eliminar con document.cookie directamente (método más agresivo)
-      const cookiesToClear = ["userPreview", "userType", "isLoggedIn", "authToken"];
+      const cookiesToClear = ["authToken", "userType", "isLoggedIn", "authToken"];
       const paths = ["/", "/api", "/dashboard", "/login"];
       const domains = [
         "", 
@@ -141,7 +141,7 @@ export const AuthProvider = ({ children }) => {
         console.log("🍪 [CLEAR] Cookies después de limpieza:", remainingCookies);
         
         const problemCookies = [];
-        if (remainingCookies.includes('userPreview')) problemCookies.push('userPreview');
+        if (remainingCookies.includes('authToken')) problemCookies.push('authToken');
         if (remainingCookies.includes('userType')) problemCookies.push('userType');
         if (remainingCookies.includes('authToken')) problemCookies.push('authToken');
         
@@ -166,15 +166,15 @@ export const AuthProvider = ({ children }) => {
   };
 
   const saveToCookies = (userData, userType) => {
-    const preview = toUserPreview(userData) || {};
-    cookie.set("userPreview", JSON.stringify(preview), { days: 7 });
+    const preview = toauthToken(userData) || {};
+    cookie.set("authToken", JSON.stringify(preview), { days: 7 });
     if (userType) cookie.set("userType", String(userType), { days: 7 });
   };
 
   // ===================== DEBUG: Verificar cookies =====================
   const debugCookies = () => {
     console.log("🍪 [DEBUG] Todas las cookies:", document.cookie);
-    console.log("🍪 [DEBUG] userPreview:", cookie.get("userPreview"));
+    console.log("🍪 [DEBUG] authToken:", cookie.get("authToken"));
     console.log("🍪 [DEBUG] userType:", cookie.get("userType"));
     console.log("🍪 [DEBUG] Estado actual:", { user, isLoggedIn, loading });
   };
@@ -232,11 +232,11 @@ export const AuthProvider = ({ children }) => {
         console.log("🍪 [LOGOUT] Verificación post-limpieza:", remainingCookies);
         
         // Si TODAVÍA quedan cookies, eliminarlas de nuevo más agresivamente
-        if (remainingCookies.includes('userPreview') || remainingCookies.includes('userType')) {
+        if (remainingCookies.includes('authToken') || remainingCookies.includes('userType')) {
           console.log("🚨 [LOGOUT] Cookies persistentes detectadas - eliminación agresiva");
           
           // Eliminación nuclear específica para estas cookies problemáticas
-          ['userPreview', 'userType', 'authToken'].forEach(cookieName => {
+          ['authToken', 'userType', 'authToken'].forEach(cookieName => {
             // Múltiples intentos con diferentes métodos
             for (let i = 0; i < 5; i++) {
               document.cookie = `${cookieName}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/`;
