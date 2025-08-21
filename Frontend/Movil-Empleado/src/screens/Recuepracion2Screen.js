@@ -17,6 +17,9 @@ const Recuperacion2Screen = ({ navigation, route }) => {
   const [email, setEmail] = useState(route?.params?.email || '');
   const [phone, setPhone] = useState(route?.params?.phone || '');
   const [via, setVia] = useState(route?.params?.via || 'email');
+  
+  // NUEVO: Recibir el recovery token
+  const [recoveryToken, setRecoveryToken] = useState(route?.params?.recoveryToken || '');
 
   // Referencias para los inputs (auto-focus)
   const inputRefs = useRef([]);
@@ -77,22 +80,26 @@ const Recuperacion2Screen = ({ navigation, route }) => {
       return;
     }
 
+    // Verificar que tenemos el recovery token
+    if (!recoveryToken) {
+      Alert.alert('Error', 'Token de recuperación no encontrado. Solicita un nuevo código.');
+      return;
+    }
+
     setLoading(true);
     try {
-      console.log('🔐 Verificando código:', otpCode, `para ${via}:`, email || phone);
+      console.log('=== DEBUGGING VERIFICACION ===');
+      console.log('🔐 Código a verificar:', otpCode);
+      console.log('📧 Email:', email);
+      console.log('🎫 Recovery Token presente:', !!recoveryToken);
       
-      // ✅ IP CONFIGURADA - Ajusta según tu configuración
-      const API_URL = 'http://192.168.1.100:4000/api/recovery/verifyCode';
+      const API_URL = 'https://riveraproject-5.onrender.com/api/recovery/verifyCode';
       
-      console.log('🌐 Conectando a:', API_URL);
-      
-      // Preparar payload según el método
-      let payload = { code: otpCode };
-      if (via === 'email' && email) {
-        payload.email = email;
-      } else if (via === 'sms' && phone) {
-        payload.phone = phone;
-      }
+      // PAYLOAD CORRECTO según el backend
+      const payload = {
+        code: otpCode,
+        recoveryToken: recoveryToken
+      };
       
       console.log('📤 Payload enviado:', payload);
       
@@ -125,14 +132,42 @@ const Recuperacion2Screen = ({ navigation, route }) => {
       }
 
       if (!response.ok) {
-        Alert.alert('Error', data.message || 'Código de verificación incorrecto');
+        console.error('❌ Error del servidor:', data);
+        
+        // Mensajes de error más específicos
+        let errorMessage = 'Código de verificación incorrecto';
+        
+        if (data.message) {
+          if (data.message.includes('expired') || data.message.includes('expirado')) {
+            errorMessage = 'El código ha expirado. Solicita uno nuevo.';
+          } else if (data.message.includes('invalid') || data.message.includes('inválido')) {
+            errorMessage = 'Código inválido. Verifica que sea correcto.';
+          } else if (data.message.includes('not found') || data.message.includes('no encontrado')) {
+            errorMessage = 'No se encontró el código. Solicita uno nuevo.';
+          } else if (data.message.includes('Token inválido')) {
+            errorMessage = 'El código ha expirado. Solicita uno nuevo.';
+          } else {
+            errorMessage = data.message;
+          }
+        }
+        
+        Alert.alert('Error de Verificación', errorMessage);
+        
         // Limpiar campos en caso de error
         setOtpValues(['', '', '', '', '']);
         inputRefs.current[0]?.focus();
         return;
       }
 
-      console.log('✅ Código verificado exitosamente:', data);
+      console.log('✅ Verificación exitosa:', data);
+      
+      // Extraer el verified token del response
+      const verifiedToken = data.verifiedToken;
+      
+      if (!verifiedToken) {
+        Alert.alert('Error', 'No se recibió el token de verificación del servidor');
+        return;
+      }
       
       Alert.alert(
         'Código Verificado', 
@@ -144,7 +179,7 @@ const Recuperacion2Screen = ({ navigation, route }) => {
               email: email,
               phone: phone,
               via: via,
-              verifiedCode: otpCode 
+              verifiedToken: verifiedToken  // Pasar el verified token
             })
           }
         ]
@@ -154,24 +189,17 @@ const Recuperacion2Screen = ({ navigation, route }) => {
       console.error('❌ Error al verificar código:', error);
       
       // Manejo específico de errores
+      let errorMessage = 'No se pudo verificar el código. Intenta de nuevo.';
+      
       if (error.message.includes('HTML')) {
-        Alert.alert(
-          'Error del Servidor', 
-          '🔴 La API no está respondiendo correctamente.\n\n' +
-          'Verifica que:\n' +
-          '• El servidor esté corriendo\n' +
-          '• La ruta /api/recovery/verifyCode existe\n' +
-          '• El endpoint esté configurado correctamente'
-        );
+        errorMessage = 'Error del servidor. La API no está respondiendo correctamente.';
       } else if (error.message === 'Network request failed') {
-        Alert.alert(
-          'Error de Conexión', 
-          '🔴 No se pudo conectar al servidor.\n\n' +
-          'Verifica tu conexión a internet y que el servidor esté funcionando.'
-        );
-      } else {
-        Alert.alert('Error', error.message || 'No se pudo verificar el código. Intenta de nuevo.');
+        errorMessage = 'Error de conexión. Verifica tu conexión a internet.';
+      } else if (error.message.includes('timeout')) {
+        errorMessage = 'La solicitud tardó demasiado. Intenta de nuevo.';
       }
+      
+      Alert.alert('Error', errorMessage);
       
       // Limpiar campos y enfocar el primero
       setOtpValues(['', '', '', '', '']);
@@ -198,7 +226,7 @@ const Recuperacion2Screen = ({ navigation, route }) => {
     try {
       console.log('🔄 Reenviando código para:', email);
       
-      const API_URL = 'http://192.168.1.100:4000/api/requestCode';
+      const API_URL = 'https://riveraproject-5.onrender.com/api/recovery/requestCode';
       
       const response = await fetch(API_URL, {
         method: 'POST',
@@ -208,20 +236,31 @@ const Recuperacion2Screen = ({ navigation, route }) => {
         },
         body: JSON.stringify({
           email: email,
+          via: 'email'
         }),
       });
 
       const responseText = await response.text();
-      const data = JSON.parse(responseText);
+      
+      if (!responseText.includes('<html>')) {
+        const data = JSON.parse(responseText);
 
-      if (response.ok) {
-        setTimeLeft(120); // Reiniciar timer
-        setOtpValues(['', '', '', '', '']); // Limpiar campos
-        inputRefs.current[0]?.focus(); // Enfocar primer campo
-        
-        Alert.alert('Código Reenviado', 'Se ha enviado un nuevo código a tu email.');
+        if (response.ok) {
+          // Actualizar el recovery token con el nuevo
+          if (data.recoveryToken) {
+            setRecoveryToken(data.recoveryToken);
+          }
+          
+          setTimeLeft(120); // Reiniciar timer
+          setOtpValues(['', '', '', '', '']); // Limpiar campos
+          inputRefs.current[0]?.focus(); // Enfocar primer campo
+          
+          Alert.alert('Código Reenviado', 'Se ha enviado un nuevo código a tu email.');
+        } else {
+          Alert.alert('Error', data.message || 'No se pudo reenviar el código');
+        }
       } else {
-        Alert.alert('Error', data.message || 'No se pudo reenviar el código');
+        throw new Error('Error del servidor');
       }
     } catch (error) {
       console.error('❌ Error al reenviar:', error);

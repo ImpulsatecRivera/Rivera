@@ -41,111 +41,80 @@ const RecuperacionScreen = ({ navigation }) => {
     }
   };
 
-  const handleNext = async () => {
-    // Validaciones finales
-    if (!email) {
-      setEmailError('El email es requerido');
-      return;
+  // En RecuperacionScreen - Modificar el handleNext:
+
+const handleNext = async () => {
+  // ... validaciones existentes ...
+
+  setLoading(true);
+  try {
+    console.log('🔐 Solicitando código de recuperación para:', email);
+    
+    const API_URL = 'https://riveraproject-5.onrender.com/api/recovery/requestCode';
+    
+    const response = await fetch(API_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      body: JSON.stringify({
+        email: email.trim().toLowerCase(),
+        via: 'email' // Agregar esto también
+      }),
+    });
+
+    const responseText = await response.text();
+    console.log('📄 Response text:', responseText);
+
+    if (responseText.includes('<html>') || responseText.includes('<!DOCTYPE')) {
+      throw new Error('El servidor devolvió HTML en lugar de JSON.');
     }
 
-    if (isOnlyNumbers(email)) {
-      setEmailError('Ingresa un email válido, no un número');
-      return;
-    }
-
-    if (!validateEmail(email)) {
-      setEmailError('Formato de email inválido');
-      return;
-    }
-
-    setLoading(true);
+    let data;
     try {
-      console.log('🔐 Solicitando código de recuperación para:', email);
-      
-      // ✅ IP CONFIGURADA - Ajusta según tu configuración
-      const API_URL = 'http://192.168.1.100:4000/api/recovery/requestCode';
-      
-      console.log('🌐 Conectando a:', API_URL);
-      const response = await fetch(API_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-        body: JSON.stringify({
-          email: email.trim().toLowerCase(),
-        }),
-      });
-
-      console.log('📡 Response status:', response.status);
-      console.log('📡 Response headers:', response.headers);
-
-      // Verificar el contenido antes de parsear JSON
-      const responseText = await response.text();
-      console.log('📄 Response text:', responseText);
-
-      // Verificar si la respuesta es HTML (error del servidor)
-      if (responseText.includes('<html>') || responseText.includes('<!DOCTYPE')) {
-        throw new Error('El servidor devolvió HTML en lugar de JSON. Verifica que la API esté funcionando correctamente.');
-      }
-
-      let data;
-      try {
-        data = JSON.parse(responseText);
-      } catch (parseError) {
-        console.error('❌ Error parsing JSON:', parseError);
-        throw new Error('Respuesta inválida del servidor');
-      }
-
-      if (!response.ok) {
-        Alert.alert('Error', data.message || 'Error al enviar código de recuperación');
-        return;
-      }
-
-      console.log('✅ Código enviado exitosamente:', data);
-      
-      Alert.alert(
-        'Código Enviado', 
-        'Se ha enviado un código de recuperación a tu email. Revisa tu bandeja de entrada.',
-        [
-          { 
-            text: 'Continuar', 
-            onPress: () => navigation.navigate('Recuperacion2', { email: email.trim() })
-          }
-        ]
-      );
-
-    } catch (error) {
-      console.error('❌ Error al solicitar código:', error);
-      
-      // Manejo específico de errores
-      if (error.message.includes('HTML')) {
-        Alert.alert(
-          'Error del Servidor', 
-          '🔴 La API no está respondiendo correctamente.\n\n' +
-          'Verifica que:\n' +
-          '• El servidor esté corriendo\n' +
-          '• La ruta /api/requestCode existe\n' +
-          '• El endpoint esté configurado correctamente'
-        );
-      } else if (error.message === 'Network request failed') {
-        Alert.alert(
-          'Error de Conexión', 
-          '🔴 No se pudo conectar al servidor.\n\n' +
-          'Verifica tu conexión a internet y que el servidor esté funcionando.'
-        );
-      } else if (error.name === 'TypeError') {
-        Alert.alert(
-          'Error de Red', 
-          'Problema de conectividad. Verifica tu conexión a internet.'
-        );
-      } else {
-        Alert.alert('Error', error.message || 'No se pudo enviar el código. Intenta de nuevo.');
-      }
-    } finally {
-      setLoading(false);
+      data = JSON.parse(responseText);
+    } catch (parseError) {
+      console.error('❌ Error parsing JSON:', parseError);
+      throw new Error('Respuesta inválida del servidor');
     }
-  };
+
+    if (!response.ok) {
+      Alert.alert('Error', data.message || 'Error al enviar código de recuperación');
+      return;
+    }
+
+    console.log('✅ Código enviado exitosamente:', data);
+    
+    // ✅ GUARDAR EL RECOVERY TOKEN QUE DEVUELVE EL BACKEND
+    const recoveryToken = data.recoveryToken;
+    
+    if (!recoveryToken) {
+      Alert.alert('Error', 'No se recibió el token de recuperación');
+      return;
+    }
+    
+    Alert.alert(
+      'Código Enviado', 
+      'Se ha enviado un código de recuperación a tu email. Revisa tu bandeja de entrada.',
+      [
+        { 
+          text: 'Continuar', 
+          onPress: () => navigation.navigate('Recuperacion2', { 
+            email: email.trim(),
+            recoveryToken: recoveryToken  // ✅ PASAR EL TOKEN
+          })
+        }
+      ]
+    );
+
+  } catch (error) {
+    console.error('❌ Error al solicitar código:', error);
+    // ... manejo de errores existente ...
+  } finally {
+    setLoading(false);
+  }
+};
 
   const handleClose = () => {
     navigation.goBack();

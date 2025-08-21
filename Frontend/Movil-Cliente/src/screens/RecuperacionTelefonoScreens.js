@@ -79,10 +79,10 @@ const RecuperacionTelefonoScreen = ({ navigation }) => {
         [
           { 
             text: 'Continuar', 
-            onPress: () => navigation.navigate('Recuperacion2', { 
-              phone: fullPhoneNumber,
-              via: 'sms'
-            })
+           onPress: () => navigation.navigate('Recuperacion2Screen', { 
+  phone: fullPhoneNumber,
+  via: 'sms'
+})
           }
         ]
       );

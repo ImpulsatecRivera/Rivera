@@ -40,7 +40,7 @@ export const useProfile = () => {
       console.log('🌐 Conectando al backend con ID:', userId);
 
       // Hacer petición al backend para obtener datos actualizados
-      const response = await fetch(`http://192.168.1.100:4000/api/motoristas/${userId}`, {
+      const response = await fetch(`https://riveraproject-5.onrender.com/api/motoristas/${userId}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',

@@ -13,7 +13,7 @@ import {
 import Icon from 'react-native-vector-icons/Ionicons';
 
 // ✅ CONFIGURACIÓN DE LA API - CORREGIDA
-const API_BASE_URL = 'http://192.168.1.100:4000';
+const API_BASE_URL = 'https://riveraproject-5.onrender.com';
 
 const RegistrarseCliente2 = ({ navigation, route }) => {
   // ✅ OBTENER DATOS DE LA PANTALLA ANTERIOR

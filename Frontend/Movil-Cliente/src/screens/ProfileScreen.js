@@ -63,7 +63,7 @@ const ProfileScreen = () => {
       console.log('🔍 Obteniendo perfil para usuario:', userId);
 
       // Hacer petición a la API con el endpoint corregido
-      const apiUrl = `http://192.168.1.100:4000/api/clientes/${userId}`;
+      const apiUrl = `https://riveraproject-5.onrender.com/api/clientes/${userId}`;
       console.log('🌐 URL de petición:', apiUrl);
       
       const response = await fetch(apiUrl, {

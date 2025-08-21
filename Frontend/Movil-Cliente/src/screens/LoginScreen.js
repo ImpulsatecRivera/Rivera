@@ -49,7 +49,7 @@ const LoginScreen = () => {
       console.log('🔐 Iniciando proceso de login...');
       
       // Llamar a la API de login
-      const response = await fetch('http://192.168.1.100:4000/api/login', {
+      const response = await fetch('https://riveraproject-5.onrender.com/api/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -145,10 +145,11 @@ const LoginScreen = () => {
     }
   };
 
-  const handleForgotPassword = () => {
-    console.log('Forgot password pressed');
-    navigation.navigate('InicioRecuperar');
-  };
+ const handleForgotPassword = () => {
+  console.log('Forgot password pressed');
+  // ✅ RESTAURAR ESTA LÍNEA:
+  navigation.navigate('InicioRecuperar');
+};
 
   const handleGoogleLogin = () => {
     Alert.alert(
