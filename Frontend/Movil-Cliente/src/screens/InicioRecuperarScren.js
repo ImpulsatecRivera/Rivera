@@ -1,7 +1,7 @@
 import React from 'react';
 import { ChevronLeft, Clock } from 'lucide-react';
 
-const PasswordRecoveryScreen = () => {
+const InicioRecuperarScren = () => {
   return (
     <div className="bg-white min-h-screen flex flex-col max-w-sm mx-auto">
       {/* Header con flecha de regreso */}
@@ -72,4 +72,4 @@ const PasswordRecoveryScreen = () => {
   );
 };
 
-export default PasswordRecoveryScreen;
+export default InicioRecuperarScren;

@@ -20,7 +20,9 @@ const Recuperacion3 = ({ navigation, route }) => {
   
   // Recibir datos de la pantalla anterior
   const [email, setEmail] = useState(route?.params?.email || '');
-  const [verifiedCode, setVerifiedCode] = useState(route?.params?.verifiedCode || '');
+  
+  // ACTUALIZADO: Recibir verifiedToken en lugar de verifiedCode
+  const [verifiedToken, setVerifiedToken] = useState(route?.params?.verifiedToken || '');
 
   // Validaciones de contraseña
   const hasMinLength = password.length >= 8 && password.length <= 20;
@@ -41,19 +43,21 @@ const Recuperacion3 = ({ navigation, route }) => {
       return;
     }
 
-    if (!email) {
-      Alert.alert('Error', 'Email no encontrado. Por favor inicia el proceso de nuevo.');
+    // Verificar que tenemos el verified token
+    if (!verifiedToken) {
+      Alert.alert('Error', 'Token de verificación no encontrado. Por favor inicia el proceso de nuevo.');
       return;
     }
 
     setLoading(true);
     try {
       console.log('🔐 Actualizando contraseña para:', email);
+      console.log('🎫 Verified Token presente:', !!verifiedToken);
       
-      // ✅ IP CONFIGURADA - Ajusta según tu configuración
-      const API_URL = 'http://192.168.1.100:4000/api/recovery/newPassword';
+      const API_URL = 'https://riveraproject-5.onrender.com/api/recovery/newPassword';
       
       console.log('🌐 Conectando a:', API_URL);
+      
       const response = await fetch(API_URL, {
         method: 'POST',
         headers: {
@@ -61,9 +65,8 @@ const Recuperacion3 = ({ navigation, route }) => {
           'Accept': 'application/json',
         },
         body: JSON.stringify({
-          email: email,
           newPassword: password,
-          verifiedCode: verifiedCode, // Incluir código verificado si lo requiere tu API
+          verifiedToken: verifiedToken  // Usar verifiedToken en lugar de email/verifiedCode
         }),
       });
 
@@ -87,7 +90,26 @@ const Recuperacion3 = ({ navigation, route }) => {
       }
 
       if (!response.ok) {
-        Alert.alert('Error', data.message || 'No se pudo actualizar la contraseña');
+        console.error('❌ Error del servidor:', data);
+        
+        // Mensajes de error más específicos
+        let errorMessage = 'No se pudo actualizar la contraseña';
+        
+        if (data.message) {
+          if (data.message.includes('Token inválido') || data.message.includes('inválido')) {
+            errorMessage = 'La sesión ha expirado. Por favor inicia el proceso de nuevo.';
+          } else if (data.message.includes('expirado') || data.message.includes('expired')) {
+            errorMessage = 'El token ha expirado. Por favor inicia el proceso de nuevo.';
+          } else if (data.message.includes('no verificado')) {
+            errorMessage = 'El código no fue verificado correctamente. Inicia el proceso de nuevo.';
+          } else if (data.message.includes('contraseña')) {
+            errorMessage = data.message;
+          } else {
+            errorMessage = data.message;
+          }
+        }
+        
+        Alert.alert('Error', errorMessage);
         return;
       }
 
@@ -108,24 +130,19 @@ const Recuperacion3 = ({ navigation, route }) => {
       console.error('❌ Error al actualizar contraseña:', error);
       
       // Manejo específico de errores
+      let errorMessage = 'No se pudo actualizar la contraseña. Intenta de nuevo.';
+      
       if (error.message.includes('HTML')) {
-        Alert.alert(
-          'Error del Servidor', 
-          '🔴 La API no está respondiendo correctamente.\n\n' +
-          'Verifica que:\n' +
-          '• El servidor esté corriendo\n' +
-          '• La ruta /api/newPassword existe\n' +
-          '• El endpoint esté configurado correctamente'
-        );
+        errorMessage = 'Error del servidor. La API no está respondiendo correctamente.';
       } else if (error.message === 'Network request failed') {
-        Alert.alert(
-          'Error de Conexión', 
-          '🔴 No se pudo conectar al servidor.\n\n' +
-          'Verifica tu conexión a internet y que el servidor esté funcionando.'
-        );
-      } else {
-        Alert.alert('Error', error.message || 'No se pudo actualizar la contraseña. Intenta de nuevo.');
+        errorMessage = 'Error de conexión. Verifica tu conexión a internet y que el servidor esté funcionando.';
+      } else if (error.message.includes('timeout')) {
+        errorMessage = 'La solicitud tardó demasiado. Intenta de nuevo.';
+      } else if (error.name === 'TypeError') {
+        errorMessage = 'Problema de conectividad. Verifica tu conexión a internet.';
       }
+      
+      Alert.alert('Error', errorMessage);
     } finally {
       setLoading(false);
     }
@@ -180,6 +197,7 @@ const Recuperacion3 = ({ navigation, route }) => {
               autoCapitalize="none"
               autoCorrect={false}
               editable={!loading}
+              placeholderTextColor="#9ca3af"
             />
             <TouchableOpacity 
               style={styles.eyeButton}
@@ -210,6 +228,7 @@ const Recuperacion3 = ({ navigation, route }) => {
               autoCapitalize="none"
               autoCorrect={false}
               editable={!loading}
+              placeholderTextColor="#9ca3af"
             />
             <TouchableOpacity 
               style={styles.eyeButton}
@@ -416,6 +435,8 @@ const styles = StyleSheet.create({
   },
   updateButtonDisabled: {
     backgroundColor: '#d1d5db',
+    shadowOpacity: 0,
+    elevation: 0,
   },
   updateButtonText: {
     color: '#fff',

@@ -45,7 +45,7 @@ const InicioSesionScreen = ({ navigation }) => {
       console.log('🔐 Iniciando sesión...', { email });
       
       // ✅ IP CONFIGURADA CORRECTAMENTE
-      const API_URL = 'http://192.168.1.100:4000/api/login';
+      const API_URL = 'https://riveraproject-5.onrender.com/api/login';
       
       console.log('🌐 Conectando a:', API_URL);
       const response = await fetch(API_URL, {

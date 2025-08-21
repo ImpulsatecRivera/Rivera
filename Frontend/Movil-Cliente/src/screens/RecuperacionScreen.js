@@ -110,7 +110,11 @@ const RecuperacionScreen = ({ navigation }) => {
         [
           { 
             text: 'Continuar', 
-            onPress: () => navigation.navigate('Recuperacion2', { email: email.trim() })
+            // ✅ CORREGIDO: Cambiar 'Recuperacion2' por 'Recuperacion2Screen'
+            onPress: () => navigation.navigate('Recuperacion2Screen', { 
+              email: email.trim(),
+              via: 'email'
+            })
           }
         ]
       );

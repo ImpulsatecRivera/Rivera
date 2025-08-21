@@ -99,7 +99,7 @@ const Recuperacion3 = ({ navigation, route }) => {
         [
           { 
             text: 'Ir al Login', 
-            onPress: () => navigation.navigate('InicioSesion')
+           onPress: () => navigation.navigate('Login')
           }
         ]
       );
