@@ -1,10 +1,10 @@
 const LogoutController = {};
 
-// Construye una variante de borrado que calce con la creada en login
-const buildDelete = ({ isProd, path, partitioned }) => {
+const buildDelete = ({ isProd, path, cookieDomain, partitioned }) => {
   return [
     "authToken=",
     `Path=${path}`,
+    cookieDomain ? `Domain=${cookieDomain}` : "",
     "HttpOnly",
     isProd ? "SameSite=None" : "SameSite=Lax",
     isProd ? "Secure" : "",
@@ -19,16 +19,18 @@ const buildDelete = ({ isProd, path, partitioned }) => {
 LogoutController.logout = async (req, res) => {
   try {
     const isProd = process.env.NODE_ENV === "production";
+    const cookieDomain = process.env.COOKIE_DOMAIN?.trim() || undefined; // DEBE coincidir con el usado en login (o no usar ninguno)
+
+    console.log("🚪 [logout] host:", req.get("host"), "| cookieDomain:", cookieDomain || "(host-only)");
 
     // Enviamos varias variantes para asegurar el borrado
-    const headers = [];
+    const deletes = [];
     for (const path of ["/", "/api"]) {
-      headers.push(buildDelete({ isProd, path, partitioned: true }));  // calza con login en prod
-      headers.push(buildDelete({ isProd, path, partitioned: false })); // fallback
+      deletes.push(buildDelete({ isProd, path, cookieDomain, partitioned: true }));  // calza con login
+      deletes.push(buildDelete({ isProd, path, cookieDomain, partitioned: false })); // fallback
     }
 
-    // Enviar múltiples Set-Cookie en un solo response
-    res.setHeader("Set-Cookie", headers);
+    res.setHeader("Set-Cookie", deletes);
     res.setHeader("Cache-Control", "no-store");
 
     return res.status(200).json({ Message: "Sesión cerrada" });
