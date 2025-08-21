@@ -1,21 +1,20 @@
-// src/components/Login/hooks/useLogin.jsx
 import { useState, useCallback } from "react";
 import { useAuth } from "../../../Context/AuthContext";
 import { useNavigate } from "react-router-dom";
 
 const useLogin = () => {
   const [loading, setLoading] = useState(false);
-  const { login } = useAuth(); // usa el login del AuthContext (maneja cookies & axios)
+  const { login } = useAuth();
   const navigate = useNavigate();
 
   const handleLogin = useCallback(async (email, password) => {
     setLoading(true);
     try {
-      const res = await login(email, password); // ya hace withCredentials y guarda preview cookies
+      const res = await login(email, password);
       if (res?.success) {
         navigate("/dashboard", { replace: true });
       }
-      return res; // { success, blocked, attemptsRemaining, ... }
+      return res;
     } finally {
       setLoading(false);
     }

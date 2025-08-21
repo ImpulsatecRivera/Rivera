@@ -1,12 +1,13 @@
 const LogoutController = {};
 
-const buildDelete = ({ isProd, path, cookieDomain, partitioned }) => {
+const isProd = process.env.NODE_ENV === "production";
+
+const buildDelete = ({ name, path = "/", sameSite, partitioned }) => {
   return [
-    "authToken=",
+    `${name}=`,
     `Path=${path}`,
-    cookieDomain ? `Domain=${cookieDomain}` : "",
     "HttpOnly",
-    isProd ? "SameSite=None" : "SameSite=Lax",
+    sameSite,                         // "SameSite=None" o "SameSite=Lax"
     isProd ? "Secure" : "",
     partitioned && isProd ? "Partitioned" : "",
     "Expires=Thu, 01 Jan 1970 00:00:00 GMT",
@@ -18,21 +19,17 @@ const buildDelete = ({ isProd, path, cookieDomain, partitioned }) => {
 
 LogoutController.logout = async (req, res) => {
   try {
-    const isProd = process.env.NODE_ENV === "production";
-    const cookieDomain = process.env.COOKIE_DOMAIN?.trim() || undefined; // DEBE coincidir con el usado en login (o no usar ninguno)
+    // borramos todas las variantes posibles (por si la cookie fue creada con otros atributos)
+    const variants = [
+      buildDelete({ name: "authToken", path: "/", sameSite: "SameSite=None", partitioned: true }),
+      buildDelete({ name: "authToken", path: "/", sameSite: "SameSite=None", partitioned: false }),
+      buildDelete({ name: "authToken", path: "/", sameSite: "SameSite=Lax", partitioned: false }),
+      buildDelete({ name: "authToken", path: "/api", sameSite: "SameSite=None", partitioned: true }),
+      buildDelete({ name: "authToken", path: "/api", sameSite: "SameSite=None", partitioned: false }),
+      buildDelete({ name: "authToken", path: "/api", sameSite: "SameSite=Lax", partitioned: false }),
+    ];
 
-    console.log("🚪 [logout] host:", req.get("host"), "| cookieDomain:", cookieDomain || "(host-only)");
-
-    // Enviamos varias variantes para asegurar el borrado
-    const deletes = [];
-    for (const path of ["/", "/api"]) {
-      deletes.push(buildDelete({ isProd, path, cookieDomain, partitioned: true }));  // calza con login
-      deletes.push(buildDelete({ isProd, path, cookieDomain, partitioned: false })); // fallback
-    }
-
-    res.setHeader("Set-Cookie", deletes);
-    res.setHeader("Cache-Control", "no-store");
-
+    res.setHeader("Set-Cookie", variants);
     return res.status(200).json({ Message: "Sesión cerrada" });
   } catch (e) {
     console.error("💥 [logout] Error:", e);

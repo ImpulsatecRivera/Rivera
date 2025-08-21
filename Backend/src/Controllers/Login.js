@@ -40,32 +40,28 @@ const getBlockTimeRemaining = (email) => {
   return Math.max(0, Math.ceil((d.blockedUntil.getTime() - Date.now()) / 1000));
 };
 
-// ===================== Utils de Cookie =====================
+// ===================== Helper para Set-Cookie (embebido) =====================
 const setAuthCookie = (res, token) => {
   const isProd = process.env.NODE_ENV === "production";
-  const cookieDomain = process.env.COOKIE_DOMAIN?.trim(); // opcional
-
-  // IMPORTANTE: si seteas Domain aquí, debes borrar con el MISMO Domain
   const parts = [
     `authToken=${token}`,
     "Path=/",
-    cookieDomain ? `Domain=${cookieDomain}` : "",
     "HttpOnly",
     `Max-Age=${24 * 60 * 60}`,
     isProd ? "SameSite=None" : "SameSite=Lax",
     isProd ? "Secure" : "",
     isProd ? "Partitioned" : "", // CHIPS
   ].filter(Boolean);
-
   const cookieStr = parts.join("; ");
-  console.log("🍪 [LOGIN] Set-Cookie ->", cookieStr);
-  res.append("Set-Cookie", cookieStr);
+  console.log("🍪 [LOGIN] Set-Cookie:", cookieStr);
+  // usamos setHeader una sola línea; si ya tienes otras cookies, puedes usar res.append
+  res.setHeader("Set-Cookie", cookieStr);
 };
 
 // ===================== LOGIN =====================
 LoginController.Login = async (req, res) => {
   const { email, password } = req.body;
-  console.log("🔐 [LOGIN] email:", email, "| host:", req.get("host"));
+  console.log("🔐 [LOGIN] email:", email);
 
   try {
     // Bloqueo por intentos
@@ -181,12 +177,8 @@ LoginController.Login = async (req, res) => {
           return res.status(500).json({ message: "Error al generar token" });
         }
 
-        // Cookie httpOnly (cross-site ok)
         setAuthCookie(res, token);
-
-        // Opcional: header
-        res.setHeader("Authorization", `Bearer ${token}`);
-        res.setHeader("Cache-Control", "no-store");
+        res.setHeader("Authorization", `Bearer ${token}`); // opcional
 
         return res.status(200).json({
           message: "Inicio de sesión completado",
@@ -209,7 +201,7 @@ LoginController.Login = async (req, res) => {
 // ===================== CHECK AUTH =====================
 LoginController.checkAuth = async (req, res) => {
   try {
-    console.log("🔍 [checkAuth] host:", req.get("host"));
+    console.log("🔍 [checkAuth] Verificando autenticación");
     const token = req.cookies?.authToken;
     if (!token) return res.status(401).json({ message: "No autorizado" });
 
