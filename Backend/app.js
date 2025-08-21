@@ -25,8 +25,8 @@ app.use(express.json());
 app.use(cookieParser());
 app.use(cors({
   origin: [
-    "https://rivera-project-ecru.vercel.app",
-    "https://rivera-project-uhuf.vercel.app"
+    "https://rivera-project-olive.vercel.app",
+    "https://rivera-project-k7xd.vercel.app"
   ],
   credentials: true,
   methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
