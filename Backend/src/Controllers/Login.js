@@ -7,7 +7,7 @@ import ClienteModel from "../Models/Clientes.js";
 
 const LoginController = {};
 
-// ===================== Intentos fallidos (igual que tenías) =====================
+// ===================== Intentos fallidos =====================
 const failedAttempts = new Map(); // { email: { attempts: number, blockedUntil: Date } }
 
 const isBlocked = (email) => {
@@ -41,27 +41,31 @@ const getBlockTimeRemaining = (email) => {
 };
 
 // ===================== Utils de Cookie =====================
-// Construimos Set-Cookie manual para incluir Partitioned en producción
 const setAuthCookie = (res, token) => {
   const isProd = process.env.NODE_ENV === "production";
+  const cookieDomain = process.env.COOKIE_DOMAIN?.trim(); // opcional
+
+  // IMPORTANTE: si seteas Domain aquí, debes borrar con el MISMO Domain
   const parts = [
     `authToken=${token}`,
     "Path=/",
+    cookieDomain ? `Domain=${cookieDomain}` : "",
     "HttpOnly",
     `Max-Age=${24 * 60 * 60}`,
     isProd ? "SameSite=None" : "SameSite=Lax",
     isProd ? "Secure" : "",
     isProd ? "Partitioned" : "", // CHIPS
   ].filter(Boolean);
+
   const cookieStr = parts.join("; ");
-  console.log("🍪 [LOGIN] Set-Cookie:", cookieStr);
+  console.log("🍪 [LOGIN] Set-Cookie ->", cookieStr);
   res.append("Set-Cookie", cookieStr);
 };
 
 // ===================== LOGIN =====================
 LoginController.Login = async (req, res) => {
   const { email, password } = req.body;
-  console.log("🔐 [LOGIN] email:", email);
+  console.log("🔐 [LOGIN] email:", email, "| host:", req.get("host"));
 
   try {
     // Bloqueo por intentos
@@ -180,8 +184,9 @@ LoginController.Login = async (req, res) => {
         // Cookie httpOnly (cross-site ok)
         setAuthCookie(res, token);
 
-        // Mantengo el header por compatibilidad (opcional)
+        // Opcional: header
         res.setHeader("Authorization", `Bearer ${token}`);
+        res.setHeader("Cache-Control", "no-store");
 
         return res.status(200).json({
           message: "Inicio de sesión completado",
@@ -204,7 +209,7 @@ LoginController.Login = async (req, res) => {
 // ===================== CHECK AUTH =====================
 LoginController.checkAuth = async (req, res) => {
   try {
-    console.log("🔍 [checkAuth] Verificando autenticación");
+    console.log("🔍 [checkAuth] host:", req.get("host"));
     const token = req.cookies?.authToken;
     if (!token) return res.status(401).json({ message: "No autorizado" });
 

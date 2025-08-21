@@ -2,18 +2,20 @@ import React, { createContext, useContext, useState, useEffect } from "react";
 import axios from "axios";
 import { toast } from "react-toastify";
 
+axios.defaults.withCredentials = true;
+
 const AuthContext = createContext();
 
 // ===================== Utils de Cookies =====================
 const cookie = {
   set(name, value, options = {}) {
     const {
-      days,          // preferido para expiración
-      maxAge,        // alternativa en segundos
+      days,
+      maxAge,
       path = "/",
-      sameSite = "Lax", // Lax es seguro para la mayoría de SPA
+      sameSite = "Lax",
       secure = (typeof window !== "undefined" ? window.location.protocol === "https:" : true),
-      domain,        // opcional si quieres compartir subdominios
+      domain,
     } = options;
 
     let cookieStr = `${name}=${encodeURIComponent(value)}`;
@@ -37,14 +39,18 @@ const cookie = {
   get(name) {
     const value = document.cookie
       .split("; ")
-      .find((row) => row.startsWith(`${name}=`))
+      .find(row => row.startsWith(`${name}=`))
       ?.split("=")[1];
     return value ? decodeURIComponent(value) : undefined;
   },
 
   remove(name, options = {}) {
-    // Para borrar: Max-Age=0 y misma Path/Domain
-    const { path = "/", domain, sameSite = "Lax", secure = (typeof window !== "undefined" ? window.location.protocol === "https:" : true) } = options;
+    const {
+      path = "/",
+      domain,
+      sameSite = "Lax",
+      secure = (typeof window !== "undefined" ? window.location.protocol === "https:" : true),
+    } = options;
     let cookieStr = `${name}=; Max-Age=0; Path=${path}`;
     if (domain) cookieStr += `; Domain=${domain}`;
     if (sameSite) cookieStr += `; SameSite=${sameSite}`;
@@ -53,7 +59,17 @@ const cookie = {
   },
 };
 
-// Restringimos lo que guardamos del usuario para no llenar la cookie
+// Mata todas las variantes comunes de una cookie en el dominio del FRONTEND
+const nukeCookie = (name) => {
+  const paths = ["/", "/api"];
+  const attrs = ["", "; SameSite=Lax", "; SameSite=None; Secure"];
+  const exp = "; Expires=Thu, 01 Jan 1970 00:00:00 GMT; Max-Age=0";
+  for (const p of paths) for (const a of attrs) {
+    document.cookie = `${name}=${exp}; Path=${p}${a}`;
+  }
+};
+
+// Solo guardamos lo mínimo del usuario
 const toUserPreview = (user) => {
   if (!user) return null;
   return {
@@ -65,107 +81,66 @@ const toUserPreview = (user) => {
 };
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);         // objeto completo desde servidor
+  const [user, setUser] = useState(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  // ===================== Carga desde cookies (UI inmediata) =====================
+  // ===================== Carga desde cookies (solo preview) =====================
   const loadFromCookies = () => {
-    console.log("🍪 [loadFromCookies] Leyendo estado desde cookies");
     try {
-      const isLogged = cookie.get("isLoggedIn") === "true";
       const userPreviewRaw = cookie.get("userPreview");
-      const userType = cookie.get("userType");
-
-      console.log("🍪 [loadFromCookies] Cookies encontradas:", {
-        isLogged,
-        hasUserPreview: Boolean(userPreviewRaw),
-        userType,
-      });
-
-      if (isLogged) {
-        let preview = null;
-        if (userPreviewRaw) {
-          try {
-            preview = JSON.parse(userPreviewRaw);
-          } catch {
-            console.warn("⚠️ [loadFromCookies] userPreview inválido, ignorando");
-          }
-        }
-        // Restauramos un "usuario ligero" solo para UI inicial;
-        // luego checkAuth lo actualizará con el usuario real del servidor.
-        setUser(preview);
-        setIsLoggedIn(true);
-        return true;
+      if (userPreviewRaw) {
+        try { setUser(JSON.parse(userPreviewRaw)); } catch {}
       }
-      return false;
-    } catch (e) {
-      console.error("💥 [loadFromCookies] Error leyendo cookies:", e);
+      return Boolean(userPreviewRaw);
+    } catch {
       return false;
     }
   };
 
+  // Borra cookies UI + authToken del FRONTEND
   const clearCookies = () => {
-    console.log("🧹 [clearCookies] Borrando cookies de estado");
-    cookie.remove("isLoggedIn");
-    cookie.remove("userType");
-    cookie.remove("userPreview");
+    try {
+      nukeCookie("authToken");  // <-- IMPORTANTE
+      nukeCookie("isLoggedIn");
+      nukeCookie("userType");
+      nukeCookie("userPreview");
+    } catch {}
   };
 
   const saveToCookies = (userData, userType) => {
-    console.log("💾 [saveToCookies] Guardando estado mínimo en cookies");
-    const preview = toUserPreview(userData);
-    cookie.set("isLoggedIn", "true", { days: 7 });
+    const preview = toUserPreview(userData) || {};
+    cookie.set("userPreview", JSON.stringify(preview), { days: 7 });
     if (userType) cookie.set("userType", String(userType), { days: 7 });
-    cookie.set("userPreview", JSON.stringify(preview || {}), { days: 7 });
   };
 
   // ===================== Login =====================
   const login = async (email, password) => {
-    console.log("🔑 [login] Iniciando login", email);
     try {
-      const response = await axios.post(
+      const { data } = await axios.post(
         "https://riveraproject-5.onrender.com/api/login",
         { email, password },
         { withCredentials: true }
       );
 
-      console.log("📨 [login] Respuesta:", response.data);
-
-      if (response.data?.user) {
-        // Guardamos estado en cookies (no el token)
-        saveToCookies(response.data.user, response.data.userType);
-
-        // Estado completo en memoria
-        setUser(response.data.user);
+      if (data?.user) {
+        saveToCookies(data.user, data.userType);
+        setUser(data.user);
         setIsLoggedIn(true);
-
         toast.success("Inicio de sesión exitoso.");
-        return { success: true, data: response.data };
-      } else {
-        toast.error("No se pudo iniciar sesión.");
-        return { success: false };
+        return { success: true, data };
       }
+      toast.error("No se pudo iniciar sesión.");
+      return { success: false };
     } catch (error) {
-      console.error("💥 [login] Error:", error.response?.data || error.message);
-
       if (error.response?.status === 429) {
         toast.error(error.response.data.message || "Demasiados intentos fallidos");
-        return {
-          success: false,
-          blocked: true,
-          timeRemaining: error.response.data.timeRemaining,
-        };
+        return { success: false, blocked: true, timeRemaining: error.response.data.timeRemaining };
       }
-
       if (error.response?.data?.attemptsRemaining !== undefined) {
         toast.error(error.response.data.message);
-        return {
-          success: false,
-          attemptsRemaining: error.response.data.attemptsRemaining,
-        };
+        return { success: false, attemptsRemaining: error.response.data.attemptsRemaining };
       }
-
       toast.error("Credenciales inválidas.");
       return { success: false };
     }
@@ -173,107 +148,52 @@ export const AuthProvider = ({ children }) => {
 
   // ===================== Logout =====================
   const logOut = async () => {
-    console.log("🚪 [logOut] Cerrando sesión");
     try {
-      await axios.post(
-        "https://riveraproject-5.onrender.com/api/logout",
-        {},
-        { withCredentials: true }
-      );
-      console.log("✅ [logOut] Logout en servidor ok");
-
+      await axios.post("https://riveraproject-5.onrender.com/api/logout", {}, { withCredentials: true });
+    } finally {
       clearCookies();
       setUser(null);
       setIsLoggedIn(false);
       toast.success("Sesión cerrada.");
-    } catch (error) {
-      console.error("💥 [logOut] Error:", error);
-      // Aunque falle, limpiamos estado local
-      clearCookies();
-      setUser(null);
-      setIsLoggedIn(false);
-      toast.error("Error al cerrar sesión, pero se limpió la sesión local.");
     }
   };
 
-  // ===================== Verificar autenticación =====================
+  // ===================== Verificar autenticación (solo server decide) =====================
   const checkAuth = async () => {
-    console.log("🔍 [checkAuth] Verificando autenticación");
-
-    // 1) Restaurar desde cookies para UI inmediata
-    const hasCookieData = loadFromCookies();
+    setLoading(true);
+    loadFromCookies(); // solo preview
 
     try {
-      // 2) Validar contra servidor (usa cookie httpOnly de tu backend)
       const res = await axios.get(
         "https://riveraproject-5.onrender.com/api/login/check-auth",
         { withCredentials: true, timeout: 10000 }
       );
 
-      console.log("📨 [checkAuth] Respuesta servidor:", res.data);
-
       if (res.data?.user) {
-        // Sincronizamos cookies por si cambiaron
         saveToCookies(res.data.user, res.data.user.userType);
-
         setUser(res.data.user);
         setIsLoggedIn(true);
-        console.log("✅ [checkAuth] Usuario válido");
       } else {
-        console.log("❌ [checkAuth] Servidor no devolvió usuario");
-        if (!hasCookieData) {
-          clearCookies();
-          setUser(null);
-          setIsLoggedIn(false);
-        }
+        clearCookies();
+        setUser(null);
+        setIsLoggedIn(false);
       }
-    } catch (err) {
-      console.error("💥 [checkAuth] Error:", err);
-
-      if (err.response?.status === 401) {
-        console.log("🔒 [checkAuth] 401 - sesión inválida");
-        // Si las cookies locales no dicen nada, limpiamos todo
-        if (!hasCookieData) {
-          clearCookies();
-          setUser(null);
-          setIsLoggedIn(false);
-        } else {
-          console.log("📂 [checkAuth] Manteniendo UI por cookies (posible error temporal)");
-        }
-      } else if (err.code === "ECONNABORTED" || String(err.message || "").includes("timeout")) {
-        console.log("⏰ [checkAuth] Timeout - usando cookies locales");
-        if (!hasCookieData) {
-          setUser(null);
-          setIsLoggedIn(false);
-        }
-      } else if (err.code === "ERR_NETWORK" || !err.response) {
-        console.log("🌐 [checkAuth] Error de red - mantener estado de cookies si existe");
-        if (!hasCookieData) {
-          setUser(null);
-          setIsLoggedIn(false);
-        }
-      } else {
-        console.log("⚠️ [checkAuth] Error inesperado - fallback cookies");
-        if (!hasCookieData) {
-          setUser(null);
-          setIsLoggedIn(false);
-        }
-      }
+    } catch {
+      clearCookies();
+      setUser(null);
+      setIsLoggedIn(false);
     } finally {
       setLoading(false);
-      console.log("🏁 [checkAuth] Fin verificación. loading=false");
     }
   };
 
   // ===================== Sync manual =====================
   const syncWithServer = async () => {
-    console.log("🔄 [syncWithServer] Forzando sincronización");
     try {
       const res = await axios.get(
         "https://riveraproject-5.onrender.com/api/login/check-auth",
         { withCredentials: true, timeout: 5000 }
       );
-
       if (res.data?.user) {
         saveToCookies(res.data.user, res.data.user.userType);
         setUser(res.data.user);
@@ -281,28 +201,17 @@ export const AuthProvider = ({ children }) => {
         return true;
       }
       return false;
-    } catch (error) {
-      console.error("💥 [syncWithServer] Error:", error);
+    } catch {
       return false;
     }
   };
 
   // ===================== Efectos =====================
+  useEffect(() => { checkAuth(); }, []);
   useEffect(() => {
-    console.log("🚀 [AuthProvider] Montado -> checkAuth");
-    checkAuth();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (!document.hidden && isLoggedIn) {
-        console.log("👁️ [AuthProvider] Tab visible -> sync");
-        syncWithServer();
-      }
-    };
-    document.addEventListener("visibilitychange", handleVisibilityChange);
-    return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
+    const onVis = () => { if (!document.hidden && isLoggedIn) syncWithServer(); };
+    document.addEventListener("visibilitychange", onVis);
+    return () => document.removeEventListener("visibilitychange", onVis);
   }, [isLoggedIn]);
 
   const contextValue = {
@@ -316,12 +225,6 @@ export const AuthProvider = ({ children }) => {
     syncWithServer,
     checkAuth,
   };
-
-  console.log("🔄 [AuthProvider] Render:", {
-    user: user ? (user.email || user.name || "user") : "No user",
-    isLoggedIn,
-    loading,
-  });
 
   return <AuthContext.Provider value={contextValue}>{children}</AuthContext.Provider>;
 };

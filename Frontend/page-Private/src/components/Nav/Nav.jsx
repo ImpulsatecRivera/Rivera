@@ -12,10 +12,13 @@ const SidebarNav = () => {
   // 🆕 Estados para responsividad
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isTabletCollapsed, setIsTabletCollapsed] = useState(false);
-  
+
   const { logOut } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+
+  // CHANGED: estado separado SOLO para logout (no se mezcla con animación de navegación)
+  const [isLogoutLoading, setIsLogoutLoading] = useState(false); // CHANGED
 
   // 🆕 Detectar cambios de tamaño de pantalla
   useEffect(() => {
@@ -28,6 +31,7 @@ const SidebarNav = () => {
       }
     };
 
+    handleResize(); // CHANGED: ajusta al montar
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
@@ -132,30 +136,32 @@ const SidebarNav = () => {
       setAnimatingItem('');
       
       // Navegar DESPUÉS de la animación
-      navigate(route);
+      const next = pendingRoute || route; // CHANGED: usa pending si existe
+      navigate(next, { replace: false });
       setPendingRoute(null);
-      console.log(`Navegando a: ${itemName} - ${route}`);
+      console.log(`Navegando a: ${itemName} - ${next}`);
     }, 2000);
   };
 
   const handleLogout = async () => {
-    // BLOQUEAR si ya hay una animación en curso
-    if (isAnimating) {
-      console.log('Logout bloqueado - animación en curso');
+    // CHANGED: ya NO bloqueamos por isAnimating; solo evitamos doble clic de logout
+    if (isLogoutLoading) {
+      console.log('Logout ya en progreso…');
       return;
     }
 
-    console.log('Cerrando sesión...');
-    setIsAnimating(true);
+    console.log('Cerrando sesión…');
+    setIsLogoutLoading(true); // CHANGED
     setAnimatingItem('Cerrar sesión');
 
     try {
-      await logOut();
-      navigate("/");
+      await logOut(); // borra cookies (server + UI)
+      setIsMobileMenuOpen(false); // CHANGED: cerrar menú móvil si estaba abierto
+      navigate("/", { replace: true }); // CHANGED: replace para evitar back al dashboard
     } catch (error) {
       console.error("Error en cierre de sesión:", error);
     } finally {
-      setIsAnimating(false);
+      setIsLogoutLoading(false); // CHANGED
       setAnimatingItem('');
     }
   };
@@ -176,6 +182,7 @@ const SidebarNav = () => {
         onClick={toggleMobileMenu}
         className="lg:hidden fixed top-4 left-4 z-50 p-2 rounded-lg text-white hover:bg-gray-700 transition-colors shadow-lg"
         style={{ backgroundColor: '#34353A' }}
+        aria-label="Abrir menú"
       >
         {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
       </button>
@@ -190,12 +197,12 @@ const SidebarNav = () => {
 
       <div 
         className={`
-  fixed lg:relative inset-y-0 left-0 z-40 lg:z-auto
-  h-screen text-white flex flex-col transition-all duration-300 ease-in-out
-  w-64 sm:w-72 md:w-64 lg:w-64
-  ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
-  ${isTabletCollapsed ? 'md:w-16' : ''}
-`}
+          fixed lg:relative inset-y-0 left-0 z-40 lg:z-auto
+          h-screen text-white flex flex-col transition-all duration-300 ease-in-out
+          w-64 sm:w-72 md:w-64 lg:w-64
+          ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+          ${isTabletCollapsed ? 'md:w-16' : ''}
+        `}
         style={{ backgroundColor: '#34353A' }}
       >
         <style>{`
@@ -264,6 +271,13 @@ const SidebarNav = () => {
             pointer-events: none !important;
             opacity: 0.4 !important;
             cursor: not-allowed !important;
+          }
+
+          /* CHANGED: estado visual para logout cargando */
+          .logout-button.loading {
+            pointer-events: none !important;
+            opacity: 0.6 !important;
+            cursor: wait !important;
           }
           
           .logout-button::before {
@@ -387,11 +401,12 @@ const SidebarNav = () => {
         <button
           onClick={toggleTabletCollapse}
           className="hidden md:flex lg:hidden absolute -right-3 top-4 w-6 h-6 bg-gray-600 hover:bg-gray-500 rounded-full items-center justify-center text-white transition-colors z-10"
+          aria-label="Colapsar menú"
         >
           <Menu size={14} />
         </button>
 
-        {/* Profile Section - 🆕 Responsivo */}
+        {/* Profile Section */}
         <div className={`flex items-center justify-center transition-all duration-300 ${isTabletCollapsed ? 'py-4 px-2' : 'py-4 sm:py-6 lg:py-8 px-4'}`}>
           <img
             src={avatarImg}
@@ -402,7 +417,7 @@ const SidebarNav = () => {
           />
         </div>
 
-        {/* Navigation Menu - 🆕 Responsivo */}
+        {/* Navigation Menu */}
         <nav className={`flex-1 mt-2 sm:mt-4 lg:mt-6 transition-all duration-300 ${isTabletCollapsed ? 'px-2' : 'px-3 sm:px-4'}`}>
           <ul className="space-y-1 sm:space-y-2">
             {menuItems.map((item) => (
@@ -414,7 +429,6 @@ const SidebarNav = () => {
                     `menu-button w-full text-left rounded-lg relative overflow-hidden block transition-all duration-300 ${
                       isActive ? 'active text-white opacity-100' : 'text-gray-300 opacity-75'
                     } ${isAnimating ? 'disabled' : 'cursor-pointer'} ${
-                      /* 🆕 Clases responsivas para items del menú */
                       isTabletCollapsed ? 'px-2 py-2 text-center' : 'px-3 sm:px-4 py-2 sm:py-3'
                     }`
                   }
@@ -423,15 +437,12 @@ const SidebarNav = () => {
                   <span 
                     className={`menu-text transition-opacity duration-300 ${
                       animatingItem === item.name ? 'opacity-30' : 'opacity-100'
-                    } ${/* 🆕 Texto responsivo */
-                      isTabletCollapsed ? 'text-xs collapsed-text' : 'text-sm sm:text-base'
-                    }`}
+                    } ${isTabletCollapsed ? 'text-xs collapsed-text' : 'text-sm sm:text-base'}`}
                   >
-                    {/* 🆕 Mostrar solo inicial en modo colapsado */}
                     {isTabletCollapsed ? item.name.charAt(0).toUpperCase() : item.name}
                   </span>
 
-                  {/* Animación del camión - 🆕 Solo se muestra si no está colapsado */}
+                  {/* Animación del camión - solo si no está colapsado */}
                   {animatingItem === item.name && !isTabletCollapsed && (
                     <>
                       <div className="truck-container">
@@ -450,21 +461,19 @@ const SidebarNav = () => {
           </ul>
         </nav>
 
-        {/* Logout Button - 🆕 Responsivo */}
+        {/* Logout Button */}
         <div className={`border-t transition-all duration-300 ${isTabletCollapsed ? 'p-2' : 'p-3 sm:p-4'}`} style={{ borderColor: '#4A4B50' }}>
           <button
             onClick={handleLogout}
-            disabled={isAnimating}
+            disabled={isLogoutLoading} // CHANGED
             title={isTabletCollapsed ? 'Cerrar Sesión' : ''}
             className={`logout-button w-full flex items-center text-gray-300 rounded-lg opacity-75 transition-all duration-300 ${
-              isAnimating ? 'disabled' : 'cursor-pointer'
-            } ${/* 🆕 Clases responsivas para logout */
-              isTabletCollapsed ? 'px-2 py-2 justify-center' : 'px-3 sm:px-4 py-2 sm:py-3'
-            }`}
+              isLogoutLoading ? 'loading' : 'cursor-pointer' // CHANGED
+            } ${isTabletCollapsed ? 'px-2 py-2 justify-center' : 'px-3 sm:px-4 py-2 sm:py-3'}`}
           >
             <LogOut size={isTabletCollapsed ? 16 : 20} className={isTabletCollapsed ? '' : 'mr-2 sm:mr-3'} />
             <span className={`logout-text transition-opacity duration-300 ${isTabletCollapsed ? 'hidden' : 'text-sm sm:text-base'}`}>
-              Cerrar Sesión 
+              {isLogoutLoading ? 'Cerrando…' : 'Cerrar Sesión'} {/* CHANGED */}
             </span>
           </button>
         </div>
