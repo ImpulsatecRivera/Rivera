@@ -131,9 +131,9 @@ const Employee = () => {
 
     if (error) {
       return (
-        <div className="text-center py-12">
-          <div className="bg-red-50 border border-red-200 rounded-xl p-6">
-            <p className="text-red-600">{error}</p>
+        <div className="text-center py-6 sm:py-12">
+          <div className="bg-red-50 border border-red-200 rounded-xl p-4 sm:p-6">
+            <p className="text-red-600 text-sm sm:text-base">{error}</p>
           </div>
         </div>
       );
@@ -149,7 +149,7 @@ const Employee = () => {
     }
 
     return (
-      <div className="space-y-2 pt-4">
+      <div className="space-y-2 pt-2 sm:pt-4">
         {getCurrentPageEmployees().map((empleado, index) => (
           <EmployeeRow
             key={empleado._id || index}
@@ -164,52 +164,76 @@ const Employee = () => {
   };
 
   return (
-    <div className="min-h-screen" style={{background: 'linear-gradient(135deg, #34353A 0%, #2a2b30 100%)'}}>
-      <div className="container mx-auto px-6 py-8">
-        <div className="flex h-[calc(100vh-4rem)]">
+    <div className="min-h-screen employee-container" style={{background: 'linear-gradient(135deg, #34353A 0%, #2a2b30 100%)'}}>
+      <div className="container mx-auto px-3 sm:px-4 md:px-6 py-4 sm:py-6 md:py-8">
+        <div className="flex flex-col lg:flex-row h-[calc(100vh-2rem)] sm:h-[calc(100vh-3rem)] md:h-[calc(100vh-4rem)] gap-3 md:gap-6">
+          
           {/* Panel Principal */}
-          <div className={`${showDetailView ? 'flex-1' : 'w-full'} bg-white rounded-2xl shadow-2xl ${showDetailView ? 'mr-6' : ''} flex flex-col overflow-hidden`}>
+          <div className={`${showDetailView ? 'lg:flex-1' : 'w-full'} bg-white rounded-xl sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden employee-main-panel`}>
             
             {/* Header */}
-            <EmployeeHeader
-              searchTerm={searchTerm}
-              setSearchTerm={setSearchTerm}
-              sortBy={sortBy}
-              setSortBy={setSortBy}
-              filterEmpleados={filterEmpleados}
-              handleContinue={handleContinue}
-            />
+            <div className="flex-shrink-0 border-b border-gray-100">
+              <EmployeeHeader
+                searchTerm={searchTerm}
+                setSearchTerm={setSearchTerm}
+                sortBy={sortBy}
+                setSortBy={setSortBy}
+                filterEmpleados={filterEmpleados}
+                handleContinue={handleContinue}
+              />
+            </div>
 
             {/* Table Header */}
-            <EmployeeTableHeader showDetailView={showDetailView} />
+            <div className="flex-shrink-0 border-b border-gray-50">
+              <EmployeeTableHeader showDetailView={showDetailView} />
+            </div>
 
             {/* Table Content */}
-            <div className="flex-1 overflow-y-auto">
-              <div className="p-8 pt-0">
+            <div className="flex-1 overflow-y-auto employee-scroll">
+              <div className="p-3 sm:p-4 md:p-6 lg:p-8 pt-0">
                 {renderTableContent()}
               </div>
             </div>
 
             {/* Footer con Paginación */}
             {filterEmpleados.length > 0 && !loading && (
-              <Pagination
-                currentPage={currentPage}
-                totalPages={totalPages}
-                handlePageChange={handlePageChange}
-                getPageNumbers={getPageNumbers}
-                itemsPerPage={itemsPerPage}
-                totalItems={filterEmpleados.length}
-              />
+              <div className="flex-shrink-0 border-t border-gray-100">
+                <Pagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  handlePageChange={handlePageChange}
+                  getPageNumbers={getPageNumbers}
+                  itemsPerPage={itemsPerPage}
+                  totalItems={filterEmpleados.length}
+                />
+              </div>
             )}
           </div>
 
-          {/* Panel de Detalles */}
+          {/* Panel de Detalles - Desktop */}
           {showDetailView && selectedEmpleados && (
-            <EmployeeDetailPanel
-              selectedEmpleados={selectedEmpleados}
-              closeDetailView={closeDetailView}
-              handleOptionsClick={handleOptionsClick}
-            />
+            <div className="hidden lg:block lg:w-96 xl:w-[400px] 2xl:w-[450px]">
+              <EmployeeDetailPanel
+                selectedEmpleados={selectedEmpleados}
+                closeDetailView={closeDetailView}
+                handleOptionsClick={handleOptionsClick}
+              />
+            </div>
+          )}
+
+          {/* Panel de Detalles - Mobile/Tablet (Modal overlay) */}
+          {showDetailView && selectedEmpleados && (
+            <div className="lg:hidden fixed inset-0 z-50 bg-black bg-opacity-50 backdrop-blur-sm employee-modal-overlay">
+              <div className="h-full flex items-end sm:items-center justify-center p-2 sm:p-4">
+                <div className="w-full sm:w-96 sm:max-w-lg h-full sm:h-auto sm:max-h-[90vh] bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl overflow-hidden">
+                  <EmployeeDetailPanel
+                    selectedEmpleados={selectedEmpleados}
+                    closeDetailView={closeDetailView}
+                    handleOptionsClick={handleOptionsClick}
+                  />
+                </div>
+              </div>
+            </div>
           )}
         </div>
       </div>
@@ -241,6 +265,139 @@ const Employee = () => {
         onSave={handleSaveEdit}
         employee={selectedEmpleados}
       />
+
+      {/* Estilos responsive */}
+      <style dangerouslySetInnerHTML={{
+        __html: `
+          /* Scroll personalizado para la tabla */
+          .employee-scroll {
+            scrollbar-width: thin;
+            scrollbar-color: #CBD5E1 #F1F5F9;
+          }
+          
+          .employee-scroll::-webkit-scrollbar {
+            width: 8px;
+          }
+          
+          .employee-scroll::-webkit-scrollbar-track {
+            background: #F1F5F9;
+            border-radius: 4px;
+          }
+          
+          .employee-scroll::-webkit-scrollbar-thumb {
+            background: #CBD5E1;
+            border-radius: 4px;
+            transition: background 0.2s ease;
+          }
+          
+          .employee-scroll::-webkit-scrollbar-thumb:hover {
+            background: #94A3B8;
+          }
+
+          /* Optimizaciones para móviles muy pequeños */
+          @media (max-width: 375px) {
+            .employee-container .container {
+              padding-left: 0.5rem !important;
+              padding-right: 0.5rem !important;
+            }
+            
+            .employee-main-panel {
+              border-radius: 0.75rem !important;
+            }
+          }
+
+          /* Tablets en modo portrait */
+          @media (min-width: 640px) and (max-width: 1023px) {
+            .employee-modal-overlay .bg-white {
+              margin: 1rem;
+              height: calc(100vh - 2rem);
+              border-radius: 1rem !important;
+            }
+          }
+
+          /* Móviles en modo landscape */
+          @media (max-height: 500px) and (orientation: landscape) {
+            .employee-container {
+              padding-top: 0.5rem !important;
+              padding-bottom: 0.5rem !important;
+            }
+            
+            .employee-modal-overlay .bg-white {
+              height: 95vh !important;
+              margin: 0.5rem;
+            }
+          }
+
+          /* Animaciones para el modal móvil */
+          .employee-modal-overlay {
+            animation: fadeIn 0.2s ease-out;
+          }
+          
+          .employee-modal-overlay .bg-white {
+            animation: slideUp 0.3s ease-out;
+          }
+          
+          @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+          }
+          
+          @keyframes slideUp {
+            from { 
+              transform: translateY(100%);
+              opacity: 0;
+            }
+            to { 
+              transform: translateY(0);
+              opacity: 1;
+            }
+          }
+
+          /* Responsive para contenido de tabla */
+          @media (max-width: 640px) {
+            .employee-scroll {
+              -webkit-overflow-scrolling: touch;
+            }
+          }
+
+          /* Optimizaciones de rendimiento */
+          .employee-container {
+            contain: layout style paint;
+            -webkit-overflow-scrolling: touch;
+            overscroll-behavior: contain;
+          }
+          
+          .employee-main-panel {
+            contain: layout style;
+          }
+
+          /* Accesibilidad */
+          @media (prefers-reduced-motion: reduce) {
+            .employee-modal-overlay,
+            .employee-modal-overlay .bg-white {
+              animation: none !important;
+            }
+            
+            .employee-scroll::-webkit-scrollbar-thumb {
+              transition: none !important;
+            }
+          }
+
+          /* Mejoras para pantallas grandes */
+          @media (min-width: 1536px) {
+            .employee-main-panel {
+              border-radius: 1.5rem !important;
+            }
+          }
+
+          /* Fix para evitar scroll horizontal en móviles */
+          @media (max-width: 640px) {
+            .employee-container {
+              overflow-x: hidden;
+            }
+          }
+        `
+      }} />
     </div>
   );
 };
