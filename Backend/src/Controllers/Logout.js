@@ -20,7 +20,7 @@ LogoutController.logout = async (req, res) => {
 
     const cookiesToClear = [
       buildCookie("authToken"),
-      buildCookie("userPreview"),
+      buildCookie("authToken"),
       buildCookie("userType"),
     ];
 
