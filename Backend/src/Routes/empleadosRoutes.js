@@ -15,4 +15,4 @@ router.route("/:id")
     .put(upload.single("img"),empleadosCon.put)
     .delete(empleadosCon.delete);
 
-export default router;z
+export default router;
