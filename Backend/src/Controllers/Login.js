@@ -8,7 +8,7 @@ import ClienteModel from "../Models/Clientes.js";
 const LoginController = {};
 
 // ===================== Intentos fallidos =====================
-const failedAttempts = new Map(); // { email: { attempts: number, blockedUntil: Date } }
+const failedAttempts = new Map();
 
 const isBlocked = (email) => {
   const d = failedAttempts.get(email);
@@ -40,22 +40,20 @@ const getBlockTimeRemaining = (email) => {
   return Math.max(0, Math.ceil((d.blockedUntil.getTime() - Date.now()) / 1000));
 };
 
-// ===================== Helper para Set-Cookie (embebido) =====================
+// ===================== Helper para Set-Cookie (Corregido) =====================
 const setAuthCookie = (res, token) => {
   const isProd = process.env.NODE_ENV === "production";
-  const parts = [
-    `authToken=${token}`,
-    "Path=/",
-    "HttpOnly",
-    `Max-Age=${24 * 60 * 60}`,
-    isProd ? "SameSite=None" : "SameSite=Lax",
-    isProd ? "Secure" : "",
-    isProd ? "Partitioned" : "", // CHIPS
-  ].filter(Boolean);
-  const cookieStr = parts.join("; ");
-  console.log("🍪 [LOGIN] Set-Cookie:", cookieStr);
-  // usamos setHeader una sola línea; si ya tienes otras cookies, puedes usar res.append
-  res.setHeader("Set-Cookie", cookieStr);
+  
+  res.cookie("authToken", token, {
+    path: "/",
+    httpOnly: true,
+    maxAge: 24 * 60 * 60 * 1000, // 24 horas
+    sameSite: isProd ? "none" : "lax",
+    secure: isProd,
+    ...(isProd && { partitioned: true }) // CHIPS solo en producción
+  });
+  
+  console.log("🍪 [LOGIN] Cookie configurada correctamente");
 };
 
 // ===================== LOGIN =====================
@@ -159,7 +157,7 @@ LoginController.Login = async (req, res) => {
       }
     }
 
-    // OK
+    // ✅ Login exitoso
     clearFailedAttempts(email);
 
     if (!config.JWT.secret) {
@@ -177,8 +175,8 @@ LoginController.Login = async (req, res) => {
           return res.status(500).json({ message: "Error al generar token" });
         }
 
+        // ✅ Configurar cookie correctamente
         setAuthCookie(res, token);
-        res.setHeader("Authorization", `Bearer ${token}`); // opcional
 
         return res.status(200).json({
           message: "Inicio de sesión completado",
@@ -187,6 +185,7 @@ LoginController.Login = async (req, res) => {
             id: userFound._id,
             email: userFound.email || email,
             nombre: userFound.nombre || userFound.name || null,
+            userType
           },
           token,
         });
@@ -198,20 +197,38 @@ LoginController.Login = async (req, res) => {
   }
 };
 
-// ===================== CHECK AUTH =====================
+// ===================== CHECK AUTH (Corregido) =====================
 LoginController.checkAuth = async (req, res) => {
   try {
     console.log("🔍 [checkAuth] Verificando autenticación");
     const token = req.cookies?.authToken;
-    if (!token) return res.status(401).json({ message: "No autorizado" });
+    
+    // ✅ Devolver 200 con user: null en lugar de 401
+    if (!token) {
+      return res.status(200).json({ 
+        message: "No hay sesión activa", 
+        user: null 
+      });
+    }
 
     jwt.verify(token, config.JWT.secret, async (err, decoded) => {
-      if (err) return res.status(401).json({ message: "Token inválido" });
+      if (err) {
+        // ✅ También devolver 200 con user: null
+        return res.status(200).json({ 
+          message: "Token inválido", 
+          user: null 
+        });
+      }
 
       const { id, userType } = decoded;
+      
       if (userType === "Administrador") {
         return res.status(200).json({
-          user: { id, email: config.ADMIN.emailAdmin, userType: "Administrador" },
+          user: { 
+            id, 
+            email: config.ADMIN.emailAdmin, 
+            userType: "Administrador" 
+          },
         });
       }
 
@@ -219,10 +236,20 @@ LoginController.checkAuth = async (req, res) => {
       if (userType === "Empleado") Model = EmpleadoModel;
       else if (userType === "Motorista") Model = MotoristaModel;
       else if (userType === "Cliente") Model = ClienteModel;
-      else return res.status(400).json({ message: "Tipo de usuario inválido" });
+      else {
+        return res.status(200).json({ 
+          message: "Tipo de usuario inválido", 
+          user: null 
+        });
+      }
 
       const userFound = await Model.findById(id).select("email nombre name");
-      if (!userFound) return res.status(404).json({ message: `${userType} no encontrado` });
+      if (!userFound) {
+        return res.status(200).json({ 
+          message: `${userType} no encontrado`, 
+          user: null 
+        });
+      }
 
       return res.status(200).json({
         user: {
@@ -236,6 +263,24 @@ LoginController.checkAuth = async (req, res) => {
   } catch (e) {
     console.error("💥 [checkAuth] Error:", e);
     return res.status(500).json({ message: "Error interno del servidor" });
+  }
+};
+
+// ===================== LOGOUT =====================
+LoginController.logout = async (req, res) => {
+  try {
+    // Limpiar cookie del servidor
+    res.clearCookie("authToken", {
+      path: "/",
+      httpOnly: true,
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+      secure: process.env.NODE_ENV === "production"
+    });
+    
+    return res.status(200).json({ message: "Logout exitoso" });
+  } catch (error) {
+    console.error("❌ [LOGOUT] Error:", error);
+    return res.status(500).json({ message: "Error en logout" });
   }
 };
 
