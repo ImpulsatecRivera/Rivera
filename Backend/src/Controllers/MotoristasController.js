@@ -3,6 +3,7 @@ import camioneModel from "../Models/Camiones.js";
 import bcryptjs from "bcryptjs";
 import { v2 as cloudinary } from "cloudinary";
 import { config } from "../config.js";
+import viajesModel from "../Models/Viajes.js";
 
 /**
  * Controlador para manejar operaciones CRUD de motoristas
@@ -274,6 +275,222 @@ motoristasCon.delete = async (req, res) => {
   } catch (error) {
     // Manejar errores durante la eliminación
     res.status(500).json({ message: "Error al eliminar motoristas", error: error.message });
+  }
+};
+
+motoristasCon.getViajesProgramados = async (req, res) => {
+  try {
+    const motoristaId = req.params.id;
+
+    // Verificar que el motorista existe
+    const motorista = await motoristalModel.findById(motoristaId);
+    if (!motorista) {
+      return res.status(404).json({ message: "Motorista no encontrado" });
+    }
+
+    // Buscar el camión asignado al motorista
+    const camion = await camioneModel.findOne({ driverId: motoristaId });
+    if (!camion) {
+      return res.status(200).json({ 
+        message: "El motorista no tiene camión asignado",
+        motorista: {
+          _id: motorista._id,
+          name: motorista.name,
+          lastName: motorista.lastName,
+          email: motorista.email
+        },
+        viajesProgramados: []
+      });
+    }
+
+    // Obtener fecha actual y fecha límite (próximos 30 días por ejemplo)
+    const fechaActual = new Date();
+    const fechaLimite = new Date();
+    fechaLimite.setDate(fechaActual.getDate() + 30);
+
+    // Buscar viajes programados del camión
+    // Asumiendo que tu modelo de viajes tiene campos: camionId, fechaSalida, estado, etc.
+    const viajesProgramados = await viajesModel.find({
+      camionId: camion._id,
+      fechaSalida: {
+        $gte: fechaActual,
+        $lte: fechaLimite
+      },
+      estado: { $in: ['programado', 'pendiente', 'confirmado'] } // Estados que consideras como programados
+    }).sort({ fechaSalida: 1 }); // Ordenar por fecha ascendente
+
+    // Agrupar viajes por día
+    const viajesAgrupados = {};
+    
+    viajesProgramados.forEach(viaje => {
+      // Obtener solo la fecha (sin hora) como string
+      const fecha = viaje.fechaSalida.toISOString().split('T')[0];
+      
+      if (!viajesAgrupados[fecha]) {
+        viajesAgrupados[fecha] = [];
+      }
+      
+      viajesAgrupados[fecha].push({
+        _id: viaje._id,
+        origen: viaje.origen,
+        destino: viaje.destino,
+        fechaSalida: viaje.fechaSalida,
+        fechaLlegada: viaje.fechaLlegada,
+        estado: viaje.estado,
+        descripcion: viaje.descripcion,
+        carga: viaje.carga,
+        cliente: viaje.cliente
+      });
+    });
+
+    // Convertir objeto agrupado a array ordenado
+    const viajesPorDia = Object.keys(viajesAgrupados)
+      .sort()
+      .map(fecha => ({
+        fecha: fecha,
+        viajes: viajesAgrupados[fecha]
+      }));
+
+    // Respuesta con información completa
+    res.status(200).json({
+      motorista: {
+        _id: motorista._id,
+        name: motorista.name,
+        lastName: motorista.lastName,
+        email: motorista.email,
+        phone: motorista.phone,
+        img: motorista.img
+      },
+      camionAsignado: {
+        _id: camion._id,
+        name: camion.name,
+        brand: camion.brand,
+        model: camion.model,
+        licensePlate: camion.licensePlate,
+        state: camion.state
+      },
+      totalViajes: viajesProgramados.length,
+      viajesPorDia: viajesPorDia
+    });
+
+  } catch (error) {
+    res.status(500).json({ 
+      message: "Error al obtener viajes programados", 
+      error: error.message 
+    });
+  }
+};
+
+/**
+ * Obtener viajes programados de todos los motoristas organizados por día
+ * GET /motoristas/viajes-programados/todos
+ * @param {object} req - Objeto request de Express
+ * @param {object} res - Objeto response de Express
+ * @returns {object} JSON con viajes programados de todos los motoristas
+ */
+motoristasCon.getAllViajesProgramados = async (req, res) => {
+  try {
+    // Obtener todos los motoristas
+    const motoristas = await motoristalModel.find();
+    
+    // Obtener todos los camiones con sus motoristas asignados
+    const camiones = await camioneModel.find({ driverId: { $exists: true, $ne: null } });
+
+    // Obtener fecha actual y fecha límite
+    const fechaActual = new Date();
+    const fechaLimite = new Date();
+    fechaLimite.setDate(fechaActual.getDate() + 30);
+
+    // Obtener todos los viajes programados
+    const todosLosViajes = await viajesModel.find({
+      camionId: { $in: camiones.map(c => c._id) },
+      fechaSalida: {
+        $gte: fechaActual,
+        $lte: fechaLimite
+      },
+      estado: { $in: ['programado', 'pendiente', 'confirmado'] }
+    }).sort({ fechaSalida: 1 });
+
+    // Crear un mapa para acceso rápido a motoristas y camiones
+    const motoristasMap = {};
+    const camionesMap = {};
+
+    motoristas.forEach(m => {
+      motoristasMap[m._id.toString()] = m;
+    });
+
+    camiones.forEach(c => {
+      camionesMap[c._id.toString()] = c;
+    });
+
+    // Agrupar viajes por fecha y motorista
+    const viajesPorFecha = {};
+
+    todosLosViajes.forEach(viaje => {
+      const fecha = viaje.fechaSalida.toISOString().split('T')[0];
+      const camion = camionesMap[viaje.camionId.toString()];
+      
+      if (camion && camion.driverId) {
+        const motorista = motoristasMap[camion.driverId.toString()];
+        
+        if (motorista) {
+          if (!viajesPorFecha[fecha]) {
+            viajesPorFecha[fecha] = {};
+          }
+
+          const motoristaKey = motorista._id.toString();
+          if (!viajesPorFecha[fecha][motoristaKey]) {
+            viajesPorFecha[fecha][motoristaKey] = {
+              motorista: {
+                _id: motorista._id,
+                name: motorista.name,
+                lastName: motorista.lastName,
+                email: motorista.email,
+                img: motorista.img
+              },
+              camion: {
+                _id: camion._id,
+                name: camion.name,
+                licensePlate: camion.licensePlate
+              },
+              viajes: []
+            };
+          }
+
+          viajesPorFecha[fecha][motoristaKey].viajes.push({
+            _id: viaje._id,
+            origen: viaje.origen,
+            destino: viaje.destino,
+            fechaSalida: viaje.fechaSalida,
+            fechaLlegada: viaje.fechaLlegada,
+            estado: viaje.estado,
+            descripcion: viaje.descripcion,
+            carga: viaje.carga,
+            cliente: viaje.cliente
+          });
+        }
+      }
+    });
+
+    // Convertir a formato de respuesta ordenado
+    const viajesOrganizados = Object.keys(viajesPorFecha)
+      .sort()
+      .map(fecha => ({
+        fecha: fecha,
+        motoristasConViajes: Object.values(viajesPorFecha[fecha])
+      }));
+
+    res.status(200).json({
+      totalDias: viajesOrganizados.length,
+      totalViajes: todosLosViajes.length,
+      viajesPorDia: viajesOrganizados
+    });
+
+  } catch (error) {
+    res.status(500).json({ 
+      message: "Error al obtener todos los viajes programados", 
+      error: error.message 
+    });
   }
 };
 
