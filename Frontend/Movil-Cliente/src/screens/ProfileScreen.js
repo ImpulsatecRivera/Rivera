@@ -13,6 +13,7 @@ import {
   ActivityIndicator,
   RefreshControl,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage'; // ✅ AGREGAR ESTA IMPORTACIÓN
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { useAuth } from '../contenxt/authContext';
 import FocusAwareStatusBar from '../components/FocusAwareStatusBar';
@@ -20,14 +21,19 @@ import FocusAwareStatusBar from '../components/FocusAwareStatusBar';
 const GREEN = '#10AC84';
 const BG = '#F5F5F5';
 
-const ProfileScreen = () => {// En tu ProfileScreen.js, al inicio del componente, agrega esto:
-
 const ProfileScreen = () => {
-  // ... otros estados ...
-  
+  // Estados para manejo de datos y UI
+  const [userInfo, setUserInfo] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [confirmVisible, setConfirmVisible] = useState(false);
+  const [error, setError] = useState(null);
+
+  // Hooks de navegación y autenticación
+  const navigation = useNavigation();
   const { user, logout, token } = useAuth();
 
-  // 🔍 DEBUG: Agregar esto para ver qué hay en el contexto
+  // 🔍 DEBUG: Para monitorear el contexto de autenticación
   useEffect(() => {
     console.log('🔍 DEBUG - Usuario en contexto:', JSON.stringify(user, null, 2));
     console.log('🔍 DEBUG - Token en contexto:', token);
@@ -51,19 +57,6 @@ const ProfileScreen = () => {
     
     checkAsyncStorage();
   }, [user, token]);
-
-  // ... resto del componente
-};
-  // Estados para manejo de datos y UI
-  const [userInfo, setUserInfo] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [confirmVisible, setConfirmVisible] = useState(false);
-  const [error, setError] = useState(null);
-
-  // Hooks de navegación y autenticación
-  const navigation = useNavigation();
-  const { user, logout, token } = useAuth();
 
   // 🚨 DEBUG: Para monitorear los datos del usuario
   useEffect(() => {
