@@ -134,25 +134,52 @@ LoginController.Login = async (req, res) => {
           userType = "Motorista";
         } else {
           // 4) Cliente
-          userFound = await ClienteModel.findOne({ email });
-          if (!userFound) {
-            const d = recordFailedAttempt(email);
-            const remaining = Math.max(0, 4 - d.attempts);
-            return res.status(400).json({
-              message: `Usuario no encontrado. Te quedan ${remaining} intento(s).`,
-              attemptsRemaining: remaining,
-            });
-          }
-          valid = await bcryptjs.compare(password, userFound.password);
-          if (!valid) {
-            const d = recordFailedAttempt(email);
-            const remaining = Math.max(0, 4 - d.attempts);
-            return res.status(400).json({
-              message: `Contraseña incorrecta. Te quedan ${remaining} intento(s).`,
-              attemptsRemaining: remaining,
-            });
-          }
-          userType = "Cliente";
+          // En tu LoginController.js, en la sección de Cliente, agrega estos logs:
+
+// 4) Cliente
+userFound = await ClienteModel.findOne({ email });
+if (!userFound) {
+  console.log('❌ Cliente no encontrado para email:', email);
+  const d = recordFailedAttempt(email);
+  const remaining = Math.max(0, 4 - d.attempts);
+  return res.status(400).json({
+    message: `Usuario no encontrado. Te quedan ${remaining} intento(s).`,
+    attemptsRemaining: remaining,
+  });
+}
+
+// ✅ AGREGAR ESTOS LOGS DE DEBUG:
+console.log('✅ Cliente encontrado:', userFound._id);
+console.log('📧 Email en DB:', userFound.email);
+console.log('👤 Nombre:', userFound.firstName, userFound.lastName);
+console.log('🔍 Password hash en DB:', userFound.password);
+console.log('🔍 Hash length:', userFound.password ? userFound.password.length : 'NULL');
+console.log('🔍 Password recibido:', password);
+console.log('🔍 Password length recibido:', password.length);
+
+valid = await bcryptjs.compare(password, userFound.password);
+console.log('🔑 bcrypt.compare result:', valid);
+
+if (!valid) {
+  console.log('❌ Contraseña incorrecta para cliente');
+  
+  // ✅ PROBAR ALGUNAS VARIACIONES PARA DEBUG:
+  const trimmedPassword = password.trim();
+  if (trimmedPassword !== password) {
+    const trimmedValid = await bcryptjs.compare(trimmedPassword, userFound.password);
+    console.log('🔍 Probando sin espacios:', trimmedValid);
+  }
+  
+  const d = recordFailedAttempt(email);
+  const remaining = Math.max(0, 4 - d.attempts);
+  return res.status(400).json({
+    message: `Contraseña incorrecta. Te quedan ${remaining} intento(s).`,
+    attemptsRemaining: remaining,
+  });
+}
+
+console.log('✅ Login de cliente exitoso');
+userType = "Cliente";
         }
       }
     }
