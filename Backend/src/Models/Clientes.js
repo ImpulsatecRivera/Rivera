@@ -11,7 +11,7 @@ import { Schema, model } from "mongoose";
  */
 const clienteSchema = new Schema({
   // Información personal básica
-  firtsName: {
+  firstName: {
     type: String,      // Primer nombre del cliente
     required: true     // Campo obligatorio para identificación
   },
