@@ -261,7 +261,7 @@ const RegistrarseCliente2 = ({ navigation, route }) => {
 
       // ✅ MAPEAR DATOS DEL FRONTEND AL FORMATO DEL BACKEND
       const userData = {
-        firtsName: firstName.trim(),      // ⚠️ NOTA: Tu backend usa 'firtsName' (con typo)
+        firstName: firstName.trim(),      // ⚠️ NOTA: Tu backend usa 'firtsName' (con typo)
         lastName: lastName.trim(),
         email: email.trim(),
         idNumber: dui.trim(),            // DUI → idNumber
