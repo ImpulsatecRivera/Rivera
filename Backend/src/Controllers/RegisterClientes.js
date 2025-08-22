@@ -11,83 +11,86 @@ const RegsiterCliente = {};
 /**
  * Registrar un nuevo cliente en el sistema
  * POST /clientes/register
- * 
- * Crea un nuevo cliente, hashea su contraseña y genera un token JWT
- * para autenticación automática después del registro.
- * 
- * @param {object} req - Objeto request que contiene los datos del cliente en req.body
- * @param {object} res - Objeto response de Express
- * @returns {object} JSON con mensaje de éxito o error, y cookie con token JWT
  */
 RegsiterCliente.registrarCliente = async (req, res) => {
-    // Extraer todos los datos del cliente del cuerpo de la petición
-    const { firtsName, lastName, email, idNumber, birthDate, password, phone, address } = req.body;
+    // ✅ CORREGIDO: Cambiar firtsName por firstName
+    const { firstName, lastName, email, idNumber, birthDate, password, phone, address } = req.body;
+    
+    console.log('📋 Datos recibidos en backend:', {
+        firstName,
+        lastName,
+        email,
+        idNumber,
+        birthDate,
+        phone,
+        address,
+        passwordReceived: !!password
+    });
     
     try {
         // Verificar si ya existe un cliente registrado con este email
         const validacion = await ClientesModelo.findOne({ email });
         
         if (validacion) {
-            // Si ya existe, retornar error 500 con mensaje
-            return res.status(500).json({ Message: "Usuario ya resgistrado con este correo" });
+            return res.status(400).json({ 
+                message: "Usuario ya registrado con este correo" 
+            });
         }
 
-        // Encriptar la contraseña usando bcrypt con salt de 10 rounds
-        // Esto protege la contraseña en caso de que la base de datos sea comprometida
+        // Encriptar la contraseña
         const encriptarHash = await bcrypt.hash(password, 10);
         
-        // Crear nueva instancia del modelo Cliente con los datos recibidos
+        // ✅ CORREGIDO: Crear nueva instancia con firstName correcto
         const newCliente = new ClientesModelo({
-            firtsName,      // Primer nombre del cliente
-            lastName,       // Apellido del cliente
-            email,          // Email único para login
-            idNumber,       // Número de identificación del cliente
-            birthDate,      // Fecha de nacimiento
-            password: encriptarHash,  // ← CAMBIO: Usar el hash de la contraseña
-            phone,          // Teléfono de contacto
-            address         // Dirección física del cliente
+            firstName,      // ✅ Corregido de firtsName a firstName
+            lastName,
+            email,
+            idNumber,
+            birthDate,
+            password: encriptarHash,
+            phone,
+            address
         });
         
         // Guardar el nuevo cliente en la base de datos
         await newCliente.save();
+        console.log('✅ Cliente guardado exitosamente:', newCliente._id);
 
-        // Generar token JWT para autenticación automática después del registro
+        // Generar token JWT
         jwt.sign(
-            { id: newCliente._id, userType: "Cliente" },  // Agregado userType para consistencia
-            config.JWT.secret,           // Clave secreta para firmar el token
-            { expiresIn: config.JWT.expiresIn }, // Tiempo de expiración del token
+            { id: newCliente._id, userType: "Cliente" },
+            config.JWT.secret,
+            { expiresIn: config.JWT.expiresIn },
             (error, token) => {
                 if (error) {
                     console.error("Error generando token:", error);
                     return res.status(500).json({ message: "Error al generar token" });
                 }
                 
-                // Establecer cookie con el token JWT para mantener sesión
+                // Establecer cookie con el token JWT
                 res.cookie("authToken", token, {
                     httpOnly: true,
                     sameSite: "Lax",
-                    secure: false // cambiar a true en producción con HTTPS
+                    secure: false
                 });
                 
                 // Responder con mensaje de éxito
                 res.status(200).json({ 
-                    message: "Cliente registrado",
+                    message: "Cliente registrado exitosamente",
                     userType: "Cliente",
                     user: {
                         id: newCliente._id,
                         email: newCliente.email,
-                        nombre: `${firtsName} ${lastName}`
+                        nombre: `${firstName} ${lastName}` // ✅ Corregido
                     }
                 });
             }
         );
 
     } catch (error) {
-        // Manejar cualquier error durante el proceso de registro
         console.error("Error en registro:", error);
         res.status(500).json({ message: "Error cliente no registrado" });
     }
 };
 
-// Exportar el controlador para uso en las rutas
 export default RegsiterCliente;
