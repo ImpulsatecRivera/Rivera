@@ -12,6 +12,22 @@ import {
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 
+// Al inicio de RegistrarseCliente2.js, agregar estas importaciones:
+import Icon from 'react-native-vector-icons/Ionicons';
+import { useAuth } from '../contenxt/authContext'; // Ajusta la ruta según tu estructura
+
+// ✅ CONFIGURACIÓN DE LA API - CORREGIDA
+const API_BASE_URL = 'https://riveraproject-5.onrender.com';
+
+const RegistrarseCliente2 = ({ navigation, route }) => {
+  // ✅ OBTENER DATOS DE LA PANTALLA ANTERIOR
+  const { email, password } = route.params || {};
+  
+  // ✅ OBTENER FUNCIONES DEL CONTEXTO DE AUTENTICACIÓN
+  const { register } = useAuth();
+
+  // ... resto del código de estados ...
+
 // ✅ CONFIGURACIÓN DE LA API - CORREGIDA
 const API_BASE_URL = 'https://riveraproject-5.onrender.com';
 
@@ -233,7 +249,6 @@ const RegistrarseCliente2 = ({ navigation, route }) => {
       return;
     }
 
-    // ✅ VERIFICAR QUE TENEMOS LOS DATOS DE LA PANTALLA ANTERIOR
     if (!email || !password) {
       Alert.alert('Error', 'Faltan datos del email o contraseña. Regresa a la pantalla anterior.');
       return;
@@ -245,7 +260,6 @@ const RegistrarseCliente2 = ({ navigation, route }) => {
       const convertDateFormat = (dateStr) => {
         if (dateStr.includes('/')) {
           const [day, month, year] = dateStr.split('/');
-          // Validar que todos los componentes sean números
           const dayNum = parseInt(day, 10);
           const monthNum = parseInt(month, 10);
           const yearNum = parseInt(year, 10);
@@ -261,14 +275,14 @@ const RegistrarseCliente2 = ({ navigation, route }) => {
 
       // ✅ MAPEAR DATOS DEL FRONTEND AL FORMATO DEL BACKEND
       const userData = {
-        firstName: firstName.trim(),      // ⚠️ NOTA: Tu backend usa 'firtsName' (con typo)
+        firstName: firstName.trim(),
         lastName: lastName.trim(),
         email: email.trim(),
-        idNumber: dui.trim(),            // DUI → idNumber
-        birthDate: convertDateFormat(fechaNacimiento), // Fecha convertida
+        idNumber: dui.trim(),
+        birthDate: convertDateFormat(fechaNacimiento),
         password: password.trim(),
         phone: phone.trim(),
-        address: direccion.trim()        // direccion → address
+        address: direccion.trim()
       };
       
       console.log('📝 Datos a enviar:', userData);
@@ -278,20 +292,61 @@ const RegistrarseCliente2 = ({ navigation, route }) => {
       
       if (result.success) {
         console.log('✅ Registro exitoso!');
+        console.log('📋 RESPUESTA COMPLETA DEL BACKEND:', JSON.stringify(result.data, null, 2));
         
-        Alert.alert(
-          'Éxito', 
-          '¡Cuenta creada exitosamente!', 
-          [
-            { 
-              text: 'Continuar', 
-              onPress: () => {
-                console.log('🎯 Navegando a pantalla de carga');
-                navigation.navigate('pantallacarga1');
+        // 🔍 DEBUG: Verificar qué nos devuelve el backend
+        console.log('🔍 result.data.user:', result.data.user);
+        console.log('🔍 result.data.token:', result.data.token);
+        console.log('🔍 result.data.success:', result.data.success);
+        
+        // ✅ EXTRAER DATOS DE LA RESPUESTA PARA EL CONTEXTO
+        const registrationData = {
+          user: {
+            // Usar diferentes fuentes para obtener el ID
+            id: result.data.user?.id || result.data.user?._id || null,
+            _id: result.data.user?.id || result.data.user?._id || null,
+            email: result.data.user?.email || email,
+            firstName: result.data.user?.firstName || firstName,
+            lastName: result.data.user?.lastName || lastName,
+            fullName: result.data.user?.nombre || `${firstName} ${lastName}`,
+            idNumber: dui,
+            phone: phone,
+            address: direccion,
+            birthDate: fechaNacimiento
+          },
+          token: result.data.token || 'no-token-received',
+          userType: result.data.userType || 'Cliente'
+        };
+
+        console.log('📦 DATOS PREPARADOS PARA CONTEXTO:', JSON.stringify(registrationData, null, 2));
+        console.log('🔍 ID extraído:', registrationData.user.id);
+
+        // ✅ GUARDAR EN EL CONTEXTO DE AUTENTICACIÓN
+        console.log('💾 Guardando datos en el contexto...');
+        const authResult = await register(registrationData);
+        
+        console.log('📋 RESULTADO DEL CONTEXTO:', authResult);
+        
+        if (authResult.success) {
+          console.log('✅ Datos guardados en contexto exitosamente');
+          Alert.alert(
+            'Éxito', 
+            '¡Cuenta creada exitosamente!', 
+            [
+              { 
+                text: 'Continuar', 
+                onPress: () => {
+                  console.log('🎯 Navegando a pantalla de carga');
+                  navigation.navigate('pantallacarga1');
+                }
               }
-            }
-          ]
-        );
+            ]
+          );
+        } else {
+          console.error('❌ Error guardando en contexto:', authResult.error);
+          Alert.alert('Error', 'Cuenta creada pero hubo un problema con la sesión. Intenta iniciar sesión.');
+        }
+        
       } else {
         console.error('❌ Error en el registro:', result.error);
         Alert.alert('Error', result.error);
@@ -584,4 +639,5 @@ const styles = StyleSheet.create({
   },
 });
 
+}
 export default RegistrarseCliente2;
