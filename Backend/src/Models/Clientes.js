@@ -12,7 +12,7 @@ import { Schema, model } from "mongoose";
 const clienteSchema = new Schema({
   // Información personal básica
   firstName: {
-    type: String,      // Primer nombre del cliente
+    type: String,      // Primer no mbre del cliente
     required: true     // Campo obligatorio para identificación
   },
   lastName: {
