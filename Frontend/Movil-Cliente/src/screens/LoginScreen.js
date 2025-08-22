@@ -23,127 +23,58 @@ const LoginScreen = () => {
   const { login } = useAuth();
 
   // 🔐 FUNCIÓN DE LOGIN
-  const handleLogin = async () => {
-    // Validar campos vacíos
-    if (!email.trim() || !password.trim()) {
-      Alert.alert(
-        '⚠️ Campos requeridos',
-        'Por favor ingresa tu email y contraseña'
-      );
-      return;
+  // En tu LoginScreen.js, agrega este debugging:
+
+const handleLogin = async () => {
+  // Validaciones...
+
+  setIsLoading(true);
+
+  try {
+    const loginData = {
+      email: email.trim(),
+      password: password.trim(),
+    };
+
+    console.log('🔐 Iniciando proceso de login...');
+    console.log('📧 Email limpio:', loginData.email);
+    console.log('🔒 Password length:', loginData.password.length);
+    console.log('🔒 Password (primeros 3 chars):', loginData.password.substring(0, 3) + '***');
+    
+    const response = await fetch('https://riveraproject-5.onrender.com/api/login', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(loginData),
+    });
+
+    console.log('📡 Status de respuesta:', response.status);
+    console.log('📡 Status text:', response.statusText);
+
+    const data = await response.json();
+    console.log('📡 Respuesta completa del servidor:');
+    console.log(JSON.stringify(data, null, 2));
+
+    if (response.ok && data.message === "Inicio de sesión completado") {
+      console.log('✅ Login exitoso');
+      // Resto del código...
+    } else {
+      console.log('❌ Login fallido');
+      console.log('📄 Mensaje específico:', data.message);
+      console.log('🔢 Intentos restantes:', data.attemptsRemaining);
+      console.log('🚫 Está bloqueado:', data.blocked);
+      
+      Alert.alert('❌ Error de Login', data.message);
     }
 
-    // Validar formato de email básico
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email.trim())) {
-      Alert.alert(
-        '⚠️ Email inválido',
-        'Por favor ingresa un email válido'
-      );
-      return;
-    }
-
-    setIsLoading(true);
-
-    try {
-      console.log('🔐 Iniciando proceso de login...');
-      
-      // Llamar a la API de login
-      const response = await fetch('https://riveraproject-5.onrender.com/api/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email: email.trim(),
-          password: password.trim(),
-        }),
-      });
-
-      const data = await response.json();
-      console.log('📡 Respuesta del servidor:', data);
-
-      // ✅ CAMBIO PRINCIPAL: Verificar response.ok en lugar de data.success
-      if (response.ok && data.message === "Inicio de sesión completado") {
-        // ✅ LOGIN EXITOSO
-        console.log('✅ Login exitoso');
-        console.log('👤 Tipo de usuario:', data.userType);
-
-        // 🚨 VALIDAR QUE SOLO SEAN CLIENTES
-        if (data.userType !== 'Cliente') {
-          Alert.alert(
-            '🚫 Acceso Denegado',
-            `Esta aplicación es solo para clientes. Tu tipo de usuario es: ${data.userType}`
-          );
-          setIsLoading(false);
-          return;
-        }
-
-        try {
-          // Guardar en contexto (AuthContext maneja la persistencia)
-          const loginResult = await login({
-            token: data.token, // Nota: el servidor podría no estar enviando token en la respuesta JSON
-            user: data.user,
-            userType: data.userType
-          });
-
-          if (loginResult && loginResult.success !== false) {
-            console.log('🎉 Login completado exitosamente');
-            
-            // 🚀 NAVEGAR AL TABNAVIGATOR (MAIN) - CORREGIDO
-            navigation.reset({
-              index: 0,
-              routes: [{ name: 'Main' }], // ✅ Correcto: 'Main' es el TabNavigator
-            });
-            
-          } else {
-            Alert.alert(
-              '❌ Error',
-              'Error al guardar la sesión. Inténtalo de nuevo.'
-            );
-          }
-        } catch (authError) {
-          console.error('Error en AuthContext:', authError);
-          // Aún así navegar si el login fue exitoso en el servidor
-          console.log('🚀 Navegando al Dashboard a pesar del error de contexto');
-          navigation.reset({
-            index: 0,
-            routes: [{ name: 'Main' }], // ✅ Correcto: 'Main' es el TabNavigator
-          });
-        }
-
-      } else {
-        // ❌ ERROR DEL SERVIDOR
-        let errorMessage = 'Error de conexión';
-        
-        if (data.message) {
-          errorMessage = data.message;
-        } else if (response.status === 401) {
-          errorMessage = 'Email o contraseña incorrectos';
-        } else if (response.status === 400) {
-          errorMessage = 'Datos inválidos. Verifica tus credenciales.';
-        } else if (response.status >= 500) {
-          errorMessage = 'Error del servidor. Inténtalo más tarde.';
-        }
-
-        Alert.alert('❌ Error de Login', errorMessage);
-      }
-
-    } catch (error) {
-      console.error('❌ Error en login:', error);
-      
-      let errorMessage = 'Error de conexión';
-      if (error.message.includes('Network')) {
-        errorMessage = 'Sin conexión a internet. Verifica tu conexión.';
-      } else if (error.message.includes('timeout')) {
-        errorMessage = 'Tiempo de espera agotado. Inténtalo de nuevo.';
-      }
-      
-      Alert.alert('❌ Error', errorMessage);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  } catch (error) {
+    console.error('❌ Error en login:', error);
+    Alert.alert('❌ Error', 'Error de conexión');
+  } finally {
+    setIsLoading(false);
+  }
+};
 
  const handleForgotPassword = () => {
   console.log('Forgot password pressed');
