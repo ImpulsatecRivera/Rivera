@@ -11,10 +11,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
-
-// Al inicio de RegistrarseCliente2.js, agregar estas importaciones:
-import Icon from 'react-native-vector-icons/Ionicons';
-import { useAuth } from '../contenxt/authContext'; // Ajusta la ruta según tu estructura
+import { useAuth } from '../contenxt/authContext'; // ✅ AGREGAR ESTA IMPORTACIÓN
 
 // ✅ CONFIGURACIÓN DE LA API - CORREGIDA
 const API_BASE_URL = 'https://riveraproject-5.onrender.com';
@@ -25,15 +22,6 @@ const RegistrarseCliente2 = ({ navigation, route }) => {
   
   // ✅ OBTENER FUNCIONES DEL CONTEXTO DE AUTENTICACIÓN
   const { register } = useAuth();
-
-  // ... resto del código de estados ...
-
-// ✅ CONFIGURACIÓN DE LA API - CORREGIDA
-const API_BASE_URL = 'https://riveraproject-5.onrender.com';
-
-const RegistrarseCliente2 = ({ navigation, route }) => {
-  // ✅ OBTENER DATOS DE LA PANTALLA ANTERIOR
-  const { email, password } = route.params || {};
 
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -143,13 +131,9 @@ const RegistrarseCliente2 = ({ navigation, route }) => {
   };
 
   const formatDUI = (text) => {
-    // Eliminar todo lo que no sea número
     const cleaned = text.replace(/\D/g, '');
-    
-    // Limitar a 9 dígitos máximo
     const truncated = cleaned.substring(0, 9);
     
-    // Formatear con guión después del 8vo dígito
     if (truncated.length >= 8) {
       return truncated.substring(0, 8) + '-' + truncated.substring(8);
     }
@@ -167,24 +151,20 @@ const RegistrarseCliente2 = ({ navigation, route }) => {
   };
 
   const formatPhone = (text) => {
-    // Eliminar todo lo que no sea número
     const cleaned = text.replace(/\D/g, '');
-    
-    // Limitar a 8 dígitos máximo
     const truncated = cleaned.substring(0, 8);
     
-    // Formatear con guión después del 4to dígito
     if (truncated.length >= 4) {
       return truncated.substring(0, 4) + '-' + truncated.substring(4);
     }
     return truncated;
   };
 
-  // ✅ FUNCIÓN PARA CONECTAR CON EL BACKEND - RUTA CORREGIDA
+  // ✅ FUNCIÓN PARA CONECTAR CON EL BACKEND
   const registerUser = async (userData) => {
     try {
       console.log('🚀 Enviando datos al backend:', userData);
-      // ✅ RUTA CORREGIDA: Cambiada de /clientes/register a /api/register
+      // ✅ USAR LA RUTA CORRECTA
       const url = `${API_BASE_URL}/api/register-cliente`;
       console.log('🌐 URL completa:', url);
       
@@ -199,12 +179,10 @@ const RegistrarseCliente2 = ({ navigation, route }) => {
       console.log('📊 Status de respuesta:', response.status);
       console.log('📊 Status text:', response.statusText);
 
-      // ✅ VERIFICAR SI LA RESPUESTA ES JSON
       const contentType = response.headers.get('content-type');
       console.log('📊 Content-Type:', contentType);
 
       if (!contentType || !contentType.includes('application/json')) {
-        // Si no es JSON, leer como texto para ver qué está devolviendo
         const textResponse = await response.text();
         console.error('❌ Respuesta no es JSON:', textResponse);
         return { 
@@ -224,16 +202,6 @@ const RegistrarseCliente2 = ({ navigation, route }) => {
       
     } catch (error) {
       console.error('💥 Error de conexión:', error);
-      console.error('💥 Tipo de error:', error.name);
-      console.error('💥 Mensaje de error:', error.message);
-      
-      if (error.name === 'SyntaxError' && error.message.includes('JSON Parse error')) {
-        return { 
-          success: false, 
-          error: 'El servidor no está respondiendo correctamente. Verifica que esté corriendo y la URL sea correcta.' 
-        };
-      }
-      
       return { 
         success: false, 
         error: `Error de conexión: ${error.message}` 
@@ -273,7 +241,6 @@ const RegistrarseCliente2 = ({ navigation, route }) => {
         return dateStr;
       };
 
-      // ✅ MAPEAR DATOS DEL FRONTEND AL FORMATO DEL BACKEND
       const userData = {
         firstName: firstName.trim(),
         lastName: lastName.trim(),
@@ -287,7 +254,6 @@ const RegistrarseCliente2 = ({ navigation, route }) => {
       
       console.log('📝 Datos a enviar:', userData);
       
-      // ✅ LLAMAR AL BACKEND
       const result = await registerUser(userData);
       
       if (result.success) {
@@ -302,7 +268,6 @@ const RegistrarseCliente2 = ({ navigation, route }) => {
         // ✅ EXTRAER DATOS DE LA RESPUESTA PARA EL CONTEXTO
         const registrationData = {
           user: {
-            // Usar diferentes fuentes para obtener el ID
             id: result.data.user?.id || result.data.user?._id || null,
             _id: result.data.user?.id || result.data.user?._id || null,
             email: result.data.user?.email || email,
@@ -639,5 +604,4 @@ const styles = StyleSheet.create({
   },
 });
 
-}
 export default RegistrarseCliente2;

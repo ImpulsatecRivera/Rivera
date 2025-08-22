@@ -208,55 +208,64 @@ export const AuthProvider = ({ children }) => {
   };
 
   // 📝 REGISTRO (USUARIOS NUEVOS - SOLO CLIENTES)
-  const register = async (userData) => {
-    try {
-      console.log('📝 Registrando nuevo cliente');
-      
-      // VALIDAR QUE SEA CLIENTE
-      if (userData.userType && userData.userType !== 'Cliente') {
-        return { 
-          success: false, 
-          error: `Solo se pueden registrar clientes en esta aplicación` 
-        };
-      }
-      
-      const currentTime = Date.now();
-      const userId = userData._id || userData.id;
-      
-      if (!userId) {
-        console.error('❌ No se encontró ID del cliente en registro');
-        throw new Error('ID de cliente no disponible');
-      }
-      
-      // 💾 GUARDAR EN ASYNCSTORAGE
-      await AsyncStorage.multiSet([
-        ['clientToken', 'temp-register-token'],
-        ['authToken', ''], // Para compatibilidad
-        ['clientLoginTime', currentTime.toString()],
-        ['clientData', JSON.stringify(userData)],
-        ['clientUserType', 'Cliente'],
-        ['clientId', userId.toString()],
-        ['onboardingCompleted', 'false'] // Usuarios nuevos SÍ necesitan onboarding
-      ]);
-      
-      // 📱 ACTUALIZAR ESTADO
-      setUser(userData);
-      setUserType('Cliente');
-      setIsAuthenticated(true);
-      setHasCompletedOnboarding(false); // Mostrar onboarding para nuevos usuarios
-      
-      // ⏰ INICIAR TIMER DE EXPIRACIÓN
-      startSessionTimer();
-      
-      console.log('📊 Registro de cliente completado');
-      console.log('📋 Cliente ID guardado:', userId);
-      
-      return { success: true };
-    } catch (error) {
-      console.error('❌ Register error:', error);
-      return { success: false, error };
+  // En tu authContext.js, asegúrate de que la función register sea así:
+
+// En tu authContext.js, asegúrate de que la función register sea así:
+
+const register = async (registrationData) => {
+  try {
+    console.log('📝 Registrando nuevo cliente:', registrationData);
+    
+    // VALIDAR QUE SEA CLIENTE
+    if (registrationData.userType && registrationData.userType !== 'Cliente') {
+      return { 
+        success: false, 
+        error: `Solo se pueden registrar clientes en esta aplicación` 
+      };
     }
-  };
+    
+    const currentTime = Date.now();
+    const userId = registrationData.user?._id || registrationData.user?.id;
+    const realToken = registrationData.token;
+    
+    if (!userId) {
+      console.error('❌ No se encontró ID del cliente en registro');
+      throw new Error('ID de cliente no disponible');
+    }
+
+    console.log('🔑 Token recibido del backend:', realToken ? 'SÍ' : 'NO');
+    console.log('🆔 User ID recibido:', userId);
+    
+    // 💾 GUARDAR EN ASYNCSTORAGE CON TOKEN REAL
+    await AsyncStorage.multiSet([
+      ['clientToken', realToken || 'temp-register-token'],
+      ['authToken', realToken || ''], // Para compatibilidad
+      ['clientLoginTime', currentTime.toString()],
+      ['clientData', JSON.stringify(registrationData.user)],
+      ['clientUserType', registrationData.userType || 'Cliente'],
+      ['clientId', userId.toString()],
+      ['onboardingCompleted', 'false'] // Usuarios nuevos SÍ necesitan onboarding
+    ]);
+    
+    // 📱 ACTUALIZAR ESTADO
+    setUser(registrationData.user);
+    setUserType(registrationData.userType || 'Cliente');
+    setIsAuthenticated(true);
+    setHasCompletedOnboarding(false); // Mostrar onboarding para nuevos usuarios
+    
+    // ⏰ INICIAR TIMER DE EXPIRACIÓN
+    startSessionTimer();
+    
+    console.log('📊 Registro de cliente completado');
+    console.log('📋 Cliente ID guardado:', userId);
+    console.log('🔑 Token guardado:', realToken ? 'SÍ' : 'NO');
+    
+    return { success: true };
+  } catch (error) {
+    console.error('❌ Register error:', error);
+    return { success: false, error: error.message };
+  }
+};
 
   // 🎉 COMPLETAR ONBOARDING
   const completeOnboarding = async () => {
