@@ -17,4 +17,7 @@ router.route("/:id")
 .delete(motoristasCon.delete);
 router.get('/:id', motoristasCon.getById);
 
+
+router.get("/viajes-programados/todos", motoristasCon.getAllViajesProgramados);
+router.get("/:id/viajes-programados", motoristasCon.getViajesProgramados);
 export default router;
