@@ -12,23 +12,16 @@ const RegsiterCliente = {};
  * Registrar un nuevo cliente en el sistema
  * POST /clientes/register
  */
+// En tu controlador del backend (RegsiterCliente.js):
+
 RegsiterCliente.registrarCliente = async (req, res) => {
-    // ✅ CORREGIDO: Cambiar firtsName por firstName
     const { firstName, lastName, email, idNumber, birthDate, password, phone, address } = req.body;
     
     console.log('📋 Datos recibidos en backend:', {
-        firstName,
-        lastName,
-        email,
-        idNumber,
-        birthDate,
-        phone,
-        address,
-        passwordReceived: !!password
+        firstName, lastName, email, idNumber, birthDate, phone, address
     });
     
     try {
-        // Verificar si ya existe un cliente registrado con este email
         const validacion = await ClientesModelo.findOne({ email });
         
         if (validacion) {
@@ -37,12 +30,10 @@ RegsiterCliente.registrarCliente = async (req, res) => {
             });
         }
 
-        // Encriptar la contraseña
         const encriptarHash = await bcrypt.hash(password, 10);
         
-        // ✅ CORREGIDO: Crear nueva instancia con firstName correcto
         const newCliente = new ClientesModelo({
-            firstName,      // ✅ Corregido de firtsName a firstName
+            firstName,
             lastName,
             email,
             idNumber,
@@ -52,11 +43,10 @@ RegsiterCliente.registrarCliente = async (req, res) => {
             address
         });
         
-        // Guardar el nuevo cliente en la base de datos
         await newCliente.save();
         console.log('✅ Cliente guardado exitosamente:', newCliente._id);
 
-        // Generar token JWT
+        // ✅ GENERAR TOKEN Y DEVOLVERLO EN LA RESPUESTA
         jwt.sign(
             { id: newCliente._id, userType: "Cliente" },
             config.JWT.secret,
@@ -67,6 +57,8 @@ RegsiterCliente.registrarCliente = async (req, res) => {
                     return res.status(500).json({ message: "Error al generar token" });
                 }
                 
+                console.log('✅ Token generado exitosamente');
+                
                 // Establecer cookie con el token JWT
                 res.cookie("authToken", token, {
                     httpOnly: true,
@@ -74,22 +66,29 @@ RegsiterCliente.registrarCliente = async (req, res) => {
                     secure: false
                 });
                 
-                // Responder con mensaje de éxito
+                // ✅ RESPUESTA CORREGIDA: INCLUIR TOKEN EN JSON
                 res.status(200).json({ 
                     message: "Cliente registrado exitosamente",
                     userType: "Cliente",
                     user: {
-                        id: newCliente._id,
+                        id: newCliente._id,  // ✅ ASEGURAR QUE EL ID ESTÉ AQUÍ
                         email: newCliente.email,
-                        nombre: `${firstName} ${lastName}` // ✅ Corregido
-                    }
+                        nombre: `${firstName} ${lastName}`,
+                        firstName: firstName,
+                        lastName: lastName
+                    },
+                    token: token,  // ✅ INCLUIR EL TOKEN EN LA RESPUESTA
+                    success: true  // ✅ AGREGAR FLAG DE ÉXITO
                 });
             }
         );
 
     } catch (error) {
-        console.error("Error en registro:", error);
-        res.status(500).json({ message: "Error cliente no registrado" });
+        console.error("💥 Error en registro:", error);
+        res.status(500).json({ 
+            message: "Error cliente no registrado",
+            success: false 
+        });
     }
 };
 

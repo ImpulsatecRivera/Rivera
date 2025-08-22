@@ -20,7 +20,40 @@ import FocusAwareStatusBar from '../components/FocusAwareStatusBar';
 const GREEN = '#10AC84';
 const BG = '#F5F5F5';
 
+const ProfileScreen = () => {// En tu ProfileScreen.js, al inicio del componente, agrega esto:
+
 const ProfileScreen = () => {
+  // ... otros estados ...
+  
+  const { user, logout, token } = useAuth();
+
+  // 🔍 DEBUG: Agregar esto para ver qué hay en el contexto
+  useEffect(() => {
+    console.log('🔍 DEBUG - Usuario en contexto:', JSON.stringify(user, null, 2));
+    console.log('🔍 DEBUG - Token en contexto:', token);
+    console.log('🔍 DEBUG - Tipo de user:', typeof user);
+    console.log('🔍 DEBUG - User tiene ID?:', !!(user?.id || user?._id));
+    
+    // Verificar AsyncStorage también
+    const checkAsyncStorage = async () => {
+      try {
+        const clientData = await AsyncStorage.getItem('clientData');
+        const clientId = await AsyncStorage.getItem('clientId');
+        const clientToken = await AsyncStorage.getItem('clientToken');
+        
+        console.log('🔍 DEBUG - AsyncStorage clientData:', clientData);
+        console.log('🔍 DEBUG - AsyncStorage clientId:', clientId);
+        console.log('🔍 DEBUG - AsyncStorage clientToken:', clientToken);
+      } catch (error) {
+        console.error('Error leyendo AsyncStorage:', error);
+      }
+    };
+    
+    checkAsyncStorage();
+  }, [user, token]);
+
+  // ... resto del componente
+};
   // Estados para manejo de datos y UI
   const [userInfo, setUserInfo] = useState(null);
   const [loading, setLoading] = useState(true);
