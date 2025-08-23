@@ -15,7 +15,7 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage'; // ✅ AGREGAR ESTA IMPORTACIÓN
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
-import { useAuth } from '../contenxt/authContext';
+import { useAuth } from '../context/authContext';
 import FocusAwareStatusBar from '../components/FocusAwareStatusBar';
 
 const GREEN = '#10AC84';

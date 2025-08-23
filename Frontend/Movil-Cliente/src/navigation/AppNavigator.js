@@ -15,7 +15,7 @@ import CustomTabBar from '../components/CustomTabBar';
 
 // Pantallas de recuperación de contraseña
 import InicioRecuperar from "../screens/InicioRecuperarScren"; // inicio de recuperación
-import elegirMetodoRecuperacionScreen from '../screens/elegirMetodoRecuperacionScreen';
+import SeleccionarMetodoRecuperacionScreen from '../screens/SeleccionarMetodoRecuperacionScreen';
 import RecuperacionScreen from "../screens/RecuperacionScreen"; // Recuperación por email
 import Recuperacion2Screen from "../screens/Recuepracion2Screen"; // Segundo paso 
 import Recuperacion3 from "../screens/Recuperacion3"; // Nueva contraseña
@@ -90,10 +90,10 @@ const AppNavigator = () => {
         }}
       />
 
-      {/* 2. Elegir método de recuperación (Email o Teléfono) */}
+      {/* 2. Seleccionar método de recuperación (Email o Teléfono) */}
       <Stack.Screen 
-        name="elegirMetodoRecuperacion" 
-        component={elegirMetodoRecuperacionScreen}
+        name="seleccionarMetodoRecuperacion" 
+        component={SeleccionarMetodoRecuperacionScreen}
         options={{
           headerShown: true,
           title: 'Método de Recuperación',
@@ -126,7 +126,7 @@ const AppNavigator = () => {
       {/* === FLUJO POR EMAIL === */}
       {/* 3a. Recuperación por Email - Paso 1 */}
       <Stack.Screen 
-        name="RecuperacionScreen" 
+        name="Recuperacion" 
         component={RecuperacionScreen}
         options={{
           headerShown: true,
