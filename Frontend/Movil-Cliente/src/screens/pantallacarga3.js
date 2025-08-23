@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Image } from 'react-native';
-import { useAuth } from '../contenxt/authContext'; // ✅ CORREGIDO: context en lugar de contenxt
+import { useAuth } from '../context/authContext'; // ✅ CORREGIDO: context en lugar de contenxt
 
 const OnboardingScreen3 = ({ navigation }) => {
   const { completeOnboarding } = useAuth();
