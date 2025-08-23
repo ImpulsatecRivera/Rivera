@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 
-const elegirMetodoRecuperacionScreen = ({ navigation }) => {
+const SeleccionarMetodoRecuperacionScreen = ({ navigation }) => {
   const [selectedMethod, setSelectedMethod] = useState(null);
 
   // Reset del estado cuando la pantalla se enfoca (al regresar)
@@ -270,4 +270,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default elegirMetodoRecuperacionScreen;
+export default SeleccionarMetodoRecuperacionScreen;

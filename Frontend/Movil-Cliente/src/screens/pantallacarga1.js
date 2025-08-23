@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Image } from 'react-native';
-import { useAuth } from '../contenxt/authContext';
+import { useAuth } from '../context/authContext';
 
 const OnboardingScreen1 = ({ navigation }) => {
   const { completeOnboarding } = useAuth();
