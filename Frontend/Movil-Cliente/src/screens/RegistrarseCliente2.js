@@ -11,7 +11,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
-import { useAuth } from '../contenxt/authContext'; // ✅ AGREGAR ESTA IMPORTACIÓN
+import { useAuth } from '../context/authContext'; // ✅ AGREGAR ESTA IMPORTACIÓN
 
 // ✅ CONFIGURACIÓN DE LA API - CORREGIDA
 const API_BASE_URL = 'https://riveraproject-5.onrender.com';

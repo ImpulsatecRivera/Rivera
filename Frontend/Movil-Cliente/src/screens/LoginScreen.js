@@ -13,7 +13,7 @@ import { useNavigation } from '@react-navigation/native';
 import CustomInput from '../components/CustomInput';
 import CustomButton from '../components/CustomButton';
 import SocialButton from '../components/SocialButton';
-import { useAuth } from '../contenxt/authContext';
+import { useAuth } from '../context/authContext'; // <-- CAMBIO 1: ruta corregida
 
 const LoginScreen = () => {
   const [email, setEmail] = useState('');
@@ -25,62 +25,78 @@ const LoginScreen = () => {
   // 🔐 FUNCIÓN DE LOGIN
   // En tu LoginScreen.js, agrega este debugging:
 
-const handleLogin = async () => {
-  // Validaciones...
+  const handleLogin = async () => {
+    // Validaciones...
 
-  setIsLoading(true);
+    setIsLoading(true);
 
-  try {
-    const loginData = {
-      email: email.trim(),
-      password: password.trim(),
-    };
+    try {
+      const loginData = {
+        email: email.trim(),
+        password: password.trim(),
+      };
 
-    console.log('🔐 Iniciando proceso de login...');
-    console.log('📧 Email limpio:', loginData.email);
-    console.log('🔒 Password length:', loginData.password.length);
-    console.log('🔒 Password (primeros 3 chars):', loginData.password.substring(0, 3) + '***');
-    
-    const response = await fetch('https://riveraproject-5.onrender.com/api/login', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(loginData),
-    });
-
-    console.log('📡 Status de respuesta:', response.status);
-    console.log('📡 Status text:', response.statusText);
-
-    const data = await response.json();
-    console.log('📡 Respuesta completa del servidor:');
-    console.log(JSON.stringify(data, null, 2));
-
-    if (response.ok && data.message === "Inicio de sesión completado") {
-      console.log('✅ Login exitoso');
-      // Resto del código...
-    } else {
-      console.log('❌ Login fallido');
-      console.log('📄 Mensaje específico:', data.message);
-      console.log('🔢 Intentos restantes:', data.attemptsRemaining);
-      console.log('🚫 Está bloqueado:', data.blocked);
+      console.log('🔐 Iniciando proceso de login...');
+      console.log('📧 Email limpio:', loginData.email);
+      console.log('🔒 Password length:', loginData.password.length);
+      console.log('🔒 Password (primeros 3 chars):', loginData.password.substring(0, 3) + '***');
       
-      Alert.alert('❌ Error de Login', data.message);
+      const response = await fetch('https://riveraproject-5.onrender.com/api/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(loginData),
+      });
+
+      console.log('📡 Status de respuesta:', response.status);
+      console.log('📡 Status text:', response.statusText);
+
+      const data = await response.json();
+      console.log('📡 Respuesta completa del servidor:');
+      console.log(JSON.stringify(data, null, 2));
+
+      if (response.ok && data.message === "Inicio de sesión completado") {
+        console.log('✅ Login exitoso');
+        // CAMBIO 2: guardar sesión y entrar a la app
+        const result = await login({
+          token: data.token,
+          user: data.user,
+          userType: data.userType,
+        });
+
+        if (!result?.success) {
+          Alert.alert('Error', result?.error || 'No se pudo guardar la sesión');
+          return;
+        }
+
+        navigation.reset({
+          index: 0,
+          routes: [{ name: 'Main' }], // usa 'pantallacarga1' si quieres pasar por esa pantalla
+        });
+
+      } else {
+        console.log('❌ Login fallido');
+        console.log('📄 Mensaje específico:', data.message);
+        console.log('🔢 Intentos restantes:', data.attemptsRemaining);
+        console.log('🚫 Está bloqueado:', data.blocked);
+        
+        Alert.alert('❌ Error de Login', data.message);
+      }
+
+    } catch (error) {
+      console.error('❌ Error en login:', error);
+      Alert.alert('❌ Error', 'Error de conexión');
+    } finally {
+      setIsLoading(false);
     }
+  };
 
-  } catch (error) {
-    console.error('❌ Error en login:', error);
-    Alert.alert('❌ Error', 'Error de conexión');
-  } finally {
-    setIsLoading(false);
-  }
-};
-
- const handleForgotPassword = () => {
-  console.log('Forgot password pressed');
-  // ✅ RESTAURAR ESTA LÍNEA:
-  navigation.navigate('InicioRecuperar');
-};
+  const handleForgotPassword = () => {
+    console.log('Forgot password pressed');
+    // ✅ RESTAURAR ESTA LÍNEA:
+    navigation.navigate('InicioRecuperar');
+  };
 
   const handleGoogleLogin = () => {
     Alert.alert(
