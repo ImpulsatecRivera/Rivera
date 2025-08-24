@@ -16,13 +16,11 @@ const RecuperacionScreen = ({ navigation }) => {
   const [emailError, setEmailError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // Validar formato de email
   const validateEmail = (email) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return emailRegex.test(email);
   };
 
-  // Verificar si contiene solo números
   const isOnlyNumbers = (text) => {
     return /^\d+$/.test(text.trim());
   };
@@ -31,7 +29,6 @@ const RecuperacionScreen = ({ navigation }) => {
     setEmail(text);
     setEmailError('');
 
-    // Validación en tiempo real
     if (text.length > 0) {
       if (isOnlyNumbers(text)) {
         setEmailError('Ingresa un email, no un número de teléfono');
@@ -42,7 +39,6 @@ const RecuperacionScreen = ({ navigation }) => {
   };
 
   const handleNext = async () => {
-    // Validaciones finales
     if (!email) {
       setEmailError('El email es requerido');
       return;
@@ -60,31 +56,23 @@ const RecuperacionScreen = ({ navigation }) => {
 
     setLoading(true);
     try {
-      console.log('🔐 Solicitando código de recuperación para:', email);
+      const API_URL = 'https://riveraproject-5.onrender.com/api/recovery/requestCode';
       
-      // ✅ IP CONFIGURADA - Ajusta según tu configuración
-      const API_URL = 'http://192.168.1.100:4000/api/recovery/requestCode';
+      const requestPayload = {
+        email: email.trim().toLowerCase(),
+      };
       
-      console.log('🌐 Conectando a:', API_URL);
       const response = await fetch(API_URL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
         },
-        body: JSON.stringify({
-          email: email.trim().toLowerCase(),
-        }),
+        body: JSON.stringify(requestPayload),
       });
 
-      console.log('📡 Response status:', response.status);
-      console.log('📡 Response headers:', response.headers);
-
-      // Verificar el contenido antes de parsear JSON
       const responseText = await response.text();
-      console.log('📄 Response text:', responseText);
 
-      // Verificar si la respuesta es HTML (error del servidor)
       if (responseText.includes('<html>') || responseText.includes('<!DOCTYPE')) {
         throw new Error('El servidor devolvió HTML en lugar de JSON. Verifica que la API esté funcionando correctamente.');
       }
@@ -93,7 +81,6 @@ const RecuperacionScreen = ({ navigation }) => {
       try {
         data = JSON.parse(responseText);
       } catch (parseError) {
-        console.error('❌ Error parsing JSON:', parseError);
         throw new Error('Respuesta inválida del servidor');
       }
 
@@ -102,46 +89,56 @@ const RecuperacionScreen = ({ navigation }) => {
         return;
       }
 
-      console.log('✅ Código enviado exitosamente:', data);
+      let recoveryToken = null;
+      const possibleTokenFields = [
+        'token', 'recoveryToken', 'reset_token', 'resetToken', 
+        'access_token', 'accessToken', 'verification_token',
+        'verificationToken', 'temp_token', 'tempToken'
+      ];
       
-      Alert.alert(
-        'Código Enviado', 
-        'Se ha enviado un código de recuperación a tu email. Revisa tu bandeja de entrada.',
-        [
-          { 
-            text: 'Continuar', 
-            // ✅ CORREGIDO: Cambiar 'Recuperacion2' por 'Recuperacion2Screen'
-            onPress: () => navigation.navigate('Recuperacion2Screen', { 
-              email: email.trim(),
-              via: 'email'
-            })
+      for (const field of possibleTokenFields) {
+        if (data[field]) {
+          recoveryToken = data[field];
+          break;
+        }
+      }
+      
+      if (!recoveryToken && data.data && typeof data.data === 'object') {
+        for (const field of possibleTokenFields) {
+          if (data.data[field]) {
+            recoveryToken = data.data[field];
+            break;
           }
-        ]
-      );
-
-    } catch (error) {
-      console.error('❌ Error al solicitar código:', error);
+        }
+      }
       
-      // Manejo específico de errores
+      if (!recoveryToken) {
+        Alert.alert(
+          'Advertencia',
+          `No se recibió token de recuperación del servidor. Esto puede causar problemas en los siguientes pasos.\n\n¿Deseas continuar de todas formas?`,
+          [
+            { text: 'Cancelar', style: 'cancel' },
+            { 
+              text: 'Continuar', 
+              onPress: () => proceedToNextScreen(null)
+            }
+          ]
+        );
+        return;
+      }
+      
+      proceedToNextScreen(recoveryToken);
+      
+    } catch (error) {
       if (error.message.includes('HTML')) {
         Alert.alert(
           'Error del Servidor', 
-          '🔴 La API no está respondiendo correctamente.\n\n' +
-          'Verifica que:\n' +
-          '• El servidor esté corriendo\n' +
-          '• La ruta /api/requestCode existe\n' +
-          '• El endpoint esté configurado correctamente'
+          'La API no está respondiendo correctamente.\n\nVerifica que el servidor esté funcionando.'
         );
-      } else if (error.message === 'Network request failed') {
+      } else if (error.message === 'Network request failed' || error.name === 'TypeError') {
         Alert.alert(
           'Error de Conexión', 
-          '🔴 No se pudo conectar al servidor.\n\n' +
-          'Verifica tu conexión a internet y que el servidor esté funcionando.'
-        );
-      } else if (error.name === 'TypeError') {
-        Alert.alert(
-          'Error de Red', 
-          'Problema de conectividad. Verifica tu conexión a internet.'
+          'No se pudo conectar al servidor.\n\nVerifica tu conexión a internet.'
         );
       } else {
         Alert.alert('Error', error.message || 'No se pudo enviar el código. Intenta de nuevo.');
@@ -149,6 +146,24 @@ const RecuperacionScreen = ({ navigation }) => {
     } finally {
       setLoading(false);
     }
+  };
+  
+  const proceedToNextScreen = (token) => {
+    Alert.alert(
+      'Código Enviado', 
+      'Se ha enviado un código de recuperación a tu email. Revisa tu bandeja de entrada.',
+      [
+        { 
+          text: 'Continuar', 
+          onPress: () => navigation.navigate('Recuperacion2Screen', { 
+            email: email.trim().toLowerCase(),
+            via: 'email',
+            recoveryToken: token,
+            timestamp: Date.now()
+          })
+        }
+      ]
+    );
   };
 
   const handleClose = () => {
@@ -160,35 +175,29 @@ const RecuperacionScreen = ({ navigation }) => {
 
   return (
     <View style={styles.container}>
-      {/* Header con X para cerrar */}
       <View style={styles.header}>
         <TouchableOpacity onPress={handleClose} disabled={loading}>
           <Icon name="close" size={24} color="#666" />
         </TouchableOpacity>
       </View>
 
-      {/* Ilustración */}
       <View style={styles.imageContainer}>
         <Image 
-          source={require('../images/recuperarcontra.png')} // Ajusta la ruta según tu estructura
+          source={require('../images/recuperarcontra.png')}
           style={styles.image}
           resizeMode="contain"
         />
       </View>
 
-      {/* Contenido principal */}
       <View style={styles.content}>
-        {/* Título */}
         <Text style={styles.title}>
           ¿Olvidaste tu contraseña?
         </Text>
 
-        {/* Subtítulo */}
         <Text style={styles.subtitle}>
           No te preocupes, puede pasar. Introduce tu correo electrónico y te enviaremos un código de recuperación.
         </Text>
 
-        {/* Campo de entrada */}
         <View style={styles.inputContainer}>
           <TextInput
             style={[styles.input, emailError && styles.inputError]}
@@ -202,7 +211,6 @@ const RecuperacionScreen = ({ navigation }) => {
             editable={!loading}
           />
           
-          {/* Mensaje de error */}
           {emailError ? (
             <View style={styles.errorContainer}>
               <Icon name="error-outline" size={16} color="#ef4444" />
@@ -211,7 +219,6 @@ const RecuperacionScreen = ({ navigation }) => {
           ) : null}
         </View>
 
-        {/* Ayuda adicional */}
         <View style={styles.helpContainer}>
           <Icon name="info-outline" size={16} color="#6b7280" />
           <Text style={styles.helpText}>
@@ -220,14 +227,12 @@ const RecuperacionScreen = ({ navigation }) => {
         </View>
       </View>
 
-      {/* Indicadores de progreso */}
       <View style={styles.progressContainer}>
         <View style={[styles.progressBar, styles.progressActive]} />
         <View style={[styles.progressDot]} />
         <View style={[styles.progressDot]} />
       </View>
 
-      {/* Botón Siguiente */}
       <View style={styles.buttonContainer}>
         <TouchableOpacity 
           style={[styles.button, isButtonDisabled && styles.buttonDisabled]}
@@ -247,7 +252,6 @@ const RecuperacionScreen = ({ navigation }) => {
         </TouchableOpacity>
       </View>
 
-      {/* Footer */}
       <View style={styles.footer}>
         <Text style={styles.footerText}>
           Rivera distribuidora y{'\n'}
