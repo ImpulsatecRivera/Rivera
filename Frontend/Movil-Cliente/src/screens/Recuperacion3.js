@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   View, 
   Text, 
@@ -18,11 +18,10 @@ const Recuperacion3 = ({ navigation, route }) => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   
-  // Recibir datos de la pantalla anterior
-  const [email, setEmail] = useState(route?.params?.email || '');
-  const [verifiedCode, setVerifiedCode] = useState(route?.params?.verifiedCode || '');
+  const [email] = useState(route?.params?.email || '');
+  const [verifiedCode] = useState(route?.params?.verifiedCode || '');
+  const [recoveryToken] = useState(route?.params?.recoveryToken || '');
 
-  // Validaciones de contraseña
   const hasMinLength = password.length >= 8 && password.length <= 20;
   const hasUppercase = /[A-Z]/.test(password);
   const hasNumber = /\d/.test(password);
@@ -46,34 +45,68 @@ const Recuperacion3 = ({ navigation, route }) => {
       return;
     }
 
+    if (!verifiedCode) {
+      Alert.alert(
+        'Código No Encontrado',
+        'No se encontró el código de verificación. Por favor verifica el código primero.',
+        [
+          { 
+            text: 'Verificar Código', 
+            onPress: () => navigation.navigate('Recuperacion2Screen', { email, recoveryToken })
+          }
+        ]
+      );
+      return;
+    }
+
+    if (!recoveryToken) {
+      Alert.alert(
+        'Token No Encontrado',
+        'No se encontró el token de recuperación. ¿Deseas reiniciar el proceso?',
+        [
+          { text: 'Continuar Sin Token', style: 'cancel' },
+          { 
+            text: 'Reiniciar Proceso', 
+            onPress: () => navigation.navigate('RecuperacionScreen')
+          }
+        ]
+      );
+    }
+
     setLoading(true);
     try {
-      console.log('🔐 Actualizando contraseña para:', email);
+      const API_URL = 'https://riveraproject-5.onrender.com/api/recovery/newPassword';
       
-      // ✅ IP CONFIGURADA - Ajusta según tu configuración
-      const API_URL = 'http://192.168.1.100:4000/api/recovery/newPassword';
+      const payload = {
+        email: email,
+        newPassword: password
+      };
       
-      console.log('🌐 Conectando a:', API_URL);
+      if (verifiedCode) {
+        payload.code = verifiedCode;
+        payload.verificationCode = verifiedCode;
+        payload.otp = verifiedCode;
+        payload.otpCode = verifiedCode;
+      }
+      
+      if (recoveryToken) {
+        payload.token = recoveryToken;
+        payload.recoveryToken = recoveryToken;
+        payload.reset_token = recoveryToken;
+        payload.resetToken = recoveryToken;
+      }
+      
       const response = await fetch(API_URL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
         },
-        body: JSON.stringify({
-          email: email,
-          newPassword: password,
-          verifiedCode: verifiedCode, // Incluir código verificado si lo requiere tu API
-        }),
+        body: JSON.stringify(payload),
       });
 
-      console.log('📡 Response status:', response.status);
-
-      // Verificar el contenido antes de parsear JSON
       const responseText = await response.text();
-      console.log('📄 Response text:', responseText);
 
-      // Verificar si la respuesta es HTML (error del servidor)
       if (responseText.includes('<html>') || responseText.includes('<!DOCTYPE')) {
         throw new Error('El servidor devolvió HTML en lugar de JSON. Verifica que la API esté funcionando correctamente.');
       }
@@ -82,46 +115,93 @@ const Recuperacion3 = ({ navigation, route }) => {
       try {
         data = JSON.parse(responseText);
       } catch (parseError) {
-        console.error('❌ Error parsing JSON:', parseError);
         throw new Error('Respuesta inválida del servidor');
       }
 
       if (!response.ok) {
+        if (response.status === 400 && data.message) {
+          const message = data.message.toLowerCase();
+          
+          if (message.includes('token de recuperación requerido') || 
+              message.includes('token requerido') ||
+              message.includes('recovery token required')) {
+            
+            Alert.alert(
+              'Token Requerido', 
+              'Se requiere un token de recuperación válido para cambiar la contraseña.',
+              [
+                { 
+                  text: 'Solicitar Nuevo Código', 
+                  onPress: () => navigation.navigate('RecuperacionScreen')
+                }
+              ]
+            );
+            return;
+          }
+          
+          if (message.includes('token expirado') || 
+              message.includes('token inválido') ||
+              message.includes('expired') || 
+              message.includes('invalid token')) {
+            
+            Alert.alert(
+              'Token Expirado', 
+              'El token de recuperación ha expirado o es inválido.',
+              [
+                { 
+                  text: 'Solicitar Nuevo Código', 
+                  onPress: () => navigation.navigate('RecuperacionScreen')
+                }
+              ]
+            );
+            return;
+          }
+          
+          if (message.includes('código') || message.includes('code')) {
+            Alert.alert(
+              'Código Inválido', 
+              'El código de verificación es inválido o ha expirado.',
+              [
+                { 
+                  text: 'Verificar Código', 
+                  onPress: () => navigation.navigate('Recuperacion2Screen', { email, recoveryToken })
+                }
+              ]
+            );
+            return;
+          }
+        }
+        
         Alert.alert('Error', data.message || 'No se pudo actualizar la contraseña');
         return;
       }
 
-      console.log('✅ Contraseña actualizada exitosamente:', data);
-      
       Alert.alert(
-        'Contraseña Actualizada', 
-        '¡Tu contraseña ha sido actualizada exitosamente! Ahora puedes iniciar sesión con tu nueva contraseña.',
+        '¡Contraseña Actualizada!', 
+        'Tu contraseña ha sido actualizada exitosamente. Ahora puedes iniciar sesión con tu nueva contraseña.',
         [
           { 
             text: 'Ir al Login', 
-           onPress: () => navigation.navigate('Login')
+            onPress: () => {
+              navigation.reset({
+                index: 0,
+                routes: [{ name: 'Login' }],
+              });
+            }
           }
         ]
       );
 
     } catch (error) {
-      console.error('❌ Error al actualizar contraseña:', error);
-      
-      // Manejo específico de errores
       if (error.message.includes('HTML')) {
         Alert.alert(
           'Error del Servidor', 
-          '🔴 La API no está respondiendo correctamente.\n\n' +
-          'Verifica que:\n' +
-          '• El servidor esté corriendo\n' +
-          '• La ruta /api/newPassword existe\n' +
-          '• El endpoint esté configurado correctamente'
+          'La API no está respondiendo correctamente.\n\nVerifica que el servidor esté funcionando.'
         );
       } else if (error.message === 'Network request failed') {
         Alert.alert(
           'Error de Conexión', 
-          '🔴 No se pudo conectar al servidor.\n\n' +
-          'Verifica tu conexión a internet y que el servidor esté funcionando.'
+          'No se pudo conectar al servidor.\n\nVerifica tu conexión a internet.'
         );
       } else {
         Alert.alert('Error', error.message || 'No se pudo actualizar la contraseña. Intenta de nuevo.');
@@ -144,31 +224,25 @@ const Recuperacion3 = ({ navigation, route }) => {
 
   return (
     <View style={styles.container}>
-      {/* Contenido principal */}
       <View style={styles.content}>
-        
-        {/* Ilustración */}
         <View style={styles.imageContainer}>
           <Image 
-            source={require('../images/contra3.png')} // Ajusta la ruta según tu estructura
+            source={require('../images/contra3.png')} 
             style={styles.image}
             resizeMode="contain"
           />
         </View>
 
-        {/* Título */}
         <Text style={styles.title}>
           Escribe la nueva contraseña
         </Text>
 
-        {/* Información del email */}
         {email && (
           <Text style={styles.emailInfo}>
             Actualizando contraseña para: <Text style={styles.emailText}>{email}</Text>
           </Text>
         )}
 
-        {/* Campo Contraseña */}
         <View style={styles.inputContainer}>
           <View style={styles.inputWrapper}>
             <TextInput
@@ -195,7 +269,6 @@ const Recuperacion3 = ({ navigation, route }) => {
           </View>
         </View>
 
-        {/* Campo Confirmar Contraseña */}
         <View style={styles.inputContainer}>
           <View style={styles.inputWrapper}>
             <TextInput
@@ -228,7 +301,6 @@ const Recuperacion3 = ({ navigation, route }) => {
           )}
         </View>
 
-        {/* Requisitos de contraseña */}
         <View style={styles.validationContainer}>
           <Text style={styles.validationHeader}>
             SU CONTRASEÑA DEBE CONTENER
@@ -243,7 +315,6 @@ const Recuperacion3 = ({ navigation, route }) => {
           </View>
         </View>
 
-        {/* Botón Actualizar */}
         <TouchableOpacity 
           style={[styles.updateButton, (!isFormValid || loading) && styles.updateButtonDisabled]}
           onPress={handleUpdate}
@@ -262,13 +333,11 @@ const Recuperacion3 = ({ navigation, route }) => {
         </TouchableOpacity>
       </View>
 
-      {/* Navegación inferior */}
       <View style={styles.navigation}>
         <TouchableOpacity onPress={handleBack} disabled={loading}>
           <Text style={[styles.navButton, loading && styles.navButtonDisabled]}>Atrás</Text>
         </TouchableOpacity>
         
-        {/* Indicadores de progreso */}
         <View style={styles.progressContainer}>
           <View style={styles.progressDot} />
           <View style={styles.progressDot} />
@@ -276,7 +345,6 @@ const Recuperacion3 = ({ navigation, route }) => {
         </View>
       </View>
 
-      {/* Footer */}
       <View style={styles.footer}>
         <Text style={styles.footerText}>
           Rivera distribuidora y{'\n'}

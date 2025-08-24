@@ -12,16 +12,16 @@ import {
 
 const Recuperacion2Screen = ({ navigation, route }) => {
   const [otpValues, setOtpValues] = useState(['', '', '', '', '']);
-  const [timeLeft, setTimeLeft] = useState(120); // 2 minutos en segundos
+  const [timeLeft, setTimeLeft] = useState(120);
   const [loading, setLoading] = useState(false);
+  
   const [email, setEmail] = useState(route?.params?.email || '');
   const [phone, setPhone] = useState(route?.params?.phone || '');
   const [via, setVia] = useState(route?.params?.via || 'email');
+  const [recoveryToken, setRecoveryToken] = useState(route?.params?.recoveryToken || '');
 
-  // Referencias para los inputs (auto-focus)
   const inputRefs = useRef([]);
 
-  // Timer countdown
   useEffect(() => {
     if (timeLeft > 0) {
       const timer = setTimeout(() => setTimeLeft(timeLeft - 1), 1000);
@@ -29,31 +29,26 @@ const Recuperacion2Screen = ({ navigation, route }) => {
     }
   }, [timeLeft]);
 
-  // Formatear tiempo mm:ss
   const formatTime = (seconds) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')} Sec`;
   };
 
-  // Manejar cambio en campos OTP con auto-focus
   const handleOTPChange = (index, value) => {
     if (value.length <= 1 && /^\d*$/.test(value)) {
       const newOtpValues = [...otpValues];
       newOtpValues[index] = value;
       setOtpValues(newOtpValues);
       
-      // Auto-focus al siguiente campo
       if (value && index < 4) {
         inputRefs.current[index + 1]?.focus();
       }
       
-      // Auto-verificar cuando se complete el código
       if (value && index === 4) {
         const completeCode = [...newOtpValues];
         completeCode[index] = value;
         if (completeCode.every(digit => digit !== '')) {
-          // Pequeño delay para que se vea el último dígito
           setTimeout(() => {
             handleVerifyCode(completeCode.join(''));
           }, 300);
@@ -62,7 +57,6 @@ const Recuperacion2Screen = ({ navigation, route }) => {
     }
   };
 
-  // Manejar backspace para regresar al campo anterior
   const handleKeyPress = (index, key) => {
     if (key === 'Backspace' && otpValues[index] === '' && index > 0) {
       inputRefs.current[index - 1]?.focus();
@@ -79,22 +73,19 @@ const Recuperacion2Screen = ({ navigation, route }) => {
 
     setLoading(true);
     try {
-      console.log('🔐 Verificando código:', otpCode, `para ${via}:`, email || phone);
+      const API_URL = 'https://riveraproject-5.onrender.com/api/recovery/verifyCode';
       
-      // ✅ IP CONFIGURADA - Ajusta según tu configuración
-      const API_URL = 'http://192.168.1.100:4000/api/recovery/verifyCode';
+      const payload = {
+        code: otpCode,
+        email: email
+      };
       
-      console.log('🌐 Conectando a:', API_URL);
-      
-      // Preparar payload según el método
-      let payload = { code: otpCode };
-      if (via === 'email' && email) {
-        payload.email = email;
-      } else if (via === 'sms' && phone) {
-        payload.phone = phone;
+      if (recoveryToken) {
+        payload.token = recoveryToken;
+        payload.recoveryToken = recoveryToken;
+        payload.reset_token = recoveryToken;
+        payload.resetToken = recoveryToken;
       }
-      
-      console.log('📤 Payload enviado:', payload);
       
       const response = await fetch(API_URL, {
         method: 'POST',
@@ -105,13 +96,8 @@ const Recuperacion2Screen = ({ navigation, route }) => {
         body: JSON.stringify(payload),
       });
 
-      console.log('📡 Response status:', response.status);
-
-      // Verificar el contenido antes de parsear JSON
       const responseText = await response.text();
-      console.log('📄 Response text:', responseText);
 
-      // Verificar si la respuesta es HTML (error del servidor)
       if (responseText.includes('<html>') || responseText.includes('<!DOCTYPE')) {
         throw new Error('El servidor devolvió HTML en lugar de JSON. Verifica que la API esté funcionando correctamente.');
       }
@@ -120,60 +106,87 @@ const Recuperacion2Screen = ({ navigation, route }) => {
       try {
         data = JSON.parse(responseText);
       } catch (parseError) {
-        console.error('❌ Error parsing JSON:', parseError);
         throw new Error('Respuesta inválida del servidor');
       }
 
       if (!response.ok) {
+        if (response.status === 400) {
+          const message = data.message || '';
+          
+          if (message.includes('Token de recuperación requerido') || 
+              message.includes('Token requerido') ||
+              message.includes('Recovery token required')) {
+            
+            Alert.alert(
+              'Token Requerido', 
+              'El servidor requiere un token de recuperación válido.\n\n¿Deseas solicitar un nuevo código?',
+              [
+                { text: 'Cancelar', style: 'cancel' },
+                { 
+                  text: 'Nuevo Código', 
+                  onPress: () => navigation.navigate('RecuperacionScreen')
+                }
+              ]
+            );
+            return;
+          }
+          
+          if (message.includes('expirado') || message.includes('expired')) {
+            Alert.alert(
+              'Código Expirado', 
+              'El código ha expirado. Solicita un nuevo código.',
+              [
+                { 
+                  text: 'Nuevo Código', 
+                  onPress: () => navigation.navigate('RecuperacionScreen')
+                }
+              ]
+            );
+            return;
+          }
+        }
+        
         Alert.alert('Error', data.message || 'Código de verificación incorrecto');
-        // Limpiar campos en caso de error
         setOtpValues(['', '', '', '', '']);
         inputRefs.current[0]?.focus();
         return;
       }
 
-      console.log('✅ Código verificado exitosamente:', data);
-      
       Alert.alert(
         'Código Verificado', 
         'El código es correcto. Ahora puedes crear tu nueva contraseña.',
         [
           { 
             text: 'Continuar', 
-            onPress: () => navigation.navigate('Recuperacion3', { 
-              email: email,
-              phone: phone,
-              via: via,
-              verifiedCode: otpCode 
-            })
+            onPress: () => {
+              navigation.navigate('Recuperacion3', { 
+                email: email,
+                phone: phone,
+                via: via,
+                verifiedCode: otpCode,
+                recoveryToken: recoveryToken,
+                timestamp: Date.now()
+              });
+            }
           }
         ]
       );
 
     } catch (error) {
-      console.error('❌ Error al verificar código:', error);
-      
-      // Manejo específico de errores
       if (error.message.includes('HTML')) {
         Alert.alert(
           'Error del Servidor', 
-          '🔴 La API no está respondiendo correctamente.\n\n' +
-          'Verifica que:\n' +
-          '• El servidor esté corriendo\n' +
-          '• La ruta /api/recovery/verifyCode existe\n' +
-          '• El endpoint esté configurado correctamente'
+          'La API no está respondiendo correctamente.\n\nVerifica que el servidor esté funcionando.'
         );
       } else if (error.message === 'Network request failed') {
         Alert.alert(
           'Error de Conexión', 
-          '🔴 No se pudo conectar al servidor.\n\n' +
-          'Verifica tu conexión a internet y que el servidor esté funcionando.'
+          'No se pudo conectar al servidor.\n\nVerifica tu conexión a internet.'
         );
       } else {
         Alert.alert('Error', error.message || 'No se pudo verificar el código. Intenta de nuevo.');
       }
       
-      // Limpiar campos y enfocar el primero
       setOtpValues(['', '', '', '', '']);
       inputRefs.current[0]?.focus();
     } finally {
@@ -196,9 +209,7 @@ const Recuperacion2Screen = ({ navigation, route }) => {
     }
 
     try {
-      console.log('🔄 Reenviando código para:', email);
-      
-      const API_URL = 'http://192.168.1.100:4000/api/requestCode';
+      const API_URL = 'https://riveraproject-5.onrender.com/api/recovery/requestCode';
       
       const response = await fetch(API_URL, {
         method: 'POST',
@@ -215,16 +226,20 @@ const Recuperacion2Screen = ({ navigation, route }) => {
       const data = JSON.parse(responseText);
 
       if (response.ok) {
-        setTimeLeft(120); // Reiniciar timer
-        setOtpValues(['', '', '', '', '']); // Limpiar campos
-        inputRefs.current[0]?.focus(); // Enfocar primer campo
+        const newToken = data.token || data.recoveryToken || data.reset_token;
+        if (newToken) {
+          setRecoveryToken(newToken);
+        }
+        
+        setTimeLeft(120);
+        setOtpValues(['', '', '', '', '']);
+        inputRefs.current[0]?.focus();
         
         Alert.alert('Código Reenviado', 'Se ha enviado un nuevo código a tu email.');
       } else {
         Alert.alert('Error', data.message || 'No se pudo reenviar el código');
       }
     } catch (error) {
-      console.error('❌ Error al reenviar:', error);
       Alert.alert('Error', 'No se pudo reenviar el código. Intenta de nuevo.');
     }
   };
@@ -233,29 +248,23 @@ const Recuperacion2Screen = ({ navigation, route }) => {
 
   return (
     <View style={styles.container}>
-      {/* Contenido principal */}
       <View style={styles.content}>
-        
-        {/* Ilustración */}
         <View style={styles.imageContainer}>
           <Image 
-            source={require('../images/contra2.png')} // Ajusta la ruta según tu estructura
+            source={require('../images/contra2.png')} 
             style={styles.image}
             resizeMode="contain"
           />
         </View>
 
-        {/* Título */}
         <Text style={styles.title}>
           Código de verificación
         </Text>
 
-        {/* Subtítulo con email */}
         <Text style={styles.subtitle}>
           Ingresa el código OTP enviado a • <Text style={styles.emailText}>{email || 'tu email'}</Text>
         </Text>
 
-        {/* Campos OTP */}
         <View style={styles.otpContainer}>
           {otpValues.map((value, index) => (
             <TextInput
@@ -280,7 +289,6 @@ const Recuperacion2Screen = ({ navigation, route }) => {
           ))}
         </View>
 
-        {/* Loading indicator */}
         {loading && (
           <View style={styles.loadingContainer}>
             <ActivityIndicator color="#10b981" size="small" />
@@ -288,12 +296,10 @@ const Recuperacion2Screen = ({ navigation, route }) => {
           </View>
         )}
 
-        {/* Timer */}
         <Text style={styles.timer}>
           {formatTime(timeLeft)}
         </Text>
 
-        {/* Reenviar */}
         <View style={styles.resendContainer}>
           <Text style={styles.resendText}>
             ¿No recibiste nada?{' '}
@@ -307,13 +313,11 @@ const Recuperacion2Screen = ({ navigation, route }) => {
         </View>
       </View>
 
-      {/* Navegación inferior */}
       <View style={styles.navigation}>
         <TouchableOpacity onPress={handleBack} disabled={loading}>
           <Text style={[styles.navButton, loading && styles.navButtonDisabled]}>Atrás</Text>
         </TouchableOpacity>
         
-        {/* Indicadores de progreso */}
         <View style={styles.progressContainer}>
           <View style={styles.progressDot} />
           <View style={[styles.progressBar, styles.progressActive]} />
@@ -334,7 +338,6 @@ const Recuperacion2Screen = ({ navigation, route }) => {
         </TouchableOpacity>
       </View>
 
-      {/* Footer */}
       <View style={styles.footer}>
         <Text style={styles.footerText}>
           Rivera distribuidora y{'\n'}
