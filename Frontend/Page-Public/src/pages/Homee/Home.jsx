@@ -4,8 +4,12 @@ import './Home.css';
 import logo from '../../assets/image.png';
 import Equipo from "../../Images/Imagen1.jpg";
 import Nosotros from "../../Images/Imagen2.jpg";
+import Equipo3 from "../../Images/Imagen12.jpg";
+import Equipo4 from "../../Images/Imagen15.jpg";
+import Equipo5 from "../../Images/Imagen16.jpg";
+import Equipo7 from "../../Images/Imagen18.jpg";
 import Ceo from "../../Images/Imagen4.jpg";
-import Conoce from "../../Images/Imagen6.jpg";
+import Conoce from "../../Images/imagen14.jpg";
 
 
 const EmpresaPage = () => {
@@ -23,11 +27,10 @@ const EmpresaPage = () => {
   
   const images = [
     Equipo,
-    Equipo,
-    Equipo,
-    Equipo,
-    Equipo,
-    Equipo
+    Equipo3,
+    Equipo4,
+    Equipo5,
+    Equipo7
   ];
 
   useEffect(() => {
