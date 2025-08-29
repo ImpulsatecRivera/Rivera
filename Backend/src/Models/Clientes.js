@@ -41,6 +41,10 @@ const clienteSchema = new Schema({
     type: String,      // Contraseña hasheada para acceso al sistema
     required: true     // Campo obligatorio para autenticación
   },
+  googleId: { type: String, unique: true, sparse: true },
+  profilePicture: { type: String },
+  isGoogleUser: { type: Boolean, default: false },
+  emailVerified: { type: Boolean, default: false },
   
   // Información de contacto físico
   phone: {
