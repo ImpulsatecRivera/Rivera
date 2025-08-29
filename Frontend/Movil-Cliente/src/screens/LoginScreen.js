@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -10,123 +10,244 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import * as AuthSession from 'expo-auth-session';
+import * as WebBrowser from 'expo-web-browser';
+import Constants from 'expo-constants';
 import CustomInput from '../components/CustomInput';
 import CustomButton from '../components/CustomButton';
 import SocialButton from '../components/SocialButton';
-import { useAuth } from '../context/authContext'; // <-- CAMBIO 1: ruta corregida
+import { useAuth } from '../context/authContext';
+
+// Necesario para iOS
+WebBrowser.maybeCompleteAuthSession();
 
 const LoginScreen = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false); // 🆕 NUEVO ESTADO
   const navigation = useNavigation();
   const { login } = useAuth();
 
-  // 🔐 FUNCIÓN DE LOGIN
-  // En tu LoginScreen.js, agrega este debugging:
+  // 🆕 CONFIGURACIÓN DE GOOGLE AUTH
+  const googleClientId = Constants.expoConfig?.extra?.googleClientId || 
+                         'TU_GOOGLE_CLIENT_ID.apps.googleusercontent.com';
 
-  // Función de login con debugging mejorado
-const handleLogin = async () => {
-  // Validaciones básicas
-  if (!email.trim()) {
-    Alert.alert('Error', 'Por favor ingresa tu email');
-    return;
-  }
-  
-  if (!password.trim()) {
-    Alert.alert('Error', 'Por favor ingresa tu contraseña');
-    return;
-  }
-
-  setIsLoading(true);
-
-  try {
-    const loginData = {
-      email: email.trim().toLowerCase(), // 🔧 Asegurar minúsculas
-      password: password.trim(),
-    };
-
-    console.log('🔐 Iniciando proceso de login...');
-    console.log('📧 Email limpio:', loginData.email);
-    console.log('🔒 Password length:', loginData.password.length);
-    console.log('🔒 Password (primeros 3 chars):', loginData.password.substring(0, 3) + '***');
-    
-    // 🔧 DEBUGGING ADICIONAL - Verificar caracteres especiales
-    console.log('🔍 Email tiene espacios?', loginData.email.includes(' '));
-    console.log('🔍 Password tiene espacios al inicio/final?', password !== password.trim());
-    console.log('🔍 Password caracteres especiales:', /[^a-zA-Z0-9]/.test(loginData.password));
-    
-    // 🔧 Mostrar cada carácter del password para debugging
-    console.log('🔍 Password char codes:', [...loginData.password].map(char => ({char, code: char.charCodeAt(0)})));
-    
-    const response = await fetch('https://riveraproject-5.onrender.com/api/login', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json', // 🔧 Header adicional
+  const [request, response, promptAsync] = AuthSession.useAuthRequest(
+    {
+      clientId: googleClientId,
+      scopes: ['openid', 'profile', 'email'],
+      additionalParameters: {},
+      extraParams: {
+        nonce: Math.random().toString(36).substring(2, 15),
       },
-      body: JSON.stringify(loginData),
-    });
+    },
+    {
+      authorizationEndpoint: 'https://accounts.google.com/oauth/authorize',
+    }
+  );
 
-    console.log('📡 Status de respuesta:', response.status);
-    console.log('📡 Status text:', response.statusText);
+  // 🆕 MANEJAR RESPUESTA DE GOOGLE
+  useEffect(() => {
+    if (response?.type === 'success') {
+      const { authentication } = response;
+      if (authentication?.accessToken) {
+        handleGoogleAuthSuccess(authentication.accessToken);
+      }
+    } else if (response?.type === 'error') {
+      console.error('Error de Google Auth:', response.error);
+      Alert.alert('Error', 'Error en la autenticación con Google');
+      setIsGoogleLoading(false);
+    } else if (response?.type === 'dismiss') {
+      setIsGoogleLoading(false);
+    }
+  }, [response]);
 
-    const data = await response.json();
-    console.log('📡 Respuesta completa del servidor:');
-    console.log(JSON.stringify(data, null, 2));
-
-    if (response.ok && data.message === "Inicio de sesión completado") {
-      console.log('✅ Login exitoso');
-      const result = await login({
-        token: data.token,
-        user: data.user,
-        userType: data.userType,
+  // 🆕 FUNCIÓN PARA PROCESAR ÉXITO DE GOOGLE
+  const handleGoogleAuthSuccess = async (accessToken) => {
+    try {
+      console.log('🔍 Obteniendo información de Google...');
+      
+      const userResponse = await fetch('https://www.googleapis.com/userinfo/v2/me', {
+        headers: { Authorization: `Bearer ${accessToken}` },
       });
 
-      if (!result?.success) {
-        Alert.alert('Error', result?.error || 'No se pudo guardar la sesión');
-        return;
+      if (!userResponse.ok) {
+        throw new Error('Error al obtener información de Google');
       }
 
-      navigation.reset({
-        index: 0,
-        routes: [{ name: 'Main' }],
+      const googleUser = await userResponse.json();
+      console.log('👤 Usuario de Google:', googleUser);
+
+      await loginWithGoogle(googleUser, accessToken);
+
+    } catch (error) {
+      console.error('❌ Error en Google Auth:', error);
+      Alert.alert('Error', 'No se pudo completar el login con Google');
+      setIsGoogleLoading(false);
+    }
+  };
+
+  // 🆕 FUNCIÓN PARA LOGIN CON GOOGLE
+  const loginWithGoogle = async (googleUser, googleToken) => {
+    try {
+      console.log('🚀 Enviando datos de Google al backend...');
+      
+      const response = await fetch('https://riveraproject-5.onrender.com/api/login/google', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify({
+          googleToken,
+          googleUser,
+        }),
       });
 
-    } else {
-      console.log('❌ Login fallido');
-      console.log('📄 Mensaje específico:', data.message);
-      console.log('🔢 Intentos restantes:', data.attemptsRemaining);
-      console.log('🚫 Está bloqueado:', data.blocked);
-      
-      // 🔧 DEBUGGING: Mostrar más información del error
-      if (data.debug) {
-        console.log('🔍 Debug del servidor:', data.debug);
+      console.log('📡 Status de respuesta Google:', response.status);
+      const data = await response.json();
+      console.log('📡 Respuesta del servidor Google:', data);
+
+      if (response.ok && data.token) {
+        console.log('✅ Login con Google exitoso');
+        
+        const result = await login({
+          token: data.token,
+          user: data.user,
+          userType: data.userType,
+        });
+
+        if (!result?.success) {
+          Alert.alert('Error', result?.error || 'No se pudo guardar la sesión');
+          return;
+        }
+
+        navigation.reset({
+          index: 0,
+          routes: [{ name: 'Main' }],
+        });
+
+      } else {
+        console.log('❌ Error en login con Google');
+        Alert.alert('Error', data.message || 'Error en el login con Google');
       }
-      
-      Alert.alert('❌ Error de Login', data.message);
+
+    } catch (error) {
+      console.error('❌ Error enviando a backend:', error);
+      Alert.alert('Error', 'Error de conexión con el servidor');
+    } finally {
+      setIsGoogleLoading(false);
+    }
+  };
+
+  // TU FUNCIÓN DE LOGIN ORIGINAL (sin cambios)
+  const handleLogin = async () => {
+    if (!email.trim()) {
+      Alert.alert('Error', 'Por favor ingresa tu email');
+      return;
+    }
+    
+    if (!password.trim()) {
+      Alert.alert('Error', 'Por favor ingresa tu contraseña');
+      return;
     }
 
-  } catch (error) {
-    console.error('❌ Error en login:', error);
-    console.error('❌ Error stack:', error.stack);
-    Alert.alert('❌ Error', 'Error de conexión: ' + error.message);
-  } finally {
-    setIsLoading(false);
-  }
-};
+    setIsLoading(true);
+
+    try {
+      const loginData = {
+        email: email.trim().toLowerCase(),
+        password: password.trim(),
+      };
+
+      console.log('🔐 Iniciando proceso de login...');
+      console.log('📧 Email limpio:', loginData.email);
+      console.log('🔒 Password length:', loginData.password.length);
+      console.log('🔒 Password (primeros 3 chars):', loginData.password.substring(0, 3) + '***');
+      
+      console.log('🔍 Email tiene espacios?', loginData.email.includes(' '));
+      console.log('🔍 Password tiene espacios al inicio/final?', password !== password.trim());
+      console.log('🔍 Password caracteres especiales:', /[^a-zA-Z0-9]/.test(loginData.password));
+      
+      console.log('🔍 Password char codes:', [...loginData.password].map(char => ({char, code: char.charCodeAt(0)})));
+      
+      const response = await fetch('https://riveraproject-5.onrender.com/api/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify(loginData),
+      });
+
+      console.log('📡 Status de respuesta:', response.status);
+      console.log('📡 Status text:', response.statusText);
+
+      const data = await response.json();
+      console.log('📡 Respuesta completa del servidor:');
+      console.log(JSON.stringify(data, null, 2));
+
+      if (response.ok && data.message === "Inicio de sesión completado") {
+        console.log('✅ Login exitoso');
+        const result = await login({
+          token: data.token,
+          user: data.user,
+          userType: data.userType,
+        });
+
+        if (!result?.success) {
+          Alert.alert('Error', result?.error || 'No se pudo guardar la sesión');
+          return;
+        }
+
+        navigation.reset({
+          index: 0,
+          routes: [{ name: 'Main' }],
+        });
+
+      } else {
+        console.log('❌ Login fallido');
+        console.log('📄 Mensaje específico:', data.message);
+        console.log('🔢 Intentos restantes:', data.attemptsRemaining);
+        console.log('🚫 Está bloqueado:', data.blocked);
+        
+        if (data.debug) {
+          console.log('🔍 Debug del servidor:', data.debug);
+        }
+        
+        Alert.alert('❌ Error de Login', data.message);
+      }
+
+    } catch (error) {
+      console.error('❌ Error en login:', error);
+      console.error('❌ Error stack:', error.stack);
+      Alert.alert('❌ Error', 'Error de conexión: ' + error.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleForgotPassword = () => {
     console.log('Forgot password pressed');
-    // ✅ RESTAURAR ESTA LÍNEA:
     navigation.navigate('InicioRecuperar');
   };
 
-  const handleGoogleLogin = () => {
-    Alert.alert(
-      'Próximamente',
-      'El login con Google estará disponible pronto'
-    );
+  // 🔄 FUNCIÓN GOOGLE LOGIN ACTUALIZADA
+  const handleGoogleLogin = async () => {
+    if (!request) {
+      Alert.alert('Error', 'Google Login no está configurado correctamente');
+      return;
+    }
+
+    try {
+      setIsGoogleLoading(true);
+      await promptAsync();
+    } catch (error) {
+      console.error('Error iniciando Google Login:', error);
+      Alert.alert('Error', 'Error al iniciar Google Login');
+      setIsGoogleLoading(false);
+    }
   };
 
   const handleFacebookLogin = () => {
@@ -145,11 +266,9 @@ const handleLogin = async () => {
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.content}>
-          {/* Header */}
           <Text style={styles.title}>Bienvenido de vuelta!</Text>
           <Text style={styles.subtitle}>Acceso exclusivo para clientes</Text>
 
-          {/* Form */}
           <View style={styles.form}>
             <CustomInput
               placeholder="Correo electrónico"
@@ -158,7 +277,7 @@ const handleLogin = async () => {
               iconName="person"
               keyboardType="email-address"
               autoCapitalize="none"
-              editable={!isLoading}
+              editable={!isLoading && !isGoogleLoading} // 🔄 ACTUALIZADO
             />
 
             <CustomInput
@@ -167,13 +286,13 @@ const handleLogin = async () => {
               onChangeText={setPassword}
               isPassword={true}
               iconName="lock"
-              editable={!isLoading}
+              editable={!isLoading && !isGoogleLoading} // 🔄 ACTUALIZADO
             />
 
             <TouchableOpacity 
               style={styles.forgotPassword}
               onPress={handleForgotPassword}
-              disabled={isLoading}
+              disabled={isLoading || isGoogleLoading} // 🔄 ACTUALIZADO
             >
               <Text style={styles.forgotPasswordText}>
                 ¿Olvidaste tu contraseña?
@@ -184,10 +303,9 @@ const handleLogin = async () => {
               title={isLoading ? "Iniciando sesión..." : "Login"}
               onPress={handleLogin}
               backgroundColor={isLoading ? "#A5D6A7" : "#4CAF50"}
-              disabled={isLoading}
+              disabled={isLoading || isGoogleLoading} // 🔄 ACTUALIZADO
             />
 
-            {/* Loading indicator */}
             {isLoading && (
               <View style={styles.loadingContainer}>
                 <ActivityIndicator size="small" color="#4CAF50" />
@@ -196,7 +314,6 @@ const handleLogin = async () => {
             )}
           </View>
 
-          {/* Social Login */}
           {!isLoading && (
             <View style={styles.socialContainer}>
               <Text style={styles.socialText}>O inicia sesión con</Text>
@@ -204,18 +321,27 @@ const handleLogin = async () => {
               <View style={styles.socialButtons}>
                 <SocialButton 
                   type="google" 
-                  onPress={handleGoogleLogin} 
+                  onPress={handleGoogleLogin}
+                  disabled={isGoogleLoading || !request} // 🆕 AGREGADO
                 />
                 <SocialButton 
                   type="facebook" 
-                  onPress={handleFacebookLogin} 
+                  onPress={handleFacebookLogin}
+                  disabled={isLoading || isGoogleLoading} // 🆕 AGREGADO
                 />
               </View>
+
+              {/* 🆕 GOOGLE LOADING */}
+              {isGoogleLoading && (
+                <View style={styles.loadingContainer}>
+                  <ActivityIndicator size="small" color="#DB4437" />
+                  <Text style={styles.loadingText}>Conectando con Google...</Text>
+                </View>
+              )}
             </View>
           )}
 
-          {/* Register Link */}
-          {!isLoading && (
+          {!isLoading && !isGoogleLoading && ( // 🔄 ACTUALIZADO
             <View style={styles.registerContainer}>
               <Text style={styles.registerText}>¿No tienes cuenta? </Text>
               <TouchableOpacity onPress={handleRegister}>
@@ -229,6 +355,7 @@ const handleLogin = async () => {
   );
 };
 
+// TUS ESTILOS ORIGINALES (sin cambios)
 const styles = StyleSheet.create({
   container: {
     flex: 1,
