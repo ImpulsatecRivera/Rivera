@@ -58,127 +58,65 @@ const setAuthCookie = (res, token) => {
 
 // ===================== 🆕 GOOGLE LOGIN =====================
 LoginController.GoogleLogin = async (req, res) => {
-  const { googleToken, googleUser } = req.body;
-  
-  console.log("🔍 [GOOGLE LOGIN] Iniciando login con Google");
-  console.log("👤 Usuario de Google:", googleUser.email);
+  const { googleToken } = req.body;
 
   try {
-    // Validar datos de Google
-    if (!googleToken || !googleUser || !googleUser.email) {
-      return res.status(400).json({
-        message: "Datos de Google incompletos"
-      });
+    if (!googleToken) {
+      return res.status(400).json({ error: "Token de Google requerido" });
     }
 
-    const email = googleUser.email.toLowerCase();
-    let userFound;
-    let userType = "Cliente"; // Por defecto será cliente
-    let isNewUser = false;
-
-    // Limpiar intentos fallidos si los hubiera (Google auth es confiable)
-    clearFailedAttempts(email);
-
-    // 1) Buscar en todas las colecciones por email
-    // Primero buscar en Empleados
-    userFound = await EmpleadoModel.findOne({ email });
-    if (userFound) {
-      userType = "Empleado";
-      console.log("✅ Usuario encontrado como Empleado");
-    } else {
-      // Buscar en Motoristas
-      userFound = await MotoristaModel.findOne({ email });
-      if (userFound) {
-        userType = "Motorista";
-        console.log("✅ Usuario encontrado como Motorista");
-      } else {
-        // Buscar en Clientes
-        userFound = await ClienteModel.findOne({ email });
-        if (userFound) {
-          userType = "Cliente";
-          console.log("✅ Usuario encontrado como Cliente existente");
-          
-          // Actualizar información del cliente con datos de Google
-          userFound.firstName = googleUser.given_name || userFound.firstName;
-          userFound.lastName = googleUser.family_name || userFound.lastName;
-          userFound.googleId = googleUser.id;
-          userFound.profilePicture = googleUser.picture || userFound.profilePicture;
-          
-          await userFound.save();
-          console.log("🔄 Información del cliente actualizada con datos de Google");
-        } else {
-          // Usuario no existe, crear nuevo cliente
-          console.log("🆕 Creando nuevo cliente desde Google");
-          isNewUser = true;
-          
-          const newClient = new ClienteModel({
-            email: email,
-            firstName: googleUser.given_name || 'Usuario',
-            lastName: googleUser.family_name || 'Google',
-            password: await bcryptjs.hash(googleUser.id + Date.now(), 10), // Password temporal
-            googleId: googleUser.id,
-            profilePicture: googleUser.picture || null,
-            isGoogleUser: true,
-            emailVerified: googleUser.verified_email || false,
-            // Campos adicionales que puede tener tu modelo Cliente
-            telefono: null,
-            direccion: null,
-            fechaNacimiento: null,
-            createdAt: new Date(),
-          });
-
-          userFound = await newClient.save();
-          userType = "Cliente";
-          console.log("✅ Nuevo cliente creado:", userFound._id);
-        }
-      }
-    }
-
-    // 2) Generar JWT token
-    if (!config.JWT.secret) {
-      console.error("❌ Falta JWT secret en config.js");
-      return res.status(500).json({ message: "Error del servidor: JWT" });
-    }
-
-    jwt.sign(
-      { id: userFound._id, userType },
-      config.JWT.secret,
-      { expiresIn: config.JWT.expiresIn },
-      (err, token) => {
-        if (err) {
-          console.error("❌ Error firmando JWT:", err);
-          return res.status(500).json({ message: "Error al generar token" });
-        }
-
-        // Configurar cookie
-        setAuthCookie(res, token);
-
-        // Respuesta exitosa
-        console.log("✅ Login con Google exitoso");
-        return res.status(200).json({
-          message: isNewUser ? "Cuenta creada y login completado" : "Inicio de sesión con Google completado",
-          userType,
-          user: {
-            id: userFound._id,
-            email: userFound.email,
-            nombre: userFound.firstName || userFound.nombre || userFound.name || googleUser.name,
-            apellido: userFound.lastName || null,
-            profilePicture: userFound.profilePicture || googleUser.picture,
-            userType,
-            isGoogleUser: true,
-            isNewUser
-          },
-          token,
-        });
-      }
-    );
-
-  } catch (error) {
-    console.error("💥 [GOOGLE LOGIN] Error:", error);
-    return res.status(500).json({ 
-      message: "Error interno del servidor en login con Google",
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    // Verificar el token con Google
+    const ticket = await client.verifyIdToken({
+      idToken: googleToken,
+      audience: config.GOOGLE.CLIENT_ID,
     });
+
+    const payload = ticket.getPayload();
+    const { email, name, picture } = payload;
+
+    if (!email) {
+      return res.status(400).json({ error: "No se pudo obtener el email" });
+    }
+
+    // Buscar usuario en empleados o clientes
+    let user = await EmpleadoModel.findOne({ email });
+    let role = "empleado";
+
+    if (!user) {
+      user = await ClienteModel.findOne({ email });
+      role = "cliente";
+    }
+
+    // Si no existe, creamos un cliente automáticamente
+    if (!user) {
+      const hashedPassword = await bcryptjs.hash(
+        Math.random().toString(36).slice(-8),
+        10
+      );
+      user = await ClienteModel.create({
+        nombre: name,
+        email,
+        img: picture,
+        password: hashedPassword,
+      });
+      role = "cliente";
+    }
+
+    // Generar token JWT
+    const token = generateToken({ id: user._id, role });
+
+    // Configurar cookie segura
+    res.cookie("token", token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: process.env.NODE_ENV === "production" ? "None" : "Lax",
+      partitioned: process.env.NODE_ENV === "production",
+    });
+
+    return res.json({ message: "Login con Google exitoso", role });
+  } catch (error) {
+    console.error("Error en GoogleLogin:", error);
+    return res.status(500).json({ error: "Error al iniciar sesión con Google" });
   }
 };
 
