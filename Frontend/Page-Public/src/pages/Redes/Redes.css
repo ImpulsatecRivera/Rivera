@@ -693,7 +693,7 @@
 /* Hero Section */
 .hero-redes {
   min-height: 100vh;
-  background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%);
+  background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
   position: relative;
   display: flex;
   align-items: center;
@@ -779,7 +779,7 @@
 .hero-title {
   font-size: 4rem;
   font-weight: 900;
-  color: white;
+  color: rgb(0, 0, 0);
   margin-bottom: 1.5rem;
   line-height: 1.1;
 }
@@ -793,7 +793,7 @@
 
 .hero-subtitle {
   font-size: 1.25rem;
-  color: rgba(255, 255, 255, 0.8);
+  color: #64748b;
   margin-bottom: 2.5rem;
   line-height: 1.6;
 }
