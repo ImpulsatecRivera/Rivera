@@ -15,6 +15,7 @@ import CustomInput from '../components/CustomInput';
 import CustomButton from '../components/CustomButton';
 import SocialButton from '../components/SocialButton';
 import { useAuth } from '../context/authContext';
+import * as Google from "expo-auth-session/providers/google"
 
 // ❌ NO IMPORTES ESTO EN REACT NATIVE:
 // import jwt from "jsonwebtoken"; // ESTO CAUSA EL ERROR
@@ -34,58 +35,9 @@ const LoginScreen = () => {
   const redirectUri = 'https://auth.expo.io/@fitoDev/movil-cliente';
 
   // Google OAuth con OpenID Connect
-  const handleGoogleLogin = async () => {
-    try {
-      setIsGoogleLoading(true);
-
-      const state = Math.random().toString(36).substring(2, 15);
-      const nonce = Math.random().toString(36).substring(2, 15);
-
-      const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
-        `client_id=${googleClientId}&` +
-        `redirect_uri=${encodeURIComponent(redirectUri)}&` +
-        `response_type=id_token%20token&` +
-        `scope=openid%20profile%20email&` +
-        `state=${state}&` +
-        `nonce=${nonce}&` +
-        `prompt=consent`;
-
-      console.log('🔗 URL OAuth construida:', authUrl);
-
-      const result = await WebBrowser.openAuthSessionAsync(authUrl, redirectUri);
-      console.log('📱 Resultado de WebBrowser:', result);
-
-      if (result.type === 'success' && result.url) {
-        const url = result.url;
-
-        const accessTokenMatch = url.match(/access_token=([^&]*)/);
-        const idTokenMatch = url.match(/id_token=([^&]*)/);
-
-        if (accessTokenMatch && idTokenMatch) {
-          const accessToken = accessTokenMatch[1];
-          const idToken = idTokenMatch[1];
-
-          console.log('✅ Tokens extraídos:');
-          console.log('Access Token:', accessToken);
-          console.log('ID Token:', idToken);
-
-          // ✅ CAMBIO PRINCIPAL: Usar directamente el idToken
-          await handleGoogleSuccess(idToken);
-        } else {
-          console.error('❌ No se encontraron tokens en la URL:', url);
-          Alert.alert('Error', 'No se pudo obtener los tokens de autenticación');
-          setIsGoogleLoading(false);
-        }
-      } else {
-        console.log('🚫 Usuario canceló o error en OAuth');
-        setIsGoogleLoading(false);
-      }
-    } catch (error) {
-      console.error('❌ Error en Google Login:', error);
-      Alert.alert('Error', 'No se pudo iniciar el login con Google');
-      setIsGoogleLoading(false);
-    }
-  };
+  const [request,response,promptAsync] = Google.useAuthRequest({
+    androidClientId: '1035488574954-odb33eqsunic4n3kqog1sfbuu06j6djp.apps.googleusercontent.com'
+  })
 
   // ✅ MÉTODO SIMPLIFICADO - Solo necesita el idToken
   const handleGoogleSuccess = async (idToken) => {
@@ -335,7 +287,9 @@ const LoginScreen = () => {
               <View style={styles.socialButtons}>
                 <SocialButton
                   type="google"
-                  onPress={handleGoogleLogin}
+                  onPress={promptAsync().catch((e)=>{
+                    console.error("error")
+                  })}
                   disabled={isGoogleLoading}
                 />
                 <SocialButton
