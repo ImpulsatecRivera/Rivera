@@ -23,19 +23,7 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.movilcliente.app",
-      "intentFilters": [
-        {
-          "action": "VIEW",
-          "autoVerify": true,
-          "category": ["BROWSABLE", "DEFAULT"],
-          "data": [
-            {
-              "scheme": "movilcliente"
-            }
-          ]
-        }
-      ]
+      "package": "com.movilcliente.app"
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -44,7 +32,10 @@
       "expo-web-browser"
     ],
     "extra": {
-      "googleClientId": "1035488574954-2agjnnugu7d1lnhen68e6n06lvfdip3u.apps.googleusercontent.com"
+      "googleClientId": "1035488574954-2agjnnugu7d1lnhen68e6n06lvfdip3u.apps.googleusercontent.com",
+      "eas": {
+        "projectId": "b3d7872f-24ff-40b1-a103-a7ec47686323"
+      }
     }
   }
 }
