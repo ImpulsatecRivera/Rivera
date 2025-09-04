@@ -12,7 +12,7 @@ import Ceo from "../../Images/Imagen4.jpg";
 import Conoce from "../../Images/imagen14.jpg";
 
 
-const EmpresaPage = () => {
+const Home = () => {
   const [currentSlide, setCurrentSlide] = useState(0);
   
   // Estados para el formulario del footer
@@ -195,12 +195,12 @@ const EmpresaPage = () => {
                 <h3 className="text-lg font-semibold text-gray-800 mb-4">Información</h3>
                 <ul className="space-y-2 text-sm text-gray-600">
                   <li>
-                    <a href="/quienes-somos" className="hover:text-teal-600 transition-colors">
+                    <a href="/" className="hover:text-teal-600 transition-colors">
                       Quienes somos
                     </a>
                   </li>
                   <li>
-                    <a href="/que-hacen" className="hover:text-teal-600 transition-colors">
+                    <a href="/Dedicacion" className="hover:text-teal-600 transition-colors">
                       Nuestra Dedicación
                     </a>
                   </li>
@@ -298,4 +298,4 @@ const EmpresaPage = () => {
   );
 };
 
-export default EmpresaPage;
+export default Home;

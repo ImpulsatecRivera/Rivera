@@ -256,7 +256,7 @@ const RedesSociales = () => {
               </div>
             </div>
             
-            <div className="content-item instagram-content" onClick={() => window.open('https://www.instagram.com/transporte.rivera/', '_blank')}>
+            <div className="content-item instagram-content" onClick={() => window.open('https://www.instagram.com/riveradistribuidoraytransporte?utm_source=ig_web_button_share_sheet&igsh=ZDNlZDc0MzIxNw==', '_blank')}>
               <div className="content-platform">
                 <Instagram className="platform-icon" />
                 <span>Instagram</span>
@@ -309,7 +309,7 @@ const RedesSociales = () => {
                 <Facebook />
                 <span>Facebook</span>
               </a>
-              <a href="https://www.instagram.com/transporte.rivera/" target="_blank" rel="noopener noreferrer" className="cta-social-btn instagram">
+              <a href="https://www.instagram.com/riveradistribuidoraytransporte?utm_source=ig_web_button_share_sheet&igsh=ZDNlZDc0MzIxNw==" target="_blank" rel="noopener noreferrer" className="cta-social-btn instagram">
                 <Instagram />
                 <span>Instagram</span>
               </a>
@@ -408,7 +408,7 @@ const RedesSociales = () => {
                 </a>
                 
                 <a 
-                  href="https://www.instagram.com/transporte.rivera/"
+                  href="https://www.instagram.com/riveradistribuidoraytransporte?utm_source=ig_web_button_share_sheet&igsh=ZDNlZDc0MzIxNw=="
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center justify-center w-10 h-10 bg-gray-300 rounded-full text-gray-600 hover:bg-teal-100 hover:text-teal-600 transition-all duration-300"
@@ -446,3 +446,5 @@ const RedesSociales = () => {
 };
 
 export default RedesSociales;
+
+
