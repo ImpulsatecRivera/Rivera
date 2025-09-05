@@ -20,4 +20,6 @@ router.get('/:id', motoristasCon.getById);
 
 router.get("/viajes-programados/todos", motoristasCon.getAllViajesProgramados);
 router.get("/:id/viajes-programados", motoristasCon.getViajesProgramados);
+// Agregar esta línea a tus rutas
+router.get('/:id/historial-completo', motoristasCon.getHistorialCompleto);
 export default router;
