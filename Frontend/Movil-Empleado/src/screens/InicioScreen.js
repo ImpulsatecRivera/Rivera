@@ -10,13 +10,13 @@ import GreetingSection from '../components/GreetingSection';
 import ServiceCard from '../components/ServiceCard';
 import StatsCard from '../components/StatsCard';
 import DestinationCard from '../components/DestinationCard';
-import LoadingScreen from '../components/LoadingScreen'; // Componente de carga opcional
+import LoadingScreen from '../components/LoadingScreen';
 
 const InicioScreen = ({ navigation }) => {
   const { profile, loading: profileLoading } = useProfile();
   
   // Usar el motoristaId del perfil del usuario
-  const motoristaId = profile?.id || profile?._id; // Ajusta según tu estructura de datos
+  const motoristaId = profile?.id || profile?._id;
   
   const { 
     trips, 
@@ -26,7 +26,8 @@ const InicioScreen = ({ navigation }) => {
     proximosDestinos,
     refrescarViajes,
     getViajesHoy,
-    getEstadisticas
+    getEstadisticas,
+    viajesPorDia // Los viajes ya agrupados por día desde el backend
   } = useTrips(motoristaId);
 
   const loading = profileLoading || tripsLoading;
@@ -68,13 +69,37 @@ const InicioScreen = ({ navigation }) => {
     refrescarViajes();
   };
 
-  // Obtener estadísticas
+  // Obtener estadísticas y viajes de hoy
   const estadisticas = getEstadisticas();
   const viajesHoy = getViajesHoy();
 
+  // Función para formatear las fechas de manera más amigable
+  const formatearFechaAmigable = (fechaString) => {
+    const fecha = new Date(fechaString + 'T00:00:00');
+    const hoy = new Date();
+    const mañana = new Date();
+    mañana.setDate(hoy.getDate() + 1);
+    
+    hoy.setHours(0, 0, 0, 0);
+    mañana.setHours(0, 0, 0, 0);
+    fecha.setHours(0, 0, 0, 0);
+
+    if (fecha.getTime() === hoy.getTime()) {
+      return 'Hoy';
+    } else if (fecha.getTime() === mañana.getTime()) {
+      return 'Mañana';
+    } else {
+      return fecha.toLocaleDateString('es-ES', {
+        weekday: 'long',
+        day: 'numeric',
+        month: 'long'
+      });
+    }
+  };
+
   // Mostrar error si hay problemas de conexión
   useEffect(() => {
-    if (error) {
+    if (error && !trips.length) {
       Alert.alert(
         'Error de conexión',
         'No se pudieron cargar los viajes. Verifica tu conexión a internet.',
@@ -86,11 +111,22 @@ const InicioScreen = ({ navigation }) => {
     }
   }, [error]);
 
+  // Debug: Mostrar información en consola
+  useEffect(() => {
+    console.log('=== DEBUG VIAJES ===');
+    console.log('motoristaId:', motoristaId);
+    console.log('loading:', loading);
+    console.log('trips length:', trips.length);
+    console.log('viajesPorDia:', viajesPorDia);
+    console.log('error:', error);
+    console.log('===================');
+  }, [motoristaId, loading, trips, viajesPorDia, error]);
+
   // Pantalla de carga inicial
-  if (loading && trips.length === 0) {
+  if (loading && (!trips || trips.length === 0)) {
     return (
       <View style={styles.loadingContainer}>
-        <LoadingScreen message="Cargando tus viajes..." />
+        <LoadingScreen message="Cargando tus viajes asignados..." />
       </View>
     );
   }
@@ -108,14 +144,34 @@ const InicioScreen = ({ navigation }) => {
         <LogoHeader />
         
         <GreetingSection
-          name={getFirstName(profile.name || profile.nombre)}
+          name={getFirstName(profile?.name || profile?.nombre)}
           subtitle={
             viajesHoy.length > 0 
               ? `Tienes ${viajesHoy.length} viaje${viajesHoy.length > 1 ? 's' : ''} para hoy`
-              : "No tienes viajes programados para hoy"
+              : totalTrips > 0 
+                ? `Tienes ${totalTrips} viajes programados`
+                : "No tienes viajes programados"
           }
-          avatarText={getInitials(profile.name || profile.nombre)}
+          avatarText={getInitials(profile?.name || profile?.nombre)}
         />
+
+        {/* Mostrar información de conexión para debug */}
+        <View style={styles.debugInfo}>
+          <Text style={styles.debugText}>
+            🔄 Estado: {loading ? 'Cargando...' : 'Conectado'}
+          </Text>
+          <Text style={styles.debugText}>
+            📊 Viajes totales: {totalTrips}
+          </Text>
+          <Text style={styles.debugText}>
+            📅 Días con viajes: {viajesPorDia ? viajesPorDia.length : 0}
+          </Text>
+          {error && (
+            <Text style={styles.debugError}>
+              ❌ Error: {error}
+            </Text>
+          )}
+        </View>
 
         {/* Mostrar error si existe pero hay datos cached */}
         {error && trips.length > 0 && (
@@ -126,49 +182,90 @@ const InicioScreen = ({ navigation }) => {
           </View>
         )}
 
-        {/* Service Cards - Mostrar viajes de hoy primero */}
-        <View style={styles.serviceCards}>
-          {viajesHoy.length > 0 ? (
-            <>
-              <Text style={styles.sectionSubtitle}>Viajes de hoy</Text>
-              {viajesHoy.map((trip) => (
-                <ServiceCard 
-                  key={trip.id}
-                  trip={trip}
-                  onPress={handleTripPress}
-                />
-              ))}
-            </>
-          ) : (
-            <View style={styles.noTripsContainer}>
-              <Text style={styles.noTripsIcon}>📅</Text>
-              <Text style={styles.noTripsText}>No hay viajes programados para hoy</Text>
-              <Text style={styles.noTripsSubtext}>
-                {proximosDestinos.length > 0 
-                  ? 'Revisa tus próximos destinos abajo'
-                  : 'Contacta a tu supervisor para más información'
-                }
-              </Text>
-            </View>
-          )}
-        </View>
+        {/* VIAJES POR DÍA - Mostrar TODOS los viajes asignados */}
+        {viajesPorDia && viajesPorDia.length > 0 ? (
+          <View style={styles.viajesContainer}>
+            <Text style={styles.mainTitle}>Tus viajes asignados</Text>
+            
+            {viajesPorDia.map((dia, diaIndex) => (
+              <View key={dia.fecha || diaIndex} style={styles.diaContainer}>
+                <View style={styles.diaHeader}>
+                  <Text style={styles.fechaTitulo}>
+                    {formatearFechaAmigable(dia.fecha)}
+                  </Text>
+                  <Text style={styles.cantidadViajes}>
+                    {dia.viajes ? dia.viajes.length : 0} viaje{(dia.viajes && dia.viajes.length !== 1) ? 's' : ''}
+                  </Text>
+                </View>
 
-        {/* Estadísticas */}
-        <View style={styles.statsContainer}>
-          <StatsCard
-            number={estadisticas.pendientes}
-            label="Viajes pendientes"
-            color="#FF9800"
-          />
-          <StatsCard
-            number={totalTrips}
-            label="Viajes este mes"
-            color="#4CAF50"
-          />
-        </View>
+                {/* Mostrar cada viaje del día */}
+                {dia.viajes && dia.viajes.length > 0 ? (
+                  dia.viajes.map((viaje, viajeIndex) => {
+                    // Transformar el viaje para ServiceCard
+                    const viajeParaCard = {
+                      id: viaje._id || `${dia.fecha}-${viajeIndex}`,
+                      tipo: `${viaje.origen} → ${viaje.destino}`,
+                      subtitulo: viaje.descripcion || viaje.carga || 'Transporte de carga',
+                      fecha: formatearFechaAmigable(dia.fecha),
+                      hora: new Date(viaje.fechaSalida).toLocaleTimeString('es-ES', {
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      }),
+                      estado: viaje.estado,
+                      // Datos completos para InfoViaje
+                      ...viaje
+                    };
 
-        {/* Próximos Destinos */}
-        {proximosDestinos.length > 0 && (
+                    return (
+                      <ServiceCard 
+                        key={viajeParaCard.id}
+                        trip={viajeParaCard}
+                        onPress={handleTripPress}
+                      />
+                    );
+                  })
+                ) : (
+                  <View style={styles.noViajesDelDia}>
+                    <Text style={styles.noViajesDelDiaText}>
+                      No hay viajes para este día
+                    </Text>
+                  </View>
+                )}
+              </View>
+            ))}
+          </View>
+        ) : (
+          /* Mostrar si NO hay viajes asignados */
+          <View style={styles.noTripsContainer}>
+            <Text style={styles.noTripsIcon}>📅</Text>
+            <Text style={styles.noTripsText}>No tienes viajes asignados</Text>
+            <Text style={styles.noTripsSubtext}>
+              Contacta a tu supervisor para que te asigne viajes
+            </Text>
+            <TouchableOpacity style={styles.refreshButton} onPress={onRefresh}>
+              <Text style={styles.refreshButtonText}>Actualizar</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* Estadísticas - Solo mostrar si hay viajes */}
+        {totalTrips > 0 && (
+          <View style={styles.statsContainer}>
+            <StatsCard
+              number={estadisticas.pendientes}
+              label="Viajes pendientes"
+              color="#FF9800"
+            />
+            <StatsCard
+              number={totalTrips}
+              label="Total asignados"
+              color="#4CAF50"
+            />
+          </View>
+        )}
+
+        {/* Próximos Destinos - Solo mostrar si hay destinos */}
+        {proximosDestinos && proximosDestinos.length > 0 && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>Próximos destinos</Text>
@@ -186,20 +283,6 @@ const InicioScreen = ({ navigation }) => {
                 />
               ))}
             </View>
-          </View>
-        )}
-
-        {/* Si no hay viajes en absoluto */}
-        {trips.length === 0 && !loading && (
-          <View style={styles.emptyStateContainer}>
-            <Text style={styles.emptyStateIcon}>🚛</Text>
-            <Text style={styles.emptyStateTitle}>No hay viajes programados</Text>
-            <Text style={styles.emptyStateText}>
-              Cuando tengas viajes asignados, aparecerán aquí
-            </Text>
-            <TouchableOpacity style={styles.refreshButton} onPress={onRefresh}>
-              <Text style={styles.refreshButtonText}>Actualizar</Text>
-            </TouchableOpacity>
           </View>
         )}
       </ScrollView>
@@ -221,16 +304,76 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#f8f9fa',
   },
-  serviceCards: {
+  debugInfo: {
+    backgroundColor: '#e8f5e8',
+    borderLeftWidth: 4,
+    borderLeftColor: '#4CAF50',
+    padding: 12,
+    marginHorizontal: 20,
+    marginBottom: 15,
+    borderRadius: 8,
+  },
+  debugText: {
+    fontSize: 12,
+    color: '#2e7d32',
+    marginBottom: 2,
+  },
+  debugError: {
+    fontSize: 12,
+    color: '#d32f2f',
+    marginTop: 5,
+    fontWeight: 'bold',
+  },
+  viajesContainer: {
     paddingHorizontal: 20,
     marginBottom: 20,
   },
-  sectionSubtitle: {
-    fontSize: 16,
+  mainTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#000',
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  diaContainer: {
+    marginBottom: 25,
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 15,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  diaHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 15,
+    paddingBottom: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  fechaTitulo: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#000',
+    textTransform: 'capitalize',
+  },
+  cantidadViajes: {
+    fontSize: 14,
+    color: '#4CAF50',
     fontWeight: '600',
-    color: '#333',
-    marginBottom: 10,
-    marginTop: 10,
+  },
+  noViajesDelDia: {
+    alignItems: 'center',
+    padding: 20,
+  },
+  noViajesDelDiaText: {
+    fontSize: 14,
+    color: '#666',
+    fontStyle: 'italic',
   },
   statsContainer: {
     flexDirection: 'row',
@@ -278,48 +421,28 @@ const styles = StyleSheet.create({
   },
   noTripsContainer: {
     alignItems: 'center',
-    padding: 30,
+    padding: 40,
+    marginHorizontal: 20,
     backgroundColor: '#fff',
     borderRadius: 12,
-    marginVertical: 10,
+    marginBottom: 20,
   },
   noTripsIcon: {
     fontSize: 48,
     marginBottom: 15,
   },
   noTripsText: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '600',
     color: '#333',
     textAlign: 'center',
-    marginBottom: 5,
+    marginBottom: 8,
   },
   noTripsSubtext: {
     fontSize: 14,
     color: '#666',
     textAlign: 'center',
-  },
-  emptyStateContainer: {
-    alignItems: 'center',
-    padding: 40,
-    marginTop: 50,
-  },
-  emptyStateIcon: {
-    fontSize: 64,
     marginBottom: 20,
-  },
-  emptyStateTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#333',
-    textAlign: 'center',
-    marginBottom: 10,
-  },
-  emptyStateText: {
-    fontSize: 16,
-    color: '#666',
-    textAlign: 'center',
-    marginBottom: 30,
   },
   refreshButton: {
     backgroundColor: '#4CAF50',

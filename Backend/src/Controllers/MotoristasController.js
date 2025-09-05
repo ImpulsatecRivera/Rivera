@@ -494,5 +494,174 @@ motoristasCon.getAllViajesProgramados = async (req, res) => {
   }
 };
 
+
+/**
+ * Obtener historial completo de viajes de un motorista (todos los estados y fechas)
+ * GET /motoristas/:id/historial-completo
+ * @param {object} req - Objeto request de Express
+ * @param {object} res - Objeto response de Express
+ * @returns {object} JSON con historial completo de viajes
+ */
+motoristasCon.getHistorialCompleto = async (req, res) => {
+  try {
+    const motoristaId = req.params.id;
+
+    // Verificar que el motorista existe
+    const motorista = await motoristalModel.findById(motoristaId);
+    if (!motorista) {
+      return res.status(404).json({ message: "Motorista no encontrado" });
+    }
+
+    // Buscar el camión asignado al motorista
+    const camion = await camioneModel.findOne({ driverId: motoristaId });
+    if (!camion) {
+      return res.status(200).json({ 
+        message: "El motorista no tiene camión asignado",
+        motorista: {
+          _id: motorista._id,
+          name: motorista.name,
+          lastName: motorista.lastName,
+          email: motorista.email
+        },
+        historialCompleto: [],
+        totalViajes: 0,
+        estadisticas: {
+          programados: 0,
+          completados: 0,
+          cancelados: 0,
+          enProgreso: 0
+        }
+      });
+    }
+
+    // Obtener TODOS los viajes del camión (sin filtro de fecha ni estado)
+    const todosLosViajes = await viajesModel.find({
+      camionId: camion._id
+    }).sort({ fechaSalida: -1 }); // Ordenar por fecha descendente (más recientes primero)
+
+    // Calcular estadísticas por estado
+    const estadisticas = {
+      programados: todosLosViajes.filter(v => ['programado', 'pendiente', 'confirmado'].includes(v.estado)).length,
+      completados: todosLosViajes.filter(v => ['completado', 'finalizado'].includes(v.estado)).length,
+      cancelados: todosLosViajes.filter(v => v.estado === 'cancelado').length,
+      enProgreso: todosLosViajes.filter(v => ['en_transito', 'iniciado'].includes(v.estado)).length
+    };
+
+    // Agrupar viajes por mes para mejor organización del historial
+    const viajesPorMes = {};
+    
+    todosLosViajes.forEach(viaje => {
+      const fecha = new Date(viaje.fechaSalida);
+      const mesAno = `${fecha.getFullYear()}-${String(fecha.getMonth() + 1).padStart(2, '0')}`;
+      
+      if (!viajesPorMes[mesAno]) {
+        viajesPorMes[mesAno] = [];
+      }
+      
+      viajesPorMes[mesAno].push({
+        _id: viaje._id,
+        origen: viaje.origen,
+        destino: viaje.destino,
+        fechaSalida: viaje.fechaSalida,
+        fechaLlegada: viaje.fechaLlegada,
+        estado: viaje.estado,
+        descripcion: viaje.descripcion,
+        carga: viaje.carga,
+        cliente: viaje.cliente
+      });
+    });
+
+    // Convertir a array ordenado por mes (más reciente primero)
+    const historialPorMes = Object.keys(viajesPorMes)
+      .sort((a, b) => b.localeCompare(a)) // Ordenar descendente
+      .map(mesAno => {
+        const [año, mes] = mesAno.split('-');
+        const fecha = new Date(año, mes - 1);
+        
+        return {
+          periodo: fecha.toLocaleDateString('es-ES', { 
+            year: 'numeric', 
+            month: 'long' 
+          }),
+          mesAno: mesAno,
+          cantidadViajes: viajesPorMes[mesAno].length,
+          viajes: viajesPorMes[mesAno]
+        };
+      });
+
+    // También agrupar por día para compatibilidad con el frontend actual
+    const viajesAgrupados = {};
+    
+    todosLosViajes.forEach(viaje => {
+      const fecha = viaje.fechaSalida.toISOString().split('T')[0];
+      
+      if (!viajesAgrupados[fecha]) {
+        viajesAgrupados[fecha] = [];
+      }
+      
+      viajesAgrupados[fecha].push({
+        _id: viaje._id,
+        origen: viaje.origen,
+        destino: viaje.destino,
+        fechaSalida: viaje.fechaSalida,
+        fechaLlegada: viaje.fechaLlegada,
+        estado: viaje.estado,
+        descripcion: viaje.descripcion,
+        carga: viaje.carga,
+        cliente: viaje.cliente
+      });
+    });
+
+    // Convertir objeto agrupado por día a array ordenado
+    const viajesPorDia = Object.keys(viajesAgrupados)
+      .sort((a, b) => b.localeCompare(a)) // Más recientes primero
+      .map(fecha => ({
+        fecha: fecha,
+        viajes: viajesAgrupados[fecha]
+      }));
+
+    // Respuesta completa con historial
+    res.status(200).json({
+      motorista: {
+        _id: motorista._id,
+        name: motorista.name,
+        lastName: motorista.lastName,
+        email: motorista.email,
+        phone: motorista.phone,
+        img: motorista.img
+      },
+      camionAsignado: {
+        _id: camion._id,
+        name: camion.name,
+        brand: camion.brand,
+        model: camion.model,
+        licensePlate: camion.licensePlate,
+        state: camion.state
+      },
+      totalViajes: todosLosViajes.length,
+      estadisticas,
+      historialCompleto: todosLosViajes.map(viaje => ({
+        _id: viaje._id,
+        origen: viaje.origen,
+        destino: viaje.destino,
+        fechaSalida: viaje.fechaSalida,
+        fechaLlegada: viaje.fechaLlegada,
+        estado: viaje.estado,
+        descripcion: viaje.descripcion,
+        carga: viaje.carga,
+        cliente: viaje.cliente
+      })),
+      historialPorMes,
+      viajesPorDia // Para compatibilidad con frontend actual
+    });
+
+  } catch (error) {
+    res.status(500).json({ 
+      message: "Error al obtener historial completo de viajes", 
+      error: error.message 
+    });
+  }
+};
+
 // Exportar el controlador para uso en las rutas
 export default motoristasCon;
