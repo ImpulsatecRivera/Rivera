@@ -16,6 +16,7 @@ import CustomInput from '../components/CustomInput';
 import CustomButton from '../components/CustomButton';
 import SocialButton from '../components/SocialButton';
 import { useAuth } from '../context/authContext';
+import * as Google from "expo-auth-session/providers/google"
 
 // Configuración para WebBrowser
 WebBrowser.maybeCompleteAuthSession();
@@ -52,6 +53,7 @@ const LoginScreen = () => {
     }
   }, [response]);
 
+<<<<<<< HEAD
   const handleGoogleLogin = async () => {
     try {
       setIsGoogleLoading(true);
@@ -77,6 +79,12 @@ const LoginScreen = () => {
       setIsGoogleLoading(false);
     }
   };
+=======
+  // Google OAuth con OpenID Connect
+  const [request,response,promptAsync] = Google.useAuthRequest({
+    androidClientId: '1035488574954-odb33eqsunic4n3kqog1sfbuu06j6djp.apps.googleusercontent.com'
+  })
+>>>>>>> master
 
   const handleGoogleSuccess = async (googleToken) => {
     try {
@@ -258,8 +266,15 @@ const LoginScreen = () => {
               <View style={styles.socialButtons}>
                 <SocialButton
                   type="google"
+<<<<<<< HEAD
                   onPress={handleGoogleLogin}
                   disabled={isGoogleLoading || !request}
+=======
+                  onPress={promptAsync().catch((e)=>{
+                    console.error("error")
+                  })}
+                  disabled={isGoogleLoading}
+>>>>>>> master
                 />
                 <SocialButton
                   type="facebook"
