@@ -12,7 +12,7 @@ const RealtimeProgressBar = ({
   viajeId,
   onStatusChange,
   apiConfig = {
-    baseUrl: process.env.REACT_APP_API_URL || 'http://localhost:3001',
+    baseUrl: process.env.REACT_APP_API_URL || 'https://riveraproject-5.onrender.com',
     endpoints: {
       getTripDetails: '/api/viajes/:id',
       updateProgress: '/api/viajes/:id/progress',
