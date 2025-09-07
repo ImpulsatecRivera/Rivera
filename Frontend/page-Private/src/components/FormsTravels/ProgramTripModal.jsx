@@ -662,10 +662,13 @@ const ProgramTripModal = ({
                   ))}
                 </select>
                 <p className="text-xs text-green-600 mt-1">
-                  {programForm.conductorId && camionSeleccionado 
-                    ? '✅ Conductor asignado automáticamente por el camión seleccionado'
-                    : '👥 Solo se muestran conductores disponibles (sin camión asignado)'
-                  }
+                  {programForm.conductorId ? (
+                    camionSeleccionado 
+                      ? `✅ ${conductores.find(c => c._id === programForm.conductorId)?.name || conductores.find(c => c._id === programForm.conductorId)?.nombre || 'Conductor'} asignado automáticamente`
+                      : `✅ ${conductores.find(c => c._id === programForm.conductorId)?.name || conductores.find(c => c._id === programForm.conductorId)?.nombre || 'Conductor'} seleccionado manualmente`
+                  ) : (
+                    '👥 Solo se muestran conductores disponibles (sin camión asignado)'
+                  )}
                 </p>
               </div>
 
