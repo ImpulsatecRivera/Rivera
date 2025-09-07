@@ -1,5 +1,5 @@
 // 📁 Backend/src/Controllers/AutoUpdateController.js
-// CONTROLLER MEJORADO CON INTEGRACIÓN DE COTIZACIONES Y RUTAS
+// CONTROLLER MEJORADO CON CONFIGURACIÓN FLEXIBLE AUTOMÁTICO/MANUAL
 
 import autoUpdateService from '../services/autoUpdateService.js';
 import ViajesModel from '../Models/Viajes.js';
@@ -14,14 +14,15 @@ AutoUpdateController.startService = async (req, res) => {
     
     res.status(200).json({
       success: true,
-      message: 'Servicio de actualización automática iniciado con integración de rutas',
+      message: 'Servicio de actualización automática iniciado con configuración flexible',
       status: autoUpdateService.getStats(),
       features: [
-        'Auto-inicio a la hora programada',
-        'Progreso híbrido (tiempo + checkpoints + ruta)',
-        'Integración con cotizaciones y rutas',
-        'Checkpoints con información geográfica',
-        'Auto-completar inteligente basado en destino'
+        'Configuración flexible por viaje',
+        'Auto-inicio configurable',
+        'Estrategias de progreso seleccionables',
+        'Pausar/Reanudar viajes',
+        'Validación de operaciones manuales',
+        'Precedencia manual sobre automático'
       ]
     });
     
@@ -56,18 +57,23 @@ AutoUpdateController.stopService = async (req, res) => {
   }
 };
 
-// 📊 Obtener estado del servicio CON INFORMACIÓN DE RUTAS
+// 📊 Obtener estado del servicio CON CONFIGURACIONES
 AutoUpdateController.getServiceStatus = async (req, res) => {
   try {
     const stats = autoUpdateService.getStats();
     const activeTrips = await autoUpdateService.getActiveTripsStatus();
     
-    // 📈 Estadísticas adicionales de rutas
-    const rutaStats = {
-      viajesConRuta: activeTrips.filter(t => t.rutaInfo).length,
-      viajesSinRuta: activeTrips.filter(t => !t.rutaInfo).length,
-      totalPuntosRuta: activeTrips.reduce((sum, t) => sum + (t.rutaInfo?.totalPuntos || 0), 0),
-      distanciaTotal: activeTrips.reduce((sum, t) => sum + (t.rutaInfo?.distanciaTotal || 0), 0)
+    // 📈 Estadísticas de configuración
+    const configStats = {
+      viajesConAutoInicio: activeTrips.filter(t => t.metodosActivos.autoInicio).length,
+      viajesSinAutoInicio: activeTrips.filter(t => !t.metodosActivos.autoInicio).length,
+      viajesConAutoCompletado: activeTrips.filter(t => t.metodosActivos.autoCompletado).length,
+      estrategias: {
+        automatico: activeTrips.filter(t => t.metodosActivos.estrategiaProgreso === 'automatico').length,
+        manual: activeTrips.filter(t => t.metodosActivos.estrategiaProgreso === 'manual').length,
+        hibrido: activeTrips.filter(t => t.metodosActivos.estrategiaProgreso === 'hibrido').length
+      },
+      viajesPausados: activeTrips.filter(t => t.status === 'pausado').length
     };
     
     res.status(200).json({
@@ -76,8 +82,8 @@ AutoUpdateController.getServiceStatus = async (req, res) => {
         service: stats,
         activeTrips: activeTrips,
         totalActiveTrips: activeTrips.length,
-        rutaStatistics: rutaStats,
-        systemType: 'hybrid_progress_with_routes',
+        configurationStatistics: configStats,
+        systemType: 'flexible_configuration',
         lastUpdate: new Date().toISOString()
       }
     });
@@ -101,12 +107,16 @@ AutoUpdateController.forceUpdate = async (req, res) => {
     
     res.status(200).json({
       success: true,
-      message: 'Actualización manual ejecutada con sistema híbrido y rutas',
+      message: 'Actualización manual ejecutada con sistema flexible',
       data: {
         updatedAt: new Date().toISOString(),
         activeTrips: activeTrips,
         processedCount: activeTrips.length,
-        rutasProcessed: activeTrips.filter(t => t.rutaInfo).length
+        configuracionesProcessed: {
+          automaticos: activeTrips.filter(t => t.metodosActivos.estrategiaProgreso === 'automatico').length,
+          manuales: activeTrips.filter(t => t.metodosActivos.estrategiaProgreso === 'manual').length,
+          hibridos: activeTrips.filter(t => t.metodosActivos.estrategiaProgreso === 'hibrido').length
+        }
       }
     });
     
@@ -150,14 +160,135 @@ AutoUpdateController.setInterval = async (req, res) => {
   }
 };
 
-// 📋 Obtener viajes activos con progreso híbrido Y RUTAS
+// 🆕 NUEVO: Configurar comportamiento de un viaje específico
+AutoUpdateController.configureTrip = async (req, res) => {
+  try {
+    const { viajeId } = req.params;
+    const { 
+      autoInicio, 
+      autoCompletado, 
+      estrategiaProgreso,
+      requiereConfirmacionManual,
+      ignoreDelayDetection 
+    } = req.body;
+    
+    const viaje = await ViajesModel.findById(viajeId);
+    if (!viaje) {
+      return res.status(404).json({
+        success: false,
+        message: 'Viaje no encontrado'
+      });
+    }
+    
+    // Validar estrategia de progreso
+    const estrategiasValidas = ['automatico', 'manual', 'hibrido'];
+    if (estrategiaProgreso && !estrategiasValidas.includes(estrategiaProgreso)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Estrategia de progreso inválida. Use: automatico, manual, hibrido'
+      });
+    }
+    
+    // Inicializar configuración si no existe
+    if (!viaje.configuracion) {
+      viaje.configuracion = {};
+    }
+    
+    // Actualizar configuración
+    if (autoInicio !== undefined) viaje.configuracion.autoInicio = autoInicio;
+    if (autoCompletado !== undefined) viaje.configuracion.autoCompletado = autoCompletado;
+    if (estrategiaProgreso !== undefined) viaje.configuracion.estrategiaProgreso = estrategiaProgreso;
+    if (requiereConfirmacionManual !== undefined) viaje.configuracion.requiereConfirmacionManual = requiereConfirmacionManual;
+    if (ignoreDelayDetection !== undefined) viaje.configuracion.ignoreDelayDetection = ignoreDelayDetection;
+    
+    // Agregar timestamp de configuración
+    viaje.configuracion.ultimaConfiguracion = new Date();
+    viaje.configuracion.configuradoPor = 'usuario'; // Podrías agregar autenticación aquí
+    
+    await viaje.save();
+    
+    res.status(200).json({
+      success: true,
+      message: 'Configuración del viaje actualizada exitosamente',
+      data: {
+        viajeId: viajeId,
+        configuracionAnterior: req.body, // Para comparar
+        configuracionActual: viaje.configuracion,
+        estadoViaje: viaje.estado.actual
+      }
+    });
+    
+  } catch (error) {
+    console.error('❌ Error configurando viaje:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error actualizando configuración del viaje',
+      error: error.message
+    });
+  }
+};
+
+// 🆕 NUEVO: Obtener configuración de un viaje
+AutoUpdateController.getTripConfiguration = async (req, res) => {
+  try {
+    const { viajeId } = req.params;
+    
+    const viaje = await ViajesModel.findById(viajeId)
+      .select('configuracion estado tripDescription departureTime arrivalTime')
+      .lean();
+    
+    if (!viaje) {
+      return res.status(404).json({
+        success: false,
+        message: 'Viaje no encontrado'
+      });
+    }
+    
+    // Configuración por defecto si no existe
+    const configDefault = {
+      autoInicio: true,
+      autoCompletado: true,
+      estrategiaProgreso: 'hibrido',
+      requiereConfirmacionManual: false,
+      ignoreDelayDetection: false
+    };
+    
+    const configuracionActual = { ...configDefault, ...viaje.configuracion };
+    
+    res.status(200).json({
+      success: true,
+      data: {
+        viajeId: viajeId,
+        descripcion: viaje.tripDescription,
+        estado: viaje.estado,
+        configuracion: configuracionActual,
+        configuracionPersonalizada: !!viaje.configuracion,
+        horarios: {
+          salida: viaje.departureTime,
+          llegada: viaje.arrivalTime
+        }
+      },
+      message: 'Configuración del viaje obtenida exitosamente'
+    });
+    
+  } catch (error) {
+    console.error('❌ Error obteniendo configuración:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error obteniendo configuración del viaje',
+      error: error.message
+    });
+  }
+};
+
+// 📋 Obtener viajes activos con configuración detallada
 AutoUpdateController.getActiveTrips = async (req, res) => {
   try {
-    console.log('🔄 Obteniendo viajes activos con sistema híbrido y rutas...');
+    console.log('🔄 Obteniendo viajes activos con configuración flexible...');
     
     const activeTrips = await autoUpdateService.getActiveTripsStatus();
     
-    // 📊 Enriquecer datos con información detallada de checkpoints y rutas
+    // 📊 Enriquecer datos con información detallada
     const enrichedTrips = await Promise.all(
       activeTrips.map(async (trip) => {
         try {
@@ -170,7 +301,7 @@ AutoUpdateController.getActiveTrips = async (req, res) => {
                 select: 'puntos coordenadas descripcion distancia orden nombre'
               }
             })
-            .select('tracking.checkpoints tracking.progreso tracking.puntoActualRuta estado')
+            .select('tracking.checkpoints tracking.progreso tracking.puntoActualRuta estado configuracion')
             .lean();
           
           if (viaje) {
@@ -198,15 +329,20 @@ AutoUpdateController.getActiveTrips = async (req, res) => {
                 descripcion: ultimoCheckpoint.descripcion,
                 timestamp: ultimoCheckpoint.timestamp,
                 progreso: ultimoCheckpoint.progreso,
-                rutaInfo: ultimoCheckpoint.rutaInfo // 🆕 Info de ruta en checkpoint
+                rutaInfo: ultimoCheckpoint.rutaInfo
               } : null,
               totalCheckpoints: viaje.tracking?.checkpoints?.length || 0,
-              progressMethod: ultimoCheckpoint && 
-                autoUpdateService.isCheckpointRecent(ultimoCheckpoint, new Date()) 
-                ? 'checkpoint' 
-                : 'time_based',
-              rutaDetallada: rutaDetallada, // 🆕 Información completa de ruta
-              puntoActualRuta: viaje.tracking?.puntoActualRuta // 🆕 Punto actual en la ruta
+              progressMethod: viaje.tracking?.progreso?.metodoCalculo || 'hibrido',
+              rutaDetallada: rutaDetallada,
+              puntoActualRuta: viaje.tracking?.puntoActualRuta,
+              // 🆕 Información de configuración detallada
+              configuracionCompleta: viaje.configuracion || {},
+              esConfigurable: {
+                puedeIniciarManual: !trip.metodosActivos.autoInicio || trip.status === 'programado',
+                puedeProgresarManual: trip.metodosActivos.estrategiaProgreso !== 'automatico',
+                puedeCompletarManual: !trip.metodosActivos.autoCompletado || trip.status === 'en_curso',
+                puedePausar: ['en_curso', 'retrasado'].includes(trip.status)
+              }
             };
           }
           
@@ -224,21 +360,21 @@ AutoUpdateController.getActiveTrips = async (req, res) => {
       count: enrichedTrips.length,
       timestamp: new Date().toISOString(),
       systemInfo: {
-        type: 'hybrid_progress_with_routes',
+        type: 'flexible_configuration_system',
         features: [
-          'auto_start', 
-          'time_calculation', 
-          'manual_checkpoints', 
-          'auto_complete',
+          'auto_start_configurable', 
+          'progress_strategy_selection', 
+          'manual_override', 
+          'pause_resume',
+          'auto_complete_configurable',
           'route_integration',
-          'distance_based_progress',
-          'route_point_tracking'
+          'conflict_validation'
         ]
       }
     });
     
   } catch (error) {
-    console.error('❌ Error obteniendo viajes activos con rutas:', error);
+    console.error('❌ Error obteniendo viajes activos:', error);
     res.status(500).json({
       success: false,
       message: 'Error obteniendo viajes activos',
@@ -247,11 +383,11 @@ AutoUpdateController.getActiveTrips = async (req, res) => {
   }
 };
 
-// 🎯 Actualizar un viaje específico manualmente CON INFORMACIÓN DE RUTA
+// 🎯 Actualizar un viaje específico manualmente CON VALIDACIÓN
 AutoUpdateController.updateSpecificTrip = async (req, res) => {
   try {
     const { viajeId } = req.params;
-    const { action, progress, descripcion, puntoRuta } = req.body; 
+    const { action, progress, descripcion, puntoRuta, confirmarOverride } = req.body; 
     
     console.log(`🎯 Actualizando viaje ${viajeId} - Acción: ${action}`);
     
@@ -272,21 +408,56 @@ AutoUpdateController.updateSpecificTrip = async (req, res) => {
       });
     }
     
+    // 🔍 VALIDAR OPERACIÓN MANUAL
+    const validacion = autoUpdateService.validateManualOperation(viaje, action);
+    
+    if (!validacion.valid) {
+      return res.status(400).json({
+        success: false,
+        message: validacion.error,
+        data: {
+          requiresConfirmation: validacion.requiresConfirmation,
+          currentConfiguration: viaje.configuracion
+        }
+      });
+    }
+    
+    // Si hay advertencias y no se confirmó el override
+    if ((validacion.warning || validacion.takesPrecedence) && !confirmarOverride) {
+      return res.status(409).json({
+        success: false,
+        message: validacion.warning,
+        data: {
+          requiresConfirmation: true,
+          warning: validacion.warning,
+          takesPrecedence: validacion.takesPrecedence,
+          temporaryOverride: validacion.temporaryOverride,
+          currentConfiguration: viaje.configuracion
+        }
+      });
+    }
+    
     const now = new Date();
     let updated = false;
     let checkpointAgregado = null;
-    
-    // 🗺️ Obtener información de ruta
     const rutaInfo = autoUpdateService.getRutaInfo(viaje);
     
     switch (action) {
       case 'start':
-        if (viaje.estado.actual === 'programado' || viaje.estado.actual === 'pendiente') {
+        if (['programado', 'listo', 'pendiente'].includes(viaje.estado.actual)) {
           viaje.estado.actual = 'en_curso';
           viaje.estado.fechaCambio = now;
           viaje.horarios.salidaReal = now;
           
-          // Agregar checkpoint manual de inicio con info de ruta
+          // Si había auto-inicio, marcar que se overrideó
+          if (viaje.configuracion?.autoInicio) {
+            viaje.configuracion.manualOverride = {
+              accion: 'inicio_manual',
+              fecha: now,
+              razon: 'Usuario inició manualmente antes del auto-inicio'
+            };
+          }
+          
           checkpointAgregado = autoUpdateService.addCheckpointConRuta(
             viaje, 
             'inicio_manual', 
@@ -297,17 +468,25 @@ AutoUpdateController.updateSpecificTrip = async (req, res) => {
           );
           
           updated = true;
-          console.log(`🚀 Viaje ${viajeId} iniciado manualmente${rutaInfo ? ' con ruta' : ''}`);
+          console.log(`🚀 Viaje ${viajeId} iniciado manualmente`);
         }
         break;
         
       case 'complete':
-        if (viaje.estado.actual === 'en_curso' || viaje.estado.actual === 'retrasado') {
+        if (['en_curso', 'retrasado', 'pausado'].includes(viaje.estado.actual)) {
           viaje.estado.actual = 'completado';
           viaje.estado.fechaCambio = now;
           viaje.horarios.llegadaReal = now;
           
-          // Agregar checkpoint manual de finalización con info de destino
+          // Marcar override si tenía auto-completado
+          if (viaje.configuracion?.autoCompletado) {
+            viaje.configuracion.manualOverride = {
+              accion: 'completado_manual',
+              fecha: now,
+              razon: 'Usuario completó manualmente'
+            };
+          }
+          
           checkpointAgregado = autoUpdateService.addCheckpointConRuta(
             viaje,
             'finalizacion_manual',
@@ -318,17 +497,24 @@ AutoUpdateController.updateSpecificTrip = async (req, res) => {
           );
           
           updated = true;
-          console.log(`✅ Viaje ${viajeId} completado manualmente${rutaInfo ? ' en destino' : ''}`);
+          console.log(`✅ Viaje ${viajeId} completado manualmente`);
         }
         break;
         
       case 'progress':
-        if (progress !== undefined && 
-            (viaje.estado.actual === 'en_curso' || viaje.estado.actual === 'retrasado')) {
-          
+        if (progress !== undefined && ['en_curso', 'retrasado', 'pausado'].includes(viaje.estado.actual)) {
           const nuevoProgreso = Math.max(0, Math.min(100, progress));
           
-          // 🆕 Si se especifica un punto de ruta, actualizar también
+          // Marcar override temporal para estrategia automática
+          if (viaje.configuracion?.estrategiaProgreso === 'automatico') {
+            viaje.configuracion.temporaryOverride = {
+              accion: 'progreso_manual',
+              fecha: now,
+              expira: new Date(now.getTime() + 2 * 60 * 60 * 1000), // 2 horas
+              valorAnterior: viaje.tracking?.progreso?.porcentaje
+            };
+          }
+          
           if (puntoRuta !== undefined && rutaInfo) {
             const puntoValido = Math.max(0, Math.min(rutaInfo.totalPuntos - 1, puntoRuta));
             viaje.tracking.puntoActualRuta = {
@@ -339,17 +525,16 @@ AutoUpdateController.updateSpecificTrip = async (req, res) => {
             };
           }
           
-          // Agregar checkpoint manual de progreso con info de ruta
           checkpointAgregado = autoUpdateService.addCheckpointConRuta(
             viaje,
             'progreso_manual',
             nuevoProgreso,
-            descripcion || `Progreso actualizado manualmente a ${nuevoProgreso}%${puntoRuta !== undefined ? ` (punto ${puntoRuta})` : ''}`,
+            descripcion || `Progreso actualizado manualmente a ${nuevoProgreso}%`,
             now,
             rutaInfo
           );
           
-          // Si llega a 100%, completar automáticamente
+          // Auto-completar si llega a 100%
           if (nuevoProgreso >= 100) {
             viaje.estado.actual = 'completado';
             viaje.estado.fechaCambio = now;
@@ -357,12 +542,11 @@ AutoUpdateController.updateSpecificTrip = async (req, res) => {
           }
           
           updated = true;
-          console.log(`📈 Progreso de viaje ${viajeId} actualizado a ${nuevoProgreso}%${puntoRuta !== undefined ? ` en punto ${puntoRuta}` : ''}`);
+          console.log(`📈 Progreso actualizado manualmente a ${nuevoProgreso}%`);
         }
         break;
         
       case 'checkpoint':
-        // 📍 Agregar checkpoint personalizado con info de ruta
         const { tipo, progreso: checkpointProgress } = req.body;
         
         if (tipo && checkpointProgress !== undefined) {
@@ -376,15 +560,12 @@ AutoUpdateController.updateSpecificTrip = async (req, res) => {
           );
           
           updated = true;
-          console.log(`📍 Checkpoint personalizado agregado: ${tipo} - ${checkpointProgress}%`);
+          console.log(`📍 Checkpoint personalizado agregado: ${tipo}`);
         }
         break;
 
       case 'route_point':
-        // 🆕 NUEVA ACCIÓN: Actualizar punto específico en la ruta
-        if (puntoRuta !== undefined && rutaInfo && 
-            (viaje.estado.actual === 'en_curso' || viaje.estado.actual === 'retrasado')) {
-          
+        if (puntoRuta !== undefined && rutaInfo && ['en_curso', 'retrasado'].includes(viaje.estado.actual)) {
           const puntoValido = Math.max(0, Math.min(rutaInfo.totalPuntos - 1, puntoRuta));
           const progresoCalculado = Math.round((puntoValido / (rutaInfo.totalPuntos - 1)) * 100);
           
@@ -399,13 +580,13 @@ AutoUpdateController.updateSpecificTrip = async (req, res) => {
             viaje,
             'punto_ruta_manual',
             progresoCalculado,
-            descripcion || `Llegada a punto ${puntoValido}: ${rutaInfo.puntos[puntoValido]?.descripcion || 'Punto de ruta'}`,
+            descripcion || `Llegada a punto ${puntoValido}: ${rutaInfo.puntos[puntoValido]?.descripcion}`,
             now,
             rutaInfo
           );
           
           updated = true;
-          console.log(`🗺️ Punto de ruta actualizado: ${puntoValido}/${rutaInfo.totalPuntos - 1}`);
+          console.log(`🗺️ Punto de ruta actualizado: ${puntoValido}`);
         }
         break;
         
@@ -417,56 +598,48 @@ AutoUpdateController.updateSpecificTrip = async (req, res) => {
     }
     
     if (updated) {
-      // Agregar al historial de estado
+      // Agregar al historial
       viaje.estado.historial.push({
         estadoAnterior: viaje.estado.actual,
         estadoNuevo: viaje.estado.actual,
         fecha: now,
-        motivo: `manual_${action}`
+        motivo: `manual_${action}`,
+        override: validacion.takesPrecedence || validacion.temporaryOverride
       });
       
       await viaje.save();
       
-      // 🔄 Recalcular progreso híbrido después de la actualización
-      const progresoRecalculado = autoUpdateService.calculateHybridProgressConRuta(viaje, now, rutaInfo);
-      
       res.status(200).json({
         success: true,
-        message: `Viaje ${action === 'progress' ? 'actualizado' : 
-                 action === 'start' ? 'iniciado' : 
-                 action === 'complete' ? 'completado' : 
-                 action === 'route_point' ? 'punto de ruta actualizado' : 'modificado'} manualmente`,
+        message: `Viaje ${action} ejecutado manualmente`,
         data: {
           id: viaje._id,
           status: viaje.estado.actual,
-          progress: progresoRecalculado,
+          progress: viaje.tracking.progreso.porcentaje,
           lastUpdate: now,
           checkpointAdded: checkpointAgregado,
-          totalCheckpoints: viaje.tracking?.checkpoints?.length || 0,
-          progressMethod: 'manual_update',
-          // 🆕 Información de ruta actualizada
+          validation: validacion,
+          override: {
+            applied: validacion.takesPrecedence || validacion.temporaryOverride,
+            type: validacion.takesPrecedence ? 'permanent' : 'temporary'
+          },
           rutaInfo: rutaInfo ? {
             totalPuntos: rutaInfo.totalPuntos,
-            puntoActual: viaje.tracking?.puntoActualRuta?.indice || 0,
-            distanciaTotal: rutaInfo.distanciaTotal
-          } : null,
-          puntoActualRuta: viaje.tracking?.puntoActualRuta
+            puntoActual: viaje.tracking?.puntoActualRuta?.indice || 0
+          } : null
         }
       });
     } else {
       res.status(400).json({
         success: false,
-        message: 'No se pudo actualizar el viaje. Verifique el estado actual y los parámetros.',
+        message: 'No se pudo actualizar el viaje',
         currentState: viaje.estado.actual,
-        rutaInfo: rutaInfo ? {
-          disponible: true,
-          totalPuntos: rutaInfo.totalPuntos
-        } : { disponible: false }
+        validation: validacion
       });
     }
     
   } catch (error) {
-    console.error('❌ Error actualizando viaje específico con ruta:', error);
+    console.error('❌ Error actualizando viaje:', error);
     res.status(500).json({
       success: false,
       message: 'Error al actualizar viaje',
@@ -475,7 +648,159 @@ AutoUpdateController.updateSpecificTrip = async (req, res) => {
   }
 };
 
-// 🆕 Obtener información detallada de ruta de un viaje
+// 🆕 NUEVO: Pausar viaje
+AutoUpdateController.pauseTrip = async (req, res) => {
+  try {
+    const { viajeId } = req.params;
+    const { reason } = req.body;
+    
+    const result = await autoUpdateService.pauseTrip(viajeId, reason);
+    
+    res.status(200).json({
+      success: true,
+      message: result.message,
+      data: {
+        viajeId: viajeId,
+        estadoAnterior: result.estadoAnterior,
+        estadoNuevo: result.estadoNuevo,
+        timestamp: new Date().toISOString()
+      }
+    });
+    
+  } catch (error) {
+    console.error('❌ Error pausando viaje:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
+// 🆕 NUEVO: Reanudar viaje
+AutoUpdateController.resumeTrip = async (req, res) => {
+  try {
+    const { viajeId } = req.params;
+    const { reason } = req.body;
+    
+    const result = await autoUpdateService.resumeTrip(viajeId, reason);
+    
+    res.status(200).json({
+      success: true,
+      message: result.message,
+      data: {
+        viajeId: viajeId,
+        estadoAnterior: result.estadoAnterior,
+        estadoNuevo: result.estadoNuevo,
+        tiempoPausado: result.tiempoPausado,
+        timestamp: new Date().toISOString()
+      }
+    });
+    
+  } catch (error) {
+    console.error('❌ Error reanudando viaje:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
+// 🆕 NUEVO: Resetear configuración a valores por defecto
+AutoUpdateController.resetTripConfiguration = async (req, res) => {
+  try {
+    const { viajeId } = req.params;
+    
+    const viaje = await ViajesModel.findById(viajeId);
+    if (!viaje) {
+      return res.status(404).json({
+        success: false,
+        message: 'Viaje no encontrado'
+      });
+    }
+    
+    const configAnterior = { ...viaje.configuracion };
+    
+    // Resetear a configuración por defecto
+    viaje.configuracion = {
+      autoInicio: true,
+      autoCompletado: true,
+      estrategiaProgreso: 'hibrido',
+      requiereConfirmacionManual: false,
+      ignoreDelayDetection: false,
+      ultimaConfiguracion: new Date(),
+      configuradoPor: 'reset_automatico',
+      resetDesde: configAnterior
+    };
+    
+    await viaje.save();
+    
+    res.status(200).json({
+      success: true,
+      message: 'Configuración reseteada a valores por defecto',
+      data: {
+        viajeId: viajeId,
+        configuracionAnterior: configAnterior,
+        configuracionNueva: viaje.configuracion
+      }
+    });
+    
+  } catch (error) {
+    console.error('❌ Error reseteando configuración:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error reseteando configuración',
+      error: error.message
+    });
+  }
+};
+
+// 🆕 NUEVO: Obtener historial de overrides
+AutoUpdateController.getTripOverrides = async (req, res) => {
+  try {
+    const { viajeId } = req.params;
+    
+    const viaje = await ViajesModel.findById(viajeId)
+      .select('configuracion estado.historial tracking.checkpoints tripDescription')
+      .lean();
+    
+    if (!viaje) {
+      return res.status(404).json({
+        success: false,
+        message: 'Viaje no encontrado'
+      });
+    }
+    
+    const overrides = {
+      manualOverride: viaje.configuracion?.manualOverride || null,
+      temporaryOverride: viaje.configuracion?.temporaryOverride || null,
+      historialOverrides: viaje.estado?.historial?.filter(h => h.override) || [],
+      checkpointsManuales: viaje.tracking?.checkpoints?.filter(c => 
+        c.reportadoPor === 'manual' || c.tipo.includes('manual')
+      ) || []
+    };
+    
+    res.status(200).json({
+      success: true,
+      data: {
+        viajeId: viajeId,
+        descripcion: viaje.tripDescription,
+        overrides: overrides,
+        totalOverrides: Object.values(overrides).flat().length
+      },
+      message: 'Historial de overrides obtenido exitosamente'
+    });
+    
+  } catch (error) {
+    console.error('❌ Error obteniendo overrides:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error obteniendo historial de overrides',
+      error: error.message
+    });
+  }
+};
+
+// Mantener todos los endpoints anteriores...
 AutoUpdateController.getTripRoute = async (req, res) => {
   try {
     const { viajeId } = req.params;
@@ -489,7 +814,7 @@ AutoUpdateController.getTripRoute = async (req, res) => {
           select: 'puntos coordenadas descripcion distancia orden nombre'
         }
       })
-      .select('tracking.puntoActualRuta tracking.progreso estado tripDescription')
+      .select('tracking.puntoActualRuta tracking.progreso estado tripDescription configuracion')
       .lean();
     
     if (!viaje) {
@@ -504,15 +829,10 @@ AutoUpdateController.getTripRoute = async (req, res) => {
     if (!rutaInfo) {
       return res.status(404).json({
         success: false,
-        message: 'Este viaje no tiene información de ruta asociada',
-        data: {
-          viajeId: viajeId,
-          cotizacionId: viaje.cotizacionId?._id || null
-        }
+        message: 'Este viaje no tiene información de ruta asociada'
       });
     }
     
-    // 🗺️ Preparar información detallada de la ruta
     const rutaDetallada = {
       viajeId: viajeId,
       cotizacionId: viaje.cotizacionId._id,
@@ -529,7 +849,8 @@ AutoUpdateController.getTripRoute = async (req, res) => {
       })),
       puntoActual: viaje.tracking?.puntoActualRuta || null,
       progresoActual: viaje.tracking?.progreso?.porcentaje || 0,
-      estadoViaje: viaje.estado
+      estadoViaje: viaje.estado,
+      configuracion: viaje.configuracion
     };
     
     res.status(200).json({
@@ -539,7 +860,7 @@ AutoUpdateController.getTripRoute = async (req, res) => {
     });
     
   } catch (error) {
-    console.error('❌ Error obteniendo ruta del viaje:', error);
+    console.error('❌ Error obteniendo ruta:', error);
     res.status(500).json({
       success: false,
       message: 'Error al obtener información de ruta',
@@ -548,7 +869,6 @@ AutoUpdateController.getTripRoute = async (req, res) => {
   }
 };
 
-// 🆕 NUEVO: Obtener historial de checkpoints de un viaje CON RUTAS
 AutoUpdateController.getTripCheckpoints = async (req, res) => {
   try {
     const { viajeId } = req.params;
@@ -562,7 +882,7 @@ AutoUpdateController.getTripCheckpoints = async (req, res) => {
           select: 'puntos descripcion orden'
         }
       })
-      .select('tracking.checkpoints tracking.progreso estado tripDescription')
+      .select('tracking.checkpoints tracking.progreso estado tripDescription configuracion')
       .lean();
     
     if (!viaje) {
@@ -573,13 +893,7 @@ AutoUpdateController.getTripCheckpoints = async (req, res) => {
     }
     
     const checkpoints = viaje.tracking?.checkpoints || [];
-    const progresoActual = viaje.tracking?.progreso?.porcentaje || 0;
     const rutaInfo = autoUpdateService.getRutaInfo(viaje);
-    
-    // Calcular métricas
-    const ultimoCheckpoint = checkpoints.length > 0 
-      ? checkpoints[checkpoints.length - 1] 
-      : null;
     
     const checkpointsManuales = checkpoints.filter(cp => 
       cp.reportadoPor === 'manual' || cp.tipo.includes('manual')
@@ -597,9 +911,9 @@ AutoUpdateController.getTripCheckpoints = async (req, res) => {
         viajeId: viajeId,
         descripcion: viaje.tripDescription,
         estadoActual: viaje.estado,
-        progresoActual: progresoActual,
+        configuracion: viaje.configuracion,
+        progresoActual: viaje.tracking?.progreso?.porcentaje || 0,
         checkpoints: checkpoints.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp)),
-        ultimoCheckpoint: ultimoCheckpoint,
         rutaInfo: rutaInfo,
         estadisticas: {
           totalCheckpoints: checkpoints.length,
@@ -609,12 +923,11 @@ AutoUpdateController.getTripCheckpoints = async (req, res) => {
           progresoMinimo: checkpoints.length > 0 ? Math.min(...checkpoints.map(cp => cp.progreso)) : 0,
           progresoMaximo: checkpoints.length > 0 ? Math.max(...checkpoints.map(cp => cp.progreso)) : 0
         }
-      },
-      message: 'Historial de checkpoints con rutas obtenido exitosamente'
+      }
     });
     
   } catch (error) {
-    console.error('❌ Error obteniendo checkpoints con rutas:', error);
+    console.error('❌ Error obteniendo checkpoints:', error);
     res.status(500).json({
       success: false,
       message: 'Error al obtener historial de checkpoints',
@@ -623,7 +936,6 @@ AutoUpdateController.getTripCheckpoints = async (req, res) => {
   }
 };
 
-// 🆕 NUEVO: Obtener resumen de progreso híbrido CON RUTAS
 AutoUpdateController.getProgressSummary = async (req, res) => {
   try {
     const { viajeId } = req.params;
@@ -647,23 +959,20 @@ AutoUpdateController.getProgressSummary = async (req, res) => {
     
     const rutaInfo = autoUpdateService.getRutaInfo(viaje);
     const now = new Date();
+    const config = viaje.configuracion || {};
     
-    // Usar métodos del servicio para obtener resumen completo
     const resumen = {
       viajeId: viajeId,
       estadoActual: viaje.estado.actual,
+      configuracion: config,
       progresoActual: viaje.tracking?.progreso?.porcentaje || 0,
       progresoTiempo: autoUpdateService.calculateTimeBasedProgress(viaje, now),
       progresoDistancia: rutaInfo ? autoUpdateService.calculateDistanceBasedProgress(viaje, now, rutaInfo) : null,
       ultimoCheckpoint: autoUpdateService.getLastValidCheckpoint(viaje),
-      metodoCalculo: autoUpdateService.getLastValidCheckpoint(viaje) &&
-        autoUpdateService.isCheckpointRecent(autoUpdateService.getLastValidCheckpoint(viaje), now)
-        ? 'checkpoint'
-        : rutaInfo ? 'hibrido_ruta' : 'tiempo',
-      tiempoTranscurrido: Math.round((now - new Date(viaje.departureTime)) / (1000 * 60)), // minutos
-      tiempoRestante: Math.round((new Date(viaje.arrivalTime) - now) / (1000 * 60)), // minutos
+      metodoCalculo: viaje.tracking?.progreso?.metodoCalculo || config.estrategiaProgreso || 'hibrido',
+      tiempoTranscurrido: Math.round((now - new Date(viaje.departureTime)) / (1000 * 60)),
+      tiempoRestante: Math.round((new Date(viaje.arrivalTime) - now) / (1000 * 60)),
       totalCheckpoints: viaje.tracking?.checkpoints?.length || 0,
-      // 🆕 Información específica de ruta
       rutaInfo: rutaInfo ? {
         totalPuntos: rutaInfo.totalPuntos,
         puntoActual: viaje.tracking?.puntoActualRuta?.indice || 0,
@@ -673,17 +982,21 @@ AutoUpdateController.getProgressSummary = async (req, res) => {
         destino: rutaInfo.destino,
         progresoRuta: rutaInfo.totalPuntos > 0 ? 
           Math.round(((viaje.tracking?.puntoActualRuta?.indice || 0) / (rutaInfo.totalPuntos - 1)) * 100) : 0
-      } : null
+      } : null,
+      overrides: {
+        manual: viaje.configuracion?.manualOverride || null,
+        temporal: viaje.configuracion?.temporaryOverride || null
+      }
     };
     
     res.status(200).json({
       success: true,
       data: resumen,
-      message: 'Resumen de progreso híbrido con rutas obtenido exitosamente'
+      message: 'Resumen de progreso con configuración obtenido exitosamente'
     });
     
   } catch (error) {
-    console.error('❌ Error obteniendo resumen de progreso con rutas:', error);
+    console.error('❌ Error obteniendo resumen:', error);
     res.status(500).json({
       success: false,
       message: 'Error al obtener resumen de progreso',
