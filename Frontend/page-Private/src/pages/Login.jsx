@@ -18,7 +18,6 @@ const Login = () => {
  
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  // 🆕 Estado para controlar intentos y bloqueos
   const [isBlocked, setIsBlocked] = useState(false);
   const [attemptsRemaining, setAttemptsRemaining] = useState(4);
   const [blockTimeRemaining, setBlockTimeRemaining] = useState(0);
@@ -30,14 +29,13 @@ const Login = () => {
     }
   }, [isLoggedIn, navigate]);
 
-  // 🕐 Contador para tiempo de bloqueo
+  // Contador para tiempo de bloqueo
   useEffect(() => {
     let interval;
     if (isBlocked && blockTimeRemaining > 0) {
       interval = setInterval(() => {
         setBlockTimeRemaining((prev) => {
           if (prev <= 1) {
-            // ✅ Restablecer completamente el estado al desbloquear
             setIsBlocked(false);
             setAttemptsRemaining(4);
             return 0;
@@ -49,7 +47,6 @@ const Login = () => {
     return () => clearInterval(interval);
   }, [isBlocked, blockTimeRemaining]);
 
-  // 🆕 Función para resetear estado de intentos (reutilizable)
   const resetAttemptsState = () => {
     setIsBlocked(false);
     setAttemptsRemaining(4);
@@ -57,7 +54,7 @@ const Login = () => {
   };
  
   const showSuccessAlert = () => {
-    resetAttemptsState(); // ✅ Usar función centralizada
+    resetAttemptsState();
 
     Swal.fire({
       title: 'Inicio de sesión con éxito!',
@@ -72,7 +69,6 @@ const Login = () => {
     });
   };
  
-  // 🆕 Alerta para intentos fallidos con contador
   const showAttemptsErrorAlert = (message, remaining) => {
     Swal.fire({
       title: 'Credenciales incorrectas',
@@ -93,7 +89,6 @@ const Login = () => {
     });
   };
 
-  // 🔒 Alerta para usuario bloqueado
   const showBlockedAlert = (message, timeRemaining) => {
     const minutes = Math.ceil(timeRemaining / 60);
     
@@ -159,19 +154,15 @@ const Login = () => {
     });
   };
 
-  // 🆕 Función centralizada para manejar respuestas del login
   const handleLoginResponse = (result) => {
     if (result?.blocked) {
-      // Usuario bloqueado
       setIsBlocked(true);
       setBlockTimeRemaining(result.timeRemaining || 300);
       showBlockedAlert(result.message, result.timeRemaining || 300);
     } else if (result?.attemptsRemaining !== undefined) {
-      // Intento fallido con contador
       setAttemptsRemaining(result.attemptsRemaining);
       showAttemptsErrorAlert(result.message, result.attemptsRemaining);
     } else {
-      // Error genérico
       showErrorAlert(result?.message || "Credenciales incorrectas");
     }
   };
@@ -184,7 +175,6 @@ const Login = () => {
       return;
     }
 
-    // 🔒 Verificar si está bloqueado antes de enviar
     if (isBlocked) {
       const minutes = Math.ceil(blockTimeRemaining / 60);
       showBlockedAlert(`Demasiados intentos fallidos. Intenta de nuevo en ${minutes} minuto(s).`, blockTimeRemaining);
@@ -201,27 +191,21 @@ const Login = () => {
       if (result?.success) {
         showSuccessAlert();
       } else {
-        // ✅ Usar función centralizada para manejar errores
         handleLoginResponse(result);
       }
     } catch (error) {
       Swal.close();
       console.error('Error inesperado en login:', error);
-      
-      // 🚨 Con el hook mejorado, los errores ya están manejados
-      // Solo mostrar error genérico para casos inesperados
       showErrorAlert("Ocurrió un error inesperado. Por favor, intenta de nuevo.");
     }
   };
 
-  // 🕐 Función para formatear tiempo restante
   const formatTimeRemaining = (seconds) => {
     const minutes = Math.floor(seconds / 60);
     const remainingSeconds = seconds % 60;
     return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
   };
 
-  // 🎨 Función para determinar el texto del botón
   const getButtonText = () => {
     if (isBlocked) {
       return `Bloqueado (${formatTimeRemaining(blockTimeRemaining)})`;
@@ -232,93 +216,108 @@ const Login = () => {
     return "Iniciar sesión";
   };
 
-  // 🎨 Función para determinar si mostrar advertencia de intentos
   const shouldShowAttemptsWarning = () => {
     return !isBlocked && attemptsRemaining < 4 && attemptsRemaining > 0;
   };
  
   return (
-    <div className="min-h-screen flex flex-col lg:flex-row items-center justify-center bg-gray-100">
-      <div className="w-full lg:w-[55%] flex flex-col justify-center items-center p-8">
-        <Avatar />
-        <Title className="text-gray-800">¡Bienvenido de vuelta!</Title>
+    <div className="min-h-screen flex">
+      {/* 🎨 LADO IZQUIERDO - Formulario (45% en desktop) */}
+      <div className="w-full lg:w-[45%] flex flex-col justify-center items-center p-8 bg-gradient-to-br from-gray-50 to-white relative">
+        
+        {/* ✨ Efecto de fondo sutil */}
+        <div className="absolute inset-0 bg-gradient-to-r from-blue-50/30 to-transparent"></div>
+        
+        <div className="relative z-10 w-full max-w-md">
+          <Avatar />
+          <Title className="text-gray-800 mb-8">¡Bienvenido de vuelta!</Title>
 
-        {/* 🆕 Indicador de estado de bloqueo */}
-        {isBlocked && (
-          <div className="w-full max-w-md mb-4 p-4 bg-red-50 border border-red-200 rounded-lg animate-pulse">
-            <div className="text-center">
-              <p className="text-red-800 font-semibold">🔒 Cuenta bloqueada</p>
-              <p className="text-red-600 text-sm mt-1">
-                Tiempo restante: {formatTimeRemaining(blockTimeRemaining)}
-              </p>
-              <p className="text-red-500 text-xs mt-2">
-                La página se desbloqueará automáticamente cuando termine el tiempo
-              </p>
+          {/* Indicador de estado de bloqueo */}
+          {isBlocked && (
+            <div className="w-full mb-4 p-4 bg-red-50 border border-red-200 rounded-lg animate-pulse">
+              <div className="text-center">
+                <p className="text-red-800 font-semibold">🔒 Cuenta bloqueada</p>
+                <p className="text-red-600 text-sm mt-1">
+                  Tiempo restante: {formatTimeRemaining(blockTimeRemaining)}
+                </p>
+                <p className="text-red-500 text-xs mt-2">
+                  La página se desbloqueará automáticamente cuando termine el tiempo
+                </p>
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {/* 🆕 Indicador de intentos restantes */}
-        {shouldShowAttemptsWarning() && (
-          <div className="w-full max-w-md mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-            <div className="text-center">
-              <p className="text-yellow-800 font-semibold">⚠️ Intentos restantes: {attemptsRemaining}</p>
-              <p className="text-yellow-600 text-xs mt-1">
-                Después de 4 intentos fallidos serás bloqueado por 5 minutos
-              </p>
+          {/* Indicador de intentos restantes */}
+          {shouldShowAttemptsWarning() && (
+            <div className="w-full mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+              <div className="text-center">
+                <p className="text-yellow-800 font-semibold">⚠️ Intentos restantes: {attemptsRemaining}</p>
+                <p className="text-yellow-600 text-xs mt-1">
+                  Después de 4 intentos fallidos serás bloqueado por 5 minutos
+                </p>
+              </div>
             </div>
-          </div>
-        )}
- 
-        <form className="w-full max-w-md space-y-4" onSubmit={onSubmit}>
-          <Input
-            label="Correo"
-            type="email"
-            placeholder="ejemplo@email.com"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            disabled={isBlocked}
-            className={isBlocked ? "opacity-50 cursor-not-allowed" : ""}
-          />
-          <Input
-            label="Contraseña"
-            type="password"
-            placeholder="Al menos 8 caracteres"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            disabled={isBlocked}
-            className={isBlocked ? "opacity-50 cursor-not-allowed" : ""}
-          />
-          <div className="text-right text-sm">
-            <Link 
-              to="/recuperar" 
-              className={`text-blue-600 hover:underline ${isBlocked ? 'pointer-events-none opacity-50' : ''}`}
+          )}
+   
+          <form className="w-full space-y-4" onSubmit={onSubmit}>
+            <Input
+              label="Correo"
+              type="email"
+              placeholder="ejemplo@email.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              disabled={isBlocked}
+              className={isBlocked ? "opacity-50 cursor-not-allowed" : ""}
+            />
+            <Input
+              label="Contraseña"
+              type="password"
+              placeholder="Al menos 8 caracteres"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              disabled={isBlocked}
+              className={isBlocked ? "opacity-50 cursor-not-allowed" : ""}
+            />
+            <div className="text-right text-sm">
+              <Link 
+                to="/recuperar" 
+                className={`text-blue-600 hover:underline ${isBlocked ? 'pointer-events-none opacity-50' : ''}`}
+              >
+                ¿Olvidaste tu contraseña?
+              </Link>
+            </div>
+            <Button 
+              type="submit" 
+              disabled={loading || isBlocked}
+              className={`w-full ${isBlocked ? 'bg-red-400 cursor-not-allowed' : ''}`}
             >
-              ¿Olvidaste tu contraseña?
-            </Link>
-          </div>
-          <Button 
-            type="submit" 
-            disabled={loading || isBlocked}
-            className={`w-full ${isBlocked ? 'bg-red-400 cursor-not-allowed' : ''}`}
-          >
-            {getButtonText()}
-          </Button>
-        </form>
+              {getButtonText()}
+            </Button>
+          </form>
 
-        {/* 🆕 Información adicional cuando está bloqueado */}
-        {isBlocked && (
-          <div className="w-full max-w-md mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-            <div className="text-center">
-              <p className="text-blue-800 text-sm">
-                💡 <strong>Mientras esperas:</strong> Verifica que tengas las credenciales correctas
-              </p>
+          {/* Información adicional cuando está bloqueado */}
+          {isBlocked && (
+            <div className="w-full mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <div className="text-center">
+                <p className="text-blue-800 text-sm">
+                  💡 <strong>Mientras esperas:</strong> Verifica que tengas las credenciales correctas
+                </p>
+              </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
  
-      <div className="w-full lg:w-[30%] flex justify-center p-4">
+      {/* 🚛 LADO DERECHO - Lottie Animation (55% en desktop) - ¡ÉPICO! */}
+      <div className="hidden lg:block lg:w-[55%] relative">
+        <SideImage />
+        
+        {/* 🌟 Efecto de transición entre los lados */}
+        <div className="absolute left-0 top-0 w-8 h-full bg-gradient-to-r from-white via-white/50 to-transparent z-30"></div>
+      </div>
+
+      {/* 📱 Versión móvil del Lottie */}
+      <div className="lg:hidden w-full h-64 mt-8">
         <SideImage />
       </div>
     </div>
