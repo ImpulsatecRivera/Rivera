@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Dimensions } from 'react-native';
+import LottieView from 'lottie-react-native'; // Descomenta cuando resuelvas el error de Babel
 import { useAuth } from '../context/authContext';
 
 const { height } = Dimensions.get('window');
@@ -34,28 +35,19 @@ const OnboardingScreen2 = ({ navigation }) => {
 
       {/* Illustration Container */}
       <View style={styles.illustrationContainer}>
-        {/* Credit Card */}
-        <View style={styles.cardContainer}>
-          <View style={styles.creditCard}>
-            {/* Card chip */}
-            <View style={styles.chip} />
-            
-            {/* Card lines (representing card number and text) */}
-            <View style={styles.cardLines}>
-              <View style={styles.cardLine1} />
-              <View style={styles.cardLine2} />
-            </View>
-            
-            {/* Card stripe */}
-            <View style={styles.cardStripe} />
-          </View>
-          
-          {/* Green checkmark circle */}
-          <View style={styles.checkmarkContainer}>
-            <View style={styles.checkmarkCircle}>
-              <Text style={styles.checkmark}>✓</Text>
-            </View>
-          </View>
+        {/* Contenedor para la animación Lottie */}
+        <View style={styles.lottieContainer}>
+          {/* Placeholder temporal para animación de pago */}
+         
+        
+          <LottieView
+            source={require('../assets/lottie/Make payment.json')} // Tu archivo Lottie de pago
+            autoPlay
+            loop
+            style={styles.lottieAnimation}
+            resizeMode="contain"
+          />
+         
         </View>
       </View>
 
@@ -125,84 +117,36 @@ const styles = StyleSheet.create({
     paddingHorizontal: 40,
     minHeight: 400,
   },
-  cardContainer: {
+  lottieContainer: {
     alignItems: 'center',
+    justifyContent: 'center',
+    width: 300,
+    height: 300,
   },
-  creditCard: {
-    width: 280,
-    height: 180,
-    backgroundColor: '#4A90E2',
-    borderRadius: 15,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.15,
-    shadowRadius: 10,
-    elevation: 8, // for Android
-    overflow: 'hidden',
-  },
-  chip: {
-    width: 45,
-    height: 35,
-    backgroundColor: '#F0C851',
-    borderRadius: 6,
-    position: 'absolute',
-    top: 30,
-    left: 25,
-  },
-  cardLines: {
-    position: 'absolute',
-    top: 30,
-    right: 25,
-  },
-  cardLine1: {
-    width: 120,
-    height: 8,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 4,
-    marginBottom: 8,
-  },
-  cardLine2: {
-    width: 80,
-    height: 8,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 4,
-  },
-  cardStripe: {
+  lottieAnimation: {
     width: '100%',
-    height: 50,
-    backgroundColor: '#2C3E50',
-    position: 'absolute',
-    bottom: 0,
+    height: '100%',
   },
-  checkmarkContainer: {
-    position: 'absolute',
-    bottom: -25,
-    right: -25,
-  },
-  checkmarkCircle: {
-    width: 80,
-    height: 80,
-    backgroundColor: '#4CAF50',
-    borderRadius: 40,
+  // Estilos temporales para el placeholder
+  placeholderAnimation: {
+    width: '100%',
+    height: '100%',
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#4CAF50',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 7.5,
-    elevation: 6, // for Android
+    backgroundColor: '#F8F9FA',
+    borderRadius: 20,
+    borderWidth: 2,
+    borderColor: '#E9ECEF',
+    borderStyle: 'dashed',
   },
-  checkmark: {
-    color: '#FFFFFF',
-    fontSize: 32,
-    fontWeight: 'bold',
-    transform: [{ rotate: '-10deg' }],
+  placeholderText: {
+    fontSize: 60,
+    marginBottom: 10,
+  },
+  placeholderSubtext: {
+    fontSize: 16,
+    color: '#6C757D',
+    textAlign: 'center',
   },
   content: {
     paddingHorizontal: 40,

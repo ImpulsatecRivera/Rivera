@@ -4,12 +4,12 @@
     "slug": "movil-cliente",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./src/assets/icon.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "scheme": "movilcliente",
     "splash": {
-      "image": "./assets/splash-icon.png",
+      "image": "./src/assets/icon.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
@@ -19,39 +19,16 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
+        "foregroundImage": "./src/assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-<<<<<<< HEAD
-      "package": "com.movilcliente.app",
-      "intentFilters": [
-        {
-          "action": "VIEW",
-          "autoVerify": true,
-          "category": [
-            "BROWSABLE",
-            "DEFAULT"
-          ],
-          "data": [
-            {
-              "scheme": "movilcliente"
-            }
-          ]
-        }
-      ]
-=======
       "package": "com.movilcliente.app"
->>>>>>> master
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./src/assets/favicon.png"
     },
     "plugins": [
-<<<<<<< HEAD
-      "expo-secure-store"
-    ]
-=======
       "expo-web-browser"
     ],
     "extra": {
@@ -60,6 +37,5 @@
         "projectId": "b3d7872f-24ff-40b1-a103-a7ec47686323"
       }
     }
->>>>>>> master
   }
 }
