@@ -1,5 +1,7 @@
 import { useEffect, useRef } from 'react';
 import lottie from 'lottie-web';
+// ✅ Importa tu archivo JSON directamente
+import carLoadingAnimation from '../../assets/lotties/Car loading.json';
 
 const SideImage = () => {
   const animationContainer = useRef(null);
@@ -10,12 +12,11 @@ const SideImage = () => {
     if (animationContainer.current) {
       animationInstance.current = lottie.loadAnimation({
         container: animationContainer.current,
-        renderer: 'svg', // 'svg', 'canvas' o 'html'
+        renderer: 'svg',
         loop: true,
         autoplay: true,
-        path: './assets/lotties/Car loading.json', // Cambia esta ruta por la de tu archivo
-        // O si tienes el JSON importado:
-        // animationData: yourLottieData,
+        // ✅ Usa animationData en lugar de path
+        animationData: carLoadingAnimation,
       });
 
       // Configuraciones adicionales para hacerlo más épico
