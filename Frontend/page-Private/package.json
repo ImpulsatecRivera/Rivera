@@ -16,6 +16,7 @@
     "cors": "^2.8.5",
     "framer-motion": "^12.23.12",
     "leaflet": "^1.9.4",
+    "lottie-react": "^2.4.1",
     "lucide-react": "^0.518.0",
     "react": "^19.0.0-rc.1",
     "react-chartjs-2": "^5.3.0",
