@@ -152,33 +152,7 @@ function App() {
         </div>
 
         {/* Texto del error */}
-        <div className="space-y-4">
-          <h1 className="text-4xl font-bold text-gray-800 mb-2">
-            ¡Ups! Ruta perdida
-          </h1>
-          <p className="text-xl text-gray-600 mb-4">
-            La página "{location.pathname}" no fue encontrada
-          </p>
-          <p className="text-gray-500 mb-6">
-            Parece que esta ruta se perdió en el universo digital
-          </p>
-          
-          {/* Botones de navegación */}
-          <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <button
-              onClick={() => window.history.back()}
-              className="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-3 px-6 rounded-lg transition-all duration-200 transform hover:scale-105"
-            >
-              ← Volver atrás
-            </button>
-            <button
-              onClick={() => window.location.href = '/'}
-              className="bg-gray-600 hover:bg-gray-700 text-white font-semibold py-3 px-6 rounded-lg transition-all duration-200 transform hover:scale-105"
-            >
-              🏠 Ir al inicio
-            </button>
-          </div>
-        </div>
+        
         
       </div>
     </div>
