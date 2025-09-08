@@ -146,25 +146,10 @@ const SideImage = () => {
         </div>
 
         {/* 🚀 Texto de marca más elegante */}
-        <div className="absolute bottom-8 left-8 z-40 transition-all duration-300 hover:scale-105">
-          <div className="backdrop-blur-sm bg-white/5 rounded-lg p-4 border border-white/10">
-            <div className="text-white/90 text-lg font-semibold tracking-wide">
-              Rivera Logística
-            </div>
-            <div className="text-white/70 text-sm mt-1 font-light">
-              Conectando destinos con excelencia
-            </div>
-          </div>
-        </div>
+       
 
         {/* 💎 Badge de "powered by" sutil */}
-        <div className="absolute top-8 right-8 z-40">
-          <div className="backdrop-blur-sm bg-white/5 rounded-full px-3 py-1 border border-white/10">
-            <div className="text-white/60 text-xs font-medium">
-              Powered by Innovation
-            </div>
-          </div>
-        </div>
+        
       </div>
 
       {/* 🎯 Indicador de carga mejorado */}
