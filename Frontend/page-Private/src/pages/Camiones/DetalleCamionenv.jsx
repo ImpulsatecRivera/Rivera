@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, ChevronLeft, ChevronRight, AlertCircle, Truck } from 'lucide-react';
 import { useParams, useNavigate } from 'react-router-dom';
+import Lottie from 'lottie-react';
+import sandyLoadingAnimation from '../../assets/lotties/Sandy Loading.json';
 import { useTruckDetail } from '../../components/Camiones/hooks/HookVer'; // Ajusta la ruta según tu estructura
 import CamionFord from "../../images/CamionFord.jpg";
 
@@ -108,44 +110,33 @@ const DetalleCamionenv = () => {
                 <h1 className="text-xl font-semibold text-gray-800">Información del vehículo</h1>
               </div>
               
-              {/* Enhanced Loading Screen */}
+              {/* Enhanced Loading Screen with Lottie */}
               <div className="flex-1 flex items-center justify-center relative" 
                    style={{background: 'linear-gradient(135deg, #34353A 0%, #2a2b2f 100%)'}}>
                 
                 {/* Background Animation */}
                 <div className="absolute inset-0 overflow-hidden">
                   <div className="absolute top-10 left-10 w-20 h-20 rounded-full opacity-10 animate-pulse"
-                       style={{backgroundColor: '#5F8EAD'}}>
+                       style={{backgroundColor: '#5F8EAD', animation: 'float 3s ease-in-out infinite'}}>
                   </div>
                   <div className="absolute bottom-10 right-10 w-16 h-16 rounded-full opacity-10 animate-pulse"
-                       style={{backgroundColor: '#5D9646', animationDelay: '1s'}}>
+                       style={{backgroundColor: '#5D9646', animation: 'float 3s ease-in-out infinite reverse'}}>
                   </div>
                   <div className="absolute top-1/2 left-4 w-12 h-12 rounded-full opacity-10 animate-pulse"
-                       style={{backgroundColor: '#5F8EAD', animationDelay: '0.5s'}}>
+                       style={{backgroundColor: '#5F8EAD', animation: 'float 4s ease-in-out infinite'}}>
                   </div>
                 </div>
 
                 <div className="text-center z-10">
-                  {/* Enhanced Profile Loading Animation */}
+                  {/* Lottie Animation */}
                   <div className="relative mb-8">
-                    <div className="w-28 h-28 rounded-2xl mx-auto mb-6 flex items-center justify-center shadow-2xl overflow-hidden relative" 
-                         style={{background: 'linear-gradient(135deg, #5F8EAD 0%, #5D9646 100%)'}}>
-                      <Truck className="w-14 h-14 text-white animate-pulse" />
-                      
-                      {/* Multiple rotating borders */}
-                      <div className="absolute inset-0 rounded-2xl border-4 border-transparent animate-spin"
-                           style={{
-                             borderTopColor: '#FFFFFF',
-                             borderRightColor: 'rgba(255,255,255,0.3)'
-                           }}>
-                      </div>
-                      <div className="absolute inset-2 rounded-xl border-2 border-transparent animate-spin"
-                           style={{
-                             borderBottomColor: '#FFFFFF',
-                             borderLeftColor: 'rgba(255,255,255,0.2)',
-                             animationDirection: 'reverse'
-                           }}>
-                      </div>
+                    <div className="w-40 h-40 mx-auto mb-6 flex items-center justify-center">
+                      <Lottie 
+                        animationData={sandyLoadingAnimation}
+                        className="w-full h-full"
+                        loop={true}
+                        autoplay={true}
+                      />
                     </div>
                   </div>
                   
@@ -158,65 +149,70 @@ const DetalleCamionenv = () => {
                       Preparando información del vehículo
                     </p>
                   </div>
-
-                  {/* Modern Loading Dots with Ripple Effect */}
-                  <div className="flex justify-center space-x-3 mb-8">
-                    <div className="relative">
-                      <div className="w-4 h-4 rounded-full animate-bounce" 
-                           style={{
-                             backgroundColor: '#5F8EAD',
-                             animationDelay: '0ms'
-                           }}>
-                      </div>
-                      <div className="absolute inset-0 w-4 h-4 rounded-full animate-ping" 
-                           style={{backgroundColor: '#5F8EAD', opacity: '0.3'}}>
-                      </div>
-                    </div>
-                    <div className="relative">
-                      <div className="w-4 h-4 rounded-full animate-bounce" 
-                           style={{
-                             backgroundColor: '#FFFFFF',
-                             animationDelay: '0.2s'
-                           }}>
-                      </div>
-                      <div className="absolute inset-0 w-4 h-4 rounded-full animate-ping" 
-                           style={{backgroundColor: '#FFFFFF', opacity: '0.3', animationDelay: '0.2s'}}>
-                      </div>
-                    </div>
-                    <div className="relative">
-                      <div className="w-4 h-4 rounded-full animate-bounce" 
-                           style={{
-                             backgroundColor: '#5D9646',
-                             animationDelay: '0.4s'
-                           }}>
-                      </div>
-                      <div className="absolute inset-0 w-4 h-4 rounded-full animate-ping" 
-                           style={{backgroundColor: '#5D9646', opacity: '0.3', animationDelay: '0.4s'}}>
-                      </div>
-                    </div>
-                  </div>
                   
                   {/* Advanced Progress Bar */}
                   <div className="w-80 mx-auto">
                     <div className="w-full bg-gray-600 rounded-full h-2 mb-4 overflow-hidden shadow-inner">
-                      <div className="h-2 rounded-full relative overflow-hidden animate-pulse"
+                      <div className="h-2 rounded-full relative overflow-hidden"
                            style={{
                              background: 'linear-gradient(90deg, #5F8EAD 0%, #5D9646 50%, #5F8EAD 100%)',
-                             width: '100%'
+                             width: '100%',
+                             animation: 'loading-wave 2.5s ease-in-out infinite'
                            }}>
-                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent opacity-40 animate-pulse">
+                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent opacity-40"
+                             style={{animation: 'shimmer 1.5s ease-in-out infinite'}}>
                         </div>
                       </div>
                     </div>
                     
                     {/* Dynamic Loading Steps */}
                     <div className="text-sm text-gray-400 animate-pulse">
-                      <span className="inline-block">
+                      <span className="inline-block" style={{animation: 'text-fade 3s ease-in-out infinite'}}>
                         Verificando datos del camión...
                       </span>
                     </div>
                   </div>
                 </div>
+                
+                <style jsx>{`
+                  @keyframes loading-wave {
+                    0% { 
+                      transform: translateX(-100%);
+                      opacity: 0.5;
+                    }
+                    50% { 
+                      transform: translateX(0%);
+                      opacity: 1;
+                    }
+                    100% { 
+                      transform: translateX(100%);
+                      opacity: 0.5;
+                    }
+                  }
+                  
+                  @keyframes float {
+                    0%, 100% {
+                      transform: translateY(0px) scale(1);
+                    }
+                    50% {
+                      transform: translateY(-10px) scale(1.1);
+                    }
+                  }
+                  
+                  @keyframes shimmer {
+                    0% {
+                      transform: translateX(-100%);
+                    }
+                    100% {
+                      transform: translateX(100%);
+                    }
+                  }
+                  
+                  @keyframes text-fade {
+                    0%, 100% { opacity: 0.6; }
+                    50% { opacity: 1; }
+                  }
+                `}</style>
               </div>
             </div>
           </div>
@@ -467,8 +463,8 @@ const DetalleCamionenv = () => {
           </div>
         </div>
       </div>
-    </div>
-  );
-};
+      </div>
+
+    );}
 
 export default DetalleCamionenv;
