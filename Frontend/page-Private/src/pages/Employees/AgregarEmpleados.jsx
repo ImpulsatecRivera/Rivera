@@ -178,14 +178,11 @@ const AgregarEmpleado = () => {
       if (response.status === 200 || response.status === 201) {
         console.log('¡Empleado creado exitosamente!');
 
-        // Cerrar el loading alert primero
-        Swal.close();
-        
-        // Pequeña pausa para que se cierre completamente el loading
+        // Esperar un poco para que el loading alert se cierre naturalmente
         setTimeout(() => {
           // Mostrar éxito con Lottie
           handleSuccess();
-        }, 300);
+        }, 1500);
 
         // Limpiar formulario
         setFormData({

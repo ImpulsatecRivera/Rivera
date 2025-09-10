@@ -1,7 +1,7 @@
 import { Routes, Route, useLocation, Outlet } from "react-router-dom";
 import { useState, useEffect } from "react";
 import Lottie from 'lottie-react';
-import animationData from './assets/lotties/Animation - 1697446322669.json'; // Ajusta la ru
+import animationData from './assets/lotties/404error.json'; // Ajusta la ru
 
 // Rutas privadas
 import PrivateRoute from "./components/PrivateRoutes/PrivateRoute";
