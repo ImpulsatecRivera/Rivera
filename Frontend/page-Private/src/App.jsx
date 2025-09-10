@@ -136,20 +136,18 @@ function App() {
   path="*"
   element={
     <div className="flex items-center justify-center h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
-      
-      {/* Animación Lottie - Pantalla Completa */}
-      <div className="w-full h-full flex items-center justify-center">
+      <div className="w-full flex items-center justify-center">
         <Lottie
           animationData={animationData}
           style={{ 
-            width: '100vw', 
-            height: '100vh'
+            width: '100%',
+            maxWidth: '800px', // Controla el tamaño máximo
+            height: 'auto' // Mantiene proporciones
           }}
           loop={true}
           autoplay={true}
         />
       </div>
-
     </div>
   }
 />
