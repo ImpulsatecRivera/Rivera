@@ -1,5 +1,7 @@
 import React from 'react';
-import { Truck } from 'lucide-react';
+import Lottie from 'lottie-react';
+// Importa tu animación JSON
+import carAnimation from '../../assets/lotties/Car _ Ignite Animation.json';
 
 const PantallaCarga = () => {
   return (
@@ -12,17 +14,21 @@ const PantallaCarga = () => {
           {/* Logo/Icono principal con efectos mejorados */}
           <div className="relative flex justify-center">
             {/* Círculo de fondo animado */}
-            <div className="absolute inset-0 w-24 h-24 mx-auto rounded-full blur-2xl opacity-40 animate-pulse"
+            <div className="absolute inset-0 w-32 h-32 mx-auto rounded-full blur-2xl opacity-40 animate-pulse"
                  style={{ 
                    background: 'linear-gradient(135deg, #3B82F6, #6366F1)',
                    animation: 'pulse-glow 2s ease-in-out infinite alternate'
                  }}>
             </div>
             
-            {/* Icono del camión */}
-            <div className="relative">
-              <Truck className="w-20 h-20 text-blue-600 animate-bounce" 
-                     style={{ animationDuration: '2s' }} />
+            {/* Animación Lottie del carro */}
+            <div className="relative w-28 h-28">
+              <Lottie 
+                animationData={carAnimation}
+                loop={true}
+                autoplay={true}
+                className="w-full h-full"
+              />
             </div>
           </div>
 
@@ -40,9 +46,6 @@ const PantallaCarga = () => {
               </p>
             </div>
           </div>
-
-          {/* Barra de progreso mejorada */}
-          
 
           {/* Puntos de carga animados mejorados */}
           <div className="flex justify-center space-x-2">
