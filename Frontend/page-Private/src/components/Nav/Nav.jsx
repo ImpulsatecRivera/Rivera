@@ -268,7 +268,7 @@ const SidebarNav = () => {
             top: 50%;
             left: -80px;
             transform: translateY(-50%);
-            animation: lottieMove 2s ease-in-out;
+            animation: lottieMove 5s ease-in-out;
             filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3));
           }
           
