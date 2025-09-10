@@ -1,6 +1,8 @@
 // ProveedorDetailPanel.jsx
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, MoreHorizontal, Building2, Phone, Mail, Package } from 'lucide-react';
+import Lottie from 'lottie-react';
+import sandyLoadingAnimation from '../../assets/lotties/Sandy Loading.json';
 
 const ProveedorDetailPanel = ({ 
   selectedProveedor, 
@@ -40,27 +42,15 @@ const ProveedorDetailPanel = ({
           </div>
 
           <div className="text-center z-10">
-            {/* Enhanced Profile Loading Animation */}
+            {/* Lottie Animation */}
             <div className="relative mb-8">
-              <div className="w-28 h-28 rounded-2xl mx-auto mb-6 flex items-center justify-center shadow-2xl overflow-hidden relative" 
-                   style={{background: 'linear-gradient(135deg, #5F8EAD 0%, #5D9646 100%)'}}>
-                <Building2 className="w-14 h-14 text-white animate-pulse" />
-                
-                {/* Multiple rotating borders */}
-                <div className="absolute inset-0 rounded-2xl border-4 border-transparent animate-spin"
-                     style={{
-                       borderTopColor: '#FFFFFF',
-                       borderRightColor: 'rgba(255,255,255,0.3)',
-                       animation: 'spin 2s linear infinite'
-                     }}>
-                </div>
-                <div className="absolute inset-2 rounded-xl border-2 border-transparent animate-spin"
-                     style={{
-                       borderBottomColor: '#FFFFFF',
-                       borderLeftColor: 'rgba(255,255,255,0.2)',
-                       animation: 'spin 3s linear infinite reverse'
-                     }}>
-                </div>
+              <div className="w-40 h-40 mx-auto mb-6 flex items-center justify-center">
+                <Lottie 
+                  animationData={sandyLoadingAnimation}
+                  className="w-full h-full"
+                  loop={true}
+                  autoplay={true}
+                />
               </div>
             </div>
             
@@ -72,46 +62,6 @@ const ProveedorDetailPanel = ({
               <p className="text-gray-300 text-lg">
                 Preparando información de la empresa
               </p>
-            </div>
-
-            {/* Modern Loading Dots with Ripple Effect */}
-            <div className="flex justify-center space-x-3 mb-8">
-              <div className="relative">
-                <div className="w-4 h-4 rounded-full animate-bounce" 
-                     style={{
-                       backgroundColor: '#5F8EAD', 
-                       animationDelay: '0ms',
-                       animation: 'bounce-custom 1.6s ease-in-out infinite both'
-                     }}>
-                </div>
-                <div className="absolute inset-0 w-4 h-4 rounded-full animate-ping" 
-                     style={{backgroundColor: '#5F8EAD', opacity: '0.3'}}>
-                </div>
-              </div>
-              <div className="relative">
-                <div className="w-4 h-4 rounded-full animate-bounce" 
-                     style={{
-                       backgroundColor: '#FFFFFF', 
-                       animationDelay: '0.2s',
-                       animation: 'bounce-custom 1.6s ease-in-out infinite both'
-                     }}>
-                </div>
-                <div className="absolute inset-0 w-4 h-4 rounded-full animate-ping" 
-                     style={{backgroundColor: '#FFFFFF', opacity: '0.3', animationDelay: '0.2s'}}>
-                </div>
-              </div>
-              <div className="relative">
-                <div className="w-4 h-4 rounded-full animate-bounce" 
-                     style={{
-                       backgroundColor: '#5D9646', 
-                       animationDelay: '0.4s',
-                       animation: 'bounce-custom 1.6s ease-in-out infinite both'
-                     }}>
-                </div>
-                <div className="absolute inset-0 w-4 h-4 rounded-full animate-ping" 
-                     style={{backgroundColor: '#5D9646', opacity: '0.3', animationDelay: '0.4s'}}>
-                </div>
-              </div>
             </div>
             
             {/* Advanced Progress Bar */}
@@ -155,17 +105,6 @@ const ProveedorDetailPanel = ({
             }
           }
           
-          @keyframes bounce-custom {
-            0%, 80%, 100% {
-              transform: scale(0.8) translateY(0);
-              opacity: 0.5;
-            } 
-            40% {
-              transform: scale(1.2) translateY(-10px);
-              opacity: 1;
-            }
-          }
-          
           @keyframes float {
             0%, 100% {
               transform: translateY(0px) scale(1);
@@ -187,11 +126,6 @@ const ProveedorDetailPanel = ({
           @keyframes text-fade {
             0%, 100% { opacity: 0.6; }
             50% { opacity: 1; }
-          }
-          
-          @keyframes spin {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
           }
         `}</style>
       </div>
