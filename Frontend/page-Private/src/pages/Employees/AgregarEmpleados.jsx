@@ -14,10 +14,13 @@ import FormTextarea from '../../components/FormsEmpleados/FormTextarea';
 import DatePicker from '../../components/FormsEmpleados/DatePicker';
 
 // Importar utilidades
-import { showSuccessAlert, showErrorAlert, showLoadingAlert, showValidationAlert } from '../../components/UIEmpleados/SweetAlertUtils';
+import { showErrorAlert, showLoadingAlert, showValidationAlert } from '../../components/UIEmpleados/SweetAlertUtils';
 import { validateEmployeeForm, formatInput } from '../../components/UIEmpleados/FormValidation';
 import { generateEmail } from '../../components/UIEmpleados/EmailGenerator';
 import { useImageUpload } from '../../components/Empleados/hooks/useImageUpload';
+
+// Importar el nuevo hook de éxito con Lottie
+import { useSuccessModal } from '../../components/UIEmpleados/SuccessLottieModal';
 
 const AgregarEmpleado = () => {
   // Estados del formulario
@@ -38,6 +41,9 @@ const AgregarEmpleado = () => {
 
   // Hook personalizado para manejo de imágenes
   const { imagePreview, handleImageChange, removeImage, setImagePreview } = useImageUpload();
+
+  // Hook para el modal de éxito con Lottie
+  const { showSuccess, SuccessModal } = useSuccessModal();
 
   // Generar email automáticamente cuando cambien nombre o apellido
   useEffect(() => {
@@ -81,6 +87,25 @@ const AgregarEmpleado = () => {
 
   const onRemoveImage = () => {
     removeImage(setFormData);
+  };
+
+  // Navegación
+  const handleBackToMenu = () => {
+    if (window.history.length > 1) {
+      window.history.back();
+    } else {
+      console.log('Navegar a la página anterior');
+    }
+  };
+
+  // Función para mostrar éxito con Lottie
+  const handleSuccess = () => {
+    showSuccess({
+      title: "¡Empleado Agregado!",
+      message: "El empleado ha sido registrado exitosamente en el sistema.",
+      buttonText: "Volver al menú",
+      onClose: handleBackToMenu
+    });
   };
 
   // Validación y envío del formulario
@@ -153,8 +178,8 @@ const AgregarEmpleado = () => {
       if (response.status === 200 || response.status === 201) {
         console.log('¡Empleado creado exitosamente!');
 
-        // Cerrar loading y mostrar éxito
-        showSuccessAlert(handleBackToMenu);
+        // Cerrar loading y mostrar éxito con Lottie
+        handleSuccess();
 
         // Limpiar formulario
         setFormData({
@@ -232,15 +257,6 @@ const AgregarEmpleado = () => {
     } finally {
       console.log('=== FINALIZANDO ===');
       setLoading(false);
-    }
-  };
-
-  // Navegación
-  const handleBackToMenu = () => {
-    if (window.history.length > 1) {
-      window.history.back();
-    } else {
-      console.log('Navegar a la página anterior');
     }
   };
 
@@ -399,6 +415,9 @@ const AgregarEmpleado = () => {
           </div>
         </div>
       </div>
+
+      {/* Modal de Éxito con Lottie */}
+      <SuccessModal />
     </div>
   );
 };
