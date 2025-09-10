@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Phone, Mail, User, ArrowLeft, ChevronDown, ChevronLeft, ChevronRight, Users, MapPin, Calendar, CreditCard, Plus } from 'lucide-react';
 import Lottie from 'lottie-react';
-import sandyLoadingAnimation from '../../assets/lotties/Sandy Loading.json';
+import sandyLoadingAnimation from '../assets/lotties/Sandy Loading.json';
 import useClients from '../components/Clientes/hooks/useDataCliente'; // Ajusta la ruta según tu estructura
 
 const Clientes= () => {
