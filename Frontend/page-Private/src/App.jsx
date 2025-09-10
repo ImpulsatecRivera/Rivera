@@ -132,29 +132,26 @@ function App() {
       </Route>
 
       {/* ===================== 404 FUERA DEL LAYOUT (SIN MENÚ) ===================== */}
-      <Route
+     <Route
   path="*"
   element={
     <div className="flex items-center justify-center h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
-      <div className="text-center max-w-lg mx-auto px-6">
-        
-        {/* Animación Lottie */}
-        <div className="mb-6">
-          {/* Placeholder temporal - reemplaza cuando tengas tu Lottie */}
-          
-          
-          <Lottie
-            animationData={animationData}
-            style={{ width: 320, height: 320 }}
-            loop={true}
-            autoplay={true}
-          />
-        </div>
-
-        {/* Texto del error */}
-        
-        
+      
+      {/* Animación Lottie - Grande pero proporcionada */}
+      <div className="w-full h-full flex items-center justify-center">
+        <Lottie
+          animationData={animationData}
+          style={{ 
+            width: '80vw', 
+            height: '80vh',
+            maxWidth: '800px',
+            maxHeight: '800px'
+          }}
+          loop={true}
+          autoplay={true}
+        />
       </div>
+
     </div>
   }
 />
