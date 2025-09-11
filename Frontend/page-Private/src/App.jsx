@@ -1,7 +1,7 @@
 import { Routes, Route, useLocation, Outlet } from "react-router-dom";
 import { useState, useEffect } from "react";
 import Lottie from 'lottie-react';
-import animationData from './assets/lotties/Animation - 1697446322669.json'; // Ajusta la ru
+import animationData from './assets/lotties/404 not found.json'; // Ajusta la ru
 
 // Rutas privadas
 import PrivateRoute from "./components/PrivateRoutes/PrivateRoute";
@@ -132,28 +132,21 @@ function App() {
       </Route>
 
       {/* ===================== 404 FUERA DEL LAYOUT (SIN MENÚ) ===================== */}
-      <Route
+     <Route
   path="*"
   element={
     <div className="flex items-center justify-center h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
-      <div className="text-center max-w-lg mx-auto px-6">
-        
-        {/* Animación Lottie */}
-        <div className="mb-6">
-          {/* Placeholder temporal - reemplaza cuando tengas tu Lottie */}
-          
-          
-          <Lottie
-            animationData={animationData}
-            style={{ width: 320, height: 320 }}
-            loop={true}
-            autoplay={true}
-          />
-        </div>
-
-        {/* Texto del error */}
-        
-        
+      <div className="w-full flex items-center justify-center">
+        <Lottie
+          animationData={animationData}
+          style={{ 
+            width: '100%',
+            maxWidth: '800px', // Controla el tamaño máximo
+            height: 'auto' // Mantiene proporciones
+          }}
+          loop={true}
+          autoplay={true}
+        />
       </div>
     </div>
   }
