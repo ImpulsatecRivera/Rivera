@@ -17,13 +17,13 @@ import Animated, {
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
-const SplashScreen = ({ onAnimationFinish }) => {
-  const forkliftRef = useRef(null);
+const SplashScreen2 = ({ onAnimationFinish }) => {
+  const travelRef = useRef(null);
   
   // Valores animados
   const opacity = useSharedValue(0);
-  const forkliftOpacity = useSharedValue(0);
-  const forkliftScale = useSharedValue(0.5);
+  const travelOpacity = useSharedValue(0);
+  const travelScale = useSharedValue(0.5);
 
   useEffect(() => {
     startAnimationSequence();
@@ -33,12 +33,12 @@ const SplashScreen = ({ onAnimationFinish }) => {
     // Fade in general
     opacity.value = withTiming(1, { duration: 600 });
     
-    // Animación del montacargas
-    forkliftOpacity.value = withDelay(
+    // Animación de Travel
+    travelOpacity.value = withDelay(
       200,
       withTiming(1, { duration: 800 })
     );
-    forkliftScale.value = withDelay(
+    travelScale.value = withDelay(
       200,
       withTiming(1, {
         duration: 1200,
@@ -65,9 +65,9 @@ const SplashScreen = ({ onAnimationFinish }) => {
     opacity: opacity.value,
   }));
 
-  const forkliftStyle = useAnimatedStyle(() => ({
-    opacity: forkliftOpacity.value,
-    transform: [{ scale: forkliftScale.value }],
+  const travelStyle = useAnimatedStyle(() => ({
+    opacity: travelOpacity.value,
+    transform: [{ scale: travelScale.value }],
   }));
 
   return (
@@ -75,12 +75,12 @@ const SplashScreen = ({ onAnimationFinish }) => {
       <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
       <Animated.View style={[styles.container, containerStyle]}>
         
-        {/* Solo la Lottie del montacargas */}
-        <Animated.View style={forkliftStyle}>
+        {/* Solo la Lottie de Travel */}
+        <Animated.View style={travelStyle}>
           <LottieView
-            ref={forkliftRef}
-            source={require('../../assets/lottie/Forklift.json')}
-            style={styles.forkliftAnimation}
+            ref={travelRef}
+            source={require('../../assets/lottie/Travel.json')}
+            style={styles.travelAnimation}
             autoPlay
             loop
             speed={1.2}
@@ -99,10 +99,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  forkliftAnimation: {
-    width: SCREEN_WIDTH * 0.6,
-    height: SCREEN_WIDTH * 0.6,
+  travelAnimation: {
+    width: SCREEN_WIDTH * 0.8,  // Más grande para ver mejor los detalles
+    height: SCREEN_WIDTH * 0.8,
   },
 });
 
-export default SplashScreen;
+export default SplashScreen2;
