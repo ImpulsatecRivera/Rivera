@@ -46,7 +46,7 @@ const SplashScreen2 = ({ onAnimationFinish }) => {
       })
     );
 
-    // Fade out después de 3 segundos
+    // Fade out después de 5 segundos
     setTimeout(() => {
       opacity.value = withTiming(
         0,
@@ -57,7 +57,7 @@ const SplashScreen2 = ({ onAnimationFinish }) => {
           }
         }
       );
-    }, 3000);
+    }, 5000); 
   };
 
   // Estilos animados
