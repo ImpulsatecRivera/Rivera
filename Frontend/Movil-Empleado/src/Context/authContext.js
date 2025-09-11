@@ -16,6 +16,9 @@ export const AuthProvider = ({ children }) => {
   const [userType, setUserType] = useState(null);
   const [user, setUser] = useState(null);
   const [sessionTimer, setSessionTimer] = useState(null);
+  
+  // 🆕 ESTADO PARA SPLASHSCREEN2 DESPUÉS DEL LOGIN
+  const [showPostLoginSplash, setShowPostLoginSplash] = useState(false);
 
   useEffect(() => {
     checkAuthStatus();
@@ -57,6 +60,9 @@ export const AuthProvider = ({ children }) => {
           setHasCompletedOnboarding(onboardingCompleted === 'true');
           setUser(userData ? JSON.parse(userData) : null);
           setUserType(savedUserType);
+          
+          // 🆕 NO MOSTRAR SPLASHSCREEN2 EN SESIONES RESTAURADAS
+          setShowPostLoginSplash(false);
           
           // Programar auto-logout
           startSessionTimer(remainingTime);
@@ -127,6 +133,9 @@ export const AuthProvider = ({ children }) => {
       setUserType(null);
       setUser(null);
       
+      // 🆕 RESETEAR SPLASHSCREEN2
+      setShowPostLoginSplash(false);
+      
       if (sessionTimer) {
         clearTimeout(sessionTimer);
         setSessionTimer(null);
@@ -166,12 +175,16 @@ export const AuthProvider = ({ children }) => {
       setIsAuthenticated(true);
       setHasCompletedOnboarding(true); // Motoristas existentes no necesitan onboarding
       
+      // 🆕 ACTIVAR SPLASHSCREEN2 DESPUÉS DEL LOGIN EXITOSO
+      setShowPostLoginSplash(true);
+      
       // ⏰ INICIAR TIMER DE EXPIRACIÓN
       startSessionTimer();
       
       console.log('✅ Login completado y guardado');
       console.log('📋 Motorista ID guardado:', userId);
       console.log('📊 Sesión expirará en 20 minutos');
+      console.log('🎬 SplashScreen2 activado');
       
       return { success: true };
     } catch (error) {
@@ -209,6 +222,9 @@ export const AuthProvider = ({ children }) => {
       setUserType('Motorista');
       setIsAuthenticated(true);
       setHasCompletedOnboarding(false); // ❌ Mostrar onboarding para nuevos usuarios
+      
+      // 🆕 NO MOSTRAR SPLASHSCREEN2 EN REGISTRO (VAN DIRECTO AL ONBOARDING)
+      setShowPostLoginSplash(false);
       
       // ⏰ INICIAR TIMER DE EXPIRACIÓN
       startSessionTimer();
@@ -266,6 +282,11 @@ export const AuthProvider = ({ children }) => {
     isLoading,
     userType,
     user,
+    
+    // 🆕 NUEVOS VALORES PARA SPLASHSCREEN2
+    showPostLoginSplash,
+    setShowPostLoginSplash,
+    
     login,
     register,
     completeOnboarding,

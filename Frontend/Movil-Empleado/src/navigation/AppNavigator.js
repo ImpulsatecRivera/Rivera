@@ -10,8 +10,9 @@ import PerfilScreen from '../screens/PerfilScreen';
 import InfoViajeScreen from '../screens/InfoViajeScreen';
 import InicioSesionScreen from '../screens/InicioSesionScreen';
 
-// 🆕 IMPORTAR TU PANTALLA DE CARGA AQUÍ
-import PremiumLoadingScreen from '../screens/splashScreens'; // O CreativeTruckLoading
+// IMPORTAR PANTALLAS DE CARGA
+import PremiumLoadingScreen from '../screens/splashScreens'; // Pantalla inicial
+import SplashScreen2 from '../screens/SplashScreen2'; // 🆕 Tu nueva pantalla después del login
 
 // Pantallas de recuperación
 import elegirMetodoRecuperacionScreen from '../screens/elegirMetodoRecuperacionScreen';
@@ -101,28 +102,29 @@ const TabNavigator = () => {
 
 // Componente principal del navegador
 const AppNavigator = () => {
-  const { isAuthenticated, hasCompletedOnboarding, isLoading } = useAuth();
+  const { isAuthenticated, hasCompletedOnboarding, isLoading, showPostLoginSplash, setShowPostLoginSplash } = useAuth();
   
-  // 🆕 ESTADO PARA CONTROLAR LA PANTALLA DE CARGA INICIAL
+  // ESTADO PARA CONTROLAR LA PANTALLA DE CARGA INICIAL
   const [showInitialLoading, setShowInitialLoading] = useState(true);
   
   console.log('🔄 AppNavigator render:', { 
     isAuthenticated, 
     hasCompletedOnboarding, 
     isLoading,
-    showInitialLoading
+    showInitialLoading,
+    showPostLoginSplash
   });
 
-  // 🆕 EFECTO PARA OCULTAR LA PANTALLA DE CARGA DESPUÉS DE UN TIEMPO
+  // EFECTO PARA OCULTAR LA PANTALLA DE CARGA INICIAL
   useEffect(() => {
     const timer = setTimeout(() => {
       setShowInitialLoading(false);
-    }, 3000); // 3 segundos - ajusta según necesites
+    }, 3000); // 3 segundos
 
     return () => clearTimeout(timer);
   }, []);
 
-  // 🆕 MOSTRAR PANTALLA DE CARGA INICIAL PRIMERO
+  // 1️⃣ MOSTRAR PANTALLA DE CARGA INICIAL PRIMERO
   if (showInitialLoading) {
     console.log('🚚 Mostrando pantalla de carga inicial...');
     return (
@@ -133,7 +135,7 @@ const AppNavigator = () => {
     );
   }
   
-  // Mostrar loading del contexto si está cargando
+  // 2️⃣ MOSTRAR LOADING DEL CONTEXTO SI ESTÁ CARGANDO
   if (isLoading) {
     console.log('⏳ Mostrando loading del contexto...');
     return (
@@ -144,7 +146,7 @@ const AppNavigator = () => {
     );
   }
   
-  // 1️⃣ SI NO ESTÁ AUTENTICADO: Mostrar pantallas de login
+  // 3️⃣ SI NO ESTÁ AUTENTICADO: Mostrar pantallas de login
   if (!isAuthenticated) {
     console.log('🔐 Mostrando navegador de autenticación');
     return (
@@ -196,7 +198,20 @@ const AppNavigator = () => {
     );
   }
 
-  // 2️⃣ SI ESTÁ AUTENTICADO PERO NO HA COMPLETADO ONBOARDING: Mostrar pantallas de carga
+  // 4️⃣ 🆕 SI ESTÁ AUTENTICADO Y DEBE MOSTRAR SPLASH POST-LOGIN
+  if (isAuthenticated && showPostLoginSplash) {
+    console.log('✨ Mostrando SplashScreen2 después del login...');
+    return (
+      <SplashScreen2 
+        onAnimationFinish={() => {
+          console.log('✅ SplashScreen2 terminado, ocultando...');
+          setShowPostLoginSplash(false);
+        }}
+      />
+    );
+  }
+
+  // 5️⃣ SI ESTÁ AUTENTICADO PERO NO HA COMPLETADO ONBOARDING: Mostrar pantallas de carga
   if (isAuthenticated && !hasCompletedOnboarding) {
     console.log('🎬 Mostrando navegador de onboarding (pantallas de carga)');
     return (
@@ -235,7 +250,7 @@ const AppNavigator = () => {
     );
   }
 
-  // 3️⃣ SI ESTÁ AUTENTICADO Y HA COMPLETADO ONBOARDING: Mostrar app principal
+  // 6️⃣ SI ESTÁ AUTENTICADO Y HA COMPLETADO ONBOARDING: Mostrar app principal
   console.log('🏠 Mostrando navegador principal (TabNavigator con InicioScreen)');
   return (
     <Stack.Navigator 
