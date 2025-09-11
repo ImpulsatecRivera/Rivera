@@ -10,7 +10,7 @@ import GreetingSection from '../components/GreetingSection';
 import ServiceCard from '../components/ServiceCard';
 import StatsCard from '../components/StatsCard';
 import DestinationCard from '../components/DestinationCard';
-import LoadingScreen from '../components/LoadingScreen';
+
 
 const InicioScreen = ({ navigation }) => {
   const { profile, loading: profileLoading } = useProfile();
@@ -123,13 +123,7 @@ const InicioScreen = ({ navigation }) => {
   }, [motoristaId, loading, trips, viajesPorDia, error]);
 
   // Pantalla de carga inicial
-  if (loading && (!trips || trips.length === 0)) {
-    return (
-      <View style={styles.loadingContainer}>
-        <LoadingScreen message="Cargando tus viajes asignados..." />
-      </View>
-    );
-  }
+ 
 
   return (
     <View style={styles.container}>

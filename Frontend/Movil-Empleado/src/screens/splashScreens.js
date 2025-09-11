@@ -3,465 +3,315 @@ import {
   View,
   Text,
   StyleSheet,
-  Animated,
-  Image,
-  StatusBar,
   Dimensions,
-  Easing
+  StatusBar,
+  Platform,
 } from 'react-native';
+import LottieView from 'lottie-react-native';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+  withDelay,
+  withSequence,
+  runOnJS,
+  Easing,
+} from 'react-native-reanimated';
 
-const { width, height } = Dimensions.get('window');
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
-const LoadingWithEmojiTruck = ({ 
-  message = "viajando por cada parte de ti",
-  subtitle = "Conectando con tu ruta..."
-}) => {
-  // Animaciones
-  const logoScale = useRef(new Animated.Value(0)).current;
-  const logoOpacity = useRef(new Animated.Value(0)).current;
-  const truckMove = useRef(new Animated.Value(-150)).current;
-  const truckBounce = useRef(new Animated.Value(0)).current;
-  const wheelSpin = useRef(new Animated.Value(0)).current;
-  const textFade = useRef(new Animated.Value(0)).current;
-  const roadProgress = useRef(new Animated.Value(0)).current;
-  const smokeOpacity = useRef(new Animated.Value(0)).current;
-  const smokeDrift = useRef(new Animated.Value(0)).current;
+const SplashScreen = ({ onAnimationFinish }) => {
+  const lottieRef = useRef(null);
+  
+  // Valores animados
+  const opacity = useSharedValue(0);
+  const logoScale = useSharedValue(0.3);
+  const titleOpacity = useSharedValue(0);
+  const titleTranslateY = useSharedValue(30);
+  const subtitleOpacity = useSharedValue(0);
+  const subtitleTranslateY = useSharedValue(20);
+  const loadingOpacity = useSharedValue(0);
 
   useEffect(() => {
-    // Secuencia de animaciones de entrada
-    Animated.sequence([
-      // 1. Logo aparece
-      Animated.parallel([
-        Animated.spring(logoScale, {
-          toValue: 1,
-          tension: 40,
-          friction: 8,
-          useNativeDriver: true,
-        }),
-        Animated.timing(logoOpacity, {
-          toValue: 1,
-          duration: 1000,
-          useNativeDriver: true,
-        }),
-      ]),
-      
-      // 2. Texto aparece
-      Animated.delay(500),
-      Animated.timing(textFade, {
-        toValue: 1,
-        duration: 800,
-        easing: Easing.out(Easing.quad),
-        useNativeDriver: true,
-      }),
-    ]).start();
+    // Iniciar secuencia de animaciones
+    startAnimationSequence();
+  }, []);
 
-    // Animaciones continuas MUY LENTAS Y SUAVES
+  const startAnimationSequence = () => {
+    // Fade in general
+    opacity.value = withTiming(1, { duration: 800 });
     
-    // Camión moviéndose SÚPER LENTO
-    const truckAnimation = Animated.loop(
-      Animated.sequence([
-        Animated.timing(truckMove, {
-          toValue: width + 150,
-          duration: 15000, // 15 segundos! Aún más lento
-          easing: Easing.inOut(Easing.quad),
-          useNativeDriver: true,
-        }),
-        Animated.delay(3000),
-        Animated.timing(truckMove, {
-          toValue: -150,
-          duration: 0,
-          useNativeDriver: true,
-        }),
-        Animated.delay(2000),
-      ])
-    );
-
-    // Rebote suave y lento
-    const bounceAnimation = Animated.loop(
-      Animated.sequence([
-        Animated.timing(truckBounce, {
-          toValue: -8,
-          duration: 1200,
-          easing: Easing.inOut(Easing.sin),
-          useNativeDriver: true,
-        }),
-        Animated.timing(truckBounce, {
-          toValue: 0,
-          duration: 1200,
-          easing: Easing.inOut(Easing.sin),
-          useNativeDriver: true,
-        }),
-      ])
-    );
-
-    // Carretera súper lenta
-    const roadAnimation = Animated.loop(
-      Animated.timing(roadProgress, {
-        toValue: 1,
-        duration: 5000, // Más lento
-        easing: Easing.linear,
-        useNativeDriver: true,
+    // Animación del logo (escala)
+    logoScale.value = withDelay(
+      200,
+      withTiming(1, {
+        duration: 1200,
+        easing: Easing.out(Easing.back(1.2)),
       })
     );
 
-    // Humo más realista y lento
-    const smokeAnimation = Animated.loop(
-      Animated.sequence([
-        Animated.timing(smokeOpacity, {
-          toValue: 0.8,
-          duration: 2500,
-          easing: Easing.inOut(Easing.quad),
-          useNativeDriver: true,
-        }),
-        Animated.timing(smokeOpacity, {
-          toValue: 0.1,
-          duration: 2500,
-          easing: Easing.inOut(Easing.quad),
-          useNativeDriver: true,
-        }),
-      ])
+    // Animación del título
+    titleOpacity.value = withDelay(
+      800,
+      withTiming(1, { duration: 600 })
+    );
+    titleTranslateY.value = withDelay(
+      800,
+      withTiming(0, { duration: 600, easing: Easing.out(Easing.quad) })
     );
 
-    // Humo desplazándose
-    const smokeDriftAnimation = Animated.loop(
-      Animated.timing(smokeDrift, {
-        toValue: 1,
-        duration: 4000,
-        easing: Easing.out(Easing.quad),
-        useNativeDriver: true,
-      })
+    // Animación del subtítulo
+    subtitleOpacity.value = withDelay(
+      1200,
+      withTiming(1, { duration: 600 })
+    );
+    subtitleTranslateY.value = withDelay(
+      1200,
+      withTiming(0, { duration: 600, easing: Easing.out(Easing.quad) })
     );
 
-    // Iniciar animaciones después del logo
+    // Indicador de carga
+    loadingOpacity.value = withDelay(
+      1600,
+      withTiming(1, { duration: 400 })
+    );
+
+    // Simular tiempo de carga y luego hacer fade out
     setTimeout(() => {
-      truckAnimation.start();
-      bounceAnimation.start();
-      roadAnimation.start();
-      smokeAnimation.start();
-      smokeDriftAnimation.start();
-    }, 1500);
-
-    return () => {
-      truckAnimation.stop();
-      bounceAnimation.stop();
-      roadAnimation.stop();
-      smokeAnimation.stop();
-      smokeDriftAnimation.stop();
-    };
-  }, []);
-
-  const roadDashOffset = roadProgress.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0, -60],
-  });
-
-  const smokeXOffset = smokeDrift.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0, 50],
-  });
-
-  const smokeYOffset = smokeDrift.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0, -20],
-  });
-
-  return (
-    <View style={styles.container}>
-      <StatusBar backgroundColor="#f8f9fa" barStyle="dark-content" />
-      
-      {/* Logo Section */}
-      <Animated.View 
-        style={[
-          styles.logoSection,
-          {
-            opacity: logoOpacity,
-            transform: [{ scale: logoScale }]
+      opacity.value = withTiming(
+        0,
+        { duration: 600 },
+        (finished) => {
+          if (finished && onAnimationFinish) {
+            runOnJS(onAnimationFinish)();
           }
-        ]}
-      >
-        <Image 
-          source={require('../images/logo.png')}
-          style={styles.logo}
-          resizeMode="contain"
-          onError={() => console.log('Error cargando logo')}
-        />
-      </Animated.View>
+        }
+      );
+    }, 4000);
+  };
 
-      {/* Main Content */}
-      <View style={styles.mainContent}>
-        {/* Texto */}
-        <Animated.View 
-          style={[
-            styles.textContainer,
-            { opacity: textFade }
-          ]}
-        >
-          <Text style={styles.title}>{message}</Text>
-          <Text style={styles.subtitle}>{subtitle}</Text>
-        </Animated.View>
+  // Estilos animados
+  const containerStyle = useAnimatedStyle(() => ({
+    opacity: opacity.value,
+  }));
 
-        {/* Área de animación del camión */}
-        <View style={styles.animationArea}>
-          {/* Múltiples nubes de humo */}
-          <Animated.View 
-            style={[
-              styles.smoke,
-              { 
-                opacity: smokeOpacity,
-                transform: [
-                  { translateX: Animated.add(truckMove, smokeXOffset) },
-                  { translateY: smokeYOffset }
-                ]
-              }
-            ]}
-          >
-            <Text style={styles.smokeText}>💨</Text>
-          </Animated.View>
+  const logoStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: logoScale.value }],
+  }));
 
-          <Animated.View 
-            style={[
-              styles.smoke2,
-              { 
-                opacity: smokeOpacity.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [0, 0.5],
-                }),
-                transform: [
-                  { 
-                    translateX: Animated.add(
-                      truckMove, 
-                      smokeXOffset.interpolate({
-                        inputRange: [0, 1],
-                        outputRange: [0, 30],
-                      })
-                    ) 
-                  },
-                  { translateY: smokeYOffset }
-                ]
-              }
-            ]}
-          >
-            <Text style={[styles.smokeText, { fontSize: 16 }]}>💨</Text>
-          </Animated.View>
+  const titleStyle = useAnimatedStyle(() => ({
+    opacity: titleOpacity.value,
+    transform: [{ translateY: titleTranslateY.value }],
+  }));
 
-          {/* Camión con Emoji (funciona siempre) */}
-          <Animated.View 
-            style={[
-              styles.truckContainer,
-              {
-                transform: [
-                  { translateX: truckMove },
-                  { translateY: truckBounce }
-                ]
-              }
-            ]}
-          >
-            <View style={styles.truck}>
-              {/* Sombra del camión */}
-              <View style={styles.truckShadow} />
-              
-              {/* Camión Emoji */}
-              <Text style={styles.truckEmoji}>🚚</Text>
-              
-              {/* Puedes también intentar cargar tu imagen así: */}
-              {/* 
-              <Image 
-                source={require('../images/camionchito.png')}
-                style={styles.truckImage}
-                resizeMode="contain"
-                onError={() => console.log('Error cargando imagen del camión')}
-              />
-              */}
-            </View>
-          </Animated.View>
-        </View>
+  const subtitleStyle = useAnimatedStyle(() => ({
+    opacity: subtitleOpacity.value,
+    transform: [{ translateY: subtitleTranslateY.value }],
+  }));
 
-        {/* Carretera mejorada */}
-        <View style={styles.roadContainer}>
-          <Animated.View 
-            style={[
-              styles.roadDashes,
-              { transform: [{ translateX: roadDashOffset }] }
-            ]}
-          >
-            {[...Array(20)].map((_, i) => (
-              <View key={i} style={styles.dash} />
-            ))}
-          </Animated.View>
-        </View>
-
-        {/* Loading indicator mejorado */}
-        <View style={styles.loadingContainer}>
-          <SlowProgressDots />
-        </View>
-      </View>
-    </View>
-  );
-};
-
-// Componente de puntos más lentos
-const SlowProgressDots = () => {
-  const dots = Array.from({ length: 5 }, () => useRef(new Animated.Value(0.2)).current);
-
-  useEffect(() => {
-    const animations = dots.map((dot, index) =>
-      Animated.loop(
-        Animated.sequence([
-          Animated.delay(index * 400), // Aún más separación
-          Animated.timing(dot, {
-            toValue: 1,
-            duration: 1000, // Más lento
-            easing: Easing.inOut(Easing.quad),
-            useNativeDriver: true,
-          }),
-          Animated.timing(dot, {
-            toValue: 0.2,
-            duration: 1000,
-            easing: Easing.inOut(Easing.quad),
-            useNativeDriver: true,
-          }),
-          Animated.delay((dots.length - index - 1) * 400),
-        ])
-      )
-    );
-
-    animations.forEach(anim => anim.start());
-    return () => animations.forEach(anim => anim.stop());
-  }, []);
+  const loadingStyle = useAnimatedStyle(() => ({
+    opacity: loadingOpacity.value,
+  }));
 
   return (
-    <View style={styles.dotsContainer}>
-      {dots.map((dot, index) => (
-        <Animated.View
-          key={index}
-          style={[
-            styles.dot,
-            { opacity: dot }
-          ]}
-        />
-      ))}
-    </View>
+    <>
+      <StatusBar hidden />
+      <Animated.View style={[styles.container, containerStyle]}>
+        {/* Fondo con gradiente simulado */}
+        <View style={styles.backgroundGradient}>
+          <View style={styles.gradientTop} />
+          <View style={styles.gradientBottom} />
+        </View>
+
+        {/* Contenido principal */}
+        <View style={styles.content}>
+          
+          {/* Logo/Animación */}
+          <Animated.View style={[styles.logoContainer, logoStyle]}>
+            <LottieView
+              ref={lottieRef}
+              source={require('../../assets/lottie/Forklift.json')}
+              style={styles.lottieAnimation}
+              autoPlay
+              loop
+              speed={1.2}
+            />
+          </Animated.View>
+
+          {/* Textos de marca */}
+          <View style={styles.textContainer}>
+            <Animated.Text style={[styles.title, titleStyle]}>
+              LogiTech Pro
+            </Animated.Text>
+            
+            <Animated.Text style={[styles.subtitle, subtitleStyle]}>
+              Soluciones inteligentes para tu almacén
+            </Animated.Text>
+          </View>
+
+          {/* Indicador de carga */}
+          <Animated.View style={[styles.loadingContainer, loadingStyle]}>
+            <View style={styles.loadingBar}>
+              <Animated.View style={styles.loadingProgress} />
+            </View>
+            <Text style={styles.loadingText}>Cargando...</Text>
+          </Animated.View>
+
+        </View>
+
+        {/* Footer */}
+        <View style={styles.footer}>
+          <Text style={styles.footerText}>Powered by Innovation</Text>
+          <View style={styles.footerDots}>
+            <View style={styles.dot} />
+            <View style={[styles.dot, styles.dotActive]} />
+            <View style={styles.dot} />
+          </View>
+        </View>
+
+      </Animated.View>
+    </>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: '#1a1a2e',
   },
-  logoSection: {
-    alignItems: 'center',
-    paddingTop: height * 0.08,
-    paddingBottom: 20,
+  backgroundGradient: {
+    ...StyleSheet.absoluteFillObject,
   },
-  logo: {
-    width: 160,
-    height: 80,
-  },
-  mainContent: {
+  gradientTop: {
     flex: 1,
-    justifyContent: 'space-around',
-    alignItems: 'center',
+    backgroundColor: '#16213e',
+    opacity: 0.9,
   },
-  textContainer: {
+  gradientBottom: {
+    flex: 1,
+    backgroundColor: '#0f172a',
+    opacity: 0.9,
+  },
+  content: {
+    flex: 1,
+    justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 40,
   },
+  logoContainer: {
+    width: SCREEN_WIDTH * 0.6,
+    height: SCREEN_WIDTH * 0.6,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 40,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: (SCREEN_WIDTH * 0.6) / 2,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 10 },
+        shadowOpacity: 0.3,
+        shadowRadius: 20,
+      },
+      android: {
+        elevation: 8,
+      },
+    }),
+  },
+  lottieAnimation: {
+    width: '80%',
+    height: '80%',
+  },
+  textContainer: {
+    alignItems: 'center',
+    marginBottom: 60,
+  },
   title: {
     fontSize: 32,
-    fontWeight: 'bold',
-    color: '#2c3e50',
+    fontWeight: '700',
+    color: '#ffffff',
     textAlign: 'center',
     marginBottom: 12,
+    letterSpacing: 1.2,
+    ...Platform.select({
+      ios: {
+        fontFamily: 'System',
+      },
+      android: {
+        fontFamily: 'sans-serif-medium',
+      },
+    }),
   },
   subtitle: {
-    fontSize: 18,
-    color: '#7f8c8d',
+    fontSize: 16,
+    color: '#94a3b8',
     textAlign: 'center',
-  },
-  animationArea: {
-    height: 120,
-    width: '100%',
-    justifyContent: 'center',
-    overflow: 'hidden',
-  },
-  smoke: {
-    position: 'absolute',
-    top: 20,
-    left: -60,
-  },
-  smoke2: {
-    position: 'absolute',
-    top: 30,
-    left: -50,
-  },
-  smokeText: {
-    fontSize: 24,
-  },
-  truckContainer: {
-    position: 'absolute',
-    left: -150,
-    top: 40,
-  },
-  truck: {
-    position: 'relative',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  truckShadow: {
-    position: 'absolute',
-    bottom: -5,
-    width: 80,
-    height: 8,
-    backgroundColor: 'rgba(0,0,0,0.1)',
-    borderRadius: 4,
-    zIndex: 0,
-  },
-  truckEmoji: {
-    fontSize: 70, // Camión emoji grande
-    textAlign: 'center',
-    zIndex: 1,
-  },
-  truckImage: {
-    width: 120,
-    height: 70,
-    backgroundColor: 'transparent',
-    zIndex: 1,
-  },
-  roadContainer: {
-    height: 6,
-    width: '85%',
-    backgroundColor: '#ecf0f1',
-    borderRadius: 3,
-    overflow: 'hidden',
-    justifyContent: 'center',
-  },
-  roadDashes: {
-    flexDirection: 'row',
-    height: '100%',
-    alignItems: 'center',
-  },
-  dash: {
-    width: 30,
-    height: 3,
-    backgroundColor: '#4CAF50',
-    marginRight: 30,
-    borderRadius: 1.5,
+    lineHeight: 24,
+    fontWeight: '400',
+    maxWidth: SCREEN_WIDTH * 0.8,
   },
   loadingContainer: {
-    paddingBottom: 50,
+    alignItems: 'center',
+    position: 'absolute',
+    bottom: 120,
+    width: '100%',
   },
-  dotsContainer: {
+  loadingBar: {
+    width: 200,
+    height: 4,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 2,
+    overflow: 'hidden',
+    marginBottom: 12,
+  },
+  loadingProgress: {
+    height: '100%',
+    backgroundColor: '#3b82f6',
+    width: '70%',
+    borderRadius: 2,
+    shadowColor: '#3b82f6',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.8,
+    shadowRadius: 4,
+  },
+  loadingText: {
+    fontSize: 14,
+    color: '#64748b',
+    fontWeight: '500',
+  },
+  footer: {
+    position: 'absolute',
+    bottom: 40,
+    width: '100%',
+    alignItems: 'center',
+  },
+  footerText: {
+    fontSize: 12,
+    color: '#475569',
+    marginBottom: 16,
+    letterSpacing: 0.5,
+  },
+  footerDots: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   dot: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    backgroundColor: '#4CAF50',
-    marginHorizontal: 8,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    marginHorizontal: 4,
+  },
+  dotActive: {
+    backgroundColor: '#3b82f6',
+    width: 20,
+    shadowColor: '#3b82f6',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.8,
+    shadowRadius: 4,
   },
 });
 
-export default LoadingWithEmojiTruck;
+export default SplashScreen;
