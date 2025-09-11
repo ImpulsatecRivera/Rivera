@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, MoreHorizontal, User, Phone, Mail, Calendar, MapPin } from 'lucide-react';
+import Lottie from 'lottie-react';
+// Importa tu animación Sandy Loading
+import sandyLoadingAnimation from '../../assets/lotties/Sandy Loading.json';
 
 const EmployeeDetailPanel = ({ 
   selectedEmpleados, 
@@ -13,7 +16,7 @@ const EmployeeDetailPanel = ({
     setIsLoading(true);
     const timer = setTimeout(() => {
       setIsLoading(false);
-    }, 2500);
+    }, 6000); // 6 segundos para ver la animación completa
 
     return () => clearTimeout(timer);
   }, [selectedEmpleados]); // Se ejecuta cada vez que cambia selectedEmpleados
@@ -39,25 +42,18 @@ const EmployeeDetailPanel = ({
           </div>
 
           <div className="text-center z-10">
-            {/* Enhanced Profile Loading Animation */}
-            <div className="relative mb-8">
-              <div className="w-28 h-28 rounded-2xl mx-auto mb-6 flex items-center justify-center shadow-2xl overflow-hidden relative" 
-                   style={{background: 'linear-gradient(135deg, #5F8EAD 0%, #5D9646 100%)'}}>
-                <User className="w-14 h-14 text-white animate-pulse" />
-                
-                {/* Multiple rotating borders */}
-                <div className="absolute inset-0 rounded-2xl border-4 border-transparent spinning-border"
-                     style={{
-                       borderTopColor: '#FFFFFF',
-                       borderRightColor: 'rgba(255,255,255,0.3)'
-                     }}>
-                </div>
-                <div className="absolute inset-2 rounded-xl border-2 border-transparent spinning-border-reverse"
-                     style={{
-                       borderBottomColor: '#FFFFFF',
-                       borderLeftColor: 'rgba(255,255,255,0.2)'
-                     }}>
-                </div>
+            {/* Sandy Loading Animation */}
+            <div className="relative mb-8 flex justify-center">
+              <div className="w-48 h-48 flex items-center justify-center">
+                <Lottie 
+                  animationData={sandyLoadingAnimation}
+                  loop={true}
+                  autoplay={true}
+                  className="w-full h-full"
+                  style={{
+                    filter: 'drop-shadow(0 10px 30px rgba(95, 142, 173, 0.4))'
+                  }}
+                />
               </div>
             </div>
             
@@ -278,7 +274,7 @@ const EmployeeDetailPanel = ({
 
         {/* Information Cards */}
         <div className="space-y-6">
-          {/* InformaciÃ³n Personal */}
+          {/* Información Personal */}
           <div className="bg-gradient-to-r from-blue-50 to-blue-100 rounded-xl p-6 border border-blue-200">
             <div className="flex items-center space-x-3 mb-4">
               <div className="p-2 rounded-lg" style={{backgroundColor: '#5F8EAD'}}>
@@ -289,7 +285,7 @@ const EmployeeDetailPanel = ({
 
             <div className="space-y-4">
               <div>
-                <div className="text-sm font-medium text-gray-700 mb-1">Correo Electronico</div>
+                <div className="text-sm font-medium text-gray-700 mb-1">Correo Electrónico</div>
                 <div className="text-sm text-gray-600 break-words bg-white p-3 rounded-lg border">{selectedEmpleados.email}</div>
               </div>
               <div>
@@ -299,7 +295,7 @@ const EmployeeDetailPanel = ({
             </div>
           </div>
 
-          {/* InformaciÃ³n de Contacto */}
+          {/* Información de Contacto */}
           <div className="bg-gradient-to-r from-green-50 to-green-100 rounded-xl p-6 border border-green-200">
             <div className="flex items-center space-x-3 mb-4">
               <div className="p-2 rounded-lg" style={{backgroundColor: '#5D9646'}}>
@@ -317,14 +313,14 @@ const EmployeeDetailPanel = ({
                 </div>
               </div>
               <div>
-                <div className="text-sm font-medium text-gray-700 mb-1">TelÃ©fono</div>
+                <div className="text-sm font-medium text-gray-700 mb-1">Teléfono</div>
                 <div className="text-sm text-gray-600 bg-white p-3 rounded-lg border flex items-center">
                   <Phone className="w-4 h-4 mr-2" style={{color: '#5D9646'}} />
                   {selectedEmpleados.phone ? selectedEmpleados.phone.toString() : 'No disponible'}
                 </div>
               </div>
               <div>
-                <div className="text-sm font-medium text-gray-700 mb-1">DirecciÃ³n</div>
+                <div className="text-sm font-medium text-gray-700 mb-1">Dirección</div>
                 <div className="text-sm text-gray-600 bg-white p-3 rounded-lg border flex items-center">
                   <MapPin className="w-4 h-4 mr-2" style={{color: '#5D9646'}} />
                   {selectedEmpleados.address}

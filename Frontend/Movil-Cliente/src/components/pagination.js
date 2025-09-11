@@ -1,294 +1,55 @@
-// src/components/pagination.js - SOLUCIÓN FINAL
-import React, { useRef, useEffect } from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  Animated,
-  Dimensions,
-} from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { View, StyleSheet } from 'react-native';
+import LottieView from 'lottie-react-native';
 
-const { width } = Dimensions.get('window');
+// Tu animación Lottie incluida directamente en el código
+const paginationLottie = {"v":"4.6.8","fr":25,"ip":0,"op":125,"w":1200,"h":480,"nm":"pagination_indicator","ddd":0,"assets":[],"layers":[{"ddd":0,"ind":1,"ty":4,"nm":"selected_oval","hd":true,"ks":{"o":{"a":0,"k":100},"r":{"a":0,"k":0},"p":{"a":0,"k":[600,240,0]},"a":{"a":0,"k":[0,0,0]},"s":{"a":0,"k":[100,100,100]}},"ao":0,"shapes":[{"ty":"gr","it":[{"ind":0,"ty":"sh","ix":1,"ks":{"a":0,"k":{"i":[[0,0],[0,0]],"o":[[0,0],[0,0]],"v":[[-200,1],[200,0]],"c":false}},"nm":"Path 1","mn":"ADBE Vector Shape - Group"},{"ty":"st","c":{"a":0,"k":[0.1843137,0.7372549,0.6039216,1]},"o":{"a":0,"k":100},"w":{"a":0,"k":100},"lc":2,"lj":1,"ml":4,"nm":"Stroke 1","mn":"ADBE Vector Graphic - Stroke"},{"ty":"tr","p":{"a":0,"k":[0,0],"ix":2},"a":{"a":0,"k":[0,0],"ix":1},"s":{"a":0,"k":[100,100],"ix":3},"r":{"a":0,"k":0,"ix":6},"o":{"a":0,"k":100,"ix":7},"sk":{"a":0,"k":0,"ix":4},"sa":{"a":0,"k":0,"ix":5},"nm":"Transform"}],"nm":"Shape 1","np":3,"cix":2,"ix":1,"mn":"ADBE Vector Group"},{"ty":"tm","s":{"a":1,"k":[{"i":{"x":[0.74],"y":[0.803]},"o":{"x":[0.413],"y":[0]},"n":["0p74_0p803_0p413_0"],"t":20,"s":[0],"e":[10]},{"i":{"x":[1],"y":[0.669]},"o":{"x":[1],"y":[0.252]},"n":["1_0p669_1_0p252"],"t":25,"s":[10],"e":[40]},{"i":{"x":[0],"y":[1.023]},"o":{"x":[0],"y":[0.992]},"n":["0_1p023_0_0p992"],"t":30,"s":[40],"e":[50]},{"i":{"x":[0.587],"y":[0.587]},"o":{"x":[0.26],"y":[0.26]},"n":["0p587_0p587_0p26_0p26"],"t":35,"s":[50],"e":[50]},{"i":{"x":[0.667],"y":[0.667]},"o":{"x":[1],"y":[1]},"n":["0p667_0p667_1_1"],"t":40,"s":[50],"e":[50]},{"i":{"x":[0.74],"y":[0.803]},"o":{"x":[0.413],"y":[0]},"n":["0p74_0p803_0p413_0"],"t":60,"s":[50],"e":[60]},{"i":{"x":[1],"y":[0.669]},"o":{"x":[1],"y":[0.252]},"n":["1_0p669_1_0p252"],"t":65,"s":[60],"e":[90]},{"i":{"x":[0],"y":[1.023]},"o":{"x":[0],"y":[0.992]},"n":["0_1p023_0_0p992"],"t":70,"s":[90],"e":[100]},{"i":{"x":[0.587],"y":[0.587]},"o":{"x":[0.26],"y":[0.26]},"n":["0p587_0p587_0p26_0p26"],"t":75,"s":[100],"e":[100]},{"i":{"x":[0.833],"y":[0.833]},"o":{"x":[1],"y":[1]},"n":["0p833_0p833_1_1"],"t":80,"s":[100],"e":[100]},{"i":{"x":[0.833],"y":[0.833]},"o":{"x":[0.167],"y":[0.167]},"n":["0p833_0p833_0p167_0p167"],"t":100,"s":[100],"e":[100]},{"i":{"x":[0.833],"y":[1]},"o":{"x":[0.167],"y":[0]},"n":["0p833_1_0p167_0"],"t":105,"s":[100],"e":[90]},{"i":{"x":[0.833],"y":[1]},"o":{"x":[0.167],"y":[0]},"n":["0p833_1_0p167_0"],"t":110,"s":[90],"e":[10]},{"i":{"x":[0.833],"y":[1]},"o":{"x":[0.167],"y":[0]},"n":["0p833_1_0p167_0"],"t":115,"s":[10],"e":[0]},{"t":120}],"ix":1},"e":{"a":1,"k":[{"i":{"x":[0.74],"y":[0.74]},"o":{"x":[0.413],"y":[0.413]},"n":["0p74_0p74_0p413_0p413"],"t":20,"s":[0],"e":[0]},{"i":{"x":[1],"y":[0.008]},"o":{"x":[1],"y":[-0.023]},"n":["1_0p008_1_-0p023"],"t":25,"s":[0],"e":[10]},{"i":{"x":[0],"y":[0.748]},"o":{"x":[0],"y":[0.331]},"n":["0_0p748_0_0p331"],"t":30,"s":[10],"e":[40]},{"i":{"x":[0.587],"y":[1]},"o":{"x":[0.26],"y":[0.197]},"n":["0p587_1_0p26_0p197"],"t":35,"s":[40],"e":[50]},{"i":{"x":[0.667],"y":[0.667]},"o":{"x":[0.423],"y":[0.423]},"n":["0p667_0p667_0p423_0p423"],"t":40,"s":[50],"e":[50]},{"i":{"x":[0.74],"y":[0.74]},"o":{"x":[0.413],"y":[0.413]},"n":["0p74_0p74_0p413_0p413"],"t":60,"s":[50],"e":[50]},{"i":{"x":[1],"y":[0.008]},"o":{"x":[1],"y":[-0.023]},"n":["1_0p008_1_-0p023"],"t":65,"s":[50],"e":[60]},{"i":{"x":[0],"y":[0.748]},"o":{"x":[0],"y":[0.331]},"n":["0_0p748_0_0p331"],"t":70,"s":[60],"e":[90]},{"i":{"x":[0.587],"y":[1]},"o":{"x":[0.26],"y":[0.197]},"n":["0p587_1_0p26_0p197"],"t":75,"s":[90],"e":[100]},{"i":{"x":[0.833],"y":[0.833]},"o":{"x":[0.423],"y":[0.423]},"n":["0p833_0p833_0p423_0p423"],"t":80,"s":[100],"e":[100]},{"i":{"x":[0.833],"y":[1]},"o":{"x":[0.167],"y":[0]},"n":["0p833_1_0p167_0"],"t":100,"s":[100],"e":[90]},{"i":{"x":[0.833],"y":[1]},"o":{"x":[0.167],"y":[0]},"n":["0p833_1_0p167_0"],"t":105,"s":[90],"e":[10]},{"i":{"x":[0.833],"y":[1]},"o":{"x":[0.167],"y":[0]},"n":["0p833_1_0p167_0"],"t":110,"s":[10],"e":[0]},{"i":{"x":[0.833],"y":[0.833]},"o":{"x":[0.167],"y":[0.167]},"n":["0p833_0p833_0p167_0p167"],"t":115,"s":[0],"e":[0]},{"t":120}],"ix":2},"o":{"a":0,"k":0,"ix":3},"m":1,"ix":2,"nm":"Trim Paths 1","mn":"ADBE Vector Filter - Trim"}],"ip":0,"op":125,"st":0,"bm":0,"sr":1},{"ddd":0,"ind":2,"ty":4,"nm":"selected_oval","ks":{"o":{"a":0,"k":100},"r":{"a":0,"k":0},"p":{"a":1,"k":[{"i":{"x":0,"y":1},"o":{"x":1,"y":0},"n":"0_1_1_0","t":5,"s":[400,240,0],"e":[600,240,0],"to":[33.3333320617676,0,0],"ti":[-33.3333320617676,0,0]},{"i":{"x":0.667,"y":0.667},"o":{"x":0.333,"y":0.333},"n":"0p667_0p667_0p333_0p333","t":25,"s":[600,240,0],"e":[600,240,0],"to":[0,0,0],"ti":[0,0,0]},{"i":{"x":0,"y":1},"o":{"x":1,"y":0},"n":"0_1_1_0","t":45,"s":[600,240,0],"e":[800,240,0],"to":[33.3333320617676,0,0],"ti":[-33.3333320617676,0,0]},{"i":{"x":0.667,"y":0.667},"o":{"x":0.333,"y":0.333},"n":"0p667_0p667_0p333_0p333","t":65,"s":[800,240,0],"e":[800,240,0],"to":[0,0,0],"ti":[0,0,0]},{"i":{"x":0,"y":1},"o":{"x":1,"y":0},"n":"0_1_1_0","t":85,"s":[800,240,0],"e":[400,240,0],"to":[-66.6666641235352,0,0],"ti":[66.6666641235352,0,0]},{"t":105}]},"a":{"a":0,"k":[-206,-14,0]},"s":{"a":0,"k":[100,100,100]}},"ao":0,"shapes":[{"ty":"gr","it":[{"d":1,"ty":"el","s":{"a":0,"k":[100,100]},"p":{"a":0,"k":[0,0]},"nm":"Ellipse Path 1","mn":"ADBE Vector Shape - Ellipse"},{"ty":"fl","c":{"a":0,"k":[0.1843137,0.7372549,0.6039216,1]},"o":{"a":0,"k":100},"r":1,"nm":"Fill 1","mn":"ADBE Vector Graphic - Fill"},{"ty":"tr","p":{"a":0,"k":[-206,-14],"ix":2},"a":{"a":0,"k":[0,0],"ix":1},"s":{"a":0,"k":[100,100],"ix":3},"r":{"a":0,"k":0,"ix":6},"o":{"a":0,"k":100,"ix":7},"sk":{"a":0,"k":0,"ix":4},"sa":{"a":0,"k":0,"ix":5},"nm":"Transform"}],"nm":"Ellipse 1","np":3,"cix":2,"ix":1,"mn":"ADBE Vector Group"}],"ip":0,"op":125,"st":0,"bm":0,"sr":1},{"ddd":0,"ind":3,"ty":4,"nm":"first","ks":{"o":{"a":0,"k":100},"r":{"a":0,"k":0},"p":{"a":0,"k":[400,240,0]},"a":{"a":0,"k":[-206,-14,0]},"s":{"a":0,"k":[100,100,100]}},"ao":0,"shapes":[{"ty":"gr","it":[{"d":1,"ty":"el","s":{"a":0,"k":[100,100]},"p":{"a":0,"k":[0,0]},"nm":"Ellipse Path 1","mn":"ADBE Vector Shape - Ellipse"},{"ty":"fl","c":{"a":0,"k":[0.8117647,0.945098,0.9137255,1]},"o":{"a":0,"k":100},"r":1,"nm":"Fill 1","mn":"ADBE Vector Graphic - Fill"},{"ty":"tr","p":{"a":0,"k":[-206,-14],"ix":2},"a":{"a":0,"k":[0,0],"ix":1},"s":{"a":0,"k":[100,100],"ix":3},"r":{"a":0,"k":0,"ix":6},"o":{"a":0,"k":100,"ix":7},"sk":{"a":0,"k":0,"ix":4},"sa":{"a":0,"k":0,"ix":5},"nm":"Transform"}],"nm":"Ellipse 1","np":3,"cix":2,"ix":1,"mn":"ADBE Vector Group"}],"ip":0,"op":125,"st":0,"bm":0,"sr":1},{"ddd":0,"ind":4,"ty":4,"nm":"second","ks":{"o":{"a":0,"k":100},"r":{"a":0,"k":0},"p":{"a":0,"k":[600,240,0]},"a":{"a":0,"k":[-206,-14,0]},"s":{"a":0,"k":[100,100,100]}},"ao":0,"shapes":[{"ty":"gr","it":[{"d":1,"ty":"el","s":{"a":0,"k":[100,100]},"p":{"a":0,"k":[0,0]},"nm":"Ellipse Path 1","mn":"ADBE Vector Shape - Ellipse"},{"ty":"fl","c":{"a":0,"k":[0.8116724,0.945098,0.9129245,1]},"o":{"a":0,"k":100},"r":1,"nm":"Fill 1","mn":"ADBE Vector Graphic - Fill"},{"ty":"tr","p":{"a":0,"k":[-206,-14],"ix":2},"a":{"a":0,"k":[0,0],"ix":1},"s":{"a":0,"k":[100,100],"ix":3},"r":{"a":0,"k":0,"ix":6},"o":{"a":0,"k":100,"ix":7},"sk":{"a":0,"k":0,"ix":4},"sa":{"a":0,"k":0,"ix":5},"nm":"Transform"}],"nm":"Ellipse 1","np":3,"cix":2,"ix":1,"mn":"ADBE Vector Group"}],"ip":0,"op":125,"st":0,"bm":0,"sr":1},{"ddd":0,"ind":5,"ty":4,"nm":"third","ks":{"o":{"a":0,"k":100},"r":{"a":0,"k":0},"p":{"a":0,"k":[800,240,0]},"a":{"a":0,"k":[-206,-14,0]},"s":{"a":0,"k":[100,100,100]}},"ao":0,"shapes":[{"ty":"gr","it":[{"d":1,"ty":"el","s":{"a":0,"k":[100,100]},"p":{"a":0,"k":[0,0]},"nm":"Ellipse Path 1","mn":"ADBE Vector Shape - Ellipse"},{"ty":"fl","c":{"a":0,"k":[0.8117647,0.945098,0.9137255,1]},"o":{"a":0,"k":100},"r":1,"nm":"Fill 1","mn":"ADBE Vector Graphic - Fill"},{"ty":"tr","p":{"a":0,"k":[-206,-14],"ix":2},"a":{"a":0,"k":[0,0],"ix":1},"s":{"a":0,"k":[100,100],"ix":3},"r":{"a":0,"k":0,"ix":6},"o":{"a":0,"k":100,"ix":7},"sk":{"a":0,"k":0,"ix":4},"sa":{"a":0,"k":0,"ix":5},"nm":"Transform"}],"nm":"Ellipse 1","np":3,"cix":2,"ix":1,"mn":"ADBE Vector Group"}],"ip":0,"op":125,"st":0,"bm":0,"sr":1},{"ddd":0,"ind":6,"ty":4,"nm":"first_trans","ks":{"o":{"a":1,"k":[{"i":{"x":[0.667],"y":[1]},"o":{"x":[0.333],"y":[0]},"n":["0p667_1_0p333_0"],"t":99,"s":[50],"e":[0]},{"t":109}]},"r":{"a":0,"k":0},"p":{"a":0,"k":[400,240,0]},"a":{"a":0,"k":[-206,-14,0]},"s":{"a":1,"k":[{"i":{"x":[0.667,0.667,0.667],"y":[1,1,0.667]},"o":{"x":[0.333,0.333,0.333],"y":[0,0,0.333]},"n":["0p667_1_0p333_0","0p667_1_0p333_0","0p667_0p667_0p333_0p333"],"t":99,"s":[100,100,100],"e":[250,250,100]},{"t":109}]}},"ao":0,"shapes":[{"ty":"gr","it":[{"d":1,"ty":"el","s":{"a":0,"k":[100,100]},"p":{"a":0,"k":[0,0]},"nm":"Ellipse Path 1","mn":"ADBE Vector Shape - Ellipse"},{"ty":"fl","c":{"a":0,"k":[0.1843137,0.7372549,0.6039216,1]},"o":{"a":0,"k":100},"r":1,"nm":"Fill 1","mn":"ADBE Vector Graphic - Fill"},{"ty":"tr","p":{"a":0,"k":[-206,-14],"ix":2},"a":{"a":0,"k":[0,0],"ix":1},"s":{"a":0,"k":[100,100],"ix":3},"r":{"a":0,"k":0,"ix":6},"o":{"a":0,"k":100,"ix":7},"sk":{"a":0,"k":0,"ix":4},"sa":{"a":0,"k":0,"ix":5},"nm":"Transform"}],"nm":"Ellipse 1","np":3,"cix":2,"ix":1,"mn":"ADBE Vector Group"}],"ip":0,"op":125,"st":0,"bm":0,"sr":1},{"ddd":0,"ind":7,"ty":4,"nm":"second_trans","ks":{"o":{"a":1,"k":[{"i":{"x":[0.667],"y":[1]},"o":{"x":[0.333],"y":[0]},"n":["0p667_1_0p333_0"],"t":17,"s":[50],"e":[0]},{"t":27}]},"r":{"a":0,"k":0},"p":{"a":0,"k":[600,240,0]},"a":{"a":0,"k":[-206,-14,0]},"s":{"a":1,"k":[{"i":{"x":[0.667,0.667,0.667],"y":[1,1,0.667]},"o":{"x":[0.333,0.333,0.333],"y":[0,0,0.333]},"n":["0p667_1_0p333_0","0p667_1_0p333_0","0p667_0p667_0p333_0p333"],"t":17,"s":[100,100,100],"e":[250,250,100]},{"t":27}]}},"ao":0,"shapes":[{"ty":"gr","it":[{"d":1,"ty":"el","s":{"a":0,"k":[100,100]},"p":{"a":0,"k":[0,0]},"nm":"Ellipse Path 1","mn":"ADBE Vector Shape - Ellipse"},{"ty":"fl","c":{"a":0,"k":[0.1843137,0.7372549,0.6039216,1]},"o":{"a":0,"k":100},"r":1,"nm":"Fill 1","mn":"ADBE Vector Graphic - Fill"},{"ty":"tr","p":{"a":0,"k":[-206,-14],"ix":2},"a":{"a":0,"k":[0,0],"ix":1},"s":{"a":0,"k":[100,100],"ix":3},"r":{"a":0,"k":0,"ix":6},"o":{"a":0,"k":100,"ix":7},"sk":{"a":0,"k":0,"ix":4},"sa":{"a":0,"k":0,"ix":5},"nm":"Transform"}],"nm":"Ellipse 1","np":3,"cix":2,"ix":1,"mn":"ADBE Vector Group"}],"ip":0,"op":125,"st":0,"bm":0,"sr":1},{"ddd":0,"ind":8,"ty":4,"nm":"third_trans","ks":{"o":{"a":1,"k":[{"i":{"x":[0.667],"y":[1]},"o":{"x":[0.333],"y":[0]},"n":["0p667_1_0p333_0"],"t":57,"s":[50],"e":[0]},{"t":67}]},"r":{"a":0,"k":0},"p":{"a":0,"k":[800,240,0]},"a":{"a":0,"k":[-206,-14,0]},"s":{"a":1,"k":[{"i":{"x":[0.667,0.667,0.667],"y":[1,1,0.667]},"o":{"x":[0.333,0.333,0.333],"y":[0,0,0.333]},"n":["0p667_1_0p333_0","0p667_1_0p333_0","0p667_0p667_0p333_0p333"],"t":57,"s":[100,100,100],"e":[250,250,100]},{"t":67}]}},"ao":0,"shapes":[{"ty":"gr","it":[{"d":1,"ty":"el","s":{"a":0,"k":[100,100]},"p":{"a":0,"k":[0,0]},"nm":"Ellipse Path 1","mn":"ADBE Vector Shape - Ellipse"},{"ty":"fl","c":{"a":0,"k":[0.1843137,0.7372549,0.6039216,1]},"o":{"a":0,"k":100},"r":1,"nm":"Fill 1","mn":"ADBE Vector Graphic - Fill"},{"ty":"tr","p":{"a":0,"k":[-206,-14],"ix":2},"a":{"a":0,"k":[0,0],"ix":1},"s":{"a":0,"k":[100,100],"ix":3},"r":{"a":0,"k":0,"ix":6},"o":{"a":0,"k":100,"ix":7},"sk":{"a":0,"k":0,"ix":4},"sa":{"a":0,"k":0,"ix":5},"nm":"Transform"}],"nm":"Ellipse 1","np":3,"cix":2,"ix":1,"mn":"ADBE Vector Group"}],"ip":0,"op":125,"st":0,"bm":0,"sr":1}]};
 
-export const CustomLottiePagination = ({ 
-  currentStep, 
-  totalSteps = 3, 
-  onNext, 
-  onBack, 
-  nextText = "Siguiente",
-  backText = "Atrás",
-  showBack = false 
-}) => {
-  const progressAnim = useRef(new Animated.Value(0)).current;
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const prevStepRef = useRef(currentStep);
+const PaginationIndicator = ({ currentStep = 1, totalSteps = 3 }) => {
+  const animationRef = useRef(null);
 
   useEffect(() => {
-    // Solo ejecutar si el step realmente cambió (evitar re-renders innecesarios)
-    if (prevStepRef.current !== currentStep) {
-      console.log(`🔄 Step cambió: ${prevStepRef.current} → ${currentStep}`);
-      prevStepRef.current = currentStep;
-
-      // Animación de entrada solo la primera vez
-      if (currentStep === 1) {
-        Animated.timing(fadeAnim, {
-          toValue: 1,
-          duration: 600,
-          useNativeDriver: true,
-        }).start();
-      }
-
-      // Calcular progreso (asegurar que nunca sea mayor a 1)
-      const progress = Math.min(currentStep / totalSteps, 1);
+    if (animationRef.current) {
+      // 🎬 REPRODUCIR ANIMACIÓN FLUIDA hasta cada punto
+      const animationRanges = {
+        1: { start: 0, end: 30 },   // ✅ Anima desde inicio hasta primer punto
+        2: { start: 0, end: 70 },   // ✅ Anima desde inicio hasta segundo punto  
+        3: { start: 0, end: 110 }   // ✅ Anima desde inicio hasta tercer punto
+      };
       
-      console.log(`📊 Animando progreso: ${progress * 100}%`);
-
-      // Animar la barra de progreso
-      Animated.timing(progressAnim, {
-        toValue: progress,
-        duration: 800,
-        useNativeDriver: false,
-      }).start(() => {
-        console.log(`✅ Animación completada para step ${currentStep}`);
-      });
+      const range = animationRanges[currentStep] || animationRanges[1];
+      
+      // 🎯 Reproducir la animación completa hasta el punto deseado
+      animationRef.current.play(range.start, range.end);
     }
-  }, [currentStep, totalSteps]);
+  }, [currentStep]);
 
   return (
-    <Animated.View 
-      style={[
-        styles.paginationContainer,
-        { opacity: fadeAnim }
-      ]}
-    >
-      {/* Contenedor de progreso principal */}
-      <View style={styles.progressContainer}>
-        
-        {/* Barra de progreso animada */}
-        <View style={styles.progressBackground}>
-          <Animated.View 
-            style={[
-              styles.progressBar,
-              {
-                width: progressAnim.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: ['0%', '100%'],
-                }),
-                opacity: progressAnim.interpolate({
-                  inputRange: [0, 0.1, 1],
-                  outputRange: [0.3, 1, 1],
-                })
-              }
-            ]}
-          />
-          
-          {/* Efecto de brillo */}
-          <Animated.View 
-            style={[
-              styles.progressGlow,
-              {
-                width: progressAnim.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: ['0%', '100%'],
-                }),
-              }
-            ]}
-          />
-        </View>
-        
-        {/* Indicadores de pasos */}
-        <View style={styles.stepIndicators}>
-          {Array.from({ length: totalSteps }).map((_, index) => {
-            const isCompleted = index < currentStep;
-            const isCurrent = index === currentStep - 1;
-            
-            return (
-              <Animated.View
-                key={index}
-                style={[
-                  styles.stepDot,
-                  {
-                    backgroundColor: isCompleted ? '#7ED321' : '#E0E0E0',
-                    transform: [{
-                      scale: isCurrent ? 1.1 : 1
-                    }]
-                  }
-                ]}
-              >
-                <Text style={[
-                  styles.stepNumber,
-                  { 
-                    color: isCompleted ? '#FFF' : '#999',
-                    fontWeight: isCurrent ? 'bold' : '500'
-                  }
-                ]}>
-                  {index + 1}
-                </Text>
-              </Animated.View>
-            );
-          })}
-        </View>
-        
-        {/* Texto de progreso con porcentaje */}
-        <Animated.View style={styles.progressTextContainer}>
-          <Text style={styles.progressText}>
-            Paso {currentStep} de {totalSteps}
-          </Text>
-          <Animated.Text style={[
-            styles.percentageText,
-            {
-              opacity: progressAnim.interpolate({
-                inputRange: [0, 0.2, 1],
-                outputRange: [0, 1, 1],
-              })
-            }
-          ]}>
-            {Math.round((currentStep / totalSteps) * 100)}%
-          </Animated.Text>
-        </Animated.View>
-      </View>
-
-      {/* Navegación */}
-      <View style={styles.navigation}>
-        {showBack ? (
-          <TouchableOpacity 
-            style={[styles.button, styles.backButton]} 
-            onPress={onBack}
-          >
-            <Text style={styles.backButtonText}>{backText}</Text>
-          </TouchableOpacity>
-        ) : (
-          <View style={styles.placeholder} />
-        )}
-
-        <TouchableOpacity 
-          style={[styles.button, styles.nextButton]} 
-          onPress={onNext}
-        >
-          <Text style={styles.nextButtonText}>{nextText}</Text>
-        </TouchableOpacity>
-      </View>
-    </Animated.View>
+    <View style={styles.container}>
+      <LottieView
+        ref={animationRef}
+        source={paginationLottie} 
+        style={styles.animation}
+        resizeMode="contain"
+        loop={false}
+        autoPlay={false}
+        speed={1.5} // ⚡ Velocidad de animación más rápida
+      />
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  paginationContainer: {
-    paddingHorizontal: 20,
-    paddingBottom: 40,
-    alignItems: 'center',
-  },
-  progressContainer: {
-    width: '100%',
-    alignItems: 'center',
-    marginBottom: 30,
-  },
-  progressBackground: {
-    width: '85%',
-    height: 12,
-    backgroundColor: '#F0F0F0',
-    borderRadius: 6,
-    overflow: 'hidden',
-    marginBottom: 25,
-    position: 'relative',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  progressBar: {
-    height: '100%',
-    backgroundColor: '#7ED321',
-    borderRadius: 6,
-    position: 'absolute',
-    left: 0,
-    top: 0,
-  },
-  progressGlow: {
-    height: '100%',
-    backgroundColor: 'rgba(126, 211, 33, 0.3)',
-    borderRadius: 6,
-    position: 'absolute',
-    left: 0,
-    top: 0,
-    shadowColor: '#7ED321',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.6,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  stepIndicators: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    width: '85%',
-    paddingHorizontal: 5,
-    marginBottom: 15,
-  },
-  stepDot: {
-    width: 35,
-    height: 35,
-    borderRadius: 17.5,
+  container: {
+    height: 60,
+    width: 200,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
-    elevation: 3,
-    borderWidth: 2,
-    borderColor: '#FFF',
   },
-  stepNumber: {
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  progressTextContainer: {
-    alignItems: 'center',
-  },
-  progressText: {
-    fontSize: 16,
-    color: '#333',
-    fontWeight: '600',
-    marginBottom: 5,
-  },
-  percentageText: {
-    fontSize: 14,
-    color: '#7ED321',
-    fontWeight: 'bold',
-  },
-  navigation: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+  animation: {
     width: '100%',
-    paddingHorizontal: 10,
-  },
-  button: {
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 10,
-    minWidth: 80,
-    alignItems: 'center',
-  },
-  backButton: {
-    backgroundColor: 'transparent',
-  },
-  nextButton: {
-    backgroundColor: 'rgba(126, 211, 33, 0.1)',
-  },
-  backButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#999',
-  },
-  nextButtonText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#7ED321',
-  },
-  placeholder: {
-    width: 80,
+    height: '100%',
   },
 });
+
+export default PaginationIndicator;

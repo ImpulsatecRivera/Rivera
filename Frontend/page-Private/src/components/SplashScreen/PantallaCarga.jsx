@@ -1,7 +1,37 @@
-import React from 'react';
-import { Truck } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import Lottie from 'lottie-react';
+// Importa tu animación JSON
+import carAnimation from '../../assets/lotties/Delivery Truck _ Ignite Animation.json';
 
-const PantallaCarga = () => {
+const PantallaCarga = ({ onLoadingComplete }) => {
+  const [animationComplete, setAnimationComplete] = useState(false);
+  const [showContent, setShowContent] = useState(false);
+
+  // Opción 1: Mostrar pantalla de carga por tiempo fijo (mínimo 4 segundos)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setShowContent(true);
+      // Opcional: notificar al componente padre que terminó
+      if (onLoadingComplete) {
+        onLoadingComplete();
+      }
+    }, 4500); // 4.5 segundos para ver la animación completa + un poco más
+
+    return () => clearTimeout(timer);
+  }, [onLoadingComplete]);
+
+  // Opción 2: Escuchar cuando la animación termina su primer ciclo
+  const handleAnimationComplete = () => {
+    setAnimationComplete(true);
+    // Esperar un poco más después de completar la animación
+    setTimeout(() => {
+      setShowContent(true);
+      if (onLoadingComplete) {
+        onLoadingComplete();
+      }
+    }, 1000);
+  };
+
   return (
     <div className="fixed inset-0 bg-gradient-to-br from-slate-50 via-white to-slate-100 flex items-center justify-center p-6">
       <div className="w-full h-full bg-white/95 backdrop-blur-sm rounded-[2rem] shadow-2xl flex items-center justify-center relative overflow-hidden">
@@ -12,17 +42,24 @@ const PantallaCarga = () => {
           {/* Logo/Icono principal con efectos mejorados */}
           <div className="relative flex justify-center">
             {/* Círculo de fondo animado */}
-            <div className="absolute inset-0 w-24 h-24 mx-auto rounded-full blur-2xl opacity-40 animate-pulse"
+            <div className="absolute inset-0 w-40 h-40 mx-auto rounded-full blur-2xl opacity-40 animate-pulse"
                  style={{ 
                    background: 'linear-gradient(135deg, #3B82F6, #6366F1)',
                    animation: 'pulse-glow 2s ease-in-out infinite alternate'
                  }}>
             </div>
             
-            {/* Icono del camión */}
-            <div className="relative">
-              <Truck className="w-20 h-20 text-blue-600 animate-bounce" 
-                     style={{ animationDuration: '2s' }} />
+            {/* Animación Lottie del carro - Tamaño aumentado para mejor visibilidad */}
+            <div className="relative w-36 h-36">
+              <Lottie 
+                animationData={carAnimation}
+                loop={true} // Mantener loop para repetición
+                autoplay={true}
+                className="w-full h-full"
+                onComplete={handleAnimationComplete} // Detectar cuando termina un ciclo
+                // Opcional: controlar la velocidad si necesitas
+                // speed={1} // 1 = velocidad normal, 0.5 = más lento, 2 = más rápido
+              />
             </div>
           </div>
 
@@ -36,13 +73,30 @@ const PantallaCarga = () => {
                 Cargando...
               </p>
               <p className="text-sm text-gray-500">
-                Conectando con base de datos y verificando credenciales
+                {animationComplete 
+                  ? "Finalizando carga..." 
+                  : "Conectando con base de datos y verificando credenciales"
+                }
               </p>
             </div>
           </div>
 
-          {/* Barra de progreso mejorada */}
-          
+          {/* Barra de progreso que coincide con la duración de la animación */}
+          <div className="w-64 mx-auto">
+            <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+              <div 
+                className="h-full bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full transition-all ease-linear"
+                style={{
+                  width: '0%',
+                  animation: 'loading-progress 4s ease-out forwards'
+                }}
+              >
+              </div>
+            </div>
+            <p className="text-xs text-gray-400 mt-2">
+              Duración estimada: 4 segundos
+            </p>
+          </div>
 
           {/* Puntos de carga animados mejorados */}
           <div className="flex justify-center space-x-2">
@@ -77,23 +131,18 @@ const PantallaCarga = () => {
           @keyframes loading-progress {
             0% { 
               width: 0%; 
-              opacity: 0.8;
             }
             25% { 
               width: 30%; 
-              opacity: 1;
             }
             50% { 
               width: 60%; 
-              opacity: 1;
             }
             75% { 
               width: 85%; 
-              opacity: 0.9;
             }
             100% { 
               width: 100%; 
-              opacity: 0.7;
             }
           }
 
