@@ -51,10 +51,10 @@ const PantallaCarga = ({ onLoadingComplete }) => {
             <div className="relative w-36 h-36">
               <Lottie 
                 animationData={carAnimation}
-                loop={false} // Cambiar a false para que solo haga un ciclo de 6 segundos
+                loop={true} // Cambiar a true para que se repita durante los 6 segundos
                 autoplay={true}
                 className="w-full h-full"
-                onComplete={handleAnimationComplete} // Detectar cuando termina el ciclo
+                onComplete={handleAnimationComplete}
                 // Opcional: controlar la velocidad si necesitas
                 // speed={1} // 1 = velocidad normal, 0.5 = más lento, 2 = más rápido
               />
