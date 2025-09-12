@@ -45,7 +45,7 @@ const PantallaCarga = ({ onLoadingComplete }) => {
             <div className="absolute inset-0 w-40 h-40 mx-auto rounded-full blur-2xl opacity-40 animate-pulse"
                  style={{ 
                    background: 'linear-gradient(135deg, #3B82F6, #6366F1)',
-                   animation: 'pulse-glow 2s ease-in-out infinite alternate'
+                   animation: 'pulse-glow 7s ease-in-out infinite alternate'
                  }}>
             </div>
             
@@ -88,7 +88,7 @@ const PantallaCarga = ({ onLoadingComplete }) => {
                 className="h-full bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full transition-all ease-linear"
                 style={{
                   width: '0%',
-                  animation: 'loading-progress 4s ease-out forwards'
+                  animation: 'loading-progress 7s ease-out forwards'
                 }}
               >
               </div>
