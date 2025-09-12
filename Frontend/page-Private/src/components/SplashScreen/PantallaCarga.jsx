@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Lottie from 'lottie-react';
 // Importa tu animación JSON
-import carAnimation from '../../assets/lotties/Delivery Truck _ Ignite Animation.json';
+import carAnimation from '../../assets/lotties/Loading 40 _ Paperplane.json';
 
 const PantallaCarga = ({ onLoadingComplete }) => {
   const [animationComplete, setAnimationComplete] = useState(false);
