@@ -15,7 +15,7 @@ const PantallaCarga = ({ onLoadingComplete }) => {
       if (onLoadingComplete) {
         onLoadingComplete();
       }
-    }, 4500); // 4.5 segundos para ver la animación completa + un poco más
+    }, 8000); // 4.5 segundos para ver la animación completa + un poco más
 
     return () => clearTimeout(timer);
   }, [onLoadingComplete]);
