@@ -7,7 +7,7 @@ const PantallaCarga = ({ onLoadingComplete }) => {
   const [animationComplete, setAnimationComplete] = useState(false);
   const [showContent, setShowContent] = useState(false);
 
-  // Opción 1: Mostrar pantalla de carga por tiempo fijo (mínimo 4 segundos)
+  // Opción 1: Fallback de 6 segundos en caso de que onComplete no funcione
   useEffect(() => {
     const timer = setTimeout(() => {
       setShowContent(true);
@@ -15,21 +15,19 @@ const PantallaCarga = ({ onLoadingComplete }) => {
       if (onLoadingComplete) {
         onLoadingComplete();
       }
-    }, 8000); // 4.5 segundos para ver la animación completa + un poco más
+    }, 6000); // 6 segundos - duración de tu animación Lottie
 
     return () => clearTimeout(timer);
   }, [onLoadingComplete]);
 
-  // Opción 2: Escuchar cuando la animación termina su primer ciclo
+  // Opción 2: Termina inmediatamente cuando la animación completa su ciclo
   const handleAnimationComplete = () => {
     setAnimationComplete(true);
-    // Esperar un poco más después de completar la animación
-    setTimeout(() => {
-      setShowContent(true);
-      if (onLoadingComplete) {
-        onLoadingComplete();
-      }
-    }, 1000);
+    // Sin setTimeout adicional - termina inmediatamente (0 segundos)
+    setShowContent(true);
+    if (onLoadingComplete) {
+      onLoadingComplete();
+    }
   };
 
   return (
@@ -45,7 +43,7 @@ const PantallaCarga = ({ onLoadingComplete }) => {
             <div className="absolute inset-0 w-40 h-40 mx-auto rounded-full blur-2xl opacity-40 animate-pulse"
                  style={{ 
                    background: 'linear-gradient(135deg, #3B82F6, #6366F1)',
-                   animation: 'pulse-glow 7s ease-in-out infinite alternate'
+                   animation: 'pulse-glow 6s ease-in-out infinite alternate'
                  }}>
             </div>
             
@@ -53,10 +51,10 @@ const PantallaCarga = ({ onLoadingComplete }) => {
             <div className="relative w-36 h-36">
               <Lottie 
                 animationData={carAnimation}
-                loop={true} // Mantener loop para repetición
+                loop={false} // Cambiar a false para que solo haga un ciclo de 6 segundos
                 autoplay={true}
                 className="w-full h-full"
-                onComplete={handleAnimationComplete} // Detectar cuando termina un ciclo
+                onComplete={handleAnimationComplete} // Detectar cuando termina el ciclo
                 // Opcional: controlar la velocidad si necesitas
                 // speed={1} // 1 = velocidad normal, 0.5 = más lento, 2 = más rápido
               />
@@ -88,13 +86,13 @@ const PantallaCarga = ({ onLoadingComplete }) => {
                 className="h-full bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full transition-all ease-linear"
                 style={{
                   width: '0%',
-                  animation: 'loading-progress 7s ease-out forwards'
+                  animation: 'loading-progress 6s ease-out forwards'
                 }}
               >
               </div>
             </div>
             <p className="text-xs text-gray-400 mt-2">
-              Duración estimada: 4 segundos
+              Duración estimada: 6 segundos
             </p>
           </div>
 
