@@ -6,32 +6,57 @@ import carAnimation from '../../assets/lotties/Delivery Truck _ Ignite Animation
 const PantallaCarga = ({ onLoadingComplete }) => {
   const [animationComplete, setAnimationComplete] = useState(false);
   const [showContent, setShowContent] = useState(false);
+  const [debugInfo, setDebugInfo] = useState('Iniciando...');
 
-  // Opción 1: Fallback de 6 segundos en caso de que onComplete no funcione
+  // SOLO UN MÉTODO: Timer fijo basado en la duración real de la animación
   useEffect(() => {
+    console.log('🚀 PantallaCarga iniciada');
+    setDebugInfo('Cargando animación...');
+    
+    // Timer para 4 segundos (duración real de tu animación + pequeño margen)
     const timer = setTimeout(() => {
+      console.log('⏰ 4.2 segundos completados - cerrando pantalla');
+      setDebugInfo('Animación completada - cerrando...');
       setShowContent(true);
-      // Opcional: notificar al componente padre que terminó
+      
       if (onLoadingComplete) {
+        console.log('📞 Llamando onLoadingComplete');
         onLoadingComplete();
       }
-    }, 6000); // 6 segundos - duración de tu animación Lottie
+    }, 4200); // 4.2 segundos para asegurar que la animación termine
 
-    return () => clearTimeout(timer);
+    return () => {
+      console.log('🧹 Limpiando timer');
+      clearTimeout(timer);
+    };
   }, [onLoadingComplete]);
 
-  // Opción 2: Termina inmediatamente cuando la animación completa su ciclo
+  // Solo para debugging - NO controla el tiempo
   const handleAnimationComplete = () => {
+    console.log('🎬 onComplete ejecutado (solo para debug)');
     setAnimationComplete(true);
-    // Sin setTimeout adicional - termina inmediatamente (0 segundos)
-    setShowContent(true);
-    if (onLoadingComplete) {
-      onLoadingComplete();
-    }
+    setDebugInfo('Animación onComplete disparado');
   };
 
+  // Debugging adicional
+  const handleAnimationData = () => {
+    console.log('📁 Datos de animación cargados');
+    setDebugInfo('Datos de animación listos');
+  };
+
+  const handleAnimationError = (error) => {
+    console.error('❌ Error en animación:', error);
+    setDebugInfo('Error al cargar animación');
+  };
+
+  // Si ya debe mostrar contenido, no renderizar la pantalla de carga
+  if (showContent) {
+    console.log('✅ showContent es true - no renderizando pantalla');
+    return null;
+  }
+
   return (
-    <div className="fixed inset-0 bg-gradient-to-br from-slate-50 via-white to-slate-100 flex items-center justify-center p-6">
+    <div className="fixed inset-0 bg-gradient-to-br from-slate-50 via-white to-slate-100 flex items-center justify-center p-6 z-50">
       <div className="w-full h-full bg-white/95 backdrop-blur-sm rounded-[2rem] shadow-2xl flex items-center justify-center relative overflow-hidden">
         {/* Efecto de brillo de fondo */}
         <div className="absolute inset-0 bg-gradient-to-br from-transparent via-blue-50/30 to-transparent animate-pulse"></div>
@@ -43,20 +68,22 @@ const PantallaCarga = ({ onLoadingComplete }) => {
             <div className="absolute inset-0 w-40 h-40 mx-auto rounded-full blur-2xl opacity-40 animate-pulse"
                  style={{ 
                    background: 'linear-gradient(135deg, #3B82F6, #6366F1)',
-                   animation: 'pulse-glow 6s ease-in-out infinite alternate'
+                   animation: 'pulse-glow 4s ease-in-out infinite alternate'
                  }}>
             </div>
             
-            {/* Animación Lottie del carro - Tamaño aumentado para mejor visibilidad */}
+            {/* Animación Lottie del carro */}
             <div className="relative w-36 h-36">
               <Lottie 
                 animationData={carAnimation}
-                loop={true} // Cambiar a true para que se repita durante los 6 segundos
+                loop={false} // UN SOLO CICLO
                 autoplay={true}
                 className="w-full h-full"
                 onComplete={handleAnimationComplete}
-                // Opcional: controlar la velocidad si necesitas
-                // speed={1} // 1 = velocidad normal, 0.5 = más lento, 2 = más rápido
+                onDataReady={handleAnimationData}
+                onLoadedImages={handleAnimationData}
+                onError={handleAnimationError}
+                speed={1} // Velocidad normal
               />
             </div>
           </div>
@@ -76,27 +103,31 @@ const PantallaCarga = ({ onLoadingComplete }) => {
                   : "Conectando con base de datos y verificando credenciales"
                 }
               </p>
+              {/* Info de debugging */}
+              <p className="text-xs text-red-500 font-mono">
+                DEBUG: {debugInfo}
+              </p>
             </div>
           </div>
 
-          {/* Barra de progreso que coincide con la duración de la animación */}
+          {/* Barra de progreso */}
           <div className="w-64 mx-auto">
             <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
               <div 
                 className="h-full bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full transition-all ease-linear"
                 style={{
                   width: '0%',
-                  animation: 'loading-progress 6s ease-out forwards'
+                  animation: 'loading-progress 4.2s ease-out forwards'
                 }}
               >
               </div>
             </div>
             <p className="text-xs text-gray-400 mt-2">
-              Duración estimada: 6 segundos
+              Esperando 4.2 segundos para animación completa
             </p>
           </div>
 
-          {/* Puntos de carga animados mejorados */}
+          {/* Puntos de carga animados */}
           <div className="flex justify-center space-x-2">
             <div className="w-3 h-3 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full shadow-lg"
                  style={{ 
@@ -124,24 +155,14 @@ const PantallaCarga = ({ onLoadingComplete }) => {
           </div>
         </div>
 
-        {/* Animaciones CSS mejoradas */}
+        {/* Animaciones CSS */}
         <style jsx>{`
           @keyframes loading-progress {
-            0% { 
-              width: 0%; 
-            }
-            25% { 
-              width: 30%; 
-            }
-            50% { 
-              width: 60%; 
-            }
-            75% { 
-              width: 85%; 
-            }
-            100% { 
-              width: 100%; 
-            }
+            0% { width: 0%; }
+            25% { width: 30%; }
+            50% { width: 60%; }
+            75% { width: 85%; }
+            100% { width: 100%; }
           }
 
           @keyframes bounce-delay {
