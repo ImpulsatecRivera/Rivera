@@ -22,11 +22,10 @@ const ImageUploader = ({ imagePreview, onImageChange, onRemoveImage }) => {
         ) : (
           <label
             htmlFor="img-input"
-            className="flex flex-col items-center justify-center cursor-pointer w-24 h-24 sm:w-32 sm:h-32 rounded-full bg-gray-100 border-4 border-dashed transition-all duration-300 group-hover:shadow-xl hover:bg-gray-200 hover:scale-105"
-            style={{ borderColor: '#5F8EAD' }}
+            className="flex flex-col items-center justify-center cursor-pointer w-24 h-24 sm:w-32 sm:h-32 rounded-full bg-gray-100 transition-all duration-300 group-hover:shadow-xl hover:bg-gray-200 hover:scale-105"
           >
-            {/* Animación Lottie de Upload Files */}
-            <div className="w-8 h-8 sm:w-10 sm:h-10 mb-1">
+            {/* Animación Lottie de Upload Files - Más grande */}
+            <div className="w-16 h-16 sm:w-20 sm:h-20 mb-1">
               <Lottie 
                 animationData={uploadFilesAnimation}
                 loop={true}
