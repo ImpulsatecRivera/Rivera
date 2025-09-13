@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import Lottie from 'lottie-react';
-import carAnimation from './Car_Ignite Animation.json';
+import carAnimation from '../../assets/lotties/Car _ Ignite Animation.json';
 
 const PantallaCarga = ({ onLoadingComplete }) => {
   useEffect(() => {
