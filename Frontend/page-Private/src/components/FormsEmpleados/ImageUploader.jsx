@@ -1,18 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { X } from 'lucide-react';
 import Lottie from 'lottie-react';
+import uploadFilesAnimation from '../../assets/lotties/Upload Files.json';
 
 const ImageUploader = ({ imagePreview, onImageChange, onRemoveImage }) => {
-  const [uploadFilesAnimation, setUploadFilesAnimation] = useState(null);
-
-  // Cargar la animación Lottie
-  useEffect(() => {
-    fetch('../../assets/lotties/Upload Files.json')
-      .then(response => response.json())
-      .then(data => setUploadFilesAnimation(data))
-      .catch(err => console.log('Error loading Upload Files animation:', err));
-  }, []);
-
   return (
     <div className="flex justify-center mb-6 sm:mb-8">
       <div className="relative group">
@@ -36,25 +27,18 @@ const ImageUploader = ({ imagePreview, onImageChange, onRemoveImage }) => {
           >
             {/* Animación Lottie de Upload Files */}
             <div className="w-8 h-8 sm:w-10 sm:h-10 mb-1">
-              {uploadFilesAnimation ? (
-                <Lottie 
-                  animationData={uploadFilesAnimation}
-                  loop={true}
-                  autoplay={true}
-                  className="w-full h-full"
-                />
-              ) : (
-                // Fallback mientras carga la animación
-                <div className="w-full h-full bg-gradient-to-br from-blue-400 to-purple-500 rounded-lg animate-pulse flex items-center justify-center">
-                  <span className="text-white text-xs font-bold">📁</span>
-                </div>
-              )}
+              <Lottie 
+                animationData={uploadFilesAnimation}
+                loop={true}
+                autoplay={true}
+                className="w-full h-full"
+              />
             </div>
-            
+                     
             <span className="text-xs font-medium text-center px-2" style={{ color: '#5D9646' }}>
               Subir foto
             </span>
-            
+                     
             <input
               id="img-input"
               type="file"
