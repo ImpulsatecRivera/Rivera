@@ -2,22 +2,75 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, Image, RefreshControl, TouchableOpacity, Alert } from 'react-native';
 import { useTrips } from '../hooks/useTrips';
 import { useProfile } from '../hooks/useProfile';
+import { useAuth } from '../Context/authContext';
 import HistoryItem from '../components/HistoryItem';
 import senalImg from '../images/senal.png';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const ViajesScreen = ({ navigation }) => {
-  const { profile } = useProfile();
-  const motoristaId = profile?.id || profile?._id;
+  const { user, isAuthenticated } = useAuth(); // Obtener contexto completo
+  const { profile, loading: profileLoading } = useProfile();
+  const [motoristaId, setMotoristaId] = useState(null);
   
-  // IMPORTANTE: Pasar 'historial' para obtener TODOS los viajes
+  // Función para obtener el ID del motorista desde el contexto y AsyncStorage
+  const obtenerMotoristaId = async () => {
+    try {
+      // 1. Prioridad: AsyncStorage (donde lo guarda el contexto)
+      const storedId = await AsyncStorage.getItem('motoristaId');
+      if (storedId) {
+        console.log('🆔 ID encontrado en AsyncStorage:', storedId);
+        return storedId;
+      }
+
+      // 2. Fallback: Contexto
+      const contextId = user?._id || user?.id;
+      if (contextId) {
+        console.log('🆔 ID encontrado en contexto:', contextId);
+        return contextId.toString();
+      }
+
+      // 3. Fallback: Profile
+      const profileId = profile?.id || profile?._id;
+      if (profileId) {
+        console.log('🆔 ID encontrado en profile:', profileId);
+        return profileId.toString();
+      }
+
+      console.log('❌ No se encontró ID de motorista');
+      return null;
+    } catch (error) {
+      console.error('❌ Error obteniendo motorista ID:', error);
+      return null;
+    }
+  };
+
+  // Efecto para obtener y establecer el motorista ID
+  useEffect(() => {
+    const setupMotoristaId = async () => {
+      if (isAuthenticated) {
+        const id = await obtenerMotoristaId();
+        if (id && id !== motoristaId) {
+          console.log('🔄 Estableciendo motorista ID:', id);
+          setMotoristaId(id);
+        }
+      } else {
+        console.log('❌ Usuario no autenticado');
+        setMotoristaId(null);
+      }
+    };
+
+    setupMotoristaId();
+  }, [user, profile, isAuthenticated]); // Dependencias para reaccionar a cambios
+
+  // IMPORTANTE: Solo llamar useTrips cuando tengamos el motoristaId
   const { 
-    trips, // TODOS los viajes (programados, completados, cancelados, etc.)
+    trips,
     loading, 
     error,
     refrescarViajes,
     totalTrips,
-    estadisticas // Estadísticas del backend
-  } = useTrips(motoristaId, 'historial'); // ← Clave: usar 'historial'
+    estadisticas
+  } = useTrips(motoristaId, 'historial'); // Pasar el ID obtenido
 
   const [filtroEstado, setFiltroEstado] = useState('todos');
 
@@ -27,7 +80,6 @@ const ViajesScreen = ({ navigation }) => {
       return trips;
     }
     
-    // Filtrar según el estado seleccionado
     switch (filtroEstado) {
       case 'programados':
         return trips.filter(v => ['programado', 'pendiente', 'confirmado'].includes(v.estado));
@@ -58,18 +110,15 @@ const ViajesScreen = ({ navigation }) => {
         destino: item.destino,
         fecha: item.fecha,
         hora: item.hora,
-        // Pasar todos los datos originales
         ...item
       }
     });
   };
 
   const onRefresh = () => {
+    console.log('🔄 Refrescando viajes...');
     refrescarViajes();
   };
-
-  // Obtener datos organizados
-  const viajesFiltrados = getViajesFiltrados();
 
   // Función para obtener el conteo de cada filtro
   const getConteoFiltro = (filtro) => {
@@ -86,6 +135,21 @@ const ViajesScreen = ({ navigation }) => {
         return 0;
     }
   };
+
+  // Obtener datos organizados
+  const viajesFiltrados = getViajesFiltrados();
+
+  // Mostrar loading si está cargando el perfil o los viajes, o si no tenemos motoristaId
+  if (profileLoading || loading || !motoristaId) {
+    return (
+      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+        <Text style={styles.loadingText}>Cargando viajes...</Text>
+        {!isAuthenticated && (
+          <Text style={styles.errorText}>Por favor, inicia sesión</Text>
+        )}
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -165,6 +229,12 @@ const ViajesScreen = ({ navigation }) => {
           </Text>
           <Text style={styles.debugText}>
             👤 Motorista ID: {motoristaId}
+          </Text>
+          <Text style={styles.debugText}>
+            🔐 Usuario autenticado: {isAuthenticated ? 'Sí' : 'No'}
+          </Text>
+          <Text style={styles.debugText}>
+            👤 Usuario del contexto: {user?.name || 'No disponible'}
           </Text>
           {error && (
             <Text style={styles.debugError}>
@@ -332,6 +402,16 @@ const styles = StyleSheet.create({
     color: '#d32f2f',
     marginTop: 5,
     fontWeight: 'bold',
+  },
+  loadingText: {
+    fontSize: 18,
+    color: '#666',
+    marginBottom: 10,
+  },
+  errorText: {
+    fontSize: 16,
+    color: '#d32f2f',
+    textAlign: 'center',
   },
   sectionTitle: {
     fontSize: 18,

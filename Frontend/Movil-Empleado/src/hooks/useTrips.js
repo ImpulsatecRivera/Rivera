@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// Configuración de la API - ajusta esta URL a tu servidor
-const API_BASE_URL = 'https://riveraproject-5.onrender.com/api'; // Cambia por tu URL real
+// Configuración de la API
+const API_BASE_URL = 'https://riveraproject-5.onrender.com/api';
 
 export const useTrips = (motoristaId = null, tipoConsulta = 'programados') => {
   const [trips, setTrips] = useState([]);
@@ -84,7 +85,7 @@ export const useTrips = (motoristaId = null, tipoConsulta = 'programados') => {
     descripcion: viaje.descripcion,
     horaLlegada: viaje.fechaLlegada ? formatearHora(viaje.fechaLlegada) : 'No especificada',
     horaSalida: formatearHora(viaje.fechaSalida),
-    asistente: 'Por asignar', // Si tienes este campo en tu modelo, úsalo
+    asistente: 'Por asignar',
     icon: obtenerIconoViaje(viaje.descripcion || ''),
     color: obtenerColorEstado(viaje.estado),
     estado: viaje.estado,
@@ -93,21 +94,53 @@ export const useTrips = (motoristaId = null, tipoConsulta = 'programados') => {
     carga: viaje.carga
   });
 
-  // NUEVO: Función para cargar historial completo de viajes
-  const cargarHistorialCompleto = async (id) => {
+  // Función para hacer peticiones con manejo de autenticación
+  const hacerPeticion = async (url) => {
     try {
-      setLoading(true);
-      setError(null);
-
-      const response = await fetch(`${API_BASE_URL}/motoristas/${id}/historial-completo`);
+      // Obtener token de AsyncStorage
+      const authToken = await AsyncStorage.getItem('authToken');
       
+      console.log(`🌐 Haciendo petición a: ${url}`);
+      console.log(`🔑 Token presente: ${authToken ? 'Sí' : 'No'}`);
+
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(authToken && { 'Authorization': `Bearer ${authToken}` }),
+        },
+      });
+
+      console.log(`📡 Response status: ${response.status}`);
+
       if (!response.ok) {
+        const errorText = await response.text();
+        console.log(`❌ Error response: ${errorText}`);
         throw new Error(`Error ${response.status}: ${response.statusText}`);
       }
 
       const data = await response.json();
+      console.log(`✅ Datos recibidos exitosamente`);
+      return data;
+    } catch (error) {
+      console.error(`❌ Error en petición: ${error.message}`);
+      throw error;
+    }
+  };
+
+  // FUNCIÓN PRINCIPAL: Cargar historial completo de viajes
+  const cargarHistorialCompleto = async (id) => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      console.log(`🔍 Cargando historial completo para motorista: ${id}`);
+
+      const data = await hacerPeticion(`${API_BASE_URL}/motoristas/${id}/historial-completo`);
 
       if (data.historialCompleto && data.historialCompleto.length > 0) {
+        console.log(`📊 Procesando ${data.historialCompleto.length} viajes`);
+        
         // Procesar todos los viajes
         const todosLosViajes = data.historialCompleto.map(viaje => 
           transformarViajeAPI(viaje, data.camionAsignado)
@@ -126,14 +159,24 @@ export const useTrips = (motoristaId = null, tipoConsulta = 'programados') => {
           hora: formatearHora(viaje.fechaSalida)
         }));
 
+        // Actualizar estado con datos reales del backend
         setTrips(todosLosViajes);
         setViajesPorDia(data.viajesPorDia || []);
         setProximosDestinos(proximosDestinos);
         setTotalTrips(data.totalViajes || todosLosViajes.length);
-        setEstadisticas(data.estadisticas);
+        setEstadisticas(data.estadisticas || {
+          programados: 0,
+          completados: 0,
+          cancelados: 0,
+          enProgreso: 0
+        });
         setHistorialViajes(todosLosViajes);
+
+        console.log(`✅ Historial cargado: ${todosLosViajes.length} viajes`);
       } else {
-        // No hay viajes
+        console.log(`ℹ️ No se encontraron viajes para el motorista ${id}`);
+        
+        // No hay viajes - estado limpio
         setTrips([]);
         setViajesPorDia([]);
         setProximosDestinos([]);
@@ -148,30 +191,39 @@ export const useTrips = (motoristaId = null, tipoConsulta = 'programados') => {
       }
 
     } catch (error) {
-      console.error('Error al cargar historial completo:', error);
-      setError(error.message);
-      // Mantener datos mockeados en caso de error para desarrollo
-      cargarDatosMock();
+      console.error('❌ Error al cargar historial completo:', error);
+      setError(`Error de conexión: ${error.message}`);
+      
+      // NO cargar datos mock - mantener estado limpio
+      setTrips([]);
+      setViajesPorDia([]);
+      setProximosDestinos([]);
+      setTotalTrips(0);
+      setEstadisticas({
+        programados: 0,
+        completados: 0,
+        cancelados: 0,
+        enProgreso: 0
+      });
+      setHistorialViajes([]);
     } finally {
       setLoading(false);
     }
   };
 
-  // Función para cargar viajes de un motorista específico (solo programados)
+  // Función para cargar viajes programados del motorista
   const cargarViajesMotorista = async (id) => {
     try {
       setLoading(true);
       setError(null);
 
-      const response = await fetch(`${API_BASE_URL}/motoristas/${id}/viajes-programados`);
-      
-      if (!response.ok) {
-        throw new Error(`Error ${response.status}: ${response.statusText}`);
-      }
+      console.log(`🔍 Cargando viajes programados para motorista: ${id}`);
 
-      const data = await response.json();
+      const data = await hacerPeticion(`${API_BASE_URL}/motoristas/${id}/viajes-programados`);
 
       if (data.viajesPorDia && data.viajesPorDia.length > 0) {
+        console.log(`📊 Procesando viajes programados`);
+        
         // Procesar viajes por día
         const todosLosViajes = [];
         const proximosDestinos = [];
@@ -198,7 +250,11 @@ export const useTrips = (motoristaId = null, tipoConsulta = 'programados') => {
         setProximosDestinos(proximosDestinos);
         setTotalTrips(data.totalViajes || todosLosViajes.length);
         setHistorialViajes(todosLosViajes.slice(-5)); // Últimos 5 para historial
+
+        console.log(`✅ Viajes programados cargados: ${todosLosViajes.length} viajes`);
       } else {
+        console.log(`ℹ️ No se encontraron viajes programados para el motorista ${id}`);
+        
         // No hay viajes programados
         setTrips([]);
         setViajesPorDia([]);
@@ -208,9 +264,15 @@ export const useTrips = (motoristaId = null, tipoConsulta = 'programados') => {
       }
 
     } catch (error) {
-      console.error('Error al cargar viajes del motorista:', error);
-      setError(error.message);
-      cargarDatosMock();
+      console.error('❌ Error al cargar viajes del motorista:', error);
+      setError(`Error de conexión: ${error.message}`);
+      
+      // NO cargar datos mock
+      setTrips([]);
+      setViajesPorDia([]);
+      setProximosDestinos([]);
+      setTotalTrips(0);
+      setHistorialViajes([]);
     } finally {
       setLoading(false);
     }
@@ -222,13 +284,9 @@ export const useTrips = (motoristaId = null, tipoConsulta = 'programados') => {
       setLoading(true);
       setError(null);
 
-      const response = await fetch(`${API_BASE_URL}/motoristas/viajes-programados/todos`);
-      
-      if (!response.ok) {
-        throw new Error(`Error ${response.status}: ${response.statusText}`);
-      }
+      console.log(`🔍 Cargando todos los viajes (vista administrativa)`);
 
-      const data = await response.json();
+      const data = await hacerPeticion(`${API_BASE_URL}/motoristas/viajes-programados/todos`);
 
       if (data.viajesPorDia && data.viajesPorDia.length > 0) {
         const todosLosViajes = [];
@@ -246,69 +304,33 @@ export const useTrips = (motoristaId = null, tipoConsulta = 'programados') => {
         setTrips(todosLosViajes);
         setViajesPorDia(data.viajesPorDia);
         setTotalTrips(data.totalViajes || todosLosViajes.length);
+
+        console.log(`✅ Todos los viajes cargados: ${todosLosViajes.length} viajes`);
+      } else {
+        setTrips([]);
+        setViajesPorDia([]);
+        setTotalTrips(0);
       }
 
     } catch (error) {
-      console.error('Error al cargar todos los viajes:', error);
-      setError(error.message);
-      cargarDatosMock();
+      console.error('❌ Error al cargar todos los viajes:', error);
+      setError(`Error de conexión: ${error.message}`);
+      
+      // NO cargar datos mock
+      setTrips([]);
+      setViajesPorDia([]);
+      setTotalTrips(0);
     } finally {
       setLoading(false);
     }
   };
 
-  // Datos mock para desarrollo/fallback
-  const cargarDatosMock = () => {
-    const mockTrips = [
-      {
-        id: 1,
-        tipo: 'Descarga de alimentos',
-        subtitulo: 'Ayutuxtepeque, local 28',
-        fecha: 'Hoy',
-        hora: '7:30 AM',
-        cotizacion: 'Empresas gremiales',
-        camion: 'P-438-MLR',
-        descripcion: 'Entrega de mercancías a Usulután',
-        horaLlegada: '9:00 AM',
-        horaSalida: '8:00 PM',
-        asistente: 'Laura Sánchez',
-        icon: '📦',
-        color: '#4CAF50',
-        estado: 'programado'
-      },
-      {
-        id: 2,
-        tipo: 'Transporte de mobiliario',
-        subtitulo: 'Antiguo cuscatlán, ps3, casa 26',
-        fecha: 'Mañana',
-        hora: '1:30 PM',
-        cotizacion: 'Muebles Express',
-        camion: 'P-521-XYZ',
-        descripcion: 'Transporte de muebles residenciales',
-        horaLlegada: '1:00 PM',
-        horaSalida: '6:00 PM',
-        asistente: 'Carlos Mendoza',
-        icon: '🚛',
-        color: '#FF9800',
-        estado: 'confirmado'
-      }
-    ];
-
-    const proximosDestinos = [
-      { id: 1, tipo: 'Ayutuxtepeque, local 28', fecha: 'Hoy', hora: '7:30 AM' },
-      { id: 2, tipo: 'Antiguo Cuscatlán', fecha: 'Mañana', hora: '1:30 PM' },
-      { id: 3, tipo: 'San Salvador Centro', fecha: 'Pasado mañana', hora: '9:00 AM' },
-    ];
-
-    setTrips(mockTrips);
-    setProximosDestinos(proximosDestinos);
-    setTotalTrips(23);
-    setHistorialViajes(mockTrips);
-  };
-
   // Cargar datos al montar el componente
   useEffect(() => {
-    if (motoristaId) {
+    // Solo ejecutar si tenemos un motoristaId válido
+    if (motoristaId && motoristaId !== 'null' && motoristaId !== 'undefined') {
+      console.log(`🚀 Iniciando carga de datos para motorista: ${motoristaId}, tipo: ${tipoConsulta}`);
+      
       // Decidir qué tipo de consulta hacer
       if (tipoConsulta === 'historial') {
         cargarHistorialCompleto(motoristaId);
@@ -316,10 +338,19 @@ export const useTrips = (motoristaId = null, tipoConsulta = 'programados') => {
         cargarViajesMotorista(motoristaId);
       }
     } else {
-      // Si no hay motoristaId específico, usar datos mock
-      cargarDatosMock();
+      console.log(`⏳ Esperando motoristaId válido... Actual: ${motoristaId}`);
+      
+      // Si no hay motoristaId, mantener estado de loading para esperar
+      if (!motoristaId) {
+        setLoading(true);
+        setError(null);
+      } else {
+        // Si es null o undefined como string, cargar vista administrativa
+        console.log(`ℹ️ No hay motoristaId válido, cargando vista administrativa`);
+        cargarTodosLosViajes();
+      }
     }
-  }, [motoristaId, tipoConsulta]);
+  }, [motoristaId, tipoConsulta]); // Dependencias en motoristaId y tipoConsulta
 
   // Función para obtener viaje por ID
   const getTripById = (id) => {
@@ -328,6 +359,8 @@ export const useTrips = (motoristaId = null, tipoConsulta = 'programados') => {
 
   // Función para refrescar datos
   const refrescarViajes = () => {
+    console.log(`🔄 Refrescando viajes...`);
+    
     if (motoristaId) {
       if (tipoConsulta === 'historial') {
         cargarHistorialCompleto(motoristaId);
@@ -371,13 +404,13 @@ export const useTrips = (motoristaId = null, tipoConsulta = 'programados') => {
     proximosDestinos,
     historialViajes,
     viajesPorDia,
-    estadisticas, // NUEVO: Estadísticas del backend
+    estadisticas,
     getTripById,
     setTrips,
     refrescarViajes,
     cargarViajesMotorista,
     cargarTodosLosViajes,
-    cargarHistorialCompleto, // NUEVO: Función para historial completo
+    cargarHistorialCompleto,
     getViajesHoy,
     getEstadisticas
   };
