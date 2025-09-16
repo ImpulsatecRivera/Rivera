@@ -1,45 +1,36 @@
-import React, { useEffect, useRef, useState } from 'react';
+// src/screens/DashboardScreen.jsx
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import {
-  View,
-  StyleSheet,
-  ScrollView,
-  FlatList,
-  Text,
-  TouchableOpacity,
-  Dimensions,
-  Image,
+  View, StyleSheet, ScrollView, FlatList, Text, TouchableOpacity,
+  Dimensions, Image, ActivityIndicator, RefreshControl,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
-
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { useAuth } from '../context/authContext';
 import CarouselSlide from '../components/CarouselSlide';
 import CarouselIndicators from '../components/CarouselIndicators';
 import ProjectCard from '../components/ProjectCard';
 import QuoteSheet from '../components/QuoteSheet';
 import useQuotePreview from '../hooks/useQuotePreview';
+import useMyQuotes from '../hooks/useMyQuotes';
 import FocusAwareStatusBar from '../components/FocusAwareStatusBar';
 
 const { width: ITEM_WIDTH } = Dimensions.get('window');
 const BG = '#F5F5F5';
-
-// Tamaño responsive del logo
 const LOGO_WIDTH = Math.min(ITEM_WIDTH * 0.75, 420);
 const LOGO_HEIGHT = 130;
 
 const DashboardScreen = () => {
   const navigation = useNavigation();
+  const { user } = useAuth();
 
+  // Carrusel
   const baseData = [
     { id: 1, title: 'Somos',  subtitle: 'Rivera distribuidora y transporte', imageSource: require('../images/familiaRivera.png'), backgroundColor: '#667eea' },
     { id: 2, title: 'Visita', subtitle: 'Nuestro sitio web y concenos',     imageSource: require('../images/trabajador.png'),   backgroundColor: '#f093fb' },
     { id: 3, title: '30% OFF',subtitle: 'En tu primera cotización del mes',  imageSource: require('../images/cotizacion.png'),   backgroundColor: '#4facfe' },
   ];
-
-  // Carrusel infinito
-  const LOOP_CLONES = 3;
-  const BASE_LEN = baseData.length;
-  const START_INDEX = BASE_LEN;
+  const LOOP_CLONES = 3, BASE_LEN = baseData.length, START_INDEX = BASE_LEN;
   const bigData = Array.from({ length: LOOP_CLONES }).flatMap(() => baseData);
-
   const flatListRef = useRef(null);
   const [absIndex, setAbsIndex] = useState(START_INDEX);
   const [autoPlay, setAutoPlay] = useState(true);
@@ -53,7 +44,6 @@ const DashboardScreen = () => {
   }, []);
 
   const currentIndex = absIndex % BASE_LEN;
-
   useEffect(() => {
     if (!autoPlay || BASE_LEN === 0) return;
     const id = setInterval(() => {
@@ -70,7 +60,6 @@ const DashboardScreen = () => {
     const idx = Math.round(x / ITEM_WIDTH);
     if (idx !== absIndex) setAbsIndex(idx);
   };
-
   const handleMomentumEnd = (e) => {
     const x = e.nativeEvent.contentOffset.x;
     let idx = Math.round(x / ITEM_WIDTH);
@@ -84,52 +73,55 @@ const DashboardScreen = () => {
       setAbsIndex(centralIdx);
     }
   };
+  const renderCarouselItem = ({ item }) => (
+    <CarouselSlide title={item.title} subtitle={item.subtitle} imageSource={item.imageSource} backgroundColor={item.backgroundColor} />
+  );
 
-  const projects = [
-    { id: 1, name: 'PROYECTO - USD1', price: '$ 1,800.00', status: 'pendiente',  icon: '📄' },
-    { id: 2, name: 'PROYECTO - EUR1', price: '$ 1,800.00', status: 'en ruta',    icon: '📄' },
-    { id: 3, name: 'PROYECTO - USD1', price: '$ 1,800.00', status: 'completado', icon: '📄' },
-    { id: 4, name: 'PROYECTO - EUR1', price: '$ 1,800.00', status: 'pendiente',  icon: '📄' },
-    { id: 5, name: 'PROYECTO - USD1', price: '$ 1,800.00', status: 'en ruta',    icon: '📄' },
-    { id: 6, name: 'PROYECTO - EUR1', price: '$ 1,800.00', status: 'completado', icon: '📄' },
-  ];
+  // Cotizaciones (hook conectado al backend)
+  const { quotes, loading, error, refreshing, refresh, reload } = useMyQuotes('https://riveraproject-5.onrender.com');
 
-  const { visible, item, open, close } = useQuotePreview();
+  // Preview de cotización
+  const { visible, item, open: openPreview, close } = useQuotePreview();
 
-  const handleProjectPress = (project) => {
-    open({
-      title: project.name,
-      price: project.price,
-      status: project.status,
-      lugarEntrega: 'San Salvador',
-      horaLlegada: '10:30 AM',
-      horaSalida: '11:45 AM',
+  const handleProjectPress = (q) => {
+    openPreview({
+      title: q.title,
+      price: `${q.currency === 'USD' ? '$ ' : ''}${(q.amount ?? 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}`,
+      status: q.status,
+      lugarEntrega: q.deliveryPlace,
+      horaLlegada: q.arrivalTime,
+      horaSalida: q.departureTime,
+      paymentMethod: q.paymentMethod,
     });
   };
 
+  // NO pasar funciones por params
   const handleAddQuote = () => navigation.navigate('Cotizacion');
 
-  const renderCarouselItem = ({ item }) => (
-    <CarouselSlide
-      title={item.title}
-      subtitle={item.subtitle}
-      image={item.image}
-      imageSource={item.imageSource}
-      backgroundColor={item.backgroundColor}
-    />
+  // ========= FIX del bucle de carga =========
+  // Guardamos la función en un ref para que useFocusEffect no dependa de su identidad.
+  const reloadRef = useRef(reload);
+  useEffect(() => { reloadRef.current = reload; }, [reload]);
+
+  useFocusEffect(
+    useCallback(() => {
+      reloadRef.current(); // se ejecuta una vez en cada enfoque real
+      return () => {};
+    }, [])
   );
+  // =========================================
 
   return (
     <View style={styles.container}>
-      {/* Solo la pantalla enfocada pinta su StatusBar */}
       <FocusAwareStatusBar barStyle="dark-content" backgroundColor={BG} />
 
       <ScrollView
         style={styles.content}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 20 }}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} />}
       >
-        {/* Header con logo que ahora scrollea */}
+        {/* Header con logo */}
         <View style={styles.logoHeader}>
           <Image source={require('../images/logo.png')} style={styles.logo} />
         </View>
@@ -167,16 +159,49 @@ const DashboardScreen = () => {
             <Text style={styles.sectionTitle}>Últimas Cotizaciones realizadas</Text>
           </View>
 
-          {/* Grid 2x3 */}
-          <View style={styles.projectsGrid}>
-            {projects.map((project) => (
-              <ProjectCard
-                key={project.id}
-                project={project}
-                onPress={() => handleProjectPress(project)}
-              />
-            ))}
-          </View>
+          {loading ? (
+            <View style={{ paddingVertical: 20, alignItems: 'center' }}>
+              <ActivityIndicator size="large" />
+              <Text style={{ marginTop: 8, color: '#666' }}>Cargando tus cotizaciones…</Text>
+            </View>
+          ) : error ? (
+            <View style={{ paddingVertical: 20 }}>
+              <Text style={{ color: '#d00', textAlign: 'center' }}>
+                {error}. Desliza hacia abajo para reintentar.
+              </Text>
+              <TouchableOpacity onPress={() => reloadRef.current()} style={[styles.addButton, { marginTop: 12 }]}>
+                <Text style={styles.addButtonText}>Reintentar</Text>
+              </TouchableOpacity>
+            </View>
+          ) : quotes.length === 0 ? (
+            <View style={{ paddingVertical: 24, paddingHorizontal: 12 }}>
+              <Text style={{ textAlign: 'center', fontSize: 16, fontWeight: '600' }}>
+                ¡Aún no tienes cotizaciones!
+              </Text>
+              <Text style={{ textAlign: 'center', marginTop: 6, color: '#666' }}>
+                Crea tu primera cotización y aprovecha el 30% OFF de este mes.
+              </Text>
+              <TouchableOpacity style={[styles.addButton, { marginTop: 14 }]} onPress={handleAddQuote}>
+                <Text style={styles.addButtonText}>Crear mi primera cotización</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <View style={styles.projectsGrid}>
+              {quotes.slice(0, 6).map((q) => (
+                <ProjectCard
+                  key={q.id}
+                  project={{
+                    id: q.id,
+                    name: q.title,
+                    price: `${q.currency === 'USD' ? '$ ' : ''}${(q.amount ?? 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}`,
+                    status: q.status,
+                    icon: '📄',
+                  }}
+                  onPress={() => handleProjectPress(q)}
+                />
+              ))}
+            </View>
+          )}
         </View>
       </ScrollView>
 
@@ -186,7 +211,7 @@ const DashboardScreen = () => {
         onClose={close}
         onConfirm={(payload) => {
           close();
-          navigation.navigate('Cotizacion', payload);
+          navigation.navigate('Cotizacion', payload); // payload serializable
         }}
       />
     </View>
@@ -195,27 +220,14 @@ const DashboardScreen = () => {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: BG },
-
   content: { flex: 1 },
 
-  logoHeader: {
-    backgroundColor: BG,
-    alignItems: 'center',
-    paddingTop: 26,
-    paddingBottom: 16,
-  },
-  logo: {
-    width: LOGO_WIDTH,
-    height: LOGO_HEIGHT,
-    resizeMode: 'contain',
-    alignSelf: 'center',
-    marginTop: 8,
-  },
+  logoHeader: { backgroundColor: BG, alignItems: 'center', paddingTop: 26, paddingBottom: 16 },
+  logo: { width: LOGO_WIDTH, height: LOGO_HEIGHT, resizeMode: 'contain', alignSelf: 'center', marginTop: 8 },
 
   carouselContainer: { marginTop: 20, marginBottom: 30 },
 
   quotesSection: { paddingHorizontal: 20, paddingBottom: 20 },
-
   sectionHeader: { marginTop: 8, marginBottom: 16 },
   sectionTitle: { fontSize: 16, fontWeight: '500', color: '#666666' },
 
@@ -234,12 +246,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     elevation: 3,
   },
-  addButtonText: {
-    textAlign: 'center',
-    color: '#FFFFFF',
-    fontSize: 15,
-    fontWeight: 'bold',
-  },
+  addButtonText: { textAlign: 'center', color: '#FFFFFF', fontSize: 15, fontWeight: 'bold' },
 
   projectsGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' },
 });
