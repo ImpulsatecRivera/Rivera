@@ -1,3 +1,4 @@
+// src/components/ProjectCard.jsx
 import React from 'react';
 import { TouchableOpacity, View, Text, StyleSheet, Image } from 'react-native';
 
@@ -6,7 +7,6 @@ const COTIZACION_IMG = require('../images/cotizacion.png');
 const ProjectCard = ({ project, onPress }) => {
   return (
     <TouchableOpacity style={styles.card} activeOpacity={0.85} onPress={onPress}>
-      {/* Imagen centrada, sin fondo y más grande */}
       <View style={styles.iconContainer}>
         <Image source={COTIZACION_IMG} style={styles.iconImg} />
       </View>
@@ -34,26 +34,10 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     elevation: 4,
   },
-  iconContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 12,
-  },
-  iconImg: {
-    width: 100,         
-    height: 100,         
-    resizeMode: 'contain',
-  },
-  name: {
-    color: '#FFFFFF',
-    fontWeight: '600',
-    fontSize: 12,
-    marginBottom: 6,
-  },
-  price: {
-    color: '#D1D5DB',
-    fontSize: 11,
-  },
+  iconContainer: { alignItems: 'center', justifyContent: 'center', marginBottom: 12 },
+  iconImg: { width: 100, height: 100, resizeMode: 'contain' },
+  name: { color: '#FFFFFF', fontWeight: '600', fontSize: 12, marginBottom: 6 },
+  price: { color: '#D1D5DB', fontSize: 11 },
 });
 
 export default ProjectCard;
