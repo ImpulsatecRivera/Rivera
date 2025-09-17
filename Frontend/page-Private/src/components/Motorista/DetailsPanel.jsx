@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, MoreHorizontal, User, Phone, Mail, Calendar, MapPin, CreditCard, Shield } from 'lucide-react';
+import Lottie from 'lottie-react';
+// Importa tu animación Sandy Loading
+import sandyLoadingAnimation from '../../assets/lotties/Sandy Loading.json';
 
 const DetailPanel = ({ 
   selectedMotorista, 
@@ -14,7 +17,7 @@ const DetailPanel = ({
     setIsLoading(true);
     const timer = setTimeout(() => {
       setIsLoading(false);
-    }, 2500);
+    }, 3000); // 3 segundos para ver la animación completa
 
     return () => clearTimeout(timer);
   }, [selectedMotorista]); // Se ejecuta cada vez que cambia selectedMotorista
@@ -40,37 +43,28 @@ const DetailPanel = ({
           </div>
 
           <div className="text-center z-10">
-            {/* Enhanced Profile Loading Animation */}
-            <div className="relative mb-8">
-              <div className="w-28 h-28 rounded-2xl mx-auto mb-6 flex items-center justify-center shadow-2xl overflow-hidden relative" 
-                   style={{background: 'linear-gradient(135deg, #5F8EAD 0%, #5D9646 100%)'}}>
-                <User className="w-14 h-14 text-white animate-pulse" />
-                
-                {/* Multiple rotating borders */}
-                <div className="absolute inset-0 rounded-2xl border-4 border-transparent animate-spin"
-                     style={{
-                       borderTopColor: '#FFFFFF',
-                       borderRightColor: 'rgba(255,255,255,0.3)',
-                       animation: 'spin 2s linear infinite'
-                     }}>
-                </div>
-                <div className="absolute inset-2 rounded-xl border-2 border-transparent animate-spin"
-                     style={{
-                       borderBottomColor: '#FFFFFF',
-                       borderLeftColor: 'rgba(255,255,255,0.2)',
-                       animation: 'spin 3s linear infinite reverse'
-                     }}>
-                </div>
+            {/* Sandy Loading Animation */}
+            <div className="relative mb-8 flex justify-center">
+              <div className="w-48 h-48 flex items-center justify-center">
+                <Lottie 
+                  animationData={sandyLoadingAnimation}
+                  loop={true}
+                  autoplay={true}
+                  className="w-full h-full"
+                  style={{
+                    filter: 'drop-shadow(0 10px 30px rgba(95, 142, 173, 0.4))'
+                  }}
+                />
               </div>
             </div>
             
             {/* Enhanced Loading Text */}
             <div className="space-y-4 mb-8">
               <h2 className="text-2xl font-bold text-white animate-pulse">
-                Cargando Motorista
+                Cargando Perfil
               </h2>
               <p className="text-gray-300 text-lg">
-                Preparando información del conductor
+                Preparando información del empleado
               </p>
             </div>
 
@@ -132,7 +126,7 @@ const DetailPanel = ({
               {/* Dynamic Loading Steps */}
               <div className="text-sm text-gray-400 animate-pulse">
                 <span className="inline-block" style={{animation: 'text-fade 3s ease-in-out infinite'}}>
-                  Verificando credenciales del motorista...
+                  Verificando credenciales del empleado...
                 </span>
               </div>
             </div>

@@ -1,5 +1,7 @@
 import React from 'react';
-import { Camera, X } from 'lucide-react';
+import { X } from 'lucide-react';
+import Lottie from 'lottie-react';
+import uploadFilesAnimation from '../../assets/lotties/Upload Files.json';
 
 const ImageUploader = ({ imagePreview, onImageChange, onRemoveImage }) => {
   return (
@@ -20,11 +22,22 @@ const ImageUploader = ({ imagePreview, onImageChange, onRemoveImage }) => {
         ) : (
           <label
             htmlFor="img-input"
-            className="flex flex-col items-center justify-center cursor-pointer w-24 h-24 sm:w-32 sm:h-32 rounded-full bg-gray-100 border-4 border-dashed transition-all duration-300 group-hover:shadow-xl hover:bg-gray-200"
-            style={{ borderColor: '#5F8EAD' }}
+            className="flex flex-col items-center justify-center cursor-pointer w-24 h-24 sm:w-32 sm:h-32 rounded-full bg-gray-100 transition-all duration-300 group-hover:shadow-xl hover:bg-gray-200 hover:scale-105"
           >
-            <Camera className="w-6 h-6 sm:w-8 sm:h-8 mb-1 sm:mb-2" style={{ color: '#5D9646' }} />
-            <span className="text-xs font-medium text-center" style={{ color: '#5D9646' }}>Subir foto</span>
+            {/* Animación Lottie de Upload Files - Más grande */}
+            <div className="w-16 h-16 sm:w-20 sm:h-20 mb-1">
+              <Lottie 
+                animationData={uploadFilesAnimation}
+                loop={true}
+                autoplay={true}
+                className="w-full h-full"
+              />
+            </div>
+                     
+            <span className="text-xs font-medium text-center px-2" style={{ color: '#5D9646' }}>
+              Subir foto
+            </span>
+                     
             <input
               id="img-input"
               type="file"

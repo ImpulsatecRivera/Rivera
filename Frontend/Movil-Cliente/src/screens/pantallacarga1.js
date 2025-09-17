@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Image } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import LottieView from 'lottie-react-native';
 import { useAuth } from '../context/authContext';
 
 const OnboardingScreen1 = ({ navigation }) => {
@@ -27,16 +28,15 @@ const OnboardingScreen1 = ({ navigation }) => {
 
       {/* Illustration Container */}
       <View style={styles.illustrationContainer}>
-        {/* Contenedor para tu imagen manual */}
-        <View style={styles.imageContainer}>
-          {/* AQUÍ PONDRÁS TU IMAGEN - Por ahora solo placeholder */}
-          <View style={styles.imagePlaceholder}>
-            <Text style={styles.placeholderText}><Image 
-               source={require('../images/navegando.png')} 
-               style={styles.characterImage}
-              resizeMode="contain"
-            /></Text>
-          </View>
+        {/* Contenedor para la animación Lottie */}
+        <View style={styles.lottieContainer}>
+          <LottieView
+            source={require('../assets/lottie/Blue Truck.json')} // Asegúrate de que la ruta sea correcta
+            autoPlay
+            loop
+            style={styles.lottieAnimation}
+            resizeMode="contain"
+          />
         </View>
       </View>
 
@@ -101,28 +101,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 40,
     minHeight: 400,
   },
-  imageContainer: {
+  lottieContainer: {
     alignItems: 'center',
     justifyContent: 'center',
+    width: 300,
+    height: 300,
   },
-
-  // Placeholder temporal - eliminar cuando agregues tu imagen
-  imagePlaceholder: {
-    width: 250,
-    height: 250,
-    backgroundColor: '#F0F0F0',
-    borderRadius: 125,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: '#E0E0E0',
-    borderStyle: 'dashed',
-  },
-  placeholderText: {
-    color: '#999999',
-    fontSize: 16,
-    textAlign: 'center',
-    fontWeight: '500',
+  lottieAnimation: {
+    width: '100%',
+    height: '100%',
   },
   content: {
     paddingHorizontal: 40,

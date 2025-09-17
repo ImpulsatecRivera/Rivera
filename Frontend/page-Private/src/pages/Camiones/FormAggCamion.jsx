@@ -18,6 +18,7 @@ import SubmitButton from '../../components/FormsCamiones/SubmitButton';
 
 const FormAggCamion = ({ onNavigateBack, onSubmitSuccess }) => {
   const [imagePreview, setImagePreview] = useState(null);
+  const [imageFile, setImageFile] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const {
@@ -25,7 +26,8 @@ const FormAggCamion = ({ onNavigateBack, onSubmitSuccess }) => {
     handleSubmit,
     formState: { errors },
     reset,
-    setValue
+    setValue,
+    watch
   } = useForm();
 
   const {
@@ -47,12 +49,25 @@ const FormAggCamion = ({ onNavigateBack, onSubmitSuccess }) => {
     }
   };
 
-  // Handler para cambio de imagen
+  // Handler para cambio de imagen - CON DEBUG EXTENSIVO
   const handleImageChange = (e) => {
+    console.log('🔥 === INICIO handleImageChange ===');
+    console.log('🔥 Event completo:', e);
+    console.log('🔥 e.target:', e.target);
+    console.log('🔥 e.target.files:', e.target.files);
+    console.log('🔥 Tipo de e.target.files:', typeof e.target.files);
+    console.log('🔥 Es FileList?:', e.target.files instanceof FileList);
+    console.log('🔥 Longitud:', e.target.files?.length);
+    
     const file = e.target.files[0];
+    console.log('🔥 File extraído:', file);
+    console.log('🔥 Tipo de file:', typeof file);
+    console.log('🔥 Es File?:', file instanceof File);
+    
     if (file) {
       // Validar tipo de archivo
       if (!file.type.startsWith('image/')) {
+        console.log('❌ Tipo de archivo inválido:', file.type);
         Swal.fire({
           title: 'Formato no válido',
           text: 'Por favor selecciona una imagen en formato JPG, PNG o GIF',
@@ -62,33 +77,66 @@ const FormAggCamion = ({ onNavigateBack, onSubmitSuccess }) => {
         });
         return;
       }
-      
-      // Validar tamaño (máximo 5MB)
-      if (file.size > 5 * 1024 * 1024) {
-        Swal.fire({
-          title: 'Archivo muy grande',
-          text: 'La imagen debe ser menor a 5MB',
-          icon: 'warning',
-          confirmButtonText: 'Entendido',
-          confirmButtonColor: '#f59e0b'
-        });
-        return;
-      }
 
+      console.log('✅ Archivo válido, procediendo...');
+      
+      // Guardar el archivo en el estado
+      setImageFile(file);
+      console.log('🔥 ImageFile guardado en state:', file);
+      
+      // PROBAR MÚLTIPLES MÉTODOS PARA SETEAR
+      console.log('🔥 Intentando setValue con FileList completo...');
+      setValue('img', e.target.files, { 
+        shouldValidate: true,
+        shouldDirty: true,
+        shouldTouch: true 
+      });
+      
+      // Verificar inmediatamente después de setValue
+      const currentFormValue = watch('img');
+      console.log('🔥 Valor en formulario después de setValue:', currentFormValue);
+      console.log('🔥 Tipo del valor en formulario:', typeof currentFormValue);
+      console.log('🔥 Es FileList el valor en formulario?:', currentFormValue instanceof FileList);
+      console.log('🔥 Longitud del valor en formulario:', currentFormValue?.length);
+      console.log('🔥 Primer archivo del valor en formulario:', currentFormValue?.[0]);
+
+      // Crear preview
       const reader = new FileReader();
       reader.onload = (e) => {
+        console.log('🔥 Preview creado exitosamente');
         setImagePreview(e.target.result);
       };
       reader.readAsDataURL(file);
+
+      console.log('🔥 === DEBUG IMAGE CHANGE COMPLETO ===');
+      console.log('🔥 Archivo seleccionado:', {
+        name: file.name,
+        size: file.size,
+        type: file.type,
+        lastModified: file.lastModified
+      });
+    } else {
+      console.log('❌ No se seleccionó ningún archivo');
     }
+    
+    console.log('🔥 === FIN handleImageChange ===');
   };
 
-  // Handler para remover imagen
+  // Handler para remover imagen - COMPATIBLE CON EL HOOK
   const removeImage = () => {
     setImagePreview(null);
-    setValue('img', null);
+    setImageFile(null);
+    setValue('img', null, { 
+      shouldValidate: true,
+      shouldDirty: true,
+      shouldTouch: true 
+    });
+    
+    // Limpiar el input file
     const fileInput = document.getElementById('img-input');
-    if (fileInput) fileInput.value = '';
+    if (fileInput) {
+      fileInput.value = '';
+    }
   };
 
   // Función para mostrar alerta de formulario incompleto
@@ -159,26 +207,57 @@ const FormAggCamion = ({ onNavigateBack, onSubmitSuccess }) => {
     });
   };
 
-  // Handler personalizado para el submit
+  // Handler personalizado para el submit - SOLUCIÓN DEFINITIVA
   const handleCustomSubmit = async (data) => {
     try {
       setIsSubmitting(true);
       
+      console.log('=== DEBUG ANTES DEL SUBMIT ===');
+      console.log('Datos del formulario:', data);
+      console.log('Archivo de imagen del state:', imageFile);
+      console.log('Imagen de los datos del form:', data.img);
+      console.log('¿Es FileList?:', data.img instanceof FileList);
+      console.log('¿Es File?:', data.img instanceof File);
+      console.log('Tipo de data.img:', typeof data.img);
+
+      // VERIFICACIÓN INTELIGENTE DE LA IMAGEN
+      let finalImageFile;
+      if (data.img instanceof FileList && data.img.length > 0) {
+        finalImageFile = data.img[0];
+        console.log('✅ Imagen encontrada en FileList:', finalImageFile);
+      } else if (data.img instanceof File) {
+        finalImageFile = data.img;
+        console.log('✅ Imagen encontrada como File directo:', finalImageFile);
+      } else {
+        console.log('❌ No se encontró imagen válida');
+        throw new Error('Debe seleccionar una imagen para el camión');
+      }
+
+      console.log('🔥 Imagen final para enviar:', {
+        name: finalImageFile.name,
+        size: finalImageFile.size,
+        type: finalImageFile.type
+      });
+
       // Mostrar alerta de carga
       showLoadingAlert();
 
-      // Agregar automáticamente el estado "disponible"
-      const dataWithState = {
+      // CONVERTIR A FORMATO QUE ESPERA EL HOOK
+      // El hook espera data.img[0], así que creamos un objeto que simule FileList
+      const dataToSubmit = {
         ...data,
-        state: "disponible"
+        state: "disponible",
+        img: data.img instanceof FileList ? data.img : [finalImageFile] // Asegurar formato array-like
       };
 
-      console.log('=== DEBUG FORMULARIO CAMIÓN ===');
-      console.log('Datos con estado agregado:', dataWithState);
-      console.log('Archivo de imagen:', data.img?.[0]);
+      console.log('=== DEBUG DATOS PARA ENVÍO ===');
+      console.log('Datos con estado agregado:', dataToSubmit);
+      console.log('Imagen final en formato esperado:', dataToSubmit.img);
+      console.log('¿Tiene índice [0]?:', !!dataToSubmit.img[0]);
+      console.log('Archivo en [0]:', dataToSubmit.img[0]);
 
       // Llamar a la función onSubmit original
-      const result = await onSubmit(dataWithState);
+      const result = await onSubmit(dataToSubmit);
       console.log('Resultado del onSubmit:', result);
 
       // Si todo sale bien, mostrar alerta de éxito
@@ -187,6 +266,7 @@ const FormAggCamion = ({ onNavigateBack, onSubmitSuccess }) => {
       // Resetear formulario
       reset();
       setImagePreview(null);
+      setImageFile(null);
 
     } catch (error) {
       // Log del error para debug

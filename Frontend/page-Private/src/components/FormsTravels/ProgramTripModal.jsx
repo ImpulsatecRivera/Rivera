@@ -1,4 +1,4 @@
-// FormsTravels/ProgramTripModal.jsx - COMPLETO CON TODOS LOS CAMPOS DEL MODELO
+// FormsTravels/ProgramTripModal.jsx - CON AUTO-ASIGNACIÓN DE MOTORISTA POR CAMIÓN
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, MapPin, Truck, User, Package, Calendar, Clock, DollarSign, AlertCircle, CloudRain, Car, Navigation } from 'lucide-react';
 import Swal from 'sweetalert2';
@@ -35,6 +35,8 @@ const ProgramTripModal = ({
   const [conductores, setConductores] = useState([]);
   const [cotizaciones, setCotizaciones] = useState([]);
   const [cotizacionSeleccionada, setCotizacionSeleccionada] = useState(null);
+  const [camionSeleccionado, setCamionSeleccionado] = useState(null);
+  const [conductoresDisponibles, setConductoresDisponibles] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
@@ -55,6 +57,13 @@ const ProgramTripModal = ({
       }
     }
   }, [programForm.quoteId, cotizaciones]);
+
+  // 🆕 Efecto para actualizar conductores disponibles cuando cambian los datos
+  useEffect(() => {
+    if (camiones.length > 0 && conductores.length > 0) {
+      actualizarConductoresDisponibles();
+    }
+  }, [camiones, conductores, programForm.truckId]);
 
   const cargarRecursos = async () => {
     setLoading(true);
@@ -123,6 +132,7 @@ const ProgramTripModal = ({
       if (camionesData.status === 'fulfilled') {
         setCamiones(camionesData.value);
         console.log(`✅ Camiones cargados: ${camionesData.value.length}`);
+        console.log('🔍 Estructura de camiones:', camionesData.value[0]); // Debug estructura
       } else {
         console.error('❌ Error con camiones:', camionesData.reason);
         setCamiones([]);
@@ -132,28 +142,17 @@ const ProgramTripModal = ({
       if (conductoresData.status === 'fulfilled') {
         setConductores(conductoresData.value);
         console.log(`✅ Conductores cargados: ${conductoresData.value.length}`);
+        console.log('🔍 Estructura de conductores:', conductoresData.value[0]); // Debug estructura
       } else {
         console.error('❌ Error con conductores:', conductoresData.reason);
         setConductores([]);
       }
 
-      // Procesar cotizaciones - CORREGIDO
+      // Procesar cotizaciones
       if (cotizacionesData.status === 'fulfilled') {
         console.log("🔍 DEBUGGING COTIZACIONES:");
         console.log("📊 Total cotizaciones recibidas:", cotizacionesData.value.length);
         
-        // Ver el estado de cada cotización
-        cotizacionesData.value.forEach((cot, index) => {
-          console.log(`📋 Cotización ${index + 1}:`, {
-            id: cot._id,
-            nombre: cot.quoteName || cot.nombre,
-            status: cot.status,
-            estado: cot.estado,
-            // Ver todos los campos para debugging
-            todasLasClaves: Object.keys(cot)
-          });
-        });
-
         // FILTRO CORREGIDO - MÁS PERMISIVO
         const disponibles = cotizacionesData.value.filter(c => {
           const status = c.status || c.estado || 'sin_estado';
@@ -164,7 +163,6 @@ const ProgramTripModal = ({
             'rechazada', 
             'completada', 
             'finalizada'
-            // NO excluir 'ejecutada' porque podríamos querer reutilizar cotizaciones
           ];
           
           const incluir = !estadosExcluidos.includes(status.toLowerCase());
@@ -191,8 +189,6 @@ const ProgramTripModal = ({
           setCotizaciones(disponibles);
         }
         
-        console.log(`✅ Cotizaciones finales mostradas: ${cotizaciones.length || disponibles.length}`);
-        
       } else {
         console.error('❌ Error con cotizaciones:', cotizacionesData.reason);
         setCotizaciones([]);
@@ -206,6 +202,115 @@ const ProgramTripModal = ({
     }
   };
 
+  // 🆕 FUNCIÓN PARA ACTUALIZAR CONDUCTORES DISPONIBLES
+  const actualizarConductoresDisponibles = () => {
+    console.log('🔄 Actualizando conductores disponibles...');
+    
+    // Obtener IDs de conductores que ya tienen camión asignado
+    const conductoresConCamion = camiones
+      .filter(camion => camion.conductorId || camion.driverId || camion.motorista)
+      .map(camion => {
+        // Manejar diferentes formatos de referencia al conductor
+        const conductorRef = camion.conductorId || camion.driverId || camion.motorista;
+        return typeof conductorRef === 'object' ? conductorRef._id : conductorRef;
+      })
+      .filter(Boolean); // Eliminar nulls/undefined
+
+    console.log('🚛 Conductores con camión asignado:', conductoresConCamion);
+
+    // Filtrar conductores disponibles (que no tienen camión asignado)
+    const disponibles = conductores.filter(conductor => {
+      const estaAsignado = conductoresConCamion.includes(conductor._id);
+      const esElSeleccionado = conductor._id === programForm.conductorId;
+      
+      // Incluir si no está asignado O si es el actualmente seleccionado
+      return !estaAsignado || esElSeleccionado;
+    });
+
+    console.log(`👥 Conductores disponibles: ${disponibles.length} de ${conductores.length}`);
+    setConductoresDisponibles(disponibles);
+  };
+
+  // 🆕 FUNCIÓN PARA MANEJAR CAMBIO DE CAMIÓN CON AUTO-ASIGNACIÓN DE CONDUCTOR
+  const handleCamionChange = (camionId) => {
+    console.log('🚛 Camión seleccionado:', camionId);
+    
+    // Actualizar el camión en el formulario
+    onInputChange('truckId', camionId);
+    
+    if (camionId) {
+      // Buscar el camión seleccionado
+      const camion = camiones.find(c => c._id === camionId);
+      setCamionSeleccionado(camion);
+      
+      if (camion) {
+        console.log('🔍 Datos del camión seleccionado:', camion);
+        
+        // Buscar si el camión tiene conductor asignado
+        const conductorAsignado = camion.conductorId || camion.driverId || camion.motorista;
+        
+        if (conductorAsignado) {
+          // Obtener el ID del conductor (manejar referencias populadas)
+          const conductorId = typeof conductorAsignado === 'object' 
+            ? conductorAsignado._id 
+            : conductorAsignado;
+          
+          console.log('👤 Conductor asignado al camión:', conductorId);
+          
+          // Verificar que el conductor existe en la lista
+          const conductorExiste = conductores.find(c => c._id === conductorId);
+          
+          if (conductorExiste) {
+            // Auto-asignar el conductor
+            onInputChange('conductorId', conductorId);
+            console.log(`✅ Conductor ${conductorExiste.name || conductorExiste.nombre} auto-asignado al camión`);
+            
+            // Mostrar notificación al usuario
+            Swal.fire({
+              title: '🚛➡️👤 Conductor auto-asignado',
+              text: `El conductor ${conductorExiste.name || conductorExiste.nombre} ha sido asignado automáticamente a este camión.`,
+              icon: 'info',
+              timer: 3000,
+              timerProgressBar: true,
+              toast: true,
+              position: 'top-end',
+              showConfirmButton: false
+            });
+          } else {
+            console.warn('⚠️ Conductor asignado al camión no encontrado en la lista');
+            // Limpiar conductor si no se encuentra
+            onInputChange('conductorId', '');
+          }
+        } else {
+          console.log('⚠️ Este camión no tiene conductor asignado');
+          // Limpiar conductor si el camión no tiene uno asignado
+          onInputChange('conductorId', '');
+          
+          // Mostrar notificación
+          Swal.fire({
+            title: '🚛❓ Sin conductor asignado',
+            text: 'Este camión no tiene un conductor asignado. Selecciona uno de los disponibles.',
+            icon: 'warning',
+            timer: 3000,
+            timerProgressBar: true,
+            toast: true,
+            position: 'top-end',
+            showConfirmButton: false
+          });
+        }
+      }
+    } else {
+      // Si no hay camión seleccionado, limpiar conductor
+      setCamionSeleccionado(null);
+      onInputChange('conductorId', '');
+    }
+    
+    // Actualizar lista de conductores disponibles
+    setTimeout(() => {
+      actualizarConductoresDisponibles();
+    }, 100);
+  };
+
   // 🔄 FUNCIÓN MEJORADA PARA AUTO-LLENAR DESDE COTIZACIÓN
   const llenarDatosDesdeCotizacion = (cotizacion) => {
     console.log('🔄 Auto-llenando TODOS los datos desde cotización:', cotizacion);
@@ -216,19 +321,19 @@ const ProgramTripModal = ({
         onInputChange('tripDescription', cotizacion.quoteDescription || cotizacion.descripcion);
       }
 
-      // ✅ 2. CAMIÓN Y CONDUCTOR AUTO-ASIGNADOS DESDE COTIZACIÓN
+      // ✅ 2. CAMIÓN AUTO-ASIGNADO DESDE COTIZACIÓN (SI EXISTE)
       if (cotizacion.truckId) {
-        onInputChange('truckId', cotizacion.truckId._id || cotizacion.truckId);
-        console.log('🚛 Camión auto-asignado desde cotización:', cotizacion.truckId);
+        const truckId = cotizacion.truckId._id || cotizacion.truckId;
+        console.log('🚛 Auto-asignando camión desde cotización:', truckId);
+        
+        // Usar la nueva función que maneja la auto-asignación de conductor
+        handleCamionChange(truckId);
       }
 
-      if (cotizacion.conductorId || cotizacion.driverId) {
-        const conductorId = cotizacion.conductorId?._id || cotizacion.conductorId || cotizacion.driverId?._id || cotizacion.driverId;
-        onInputChange('conductorId', conductorId);
-        console.log('👤 Conductor auto-asignado desde cotización:', conductorId);
-      }
+      // ✅ 3. CONDUCTOR - YA SE MANEJA EN handleCamionChange
+      // No necesitamos hacer nada aquí porque handleCamionChange ya maneja la asignación del conductor
 
-      // ✅ 3. HORARIOS PRINCIPALES
+      // ✅ 4. HORARIOS PRINCIPALES
       if (cotizacion.horarios?.fechaSalida) {
         const fechaSalida = new Date(cotizacion.horarios.fechaSalida);
         onInputChange('departureTime', fechaSalida.toISOString().slice(0, 16));
@@ -245,7 +350,7 @@ const ProgramTripModal = ({
         onInputChange('arrivalTime', fechaLlegada.toISOString().slice(0, 16));
       }
 
-      // ✅ 4. COSTOS REALES (inicializar con costos estimados de la cotización)
+      // ✅ 5. COSTOS REALES (inicializar con costos estimados de la cotización)
       if (cotizacion.costos) {
         onInputChange('costosReales', {
           combustible: cotizacion.costos.combustible || 0,
@@ -256,7 +361,7 @@ const ProgramTripModal = ({
         });
       }
 
-      // ✅ 5. CONDICIONES DEL VIAJE (valores por defecto inteligentes)
+      // ✅ 6. CONDICIONES DEL VIAJE (valores por defecto inteligentes)
       onInputChange('condiciones', {
         clima: 'normal',
         trafico: 'normal', 
@@ -264,7 +369,7 @@ const ProgramTripModal = ({
         observaciones: cotizacion.observaciones || ''
       });
 
-      // ✅ 6. TRACKING (inicializar)
+      // ✅ 7. TRACKING (inicializar)
       onInputChange('tracking', {
         ubicacionActual: {
           lat: cotizacion.ruta?.origen?.coordenadas?.lat || null,
@@ -278,14 +383,14 @@ const ProgramTripModal = ({
         checkpoints: []
       });
 
-      // ✅ 7. ESTADO DEL VIAJE (inicializar)
+      // ✅ 8. ESTADO DEL VIAJE (inicializar)
       onInputChange('estado', {
         actual: 'pendiente',
         autoActualizar: true,
         historial: []
       });
 
-      console.log('✅ Auto-llenado COMPLETO desde cotización - Camión y conductor asignados automáticamente');
+      console.log('✅ Auto-llenado COMPLETO desde cotización');
     } catch (error) {
       console.error('❌ Error en auto-llenado:', error);
     }
@@ -312,18 +417,15 @@ const ProgramTripModal = ({
     
     // Mostrar alerta de éxito
     showSuccessAlert(async () => {
-      // 🔄 REFRESCAR DATOS DESPUÉS DE CERRAR MODAL
       console.log('🔄 Refrescando datos después de programar viaje...');
       
       try {
-        // Refrescar datos ANTES de cerrar el modal
         if (refreshTravels) {
           console.log('📡 Llamando refreshTravels...');
           await refreshTravels();
           console.log('✅ Datos refrescados exitosamente');
         }
         
-        // Esperar un momento para que se actualice la UI
         setTimeout(() => {
           console.log('🚪 Cerrando modal...');
           onClose();
@@ -331,7 +433,6 @@ const ProgramTripModal = ({
         
       } catch (error) {
         console.error('❌ Error refrescando datos:', error);
-        // Cerrar modal aunque falle el refresh
         onClose();
       }
     });
@@ -342,13 +443,9 @@ const ProgramTripModal = ({
     try {
       console.log('🚛 Iniciando programación de viaje...');
       
-      // Llamar la función original de programar
       const result = await onProgram();
-      
-      // Si llegamos aquí, el viaje se programó exitosamente
       console.log('✅ Resultado de programación:', result);
       
-      // Esperar un poco para que se complete la transacción
       setTimeout(() => {
         handleProgramSuccess();
       }, 500);
@@ -356,13 +453,12 @@ const ProgramTripModal = ({
     } catch (error) {
       console.error('❌ Error programando viaje:', error);
       
-      // Mostrar alerta de error
       Swal.fire({
         title: '¡Error al programar viaje!',
         text: 'Hubo un problema al guardar el viaje. Por favor, inténtalo de nuevo.',
         icon: 'error',
         confirmButtonText: 'Reintentar',
-        confirmButtonColor: '#EF4444', // Rojo
+        confirmButtonColor: '#EF4444',
         customClass: {
           popup: 'animated shakeX'
         }
@@ -396,17 +492,24 @@ const ProgramTripModal = ({
           <h1 className="text-3xl font-normal text-black mr-6">Programar viaje completo</h1>
         </div>
 
-        {/* Estado de recursos - MEJORADO CON DEBUG INFO */}
+        {/* Estado de recursos - MEJORADO CON INFO DE ASIGNACIONES */}
         <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
           <div className="text-sm">
             <p className="font-medium text-blue-800">📊 Estado de recursos:</p>
             <p className="text-blue-700">
               🚛 Camiones: {camiones.length} | 
               👤 Motoristas: {conductores.length} | 
+              👥 Disponibles: {conductoresDisponibles.length} |
               📋 Cotizaciones: {cotizaciones.length}
             </p>
-            {cotizacionSeleccionada && (
+            {camionSeleccionado && (
               <p className="text-green-700 mt-2">
+                ✅ Camión seleccionado: {camionSeleccionado.brand || camionSeleccionado.marca} {camionSeleccionado.model || camionSeleccionado.modelo}
+                {programForm.conductorId && ' - Conductor auto-asignado'}
+              </p>
+            )}
+            {cotizacionSeleccionada && (
+              <p className="text-green-700 mt-1">
                 ✅ Cotización seleccionada: {cotizacionSeleccionada.quoteName} - Datos auto-llenados
               </p>
             )}
@@ -497,44 +600,51 @@ const ProgramTripModal = ({
             </div>
           </div>
 
-          {/* 🚛 SECCIÓN 2: ASIGNACIÓN DE RECURSOS */}
+          {/* 🚛 SECCIÓN 2: ASIGNACIÓN DE RECURSOS CON AUTO-ASIGNACIÓN */}
           <div className="bg-purple-50 p-6 rounded-xl">
             <h2 className="text-xl font-semibold text-gray-800 mb-6 flex items-center">
               <Truck className="mr-2" size={20} />
-              2. Asignación de Recursos (Auto-asignados desde cotización)
+              2. Asignación de Recursos (Con auto-asignación inteligente)
             </h2>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Camión - AUTO-ASIGNADO */}
+              {/* Camión - CON AUTO-ASIGNACIÓN DE CONDUCTOR */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Camión * (Auto-asignado desde cotización)
+                  Camión * (Auto-asigna conductor)
                 </label>
                 <select
                   value={programForm.truckId || ''}
-                  onChange={(e) => onInputChange('truckId', e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-green-50"
+                  onChange={(e) => handleCamionChange(e.target.value)}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-amber-50"
                   required
                   disabled={loading}
                 >
-                  <option value="">Seleccionar camión</option>
-                  {camiones.map((camion) => (
-                    <option key={camion._id} value={camion._id}>
-                      🚛 {camion.brand || camion.marca} {camion.model || camion.modelo} - {camion.licensePlate || camion.placa}
-                    </option>
-                  ))}
+                  <option value="">🚛 Seleccionar camión</option>
+                  {camiones.map((camion) => {
+                    // Verificar si tiene conductor asignado
+                    const tieneConductor = camion.conductorId || camion.driverId || camion.motorista;
+                    const conductorNombre = tieneConductor && typeof tieneConductor === 'object' 
+                      ? tieneConductor.name || tieneConductor.nombre 
+                      : '';
+                    
+                    return (
+                      <option key={camion._id} value={camion._id}>
+                        🚛 {camion.brand || camion.marca} {camion.model || camion.modelo} - {camion.licensePlate || camion.placa}
+                        {tieneConductor ? ` (👤 ${conductorNombre || 'Conductor asignado'})` : ' (❌ Sin conductor)'}
+                      </option>
+                    );
+                  })}
                 </select>
-                {cotizacionSeleccionada && programForm.truckId && (
-                  <p className="text-xs text-green-600 mt-1">
-                    ✅ Camión asignado automáticamente desde la cotización
-                  </p>
-                )}
+                <p className="text-xs text-amber-600 mt-1">
+                  💡 Al seleccionar un camión, se asignará automáticamente su conductor
+                </p>
               </div>
 
-              {/* Conductor - AUTO-ASIGNADO */}
+              {/* Conductor - AUTO-ASIGNADO O SELECCIONAR DE DISPONIBLES */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Conductor * (Auto-asignado desde cotización)
+                  Conductor * (Auto-asignado o seleccionar disponible)
                 </label>
                 <select
                   value={programForm.conductorId || ''}
@@ -543,24 +653,29 @@ const ProgramTripModal = ({
                   required
                   disabled={loading}
                 >
-                  <option value="">Seleccionar conductor</option>
-                  {conductores.map((conductor) => (
+                  <option value="">👤 Seleccionar conductor</option>
+                  {conductoresDisponibles.map((conductor) => (
                     <option key={conductor._id} value={conductor._id}>
                       👤 {conductor.name || conductor.nombre} - {conductor.phone || conductor.telefono}
+                      {conductor._id === programForm.conductorId && camionSeleccionado ? ' (🚛 Auto-asignado)' : ' (✅ Disponible)'}
                     </option>
                   ))}
                 </select>
-                {cotizacionSeleccionada && programForm.conductorId && (
-                  <p className="text-xs text-green-600 mt-1">
-                    ✅ Conductor asignado automáticamente desde la cotización
-                  </p>
-                )}
+                <p className="text-xs text-green-600 mt-1">
+                  {programForm.conductorId ? (
+                    camionSeleccionado 
+                      ? `✅ ${conductores.find(c => c._id === programForm.conductorId)?.name || conductores.find(c => c._id === programForm.conductorId)?.nombre || 'Conductor'} asignado automáticamente`
+                      : `✅ ${conductores.find(c => c._id === programForm.conductorId)?.name || conductores.find(c => c._id === programForm.conductorId)?.nombre || 'Conductor'} seleccionado manualmente`
+                  ) : (
+                    '👥 Solo se muestran conductores disponibles (sin camión asignado)'
+                  )}
+                </p>
               </div>
 
-              {/* Auxiliar - OPCIONAL Y MANUAL */}
+              {/* Auxiliar - OPCIONAL DE CONDUCTORES DISPONIBLES */}
               <div className="md:col-span-2">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Auxiliar (Opcional - Selección manual)
+                  Auxiliar (Opcional - Solo conductores disponibles)
                 </label>
                 <select
                   value={programForm.auxiliarId || ''}
@@ -569,14 +684,16 @@ const ProgramTripModal = ({
                   disabled={loading}
                 >
                   <option value="">Sin auxiliar asignado</option>
-                  {conductores.map((conductor) => (
+                  {conductoresDisponibles
+                    .filter(conductor => conductor._id !== programForm.conductorId) // Excluir el conductor principal
+                    .map((conductor) => (
                     <option key={conductor._id} value={conductor._id}>
                       👥 {conductor.name || conductor.nombre} - {conductor.phone || conductor.telefono}
                     </option>
                   ))}
                 </select>
                 <p className="text-xs text-gray-500 mt-1">
-                  El auxiliar es opcional y se selecciona manualmente
+                  El auxiliar es opcional y solo se puede seleccionar de conductores disponibles
                 </p>
               </div>
             </div>

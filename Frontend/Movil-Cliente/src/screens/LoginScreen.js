@@ -12,8 +12,7 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import CustomInput from '../components/CustomInput';
 import CustomButton from '../components/CustomButton';
-import SocialButton from '../components/SocialButton';
-import { useAuth } from '../context/authContext'; // <-- CAMBIO 1: ruta corregida
+import { useAuth } from '../context/authContext';
 
 const LoginScreen = () => {
   const [email, setEmail] = useState('');
@@ -22,134 +21,77 @@ const LoginScreen = () => {
   const navigation = useNavigation();
   const { login } = useAuth();
 
-  // 🔐 FUNCIÓN DE LOGIN
-  // En tu LoginScreen.js, agrega este debugging:
-
-  // Función de login con debugging mejorado
-const handleLogin = async () => {
-  // Validaciones básicas
-  if (!email.trim()) {
-    Alert.alert('Error', 'Por favor ingresa tu email');
-    return;
-  }
-  
-  if (!password.trim()) {
-    Alert.alert('Error', 'Por favor ingresa tu contraseña');
-    return;
-  }
-
-  setIsLoading(true);
-
-  try {
-    const loginData = {
-      email: email.trim().toLowerCase(), // 🔧 Asegurar minúsculas
-      password: password.trim(),
-    };
-
-    console.log('🔐 Iniciando proceso de login...');
-    console.log('📧 Email limpio:', loginData.email);
-    console.log('🔒 Password length:', loginData.password.length);
-    console.log('🔒 Password (primeros 3 chars):', loginData.password.substring(0, 3) + '***');
-    
-    // 🔧 DEBUGGING ADICIONAL - Verificar caracteres especiales
-    console.log('🔍 Email tiene espacios?', loginData.email.includes(' '));
-    console.log('🔍 Password tiene espacios al inicio/final?', password !== password.trim());
-    console.log('🔍 Password caracteres especiales:', /[^a-zA-Z0-9]/.test(loginData.password));
-    
-    // 🔧 Mostrar cada carácter del password para debugging
-    console.log('🔍 Password char codes:', [...loginData.password].map(char => ({char, code: char.charCodeAt(0)})));
-    
-    const response = await fetch('https://riveraproject-5.onrender.com/api/login', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json', // 🔧 Header adicional
-      },
-      body: JSON.stringify(loginData),
-    });
-
-    console.log('📡 Status de respuesta:', response.status);
-    console.log('📡 Status text:', response.statusText);
-
-    const data = await response.json();
-    console.log('📡 Respuesta completa del servidor:');
-    console.log(JSON.stringify(data, null, 2));
-
-    if (response.ok && data.message === "Inicio de sesión completado") {
-      console.log('✅ Login exitoso');
-      const result = await login({
-        token: data.token,
-        user: data.user,
-        userType: data.userType,
-      });
-
-      if (!result?.success) {
-        Alert.alert('Error', result?.error || 'No se pudo guardar la sesión');
-        return;
-      }
-
-      navigation.reset({
-        index: 0,
-        routes: [{ name: 'Main' }],
-      });
-
-    } else {
-      console.log('❌ Login fallido');
-      console.log('📄 Mensaje específico:', data.message);
-      console.log('🔢 Intentos restantes:', data.attemptsRemaining);
-      console.log('🚫 Está bloqueado:', data.blocked);
-      
-      // 🔧 DEBUGGING: Mostrar más información del error
-      if (data.debug) {
-        console.log('🔍 Debug del servidor:', data.debug);
-      }
-      
-      Alert.alert('❌ Error de Login', data.message);
+  const handleLogin = async () => {
+    if (!email.trim()) {
+      Alert.alert('Error', 'Por favor ingresa tu email');
+      return;
     }
 
-  } catch (error) {
-    console.error('❌ Error en login:', error);
-    console.error('❌ Error stack:', error.stack);
-    Alert.alert('❌ Error', 'Error de conexión: ' + error.message);
-  } finally {
-    setIsLoading(false);
-  }
-};
+    if (!password.trim()) {
+      Alert.alert('Error', 'Por favor ingresa tu contraseña');
+      return;
+    }
 
-  const handleForgotPassword = () => {
-    console.log('Forgot password pressed');
-    // ✅ RESTAURAR ESTA LÍNEA:
-    navigation.navigate('InicioRecuperar');
+    setIsLoading(true);
+
+    try {
+      const response = await fetch('https://riveraproject-5.onrender.com/api/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify({
+          email: email.trim().toLowerCase(),
+          password: password.trim(),
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.message === "Inicio de sesión completado") {
+        const result = await login({
+          token: data.token,
+          user: data.user,
+          userType: data.userType,
+        });
+
+        if (!result?.success) {
+          Alert.alert('Error', result?.error || 'No se pudo guardar la sesión');
+          return;
+        }
+
+        navigation.reset({
+          index: 0,
+          routes: [{ name: 'Main' }],
+        });
+      } else {
+        if (data.blocked) {
+          Alert.alert('Cuenta Bloqueada', data.message);
+        } else if (data.attemptsRemaining !== undefined) {
+          Alert.alert('Credenciales Incorrectas', data.message);
+        } else {
+          Alert.alert('Error de Login', data.message);
+        }
+      }
+    } catch (error) {
+      console.error('Error en login:', error);
+      Alert.alert('Error', 'Error de conexión: ' + error.message);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleGoogleLogin = () => {
-    Alert.alert(
-      'Próximamente',
-      'El login con Google estará disponible pronto'
-    );
-  };
-
-  const handleFacebookLogin = () => {
-    Alert.alert(
-      'Próximamente',
-      'El login con Facebook estará disponible pronto'
-    );
-  };
-
-  const handleRegister = () => {
-    console.log('Register pressed');
-    navigation.navigate('RegistrarseCliente');
-  };
+  const handleForgotPassword = () => navigation.navigate('InicioRecuperar');
+  const handleRegister = () => navigation.navigate('RegistrarseCliente');
 
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.content}>
-          {/* Header */}
           <Text style={styles.title}>Bienvenido de vuelta!</Text>
           <Text style={styles.subtitle}>Acceso exclusivo para clientes</Text>
 
-          {/* Form */}
           <View style={styles.form}>
             <CustomInput
               placeholder="Correo electrónico"
@@ -170,14 +112,12 @@ const handleLogin = async () => {
               editable={!isLoading}
             />
 
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.forgotPassword}
               onPress={handleForgotPassword}
               disabled={isLoading}
             >
-              <Text style={styles.forgotPasswordText}>
-                ¿Olvidaste tu contraseña?
-              </Text>
+              <Text style={styles.forgotPasswordText}>¿Olvidaste tu contraseña?</Text>
             </TouchableOpacity>
 
             <CustomButton
@@ -187,7 +127,6 @@ const handleLogin = async () => {
               disabled={isLoading}
             />
 
-            {/* Loading indicator */}
             {isLoading && (
               <View style={styles.loadingContainer}>
                 <ActivityIndicator size="small" color="#4CAF50" />
@@ -196,25 +135,6 @@ const handleLogin = async () => {
             )}
           </View>
 
-          {/* Social Login */}
-          {!isLoading && (
-            <View style={styles.socialContainer}>
-              <Text style={styles.socialText}>O inicia sesión con</Text>
-              
-              <View style={styles.socialButtons}>
-                <SocialButton 
-                  type="google" 
-                  onPress={handleGoogleLogin} 
-                />
-                <SocialButton 
-                  type="facebook" 
-                  onPress={handleFacebookLogin} 
-                />
-              </View>
-            </View>
-          )}
-
-          {/* Register Link */}
           {!isLoading && (
             <View style={styles.registerContainer}>
               <Text style={styles.registerText}>¿No tienes cuenta? </Text>
@@ -230,81 +150,68 @@ const handleLogin = async () => {
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
+  container: { 
+    flex: 1, 
+    backgroundColor: '#FFFFFF' 
   },
-  scrollContent: {
-    flexGrow: 1,
-    justifyContent: 'center',
+  scrollContent: { 
+    flexGrow: 1, 
+    justifyContent: 'center' 
   },
-  content: {
-    flex: 1,
-    paddingHorizontal: 24,
-    paddingVertical: 40,
-    justifyContent: 'center',
+  content: { 
+    flex: 1, 
+    paddingHorizontal: 24, 
+    paddingVertical: 40, 
+    justifyContent: 'center' 
   },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#333',
-    textAlign: 'center',
-    marginBottom: 8,
+  title: { 
+    fontSize: 28, 
+    fontWeight: 'bold', 
+    color: '#333', 
+    textAlign: 'center', 
+    marginBottom: 8 
   },
-  subtitle: {
-    fontSize: 16,
-    color: '#666',
-    textAlign: 'center',
-    marginBottom: 40,
+  subtitle: { 
+    fontSize: 16, 
+    color: '#666', 
+    textAlign: 'center', 
+    marginBottom: 40 
   },
-  form: {
-    marginBottom: 30,
+  form: { 
+    marginBottom: 30 
   },
-  forgotPassword: {
-    alignSelf: 'flex-end',
-    marginBottom: 20,
+  forgotPassword: { 
+    alignSelf: 'flex-end', 
+    marginBottom: 20 
   },
-  forgotPasswordText: {
-    color: '#007AFF',
-    fontSize: 14,
+  forgotPasswordText: { 
+    color: '#007AFF', 
+    fontSize: 14 
   },
-  loadingContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 16,
+  loadingContainer: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    justifyContent: 'center', 
+    marginTop: 16 
   },
-  loadingText: {
-    marginLeft: 8,
-    color: '#666',
-    fontSize: 14,
+  loadingText: { 
+    marginLeft: 8, 
+    color: '#666', 
+    fontSize: 14 
   },
-  socialContainer: {
-    alignItems: 'center',
-    marginBottom: 30,
+  registerContainer: { 
+    flexDirection: 'row', 
+    justifyContent: 'center', 
+    alignItems: 'center' 
   },
-  socialText: {
-    color: '#666',
-    fontSize: 14,
-    marginBottom: 20,
+  registerText: { 
+    color: '#666', 
+    fontSize: 14 
   },
-  socialButtons: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-  },
-  registerContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  registerText: {
-    color: '#666',
-    fontSize: 14,
-  },
-  registerLink: {
-    color: '#007AFF',
-    fontSize: 14,
-    fontWeight: '600',
+  registerLink: { 
+    color: '#007AFF', 
+    fontSize: 14, 
+    fontWeight: '600' 
   },
 });
 
