@@ -61,29 +61,18 @@ const ImageUploadSection = ({
         </div>
       </div>
 
-      {/* Input de archivo - MEJORADO */}
+      {/* Input de archivo - COMPATIBLE CON EL HOOK */}
       <input
         id="img-input"
         type="file"
         accept="image/*"
-        {...register('img', { 
-          required: 'La imagen del camión es obligatoria',
-          validate: {
-            fileType: (file) => {
-              if (!file) return true; // Si no hay archivo, required ya se encarga
-              const fileObj = file instanceof FileList ? file[0] : file;
-              if (!fileObj) return true;
-              
-              return fileObj.type.startsWith('image/') || 'Solo se permiten archivos de imagen';
-            }
-          }
-        })}
+        // NO usar register aquí porque interferirá con setValue
         onChange={onImageChange}
         className="hidden"
       />
 
-      {/* Mensaje de error */}
-      {error && (
+      {/* Mensaje de error - Solo mostrar si NO hay imagen */}
+      {error && !imagePreview && (
         <p className="text-red-500 text-sm mt-2 text-center">
           {error.message}
         </p>

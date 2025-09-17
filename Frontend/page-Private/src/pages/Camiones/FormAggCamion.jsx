@@ -1,4 +1,50 @@
-import React, { useState } from 'react';
+// Handler para cambio de imagen - COMPATIBLE CON EL HOOK
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    console.log('=== INICIO handleImageChange ===');
+    console.log('Event:', e);
+    console.log('Files:', e.target.files);
+    console.log('File seleccionado:', file);
+    
+    if (file) {
+      // Validar tipo de archivo
+      if (!file.type.startsWith('image/')) {
+        Swal.fire({
+          title: 'Formato no válido',
+          text: 'Por favor selecciona una imagen en formato JPG, PNG o GIF',
+          icon: 'warning',
+          confirmButtonText: 'Entendido',
+          confirmButtonColor: '#f59e0b'
+        });
+        return;
+      }
+
+      // Guardar el archivo en el estado
+      setImageFile(file);
+      
+      // IMPORTANTE: El hook espera un FileList, NO un File individual
+      // Creamos un FileList-like object o usamos los files originales del evento
+      setValue('img', e.target.files, { 
+        shouldValidate: true,
+        shouldDirty: true,
+        shouldTouch: true 
+      });
+
+      // Crear preview
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setImagePreview(e.target.result);
+      };
+      reader.readAsDataURL(file);
+
+      console.log('=== DEBUG IMAGE CHANGE ===');
+      console.log('Archivo seleccionado:', file);
+      console.log('FileList completo:', e.target.files);
+      console.log('Nombre:', file.name);
+      console.log('Tamaño:', file.size);
+      console.log('Tipo:', file.type);
+    }
+  };import React, { useState } from 'react';
 import { Truck, CreditCard, Car, Building, Calendar, Fuel, User, FileText } from 'lucide-react';
 import { useForm } from "react-hook-form";
 import { useTruckForm } from "../../components/Camiones/hooks/hookFormCamiones";
@@ -88,11 +134,15 @@ const FormAggCamion = ({ onNavigateBack, onSubmitSuccess }) => {
     }
   };
 
-  // Handler para remover imagen - MEJORADO
+  // Handler para remover imagen - COMPATIBLE CON EL HOOK
   const removeImage = () => {
     setImagePreview(null);
     setImageFile(null);
-    setValue('img', null, { shouldValidate: true });
+    setValue('img', null, { 
+      shouldValidate: true,
+      shouldDirty: true,
+      shouldTouch: true 
+    });
     
     // Limpiar el input file
     const fileInput = document.getElementById('img-input');
@@ -178,26 +228,29 @@ const FormAggCamion = ({ onNavigateBack, onSubmitSuccess }) => {
       console.log('Datos del formulario:', data);
       console.log('Archivo de imagen del state:', imageFile);
       console.log('Imagen de los datos del form:', data.img);
+      console.log('¿Es FileList?:', data.img instanceof FileList);
+      console.log('Longitud de FileList:', data.img?.length);
+      console.log('Primer archivo del FileList:', data.img?.[0]);
 
       // Verificar si hay imagen antes de enviar
-      if (!imageFile && !data.img) {
+      if (!data.img || !data.img[0]) {
         throw new Error('Debe seleccionar una imagen para el camión');
       }
 
       // Mostrar alerta de carga
       showLoadingAlert();
 
-      // Preparar los datos para el envío
+      // Preparar los datos para el envío - MANTENER TAL COMO ESPERA EL HOOK
       const dataToSubmit = {
         ...data,
-        state: "disponible",
-        // Asegurar que la imagen esté incluida
-        img: imageFile || data.img
+        state: "disponible"
+        // NO modificar data.img, dejarlo como FileList
       };
 
       console.log('=== DEBUG DATOS PARA ENVÍO ===');
       console.log('Datos con estado agregado:', dataToSubmit);
-      console.log('Archivo de imagen final:', dataToSubmit.img);
+      console.log('FileList final:', dataToSubmit.img);
+      console.log('Archivo final:', dataToSubmit.img?.[0]);
 
       // Llamar a la función onSubmit original
       const result = await onSubmit(dataToSubmit);
