@@ -20,6 +20,15 @@ cloudinary.config({
 });
 
 /**
+ * Función auxiliar para validar fechas
+ */
+const esFechaValida = (fecha) => {
+  if (!fecha) return false;
+  const fechaObj = new Date(fecha);
+  return !isNaN(fechaObj.getTime());
+};
+
+/**
  * Obtener todos los motoristas registrados
  * GET /motoristas
  */
@@ -217,7 +226,7 @@ motoristasCon.delete = async (req, res) => {
 };
 
 /**
- * Obtener viajes programados de un motorista
+ * Obtener viajes programados de un motorista CON VALIDACIÓN DE FECHAS
  * GET /motoristas/:id/viajes-programados
  */
 motoristasCon.getViajesProgramados = async (req, res) => {
@@ -247,36 +256,50 @@ motoristasCon.getViajesProgramados = async (req, res) => {
     const fechaLimite = new Date();
     fechaLimite.setDate(fechaActual.getDate() + 30);
 
-    // CORREGIDO: Usar truckId en lugar de camionId
+    // CORREGIDO: Usar truckId y validar fechas
     const viajesProgramados = await viajesModel.find({
       truckId: camion._id,
       fechaSalida: {
+        $exists: true,
+        $ne: null,
         $gte: fechaActual,
         $lte: fechaLimite
       },
       estado: { $in: ['programado', 'pendiente', 'confirmado'] }
     }).sort({ fechaSalida: 1 });
 
+    // Filtrar viajes con fechas válidas
+    const viajesValidos = viajesProgramados.filter(viaje => esFechaValida(viaje.fechaSalida));
+
+    console.log(`Viajes programados encontrados: ${viajesProgramados.length}`);
+    console.log(`Viajes programados con fechas válidas: ${viajesValidos.length}`);
+
+    // Agrupar viajes por día CON VALIDACIÓN
     const viajesAgrupados = {};
     
-    viajesProgramados.forEach(viaje => {
-      const fecha = viaje.fechaSalida.toISOString().split('T')[0];
-      
-      if (!viajesAgrupados[fecha]) {
-        viajesAgrupados[fecha] = [];
+    viajesValidos.forEach(viaje => {
+      try {
+        const fecha = new Date(viaje.fechaSalida);
+        const fechaString = fecha.toISOString().split('T')[0];
+        
+        if (!viajesAgrupados[fechaString]) {
+          viajesAgrupados[fechaString] = [];
+        }
+        
+        viajesAgrupados[fechaString].push({
+          _id: viaje._id,
+          origen: viaje.origen,
+          destino: viaje.destino,
+          fechaSalida: viaje.fechaSalida,
+          fechaLlegada: viaje.fechaLlegada,
+          estado: viaje.estado,
+          descripcion: viaje.descripcion,
+          carga: viaje.carga,
+          cliente: viaje.cliente
+        });
+      } catch (error) {
+        console.log(`Error agrupando viaje programado ${viaje._id}:`, error.message);
       }
-      
-      viajesAgrupados[fecha].push({
-        _id: viaje._id,
-        origen: viaje.origen,
-        destino: viaje.destino,
-        fechaSalida: viaje.fechaSalida,
-        fechaLlegada: viaje.fechaLlegada,
-        estado: viaje.estado,
-        descripcion: viaje.descripcion,
-        carga: viaje.carga,
-        cliente: viaje.cliente
-      });
     });
 
     const viajesPorDia = Object.keys(viajesAgrupados)
@@ -303,11 +326,12 @@ motoristasCon.getViajesProgramados = async (req, res) => {
         licensePlate: camion.licensePlate,
         state: camion.state
       },
-      totalViajes: viajesProgramados.length,
+      totalViajes: viajesValidos.length,
       viajesPorDia: viajesPorDia
     });
 
   } catch (error) {
+    console.error("Error en getViajesProgramados:", error);
     res.status(500).json({ 
       message: "Error al obtener viajes programados", 
       error: error.message 
@@ -316,7 +340,7 @@ motoristasCon.getViajesProgramados = async (req, res) => {
 };
 
 /**
- * Obtener todos los viajes programados
+ * Obtener todos los viajes programados CON VALIDACIÓN DE FECHAS
  * GET /motoristas/viajes-programados/todos
  */
 motoristasCon.getAllViajesProgramados = async (req, res) => {
@@ -328,15 +352,20 @@ motoristasCon.getAllViajesProgramados = async (req, res) => {
     const fechaLimite = new Date();
     fechaLimite.setDate(fechaActual.getDate() + 30);
 
-    // CORREGIDO: Usar truckId en lugar de camionId
+    // CORREGIDO: Usar truckId y validar fechas
     const todosLosViajes = await viajesModel.find({
       truckId: { $in: camiones.map(c => c._id) },
       fechaSalida: {
+        $exists: true,
+        $ne: null,
         $gte: fechaActual,
         $lte: fechaLimite
       },
       estado: { $in: ['programado', 'pendiente', 'confirmado'] }
     }).sort({ fechaSalida: 1 });
+
+    // Filtrar viajes válidos
+    const viajesValidos = todosLosViajes.filter(viaje => esFechaValida(viaje.fechaSalida));
 
     const motoristasMap = {};
     const camionesMap = {};
@@ -351,50 +380,54 @@ motoristasCon.getAllViajesProgramados = async (req, res) => {
 
     const viajesPorFecha = {};
 
-    todosLosViajes.forEach(viaje => {
-      const fecha = viaje.fechaSalida.toISOString().split('T')[0];
-      // CORREGIDO: Usar truckId en lugar de camionId
-      const camion = camionesMap[viaje.truckId.toString()];
-      
-      if (camion && camion.driverId) {
-        const motorista = motoristasMap[camion.driverId.toString()];
+    viajesValidos.forEach(viaje => {
+      try {
+        const fecha = new Date(viaje.fechaSalida).toISOString().split('T')[0];
+        // CORREGIDO: Usar truckId
+        const camion = camionesMap[viaje.truckId.toString()];
         
-        if (motorista) {
-          if (!viajesPorFecha[fecha]) {
-            viajesPorFecha[fecha] = {};
-          }
+        if (camion && camion.driverId) {
+          const motorista = motoristasMap[camion.driverId.toString()];
+          
+          if (motorista) {
+            if (!viajesPorFecha[fecha]) {
+              viajesPorFecha[fecha] = {};
+            }
 
-          const motoristaKey = motorista._id.toString();
-          if (!viajesPorFecha[fecha][motoristaKey]) {
-            viajesPorFecha[fecha][motoristaKey] = {
-              motorista: {
-                _id: motorista._id,
-                name: motorista.name,
-                lastName: motorista.lastName,
-                email: motorista.email,
-                img: motorista.img
-              },
-              camion: {
-                _id: camion._id,
-                name: camion.name,
-                licensePlate: camion.licensePlate
-              },
-              viajes: []
-            };
-          }
+            const motoristaKey = motorista._id.toString();
+            if (!viajesPorFecha[fecha][motoristaKey]) {
+              viajesPorFecha[fecha][motoristaKey] = {
+                motorista: {
+                  _id: motorista._id,
+                  name: motorista.name,
+                  lastName: motorista.lastName,
+                  email: motorista.email,
+                  img: motorista.img
+                },
+                camion: {
+                  _id: camion._id,
+                  name: camion.name,
+                  licensePlate: camion.licensePlate
+                },
+                viajes: []
+              };
+            }
 
-          viajesPorFecha[fecha][motoristaKey].viajes.push({
-            _id: viaje._id,
-            origen: viaje.origen,
-            destino: viaje.destino,
-            fechaSalida: viaje.fechaSalida,
-            fechaLlegada: viaje.fechaLlegada,
-            estado: viaje.estado,
-            descripcion: viaje.descripcion,
-            carga: viaje.carga,
-            cliente: viaje.cliente
-          });
+            viajesPorFecha[fecha][motoristaKey].viajes.push({
+              _id: viaje._id,
+              origen: viaje.origen,
+              destino: viaje.destino,
+              fechaSalida: viaje.fechaSalida,
+              fechaLlegada: viaje.fechaLlegada,
+              estado: viaje.estado,
+              descripcion: viaje.descripcion,
+              carga: viaje.carga,
+              cliente: viaje.cliente
+            });
+          }
         }
+      } catch (error) {
+        console.log(`Error procesando viaje ${viaje._id}:`, error.message);
       }
     });
 
@@ -407,7 +440,7 @@ motoristasCon.getAllViajesProgramados = async (req, res) => {
 
     res.status(200).json({
       totalDias: viajesOrganizados.length,
-      totalViajes: todosLosViajes.length,
+      totalViajes: viajesValidos.length,
       viajesPorDia: viajesOrganizados
     });
 
@@ -420,7 +453,7 @@ motoristasCon.getAllViajesProgramados = async (req, res) => {
 };
 
 /**
- * Obtener historial completo de viajes
+ * Obtener historial completo de viajes CON VALIDACIÓN DE FECHAS
  * GET /motoristas/:id/historial-completo
  */
 motoristasCon.getHistorialCompleto = async (req, res) => {
@@ -453,39 +486,51 @@ motoristasCon.getHistorialCompleto = async (req, res) => {
       });
     }
 
-    // CORREGIDO: Usar truckId en lugar de camionId
+    // CORREGIDO: Usar truckId y filtrar fechas válidas desde la consulta
     const todosLosViajes = await viajesModel.find({
-      truckId: camion._id
+      truckId: camion._id,
+      fechaSalida: { $exists: true, $ne: null }
     }).sort({ fechaSalida: -1 });
 
+    // Filtrar viajes con fechas válidas
+    const viajesValidos = todosLosViajes.filter(viaje => esFechaValida(viaje.fechaSalida));
+
+    console.log(`Total viajes encontrados: ${todosLosViajes.length}`);
+    console.log(`Viajes con fechas válidas: ${viajesValidos.length}`);
+
     const estadisticas = {
-      programados: todosLosViajes.filter(v => ['programado', 'pendiente', 'confirmado'].includes(v.estado)).length,
-      completados: todosLosViajes.filter(v => ['completado', 'finalizado'].includes(v.estado)).length,
-      cancelados: todosLosViajes.filter(v => v.estado === 'cancelado').length,
-      enProgreso: todosLosViajes.filter(v => ['en_transito', 'iniciado'].includes(v.estado)).length
+      programados: viajesValidos.filter(v => ['programado', 'pendiente', 'confirmado'].includes(v.estado)).length,
+      completados: viajesValidos.filter(v => ['completado', 'finalizado'].includes(v.estado)).length,
+      cancelados: viajesValidos.filter(v => v.estado === 'cancelado').length,
+      enProgreso: viajesValidos.filter(v => ['en_transito', 'iniciado'].includes(v.estado)).length
     };
 
+    // Agrupar viajes POR MES con validación de fechas
     const viajesPorMes = {};
     
-    todosLosViajes.forEach(viaje => {
-      const fecha = new Date(viaje.fechaSalida);
-      const mesAno = `${fecha.getFullYear()}-${String(fecha.getMonth() + 1).padStart(2, '0')}`;
-      
-      if (!viajesPorMes[mesAno]) {
-        viajesPorMes[mesAno] = [];
+    viajesValidos.forEach(viaje => {
+      try {
+        const fecha = new Date(viaje.fechaSalida);
+        const mesAno = `${fecha.getFullYear()}-${String(fecha.getMonth() + 1).padStart(2, '0')}`;
+        
+        if (!viajesPorMes[mesAno]) {
+          viajesPorMes[mesAno] = [];
+        }
+        
+        viajesPorMes[mesAno].push({
+          _id: viaje._id,
+          origen: viaje.origen,
+          destino: viaje.destino,
+          fechaSalida: viaje.fechaSalida,
+          fechaLlegada: viaje.fechaLlegada,
+          estado: viaje.estado,
+          descripcion: viaje.descripcion,
+          carga: viaje.carga,
+          cliente: viaje.cliente
+        });
+      } catch (error) {
+        console.log(`Error procesando viaje para mes ${viaje._id}:`, error.message);
       }
-      
-      viajesPorMes[mesAno].push({
-        _id: viaje._id,
-        origen: viaje.origen,
-        destino: viaje.destino,
-        fechaSalida: viaje.fechaSalida,
-        fechaLlegada: viaje.fechaLlegada,
-        estado: viaje.estado,
-        descripcion: viaje.descripcion,
-        carga: viaje.carga,
-        cliente: viaje.cliente
-      });
     });
 
     const historialPorMes = Object.keys(viajesPorMes)
@@ -505,26 +550,32 @@ motoristasCon.getHistorialCompleto = async (req, res) => {
         };
       });
 
+    // Agrupar viajes POR DÍA con validación de fechas
     const viajesAgrupados = {};
     
-    todosLosViajes.forEach(viaje => {
-      const fecha = viaje.fechaSalida.toISOString().split('T')[0];
-      
-      if (!viajesAgrupados[fecha]) {
-        viajesAgrupados[fecha] = [];
+    viajesValidos.forEach(viaje => {
+      try {
+        const fecha = new Date(viaje.fechaSalida);
+        const fechaString = fecha.toISOString().split('T')[0];
+        
+        if (!viajesAgrupados[fechaString]) {
+          viajesAgrupados[fechaString] = [];
+        }
+        
+        viajesAgrupados[fechaString].push({
+          _id: viaje._id,
+          origen: viaje.origen,
+          destino: viaje.destino,
+          fechaSalida: viaje.fechaSalida,
+          fechaLlegada: viaje.fechaLlegada,
+          estado: viaje.estado,
+          descripcion: viaje.descripcion,
+          carga: viaje.carga,
+          cliente: viaje.cliente
+        });
+      } catch (error) {
+        console.log(`Error agrupando viaje ${viaje._id}:`, error.message);
       }
-      
-      viajesAgrupados[fecha].push({
-        _id: viaje._id,
-        origen: viaje.origen,
-        destino: viaje.destino,
-        fechaSalida: viaje.fechaSalida,
-        fechaLlegada: viaje.fechaLlegada,
-        estado: viaje.estado,
-        descripcion: viaje.descripcion,
-        carga: viaje.carga,
-        cliente: viaje.cliente
-      });
     });
 
     const viajesPorDia = Object.keys(viajesAgrupados)
@@ -551,9 +602,9 @@ motoristasCon.getHistorialCompleto = async (req, res) => {
         licensePlate: camion.licensePlate,
         state: camion.state
       },
-      totalViajes: todosLosViajes.length,
+      totalViajes: viajesValidos.length,
       estadisticas,
-      historialCompleto: todosLosViajes.map(viaje => ({
+      historialCompleto: viajesValidos.map(viaje => ({
         _id: viaje._id,
         origen: viaje.origen,
         destino: viaje.destino,
@@ -569,6 +620,7 @@ motoristasCon.getHistorialCompleto = async (req, res) => {
     });
 
   } catch (error) {
+    console.error("Error en getHistorialCompleto:", error);
     res.status(500).json({ 
       message: "Error al obtener historial completo de viajes", 
       error: error.message 
@@ -601,7 +653,7 @@ motoristasCon.crearViajesPrueba = async (req, res) => {
     const pasadoManana = new Date();
     pasadoManana.setDate(hoy.getDate() + 2);
 
-    // CORREGIDO: Usar truckId en lugar de camionId
+    // CORREGIDO: Usar truckId
     const viajesPrueba = [
       {
         truckId: camion._id,
@@ -720,13 +772,15 @@ motoristasCon.debugViajes = async (req, res) => {
         camionId: v.camionId,
         origen: v.origen,
         destino: v.destino,
-        estado: v.estado
+        estado: v.estado,
+        fechaSalidaValida: esFechaValida(v.fechaSalida)
       })),
       viajesDelCamionAsignado: viajesDelCamion.map(v => ({
         id: v._id,
         origen: v.origen,
         destino: v.destino,
-        estado: v.estado
+        estado: v.estado,
+        fechaSalidaValida: esFechaValida(v.fechaSalida)
       })),
       camionesEnDB: otrosCamiones.map(c => ({
         id: c._id,
