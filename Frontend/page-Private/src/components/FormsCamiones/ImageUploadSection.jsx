@@ -75,13 +75,6 @@ const ImageUploadSection = ({
               if (!fileObj) return true;
               
               return fileObj.type.startsWith('image/') || 'Solo se permiten archivos de imagen';
-            },
-            fileSize: (file) => {
-              if (!file) return true;
-              const fileObj = file instanceof FileList ? file[0] : file;
-              if (!fileObj) return true;
-              
-              return fileObj.size <= 5 * 1024 * 1024 || 'La imagen debe ser menor a 5MB';
             }
           }
         })}
@@ -99,7 +92,6 @@ const ImageUploadSection = ({
       {/* Instrucciones */}
       <div className="text-center text-gray-500 text-xs mt-3">
         <p>Formatos permitidos: JPG, PNG, GIF</p>
-        <p>Tamaño máximo: 5MB</p>
       </div>
     </div>
   );
