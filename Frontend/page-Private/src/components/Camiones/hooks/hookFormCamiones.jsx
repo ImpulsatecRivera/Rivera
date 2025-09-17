@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 
 const API_URL_MOTORISTAS = "https://riveraproject-5.onrender.com/api/motoristas";
 const API_URL_PROVEEDORES = "https://riveraproject-5.onrender.com/api/proveedores"; 
+const API_URL_CAMIONES = "https://riveraproject-5.onrender.com/api/camiones";
 
 export const useTruckForm = (onSuccess) => {
   const [motoristasDisponibles, setMotoristasDisponibles] = useState([]);
@@ -184,7 +185,7 @@ export const useTruckForm = (onSuccess) => {
       });
 
       console.log('=== ENVIANDO REQUEST ===');
-      console.log('URL:', "http://localhost:4000/api/camiones");
+      console.log('URL:', API_URL_CAMIONES);
       console.log('Método: POST');
       
       // Debug FormData
@@ -197,7 +198,7 @@ export const useTruckForm = (onSuccess) => {
         }
       }
 
-      const res = await fetch("http://localhost:4000/api/camiones", {
+      const res = await fetch(API_URL_CAMIONES, {
         method: "POST",
         body: formData,
         // NO incluir Content-Type para FormData
