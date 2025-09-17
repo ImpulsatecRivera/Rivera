@@ -9,9 +9,9 @@ const AuthContext = createContext();
 // ⏰ Configuración de expiración (20 minutos)
 const SESSION_TIMEOUT = 20 * 60 * 1000;
 
-// 🔤 Utilidades
+// 🔤 Utilidades - ✅ ACTUALIZADO PARA GOOGLE OAUTH
 const norm = (v) => (v ?? '').toString().trim().toLowerCase();
-const ALLOWED_USER_TYPES = new Set(['cliente']); // agrega alias si aplica: 'customer', 'client'
+const ALLOWED_USER_TYPES = new Set(['cliente', 'client', 'customer']); // ✅ Más flexible
 
 // 🧩 Provider
 export const AuthProvider = ({ children }) => {
@@ -62,9 +62,19 @@ export const AuthProvider = ({ children }) => {
         if (timeSinceLogin < SESSION_TIMEOUT) {
           const remainingTime = SESSION_TIMEOUT - timeSinceLogin;
 
-          // Validar tipo de usuario
-          if (!ALLOWED_USER_TYPES.has(norm(savedUserType))) {
+          // ✅ VALIDACIÓN ACTUALIZADA PARA GOOGLE OAUTH
+          const normalizedType = norm(savedUserType);
+          if (!ALLOWED_USER_TYPES.has(normalizedType)) {
             console.log('🚫 Usuario no permitido - cerrando sesión', { savedUserType });
+            await clearAuthData();
+            setIsLoading(false);
+            return;
+          }
+
+          // ✅ VERIFICAR TOKEN CON EL BACKEND
+          const isValidToken = await verifyTokenWithBackend(token);
+          if (!isValidToken) {
+            console.log('❌ Token inválido - cerrando sesión');
             await clearAuthData();
             setIsLoading(false);
             return;
@@ -98,6 +108,38 @@ export const AuthProvider = ({ children }) => {
       console.error('❌ Error verificando sesión:', error);
       await clearAuthData();
       setIsLoading(false);
+    }
+  };
+
+  // ✅ NUEVA FUNCIÓN: Verificar token con el backend
+  const verifyTokenWithBackend = async (token) => {
+    try {
+      const response = await fetch('https://riveraproject-5.onrender.com/api/login/checkAuth', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include', // Para cookies si las usas
+      });
+
+      const data = await response.json();
+      
+      if (response.ok && data.user) {
+        // ✅ Actualizar datos del usuario si han cambiado
+        const currentUser = JSON.parse(await AsyncStorage.getItem('clientData') || '{}');
+        if (JSON.stringify(currentUser) !== JSON.stringify(data.user)) {
+          await AsyncStorage.setItem('clientData', JSON.stringify(data.user));
+          setUser(data.user);
+          console.log('🔄 Datos de usuario actualizados desde el servidor');
+        }
+        return true;
+      }
+      
+      return false;
+    } catch (error) {
+      console.error('❌ Error verificando token con backend:', error);
+      return false;
     }
   };
 
@@ -142,6 +184,7 @@ export const AuthProvider = ({ children }) => {
         'clientUserType',
         'clientId',
         'authToken', // compatibilidad
+        'googleUserData', // ✅ NUEVO: datos específicos de Google
       ]);
 
       setIsAuthenticated(false);
@@ -160,20 +203,23 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // 🔐 Login con persistencia (solo clientes)
+  // ✅ LOGIN ACTUALIZADO PARA GOOGLE OAUTH
   const login = async (loginData) => {
     try {
       console.log('🔐 Procesando login de cliente:', loginData);
 
-      // Validar tipo
-      if (!ALLOWED_USER_TYPES.has(norm(loginData?.userType))) {
+      // ✅ VALIDACIÓN MEJORADA PARA GOOGLE OAUTH
+      const incomingUserType = loginData?.userType || loginData?.user?.userType || 'Cliente';
+      const normalizedType = norm(incomingUserType);
+      
+      if (!ALLOWED_USER_TYPES.has(normalizedType)) {
         return {
           success: false,
-          error: `Acceso denegado. Esta app es solo para clientes. Tu tipo: ${loginData?.userType}`,
+          error: `Acceso denegado. Esta app es solo para clientes. Tu tipo: ${incomingUserType}`,
         };
       }
 
-      // Exigir token real (recomendado)
+      // Exigir token real
       if (!loginData?.token) {
         return { success: false, error: 'No se recibió token del backend' };
       }
@@ -184,20 +230,44 @@ export const AuthProvider = ({ children }) => {
         throw new Error('ID de cliente no disponible');
       }
 
-      await AsyncStorage.multiSet([
+      // ✅ ALMACENAR DATOS ESPECÍFICOS DE GOOGLE OAUTH
+      const storageData = [
         ['clientToken', loginData.token],
         ['authToken', loginData.token], // compatibilidad
         ['clientLoginTime', String(currentTime)],
         ['clientData', JSON.stringify(loginData.user)],
         ['clientUserType', 'Cliente'], // estándar interno
         ['clientId', String(userId)],
-        ['onboardingCompleted', 'true'], // ⇦ si quieres forzar onboarding cambia a 'false'
-      ]);
+      ];
+
+      // ✅ MANEJO ESPECIAL PARA USUARIOS DE GOOGLE
+      if (loginData.user?.isGoogleUser) {
+        console.log('🔍 Usuario de Google detectado');
+        
+        // Guardar datos específicos de Google
+        storageData.push(['googleUserData', JSON.stringify({
+          isGoogleUser: true,
+          profileCompleted: loginData.user.profileCompleted || false,
+          needsProfileCompletion: loginData.user.needsProfileCompletion || false,
+        })]);
+
+        // ✅ ONBOARDING BASADO EN SI EL PERFIL ESTÁ COMPLETO
+        const profileCompleted = loginData.user.profileCompleted !== false;
+        storageData.push(['onboardingCompleted', String(profileCompleted)]);
+        setHasCompletedOnboarding(profileCompleted);
+        
+        console.log(`📋 Perfil de Google ${profileCompleted ? 'completo' : 'incompleto'}`);
+      } else {
+        // Usuario regular
+        storageData.push(['onboardingCompleted', 'true']);
+        setHasCompletedOnboarding(true);
+      }
+
+      await AsyncStorage.multiSet(storageData);
 
       setUser(loginData.user);
       setUserType('Cliente');
       setIsAuthenticated(true);
-      setHasCompletedOnboarding(true); // ⇦ si quieres onboarding: false
       startSessionTimer();
 
       console.log('✅ Login de cliente completado y guardado');
@@ -246,6 +316,53 @@ export const AuthProvider = ({ children }) => {
     } catch (error) {
       console.error('❌ Register error:', error);
       return { success: false, error: error?.message ?? String(error) };
+    }
+  };
+
+  // ✅ NUEVA FUNCIÓN: Completar perfil de Google
+  const completeGoogleProfile = async (profileData) => {
+    try {
+      console.log('📝 Completando perfil de Google...');
+      
+      if (!user?.isGoogleUser) {
+        return { success: false, error: 'Esta función es solo para usuarios de Google' };
+      }
+
+      const response = await fetch('https://riveraproject-5.onrender.com/api/login/complete-profile', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${await AsyncStorage.getItem('clientToken')}`,
+        },
+        body: JSON.stringify(profileData),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        // Actualizar datos locales
+        const updatedUser = { ...user, ...data.user, profileCompleted: true };
+        await AsyncStorage.multiSet([
+          ['clientData', JSON.stringify(updatedUser)],
+          ['onboardingCompleted', 'true'],
+          ['googleUserData', JSON.stringify({
+            isGoogleUser: true,
+            profileCompleted: true,
+            needsProfileCompletion: false,
+          })],
+        ]);
+
+        setUser(updatedUser);
+        setHasCompletedOnboarding(true);
+        
+        console.log('✅ Perfil de Google completado');
+        return { success: true, user: updatedUser };
+      } else {
+        return { success: false, error: data.message || 'Error completando perfil' };
+      }
+    } catch (error) {
+      console.error('❌ Error completando perfil de Google:', error);
+      return { success: false, error: error.message };
     }
   };
 
@@ -305,6 +422,11 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // ✅ NUEVA FUNCIÓN: Verificar si necesita completar perfil de Google
+  const needsGoogleProfileCompletion = () => {
+    return user?.isGoogleUser && user?.profileCompleted === false;
+  };
+
   const value = {
     isAuthenticated,
     hasCompletedOnboarding,
@@ -317,6 +439,9 @@ export const AuthProvider = ({ children }) => {
     logout,
     refreshSession,
     getRemainingTime,
+    completeGoogleProfile, // ✅ NUEVO
+    needsGoogleProfileCompletion, // ✅ NUEVO
+    verifyTokenWithBackend, // ✅ NUEVO
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

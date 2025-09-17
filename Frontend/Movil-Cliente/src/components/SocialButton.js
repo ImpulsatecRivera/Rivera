@@ -1,39 +1,77 @@
 import React from 'react';
-import { TouchableOpacity, View, StyleSheet } from 'react-native';
-import Icon from 'react-native-vector-icons/MaterialIcons';
-import FontAwesome from 'react-native-vector-icons/FontAwesome';
+import { TouchableOpacity, View, StyleSheet, Text } from 'react-native';
 
-const SocialButton = ({ type, onPress }) => {
-  const getIconComponent = () => {
+const SocialButton = ({ type, onPress, disabled }) => {
+  const getIcon = () => {
     switch (type) {
       case 'google':
-        return <Icon name="google" size={24} color="#DB4437" />;
+        return 'G'; // Letra G estilizada como Google
       case 'facebook':
-        return <FontAwesome name="facebook" size={24} color="#4267B2" />;
+        return 'f';
       default:
-        return null;
+        return '?';
     }
   };
 
   const getBackgroundColor = () => {
+    if (disabled) return '#CCCCCC';
+    
     switch (type) {
       case 'google':
-        return '#FFFFFF';
+        return '#FFFFFF'; // Fondo blanco como el botón real de Google
+      case 'facebook':
+        return '#4267B2';
+      default:
+        return '#CCCCCC';
+    }
+  };
+
+  const getTextColor = () => {
+    if (disabled) return '#666666';
+    
+    switch (type) {
+      case 'google':
+        return '#DB4437'; // Rojo de Google sobre fondo blanco
       case 'facebook':
         return '#FFFFFF';
       default:
-        return '#FFFFFF';
+        return '#666666';
+    }
+  };
+
+  const getBorderColor = () => {
+    switch (type) {
+      case 'google':
+        return '#DB4437';
+      case 'facebook':
+        return '#4267B2';
+      default:
+        return '#E0E0E0';
     }
   };
 
   return (
     <TouchableOpacity 
-      style={[styles.button, { backgroundColor: getBackgroundColor() }]}
+      style={[
+        styles.button, 
+        { 
+          backgroundColor: getBackgroundColor(),
+          borderColor: getBorderColor(),
+        },
+        disabled && styles.disabled
+      ]}
       onPress={onPress}
       activeOpacity={0.8}
+      disabled={disabled}
     >
       <View style={styles.iconContainer}>
-        {getIconComponent()}
+        <Text style={[
+          styles.iconText, 
+          { color: getTextColor() },
+          type === 'google' && styles.googleText
+        ]}>
+          {getIcon()}
+        </Text>
       </View>
     </TouchableOpacity>
   );
@@ -55,12 +93,23 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 3.84,
     elevation: 5,
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
+    borderWidth: 2,
   },
   iconContainer: {
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  iconText: {
+    fontSize: 20,
+    fontWeight: 'bold',
+  },
+  googleText: {
+    fontFamily: 'System', // Fuente del sistema
+    fontSize: 24,
+    fontWeight: '600',
+  },
+  disabled: {
+    opacity: 0.5,
   },
 });
 

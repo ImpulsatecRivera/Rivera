@@ -1,11 +1,15 @@
 import jwt from "jsonwebtoken";
 import bcryptjs from "bcryptjs";
+import { OAuth2Client } from "google-auth-library"; // ✅ IMPORTAR GOOGLE AUTH
 import { config } from "../config.js";
 import EmpleadoModel from "../Models/Empleados.js";
 import MotoristaModel from "../Models/Motorista.js";
 import ClienteModel from "../Models/Clientes.js";
 
 const LoginController = {};
+
+// ✅ INICIALIZAR CLIENTE DE GOOGLE
+const client = new OAuth2Client(config.GOOGLE.CLIENT_ID);
 
 // ===================== Intentos fallidos =====================
 const failedAttempts = new Map();
@@ -40,6 +44,11 @@ const getBlockTimeRemaining = (email) => {
   return Math.max(0, Math.ceil((d.blockedUntil.getTime() - Date.now()) / 1000));
 };
 
+// ===================== Helper para generar token =====================
+const generateToken = (payload) => {
+  return jwt.sign(payload, config.JWT.secret, { expiresIn: config.JWT.expiresIn });
+};
+
 // ===================== Helper para Set-Cookie (Corregido) =====================
 const setAuthCookie = (res, token) => {
   const isProd = process.env.NODE_ENV === "production";
@@ -54,6 +63,119 @@ const setAuthCookie = (res, token) => {
   });
   
   console.log("🍪 [LOGIN] Cookie configurada correctamente");
+};
+
+// ===================== 🆕 GOOGLE LOGIN (CORREGIDO) =====================
+LoginController.GoogleLogin = async (req, res) => {
+  const { googleToken } = req.body;
+
+  try {
+    console.log("🔍 [GOOGLE LOGIN] Iniciando verificación...");
+    
+    if (!googleToken) {
+      console.log("❌ Token de Google faltante");
+      return res.status(400).json({ error: "Token de Google requerido" });
+    }
+
+    if (!config.GOOGLE.CLIENT_ID) {
+      console.error("❌ GOOGLE_CLIENT_ID no configurado");
+      return res.status(500).json({ error: "Configuración de Google faltante" });
+    }
+
+    // Verificar el token con Google
+    console.log("🔍 Verificando token con Google...");
+    const ticket = await client.verifyIdToken({
+      idToken: googleToken,
+      audience: config.GOOGLE.CLIENT_ID,
+    });
+
+    const payload = ticket.getPayload();
+    const { email, name, picture, sub: googleId } = payload;
+
+    console.log("✅ Token verificado exitosamente para:", email);
+
+    if (!email) {
+      return res.status(400).json({ error: "No se pudo obtener el email" });
+    }
+
+    // Buscar usuario en empleados o clientes
+    let user = await EmpleadoModel.findOne({ email });
+    let role = "Empleado";
+
+    if (!user) {
+      user = await ClienteModel.findOne({ email });
+      role = "Cliente";
+    }
+
+    // Si no existe, creamos un cliente automáticamente
+    if (!user) {
+      console.log("👤 Creando nuevo cliente con Google:", email);
+      
+      user = await ClienteModel.create({
+        firstName: name.split(' ')[0] || name,
+        lastName: name.split(' ').slice(1).join(' ') || 'Usuario',
+        email,
+        profilePicture: picture,
+        googleId: googleId,
+        isGoogleUser: true,
+        emailVerified: true,
+        profileCompleted: false, // Perfil incompleto hasta que agreguen info adicional
+        // NO incluimos password, phone, address, idNumber, birthDate para usuarios de Google
+      });
+      role = "Cliente";
+    } else {
+      // Actualizar googleId si no existe
+      if (!user.googleId) {
+        user.googleId = googleId;
+        if (picture && !user.profilePicture) {
+          user.profilePicture = picture;
+        }
+        await user.save();
+      }
+    }
+
+    // Generar token JWT
+    const token = generateToken({ 
+      id: user._id, 
+      userType: role 
+    });
+
+    // Configurar cookie segura
+    setAuthCookie(res, token);
+
+    return res.status(200).json({ 
+      message: "Login con Google exitoso", 
+      userType: role,
+      user: {
+        id: user._id,
+        email: user.email,
+        nombre: user.firstName || user.nombre || name,
+        apellido: user.lastName || null,
+        profilePicture: user.profilePicture || picture,
+        userType: role,
+        isGoogleUser: true,
+        profileCompleted: user.profileCompleted || false,
+        needsProfileCompletion: user.isGoogleUser && !user.isProfileComplete()
+      },
+      token
+    });
+    
+  } catch (error) {
+    console.error("💥 Error en GoogleLogin:", error);
+    
+    // Errores específicos de Google
+    if (error.message.includes('Token used too late')) {
+      return res.status(400).json({ error: "Token de Google expirado" });
+    }
+    if (error.message.includes('Invalid token signature')) {
+      return res.status(400).json({ error: "Token de Google inválido" });
+    }
+    
+    return res.status(500).json({ 
+      error: "Error al iniciar sesión con Google",
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
 };
 
 // ===================== LOGIN =====================
@@ -134,52 +256,33 @@ LoginController.Login = async (req, res) => {
           userType = "Motorista";
         } else {
           // 4) Cliente
-          // En tu LoginController.js, en la sección de Cliente, agrega estos logs:
+          userFound = await ClienteModel.findOne({ email });
+          if (!userFound) {
+            console.log('❌ Cliente no encontrado para email:', email);
+            const d = recordFailedAttempt(email);
+            const remaining = Math.max(0, 4 - d.attempts);
+            return res.status(400).json({
+              message: `Usuario no encontrado. Te quedan ${remaining} intento(s).`,
+              attemptsRemaining: remaining,
+            });
+          }
 
-// 4) Cliente
-userFound = await ClienteModel.findOne({ email });
-if (!userFound) {
-  console.log('❌ Cliente no encontrado para email:', email);
-  const d = recordFailedAttempt(email);
-  const remaining = Math.max(0, 4 - d.attempts);
-  return res.status(400).json({
-    message: `Usuario no encontrado. Te quedan ${remaining} intento(s).`,
-    attemptsRemaining: remaining,
-  });
-}
+          console.log('✅ Cliente encontrado:', userFound._id);
+          valid = await bcryptjs.compare(password, userFound.password);
+          console.log('🔑 bcrypt.compare result:', valid);
 
-// ✅ AGREGAR ESTOS LOGS DE DEBUG:
-console.log('✅ Cliente encontrado:', userFound._id);
-console.log('📧 Email en DB:', userFound.email);
-console.log('👤 Nombre:', userFound.firstName, userFound.lastName);
-console.log('🔍 Password hash en DB:', userFound.password);
-console.log('🔍 Hash length:', userFound.password ? userFound.password.length : 'NULL');
-console.log('🔍 Password recibido:', password);
-console.log('🔍 Password length recibido:', password.length);
+          if (!valid) {
+            console.log('❌ Contraseña incorrecta para cliente');
+            const d = recordFailedAttempt(email);
+            const remaining = Math.max(0, 4 - d.attempts);
+            return res.status(400).json({
+              message: `Contraseña incorrecta. Te quedan ${remaining} intento(s).`,
+              attemptsRemaining: remaining,
+            });
+          }
 
-valid = await bcryptjs.compare(password, userFound.password);
-console.log('🔑 bcrypt.compare result:', valid);
-
-if (!valid) {
-  console.log('❌ Contraseña incorrecta para cliente');
-  
-  // ✅ PROBAR ALGUNAS VARIACIONES PARA DEBUG:
-  const trimmedPassword = password.trim();
-  if (trimmedPassword !== password) {
-    const trimmedValid = await bcryptjs.compare(trimmedPassword, userFound.password);
-    console.log('🔍 Probando sin espacios:', trimmedValid);
-  }
-  
-  const d = recordFailedAttempt(email);
-  const remaining = Math.max(0, 4 - d.attempts);
-  return res.status(400).json({
-    message: `Contraseña incorrecta. Te quedan ${remaining} intento(s).`,
-    attemptsRemaining: remaining,
-  });
-}
-
-console.log('✅ Login de cliente exitoso');
-userType = "Cliente";
+          console.log('✅ Login de cliente exitoso');
+          userType = "Cliente";
         }
       }
     }
@@ -192,32 +295,22 @@ userType = "Cliente";
       return res.status(500).json({ message: "Error del servidor: JWT" });
     }
 
-    jwt.sign(
-      { id: userFound._id, userType },
-      config.JWT.secret,
-      { expiresIn: config.JWT.expiresIn },
-      (err, token) => {
-        if (err) {
-          console.error("❌ Error firmando JWT:", err);
-          return res.status(500).json({ message: "Error al generar token" });
-        }
+    const token = generateToken({ id: userFound._id, userType });
+    setAuthCookie(res, token);
 
-        // ✅ Configurar cookie correctamente
-        setAuthCookie(res, token);
-
-        return res.status(200).json({
-          message: "Inicio de sesión completado",
-          userType,
-          user: {
-            id: userFound._id,
-            email: userFound.email || email,
-            nombre: userFound.nombre || userFound.name || null,
-            userType
-          },
-          token,
-        });
-      }
-    );
+    return res.status(200).json({
+      message: "Inicio de sesión completado",
+      userType,
+      user: {
+        id: userFound._id,
+        email: userFound.email || email,
+        nombre: userFound.nombre || userFound.firstName || userFound.name || null,
+        apellido: userFound.lastName || null,
+        userType
+      },
+      token,
+    });
+    
   } catch (e) {
     console.error("💥 [LOGIN] Error:", e);
     return res.status(500).json({ message: "Error interno del servidor" });
@@ -230,7 +323,6 @@ LoginController.checkAuth = async (req, res) => {
     console.log("🔍 [checkAuth] Verificando autenticación");
     const token = req.cookies?.authToken;
     
-    // ✅ Devolver 200 con user: null en lugar de 401
     if (!token) {
       return res.status(200).json({ 
         message: "No hay sesión activa", 
@@ -240,7 +332,6 @@ LoginController.checkAuth = async (req, res) => {
 
     jwt.verify(token, config.JWT.secret, async (err, decoded) => {
       if (err) {
-        // ✅ También devolver 200 con user: null
         return res.status(200).json({ 
           message: "Token inválido", 
           user: null 
@@ -270,7 +361,7 @@ LoginController.checkAuth = async (req, res) => {
         });
       }
 
-      const userFound = await Model.findById(id).select("email nombre name");
+      const userFound = await Model.findById(id).select("email nombre name firstName lastName profilePicture googleId");
       if (!userFound) {
         return res.status(200).json({ 
           message: `${userType} no encontrado`, 
@@ -283,7 +374,12 @@ LoginController.checkAuth = async (req, res) => {
           id: userFound._id,
           email: userFound.email,
           userType,
-          nombre: userFound.nombre || userFound.name || null,
+          nombre: userFound.firstName || userFound.nombre || userFound.name || null,
+          apellido: userFound.lastName || null,
+          profilePicture: userFound.profilePicture || null,
+          isGoogleUser: !!userFound.googleId,
+          profileCompleted: userFound.profileCompleted || false,
+          needsProfileCompletion: userFound.isGoogleUser && userFound.isProfileComplete && !userFound.isProfileComplete()
         },
       });
     });
@@ -296,7 +392,6 @@ LoginController.checkAuth = async (req, res) => {
 // ===================== LOGOUT =====================
 LoginController.logout = async (req, res) => {
   try {
-    // Limpiar cookie del servidor
     res.clearCookie("authToken", {
       path: "/",
       httpOnly: true,

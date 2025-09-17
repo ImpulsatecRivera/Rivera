@@ -1,5 +1,7 @@
 import { Routes, Route, useLocation, Outlet } from "react-router-dom";
 import { useState, useEffect } from "react";
+import Lottie from 'lottie-react';
+import animationData from './assets/lotties/404 not found.json'; // Ajusta la ru
 
 // Rutas privadas
 import PrivateRoute from "./components/PrivateRoutes/PrivateRoute";
@@ -130,21 +132,25 @@ function App() {
       </Route>
 
       {/* ===================== 404 FUERA DEL LAYOUT (SIN MENÚ) ===================== */}
-      <Route
-        path="*"
-        element={
-          <div className="flex items-center justify-center h-screen">
-            <div className="text-center">
-              <h1 className="text-2xl font-bold text-gray-800 mb-2">
-                404 - Página no encontrada
-              </h1>
-              <p className="text-gray-600">
-                La ruta "{location.pathname}" no existe.
-              </p>
-            </div>
-          </div>
-        }
-      />
+     <Route
+  path="*"
+  element={
+    <div className="flex items-center justify-center h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+      <div className="w-full flex items-center justify-center">
+        <Lottie
+          animationData={animationData}
+          style={{ 
+            width: '100%',
+            maxWidth: '800px', // Controla el tamaño máximo
+            height: 'auto' // Mantiene proporciones
+          }}
+          loop={true}
+          autoplay={true}
+        />
+      </div>
+    </div>
+  }
+/>
     </Routes>
   );
 }

@@ -1,139 +1,454 @@
-// 📁 Frontend/src/components/RealtimeProgressBar.jsx
-// VERSIÓN CORREGIDA - CON RUTAS CORRECTAS DEL BACKEND
+// 📁 Frontend/src/components/Mapa/RealtimeProgressBar.jsx
+// VERSIÓN COMPATIBLE CON TU BACKEND EXISTENTE - SIN CAMBIOS AL BACKEND
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { 
+  MapPin, Clock, CheckCircle, Circle, Navigation, Truck, Plus, 
+  Play, AlertTriangle, Users, Fuel, MessageSquare, Loader,
+  XCircle, PauseCircle, RotateCcw, Info, Wifi, WifiOff
+} from 'lucide-react';
 
 const RealtimeProgressBar = ({ 
-  viajeId, 
-  initialProgress = 0, 
-  status = 'pendiente',
-  enablePolling = true 
+  viajeId,
+  onStatusChange,
+  apiConfig = {
+    baseUrl: process.env.REACT_APP_API_URL || 'https://riveraproject-5.onrender.com',
+    endpoints: {
+      getTripDetails: '/api/viajes/:id',
+      updateProgress: '/api/viajes/:id/progress',
+      completeTrip: '/api/viajes/:id/complete',
+      getMapData: '/api/viajes/map-data'
+    }
+  },
+  enablePolling = true,
+  pollingInterval = 30000 // 30 segundos
 }) => {
-  const [progress, setProgress] = useState(initialProgress);
-  const [currentStatus, setCurrentStatus] = useState(status);
-  const [lastUpdate, setLastUpdate] = useState(new Date());
+  // Estados principales
+  const [viajeData, setViajeData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [isConnected, setIsConnected] = useState(true);
-  const [apiAvailable, setApiAvailable] = useState(null);
+  const [lastUpdate, setLastUpdate] = useState(new Date());
   
-  // 🆕 NUEVOS ESTADOS PARA SISTEMA HÍBRIDO
-  const [lastCheckpoint, setLastCheckpoint] = useState(null);
-  const [totalCheckpoints, setTotalCheckpoints] = useState(0);
-  const [progressMethod, setProgressMethod] = useState('time_based');
-  const [timeBasedProgress, setTimeBasedProgress] = useState(0);
-  const [tripDetails, setTripDetails] = useState(null);
+  // Estados del viaje derivados de tu esquema
+  const [progress, setProgress] = useState(0);
+  const [currentStatus, setCurrentStatus] = useState('pendiente');
+  const [checkpoints, setCheckpoints] = useState([]);
+  const [incidents, setIncidents] = useState([]);
+  const [tripStarted, setTripStarted] = useState(false);
+  
+  // Estados de UI
+  const [isStarting, setIsStarting] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [showIncidentForm, setShowIncidentForm] = useState(false);
+  const [selectedIncidentType, setSelectedIncidentType] = useState('');
+  const [incidentDescription, setIncidentDescription] = useState('');
 
-  // 🔄 RESETEAR COMPLETAMENTE cuando cambie el viajeId
-  useEffect(() => {
-    console.log(`🔄 Reseteando componente para viaje: ${viajeId}`);
-    setProgress(initialProgress);
-    setCurrentStatus(status);
+  // Tipos de incidentes (simplificados para tu sistema)
+  const incidentTypes = [
+    { id: 'traffic', label: 'Tráfico Pesado', icon: '🚗', color: 'orange' },
+    { id: 'weather', label: 'Clima Adverso', icon: '🌧️', color: 'blue' },
+    { id: 'mechanical', label: 'Problema Mecánico', icon: '🔧', color: 'red' },
+    { id: 'fuel', label: 'Parada Combustible', icon: '⛽', color: 'green' },
+    { id: 'break', label: 'Descanso', icon: '☕', color: 'purple' },
+    { id: 'delay', label: 'Retraso General', icon: '⏰', color: 'yellow' }
+  ];
+
+  // Checkpoints realistas para El Salvador basados en tu esquema
+  const getRouteCheckpoints = useCallback((origen, destino) => {
+    const normalizeLocation = (location) => {
+      if (!location) return '';
+      return location.toLowerCase().replace(/[^a-z]/g, '');
+    };
+
+    const origenNorm = normalizeLocation(origen);
+    const destinoNorm = normalizeLocation(destino);
+
+    // Rutas principales de El Salvador
+    if (origenNorm.includes('santaana') && destinoNorm.includes('sanmiguel')) {
+      return [
+        {
+          id: 'inicio',
+          name: 'Terminal Rivera Santa Ana',
+          description: 'Punto de partida',
+          municipio: 'Santa Ana',
+          departamento: 'Santa Ana',
+          estimatedProgress: 0,
+          isOptional: false
+        },
+        {
+          id: 'texistepeque',
+          name: 'Texistepeque',
+          description: 'Control de ruta',
+          municipio: 'Texistepeque',
+          departamento: 'Santa Ana',
+          estimatedProgress: 15,
+          isOptional: true
+        },
+        {
+          id: 'comalapa',
+          name: 'Peaje Comalapa',
+          description: 'Estación de peaje',
+          municipio: 'Comalapa',
+          departamento: 'La Paz',
+          estimatedProgress: 30,
+          isOptional: false
+        },
+        {
+          id: 'sansalvador',
+          name: 'San Salvador',
+          description: 'Parada técnica',
+          municipio: 'San Salvador',
+          departamento: 'San Salvador',
+          estimatedProgress: 50,
+          isOptional: false
+        },
+        {
+          id: 'cojutepeque',
+          name: 'Cojutepeque',
+          description: 'Checkpoint intermedio',
+          municipio: 'Cojutepeque',
+          departamento: 'Cuscatlán',
+          estimatedProgress: 70,
+          isOptional: true
+        },
+        {
+          id: 'sanvicente',
+          name: 'San Vicente',
+          description: 'Parada de servicios',
+          municipio: 'San Vicente',
+          departamento: 'San Vicente',
+          estimatedProgress: 85,
+          isOptional: false
+        },
+        {
+          id: 'destino',
+          name: 'Terminal San Miguel',
+          description: 'Destino final',
+          municipio: 'San Miguel',
+          departamento: 'San Miguel',
+          estimatedProgress: 100,
+          isOptional: false
+        }
+      ];
+    }
+
+    // Ruta por defecto
+    return [
+      {
+        id: 'inicio',
+        name: origen || 'Terminal de Partida',
+        description: 'Punto de partida',
+        estimatedProgress: 0,
+        isOptional: false
+      },
+      {
+        id: 'intermedio',
+        name: 'Punto Intermedio',
+        description: 'Control de ruta',
+        estimatedProgress: 50,
+        isOptional: true
+      },
+      {
+        id: 'destino',
+        name: destino || 'Terminal de Llegada',
+        description: 'Destino final',
+        estimatedProgress: 100,
+        isOptional: false
+      }
+    ];
+  }, []);
+
+  // Función para hacer llamadas a la API usando tus endpoints existentes
+  const apiCall = useCallback(async (endpoint, options = {}) => {
+    try {
+      setIsConnected(true);
+      const url = `${apiConfig.baseUrl}${endpoint}`.replace(':id', viajeId);
+      
+      const response = await fetch(url, {
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+          ...options.headers
+        },
+        ...options
+      });
+
+      if (!response.ok) {
+        throw new Error(`API Error: ${response.status} ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      setLastUpdate(new Date());
+      return data;
+    } catch (error) {
+      console.error('API Call Error:', error);
+      setIsConnected(false);
+      setError(error.message);
+      throw error;
+    }
+  }, [apiConfig.baseUrl, viajeId]);
+
+  // Cargar datos del viaje usando tu endpoint existente
+  const loadTripData = useCallback(async () => {
+    if (!viajeId) return;
+
+    try {
+      setLoading(true);
+      setError(null);
+
+      // Usar tu endpoint getTripDetails existente
+      const response = await apiCall(apiConfig.endpoints.getTripDetails);
+      const viaje = response.data || response;
+
+      setViajeData(viaje);
+      
+      // Mapear tu esquema al estado del componente
+      const estadoActual = viaje.estado?.actual || 'pendiente';
+      const progresoActual = viaje.tracking?.progreso?.porcentaje || 0;
+      
+      setCurrentStatus(estadoActual);
+      setProgress(progresoActual);
+      setTripStarted(estadoActual !== 'pendiente');
+
+      // Procesar checkpoints desde tu tracking
+      const trackingCheckpoints = viaje.tracking?.checkpoints || [];
+      setCheckpoints(trackingCheckpoints);
+
+      // Procesar alertas desde tu esquema
+      const alertasActivas = viaje.alertas?.filter(alert => !alert.resuelta) || [];
+      setIncidents(alertasActivas.map(alert => ({
+        id: alert._id || Math.random().toString(36).substr(2, 9),
+        type: alert.tipo || 'delay',
+        description: alert.mensaje || alert.descripcion,
+        reportedAt: new Date(alert.fecha),
+        resolved: alert.resuelta || false,
+        severity: alert.prioridad || 'medium'
+      })));
+
+    } catch (error) {
+      console.error('Error loading trip data:', error);
+      setError('Error al cargar datos del viaje');
+    } finally {
+      setLoading(false);
+    }
+  }, [viajeId, apiCall, apiConfig.endpoints.getTripDetails]);
+
+  // Iniciar viaje usando tu endpoint de actualización de progreso
+  const startTrip = async () => {
+    if (isStarting || currentStatus !== 'pendiente') return;
+
+    try {
+      setIsStarting(true);
+      setError(null);
+
+      const now = new Date();
+      const salidaProgramada = new Date(viajeData.departureTime);
+      
+      // Determinar si hay retraso
+      const minutosRetraso = Math.round((now - salidaProgramada) / (1000 * 60));
+      const hayRetraso = minutosRetraso > 15; // Más de 15 minutos = retraso
+
+      const nuevoEstado = hayRetraso ? 'retrasado' : 'en_curso';
+      
+      // Usar tu endpoint updateTripProgress existente
+      const response = await apiCall(apiConfig.endpoints.updateProgress, {
+        method: 'PATCH',
+        body: JSON.stringify({
+          progreso: 5, // Progreso inicial pequeño
+          estado: nuevoEstado,
+          observaciones: hayRetraso ? 
+            `Viaje iniciado con ${minutosRetraso} minutos de retraso. Programado: ${salidaProgramada.toLocaleTimeString()}, Iniciado: ${now.toLocaleTimeString()}` :
+            `Viaje iniciado a tiempo a las ${now.toLocaleTimeString()}`
+        })
+      });
+
+      // Actualizar estado local
+      setCurrentStatus(nuevoEstado);
+      setProgress(5);
+      setTripStarted(true);
+      setLastUpdate(new Date());
+
+      // Agregar checkpoint de inicio
+      const inicioCheckpoint = {
+        tipo: 'inicio_manual',
+        progreso: 5,
+        descripcion: hayRetraso ? 
+          `🚛 Viaje iniciado con ${minutosRetraso} min de retraso` :
+          '🚛 Viaje iniciado a tiempo',
+        timestamp: now,
+        reportadoPor: 'manual',
+        estadoViaje: nuevoEstado
+      };
+
+      setCheckpoints(prev => [...prev, inicioCheckpoint]);
+
+      // Notificar cambio de estado
+      if (onStatusChange) {
+        onStatusChange(nuevoEstado, { 
+          ...response, 
+          retraso: hayRetraso ? minutosRetraso : 0 
+        });
+      }
+
+      console.log('✅ Viaje iniciado:', nuevoEstado, hayRetraso ? `(${minutosRetraso} min retraso)` : '(a tiempo)');
+
+    } catch (error) {
+      console.error('❌ Error al iniciar viaje:', error);
+      setError('No se pudo iniciar el viaje. Inténtalo de nuevo.');
+    } finally {
+      setIsStarting(false);
+    }
+  };
+
+  // Actualizar progreso usando tu endpoint existente
+  const updateProgress = async (newProgress) => {
+    try {
+      setIsUpdating(true);
+
+      const response = await apiCall(apiConfig.endpoints.updateProgress, {
+        method: 'PATCH',
+        body: JSON.stringify({
+          progreso: newProgress,
+          observaciones: `Progreso actualizado manualmente a ${newProgress}%`
+        })
+      });
+
+      setProgress(newProgress);
+      
+      // Agregar checkpoint de progreso
+      const progresoCheckpoint = {
+        tipo: 'progreso_manual',
+        progreso: newProgress,
+        descripcion: `📈 Progreso actualizado a ${newProgress}%`,
+        timestamp: new Date(),
+        reportadoPor: 'manual'
+      };
+
+      setCheckpoints(prev => [...prev, progresoCheckpoint]);
+
+      // Si llega a 100%, completar automáticamente
+      if (newProgress >= 100) {
+        await completeTrip();
+      }
+
+    } catch (error) {
+      console.error('Error actualizando progreso:', error);
+      setError('Error al actualizar progreso');
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  // Completar viaje usando tu endpoint existente
+  const completeTrip = async () => {
+    try {
+      const response = await apiCall(apiConfig.endpoints.completeTrip, {
+        method: 'PATCH',
+        body: JSON.stringify({
+          observaciones: 'Viaje completado desde panel de progreso'
+        })
+      });
+
+      setCurrentStatus('completado');
+      setProgress(100);
+
+      // Agregar checkpoint de finalización
+      const finalizacionCheckpoint = {
+        tipo: 'finalizacion_manual',
+        progreso: 100,
+        descripcion: '✅ Viaje completado exitosamente',
+        timestamp: new Date(),
+        reportadoPor: 'manual'
+      };
+
+      setCheckpoints(prev => [...prev, finalizacionCheckpoint]);
+
+      if (onStatusChange) {
+        onStatusChange('completado', response);
+      }
+
+    } catch (error) {
+      console.error('Error completando viaje:', error);
+      setError('Error al completar viaje');
+    }
+  };
+
+  // Reportar incidente simple (sin backend, solo local)
+  const reportIncident = () => {
+    if (!selectedIncidentType || !incidentDescription.trim()) return;
+
+    const newIncident = {
+      id: `incident_${Date.now()}`,
+      type: selectedIncidentType,
+      description: incidentDescription,
+      reportedAt: new Date(),
+      resolved: false,
+      severity: 'medium'
+    };
+
+    setIncidents(prev => [...prev, newIncident]);
+
+    // Agregar checkpoint del incidente
+    const incidenteCheckpoint = {
+      tipo: 'incidente_reportado',
+      progreso: progress,
+      descripcion: `⚠️ ${incidentDescription}`,
+      timestamp: new Date(),
+      reportadoPor: 'manual',
+      tipoIncidente: selectedIncidentType
+    };
+
+    setCheckpoints(prev => [...prev, incidenteCheckpoint]);
+
+    // Limpiar formulario
+    setShowIncidentForm(false);
+    setSelectedIncidentType('');
+    setIncidentDescription('');
     setLastUpdate(new Date());
-    setApiAvailable(null);
-    setLastCheckpoint(null);
-    setTotalCheckpoints(0);
-    setProgressMethod('time_based');
-  }, [viajeId, initialProgress, status]);
+  };
 
-  // 🔍 Verificar API disponible usando rutas reales del backend
-  useEffect(() => {
-    const checkApiAvailability = async () => {
-      if (!enablePolling) {
-        setApiAvailable(false);
-        setIsConnected(false);
-        return;
-      }
+  // Resolver incidente
+  const resolveIncident = (incidentId) => {
+    setIncidents(prev => prev.map(incident => 
+      incident.id === incidentId 
+        ? { ...incident, resolved: true, resolvedAt: new Date() }
+        : incident
+    ));
 
-      try {
-        // 🔧 RUTA CORRECTA: Usar el endpoint de métricas en tiempo real para verificar API
-        const response = await fetch(`https://riveraproject-5.onrender.com/api/viajes/real-time-metrics`);
-        if (response.ok) {
-          setApiAvailable(true);
-          setIsConnected(true);
-          console.log(`✅ API disponible para viaje ${viajeId}`);
-        } else {
-          setApiAvailable(false);
-          setIsConnected(false);
-        }
-      } catch (error) {
-        setApiAvailable(false);
-        setIsConnected(false);
-        console.log(`🔌 API no disponible para viaje ${viajeId}:`, error.message);
-      }
+    // Agregar checkpoint de resolución
+    const resolucionCheckpoint = {
+      tipo: 'incidente_resuelto',
+      progreso: progress,
+      descripcion: '✅ Incidente resuelto',
+      timestamp: new Date(),
+      reportadoPor: 'manual'
     };
 
-    if (apiAvailable === null) {
-      checkApiAvailability();
-    }
-  }, [enablePolling, apiAvailable, viajeId]);
+    setCheckpoints(prev => [...prev, resolucionCheckpoint]);
+  };
 
-  // 🔄 Polling mejorado usando rutas reales del backend
+  // Polling para actualizaciones (usa tu AutoUpdateService)
   useEffect(() => {
-    if (!enablePolling || apiAvailable !== true) {
-      return;
-    }
+    if (!enablePolling || !viajeId || currentStatus === 'completado') return;
 
-    console.log(`🔄 Iniciando polling para viaje ${viajeId}`);
-
-    const pollInterval = setInterval(async () => {
+    const interval = setInterval(async () => {
       try {
-        // 🔧 RUTA CORRECTA: Obtener detalles específicos del viaje
-        const response = await fetch(`https://riveraproject-5.onrender.com/api/viajes/${viajeId}`);
-        
-        if (response.ok) {
-          const result = await response.json();
-          
-          if (result.success && result.data) {
-            const tripData = result.data;
-            console.log(`📊 Actualizando viaje ${viajeId}:`, tripData);
-            
-            // 📊 Extraer progreso del backend
-            const backendProgress = tripData.tracking?.progreso?.porcentaje || 0;
-            const backendStatus = tripData.estado?.actual || 'pendiente';
-            
-            // Actualizar datos principales
-            setProgress(backendProgress);
-            setCurrentStatus(backendStatus);
-            setLastUpdate(new Date());
-            setTripDetails(tripData);
-            
-            // 🆕 Actualizar datos de tracking si existen
-            if (tripData.tracking?.ubicacionActual) {
-              setLastCheckpoint({
-                tipo: 'gps_update',
-                descripcion: `Ubicación actualizada: ${tripData.tracking.ubicacionActual.lat?.toFixed(4)}, ${tripData.tracking.ubicacionActual.lng?.toFixed(4)}`,
-                progreso: backendProgress,
-                timestamp: new Date(tripData.tracking.progreso.fechaActualizacion || Date.now())
-              });
-            }
-            
-            // Contar checkpoints del historial de ubicaciones
-            if (tripData.tracking?.historialUbicaciones) {
-              setTotalCheckpoints(tripData.tracking.historialUbicaciones.length);
-            }
-            
-            setProgressMethod(tripData.tracking?.progreso?.metodo || 'backend_calculated');
-            setIsConnected(true);
-          } else {
-            console.log(`⚠️ Viaje ${viajeId} no encontrado o respuesta inválida`);
-            setIsConnected(false);
-          }
-        } else {
-          setIsConnected(false);
-          console.log(`❌ Error HTTP ${response.status} obteniendo viaje ${viajeId}`);
-        }
+        await loadTripData();
       } catch (error) {
-        console.error(`❌ Error actualizando viaje ${viajeId}:`, error);
-        setIsConnected(false);
+        console.warn('Error en polling:', error);
       }
-    }, 30000);
+    }, pollingInterval);
 
-    return () => {
-      console.log(`🛑 Deteniendo polling para viaje ${viajeId}`);
-      clearInterval(pollInterval);
-    };
-  }, [viajeId, enablePolling, apiAvailable]);
+    return () => clearInterval(interval);
+  }, [enablePolling, viajeId, currentStatus, pollingInterval, loadTripData]);
 
-  // 🎨 Obtener color según el estado
+  // Cargar datos iniciales
+  useEffect(() => {
+    loadTripData();
+  }, [loadTripData]);
+
+  // Funciones de utilidad para UI
   const getStatusColor = () => {
     switch (currentStatus) {
       case 'programado': return 'bg-purple-500';
@@ -146,7 +461,6 @@ const RealtimeProgressBar = ({
     }
   };
 
-  // 📱 Obtener texto del estado
   const getStatusText = () => {
     switch (currentStatus) {
       case 'programado': return 'Programado';
@@ -159,415 +473,367 @@ const RealtimeProgressBar = ({
     }
   };
 
-  // ⚡ Controles manuales usando rutas reales del backend
-  const handleManualUpdate = async (action, newProgress = null, descripcion = null) => {
-    console.log(`🎮 Actualizando viaje ${viajeId} - Acción: ${action}`);
+  const getCheckpointIcon = (checkpoint) => {
+    const tipo = checkpoint.tipo || '';
     
-    if (apiAvailable === false) {
-      // Simulación local mejorada
-      if (action === 'start') {
-        setCurrentStatus('en_curso');
-        setProgress(10);
-        setLastCheckpoint({
-          tipo: 'inicio_manual',
-          descripcion: 'Iniciado manualmente',
-          progreso: 10,
-          timestamp: new Date()
-        });
-        setTotalCheckpoints(prev => prev + 1);
-      } else if (action === 'progress' && newProgress !== null) {
-        const newProg = Math.min(100, Math.max(0, newProgress));
-        setProgress(newProg);
-        setLastCheckpoint({
-          tipo: 'progreso_manual',
-          descripcion: `Progreso actualizado a ${newProg}%`,
-          progreso: newProg,
-          timestamp: new Date()
-        });
-        setTotalCheckpoints(prev => prev + 1);
-        if (newProg >= 100) {
-          setCurrentStatus('completado');
-        }
-      } else if (action === 'complete') {
-        setProgress(100);
-        setCurrentStatus('completado');
-        setLastCheckpoint({
-          tipo: 'finalizacion_manual',
-          descripcion: 'Completado manualmente',
-          progreso: 100,
-          timestamp: new Date()
-        });
-        setTotalCheckpoints(prev => prev + 1);
-      }
-      setLastUpdate(new Date());
-      setProgressMethod('manual');
-      return;
-    }
-
-    // 🔧 USAR RUTAS REALES DEL BACKEND
-    try {
-      let endpoint;
-      let method = 'PATCH';
-      let body = {};
-
-      if (action === 'start') {
-        // No hay endpoint específico para iniciar, usar actualización de progreso
-        endpoint = `https://riveraproject-5.onrender.com/api/viajes/${viajeId}/progress`;
-        body = { progreso: 10, estado: 'en_curso', observaciones: 'Iniciado manualmente' };
-      } else if (action === 'progress') {
-        // 🔧 RUTA CORRECTA: Actualizar progreso
-        endpoint = `https://riveraproject-5.onrender.com/api/viajes/${viajeId}/progress`;
-        body = { progreso: newProgress, observaciones: descripcion || `Progreso actualizado a ${newProgress}%` };
-      } else if (action === 'complete') {
-        // 🔧 RUTA CORRECTA: Completar viaje
-        endpoint = `https://riveraproject-5.onrender.com/api/viajes/${viajeId}/complete`;
-        body = { observaciones: descripcion || 'Completado manualmente' };
-      }
-
-      if (endpoint) {
-        const response = await fetch(endpoint, {
-          method: method,
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(body)
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          console.log(`✅ Actualización exitosa para viaje ${viajeId}:`, data);
-          
-          // Actualizar estado local
-          if (data.success && data.data) {
-            const updatedTrip = data.data;
-            
-            // Extraer datos del formato de respuesta del backend
-            if (updatedTrip.progreso !== undefined) {
-              setProgress(updatedTrip.progreso);
-            }
-            if (updatedTrip.estado) {
-              setCurrentStatus(updatedTrip.estado);
-            }
-            
-            setLastUpdate(new Date());
-            setProgressMethod('manual_update');
-            
-            // Agregar checkpoint local
-            setLastCheckpoint({
-              tipo: action,
-              descripcion: descripcion || `Acción: ${action}`,
-              progreso: updatedTrip.progreso || progress,
-              timestamp: new Date()
-            });
-            setTotalCheckpoints(prev => prev + 1);
-          }
-        } else {
-          console.error(`❌ Error en actualización para viaje ${viajeId}:`, response.status);
-        }
-      }
-    } catch (error) {
-      console.error(`❌ Error en actualización manual para viaje ${viajeId}:`, error);
-    }
+    if (tipo.includes('inicio')) return <Truck className="w-4 h-4 text-green-600" />;
+    if (tipo.includes('finalizacion')) return <CheckCircle className="w-4 h-4 text-green-600" />;
+    if (tipo.includes('progreso')) return <Navigation className="w-4 h-4 text-blue-600" />;
+    if (tipo.includes('incidente')) return <AlertTriangle className="w-4 h-4 text-orange-600" />;
+    
+    return <Circle className="w-4 h-4 text-gray-400" />;
   };
 
-  // 🆕 Actualizar ubicación GPS usando ruta real del backend
-  const handleLocationUpdate = async (lat, lng, velocidad = null) => {
-    if (apiAvailable === false) {
-      // Simulación local
-      setLastCheckpoint({
-        tipo: 'gps_update',
-        descripcion: `GPS: ${lat.toFixed(4)}, ${lng.toFixed(4)}`,
-        progreso: progress,
-        timestamp: new Date()
-      });
-      setTotalCheckpoints(prev => prev + 1);
-      setLastUpdate(new Date());
-      return;
+  // Calcular retraso actual
+  const calculateCurrentDelay = () => {
+    if (!viajeData?.departureTime) return null;
+    
+    const now = new Date();
+    const programmed = new Date(viajeData.departureTime);
+    const delayMinutes = Math.round((now - programmed) / (1000 * 60));
+    
+    if (delayMinutes > 15) {
+      return {
+        minutes: delayMinutes,
+        text: `${delayMinutes} min de retraso`
+      };
     }
-
-    try {
-      // 🔧 RUTA CORRECTA: Actualizar ubicación
-      const response = await fetch(`https://riveraproject-5.onrender.com/api/viajes/${viajeId}/location`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          lat: lat,
-          lng: lng,
-          velocidad: velocidad
-        })
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        console.log(`📍 Ubicación actualizada para viaje ${viajeId}:`, data);
-        
-        if (data.success && data.data) {
-          // Actualizar progreso si el backend lo calcula
-          if (data.data.progreso?.porcentaje !== undefined) {
-            setProgress(data.data.progreso.porcentaje);
-          }
-          
-          setLastCheckpoint({
-            tipo: 'gps_update',
-            descripcion: `GPS actualizado: ${lat.toFixed(4)}, ${lng.toFixed(4)}`,
-            progreso: data.data.progreso?.porcentaje || progress,
-            timestamp: new Date()
-          });
-          setTotalCheckpoints(prev => prev + 1);
-          setLastUpdate(new Date());
-          setProgressMethod('gps_tracking');
-        }
-      }
-    } catch (error) {
-      console.error('Error actualizando ubicación GPS:', error);
-    }
+    
+    return null;
   };
 
-  // 🎯 Indicador de método de progreso
-  const getProgressMethodInfo = () => {
-    switch (progressMethod) {
-      case 'gps_tracking':
-        return {
-          icon: '📍',
-          text: 'GPS',
-          color: 'text-green-600',
-          description: 'Basado en ubicación GPS'
-        };
-      case 'backend_calculated':
-        return {
-          icon: '🤖',
-          text: 'Auto',
-          color: 'text-blue-600',
-          description: 'Calculado por el sistema'
-        };
-      case 'time_based':
-        return {
-          icon: '⏰',
-          text: 'Tiempo',
-          color: 'text-blue-600',
-          description: 'Calculado por tiempo'
-        };
-      case 'manual':
-      case 'manual_update':
-        return {
-          icon: '🎮',
-          text: 'Manual',
-          color: 'text-purple-600',
-          description: 'Actualizado manualmente'
-        };
-      default:
-        return {
-          icon: '🔧',
-          text: 'Sistema',
-          color: 'text-gray-600',
-          description: 'Sistema automático'
-        };
-    }
-  };
-
-  const connectionStatus = apiAvailable === false ? 
-    { color: 'bg-yellow-400', text: 'Demo', pulse: true } :
-    !isConnected ? 
-    { color: 'bg-red-400', text: 'Desconectado', pulse: false } :
-    { color: 'bg-green-400', text: 'En línea', pulse: true };
-
-  const methodInfo = getProgressMethodInfo();
-
-  return (
-    <div className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm">
-      {/* 📊 Header con estado mejorado */}
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center space-x-2">
-          <div className={`w-3 h-3 rounded-full ${getStatusColor()}`}></div>
-          <span className="font-medium text-gray-900">{getStatusText()}</span>
-          
-          {/* 🆔 ID del viaje */}
-          <span className="text-xs text-gray-400">({viajeId.slice(-4)})</span>
-          
-          {/* 📍 Método de progreso */}
-          <span className={`text-xs px-2 py-1 rounded-full bg-gray-100 ${methodInfo.color}`} title={methodInfo.description}>
-            {methodInfo.icon} {methodInfo.text}
-          </span>
-          
-          {/* 🏷️ Estado de API */}
-          {apiAvailable === false && (
-            <span className="text-yellow-600 text-xs px-2 py-1 bg-yellow-100 rounded-full">
-              📊 Demo
-            </span>
-          )}
-        </div>
-        <div className="text-sm text-gray-500 font-semibold">
-          {Math.round(progress)}%
+  // Si está cargando
+  if (loading) {
+    return (
+      <div className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm max-w-md mx-auto">
+        <div className="flex items-center justify-center space-x-2">
+          <Loader className="w-5 h-5 animate-spin text-blue-500" />
+          <span className="text-gray-600">Cargando datos del viaje...</span>
         </div>
       </div>
+    );
+  }
 
-      {/* 📈 Barra de progreso mejorada */}
-      <div className="w-full bg-gray-200 rounded-full h-3 mb-3 relative">
+  // Si no hay datos del viaje
+  if (!viajeData && !loading) {
+    return (
+      <div className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm max-w-md mx-auto">
+        <div className="text-center text-gray-500">
+          <AlertTriangle className="w-8 h-8 mx-auto mb-2 text-orange-500" />
+          <div className="font-medium">Viaje no encontrado</div>
+          <div className="text-sm">ID: {viajeId}</div>
+        </div>
+      </div>
+    );
+  }
+
+  const activeIncidents = incidents.filter(i => !i.resolved);
+  const currentDelay = calculateCurrentDelay();
+
+  return (
+    <div className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm max-w-md mx-auto">
+      {/* Header con información del viaje */}
+      <div className="mb-4">
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center space-x-2">
+            <div className={`w-3 h-3 rounded-full ${getStatusColor()}`}></div>
+            <span className="font-medium text-gray-900">{getStatusText()}</span>
+            <span className="text-xs text-gray-400">({viajeId})</span>
+          </div>
+          <div className="flex items-center space-x-2">
+            <div className="text-sm text-gray-500 font-semibold">
+              {Math.round(progress)}%
+            </div>
+            {isConnected ? (
+              <Wifi className="w-4 h-4 text-green-500" />
+            ) : (
+              <WifiOff className="w-4 h-4 text-red-500" />
+            )}
+          </div>
+        </div>
+        
+        <div className="text-xs text-gray-600 mb-2">
+          🚐 {viajeData.truckId?.brand || viajeData.truckId?.marca || 'Camión'} {viajeData.truckId?.model || viajeData.truckId?.modelo || ''}
+          {' • '}
+          👨‍✈️ {viajeData.conductorId?.name || viajeData.conductorId?.nombre || 'Conductor'}
+        </div>
+        
+        <div className="text-xs text-gray-600">
+          📍 {viajeData.quoteId?.ruta?.origen?.nombre || 'Origen'} → {viajeData.quoteId?.ruta?.destino?.nombre || 'Destino'}
+        </div>
+
+        {/* Mostrar retraso si existe */}
+        {currentDelay && (
+          <div className="text-xs text-orange-600 mt-1 font-medium">
+            ⏰ {currentDelay.text}
+          </div>
+        )}
+      </div>
+
+      {/* Errores */}
+      {error && (
+        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+          <div className="flex items-center space-x-2 text-red-800">
+            <AlertTriangle className="w-4 h-4" />
+            <span className="text-sm font-medium">Error</span>
+          </div>
+          <div className="text-xs text-red-600 mt-1">{error}</div>
+          <button
+            onClick={() => setError(null)}
+            className="text-xs text-red-500 hover:text-red-700 mt-1"
+          >
+            Cerrar
+          </button>
+        </div>
+      )}
+
+      {/* Botón de inicio del viaje */}
+      {!tripStarted && currentStatus === 'pendiente' && (
+        <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+          <div className="text-sm text-green-800 mb-2 font-medium">
+            ✅ Listo para iniciar viaje
+          </div>
+          {currentDelay && (
+            <div className="text-xs text-orange-700 mb-2">
+              ⚠️ Iniciará con {currentDelay.minutes} minutos de retraso
+            </div>
+          )}
+          <button
+            onClick={startTrip}
+            disabled={isStarting}
+            className="w-full flex items-center justify-center space-x-2 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors disabled:bg-gray-400"
+          >
+            {isStarting ? (
+              <>
+                <Loader className="w-4 h-4 animate-spin" />
+                <span>Iniciando...</span>
+              </>
+            ) : (
+              <>
+                <Play className="w-4 h-4" />
+                <span>Iniciar Viaje</span>
+              </>
+            )}
+          </button>
+        </div>
+      )}
+
+      {/* Incidentes activos */}
+      {activeIncidents.length > 0 && (
+        <div className="mb-4 p-3 bg-orange-50 border border-orange-200 rounded-lg">
+          <div className="text-sm text-orange-800 mb-2 font-medium">
+            ⚠️ Incidentes Activos ({activeIncidents.length})
+          </div>
+          {activeIncidents.slice(0, 2).map(incident => {
+            const incidentType = incidentTypes.find(t => t.id === incident.type);
+            return (
+              <div key={incident.id} className="flex items-center justify-between mb-2 p-2 bg-white rounded border">
+                <div className="flex items-center space-x-2">
+                  <span>{incidentType?.icon || '⚠️'}</span>
+                  <div>
+                    <div className="text-xs font-medium">{incident.description}</div>
+                    <div className="text-xs text-gray-500">
+                      {incident.reportedAt.toLocaleTimeString()}
+                    </div>
+                  </div>
+                </div>
+                <button
+                  onClick={() => resolveIncident(incident.id)}
+                  className="text-xs px-2 py-1 bg-green-500 text-white rounded hover:bg-green-600"
+                >
+                  Resolver
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Barra de progreso principal */}
+      <div className="w-full bg-gray-200 rounded-full h-3 mb-4 relative">
         <div
           className={`h-3 rounded-full transition-all duration-1000 ease-out ${getStatusColor()}`}
           style={{ width: `${Math.min(Math.max(progress, 0), 100)}%` }}
         >
-          {/* ✨ Animación para viajes activos */}
-          {(currentStatus === 'en_curso' || currentStatus === 'programado') && (
+          {currentStatus === 'en_curso' && (
             <div className="h-full w-full rounded-full opacity-75 animate-pulse"></div>
           )}
         </div>
-        
-        {/* 📍 Indicador de checkpoint si existe */}
-        {lastCheckpoint && progressMethod === 'gps_tracking' && (
-          <div 
-            className="absolute top-0 w-1 h-3 bg-white border border-gray-400 rounded-sm"
-            style={{ left: `${lastCheckpoint.progreso}%` }}
-            title={`Último checkpoint: ${lastCheckpoint.descripcion}`}
-          ></div>
-        )}
       </div>
 
-      {/* ⏰ Información mejorada */}
-      <div className="space-y-2 mb-3">
-        <div className="flex justify-between items-center text-xs text-gray-500">
-          <span>
-            Última actualización: {lastUpdate.toLocaleTimeString()}
-          </span>
-          <div className="flex items-center space-x-1">
-            <div className={`w-2 h-2 rounded-full ${connectionStatus.color} ${connectionStatus.pulse ? 'animate-pulse' : ''}`}></div>
-            <span>{connectionStatus.text}</span>
+      {/* Controles de progreso manual */}
+      {tripStarted && currentStatus !== 'completado' && (
+        <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+          <div className="text-sm text-blue-800 mb-2 font-medium">
+            📈 Actualizar Progreso
+          </div>
+          <div className="flex space-x-2">
+            <button
+              onClick={() => updateProgress(25)}
+              disabled={isUpdating || progress >= 25}
+              className="flex-1 px-2 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600 disabled:bg-gray-300"
+            >
+              25%
+            </button>
+            <button
+              onClick={() => updateProgress(50)}
+              disabled={isUpdating || progress >= 50}
+              className="flex-1 px-2 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600 disabled:bg-gray-300"
+            >
+              50%
+            </button>
+            <button
+              onClick={() => updateProgress(75)}
+              disabled={isUpdating || progress >= 75}
+              className="flex-1 px-2 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600 disabled:bg-gray-300"
+            >
+              75%
+            </button>
+            <button
+              onClick={() => updateProgress(100)}
+              disabled={isUpdating}
+              className="flex-1 px-2 py-1 bg-green-500 text-white text-xs rounded hover:bg-green-600 disabled:bg-gray-300"
+            >
+              Completar
+            </button>
           </div>
         </div>
-        
-        {/* 📍 Info del último checkpoint */}
-        {lastCheckpoint && (
-          <div className="text-xs text-gray-600 bg-gray-50 p-2 rounded">
-            <div className="flex items-center space-x-1">
-              <span className="font-medium">📍 Último checkpoint:</span>
-              <span>{lastCheckpoint.descripcion}</span>
-            </div>
-            <div className="text-gray-500 mt-1">
-              {new Date(lastCheckpoint.timestamp).toLocaleString()} • {lastCheckpoint.progreso}%
-            </div>
-          </div>
-        )}
-        
-        {/* 📊 Información del viaje del backend */}
-        {tripDetails && (
-          <div className="text-xs text-gray-600 bg-blue-50 p-2 rounded">
-            <div className="flex items-center justify-between">
-              <span className="font-medium">🚛 {tripDetails.truckId?.brand} {tripDetails.truckId?.model}</span>
-              <span>👤 {tripDetails.conductor?.id?.nombre || 'Conductor'}</span>
-            </div>
-            {tripDetails.ruta && (
-              <div className="mt-1 text-gray-500">
-                📍 {tripDetails.ruta.origen?.nombre} → {tripDetails.ruta.destino?.nombre}
-              </div>
-            )}
-          </div>
-        )}
-        
-        {/* 📊 Estadísticas de checkpoints */}
-        {totalCheckpoints > 0 && (
-          <div className="text-xs text-gray-500 text-center">
-            📍 {totalCheckpoints} checkpoint{totalCheckpoints > 1 ? 's' : ''} registrado{totalCheckpoints > 1 ? 's' : ''}
-          </div>
-        )}
-      </div>
+      )}
 
-      {/* 🔧 Controles de desarrollo mejorados */}
-      {process.env.NODE_ENV === 'development' && (
-        <div className="mt-4 pt-3 border-t border-gray-200">
-          {currentStatus === 'completado' ? (
-            /* ✅ Estado completado */
-            <div className="text-center">
-              <div className="inline-flex items-center space-x-2 px-3 py-2 bg-green-100 text-green-800 rounded-lg">
-                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                <span className="text-sm font-medium">Viaje Completado</span>
-                {totalCheckpoints > 0 && (
-                  <span className="text-xs">({totalCheckpoints} checkpoints)</span>
-                )}
-              </div>
-            </div>
-          ) : (
-            /* 🎮 Controles para viajes activos */
-            <>
-              <div className="text-xs text-gray-500 mb-2">
-                Controles para viaje {viajeId.slice(-4)} (usando rutas reales):
-              </div>
-              
-              {/* Controles básicos */}
-              <div className="flex space-x-2 mb-3">
-                {(currentStatus === 'programado' || currentStatus === 'pendiente') && (
-                  <button
-                    onClick={() => handleManualUpdate('start')}
-                    className="px-2 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600"
-                  >
-                    🚀 Iniciar
-                  </button>
-                )}
-                {(currentStatus === 'en_curso' || currentStatus === 'retrasado') && (
-                  <>
-                    <button
-                      onClick={() => handleManualUpdate('progress', progress + 10)}
-                      className="px-2 py-1 bg-green-500 text-white text-xs rounded hover:bg-green-600"
-                    >
-                      +10%
-                    </button>
-                    <button
-                      onClick={() => handleManualUpdate('complete')}
-                      className="px-2 py-1 bg-purple-500 text-white text-xs rounded hover:bg-purple-600"
-                    >
-                      ✅ Completar
-                    </button>
-                  </>
-                )}
-              </div>
-              
-              {/* 🆕 Simulación de GPS */}
-              {(currentStatus === 'en_curso' || currentStatus === 'retrasado') && (
-                <div className="space-y-2">
-                  <div className="text-xs text-gray-500">Simulación GPS:</div>
-                  <div className="grid grid-cols-2 gap-1">
-                    <button
-                      onClick={() => handleLocationUpdate(13.6929, -89.2182, 60)}
-                      className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded hover:bg-blue-200"
-                    >
-                      📍 San Salvador
-                    </button>
-                    <button
-                      onClick={() => handleLocationUpdate(13.4833, -88.1833, 55)}
-                      className="px-2 py-1 bg-green-100 text-green-700 text-xs rounded hover:bg-green-200"
-                    >
-                      📍 San Miguel
-                    </button>
-                    <button
-                      onClick={() => handleLocationUpdate(13.9942, -89.5592, 45)}
-                      className="px-2 py-1 bg-orange-100 text-orange-700 text-xs rounded hover:bg-orange-200"
-                    >
-                      📍 Santa Ana
-                    </button>
-                    <button
-                      onClick={() => handleLocationUpdate(13.7167, -89.1389, 50)}
-                      className="px-2 py-1 bg-purple-100 text-purple-700 text-xs rounded hover:bg-purple-200"
-                    >
-                      📍 Soyapango
-                    </button>
+      {/* Lista de checkpoints */}
+      <div className="space-y-2 mb-3">
+        <div className="text-xs font-medium text-gray-700 mb-2">
+          📋 Historial del viaje ({checkpoints.length} eventos)
+        </div>
+        
+        <div className="max-h-48 overflow-y-auto space-y-1">
+          {checkpoints
+            .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+            .slice(0, 10)
+            .map((checkpoint, index) => (
+              <div
+                key={`${checkpoint.tipo}-${checkpoint.timestamp}-${index}`}
+                className="p-2 rounded-lg border bg-gray-50 border-gray-200"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2 flex-1">
+                    {getCheckpointIcon(checkpoint)}
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-medium truncate text-gray-700">
+                        {checkpoint.descripcion}
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        Progreso: {checkpoint.progreso}%
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="text-xs text-gray-600">
+                    <Clock className="w-3 h-3 inline mr-1" />
+                    {new Date(checkpoint.timestamp).toLocaleTimeString()}
                   </div>
                 </div>
-              )}
-            </>
+              </div>
+            ))}
+        </div>
+      </div>
+
+      {/* Controles de incidentes */}
+      {tripStarted && currentStatus !== 'completado' && (
+        <div className="mb-3">
+          {!showIncidentForm ? (
+            <button
+              onClick={() => setShowIncidentForm(true)}
+              className="w-full flex items-center justify-center space-x-2 px-3 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors"
+            >
+              <AlertTriangle className="w-4 h-4" />
+              <span>Reportar Incidente</span>
+            </button>
+          ) : (
+            <div className="p-3 bg-orange-50 border border-orange-200 rounded-lg">
+              <div className="text-sm font-medium text-orange-800 mb-2">
+                ⚠️ Reportar Incidente
+              </div>
+              
+              <div className="grid grid-cols-2 gap-1 mb-2">
+                {incidentTypes.map(type => (
+                  <button
+                    key={type.id}
+                    onClick={() => setSelectedIncidentType(type.id)}
+                    className={`text-xs p-1 rounded border ${
+                      selectedIncidentType === type.id 
+                        ? 'bg-orange-200 border-orange-400' 
+                        : 'bg-white border-gray-200'
+                    }`}
+                  >
+                    {type.icon} {type.label}
+                  </button>
+                ))}
+              </div>
+              
+              <textarea
+                value={incidentDescription}
+                onChange={(e) => setIncidentDescription(e.target.value)}
+                placeholder="Describe el incidente..."
+                className="w-full text-xs p-2 border border-gray-300 rounded mb-2"
+                rows="2"
+              />
+              
+              <div className="flex space-x-2">
+                <button
+                  onClick={reportIncident}
+                  disabled={!selectedIncidentType || !incidentDescription.trim()}
+                  className="flex-1 px-2 py-1 bg-orange-500 text-white text-xs rounded hover:bg-orange-600 disabled:bg-gray-300"
+                >
+                  Reportar
+                </button>
+                <button
+                  onClick={() => {
+                    setShowIncidentForm(false);
+                    setSelectedIncidentType('');
+                    setIncidentDescription('');
+                  }}
+                  className="px-2 py-1 bg-gray-300 text-gray-700 text-xs rounded hover:bg-gray-400"
+                >
+                  Cancelar
+                </button>
+              </div>
+            </div>
           )}
         </div>
       )}
 
-      {/* 🐛 Debug info mejorada */}
-      {process.env.NODE_ENV === 'development' && (
-        <div className="mt-2 pt-2 border-t border-gray-100">
-          <div className="text-xs text-gray-400">
-            Viaje: {viajeId.slice(-4)} | Progreso: {progress}% | Estado: {currentStatus} | 
-            Método: {progressMethod} | Checkpoints: {totalCheckpoints} | API: {apiAvailable?.toString()}
+      {/* Información de actualización */}
+      <div className="space-y-2 mb-3">
+        <div className="flex justify-between items-center text-xs text-gray-500">
+          <span>Última actualización: {lastUpdate.toLocaleTimeString()}</span>
+          <div className="flex items-center space-x-1">
+            <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-400' : 'bg-red-400'} ${isConnected ? 'animate-pulse' : ''}`}></div>
+            <span>{isConnected ? 'AutoUpdate Activo' : 'Sin conexión'}</span>
           </div>
         </div>
-      )}
+        
+        <div className="text-xs text-gray-600 bg-gray-50 p-2 rounded">
+          <div className="flex justify-between">
+            <span>Eventos registrados:</span>
+            <span className="font-medium">{checkpoints.length}</span>
+          </div>
+          <div className="flex justify-between">
+            <span>Incidentes activos:</span>
+            <span className="font-medium text-orange-600">{activeIncidents.length}</span>
+          </div>
+          <div className="flex justify-between">
+            <span>Estado del viaje:</span>
+            <span className="font-medium">{tripStarted ? 'Iniciado' : 'Pendiente'}</span>
+          </div>
+          {viajeData?.departureTime && (
+            <div className="flex justify-between">
+              <span>Hora programada:</span>
+              <span className="font-medium">{new Date(viajeData.departureTime).toLocaleTimeString()}</span>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 };
