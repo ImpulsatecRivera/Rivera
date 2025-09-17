@@ -1,4 +1,55 @@
-// Handler para cambio de imagen - CON DEBUG EXTENSIVO
+import React, { useState } from 'react';
+import { Truck, CreditCard, Car, Building, Calendar, Fuel, User, FileText } from 'lucide-react';
+import { useForm } from "react-hook-form";
+import { useTruckForm } from "../../components/Camiones/hooks/hookFormCamiones";
+import Swal from "sweetalert2";
+import "animate.css";
+
+// Importar componentes de FormsCamiones (que ya tienes)
+import FormHeader from '../../components/FormsCamiones/FormHeader';
+import FormHeroSection from '../../components/FormsCamiones/FormHeroSection';
+import FormContainer from '../../components/FormsCamiones/FormContainer';
+import ImageUploadSection from '../../components/FormsCamiones/ImageUploadSection';
+import BasicInfoFields from '../../components/FormsCamiones/BasicInfoFields';
+import VehicleDetailsFields from '../../components/FormsCamiones/VehicleDetailsFields';
+import AssignmentFields from '../../components/FormsCamiones/AssignmentFields';
+import DescriptionField from '../../components/FormsCamiones/DescriptionField';
+import SubmitButton from '../../components/FormsCamiones/SubmitButton';
+
+const FormAggCamion = ({ onNavigateBack, onSubmitSuccess }) => {
+  const [imagePreview, setImagePreview] = useState(null);
+  const [imageFile, setImageFile] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+    reset,
+    setValue,
+    watch
+  } = useForm();
+
+  const {
+    onSubmit,
+    motoristasDisponibles,
+    proveedoresDisponibles,
+  } = useTruckForm();
+
+  // Handler para volver al menú
+  const handleBackToMenu = () => {
+    if (onNavigateBack) {
+      onNavigateBack();
+    } else {
+      if (window.history.length > 1) {
+        window.history.back();
+      } else {
+        console.log('Navegar a la página anterior');
+      }
+    }
+  };
+
+  // Handler para cambio de imagen - CON DEBUG EXTENSIVO
   const handleImageChange = (e) => {
     console.log('🔥 === INICIO handleImageChange ===');
     console.log('🔥 Event completo:', e);
@@ -69,94 +120,6 @@
     }
     
     console.log('🔥 === FIN handleImageChange ===');
-  };import React, { useState } from 'react';
-import { Truck, CreditCard, Car, Building, Calendar, Fuel, User, FileText } from 'lucide-react';
-import { useForm } from "react-hook-form";
-import { useTruckForm } from "../../components/Camiones/hooks/hookFormCamiones";
-import Swal from "sweetalert2";
-import "animate.css";
-
-// Importar componentes de FormsCamiones (que ya tienes)
-import FormHeader from '../../components/FormsCamiones/FormHeader';
-import FormHeroSection from '../../components/FormsCamiones/FormHeroSection';
-import FormContainer from '../../components/FormsCamiones/FormContainer';
-import ImageUploadSection from '../../components/FormsCamiones/ImageUploadSection';
-import BasicInfoFields from '../../components/FormsCamiones/BasicInfoFields';
-import VehicleDetailsFields from '../../components/FormsCamiones/VehicleDetailsFields';
-import AssignmentFields from '../../components/FormsCamiones/AssignmentFields';
-import DescriptionField from '../../components/FormsCamiones/DescriptionField';
-import SubmitButton from '../../components/FormsCamiones/SubmitButton';
-
-const FormAggCamion = ({ onNavigateBack, onSubmitSuccess }) => {
-  const [imagePreview, setImagePreview] = useState(null);
-  const [imageFile, setImageFile] = useState(null); // Estado separado para el archivo
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-    reset,
-    setValue,
-    watch
-  } = useForm();
-
-  const {
-    onSubmit,
-    motoristasDisponibles,
-    proveedoresDisponibles,
-  } = useTruckForm();
-
-  // Handler para volver al menú
-  const handleBackToMenu = () => {
-    if (onNavigateBack) {
-      onNavigateBack();
-    } else {
-      if (window.history.length > 1) {
-        window.history.back();
-      } else {
-        console.log('Navegar a la página anterior');
-      }
-    }
-  };
-
-  // Handler para cambio de imagen - MEJORADO
-  const handleImageChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      // Validar tipo de archivo
-      if (!file.type.startsWith('image/')) {
-        Swal.fire({
-          title: 'Formato no válido',
-          text: 'Por favor selecciona una imagen en formato JPG, PNG o GIF',
-          icon: 'warning',
-          confirmButtonText: 'Entendido',
-          confirmButtonColor: '#f59e0b'
-        });
-        return;
-      }
-      
-
-
-      // Guardar el archivo en el estado
-      setImageFile(file);
-      
-      // Setear el archivo en react-hook-form usando setValue
-      setValue('img', file, { shouldValidate: true });
-
-      // Crear preview
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        setImagePreview(e.target.result);
-      };
-      reader.readAsDataURL(file);
-
-      console.log('=== DEBUG IMAGE CHANGE ===');
-      console.log('Archivo seleccionado:', file);
-      console.log('Nombre:', file.name);
-      console.log('Tamaño:', file.size);
-      console.log('Tipo:', file.type);
-    }
   };
 
   // Handler para remover imagen - COMPATIBLE CON EL HOOK
@@ -258,22 +221,22 @@ const FormAggCamion = ({ onNavigateBack, onSubmitSuccess }) => {
       console.log('Tipo de data.img:', typeof data.img);
 
       // VERIFICACIÓN INTELIGENTE DE LA IMAGEN
-      let imageFile;
+      let finalImageFile;
       if (data.img instanceof FileList && data.img.length > 0) {
-        imageFile = data.img[0];
-        console.log('✅ Imagen encontrada en FileList:', imageFile);
+        finalImageFile = data.img[0];
+        console.log('✅ Imagen encontrada en FileList:', finalImageFile);
       } else if (data.img instanceof File) {
-        imageFile = data.img;
-        console.log('✅ Imagen encontrada como File directo:', imageFile);
+        finalImageFile = data.img;
+        console.log('✅ Imagen encontrada como File directo:', finalImageFile);
       } else {
         console.log('❌ No se encontró imagen válida');
         throw new Error('Debe seleccionar una imagen para el camión');
       }
 
       console.log('🔥 Imagen final para enviar:', {
-        name: imageFile.name,
-        size: imageFile.size,
-        type: imageFile.type
+        name: finalImageFile.name,
+        size: finalImageFile.size,
+        type: finalImageFile.type
       });
 
       // Mostrar alerta de carga
@@ -284,7 +247,7 @@ const FormAggCamion = ({ onNavigateBack, onSubmitSuccess }) => {
       const dataToSubmit = {
         ...data,
         state: "disponible",
-        img: data.img instanceof FileList ? data.img : [imageFile] // Asegurar formato array-like
+        img: data.img instanceof FileList ? data.img : [finalImageFile] // Asegurar formato array-like
       };
 
       console.log('=== DEBUG DATOS PARA ENVÍO ===');
