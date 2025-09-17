@@ -33,7 +33,7 @@ const fmtTime = (iso) => {
   }
 };
 
-const QuoteSheet = ({ visible, item, onClose, onConfirm }) => {
+const QuoteSheet = ({ visible, item, onClose }) => {
   const anim = useRef(new Animated.Value(SHEET_HEIGHT)).current;
 
   useEffect(() => {
@@ -78,12 +78,11 @@ const QuoteSheet = ({ visible, item, onClose, onConfirm }) => {
         </View>
 
         <View style={styles.footer}>
-          {!!onConfirm && (
-            <TouchableOpacity style={[styles.actionBtn, { backgroundColor: '#10AC84' }]} onPress={onConfirm}>
-              <Text style={styles.actionText}>Cotizar</Text>
-            </TouchableOpacity>
-          )}
-          <TouchableOpacity style={[styles.actionBtn, { backgroundColor: '#FF4757', marginTop: 10 }]} onPress={onClose}>
+          {/* Solo botón cerrar */}
+          <TouchableOpacity
+            style={[styles.actionBtn, { backgroundColor: '#FF4757' }]}
+            onPress={onClose}
+          >
             <Text style={styles.actionText}>Cerrar</Text>
           </TouchableOpacity>
         </View>
