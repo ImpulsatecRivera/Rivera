@@ -8,7 +8,7 @@ import senalImg from '../images/senal.png';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const ViajesScreen = ({ navigation }) => {
-  const { user, isAuthenticated } = useAuth(); // Obtener contexto completo
+  const { user, isAuthenticated } = useAuth();
   const { profile, loading: profileLoading } = useProfile();
   const [motoristaId, setMotoristaId] = useState(null);
   
@@ -18,28 +18,28 @@ const ViajesScreen = ({ navigation }) => {
       // 1. Prioridad: AsyncStorage (donde lo guarda el contexto)
       const storedId = await AsyncStorage.getItem('motoristaId');
       if (storedId) {
-        console.log('🆔 ID encontrado en AsyncStorage:', storedId);
+        console.log('ID encontrado en AsyncStorage:', storedId);
         return storedId;
       }
 
       // 2. Fallback: Contexto
       const contextId = user?._id || user?.id;
       if (contextId) {
-        console.log('🆔 ID encontrado en contexto:', contextId);
+        console.log('ID encontrado en contexto:', contextId);
         return contextId.toString();
       }
 
       // 3. Fallback: Profile
       const profileId = profile?.id || profile?._id;
       if (profileId) {
-        console.log('🆔 ID encontrado en profile:', profileId);
+        console.log('ID encontrado en profile:', profileId);
         return profileId.toString();
       }
 
-      console.log('❌ No se encontró ID de motorista');
+      console.log('No se encontró ID de motorista');
       return null;
     } catch (error) {
-      console.error('❌ Error obteniendo motorista ID:', error);
+      console.error('Error obteniendo motorista ID:', error);
       return null;
     }
   };
@@ -50,19 +50,19 @@ const ViajesScreen = ({ navigation }) => {
       if (isAuthenticated) {
         const id = await obtenerMotoristaId();
         if (id && id !== motoristaId) {
-          console.log('🔄 Estableciendo motorista ID:', id);
+          console.log('Estableciendo motorista ID:', id);
           setMotoristaId(id);
         }
       } else {
-        console.log('❌ Usuario no autenticado');
+        console.log('Usuario no autenticado');
         setMotoristaId(null);
       }
     };
 
     setupMotoristaId();
-  }, [user, profile, isAuthenticated]); // Dependencias para reaccionar a cambios
+  }, [user, profile, isAuthenticated]);
 
-  // IMPORTANTE: Solo llamar useTrips cuando tengamos el motoristaId
+  // Hook useTrips - solo se ejecuta cuando tenemos motoristaId
   const { 
     trips,
     loading, 
@@ -70,7 +70,7 @@ const ViajesScreen = ({ navigation }) => {
     refrescarViajes,
     totalTrips,
     estadisticas
-  } = useTrips(motoristaId, 'historial'); // Pasar el ID obtenido
+  } = useTrips(motoristaId, 'historial');
 
   const [filtroEstado, setFiltroEstado] = useState('todos');
 
@@ -116,7 +116,7 @@ const ViajesScreen = ({ navigation }) => {
   };
 
   const onRefresh = () => {
-    console.log('🔄 Refrescando viajes...');
+    console.log('Refrescando viajes...');
     refrescarViajes();
   };
 
@@ -139,13 +139,16 @@ const ViajesScreen = ({ navigation }) => {
   // Obtener datos organizados
   const viajesFiltrados = getViajesFiltrados();
 
-  // Mostrar loading si está cargando el perfil o los viajes, o si no tenemos motoristaId
-  if (profileLoading || loading || !motoristaId) {
+  // Condición de loading corregida
+  if (profileLoading || (isAuthenticated && !motoristaId) || (motoristaId && loading)) {
     return (
       <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
         <Text style={styles.loadingText}>Cargando viajes...</Text>
         {!isAuthenticated && (
           <Text style={styles.errorText}>Por favor, inicia sesión</Text>
+        )}
+        {isAuthenticated && !motoristaId && (
+          <Text style={styles.debugText}>Obteniendo ID de motorista...</Text>
         )}
       </View>
     );
@@ -222,23 +225,23 @@ const ViajesScreen = ({ navigation }) => {
         {/* Información de debug */}
         <View style={styles.debugInfo}>
           <Text style={styles.debugText}>
-            📊 Mostrando {viajesFiltrados.length} de {totalTrips} viajes
+            Mostrando {viajesFiltrados.length} de {totalTrips} viajes
           </Text>
           <Text style={styles.debugText}>
-            🎯 Filtro actual: {filtroEstado}
+            Filtro actual: {filtroEstado}
           </Text>
           <Text style={styles.debugText}>
-            👤 Motorista ID: {motoristaId}
+            Motorista ID: {motoristaId}
           </Text>
           <Text style={styles.debugText}>
-            🔐 Usuario autenticado: {isAuthenticated ? 'Sí' : 'No'}
+            Usuario autenticado: {isAuthenticated ? 'Sí' : 'No'}
           </Text>
           <Text style={styles.debugText}>
-            👤 Usuario del contexto: {user?.name || 'No disponible'}
+            Usuario del contexto: {user?.name || 'No disponible'}
           </Text>
           {error && (
             <Text style={styles.debugError}>
-              ❌ Error: {error}
+              Error: {error}
             </Text>
           )}
         </View>
@@ -265,7 +268,6 @@ const ViajesScreen = ({ navigation }) => {
             ))}
           </View>
         ) : (
-          /* No hay viajes con el filtro actual */
           <View style={styles.noTripsContainer}>
             <Text style={styles.noTripsIcon}>📋</Text>
             <Text style={styles.noTripsText}>
