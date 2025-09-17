@@ -18,6 +18,7 @@ import SubmitButton from '../../components/FormsCamiones/SubmitButton';
 
 const FormAggCamion = ({ onNavigateBack, onSubmitSuccess }) => {
   const [imagePreview, setImagePreview] = useState(null);
+  const [imageFile, setImageFile] = useState(null); // Estado separado para el archivo
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const {
@@ -25,7 +26,8 @@ const FormAggCamion = ({ onNavigateBack, onSubmitSuccess }) => {
     handleSubmit,
     formState: { errors },
     reset,
-    setValue
+    setValue,
+    watch
   } = useForm();
 
   const {
@@ -47,7 +49,7 @@ const FormAggCamion = ({ onNavigateBack, onSubmitSuccess }) => {
     }
   };
 
-  // Handler para cambio de imagen
+  // Handler para cambio de imagen - MEJORADO
   const handleImageChange = (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -75,20 +77,38 @@ const FormAggCamion = ({ onNavigateBack, onSubmitSuccess }) => {
         return;
       }
 
+      // Guardar el archivo en el estado
+      setImageFile(file);
+      
+      // Setear el archivo en react-hook-form usando setValue
+      setValue('img', file, { shouldValidate: true });
+
+      // Crear preview
       const reader = new FileReader();
       reader.onload = (e) => {
         setImagePreview(e.target.result);
       };
       reader.readAsDataURL(file);
+
+      console.log('=== DEBUG IMAGE CHANGE ===');
+      console.log('Archivo seleccionado:', file);
+      console.log('Nombre:', file.name);
+      console.log('Tamaño:', file.size);
+      console.log('Tipo:', file.type);
     }
   };
 
-  // Handler para remover imagen
+  // Handler para remover imagen - MEJORADO
   const removeImage = () => {
     setImagePreview(null);
-    setValue('img', null);
+    setImageFile(null);
+    setValue('img', null, { shouldValidate: true });
+    
+    // Limpiar el input file
     const fileInput = document.getElementById('img-input');
-    if (fileInput) fileInput.value = '';
+    if (fileInput) {
+      fileInput.value = '';
+    }
   };
 
   // Función para mostrar alerta de formulario incompleto
@@ -159,26 +179,38 @@ const FormAggCamion = ({ onNavigateBack, onSubmitSuccess }) => {
     });
   };
 
-  // Handler personalizado para el submit
+  // Handler personalizado para el submit - MEJORADO
   const handleCustomSubmit = async (data) => {
     try {
       setIsSubmitting(true);
       
+      console.log('=== DEBUG ANTES DEL SUBMIT ===');
+      console.log('Datos del formulario:', data);
+      console.log('Archivo de imagen del state:', imageFile);
+      console.log('Imagen de los datos del form:', data.img);
+
+      // Verificar si hay imagen antes de enviar
+      if (!imageFile && !data.img) {
+        throw new Error('Debe seleccionar una imagen para el camión');
+      }
+
       // Mostrar alerta de carga
       showLoadingAlert();
 
-      // Agregar automáticamente el estado "disponible"
-      const dataWithState = {
+      // Preparar los datos para el envío
+      const dataToSubmit = {
         ...data,
-        state: "disponible"
+        state: "disponible",
+        // Asegurar que la imagen esté incluida
+        img: imageFile || data.img
       };
 
-      console.log('=== DEBUG FORMULARIO CAMIÓN ===');
-      console.log('Datos con estado agregado:', dataWithState);
-      console.log('Archivo de imagen:', data.img?.[0]);
+      console.log('=== DEBUG DATOS PARA ENVÍO ===');
+      console.log('Datos con estado agregado:', dataToSubmit);
+      console.log('Archivo de imagen final:', dataToSubmit.img);
 
       // Llamar a la función onSubmit original
-      const result = await onSubmit(dataWithState);
+      const result = await onSubmit(dataToSubmit);
       console.log('Resultado del onSubmit:', result);
 
       // Si todo sale bien, mostrar alerta de éxito
@@ -187,6 +219,7 @@ const FormAggCamion = ({ onNavigateBack, onSubmitSuccess }) => {
       // Resetear formulario
       reset();
       setImagePreview(null);
+      setImageFile(null);
 
     } catch (error) {
       // Log del error para debug
