@@ -1,14 +1,22 @@
-// Handler para cambio de imagen - COMPATIBLE CON EL HOOK
+// Handler para cambio de imagen - CON DEBUG EXTENSIVO
   const handleImageChange = (e) => {
+    console.log('🔥 === INICIO handleImageChange ===');
+    console.log('🔥 Event completo:', e);
+    console.log('🔥 e.target:', e.target);
+    console.log('🔥 e.target.files:', e.target.files);
+    console.log('🔥 Tipo de e.target.files:', typeof e.target.files);
+    console.log('🔥 Es FileList?:', e.target.files instanceof FileList);
+    console.log('🔥 Longitud:', e.target.files?.length);
+    
     const file = e.target.files[0];
-    console.log('=== INICIO handleImageChange ===');
-    console.log('Event:', e);
-    console.log('Files:', e.target.files);
-    console.log('File seleccionado:', file);
+    console.log('🔥 File extraído:', file);
+    console.log('🔥 Tipo de file:', typeof file);
+    console.log('🔥 Es File?:', file instanceof File);
     
     if (file) {
       // Validar tipo de archivo
       if (!file.type.startsWith('image/')) {
+        console.log('❌ Tipo de archivo inválido:', file.type);
         Swal.fire({
           title: 'Formato no válido',
           text: 'Por favor selecciona una imagen en formato JPG, PNG o GIF',
@@ -19,31 +27,48 @@
         return;
       }
 
+      console.log('✅ Archivo válido, procediendo...');
+      
       // Guardar el archivo en el estado
       setImageFile(file);
+      console.log('🔥 ImageFile guardado en state:', file);
       
-      // IMPORTANTE: El hook espera un FileList, NO un File individual
-      // Creamos un FileList-like object o usamos los files originales del evento
+      // PROBAR MÚLTIPLES MÉTODOS PARA SETEAR
+      console.log('🔥 Intentando setValue con FileList completo...');
       setValue('img', e.target.files, { 
         shouldValidate: true,
         shouldDirty: true,
         shouldTouch: true 
       });
+      
+      // Verificar inmediatamente después de setValue
+      const currentFormValue = watch('img');
+      console.log('🔥 Valor en formulario después de setValue:', currentFormValue);
+      console.log('🔥 Tipo del valor en formulario:', typeof currentFormValue);
+      console.log('🔥 Es FileList el valor en formulario?:', currentFormValue instanceof FileList);
+      console.log('🔥 Longitud del valor en formulario:', currentFormValue?.length);
+      console.log('🔥 Primer archivo del valor en formulario:', currentFormValue?.[0]);
 
       // Crear preview
       const reader = new FileReader();
       reader.onload = (e) => {
+        console.log('🔥 Preview creado exitosamente');
         setImagePreview(e.target.result);
       };
       reader.readAsDataURL(file);
 
-      console.log('=== DEBUG IMAGE CHANGE ===');
-      console.log('Archivo seleccionado:', file);
-      console.log('FileList completo:', e.target.files);
-      console.log('Nombre:', file.name);
-      console.log('Tamaño:', file.size);
-      console.log('Tipo:', file.type);
+      console.log('🔥 === DEBUG IMAGE CHANGE COMPLETO ===');
+      console.log('🔥 Archivo seleccionado:', {
+        name: file.name,
+        size: file.size,
+        type: file.type,
+        lastModified: file.lastModified
+      });
+    } else {
+      console.log('❌ No se seleccionó ningún archivo');
     }
+    
+    console.log('🔥 === FIN handleImageChange ===');
   };import React, { useState } from 'react';
 import { Truck, CreditCard, Car, Building, Calendar, Fuel, User, FileText } from 'lucide-react';
 import { useForm } from "react-hook-form";
@@ -219,7 +244,7 @@ const FormAggCamion = ({ onNavigateBack, onSubmitSuccess }) => {
     });
   };
 
-  // Handler personalizado para el submit - MEJORADO
+  // Handler personalizado para el submit - SOLUCIÓN DEFINITIVA
   const handleCustomSubmit = async (data) => {
     try {
       setIsSubmitting(true);
@@ -229,28 +254,44 @@ const FormAggCamion = ({ onNavigateBack, onSubmitSuccess }) => {
       console.log('Archivo de imagen del state:', imageFile);
       console.log('Imagen de los datos del form:', data.img);
       console.log('¿Es FileList?:', data.img instanceof FileList);
-      console.log('Longitud de FileList:', data.img?.length);
-      console.log('Primer archivo del FileList:', data.img?.[0]);
+      console.log('¿Es File?:', data.img instanceof File);
+      console.log('Tipo de data.img:', typeof data.img);
 
-      // Verificar si hay imagen antes de enviar
-      if (!data.img || !data.img[0]) {
+      // VERIFICACIÓN INTELIGENTE DE LA IMAGEN
+      let imageFile;
+      if (data.img instanceof FileList && data.img.length > 0) {
+        imageFile = data.img[0];
+        console.log('✅ Imagen encontrada en FileList:', imageFile);
+      } else if (data.img instanceof File) {
+        imageFile = data.img;
+        console.log('✅ Imagen encontrada como File directo:', imageFile);
+      } else {
+        console.log('❌ No se encontró imagen válida');
         throw new Error('Debe seleccionar una imagen para el camión');
       }
+
+      console.log('🔥 Imagen final para enviar:', {
+        name: imageFile.name,
+        size: imageFile.size,
+        type: imageFile.type
+      });
 
       // Mostrar alerta de carga
       showLoadingAlert();
 
-      // Preparar los datos para el envío - MANTENER TAL COMO ESPERA EL HOOK
+      // CONVERTIR A FORMATO QUE ESPERA EL HOOK
+      // El hook espera data.img[0], así que creamos un objeto que simule FileList
       const dataToSubmit = {
         ...data,
-        state: "disponible"
-        // NO modificar data.img, dejarlo como FileList
+        state: "disponible",
+        img: data.img instanceof FileList ? data.img : [imageFile] // Asegurar formato array-like
       };
 
       console.log('=== DEBUG DATOS PARA ENVÍO ===');
       console.log('Datos con estado agregado:', dataToSubmit);
-      console.log('FileList final:', dataToSubmit.img);
-      console.log('Archivo final:', dataToSubmit.img?.[0]);
+      console.log('Imagen final en formato esperado:', dataToSubmit.img);
+      console.log('¿Tiene índice [0]?:', !!dataToSubmit.img[0]);
+      console.log('Archivo en [0]:', dataToSubmit.img[0]);
 
       // Llamar a la función onSubmit original
       const result = await onSubmit(dataToSubmit);
