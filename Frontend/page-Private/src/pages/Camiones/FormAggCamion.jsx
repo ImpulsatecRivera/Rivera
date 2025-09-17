@@ -65,17 +65,7 @@ const FormAggCamion = ({ onNavigateBack, onSubmitSuccess }) => {
         return;
       }
       
-      // Validar tamaño (máximo 5MB)
-      if (file.size > 5 * 1024 * 1024) {
-        Swal.fire({
-          title: 'Archivo muy grande',
-          text: 'La imagen debe ser menor a 5MB',
-          icon: 'warning',
-          confirmButtonText: 'Entendido',
-          confirmButtonColor: '#f59e0b'
-        });
-        return;
-      }
+
 
       // Guardar el archivo en el estado
       setImageFile(file);
