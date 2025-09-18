@@ -32,7 +32,7 @@ const RecuperacionTelefonoScreen = ({ navigation }) => {
       console.log('📞 Número completo:', fullPhoneNumber);
       
       // ✅ IP CONFIGURADA - Ajusta según tu configuración
-      const API_URL = 'https://riveraproject-5.onrender.com/api/recovery/requestCode';
+      const API_URL = 'riveraproject-production.up.railway.app/api/recovery/requestCode';
       
       console.log('🌐 Conectando a:', API_URL);
       const response = await fetch(API_URL, {

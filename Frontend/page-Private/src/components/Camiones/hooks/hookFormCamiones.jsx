@@ -2,9 +2,9 @@
 import { useForm } from "react-hook-form";
 import { useEffect, useState } from "react";
 
-const API_URL_MOTORISTAS = "https://riveraproject-5.onrender.com/api/motoristas";
-const API_URL_PROVEEDORES = "https://riveraproject-5.onrender.com/api/proveedores"; 
-const API_URL_CAMIONES = "https://riveraproject-5.onrender.com/api/camiones";
+const API_URL_MOTORISTAS = "riveraproject-production.up.railway.app/api/motoristas";
+const API_URL_PROVEEDORES = "riveraproject-production.up.railway.app/api/proveedores"; 
+const API_URL_CAMIONES = "riveraproject-production.up.railway.app/api/camiones";
 
 export const useTruckForm = (onSuccess) => {
   const [motoristasDisponibles, setMotoristasDisponibles] = useState([]);

@@ -35,7 +35,7 @@ const useMotoristaManagement = () => {
       setLoading(true);
       setError(null);
       
-      const response = await axios.get('https://riveraproject-5.onrender.com/api/motoristas');
+      const response = await axios.get('riveraproject-production.up.railway.app/api/motoristas');
       
       if (response.data && Array.isArray(response.data)) {
         setMotoristas(response.data);
@@ -156,7 +156,7 @@ const useMotoristaManagement = () => {
     if (!selectedMotorista) return;
 
     try {
-      await axios.delete(`https://riveraproject-5.onrender.com/api/motoristas/${selectedMotorista._id || selectedMotorista.id}`);
+      await axios.delete(`riveraproject-production.up.railway.app/api/motoristas/${selectedMotorista._id || selectedMotorista.id}`);
       
       // Actualizar lista local
       setMotoristas(prevMotoristas => 
@@ -217,7 +217,7 @@ const useMotoristaManagement = () => {
         
         // Usar fetch para FormData (mejor compatibilidad que axios)
         const fetchResponse = await fetch(
-          `https://riveraproject-5.onrender.com/api/motoristas/${selectedMotorista._id || selectedMotorista.id}`,
+          `riveraproject-production.up.railway.app/api/motoristas/${selectedMotorista._id || selectedMotorista.id}`,
           {
             method: 'PUT',
             body: submitData,
@@ -269,7 +269,7 @@ const useMotoristaManagement = () => {
         console.log('Datos a enviar (sin imagen):', updateData);
 
         response = await axios.put(
-          `https://riveraproject-5.onrender.com/api/motoristas/${selectedMotorista._id || selectedMotorista.id}`,
+          `riveraproject-production.up.railway.app/api/motoristas/${selectedMotorista._id || selectedMotorista.id}`,
           updateData,
           {
             headers: {

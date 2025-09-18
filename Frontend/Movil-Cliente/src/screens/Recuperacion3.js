@@ -75,7 +75,7 @@ const Recuperacion3 = ({ navigation, route }) => {
 
     setLoading(true);
     try {
-      const API_URL = 'https://riveraproject-5.onrender.com/api/recovery/newPassword';
+      const API_URL = 'riveraproject-production.up.railway.app/api/recovery/newPassword';
       
       const payload = {
         email: email,
