@@ -210,7 +210,7 @@ const AgregarProveedor = () => {
 
       console.log('Enviando datos:', dataToSend);
 
-      const response = await fetch('https://riveraproject-5.onrender.com/api/proveedores', {
+      const response = await fetch('riveraproject-production.up.railway.app/api/proveedores', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -22,7 +22,7 @@ export const useTruckDetail = (truckId) => {
       console.log('=== OBTENIENDO LISTA DE MOTORISTAS ===');
       
       const response = await fetchWithTimeout(
-        `https://riveraproject-5.onrender.com/api/motoristas`,
+        `riveraproject-production.up.railway.app/api/motoristas`,
         {
           method: 'GET',
           headers: {
@@ -86,7 +86,7 @@ export const useTruckDetail = (truckId) => {
       
       // NUEVO: Usar el endpoint que incluye estadísticas
       const response = await fetchWithTimeout(
-        `https://riveraproject-5.onrender.com/api/camiones/${truckId}/stats`,
+        `riveraproject-production.up.railway.app/api/camiones/${truckId}/stats`,
         {
           method: 'GET',
           headers: {

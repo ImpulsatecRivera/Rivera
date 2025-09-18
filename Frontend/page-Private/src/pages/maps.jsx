@@ -17,7 +17,7 @@ const RiveraTransportMapDemo = () => {
   const mapInstanceRef = useRef(null);
 
   // URL fija de tu backend
-  const API_BASE_URL = 'https://riveraproject-5.onrender.com';
+  const API_BASE_URL = 'riveraproject-production.up.railway.app';
 
   // Mapear estados del backend al frontend
   const mapBackendStatus = (status) => {

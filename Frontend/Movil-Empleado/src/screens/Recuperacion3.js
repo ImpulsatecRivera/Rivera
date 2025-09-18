@@ -54,7 +54,7 @@ const Recuperacion3 = ({ navigation, route }) => {
       console.log('🔐 Actualizando contraseña para:', email);
       console.log('🎫 Verified Token presente:', !!verifiedToken);
       
-      const API_URL = 'https://riveraproject-5.onrender.com/api/recovery/newPassword';
+      const API_URL = 'riveraproject-production.up.railway.app/api/recovery/newPassword';
       
       console.log('🌐 Conectando a:', API_URL);
       

@@ -35,7 +35,7 @@ const LoginScreen = () => {
     setIsLoading(true);
 
     try {
-      const response = await fetch('https://riveraproject-5.onrender.com/api/login', {
+      const response = await fetch('riveraproject-production.up.railway.app/api/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
