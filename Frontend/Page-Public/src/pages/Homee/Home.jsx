@@ -126,7 +126,7 @@ const Home = () => {
               nuestra empresa
             </h2>
             <p className="intro-text">
-              La empresa ofrece servicios integrales de transportes de carga, distribución y gestión logística a nivel nacional e internacional. Nos enfocamos en ser eficientes y puntuales, adaptándonos a las necesidades de cada cliente, con un equipo profesional y una ética de manufactura que garantizan calidad y confiabilidad en todo lo que hacemos.
+              La empresa ofrece servicios integrales de transportes de carga, distribuciów y gestión logística a nivel nacional e internacional. Nos enfocamos en ser eficientes y puntuales, adaptándonos a las necesidades de cada cliente, con un equipo profesional y una ética de manufactura que garantizan calidad y confiabilidad en todo lo que hacemos.
             </p>
           </div>
           <div className="intro-image-section">
