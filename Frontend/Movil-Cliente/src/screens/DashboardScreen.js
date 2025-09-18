@@ -13,7 +13,7 @@ import LottieView from 'lottie-react-native';
 import Summer from "../assets/lottie/Summer Vibes.json";
 import Rain from "../assets/lottie/rainy icon.json";
 import Cloudy from "../assets/lottie/Cloudy Animation.json";
-import Location from "../assets/lottie/Location forked.json";
+import Location from "../assets/lottie/Add Document.json";
 import { useRealWeather } from '../hooks/useRealWheather';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -135,11 +135,11 @@ const DashboardScreen = () => {
             {error}. Desliza hacia abajo para reintentar.
           </Text>
           <TouchableOpacity 
-            style={[styles.addButton, { marginTop: 12 }]} 
+            style={[styles.retryButton, { marginTop: 12 }]} 
             onPress={() => reloadRef.current()}
           >
-            <View style={styles.addButtonContent}>
-              <Text style={styles.addButtonText}>🔄 Reintentar</Text>
+            <View style={styles.retryButtonContent}>
+              <Text style={styles.retryButtonText}>🔄 Reintentar</Text>
             </View>
           </TouchableOpacity>
         </View>
@@ -154,24 +154,8 @@ const DashboardScreen = () => {
             ¡Aún no tienes cotizaciones!
           </Text>
           <Text style={styles.emptySubtitle}>
-            Crea tu primera cotización y aprovecha el 30% OFF de este mes.
+            Usa el botón flotante para crear tu primera cotización y aprovechar el 30% OFF de este mes.
           </Text>
-          <TouchableOpacity 
-            style={[styles.addButton, { marginTop: 16 }]} 
-            onPress={handleAddQuote}
-          >
-            <View style={styles.addButtonContent}>
-              <View style={styles.locationLottieContainer}>
-                <LottieView
-                  source={Location}
-                  autoPlay
-                  loop
-                  style={styles.locationLottie}
-                />
-              </View>
-              <Text style={styles.addButtonText}>Crear mi primera cotización</Text>
-            </View>
-          </TouchableOpacity>
         </View>
       );
     }
@@ -193,7 +177,7 @@ const DashboardScreen = () => {
         ))}
       </View>
     );
-  }, [loading, error, quotes, handleAddQuote, handleProjectPress]);
+  }, [loading, error, quotes, handleProjectPress]);
 
   // Función para manejar el refresh de cotizaciones
   const handleRefresh = useCallback(() => {
@@ -207,7 +191,7 @@ const DashboardScreen = () => {
       <ScrollView
         style={styles.content}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 20 }}
+        contentContainerStyle={{ paddingBottom: 100 }} // Espacio extra para el botón flotante
         refreshControl={
           <RefreshControl 
             refreshing={refreshing} 
@@ -281,20 +265,6 @@ const DashboardScreen = () => {
 
         {/* Sección de cotizaciones */}
         <View style={styles.quotesSection}>
-          <TouchableOpacity style={styles.addButton} onPress={handleAddQuote}>
-            <View style={styles.addButtonContent}>
-              <View style={styles.locationLottieContainer}>
-                <LottieView
-                  source={Location}
-                  autoPlay
-                  loop
-                  style={styles.locationLottie}
-                />
-              </View>
-              <Text style={styles.addButtonText}>Hacer una cotización de viaje</Text>
-            </View>
-          </TouchableOpacity>
-
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>📋 Mis Cotizaciones</Text>
             <Text style={styles.sectionSubtitle}>Últimas cotizaciones realizadas</Text>
@@ -303,6 +273,22 @@ const DashboardScreen = () => {
           {renderQuotesContent()}
         </View>
       </ScrollView>
+
+      {/* BOTÓN FLOTANTE */}
+      <TouchableOpacity 
+        style={styles.floatingButton} 
+        onPress={handleAddQuote}
+        activeOpacity={0.8}
+      >
+        <View style={styles.floatingButtonContent}>
+          <LottieView
+            source={Location}
+            autoPlay
+            loop
+            style={styles.floatingButtonLottie}
+          />
+        </View>
+      </TouchableOpacity>
     </View>
   );
 };
@@ -459,7 +445,6 @@ const styles = StyleSheet.create({
     paddingBottom: 20 
   },
   sectionHeader: { 
-    marginTop: 8, 
     marginBottom: 20,
     paddingLeft: 4,
   },
@@ -474,39 +459,20 @@ const styles = StyleSheet.create({
     color: '#666666',
   },
 
-  addButton: {
+  // Botón de reintentar (para errores)
+  retryButton: {
     alignSelf: 'center',
-    width: '100%',
-    maxWidth: 520,
     backgroundColor: '#10AC84',
-    paddingVertical: 16,
+    paddingVertical: 12,
     paddingHorizontal: 20,
-    borderRadius: 16,
-    marginBottom: 20,
-    shadowColor: '#10AC84',
-    shadowOpacity: 0.25,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 6,
+    borderRadius: 12,
   },
-  addButtonContent: {
-    flexDirection: 'row',
+  retryButtonContent: {
     alignItems: 'center',
-    justifyContent: 'center',
   },
-  locationLottieContainer: {
-    width: 24,
-    height: 24,
-    marginRight: 8,
-  },
-  locationLottie: {
-    width: '100%',
-    height: '100%',
-  },
-  addButtonText: { 
-    textAlign: 'center', 
+  retryButtonText: { 
     color: '#FFFFFF', 
-    fontSize: 16, 
+    fontSize: 14, 
     fontWeight: 'bold' 
   },
 
@@ -564,6 +530,34 @@ const styles = StyleSheet.create({
     flexDirection: 'row', 
     flexWrap: 'wrap', 
     justifyContent: 'space-between' 
+  },
+
+  // ESTILOS DEL BOTÓN FLOTANTE
+  floatingButton: {
+    position: 'absolute',
+    bottom: 30,
+    right: 20,
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: '#2DD4BF', // Verde turquesa claro
+    shadowColor: '#2DD4BF',
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 5 },
+    elevation: 7,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  floatingButtonContent: {
+    width: '100%',
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  floatingButtonLottie: {
+    width: 36,
+    height: 36,
   },
 });
 
