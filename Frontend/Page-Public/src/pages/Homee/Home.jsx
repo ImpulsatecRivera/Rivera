@@ -4,11 +4,15 @@ import './Home.css';
 import logo from '../../assets/image.png';
 import Equipo from "../../Images/Imagen1.jpg";
 import Nosotros from "../../Images/Imagen2.jpg";
+import Equipo3 from "../../Images/Imagen12.jpg";
+import Equipo4 from "../../Images/Imagen15.jpg";
+import Equipo5 from "../../Images/Imagen16.jpg";
+import Equipo7 from "../../Images/Imagen18.jpg";
 import Ceo from "../../Images/Imagen4.jpg";
-import Conoce from "../../Images/Imagen6.jpg";
+import Conoce from "../../Images/imagen14.jpg";
 
 
-const EmpresaPage = () => {
+const Home = () => {
   const [currentSlide, setCurrentSlide] = useState(0);
   
   // Estados para el formulario del footer
@@ -23,11 +27,10 @@ const EmpresaPage = () => {
   
   const images = [
     Equipo,
-    Equipo,
-    Equipo,
-    Equipo,
-    Equipo,
-    Equipo
+    Equipo3,
+    Equipo4,
+    Equipo5,
+    Equipo7
   ];
 
   useEffect(() => {
@@ -192,12 +195,12 @@ const EmpresaPage = () => {
                 <h3 className="text-lg font-semibold text-gray-800 mb-4">Información</h3>
                 <ul className="space-y-2 text-sm text-gray-600">
                   <li>
-                    <a href="/quienes-somos" className="hover:text-teal-600 transition-colors">
+                    <a href="/" className="hover:text-teal-600 transition-colors">
                       Quienes somos
                     </a>
                   </li>
                   <li>
-                    <a href="/que-hacen" className="hover:text-teal-600 transition-colors">
+                    <a href="/Dedicacion" className="hover:text-teal-600 transition-colors">
                       Nuestra Dedicación
                     </a>
                   </li>
@@ -295,4 +298,4 @@ const EmpresaPage = () => {
   );
 };
 
-export default EmpresaPage;
+export default Home;

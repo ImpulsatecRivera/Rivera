@@ -241,22 +241,22 @@ const RedesSociales = () => {
           </div>
           
           <div className="content-grid">
-            <div className="content-item facebook-content">
+            <div className="content-item facebook-content" onClick={() => window.open('https://www.facebook.com/riveradistribuidoraytransporte/', '_blank')}>
               <div className="content-platform">
                 <Facebook className="platform-icon" />
                 <span>Facebook</span>
               </div>
               <div className="content-text">
-                "¡Otro día exitoso entregando con puntualidad! 🚛✨ #RiveraTransporte #LogísticaExcelente"
+                "🚛 Servicios de transporte de carga a nivel nacional. Nos caracterizamos por la puntualidad y seguridad en cada entrega. ¡Confía en nosotros para tus necesidades de logística! #RiveraTransporte #CargaNacional #TransporteSeguro"
               </div>
               <div className="content-stats">
-                <span><ThumbsUp className="stat-icon" /> 124</span>
-                <span><MessageCircle className="stat-icon" /> 18</span>
-                <span><Share2 className="stat-icon" /> 12</span>
+                <span><ThumbsUp className="stat-icon" /> 28</span>
+                <span><MessageCircle className="stat-icon" /> 12</span>
+                <span><Share2 className="stat-icon" /> 5</span>
               </div>
             </div>
             
-            <div className="content-item instagram-content">
+            <div className="content-item instagram-content" onClick={() => window.open('https://www.instagram.com/riveradistribuidoraytransporte?utm_source=ig_web_button_share_sheet&igsh=ZDNlZDc0MzIxNw==', '_blank')}>
               <div className="content-platform">
                 <Instagram className="platform-icon" />
                 <span>Instagram</span>
@@ -265,15 +265,15 @@ const RedesSociales = () => {
                 <div className="image-placeholder">📸</div>
               </div>
               <div className="content-text">
-                "Behind the scenes de nuestro equipo en acción 💪 #TeamRivera"
+                "Nuestra flota lista para un nuevo día de trabajo. Comprometidos con brindar el mejor servicio de transporte 💪🚛 #EquipoRivera #TransporteConfiable"
               </div>
               <div className="content-stats">
-                <span><Heart className="stat-icon" /> 89</span>
-                <span><MessageCircle className="stat-icon" /> 23</span>
+                <span><Heart className="stat-icon" /> 45</span>
+                <span><MessageCircle className="stat-icon" /> 8</span>
               </div>
             </div>
             
-            <div className="content-item tiktok-content">
+            <div className="content-item tiktok-content" onClick={() => window.open('https://www.tiktok.com/@riveradistribuido?_t=ZM-8xB2Hm41EZE&_r=1', '_blank')}>
               <div className="content-platform">
                 <svg viewBox="0 0 24 24" fill="currentColor" className="platform-icon">
                   <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43V7.56a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.05z"/>
@@ -285,11 +285,11 @@ const RedesSociales = () => {
                 <span className="video-duration">0:24</span>
               </div>
               <div className="content-text">
-                "Día en la vida de un conductor Rivera 🚛 #DayInTheLife #TransporteSeguro"
+                "Un día en la vida de nuestros conductores 🚛✨ Desde el amanecer trabajando para ustedes #DiaEnLaVida #ConductorProfesional #RiveraEnMovimiento"
               </div>
               <div className="content-stats">
-                <span><Heart className="stat-icon" /> 156</span>
-                <span><Share2 className="stat-icon" /> 34</span>
+                <span><Heart className="stat-icon" /> 189</span>
+                <span><Share2 className="stat-icon" /> 23</span>
               </div>
             </div>
           </div>
@@ -309,7 +309,7 @@ const RedesSociales = () => {
                 <Facebook />
                 <span>Facebook</span>
               </a>
-              <a href="https://www.instagram.com/transporte.rivera/" target="_blank" rel="noopener noreferrer" className="cta-social-btn instagram">
+              <a href="https://www.instagram.com/riveradistribuidoraytransporte?utm_source=ig_web_button_share_sheet&igsh=ZDNlZDc0MzIxNw==" target="_blank" rel="noopener noreferrer" className="cta-social-btn instagram">
                 <Instagram />
                 <span>Instagram</span>
               </a>
@@ -408,7 +408,7 @@ const RedesSociales = () => {
                 </a>
                 
                 <a 
-                  href="https://www.instagram.com/transporte.rivera/"
+                  href="https://www.instagram.com/riveradistribuidoraytransporte?utm_source=ig_web_button_share_sheet&igsh=ZDNlZDc0MzIxNw=="
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center justify-center w-10 h-10 bg-gray-300 rounded-full text-gray-600 hover:bg-teal-100 hover:text-teal-600 transition-all duration-300"
@@ -446,3 +446,5 @@ const RedesSociales = () => {
 };
 
 export default RedesSociales;
+
+
