@@ -20,12 +20,7 @@ import path from "path";
 
 
 //Traemos el archivo json
-const swaggerDocument = JSON.parse(
-    fs.readFileSync(
-        path.resolve("../Backend/Documentacion.json"),
-        "utf-8"
-    )
-);
+
 
 const app = express();
 
