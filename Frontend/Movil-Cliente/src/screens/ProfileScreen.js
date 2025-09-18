@@ -202,25 +202,140 @@ const ProfileScreen = () => {
     try {
       setSaving(true);
       
-      // Simular API call
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      if (!user?.id && !user?._id) {
+        throw new Error('No se encontró el ID del usuario');
+      }
+
+      const userId = user.id || user._id;
+      const apiUrl = `https://riveraproject-5.onrender.com/api/clientes/${userId}`;
       
-      setUserInfo({ ...editingUserInfo });
-      setEditMode(false);
-      setActiveField(null);
-      setSaving(false);
+      // Función para convertir fecha a formato ISO si es necesario
+      const formatDateForAPI = (dateString) => {
+        if (!dateString || dateString === 'No registrada' || dateString === 'Fecha inválida') {
+          return null;
+        }
+        
+        // Si ya está en formato válido, devolverlo
+        if (dateString.includes('/')) {
+          // Convertir de DD/MM/YYYY a formato ISO
+          const parts = dateString.split('/');
+          if (parts.length === 3) {
+            const day = parts[0].padStart(2, '0');
+            const month = parts[1].padStart(2, '0');
+            const year = parts[2];
+            return `${year}-${month}-${day}`;
+          }
+        }
+        
+        return dateString;
+      };
       
-      // Mostrar SweetAlert de éxito
-      setSuccessVisible(true);
+      // Preparar solo los campos que han cambiado o son válidos
+      const updateData = {};
       
-      // Auto cerrar después de 3 segundos
-      setTimeout(() => {
-        setSuccessVisible(false);
-      }, 3000);
+      // Solo incluir campos que tienen valores válidos
+      if (editingUserInfo.firstName && editingUserInfo.firstName.trim()) {
+        updateData.firstName = editingUserInfo.firstName.trim();
+      }
+      
+      if (editingUserInfo.lastName && editingUserInfo.lastName.trim()) {
+        updateData.lastName = editingUserInfo.lastName.trim();
+      }
+      
+      if (editingUserInfo.email && editingUserInfo.email.trim()) {
+        updateData.email = editingUserInfo.email.trim();
+      }
+      
+      if (editingUserInfo.phone && editingUserInfo.phone.trim()) {
+        updateData.phone = editingUserInfo.phone.trim();
+      }
+      
+      if (editingUserInfo.dni && editingUserInfo.dni.trim()) {
+        updateData.idNumber = editingUserInfo.dni.trim();
+      }
+      
+      if (editingUserInfo.address && editingUserInfo.address.trim()) {
+        updateData.address = editingUserInfo.address.trim();
+      }
+      
+      // Manejar fecha de nacimiento con validación
+      const formattedBirthDate = formatDateForAPI(editingUserInfo.birthDate);
+      if (formattedBirthDate) {
+        updateData.birthDate = formattedBirthDate;
+      }
+
+      console.log('Enviando datos de actualización:', updateData);
+      
+      const response = await fetch(apiUrl, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': token ? `Bearer ${token}` : '',
+        },
+        body: JSON.stringify(updateData),
+      });
+
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        throw new Error(`Servidor devolvió ${contentType || 'HTML'} en lugar de JSON. Status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log('Respuesta del servidor:', data);
+
+      if (response.ok && data.success) {
+        // Actualizar el estado local con los datos guardados
+        setUserInfo({ ...editingUserInfo });
+        setEditMode(false);
+        setActiveField(null);
+        setSaving(false);
+        
+        // Mostrar SweetAlert de éxito directamente
+        setSuccessVisible(true);
+        
+        // Auto cerrar después de 3 segundos
+        setTimeout(() => {
+          setSuccessVisible(false);
+        }, 3000);
+
+        // Recargar datos del perfil SIN mostrar loading
+        setTimeout(() => {
+          fetchUserProfile(true); // Cambiado a true para usar refreshing en lugar de loading
+        }, 1000);
+        
+      } else {
+        throw new Error(data.message || 'Error al actualizar el perfil');
+      }
       
     } catch (error) {
       setSaving(false);
-      Alert.alert('❌ Error', 'No se pudieron guardar los cambios.');
+      console.error('Error al actualizar perfil:', error);
+      
+      let errorMessage = 'No se pudieron guardar los cambios';
+      if (error.message.includes('Network')) {
+        errorMessage = 'Sin conexión a internet';
+      } else if (error.message.includes('401')) {
+        errorMessage = 'Sesión expirada. Inicia sesión nuevamente';
+      } else if (error.message.includes('Fecha de nacimiento')) {
+        errorMessage = 'Formato de fecha inválido. Usa DD/MM/YYYY';
+      } else {
+        errorMessage = error.message || 'Error desconocido';
+      }
+      
+      Alert.alert('Error al guardar', errorMessage, [
+        {
+          text: 'OK',
+          onPress: () => {
+            if (error.message.includes('401')) {
+              logout();
+              navigation.reset({
+                index: 0,
+                routes: [{ name: 'Login' }],
+              });
+            }
+          }
+        }
+      ]);
     }
   };
 
