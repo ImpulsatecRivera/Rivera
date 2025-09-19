@@ -47,7 +47,7 @@ const useCotizaciones = () => {
   // Función para cargar clientes
   const fetchClientesSync = async () => {
     try {
-      const response = await axios.get('https://riveraproject-5.onrender.com/api/clientes');
+      const response = await axios.get('riveraproject-production.up.railway.app/api/clientes');
       
       const clientesArray = Array.isArray(response.data) ? response.data : 
                            response.data.clientes ? response.data.clientes :
@@ -90,7 +90,7 @@ const useCotizaciones = () => {
   // Función para cargar cotizaciones
   const fetchCotizacionesConClientes = async (clientesMap) => {
     try {
-      const response = await axios.get('https://riveraproject-5.onrender.com/api/cotizaciones');
+      const response = await axios.get('riveraproject-production.up.railway.app/api/cotizaciones');
       
       // Acceder a los datos correctamente
       const cotizacionesData = response.data.data || response.data;
@@ -305,7 +305,7 @@ const useCotizaciones = () => {
       
       console.log('🔄 Actualizando cotización:', { id, datosActualizacion });
       
-      const response = await axios.put(`https://riveraproject-5.onrender.com/api/cotizaciones/${id}`, datosActualizacion);
+      const response = await axios.put(`riveraproject-production.up.railway.app/api/cotizaciones/${id}`, datosActualizacion);
       
       // Actualizar la cotización en el estado local
       setCotizaciones(prev => prev.map(cotizacion => {
@@ -557,7 +557,7 @@ const useCotizaciones = () => {
       setLoading(true);
       setError(null);
       
-      const response = await axios.delete(`https://riveraproject-5.onrender.com/api/cotizaciones/${id}`);
+      const response = await axios.delete(`riveraproject-production.up.railway.app/api/cotizaciones/${id}`);
       
       setCotizaciones(prev => prev.filter(c => (c.id || c._id) !== id));
       

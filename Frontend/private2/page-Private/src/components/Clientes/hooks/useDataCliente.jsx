@@ -26,7 +26,7 @@ const useDataCliente = () => {
       
       console.log('🚀 Iniciando petición a la API de clientes...');
       
-      const response = await axios.get('https://riveraproject-5.onrender.com/api/clientes');
+      const response = await axios.get('riveraproject-production.up.railway.app/api/clientes');
       
       console.log('📡 Status de la respuesta:', response.status);
       console.log('📋 Datos recibidos completos:', response.data);
@@ -97,7 +97,7 @@ const useDataCliente = () => {
       
       // Verificar si es un error de red
       if (error.message.includes('Network') || error.code === 'ERR_NETWORK') {
-        setError('No se puede conectar al servidor. Verifica que esté ejecutándose en https://riveraproject-5.onrender.com');
+        setError('No se puede conectar al servidor. Verifica que esté ejecutándose en riveraproject-production.up.railway.app');
       } else if (error.response) {
         setError(`Error del servidor: ${error.response.status} - ${error.response.data?.message || 'Error desconocido'}`);
       } else {
@@ -114,7 +114,7 @@ const useDataCliente = () => {
   const addClient = async (clientData) => {
     try {
       console.log('➕ Agregando nuevo cliente:', clientData);
-      const response = await axios.post('https://riveraproject-5.onrender.com/api/clientes', clientData);
+      const response = await axios.post('riveraproject-production.up.railway.app/api/clientes', clientData);
       
       const newClient = response.data.data || response.data;
       const normalizedClient = {
@@ -144,7 +144,7 @@ const useDataCliente = () => {
   const updateClient = async (clientId, updateData) => {
     try {
       console.log(`📝 Actualizando cliente ${clientId}:`, updateData);
-      const response = await axios.put(`https://riveraproject-5.onrender.com/api/clientes/${clientId}`, updateData);
+      const response = await axios.put(`riveraproject-production.up.railway.app/api/clientes/${clientId}`, updateData);
       
       const updatedClientData = response.data.cliente || response.data.data || { ...selectedClient, ...updateData };
       const updatedClient = {
@@ -184,7 +184,7 @@ const useDataCliente = () => {
   const deleteClient = async (clientId) => {
     try {
       console.log(`🗑️ Eliminando cliente ${clientId}`);
-      await axios.delete(`https://riveraproject-5.onrender.com/api/clientes/${clientId}`);
+      await axios.delete(`riveraproject-production.up.railway.app/api/clientes/${clientId}`);
       setClients(prev => Array.isArray(prev) ? prev.filter(client => client._id !== clientId) : []);
       
       // Limpiar selección si se elimina el cliente seleccionado
