@@ -154,7 +154,7 @@ const Home = () => {
         <div className="ceo-footer">
           <p className="ceo-footer-text">
             <span className="quote-mark">"</span>
-            Conectamos destinos, entregamos confianza.
+            Conectamos destinos, entregamos confianza aparentemente nada
             <span className="quote-mark">"</span>
           </p>
         </div>
