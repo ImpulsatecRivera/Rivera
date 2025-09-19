@@ -5,7 +5,7 @@ import logo from '../../assets/image.png';
 import Equipo from "../../Images/Imagen1.jpg";
 import Nosotros from "../../Images/Imagen2.jpg";
 import Equipo3 from "../../Images/Imagen12.jpg";
-import Equipo4 from "../../Images/Imagen15.jpg";
+import Equipo4 from "../../Images/imagen15.jpg";
 import Equipo5 from "../../Images/Imagen16.jpg";
 import Equipo7 from "../../Images/Imagen18.jpg";
 import Ceo from "../../Images/Imagen4.jpg";
@@ -126,7 +126,7 @@ const Home = () => {
               nuestra empresa
             </h2>
             <p className="intro-text">
-              La empresa ofrece servicios integrales de transportes de carga, distribuciów y gestión logística a nivel nacional e internacional. Nos enfocamos en ser eficientes y puntuales, adaptándonos a las necesidades de cada cliente, con un equipo profesional y una ética de manufactura que garantizan calidad y confiabilidad en todo lo que hacemos.
+              La empresa ofrece servicios integral de transportes de carga, distribuciów y gestión logística a nivel nacional e internacional. Nos enfocamos en ser eficientes y puntuales, adaptándonos a las necesidades de cada cliente, con un equipo profesional y una ética de manufactura que garantizan calidad y confiabilidad en todo lo que hacemos.
             </p>
           </div>
           <div className="intro-image-section">
