@@ -23,7 +23,7 @@ const CotizacionScreen = () => {
   const { user, token } = useAuth();
 
   // Base de la API (tu backend en Render)
-  const BASE_URL = useMemo(() => 'https://riveraproject-5.onrender.com', []);
+  const BASE_URL = useMemo(() => 'https://riveraproject-production.up.railway.app', []);
 
   const [formData, setFormData] = useState({
     tipoCamion: '',

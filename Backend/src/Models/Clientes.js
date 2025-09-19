@@ -81,6 +81,10 @@ const clienteSchema = new Schema({
       return !this.isGoogleUser; // Solo requerido si NO es usuario de Google
     }
   },
+  img:{
+    type:String,
+    require:true
+  },
 
   // ✅ CAMPOS ADICIONALES PARA COMPLETAR PERFIL DESPUÉS
   profileCompleted: {

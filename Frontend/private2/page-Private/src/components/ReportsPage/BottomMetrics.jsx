@@ -114,7 +114,7 @@ const BottomMetrics = () => {
       
       console.log('📊 Obteniendo usuarios activos...');
       
-      const response = await fetch('https://riveraproject-5.onrender.com/api/clientes/resumen-usuarios');
+      const response = await fetch('https://riveraproject-production.up.railway.app/api/clientes/resumen-usuarios');
       
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -155,7 +155,7 @@ const BottomMetrics = () => {
       
       console.log('🚛 Obteniendo cargas entregadas...');
       
-      const response = await fetch('https://riveraproject-5.onrender.com/api/viajes/completed');
+      const response = await fetch('https://riveraproject-production.up.railway.app/api/viajes/completed');
       
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -225,7 +225,7 @@ const BottomMetrics = () => {
       
       console.log('⏰ Obteniendo tiempo promedio de viaje...');
       
-      const response = await fetch('https://riveraproject-5.onrender.com/api/viajes/tiempo-promedio');
+      const response = await fetch('https://riveraproject-production.up.railway.app/api/viajes/tiempo-promedio');
       
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -267,7 +267,7 @@ const BottomMetrics = () => {
       
       console.log('📦 Obteniendo capacidades de carga...');
       
-      const response = await fetch('https://riveraproject-5.onrender.com/api/viajes/capacidad-carga');
+      const response = await fetch('https://riveraproject-production.up.railway.app/api/viajes/capacidad-carga');
       
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
