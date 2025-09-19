@@ -143,7 +143,7 @@ const Home = () => {
           <div className="ceo-text">
             <h2 className="ceo-title">
               Conoce a nuestra CEO<br />
-              de la empresas
+              de la empresasss
             </h2>
             <p className="ceo-description">
               Yanira Rivera es una destacada empresaria salvadoreña, fundadora y directora de Rivera Distribuidora y Transporte, con más de una década de experiencia en logística y transporte de cargas en El Salvador. Su compromiso la ha posicionado como un referente en la industria, gracias a su compromiso con la excelencia y la innovación. Además, ha contribuido significativamente al género en el sector y ha impulsado activamente a otras mujeres a ingresar y prosperar en esta importante industria del país.
