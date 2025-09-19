@@ -2,6 +2,17 @@
   "name": "movil-cliente",
   "version": "1.0.0",
   "main": "index.js",
+  "expo": {
+    "plugins": [
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Esta app necesita acceso a la galería para seleccionar fotos de perfil.",
+          "cameraPermission": "Esta app necesita acceso a la cámara para tomar fotos de perfil."
+        }
+      ]
+    ]
+  },
   "scripts": {
     "start": "METRO_DISABLE_FS_WATCH=true expo start",
     "android": "METRO_DISABLE_FS_WATCH=true expo run:android",
@@ -18,8 +29,11 @@
     "@react-navigation/stack": "^7.4.7",
     "expo": "~54.0.0",
     "expo-auth-session": "~6.2.1",
+    "expo-camera": "~17.0.8",
     "expo-crypto": "~14.1.5",
+    "expo-image-picker": "~17.0.8",
     "expo-linear-gradient": "^14.1.5",
+    "expo-permissions": "^14.4.0",
     "expo-secure-store": "~14.2.4",
     "expo-status-bar": "~3.0.8",
     "expo-web-browser": "~14.2.0",
