@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Menu, X } from "lucide-react";
+import { Link } from "react-router-dom";
 import logo from '../assets/image.png';
 
 const Navegation = () => {
@@ -45,44 +46,44 @@ const Navegation = () => {
         >
           <ul className="flex flex-col md:flex-row md:space-x-12 mt-4 md:mt-0 w-full md:w-auto">
             <li>
-              <a
-                href="/"
+              <Link
+                to="/"
                 className="block text-center md:text-left text-green-700 hover:text-green-800 transition duration-200 text-base font-medium py-2"
               >
                Inicio              
-               </a>
+              </Link>
             </li>
             <li>
-              <a
-                href="/Ficha"
+              <Link
+                to="/Ficha"
                 className="block text-center md:text-left text-green-700 hover:text-green-800 transition duration-200 text-base font-medium py-2"
               >
                 Ficha Historica
-              </a>
+              </Link>
             </li>
             <li>
-              <a
-                href="/Dedicacion"
+              <Link
+                to="/Dedicacion"
                 className="block text-center md:text-left text-green-700 hover:text-green-800 transition duration-200 text-base font-medium py-2"
               >
                 Nuestra Dedicación
-              </a>
+              </Link>
             </li>
             <li>
-              <a
-                href="/mision-vision"
+              <Link
+                to="/mision-vision"
                 className="block text-center md:text-left text-green-700 hover:text-green-800 transition duration-200 text-base font-medium py-2"
               >
                 Misión y visión
-              </a>
+              </Link>
             </li>
             <li>
-              <a
-                href="/redes-sociales"
+              <Link
+                to="/redes-sociales"
                 className="block text-center md:text-left text-green-700 hover:text-green-800 transition duration-200 text-base font-medium py-2"
               >
                 Nuestras redes sociales
-              </a>
+              </Link>
             </li>
           </ul>
         </div>

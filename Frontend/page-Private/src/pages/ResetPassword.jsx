@@ -104,7 +104,7 @@ const ResetPassword = () => {
       console.log("Enviando nueva contraseña...");
 
       // ✅ CRÍTICO: Incluir el verifiedToken en el payload
-      const response = await axios.post("https://riveraproject-5.onrender.com/api/recovery/newPassword", {
+      const response = await axios.post("https://riveraproject-production.up.railway.app/api/recovery/newPassword", {
         newPassword: newPassword,
         verifiedToken: verifiedToken  // ✅ ENVIAR EL TOKEN EN EL BODY
       }, {

@@ -51,7 +51,7 @@ const normalizeQuotes = (payload) => {
   });
 };
 
-export default function useMyQuotes(baseUrl = 'https://riveraproject-5.onrender.com') {
+export default function useMyQuotes(baseUrl = 'https://riveraproject-production.up.railway.app') {
   const { user, token } = useAuth();
 
   const [quotes, setQuotes] = useState([]);

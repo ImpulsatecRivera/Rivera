@@ -2,12 +2,11 @@
 import { useState, useEffect, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// 1) Base URL desde .env (Expo) con fallback a tu Render actual
+// Base URL: toma EXPO_PUBLIC_API_URL (sin barras finales) o cae a Railway
 const API_BASE_URL =
-  process.env.EXPO_PUBLIC_API_URL?.replace(/\/+$/, '') ||
-  'https://riveraproject-5.onrender.com/api';
+  (process.env.EXPO_PUBLIC_API_URL?.replace(/\/+$/, '') || 'https://riveraproject-production.up.railway.app') + '/api';
 
-// Utilidades de formato
+// ====================== Utilidades de formato ======================
 const formatearFecha = (fecha) => {
   if (!fecha) return '';
   const fechaObj = new Date(fecha);
@@ -34,7 +33,6 @@ const formatearHora = (fecha) =>
       })
     : '';
 
-// Helpers de UI
 const obtenerIconoViaje = (descripcion = '') => {
   const desc = String(descripcion).toLowerCase();
   if (desc.includes('alimento') || desc.includes('comida')) return '🍽️';
@@ -60,7 +58,7 @@ const obtenerColorEstado = (estado = '') => {
   }
 };
 
-// 3) Normalizador flexible (acepta distintos nombres de campos)
+// ====================== Normalización / helpers ======================
 const normalizarEstado = (estado) => {
   const e = (estado?.actual ?? estado ?? '').toString().toLowerCase();
   return e === 'en_curso' ? 'en_transito' : e;
@@ -147,20 +145,16 @@ const transformarViajeAPI = (raw, camionGlobal = null) => {
   };
 };
 
-/* ===== helpers para aceptar distintos shapes de respuesta ===== */
 const getPayload = (data) => (data && data.success && data.data) ? data.data : data;
 
 const getListaViajes = (data) => {
   if (!data) return [];
   if (Array.isArray(data)) return data;
 
-  // desempaquetar si viene como { success, data }
   const payload = getPayload(data);
   if (Array.isArray(payload)) return payload;
-
   if (typeof payload !== 'object') return [];
 
-  // prioridad a 'historialCompleto' cuando venga en motoristas/:id/historial-completo
   return (
     payload.historialCompleto ||
     payload.trips ||
@@ -182,8 +176,8 @@ const getTotalViajes = (data, lista) => {
     (Array.isArray(lista) ? lista.length : 0)
   );
 };
-/* ==================================================================== */
 
+// ====================== Hook principal ======================
 export const useTrips = (motoristaId = null, tipoConsulta = 'programados') => {
   const [trips, setTrips] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -201,7 +195,6 @@ export const useTrips = (motoristaId = null, tipoConsulta = 'programados') => {
 
   const abortRef = useRef(null);
 
-  // 2) Token robusto
   const obtenerToken = async () => {
     try {
       let token =
@@ -216,7 +209,6 @@ export const useTrips = (motoristaId = null, tipoConsulta = 'programados') => {
     }
   };
 
-  // 4) Petición con cancelación
   const hacerPeticion = async (url) => {
     console.log(`🌐 GET ${url}`);
 
@@ -229,7 +221,9 @@ export const useTrips = (motoristaId = null, tipoConsulta = 'programados') => {
       const headers = {
         'Content-Type': 'application/json',
         Accept: 'application/json',
-        ...(authToken && !/^temp(-register)?-token$/.test(authToken) ? { Authorization: `Bearer ${authToken}` } : {})
+        ...(authToken && !/^temp(-register)?-token$/.test(authToken)
+          ? { Authorization: `Bearer ${authToken}` }
+          : {}),
       };
 
       const resp = await fetch(url, { headers, signal: controller.signal });
@@ -241,14 +235,13 @@ export const useTrips = (motoristaId = null, tipoConsulta = 'programados') => {
       }
       const data = await resp.json();
 
-      // Log claro del shape
       const payload = getPayload(data);
       console.log('✅ JSON OK', Array.isArray(payload) ? ['<array>'] : Object.keys(payload));
       if (Array.isArray(payload) && payload[0]) {
         console.log('🧪 Ejemplo item:', Object.keys(payload[0]));
       }
 
-      return data; // devolvemos RAW; los helpers ya desempaquetan
+      return data;
     } catch (e) {
       if (e.name === 'AbortError') {
         console.log('⛔ Fetch abortado');
@@ -259,18 +252,16 @@ export const useTrips = (motoristaId = null, tipoConsulta = 'programados') => {
     }
   };
 
-  // ====== CARGADORES ======
-
+  // ====================== Cargadores ======================
   const cargarHistorialCompleto = async (id) => {
     try {
       setLoading(true);
       setError(null);
 
       const safeId = encodeURIComponent(id);
-      // /motoristas/:id/historial-completo
       const url = `${API_BASE_URL}/motoristas/${safeId}/historial-completo`;
       const data = await hacerPeticion(url);
-      if (!data) return; // abortado
+      if (!data) return;
 
       const lista = getListaViajes(data);
       if (Array.isArray(lista)) {
@@ -284,17 +275,16 @@ export const useTrips = (motoristaId = null, tipoConsulta = 'programados') => {
         const payload = getPayload(data);
         setEstadisticas(
           payload?.estadisticas || {
-            programados: todos.filter((x) => ['programado','pendiente','confirmado'].includes(x.estado)).length,
-            completados: todos.filter((x) => ['completado','finalizado'].includes(x.estado)).length,
-            cancelados:  todos.filter((x) => x.estado === 'cancelado').length,
-            enProgreso:  todos.filter((x) => ['en_transito','iniciado','en_curso'].includes(x.estado)).length,
+            programados: todos.filter((x) => ['programado', 'pendiente', 'confirmado'].includes(x.estado)).length,
+            completados: todos.filter((x) => ['completado', 'finalizado'].includes(x.estado)).length,
+            cancelados: todos.filter((x) => x.estado === 'cancelado').length,
+            enProgreso: todos.filter((x) => ['en_transito', 'iniciado', 'en_curso'].includes(x.estado)).length,
           }
         );
         setHistorialViajes(todos);
         return;
       }
 
-      // Fallback antiguo (por si viene otra estructura)
       const payload = getPayload(data);
       const raw = Array.isArray(payload?.historialCompleto) ? payload.historialCompleto : [];
       const todos = raw.map((v) => transformarViajeAPI(v, payload?.camionAsignado)).filter(Boolean);
@@ -305,10 +295,10 @@ export const useTrips = (motoristaId = null, tipoConsulta = 'programados') => {
       setTotalTrips(payload?.totalViajes || todos.length);
       setEstadisticas(
         payload?.estadisticas || {
-          programados: todos.filter((x) => ['programado','pendiente','confirmado'].includes(x.estado)).length,
-          completados: todos.filter((x) => ['completado','finalizado'].includes(x.estado)).length,
-          cancelados:  todos.filter((x) => x.estado === 'cancelado').length,
-          enProgreso:  todos.filter((x) => ['en_transito','iniciado','en_curso'].includes(x.estado)).length,
+          programados: todos.filter((x) => ['programado', 'pendiente', 'confirmado'].includes(x.estado)).length,
+          completados: todos.filter((x) => ['completado', 'finalizado'].includes(x.estado)).length,
+          cancelados: todos.filter((x) => x.estado === 'cancelado').length,
+          enProgreso: todos.filter((x) => ['en_transito', 'iniciado', 'en_curso'].includes(x.estado)).length,
         }
       );
       setHistorialViajes(todos);
@@ -331,10 +321,9 @@ export const useTrips = (motoristaId = null, tipoConsulta = 'programados') => {
       setError(null);
 
       const safeId = encodeURIComponent(id);
-      // /motoristas/:id/viajes-programados
       const url = `${API_BASE_URL}/motoristas/${safeId}/viajes-programados`;
       const data = await hacerPeticion(url);
-      if (!data) return; // abortado
+      if (!data) return;
 
       const lista = getListaViajes(data);
       if (Array.isArray(lista)) {
@@ -358,7 +347,7 @@ export const useTrips = (motoristaId = null, tipoConsulta = 'programados') => {
         return;
       }
 
-      // Fallback por shape agrupado por día
+      // Fallback agrupado por día
       const todos = [];
       const prox = [];
       const payload = getPayload(data);
@@ -404,7 +393,7 @@ export const useTrips = (motoristaId = null, tipoConsulta = 'programados') => {
 
       const url = `${API_BASE_URL}/viajes?scope=proximos`;
       const data = await hacerPeticion(url);
-      if (!data) return; // abortado
+      if (!data) return;
 
       const lista = getListaViajes(data);
       if (Array.isArray(lista)) {
@@ -446,7 +435,7 @@ export const useTrips = (motoristaId = null, tipoConsulta = 'programados') => {
     }
   };
 
-  // ====== EFFECT PRINCIPAL ======
+  // ====================== Effect principal ======================
   useEffect(() => {
     let mounted = true;
 
@@ -455,7 +444,9 @@ export const useTrips = (motoristaId = null, tipoConsulta = 'programados') => {
       const paramId = String(motoristaId ?? '').trim();
       const id = (paramId || storedId).trim();
 
-      console.log(`🔄 useEffect -> motoristaId(param)="${paramId}" | motoristaId(storage)="${storedId}" | usando="${id}"  tipo="${tipoConsulta}"`);
+      console.log(
+        `🔄 useEffect -> motoristaId(param)="${paramId}" | motoristaId(storage)="${storedId}" | usando="${id}"  tipo="${tipoConsulta}"`
+      );
 
       if (!mounted) return;
 
@@ -478,7 +469,7 @@ export const useTrips = (motoristaId = null, tipoConsulta = 'programados') => {
     };
   }, [motoristaId, tipoConsulta]);
 
-  // ====== Helpers públicos ======
+  // ====================== API pública del hook ======================
   const getTripById = (id) => trips.find((t) => t.id === id);
 
   const refrescarViajes = () => {

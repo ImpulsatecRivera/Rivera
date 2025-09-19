@@ -1,115 +1,244 @@
 // src/screens/DashboardScreen.jsx
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import {
-  View, StyleSheet, ScrollView, FlatList, Text, TouchableOpacity,
+  View, StyleSheet, ScrollView, Text, TouchableOpacity,
   Dimensions, Image, ActivityIndicator, RefreshControl,
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../context/authContext';
-import CarouselSlide from '../components/CarouselSlide';
-import CarouselIndicators from '../components/CarouselIndicators';
 import ProjectCard from '../components/ProjectCard';
-import QuoteSheet from '../components/QuoteSheet';
-import useQuotePreview from '../hooks/useQuotePreview';
 import useMyQuotes from '../hooks/useMyQuotes';
 import FocusAwareStatusBar from '../components/FocusAwareStatusBar';
+import LottieView from 'lottie-react-native';
+import Summer from "../assets/lottie/Summer Vibes.json";
+import Rain from "../assets/lottie/rainy icon.json";
+import Cloudy from "../assets/lottie/Cloudy Animation.json";
+import Location from "../assets/lottie/Add Document.json";
+import { useRealWeather } from '../hooks/useRealWheather';
 
-const { width: ITEM_WIDTH } = Dimensions.get('window');
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const BG = '#F5F5F5';
-const LOGO_WIDTH = Math.min(ITEM_WIDTH * 0.75, 420);
-const LOGO_HEIGHT = 130;
+const LOGO_WIDTH = Math.min(SCREEN_WIDTH * 0.6, 280);
+const LOGO_HEIGHT = 80;
+const API_BASE_URL = 'https://riveraproject-production.up.railway.app';
 
 const DashboardScreen = () => {
   const navigation = useNavigation();
   const { user } = useAuth();
 
-  // Carrusel
-  const baseData = [
-    { id: 1, title: 'Somos',  subtitle: 'Rivera distribuidora y transporte', imageSource: require('../images/familiaRivera.png'), backgroundColor: '#667eea' },
-    { id: 2, title: 'Visita', subtitle: 'Nuestro sitio web y concenos',     imageSource: require('../images/trabajador.png'),   backgroundColor: '#f093fb' },
-    { id: 3, title: '30% OFF',subtitle: 'En tu primera cotización del mes',  imageSource: require('../images/cotizacion.png'),   backgroundColor: '#4facfe' },
-  ];
-  const LOOP_CLONES = 3, BASE_LEN = baseData.length, START_INDEX = BASE_LEN;
-  const bigData = Array.from({ length: LOOP_CLONES }).flatMap(() => baseData);
-  const flatListRef = useRef(null);
-  const [absIndex, setAbsIndex] = useState(START_INDEX);
-  const [autoPlay, setAutoPlay] = useState(true);
-  const INTERVAL = 3000;
+  // Estado para hora
+  const [currentTime, setCurrentTime] = useState(new Date());
+  
+  // Usar el hook de clima real
+  const { weather } = useRealWeather();
 
-  useEffect(() => {
-    const id = setTimeout(() => {
-      flatListRef.current?.scrollToOffset({ offset: START_INDEX * ITEM_WIDTH, animated: false });
-    }, 0);
-    return () => clearTimeout(id);
+  // Obtener hora de El Salvador (UTC-6)
+  const getSalvadorTime = useCallback(() => {
+    const now = new Date();
+    const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
+    const salvadorTime = new Date(utc + (-6 * 3600000));
+    return salvadorTime;
   }, []);
 
-  const currentIndex = absIndex % BASE_LEN;
+  // Actualizar la hora cada minuto
   useEffect(() => {
-    if (!autoPlay || BASE_LEN === 0) return;
-    const id = setInterval(() => {
-      let nextAbs = absIndex + 1;
-      if (nextAbs >= BASE_LEN * 2) nextAbs -= BASE_LEN;
-      flatListRef.current?.scrollToOffset({ offset: nextAbs * ITEM_WIDTH, animated: true });
-      setAbsIndex(nextAbs);
-    }, INTERVAL);
-    return () => clearInterval(id);
-  }, [autoPlay, absIndex, BASE_LEN]);
+    setCurrentTime(getSalvadorTime());
+    
+    const timer = setInterval(() => {
+      setCurrentTime(getSalvadorTime());
+    }, 60000);
 
-  const handleScroll = (e) => {
-    const x = e.nativeEvent.contentOffset.x;
-    const idx = Math.round(x / ITEM_WIDTH);
-    if (idx !== absIndex) setAbsIndex(idx);
-  };
-  const handleMomentumEnd = (e) => {
-    const x = e.nativeEvent.contentOffset.x;
-    let idx = Math.round(x / ITEM_WIDTH);
-    if (idx < BASE_LEN) {
-      const centralIdx = idx + BASE_LEN;
-      flatListRef.current?.scrollToOffset({ offset: centralIdx * ITEM_WIDTH, animated: false });
-      setAbsIndex(centralIdx);
-    } else if (idx >= BASE_LEN * 2) {
-      const centralIdx = idx - BASE_LEN;
-      flatListRef.current?.scrollToOffset({ offset: centralIdx * ITEM_WIDTH, animated: false });
-      setAbsIndex(centralIdx);
+    return () => clearInterval(timer);
+  }, [getSalvadorTime]);
+
+  // Función CORREGIDA para detectar clima basada en tus traducciones exactas
+  const getWeatherAnimation = useCallback((condition) => {
+    // 🐛 DEBUGGING: Ver qué está llegando exactamente
+    console.log('🌤️ Condición del clima recibida:', condition);
+    console.log('🌤️ Tipo de dato:', typeof condition);
+    console.log('🌤️ Contiene "Simulado"?', condition?.includes('(Simulado)'));
+    
+    if (!condition) {
+      console.log('⚠️ No hay condición, usando Summer por defecto');
+      return Summer;
     }
-  };
-  const renderCarouselItem = ({ item }) => (
-    <CarouselSlide title={item.title} subtitle={item.subtitle} imageSource={item.imageSource} backgroundColor={item.backgroundColor} />
-  );
+    
+    const lowerCondition = condition.toLowerCase().trim();
+    console.log('🌤️ Condición procesada:', lowerCondition);
+    
+    // ☔ CONDICIONES DE LLUVIA (basadas en tus traducciones exactas)
+    const rainyKeywords = [
+      // Traducciones exactas de tu weatherService
+      'lluvia ligera', 'lluvia moderada', 'lluvia intensa', 'lluvia muy intensa',
+      'lluvia extrema', 'lluvia helada', 'llovizna ligera', 'aguacero',
+      'aguacero intenso', 'aguacero irregular', 'lluvioso',
+      'tormenta', 'tormenta con lluvia', 'tormenta ligera', 'tormenta intensa',
+      'tormenta irregular', 'tormenta con llovizna',
+      // Palabras generales
+      'lluv', 'tormenta', 'aguacero', 'llovizna', 'rain', 'storm', 'drizzle'
+    ];
+    
+    // ☁️ CONDICIONES NUBLADAS (basadas en tus traducciones exactas)
+    const cloudyKeywords = [
+      // Traducciones exactas de tu weatherService
+      'pocas nubes', 'nublado parcial', 'nublado', 'muy nublado',
+      'parcialmente nublado', 'bruma', 'niebla', 'calina', 'humo',
+      // Palabras generales
+      'nubl', 'cloud', 'overcast', 'bruma', 'niebla', 'fog', 'mist'
+    ];
+    
+    // ☀️ CONDICIONES SOLEADAS (basadas en tus traducciones exactas)
+    const sunnyKeywords = [
+      // Traducciones exactas de tu weatherService
+      'despejado', 'soleado', 'muy soleado',
+      // Palabras generales
+      'sol', 'clear', 'sunny', 'bright', 'despej'
+    ];
+    
+    // 🔍 Verificar cada categoría y mostrar en consola
+    const foundRainy = rainyKeywords.find(keyword => lowerCondition.includes(keyword));
+    const foundCloudy = cloudyKeywords.find(keyword => lowerCondition.includes(keyword));
+    const foundSunny = sunnyKeywords.find(keyword => lowerCondition.includes(keyword));
+    
+    console.log('🔍 Análisis de palabras clave:');
+    console.log('  ☔ Lluvia encontrada:', foundRainy || 'NINGUNA');
+    console.log('  ☁️ Nublado encontrado:', foundCloudy || 'NINGUNA');
+    console.log('  ☀️ Soleado encontrado:', foundSunny || 'NINGUNA');
+    
+    // Verificar lluvia primero (prioridad alta)
+    if (foundRainy) {
+      console.log('✅ DETECTADO: LLUVIA ☔ - Mostrando Rain animation');
+      return Rain;
+    }
+    
+    // Verificar nublado
+    if (foundCloudy) {
+      console.log('✅ DETECTADO: NUBLADO ☁️ - Mostrando Cloudy animation');
+      return Cloudy;
+    }
+    
+    // Verificar soleado
+    if (foundSunny) {
+      console.log('✅ DETECTADO: SOLEADO ☀️ - Mostrando Summer animation');
+      return Summer;
+    }
+    
+    // Por defecto
+    console.log('⚠️ NO DETECTADO - Usando Summer por defecto');
+    console.log('💡 Agrega esta condición a las palabras clave:', `"${lowerCondition}"`);
+    console.log('📝 Considera agregar al array correspondiente en getWeatherAnimation');
+    
+    return Summer;
+  }, []);
 
   // Cotizaciones (hook conectado al backend)
-  const { quotes, loading, error, refreshing, refresh, reload } = useMyQuotes('https://riveraproject-5.onrender.com');
+  const { quotes, loading, error, refreshing, refresh, reload } = useMyQuotes(API_BASE_URL);
 
-  // Preview de cotización
-  const { visible, item, open: openPreview, close } = useQuotePreview();
+  const handleProjectPress = useCallback((q) => {
+    // Navegar a la pantalla de detalles en lugar de abrir modal
+    navigation.navigate('QuoteDetails', { quote: q });
+  }, [navigation]);
 
-  const handleProjectPress = (q) => {
-    openPreview({
-      title: q.title,
-      price: `${q.currency === 'USD' ? '$ ' : ''}${(q.amount ?? 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}`,
-      status: q.status,
-      lugarEntrega: q.deliveryPlace,
-      horaLlegada: q.arrivalTime,
-      horaSalida: q.departureTime,
-      paymentMethod: q.paymentMethod,
-    });
-  };
+  const handleAddQuote = useCallback(() => {
+    navigation.navigate('Cotizacion');
+  }, [navigation]);
 
-  // NO pasar funciones por params
-  const handleAddQuote = () => navigation.navigate('Cotizacion');
-
-  // ========= FIX del bucle de carga =========
-  // Guardamos la función en un ref para que useFocusEffect no dependa de su identidad.
+  // FIX del bucle de carga
   const reloadRef = useRef(reload);
-  useEffect(() => { reloadRef.current = reload; }, [reload]);
+  useEffect(() => { 
+    reloadRef.current = reload; 
+  }, [reload]);
 
   useFocusEffect(
     useCallback(() => {
-      reloadRef.current(); // se ejecuta una vez en cada enfoque real
+      reloadRef.current();
       return () => {};
     }, [])
   );
-  // =========================================
+
+  const formatTime = useCallback((date) => {
+    return date.toLocaleTimeString('es-SV', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true,
+      timeZone: 'America/El_Salvador'
+    });
+  }, []);
+
+  const formatDate = useCallback((date) => {
+    return date.toLocaleDateString('es-SV', {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+      timeZone: 'America/El_Salvador'
+    });
+  }, []);
+
+  const renderQuotesContent = useCallback(() => {
+    if (loading) {
+      return (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#10AC84" />
+          <Text style={styles.loadingText}>Cargando tus cotizaciones…</Text>
+        </View>
+      );
+    }
+
+    if (error) {
+      return (
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorText}>
+            {error}. Desliza hacia abajo para reintentar.
+          </Text>
+          <TouchableOpacity 
+            style={[styles.retryButton, { marginTop: 12 }]} 
+            onPress={() => reloadRef.current()}
+          >
+            <View style={styles.retryButtonContent}>
+              <Text style={styles.retryButtonText}>🔄 Reintentar</Text>
+            </View>
+          </TouchableOpacity>
+        </View>
+      );
+    }
+
+    if (quotes.length === 0) {
+      return (
+        <View style={styles.emptyContainer}>
+          <Text style={styles.emptyIcon}>📝</Text>
+          <Text style={styles.emptyTitle}>
+            ¡Aún no tienes cotizaciones!
+          </Text>
+          <Text style={styles.emptySubtitle}>
+            Usa el botón flotante para crear tu primera cotización y aprovechar el 30% OFF de este mes.
+          </Text>
+        </View>
+      );
+    }
+
+    return (
+      <View style={styles.projectsGrid}>
+        {quotes.slice(0, 6).map((q) => (
+          <ProjectCard
+            key={q.id}
+            project={{
+              id: q.id,
+              name: q.title,
+              price: `${q.currency === 'USD' ? '$ ' : ''}${(q.amount ?? 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}`,
+              status: q.status,
+              icon: '📄',
+            }}
+            onPress={() => handleProjectPress(q)}
+          />
+        ))}
+      </View>
+    );
+  }, [loading, error, quotes, handleProjectPress]);
+
+  // Función para manejar el refresh de cotizaciones
+  const handleRefresh = useCallback(() => {
+    refresh(); // Solo refresh de cotizaciones
+  }, [refresh]);
 
   return (
     <View style={styles.container}>
@@ -118,137 +247,386 @@ const DashboardScreen = () => {
       <ScrollView
         style={styles.content}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 20 }}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} />}
+        contentContainerStyle={{ paddingBottom: 100 }} // Espacio extra para el botón flotante
+        refreshControl={
+          <RefreshControl 
+            refreshing={refreshing} 
+            onRefresh={handleRefresh} 
+          />
+        }
       >
         {/* Header con logo */}
-        <View style={styles.logoHeader}>
+        <View style={styles.header}>
           <Image source={require('../images/logo.png')} style={styles.logo} />
+          
+          {/* Saludo personalizado */}
+          <View style={styles.welcomeContainer}>
+            <Text style={styles.welcomeText}>
+              ¡Hola{user?.name ? `, ${user.name}` : ''}! 👋
+            </Text>
+            <Text style={styles.welcomeSubtext}>
+              Bienvenido a Rivera Distribuidora
+            </Text>
+          </View>
         </View>
 
-        {/* Carrusel */}
-        <View style={styles.carouselContainer}>
-          <FlatList
-            ref={flatListRef}
-            data={bigData}
-            renderItem={renderCarouselItem}
-            keyExtractor={(_, index) => `slide-${index}`}
-            horizontal
-            pagingEnabled={false}
-            decelerationRate="fast"
-            showsHorizontalScrollIndicator={false}
-            scrollEventThrottle={16}
-            onScroll={handleScroll}
-            onMomentumScrollEnd={handleMomentumEnd}
-            onTouchStart={() => setAutoPlay(false)}
-            onScrollBeginDrag={() => setAutoPlay(false)}
-            onScrollEndDrag={() => setAutoPlay(true)}
-            getItemLayout={(_, index) => ({ length: ITEM_WIDTH, offset: ITEM_WIDTH * index, index })}
-            initialScrollIndex={START_INDEX}
-          />
-          <CarouselIndicators currentIndex={currentIndex} totalSlides={BASE_LEN} />
+        {/* Sección de Clima y Hora - MEJORADA CON CLIMA REAL */}
+        <View style={styles.weatherTimeContainer}>
+          <View style={styles.weatherCard}>
+            <View style={styles.weatherHeader}>
+              <View style={styles.lottieContainer}>
+                {weather.loading ? (
+                  <ActivityIndicator size="small" color="#10AC84" />
+                ) : weather.error ? (
+                  // Mostrar animación por defecto si hay error
+                  <LottieView
+                    source={Summer}
+                    autoPlay
+                    loop
+                    style={styles.weatherLottie}
+                  />
+                ) : (
+                  <LottieView
+                    source={getWeatherAnimation(weather.condition)}
+                    autoPlay
+                    loop
+                    style={styles.weatherLottie}
+                    // Agregar fallback en caso de error de animación
+                    onAnimationFailure={() => {
+                      console.log('Error loading weather animation');
+                    }}
+                  />
+                )}
+              </View>
+              <View style={styles.weatherInfo}>
+                <Text style={styles.temperature}>
+                  {weather.loading ? '...' : `${weather.temperature}°C`}
+                </Text>
+                <Text style={styles.weatherCondition}>
+                  {weather.loading ? 'Cargando clima...' : weather.condition}
+                  {weather.error && ' (Datos offline)'}
+                </Text>
+              </View>
+            </View>
+            <View style={styles.weatherDetails}>
+              <View style={styles.weatherDetailItem}>
+                <Text style={styles.weatherDetailLabel}>Humedad</Text>
+                <Text style={styles.weatherDetailValue}>
+                  {weather.loading ? '...' : weather.humidity}
+                </Text>
+              </View>
+              <View style={styles.weatherDetailItem}>
+                <Text style={styles.weatherDetailLabel}>San Salvador</Text>
+                <Text style={styles.weatherDetailValue}>El Salvador</Text>
+              </View>
+            </View>
+          </View>
+
+          <View style={styles.timeCard}>
+            <Text style={styles.currentTime}>{formatTime(currentTime)}</Text>
+            <Text style={styles.currentDate}>{formatDate(currentTime)}</Text>
+            <View style={styles.clockIcon}>
+              <Text style={styles.clockEmoji}>🕐</Text>
+            </View>
+          </View>
         </View>
 
         {/* Sección de cotizaciones */}
         <View style={styles.quotesSection}>
-          <TouchableOpacity style={styles.addButton} onPress={handleAddQuote}>
-            <Text style={styles.addButtonText}>Hacer una cotización de viaje</Text>
-          </TouchableOpacity>
-
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Últimas Cotizaciones realizadas</Text>
+            <Text style={styles.sectionTitle}>📋 Mis Cotizaciones</Text>
+            <Text style={styles.sectionSubtitle}>Últimas cotizaciones realizadas</Text>
           </View>
 
-          {loading ? (
-            <View style={{ paddingVertical: 20, alignItems: 'center' }}>
-              <ActivityIndicator size="large" />
-              <Text style={{ marginTop: 8, color: '#666' }}>Cargando tus cotizaciones…</Text>
-            </View>
-          ) : error ? (
-            <View style={{ paddingVertical: 20 }}>
-              <Text style={{ color: '#d00', textAlign: 'center' }}>
-                {error}. Desliza hacia abajo para reintentar.
-              </Text>
-              <TouchableOpacity onPress={() => reloadRef.current()} style={[styles.addButton, { marginTop: 12 }]}>
-                <Text style={styles.addButtonText}>Reintentar</Text>
-              </TouchableOpacity>
-            </View>
-          ) : quotes.length === 0 ? (
-            <View style={{ paddingVertical: 24, paddingHorizontal: 12 }}>
-              <Text style={{ textAlign: 'center', fontSize: 16, fontWeight: '600' }}>
-                ¡Aún no tienes cotizaciones!
-              </Text>
-              <Text style={{ textAlign: 'center', marginTop: 6, color: '#666' }}>
-                Crea tu primera cotización y aprovecha el 30% OFF de este mes.
-              </Text>
-              <TouchableOpacity style={[styles.addButton, { marginTop: 14 }]} onPress={handleAddQuote}>
-                <Text style={styles.addButtonText}>Crear mi primera cotización</Text>
-              </TouchableOpacity>
-            </View>
-          ) : (
-            <View style={styles.projectsGrid}>
-              {quotes.slice(0, 6).map((q) => (
-                <ProjectCard
-                  key={q.id}
-                  project={{
-                    id: q.id,
-                    name: q.title,
-                    price: `${q.currency === 'USD' ? '$ ' : ''}${(q.amount ?? 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}`,
-                    status: q.status,
-                    icon: '📄',
-                  }}
-                  onPress={() => handleProjectPress(q)}
-                />
-              ))}
-            </View>
-          )}
+          {renderQuotesContent()}
         </View>
       </ScrollView>
 
-      <QuoteSheet
-        visible={visible}
-        item={item}
-        onClose={close}
-        onConfirm={(payload) => {
-          close();
-          navigation.navigate('Cotizacion', payload); // payload serializable
-        }}
-      />
+      {/* BOTÓN FLOTANTE */}
+      <TouchableOpacity 
+        style={styles.floatingButton} 
+        onPress={handleAddQuote}
+        activeOpacity={0.8}
+      >
+        <View style={styles.floatingButtonContent}>
+          <LottieView
+            source={Location}
+            autoPlay
+            loop
+            style={styles.floatingButtonLottie}
+          />
+        </View>
+      </TouchableOpacity>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: BG },
-  content: { flex: 1 },
+  container: { 
+    flex: 1, 
+    backgroundColor: BG 
+  },
+  content: { 
+    flex: 1 
+  },
 
-  logoHeader: { backgroundColor: BG, alignItems: 'center', paddingTop: 26, paddingBottom: 16 },
-  logo: { width: LOGO_WIDTH, height: LOGO_HEIGHT, resizeMode: 'contain', alignSelf: 'center', marginTop: 8 },
-
-  carouselContainer: { marginTop: 20, marginBottom: 30 },
-
-  quotesSection: { paddingHorizontal: 20, paddingBottom: 20 },
-  sectionHeader: { marginTop: 8, marginBottom: 16 },
-  sectionTitle: { fontSize: 16, fontWeight: '500', color: '#666666' },
-
-  addButton: {
+  // Header mejorado
+  header: { 
+    backgroundColor: '#FFFFFF',
+    paddingTop: 30,
+    paddingBottom: 20,
+    paddingHorizontal: 20,
+    borderBottomLeftRadius: 25,
+    borderBottomRightRadius: 25,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 5 },
+    elevation: 5,
+    marginBottom: 20,
+  },
+  logo: { 
+    width: LOGO_WIDTH, 
+    height: LOGO_HEIGHT, 
+    resizeMode: 'contain', 
     alignSelf: 'center',
-    width: '100%',
-    maxWidth: 520,
-    backgroundColor: '#10AC84',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 12,
-    marginBottom: 12,
-    shadowColor: '#10AC84',
-    shadowOpacity: 0.15,
+    marginBottom: 15,
+  },
+  welcomeContainer: {
+    alignItems: 'center',
+  },
+  welcomeText: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#333333',
+    marginBottom: 4,
+  },
+  welcomeSubtext: {
+    fontSize: 14,
+    color: '#666666',
+    fontWeight: '500',
+  },
+
+  // Sección de clima y hora
+  weatherTimeContainer: {
+    flexDirection: 'row',
+    paddingHorizontal: 20,
+    marginBottom: 25,
+    gap: 12,
+  },
+  weatherCard: {
+    flex: 2,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 16,
+    shadowColor: '#000',
+    shadowOpacity: 0.08,
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 4 },
-    elevation: 3,
+    elevation: 4,
   },
-  addButtonText: { textAlign: 'center', color: '#FFFFFF', fontSize: 15, fontWeight: 'bold' },
+  weatherHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  lottieContainer: {
+    width: 50,
+    height: 50,
+    marginRight: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  weatherLottie: {
+    width: '100%',
+    height: '100%',
+  },
+  weatherInfo: {
+    flex: 1,
+  },
+  temperature: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#333333',
+  },
+  weatherCondition: {
+    fontSize: 14,
+    color: '#666666',
+    marginTop: 2,
+  },
+  weatherDetails: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  weatherDetailItem: {
+    alignItems: 'center',
+  },
+  weatherDetailLabel: {
+    fontSize: 12,
+    color: '#999999',
+    marginBottom: 2,
+  },
+  weatherDetailValue: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333333',
+  },
 
-  projectsGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' },
+  timeCard: {
+    flex: 1,
+    backgroundColor: '#667eea',
+    borderRadius: 16,
+    padding: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#667eea',
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 4,
+  },
+  currentTime: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+    marginBottom: 4,
+  },
+  currentDate: {
+    fontSize: 12,
+    color: '#E8EAFF',
+    textAlign: 'center',
+    textTransform: 'capitalize',
+  },
+  clockIcon: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+  },
+  clockEmoji: {
+    fontSize: 16,
+    opacity: 0.7,
+  },
+
+  // Sección de cotizaciones mejorada
+  quotesSection: { 
+    paddingHorizontal: 20, 
+    paddingBottom: 20 
+  },
+  sectionHeader: { 
+    marginBottom: 20,
+    paddingLeft: 4,
+  },
+  sectionTitle: { 
+    fontSize: 20, 
+    fontWeight: 'bold', 
+    color: '#333333',
+    marginBottom: 4,
+  },
+  sectionSubtitle: {
+    fontSize: 14,
+    color: '#666666',
+  },
+
+  // Botón de reintentar (para errores)
+  retryButton: {
+    alignSelf: 'center',
+    backgroundColor: '#10AC84',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+  },
+  retryButtonContent: {
+    alignItems: 'center',
+  },
+  retryButtonText: { 
+    color: '#FFFFFF', 
+    fontSize: 14, 
+    fontWeight: 'bold' 
+  },
+
+  // Estados de carga, error y vacío mejorados
+  loadingContainer: {
+    paddingVertical: 30,
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 12,
+    color: '#666666',
+    fontSize: 16,
+  },
+
+  errorContainer: {
+    paddingVertical: 24,
+    paddingHorizontal: 16,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    marginHorizontal: 4,
+  },
+  errorText: {
+    color: '#d00',
+    textAlign: 'center',
+    fontSize: 16,
+  },
+
+  emptyContainer: {
+    paddingVertical: 40,
+    paddingHorizontal: 20,
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    marginHorizontal: 4,
+  },
+  emptyIcon: {
+    fontSize: 48,
+    marginBottom: 16,
+  },
+  emptyTitle: {
+    textAlign: 'center',
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333333',
+    marginBottom: 8,
+  },
+  emptySubtitle: {
+    textAlign: 'center',
+    fontSize: 15,
+    color: '#666666',
+    lineHeight: 22,
+  },
+
+  projectsGrid: { 
+    flexDirection: 'row', 
+    flexWrap: 'wrap', 
+    justifyContent: 'space-between' 
+  },
+
+  // ESTILOS DEL BOTÓN FLOTANTE
+  floatingButton: {
+    position: 'absolute',
+    bottom: 30,
+    right: 20,
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: '#2DD4BF', // Verde turquesa claro
+    shadowColor: '#2DD4BF',
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 5 },
+    elevation: 7,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  floatingButtonContent: {
+    width: '100%',
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  floatingButtonLottie: {
+    width: 36,
+    height: 36,
+  },
 });
 
 export default DashboardScreen;
