@@ -51,28 +51,84 @@ const DashboardScreen = () => {
     return () => clearInterval(timer);
   }, [getSalvadorTime]);
 
-  // Función para obtener la animación Lottie según el clima real
+  // Función CORREGIDA para detectar clima basada en tus traducciones exactas
   const getWeatherAnimation = useCallback((condition) => {
-    const lowerCondition = condition.toLowerCase();
+    // 🐛 DEBUGGING: Ver qué está llegando exactamente
+    console.log('🌤️ Condición del clima recibida:', condition);
+    console.log('🌤️ Tipo de dato:', typeof condition);
+    console.log('🌤️ Contiene "Simulado"?', condition?.includes('(Simulado)'));
     
-    if (lowerCondition.includes('despejado') || 
-        lowerCondition.includes('soleado') || 
-        lowerCondition.includes('pocas nubes')) {
+    if (!condition) {
+      console.log('⚠️ No hay condición, usando Summer por defecto');
       return Summer;
     }
     
-    if (lowerCondition.includes('lluv') || 
-        lowerCondition.includes('tormenta')) {
+    const lowerCondition = condition.toLowerCase().trim();
+    console.log('🌤️ Condición procesada:', lowerCondition);
+    
+    // ☔ CONDICIONES DE LLUVIA (basadas en tus traducciones exactas)
+    const rainyKeywords = [
+      // Traducciones exactas de tu weatherService
+      'lluvia ligera', 'lluvia moderada', 'lluvia intensa', 'lluvia muy intensa',
+      'lluvia extrema', 'lluvia helada', 'llovizna ligera', 'aguacero',
+      'aguacero intenso', 'aguacero irregular', 'lluvioso',
+      'tormenta', 'tormenta con lluvia', 'tormenta ligera', 'tormenta intensa',
+      'tormenta irregular', 'tormenta con llovizna',
+      // Palabras generales
+      'lluv', 'tormenta', 'aguacero', 'llovizna', 'rain', 'storm', 'drizzle'
+    ];
+    
+    // ☁️ CONDICIONES NUBLADAS (basadas en tus traducciones exactas)
+    const cloudyKeywords = [
+      // Traducciones exactas de tu weatherService
+      'pocas nubes', 'nublado parcial', 'nublado', 'muy nublado',
+      'parcialmente nublado', 'bruma', 'niebla', 'calina', 'humo',
+      // Palabras generales
+      'nubl', 'cloud', 'overcast', 'bruma', 'niebla', 'fog', 'mist'
+    ];
+    
+    // ☀️ CONDICIONES SOLEADAS (basadas en tus traducciones exactas)
+    const sunnyKeywords = [
+      // Traducciones exactas de tu weatherService
+      'despejado', 'soleado', 'muy soleado',
+      // Palabras generales
+      'sol', 'clear', 'sunny', 'bright', 'despej'
+    ];
+    
+    // 🔍 Verificar cada categoría y mostrar en consola
+    const foundRainy = rainyKeywords.find(keyword => lowerCondition.includes(keyword));
+    const foundCloudy = cloudyKeywords.find(keyword => lowerCondition.includes(keyword));
+    const foundSunny = sunnyKeywords.find(keyword => lowerCondition.includes(keyword));
+    
+    console.log('🔍 Análisis de palabras clave:');
+    console.log('  ☔ Lluvia encontrada:', foundRainy || 'NINGUNA');
+    console.log('  ☁️ Nublado encontrado:', foundCloudy || 'NINGUNA');
+    console.log('  ☀️ Soleado encontrado:', foundSunny || 'NINGUNA');
+    
+    // Verificar lluvia primero (prioridad alta)
+    if (foundRainy) {
+      console.log('✅ DETECTADO: LLUVIA ☔ - Mostrando Rain animation');
       return Rain;
     }
     
-    if (lowerCondition.includes('nubl') || 
-        lowerCondition.includes('bruma') || 
-        lowerCondition.includes('niebla')) {
+    // Verificar nublado
+    if (foundCloudy) {
+      console.log('✅ DETECTADO: NUBLADO ☁️ - Mostrando Cloudy animation');
       return Cloudy;
     }
     
-    return Summer; // Por defecto
+    // Verificar soleado
+    if (foundSunny) {
+      console.log('✅ DETECTADO: SOLEADO ☀️ - Mostrando Summer animation');
+      return Summer;
+    }
+    
+    // Por defecto
+    console.log('⚠️ NO DETECTADO - Usando Summer por defecto');
+    console.log('💡 Agrega esta condición a las palabras clave:', `"${lowerCondition}"`);
+    console.log('📝 Considera agregar al array correspondiente en getWeatherAnimation');
+    
+    return Summer;
   }, []);
 
   // Cotizaciones (hook conectado al backend)
@@ -214,19 +270,31 @@ const DashboardScreen = () => {
           </View>
         </View>
 
-        {/* Sección de Clima y Hora - ACTUALIZADA CON CLIMA REAL */}
+        {/* Sección de Clima y Hora - MEJORADA CON CLIMA REAL */}
         <View style={styles.weatherTimeContainer}>
           <View style={styles.weatherCard}>
             <View style={styles.weatherHeader}>
               <View style={styles.lottieContainer}>
                 {weather.loading ? (
                   <ActivityIndicator size="small" color="#10AC84" />
+                ) : weather.error ? (
+                  // Mostrar animación por defecto si hay error
+                  <LottieView
+                    source={Summer}
+                    autoPlay
+                    loop
+                    style={styles.weatherLottie}
+                  />
                 ) : (
                   <LottieView
                     source={getWeatherAnimation(weather.condition)}
                     autoPlay
                     loop
                     style={styles.weatherLottie}
+                    // Agregar fallback en caso de error de animación
+                    onAnimationFailure={() => {
+                      console.log('Error loading weather animation');
+                    }}
                   />
                 )}
               </View>
@@ -235,8 +303,8 @@ const DashboardScreen = () => {
                   {weather.loading ? '...' : `${weather.temperature}°C`}
                 </Text>
                 <Text style={styles.weatherCondition}>
-                  {weather.condition}
-                  {weather.error && ' (Sin conexión)'}
+                  {weather.loading ? 'Cargando clima...' : weather.condition}
+                  {weather.error && ' (Datos offline)'}
                 </Text>
               </View>
             </View>
