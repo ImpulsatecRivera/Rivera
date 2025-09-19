@@ -276,7 +276,7 @@ const FunctionalGroups = () => {
       setError(null);
       
       // 🔧 RUTA CORRECTA: carga-distribution
-      const res = await fetch('https://riveraproject-5.onrender.com/api/viajes/carga-distribution');
+      const res = await fetch('https://riveraproject-production.up.railway.app/api/viajes/carga-distribution');
       
       if (!res.ok) {
         throw new Error(`HTTP error! status: ${res.status}`);

@@ -2,13 +2,16 @@ import React, { useState, useEffect } from 'react';
 import { Mail, Phone, MapPin, Facebook, Instagram, Linkedin, Twitter } from 'lucide-react';
 import './Home.css';
 import logo from '../../assets/image.png';
-import Equipo from "../../Images/Imagen1.jpg";
+import Equipo from "../../Images/Imagen2.jpg";
 import Nosotros from "../../Images/Imagen2.jpg";
+import Equipo4 from "../../Images/imagen15.jpg";
+import Equipo5 from "../../Images/imagen16.jpg";
+import Equipo7 from "../../Images/imagen18.jpg";
 import Ceo from "../../Images/Imagen4.jpg";
-import Conoce from "../../Images/Imagen6.jpg";
+import Conoce from "../../Images/imagen14.jpg";
 
 
-const EmpresaPage = () => {
+const Home = () => {
   const [currentSlide, setCurrentSlide] = useState(0);
   
   // Estados para el formulario del footer
@@ -23,11 +26,10 @@ const EmpresaPage = () => {
   
   const images = [
     Equipo,
-    Equipo,
-    Equipo,
-    Equipo,
-    Equipo,
-    Equipo
+   
+    Equipo4,
+    Equipo5,
+    Equipo7
   ];
 
   useEffect(() => {
@@ -123,7 +125,7 @@ const EmpresaPage = () => {
               nuestra empresa
             </h2>
             <p className="intro-text">
-              La empresa ofrece servicios integrales de transporte de carga, distribución y gestión logística a nivel nacional e internacional. Nos enfocamos en ser eficientes y puntuales, adaptándonos a las necesidades de cada cliente, con un equipo profesional y una ética de manufactura que garantizan calidad y confiabilidad en todo lo que hacemos.
+              La empresa samuel ofrecer servicios integral de transportes de carga, distribuciów y gestión logística a nivel nacional e internacional. Nos enfocamos en ser eficientes y puntuales, adaptándonos a las necesidades de cada cliente, con un equipo profesional y una ética de manufactura que garantizan calidad y confiabilidad en todo lo que hacemos.
             </p>
           </div>
           <div className="intro-image-section">
@@ -141,7 +143,7 @@ const EmpresaPage = () => {
           <div className="ceo-text">
             <h2 className="ceo-title">
               Conoce a nuestra CEO<br />
-              de la empresa
+              de la empresasss
             </h2>
             <p className="ceo-description">
               Yanira Rivera es una destacada empresaria salvadoreña, fundadora y directora de Rivera Distribuidora y Transporte, con más de una década de experiencia en logística y transporte de cargas en El Salvador. Su compromiso la ha posicionado como un referente en la industria, gracias a su compromiso con la excelencia y la innovación. Además, ha contribuido significativamente al género en el sector y ha impulsado activamente a otras mujeres a ingresar y prosperar en esta importante industria del país.
@@ -152,7 +154,7 @@ const EmpresaPage = () => {
         <div className="ceo-footer">
           <p className="ceo-footer-text">
             <span className="quote-mark">"</span>
-            Conectamos destinos, entregamos confianza.
+            Conectamos destinos, entregamos confianza aparentemente nada
             <span className="quote-mark">"</span>
           </p>
         </div>
@@ -192,12 +194,12 @@ const EmpresaPage = () => {
                 <h3 className="text-lg font-semibold text-gray-800 mb-4">Información</h3>
                 <ul className="space-y-2 text-sm text-gray-600">
                   <li>
-                    <a href="/quienes-somos" className="hover:text-teal-600 transition-colors">
+                    <a href="/" className="hover:text-teal-600 transition-colors">
                       Quienes somos
                     </a>
                   </li>
                   <li>
-                    <a href="/que-hacen" className="hover:text-teal-600 transition-colors">
+                    <a href="/Dedicacion" className="hover:text-teal-600 transition-colors">
                       Nuestra Dedicación
                     </a>
                   </li>
@@ -295,4 +297,4 @@ const EmpresaPage = () => {
   );
 };
 
-export default EmpresaPage;
+export default Home;

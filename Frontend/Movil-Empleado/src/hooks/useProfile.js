@@ -3,8 +3,11 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../Context/authContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+const BASE_URL = 'https://riveraproject-production.up.railway.app';
+
 export const useProfile = () => {
   const { user, token, logout: authLogout } = useAuth();
+
   const [profile, setProfile] = useState({
     id: null,
     nombre: '',
@@ -15,9 +18,9 @@ export const useProfile = () => {
     tarjeta: '',
     cargo: 'Motorista',
     camion: 'Sin asignar',
-    camionInfo: null
+    camionInfo: null,
   });
-  
+
   const [loading, setLoading] = useState(true);
 
   const obtenerMotoristaId = async () => {
@@ -53,20 +56,22 @@ export const useProfile = () => {
         throw new Error('No se encontró ID de motorista. Por favor, inicia sesión nuevamente.');
       }
 
-      // ⬇️ usa cualquiera disponible; en tu AuthContext no expones token, por eso caemos a AsyncStorage
-      const authToken = (await AsyncStorage.getItem('authToken')) ||
-                        (await AsyncStorage.getItem('userToken')) ||
-                        token;
+      // Usa token del contexto o el que esté guardado
+      const authToken =
+        (await AsyncStorage.getItem('authToken')) ||
+        (await AsyncStorage.getItem('userToken')) ||
+        token;
 
       console.log('🌐 Conectando al backend con ID:', motoristaId);
       console.log('🔑 Auth token:', authToken ? 'Presente' : 'No presente');
 
-      const response = await fetch(`https://riveraproject-5.onrender.com/api/motoristas/${motoristaId}`, {
+      // Petición al backend (Railway)
+      const response = await fetch(`${BASE_URL}/api/motoristas/${motoristaId}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          ...(authToken && { 'Authorization': `Bearer ${authToken}` }),
+          Accept: 'application/json',
+          ...(authToken && { Authorization: `Bearer ${authToken}` }),
         },
       });
 
@@ -83,32 +88,32 @@ export const useProfile = () => {
             email: user.email || 'No disponible',
             telefono: user.phone || 'No disponible',
             direccion: user.address || 'No disponible',
-            fechaNacimiento: user.birthDate 
+            fechaNacimiento: user.birthDate
               ? new Date(user.birthDate).toLocaleDateString('es-ES')
               : 'No disponible',
             tarjeta: user.circulationCard || 'No disponible',
             cargo: 'Motorista',
             camion: 'Sin conexión al servidor',
             camionInfo: null,
-            img: user.img
+            img: user.img,
           });
           return;
         }
         throw new Error(`Error ${response.status}: ${errorData}`);
       }
 
-      // ✅ Desempaquetar { success, data, message } si viene así
+      // ✅ Algunas APIs envían { success, data, message }
       const raw = await response.json();
-      const payload = (raw && raw.success && raw.data) ? raw.data : raw;
+      const payload = raw && raw.success && raw.data ? raw.data : raw;
 
-      // Por si alguna API devuelve un array (tomamos el primero)
+      // Si viene array, toma el primero
       const motoristaData = Array.isArray(payload) ? payload[0] : payload;
 
       console.log('✅ Datos recibidos del backend:', {
         id: motoristaData?._id || motoristaData?.id,
         name: motoristaData?.name,
         email: motoristaData?.email,
-        camion: motoristaData?.camionAsignado ? 'Asignado' : 'Sin asignar'
+        camion: motoristaData?.camionAsignado ? 'Asignado' : 'Sin asignar',
       });
 
       if (!motoristaData || typeof motoristaData !== 'object') {
@@ -121,25 +126,26 @@ export const useProfile = () => {
         email: motoristaData.email || 'No disponible',
         telefono: motoristaData.phone || 'No disponible',
         direccion: motoristaData.address || 'No disponible',
-        fechaNacimiento: motoristaData.birthDate 
+        fechaNacimiento: motoristaData.birthDate
           ? new Date(motoristaData.birthDate).toLocaleDateString('es-ES')
           : 'No disponible',
         tarjeta: motoristaData.circulationCard || 'No disponible',
         cargo: 'Motorista',
-        camion: motoristaData.camionAsignado 
-          ? `${motoristaData.camionAsignado.name || motoristaData.camionAsignado.alias || 'Camión'} - ${motoristaData.camionAsignado.licensePlate || motoristaData.camionAsignado.placa || ''}`.trim()
+        camion: motoristaData.camionAsignado
+          ? `${motoristaData.camionAsignado.name || motoristaData.camionAsignado.alias || 'Camión'} - ${
+              motoristaData.camionAsignado.licensePlate || motoristaData.camionAsignado.placa || ''
+            }`.trim()
           : 'Sin asignar',
         camionInfo: motoristaData.camionAsignado || null,
-        img: motoristaData.img
+        img: motoristaData.img,
       });
 
-      // Mantener AsyncStorage en sync si cambió
+      // Mantén AsyncStorage sincronizado si cambió el ID
       const finalId = motoristaData._id || motoristaData.id;
       if (finalId && String(finalId) !== String(motoristaId)) {
         await AsyncStorage.setItem('motoristaId', String(finalId));
         console.log('🔄 ID actualizado en AsyncStorage:', finalId);
       }
-      
     } catch (error) {
       console.error('❌ Error al cargar perfil:', error.message);
       if (user) {
@@ -151,21 +157,21 @@ export const useProfile = () => {
           email: user.email || 'No disponible',
           telefono: user.phone || 'No disponible',
           direccion: user.address || 'No disponible',
-          fechaNacimiento: user.birthDate 
+          fechaNacimiento: user.birthDate
             ? new Date(user.birthDate).toLocaleDateString('es-ES')
             : 'No disponible',
           tarjeta: user.circulationCard || 'No disponible',
           cargo: 'Motorista',
           camion: 'Error al cargar',
           camionInfo: null,
-          img: user.img
+          img: user.img,
         });
       } else {
-        setProfile(prev => ({
+        setProfile((prev) => ({
           ...prev,
           nombre: 'Error al cargar',
           email: error.message,
-          camion: 'Error'
+          camion: 'Error',
         }));
       }
     } finally {
@@ -187,7 +193,7 @@ export const useProfile = () => {
           tarjeta: '',
           cargo: 'Motorista',
           camion: 'Sin asignar',
-          camionInfo: null
+          camionInfo: null,
         });
         console.log('Sesión cerrada correctamente');
       }
@@ -212,6 +218,6 @@ export const useProfile = () => {
     profile,
     loading,
     fetchProfile,
-    logout
+    logout,
   };
 };

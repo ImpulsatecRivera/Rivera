@@ -4,7 +4,7 @@ import {
 } from 'react-native';
 
 const { height } = Dimensions.get('window');
-const SHEET_HEIGHT = Math.round(height * 0.52);
+const SHEET_HEIGHT = Math.round(height * 0.58); // Aumentado para el botón
 
 const pretty = (s = '') =>
   String(s).replace(/_/g, ' ').replace(/\b\w/g, (m) => m.toUpperCase());
@@ -16,11 +16,29 @@ const Row = ({ label, children }) => (
   </View>
 );
 
-const Pill = ({ children }) => (
-  <View style={styles.pill}>
-    <Text style={styles.pillText}>{children}</Text>
-  </View>
-);
+const Pill = ({ children, status }) => {
+  // Diferentes colores según el status
+  const getStatusColor = (status) => {
+    const statusColors = {
+      'pendiente': { bg: '#FEF3C7', text: '#92400E' },
+      'enviada': { bg: '#DBEAFE', text: '#1D4ED8' },
+      'aceptada': { bg: '#D1FAE5', text: '#065F46' },
+      'rechazada': { bg: '#FEE2E2', text: '#991B1B' },
+      'ejecutada': { bg: '#E0E7FF', text: '#3730A3' },
+      'cancelada': { bg: '#F3F4F6', text: '#374151' },
+    };
+    
+    return statusColors[status?.toLowerCase()] || { bg: '#E6FFFA', text: '#0F766E' };
+  };
+
+  const colors = getStatusColor(status);
+
+  return (
+    <View style={[styles.pill, { backgroundColor: colors.bg }]}>
+      <Text style={[styles.pillText, { color: colors.text }]}>{children}</Text>
+    </View>
+  );
+};
 
 // HH:MM local a partir de ISO
 const fmtTime = (iso) => {
@@ -33,7 +51,7 @@ const fmtTime = (iso) => {
   }
 };
 
-const QuoteSheet = ({ visible, item, onClose }) => {
+const QuoteSheet = ({ visible, item, onClose, onAccept, showAcceptButton }) => {
   const anim = useRef(new Animated.Value(SHEET_HEIGHT)).current;
 
   useEffect(() => {
@@ -46,12 +64,17 @@ const QuoteSheet = ({ visible, item, onClose }) => {
   const payload = {
     titulo: item?.title || item?.name || 'Cotización',
     status: pretty(estadoRaw),
+    statusRaw: estadoRaw,
     metodoPago: (item?.paymentMethod || item?.metodoPago || '—').toString(),
     monto: item?.price || item?.monto || '—',
     horaLlegada: fmtTime(item?.horaLlegada || item?.arrivalTime),
     horaSalida: fmtTime(item?.horaSalida || item?.departureTime),
     lugarEntrega: item?.lugarEntrega || item?.deliveryPlace || '—',
   };
+
+  // Verificar si debe mostrar el botón de aceptar
+  const shouldShowAcceptButton = showAcceptButton || 
+    (estadoRaw === 'pendiente' && item?.amount && item.amount > 0);
 
   return (
     <Modal visible transparent animationType="none" onRequestClose={onClose}>
@@ -69,7 +92,7 @@ const QuoteSheet = ({ visible, item, onClose }) => {
 
         <View style={styles.content}>
           <Row label="Carga"><Text style={styles.rowValue} numberOfLines={1}>{payload.titulo}</Text></Row>
-          <Row label="Estado"><Pill>{payload.status}</Pill></Row>
+          <Row label="Estado"><Pill status={payload.statusRaw}>{payload.status}</Pill></Row>
           <Row label="Método de pago"><Text style={styles.rowValue}>{payload.metodoPago}</Text></Row>
           <Row label="Monto a pagar"><Text style={styles.rowValue}>{payload.monto}</Text></Row>
           <Row label="Hora de llegada"><Text style={styles.rowValue}>{payload.horaLlegada}</Text></Row>
@@ -78,9 +101,19 @@ const QuoteSheet = ({ visible, item, onClose }) => {
         </View>
 
         <View style={styles.footer}>
-          {/* Solo botón cerrar */}
+          {/* Mostrar botón de aceptar si es cotización pendiente con monto */}
+          {shouldShowAcceptButton && onAccept && (
+            <TouchableOpacity
+              style={[styles.actionBtn, styles.acceptBtn]}
+              onPress={onAccept}
+            >
+              <Text style={styles.actionText}>✓ Aceptar cotización</Text>
+            </TouchableOpacity>
+          )}
+
+          {/* Botón cerrar */}
           <TouchableOpacity
-            style={[styles.actionBtn, { backgroundColor: '#FF4757' }]}
+            style={[styles.actionBtn, styles.closeBtn]}
             onPress={onClose}
           >
             <Text style={styles.actionText}>Cerrar</Text>
@@ -108,11 +141,29 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   rowLabel: { color: '#6B7280', fontSize: 13 },
   rowValue: { color: '#111827', fontSize: 14, fontWeight: '600' },
-  pill: { backgroundColor: '#E6FFFA', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 8 },
-  pillText: { color: '#0F766E', fontWeight: '700', fontSize: 12 },
-  footer: { paddingHorizontal: 18, paddingTop: 22, paddingBottom: 14 },
-  actionBtn: { borderRadius: 12, paddingVertical: 12, alignItems: 'center' },
-  actionText: { color: '#FFFFFF', fontWeight: '700' },
+  pill: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 8 },
+  pillText: { fontWeight: '700', fontSize: 12 },
+  footer: { 
+    paddingHorizontal: 18, 
+    paddingTop: 16, 
+    paddingBottom: 14, 
+    gap: 10 
+  },
+  actionBtn: { 
+    borderRadius: 12, 
+    paddingVertical: 12, 
+    alignItems: 'center' 
+  },
+  acceptBtn: { 
+    backgroundColor: '#10AC84' 
+  },
+  closeBtn: { 
+    backgroundColor: '#FF4757' 
+  },
+  actionText: { 
+    color: '#FFFFFF', 
+    fontWeight: '700' 
+  },
 });
 
 export default QuoteSheet;

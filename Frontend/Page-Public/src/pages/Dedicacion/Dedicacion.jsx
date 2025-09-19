@@ -35,7 +35,6 @@ const QueHacemosV2 = () => {
   ];
 
   const tabs = [
-    { title: "Nuestra Historia", content: "historia" },
     { title: "Servicios", content: "servicios" },
     { title: "Proceso", content: "proceso" },
     { title: "Ventajas", content: "ventajas" }
@@ -108,34 +107,6 @@ const QueHacemosV2 = () => {
 
           <div className="dedicacion-tab-content">
             {activeTab === 0 && (
-              <div className="dedicacion-content-panel dedicacion-historia">
-                <div className="dedicacion-timeline-modern">
-                  <div className="dedicacion-timeline-item">
-                    <div className="dedicacion-timeline-year">2000</div>
-                    <div className="dedicacion-timeline-content">
-                      <h3>El Comienzo</h3>
-                      <p>Iniciamos prestando servicios a una empresa familiar, con la visión de crecer y expandirnos.</p>
-                    </div>
-                  </div>
-                  <div className="dedicacion-timeline-item">
-                    <div className="dedicacion-timeline-year">2010</div>
-                    <div className="dedicacion-timeline-content">
-                      <h3>Expansión</h3>
-                      <p>Diversificamos servicios y encontramos nuevos aliados estratégicos para nuestro crecimiento.</p>
-                    </div>
-                  </div>
-                  <div className="dedicacion-timeline-item">
-                    <div className="dedicacion-timeline-year">2024</div>
-                    <div className="dedicacion-timeline-content">
-                      <h3>Liderazgo</h3>
-                      <p>24 años después, seguimos conectando el éxito, un viaje a la vez, con total seguridad.</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {activeTab === 1 && (
               <div className="dedicacion-content-panel dedicacion-servicios">
                 <div className="dedicacion-services-cards">
                   {services.map((service) => (
@@ -174,7 +145,7 @@ const QueHacemosV2 = () => {
               </div>
             )}
 
-            {activeTab === 2 && (
+            {activeTab === 1 && (
               <div className="dedicacion-content-panel dedicacion-proceso">
                 <div className="dedicacion-process-flow">
                   <div className="dedicacion-flow-step">
@@ -204,7 +175,7 @@ const QueHacemosV2 = () => {
               </div>
             )}
 
-            {activeTab === 3 && (
+            {activeTab === 2 && (
               <div className="dedicacion-content-panel dedicacion-ventajas">
                 <div className="dedicacion-advantages-grid">
                   <div className="dedicacion-advantage-item">
