@@ -38,19 +38,19 @@ export default function EditarCamion() {
         setLoading(true);
 
         // Todas las peticiones incluyen cookies
-        const truckResponse = await fetch(`riveraproject-production.up.railway.app/api/camiones/${id}`, {
+        const truckResponse = await fetch(`https://riveraproject-production.up.railway.app/api/camiones/${id}`, {
           method: 'GET',
           ...fetchOptions
         });
         const truckData = await truckResponse.json();
 
-        const proveedoresResponse = await fetch('riveraproject-production.up.railway.app/api/proveedores', {
+        const proveedoresResponse = await fetch('https://riveraproject-production.up.railway.app/api/proveedores', {
           method: 'GET',
           ...fetchOptions
         });
         const proveedoresData = await proveedoresResponse.json();
 
-        const motoristasResponse = await fetch('riveraproject-production.up.railway.app/api/motoristas', {
+        const motoristasResponse = await fetch('https://riveraproject-production.up.railway.app/api/motoristas', {
           method: 'GET',
           ...fetchOptions
         });
@@ -105,7 +105,7 @@ export default function EditarCamion() {
         age: formData.año
       };
 
-      const response = await fetch(`riveraproject-production.up.railway.app/api/camiones/${id}`, {
+      const response = await fetch(`https://riveraproject-production.up.railway.app/api/camiones/${id}`, {
         method: 'PUT',
         ...fetchOptions,
         body: JSON.stringify(updateData)

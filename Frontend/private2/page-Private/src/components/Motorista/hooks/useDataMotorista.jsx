@@ -28,7 +28,7 @@ const useDataMotorista = () => {
         setLoading(true);
         console.log('Iniciando petición a la API de motoristas...');
         
-        const response = await fetch('riveraproject-production.up.railway.app/api/motoristas', {
+        const response = await fetch('https://riveraproject-production.up.railway.app/api/motoristas', {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
@@ -117,7 +117,7 @@ const useDataMotorista = () => {
     setShowConfirmDelete(false);
     try {
       console.log('Eliminando motorista con ID:', selectedMotorista._id);
-      await axios.delete(`riveraproject-production.up.railway.app/api/motoristas/${selectedMotorista._id}`);
+      await axios.delete(`https://riveraproject-production.up.railway.app/api/motoristas/${selectedMotorista._id}`);
       setMotoristas(motoristas.filter(mot => mot._id !== selectedMotorista._id));
       console.log("Motorista eliminado exitosamente");
       setShowDetailView(false);
@@ -174,7 +174,7 @@ const useDataMotorista = () => {
         console.log('FormData creado, enviando...');
         
         // Enviar con fetch (axios tiene problemas con FormData a veces)
-        const response = await fetch(`riveraproject-production.up.railway.app/api/motoristas/${selectedMotorista._id}`, {
+        const response = await fetch(`https://riveraproject-production.up.railway.app/api/motoristas/${selectedMotorista._id}`, {
           method: 'PUT',
           body: submitData,
           // No agregar Content-Type, el navegador lo maneja automáticamente para FormData
@@ -235,7 +235,7 @@ const useDataMotorista = () => {
         }
 
         const response = await axios.put(
-          `riveraproject-production.up.railway.app/api/motoristas/${selectedMotorista._id}`, 
+          `https://riveraproject-production.up.railway.app/api/motoristas/${selectedMotorista._id}`, 
           updateData,
           {
             headers: {
@@ -313,7 +313,7 @@ const useDataMotorista = () => {
   const handleRefresh = async () => {
     setLoading(true);
     try {
-      const response = await fetch('riveraproject-production.up.railway.app/api/motoristas', {
+      const response = await fetch('https://riveraproject-production.up.railway.app/api/motoristas', {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',

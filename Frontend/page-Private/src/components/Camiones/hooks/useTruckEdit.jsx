@@ -67,9 +67,9 @@ const useTruckEdit = (fetchOptions, onUpdateSuccess) => {
 
       // Cargar datos del camión y listas en paralelo
       const [truckResponse, proveedoresResponse, motoristasResponse] = await Promise.all([
-        fetch(`riveraproject-production.up.railway.app/api/camiones/${truck.id}`, fetchOptions),
-        fetch('riveraproject-production.up.railway.app/api/proveedores', fetchOptions),
-        fetch('riveraproject-production.up.railway.app/api/motoristas', fetchOptions)
+        fetch(`https://riveraproject-production.up.railway.app/api/camiones/${truck.id}`, fetchOptions),
+        fetch('https://riveraproject-production.up.railway.app/api/proveedores', fetchOptions),
+        fetch('https://riveraproject-production.up.railway.app/api/motoristas', fetchOptions)
       ]);
 
       // Verificar respuestas
@@ -237,7 +237,7 @@ const useTruckEdit = (fetchOptions, onUpdateSuccess) => {
           console.log(pair[0] + ': ' + pair[1]);
         }
 
-        response = await fetch(`riveraproject-production.up.railway.app/api/camiones/${selectedTruck.id}`, {
+        response = await fetch(`https://riveraproject-production.up.railway.app/api/camiones/${selectedTruck.id}`, {
           method: 'PUT',
           credentials: 'include',
           body: formDataToSend
@@ -272,7 +272,7 @@ const useTruckEdit = (fetchOptions, onUpdateSuccess) => {
 
         console.log('=== DATOS JSON A ENVIAR ===', updateData);
 
-        response = await fetch(`riveraproject-production.up.railway.app/api/camiones/${selectedTruck.id}`, {
+        response = await fetch(`https://riveraproject-production.up.railway.app/api/camiones/${selectedTruck.id}`, {
           method: 'PUT',
           ...fetchOptions,
           body: JSON.stringify(updateData)

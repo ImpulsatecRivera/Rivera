@@ -73,7 +73,7 @@ const Recuperacion2Screen = ({ navigation, route }) => {
 
     setLoading(true);
     try {
-      const API_URL = 'riveraproject-production.up.railway.app/api/recovery/verifyCode';
+      const API_URL = 'https://riveraproject-production.up.railway.app/api/recovery/verifyCode';
       
       const payload = {
         code: otpCode,
@@ -209,7 +209,7 @@ const Recuperacion2Screen = ({ navigation, route }) => {
     }
 
     try {
-      const API_URL = 'riveraproject-production.up.railway.app/api/recovery/requestCode';
+      const API_URL = 'https://riveraproject-production.up.railway.app/api/recovery/requestCode';
       
       const response = await fetch(API_URL, {
         method: 'POST',

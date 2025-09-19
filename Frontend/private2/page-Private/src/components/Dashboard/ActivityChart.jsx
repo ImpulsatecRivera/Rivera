@@ -32,7 +32,7 @@ const ActivityChart = () => {
       console.log(`📊 Obteniendo estadísticas para período: ${tipo}`);
       
       const res = await axios.get(
-        `riveraproject-production.up.railway.app/api/viajes/trip-stats?periodo=${tipo}`,
+        `https://riveraproject-production.up.railway.app/api/viajes/trip-stats?periodo=${tipo}`,
         {
           timeout: 10000, // 10 segundos de timeout
           headers: {

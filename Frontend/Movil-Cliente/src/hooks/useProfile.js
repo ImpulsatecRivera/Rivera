@@ -24,7 +24,7 @@ const useProfile = () => {
       console.log('🔍 Obteniendo perfil para usuario:', userId);
 
       // Hacer petición a la API
-      const apiUrl = `riveraproject-production.up.railway.app/api/clientes/${userId}`;
+      const apiUrl = `https://riveraproject-production.up.railway.app/api/clientes/${userId}`;
       console.log('🌐 URL de petición:', apiUrl);
       
       const response = await fetch(apiUrl, {

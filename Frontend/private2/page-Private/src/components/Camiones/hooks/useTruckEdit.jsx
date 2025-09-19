@@ -67,9 +67,9 @@ const useTruckEdit = (fetchOptions, onUpdateSuccess) => {
 
       // Cargar datos del camión y listas en paralelo
       const [truckResponse, proveedoresResponse, motoristasResponse] = await Promise.all([
-        fetch(`riveraproject-production.up.railway.app/api/camiones/${truck.id}`, fetchOptions),
-        fetch('riveraproject-production.up.railway.app/api/proveedores', fetchOptions),
-        fetch('riveraproject-production.up.railway.app/api/motoristas', fetchOptions)
+        fetch(`https://riveraproject-production.up.railway.app/api/camiones/${truck.id}`, fetchOptions),
+        fetch('https://riveraproject-production.up.railway.app/api/proveedores', fetchOptions),
+        fetch('https://riveraproject-production.up.railway.app/api/motoristas', fetchOptions)
       ]);
 
       // Verificar respuestas

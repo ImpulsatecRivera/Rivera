@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Configuración de la API
-const API_BASE_URL = 'riveraproject-production.up.railway.app/api';
+const API_BASE_URL = 'https://riveraproject-production.up.railway.app/api';
 
 export const useTrips = (motoristaId = null, tipoConsulta = 'programados') => {
   const [trips, setTrips] = useState([]);

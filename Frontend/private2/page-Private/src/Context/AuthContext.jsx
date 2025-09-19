@@ -3,7 +3,7 @@ import axios from "axios";
 import { toast } from "react-toastify";
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || "riveraproject-production.up.railway.app",
+  baseURL: import.meta.env.VITE_API_BASE_URL || "https://riveraproject-production.up.railway.app",
   withCredentials: true,
 });
 

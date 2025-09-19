@@ -22,7 +22,7 @@ import { useAuth } from '../context/authContext';
 import { fetchQuotesByClient } from '../api/quotes';
 
 const BG = '#F5F5F5';
-const BASE_URL = 'riveraproject-production.up.railway.app';
+const BASE_URL = 'https://riveraproject-production.up.railway.app';
 
 function normalizeList(data) {
   if (Array.isArray(data)) return data;
