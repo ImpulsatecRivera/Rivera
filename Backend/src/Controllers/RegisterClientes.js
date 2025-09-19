@@ -68,6 +68,8 @@ const RegsiterCliente = {};
  * Registrar un nuevo cliente en el sistema (con imagen OPCIONAL)
  * POST /clientes/
  */
+// En RegisterClientes.js, reemplaza la función registrarCliente con:
+
 RegsiterCliente.registrarCliente = async (req, res) => {
   const { 
     firstName, 
@@ -77,20 +79,22 @@ RegsiterCliente.registrarCliente = async (req, res) => {
     birthDate, 
     password, 
     phone, 
-    address 
+    address,
+    profileImage, // Para Base64
+    imageType     // Para Base64
   } = req.body;
 
   console.log('Datos recibidos:', {
     firstName, lastName, email, idNumber, birthDate, phone, address,
-    tieneImagen: !!req.file
+    tieneImagenFormData: !!req.file,
+    tieneImagenBase64: !!profileImage,
+    contentType: req.get('Content-Type')
   });
 
   try {
-    // Verificar si el usuario ya existe
     const validacion = await ClientesModelo.findOne({ email });
     
     if (validacion) {
-      // Si hay imagen pero el usuario ya existe, eliminarla
       if (req.file && req.file.filename) {
         await deleteImageFromCloudinary(req.file.filename);
       }
@@ -100,10 +104,8 @@ RegsiterCliente.registrarCliente = async (req, res) => {
       });
     }
 
-    // Encriptar contraseña
     const encriptarHash = await bcrypt.hash(password, 10);
 
-    // Preparar datos del cliente
     const clienteData = {
       firstName,
       lastName,
@@ -115,33 +117,53 @@ RegsiterCliente.registrarCliente = async (req, res) => {
       address
     };
 
-    // Solo agregar imagen SI existe (OPCIONAL)
+    // MANEJAR IMAGEN - FormData O Base64
     if (req.file) {
+      // CASO 1: FormData
       try {
         clienteData.profileImage = {
           url: req.file.path,
           public_id: req.file.filename
         };
-        console.log('Imagen de perfil agregada:', req.file.path);
+        console.log('✅ Imagen FormData agregada:', req.file.path);
       } catch (imageError) {
-        console.error("Error procesando imagen:", imageError);
-        // Si hay error con la imagen, eliminarla pero continuar sin imagen
+        console.error("❌ Error procesando imagen FormData:", imageError);
         if (req.file.filename) {
           await deleteImageFromCloudinary(req.file.filename);
         }
-        console.log('Continuando registro sin imagen debido a error');
+      }
+    } else if (profileImage && typeof profileImage === 'string') {
+      // CASO 2: Base64
+      try {
+        console.log('📤 Procesando imagen Base64...');
+        
+        const result = await cloudinary.uploader.upload(profileImage, {
+          folder: "clientes_profiles",
+          allowed_formats: ["jpg", "jpeg", "png", "webp"],
+          transformation: [
+            { width: 500, height: 500, crop: "fill", quality: "auto" }
+          ],
+          public_id: `cliente_${Date.now()}_${Math.round(Math.random() * 1E9)}`
+        });
+
+        clienteData.profileImage = {
+          url: result.secure_url,
+          public_id: result.public_id
+        };
+        console.log('✅ Imagen Base64 agregada:', result.secure_url);
+      } catch (imageError) {
+        console.error("❌ Error procesando imagen Base64:", imageError);
       }
     } else {
-      console.log('Registro sin imagen (opcional)');
+      console.log('ℹ️ Registro sin imagen (opcional)');
     }
 
-    // Crear nuevo cliente
     const newCliente = new ClientesModelo(clienteData);
     await newCliente.save();
     
-    console.log('Cliente guardado exitosamente:', newCliente._id);
+    console.log('✅ Cliente guardado exitosamente:', newCliente._id);
 
-    // Generar token JWT
+    // Resto igual...
     jwt.sign(
       { id: newCliente._id, userType: "Cliente" },
       config.JWT.secret,
@@ -155,16 +177,12 @@ RegsiterCliente.registrarCliente = async (req, res) => {
           });
         }
 
-        console.log('Token generado exitosamente');
-
-        // Establecer cookie con el token JWT
         res.cookie("authToken", token, {
           httpOnly: true,
           sameSite: "Lax",
           secure: process.env.NODE_ENV === 'production'
         });
 
-        // Respuesta exitosa
         res.status(200).json({
           message: "Cliente registrado exitosamente",
           userType: "Cliente",
@@ -185,7 +203,6 @@ RegsiterCliente.registrarCliente = async (req, res) => {
   } catch (error) {
     console.error("Error en registro:", error);
     
-    // Si hay imagen subida pero hay error, eliminarla
     if (req.file && req.file.filename) {
       await deleteImageFromCloudinary(req.file.filename);
     }
