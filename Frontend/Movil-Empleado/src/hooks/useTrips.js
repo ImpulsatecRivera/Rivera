@@ -1,8 +1,188 @@
-import { useState, useEffect } from 'react';
+// src/hooks/useTrips.js
+import { useState, useEffect, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// Configuración de la API
-const API_BASE_URL = 'https://riveraproject-5.onrender.com/api';
+// 1) Base URL desde .env (Expo) con fallback a tu Render actual
+const API_BASE_URL =
+  process.env.EXPO_PUBLIC_API_URL?.replace(/\/+$/, '') ||
+  'https://riveraproject-5.onrender.com/api';
+
+// Utilidades de formato
+const formatearFecha = (fecha) => {
+  if (!fecha) return '';
+  const fechaObj = new Date(fecha);
+  const hoy = new Date();
+  const manana = new Date();
+  manana.setDate(hoy.getDate() + 1);
+
+  if (fechaObj.toDateString() === hoy.toDateString()) return 'Hoy';
+  if (fechaObj.toDateString() === manana.toDateString()) return 'Mañana';
+
+  return fechaObj.toLocaleDateString('es-ES', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+  });
+};
+
+const formatearHora = (fecha) =>
+  fecha
+    ? new Date(fecha).toLocaleTimeString('es-ES', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true,
+      })
+    : '';
+
+// Helpers de UI
+const obtenerIconoViaje = (descripcion = '') => {
+  const desc = String(descripcion).toLowerCase();
+  if (desc.includes('alimento') || desc.includes('comida')) return '🍽️';
+  if (desc.includes('mobiliario') || desc.includes('mueble')) return '🏠';
+  if (desc.includes('construcción') || desc.includes('material')) return '🏗️';
+  if (desc.includes('combustible') || desc.includes('gas')) return '⛽';
+  if (desc.includes('medicina') || desc.includes('farmacia')) return '💊';
+  return '📦';
+};
+
+const obtenerColorEstado = (estado = '') => {
+  switch (String(estado).toLowerCase()) {
+    case 'programado': return '#4CAF50';
+    case 'pendiente': return '#FF9800';
+    case 'confirmado': return '#2196F3';
+    case 'en_transito': return '#9C27B0';
+    case 'en curso':
+    case 'en_curso': return '#9C27B0';
+    case 'completado':
+    case 'finalizado': return '#8BC34A';
+    case 'cancelado': return '#F44336';
+    default: return '#757575';
+  }
+};
+
+// 3) Normalizador flexible (acepta distintos nombres de campos)
+const normalizarEstado = (estado) => {
+  const e = (estado?.actual ?? estado ?? '').toString().toLowerCase();
+  return e === 'en_curso' ? 'en_transito' : e;
+};
+
+const transformarViajeAPI = (raw, camionGlobal = null) => {
+  if (!raw) return null;
+
+  const id = (raw._id || raw.id)?.toString();
+
+  const fechaSalida =
+    raw.fechaSalida ??
+    raw.departureTime ??
+    raw.fecha ??
+    raw.salida ??
+    raw.horarios?.fechaSalida ??
+    null;
+
+  const fechaLlegada =
+    raw.fechaLlegada ??
+    raw.arrivalTime ??
+    raw.llegada ??
+    raw.horarios?.fechaLlegadaEstimada ??
+    null;
+
+  const estado = normalizarEstado(raw.estado ?? raw.estadoActual);
+
+  const descripcion =
+    raw.descripcion ??
+    raw.tripDescription ??
+    raw.cotizacion?.descripcion ??
+    raw.detalle ??
+    '';
+
+  const origen =
+    raw.origen ??
+    raw.cotizacion?.ruta?.origen ??
+    raw.ruta?.origen ??
+    raw.origenNombre ??
+    '';
+
+  const destino =
+    raw.destino ??
+    raw.cotizacion?.ruta?.destino ??
+    raw.ruta?.destino ??
+    raw.destinoNombre ??
+    '';
+
+  const cliente =
+    raw.cliente ??
+    raw.cotizacion?.clienteNombre ??
+    raw.cotizacion?.clientName ??
+    'Cliente no especificado';
+
+  const camion =
+    camionGlobal?.licensePlate ??
+    camionGlobal?.placa ??
+    raw.camion?.licensePlate ??
+    raw.camion?.placa ??
+    raw.truck?.alias ??
+    raw.truck?.placa ??
+    'N/A';
+
+  return {
+    id,
+    tipo: descripcion || 'Transporte de carga',
+    subtitulo: `${origen} → ${destino}`,
+    fecha: formatearFecha(fechaSalida),
+    hora: formatearHora(fechaSalida),
+    cotizacion: cliente,
+    camion,
+    descripcion,
+    horaLlegada: formatearHora(fechaLlegada) || 'No especificada',
+    horaSalida: formatearHora(fechaSalida),
+    asistente: 'Por asignar',
+    icon: obtenerIconoViaje(descripcion),
+    color: obtenerColorEstado(estado),
+    estado,
+    origen,
+    destino,
+    carga: raw.carga,
+    _fechaSalidaISO: fechaSalida,
+    _fechaLlegadaISO: fechaLlegada,
+  };
+};
+
+/* ===== helpers para aceptar distintos shapes de respuesta ===== */
+const getPayload = (data) => (data && data.success && data.data) ? data.data : data;
+
+const getListaViajes = (data) => {
+  if (!data) return [];
+  if (Array.isArray(data)) return data;
+
+  // desempaquetar si viene como { success, data }
+  const payload = getPayload(data);
+  if (Array.isArray(payload)) return payload;
+
+  if (typeof payload !== 'object') return [];
+
+  // prioridad a 'historialCompleto' cuando venga en motoristas/:id/historial-completo
+  return (
+    payload.historialCompleto ||
+    payload.trips ||
+    payload.viajes ||
+    payload.items ||
+    payload.result ||
+    payload.data?.trips ||
+    payload.data?.viajes ||
+    []
+  );
+};
+
+const getTotalViajes = (data, lista) => {
+  const payload = getPayload(data);
+  return Number(
+    payload?.total ??
+    payload?.totalViajes ??
+    payload?.count ??
+    (Array.isArray(lista) ? lista.length : 0)
+  );
+};
+/* ==================================================================== */
 
 export const useTrips = (motoristaId = null, tipoConsulta = 'programados') => {
   const [trips, setTrips] = useState([]);
@@ -16,282 +196,197 @@ export const useTrips = (motoristaId = null, tipoConsulta = 'programados') => {
     programados: 0,
     completados: 0,
     cancelados: 0,
-    enProgreso: 0
+    enProgreso: 0,
   });
 
-  // Función para formatear fecha a formato legible
-  const formatearFecha = (fecha) => {
-    const fechaObj = new Date(fecha);
-    const hoy = new Date();
-    const manana = new Date();
-    manana.setDate(hoy.getDate() + 1);
+  const abortRef = useRef(null);
 
-    if (fechaObj.toDateString() === hoy.toDateString()) {
-      return 'Hoy';
-    } else if (fechaObj.toDateString() === manana.toDateString()) {
-      return 'Mañana';
-    } else {
-      return fechaObj.toLocaleDateString('es-ES', {
-        weekday: 'long',
-        day: 'numeric',
-        month: 'long'
-      });
-    }
-  };
-
-  // Función para formatear hora
-  const formatearHora = (fecha) => {
-    return new Date(fecha).toLocaleTimeString('es-ES', {
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: true
-    });
-  };
-
-  // Función para obtener el ícono según el tipo de viaje
-  const obtenerIconoViaje = (descripcion) => {
-    const desc = descripcion?.toLowerCase() || '';
-    if (desc.includes('alimento') || desc.includes('comida')) return '🍽️';
-    if (desc.includes('mobiliario') || desc.includes('mueble')) return '🏠';
-    if (desc.includes('construcción') || desc.includes('material')) return '🏗️';
-    if (desc.includes('combustible') || desc.includes('gas')) return '⛽';
-    if (desc.includes('medicina') || desc.includes('farmacia')) return '💊';
-    return '📦';
-  };
-
-  // Función para obtener color según estado del viaje
-  const obtenerColorEstado = (estado) => {
-    switch (estado?.toLowerCase()) {
-      case 'programado': return '#4CAF50';
-      case 'pendiente': return '#FF9800';
-      case 'confirmado': return '#2196F3';
-      case 'en_transito': return '#9C27B0';
-      case 'completado': return '#8BC34A';
-      case 'finalizado': return '#8BC34A';
-      case 'cancelado': return '#F44336';
-      default: return '#757575';
-    }
-  };
-
-  // Función para transformar datos de la API al formato del frontend
-  const transformarViajeAPI = (viaje, camion = null) => ({
-    id: viaje._id,
-    tipo: viaje.descripcion || 'Transporte de carga',
-    subtitulo: `${viaje.origen} → ${viaje.destino}`,
-    fecha: formatearFecha(viaje.fechaSalida),
-    hora: formatearHora(viaje.fechaSalida),
-    cotizacion: viaje.cliente || 'Cliente no especificado',
-    camion: camion?.licensePlate || 'N/A',
-    descripcion: viaje.descripcion,
-    horaLlegada: viaje.fechaLlegada ? formatearHora(viaje.fechaLlegada) : 'No especificada',
-    horaSalida: formatearHora(viaje.fechaSalida),
-    asistente: 'Por asignar',
-    icon: obtenerIconoViaje(viaje.descripcion || ''),
-    color: obtenerColorEstado(viaje.estado),
-    estado: viaje.estado,
-    origen: viaje.origen,
-    destino: viaje.destino,
-    carga: viaje.carga
-  });
-
-  // Función para obtener token de autenticación
+  // 2) Token robusto
   const obtenerToken = async () => {
     try {
-      let token = await AsyncStorage.getItem('userToken');
-      if (!token) {
-        token = await AsyncStorage.getItem('authToken');
-      }
-      
+      let token =
+        (await AsyncStorage.getItem('userToken')) ||
+        (await AsyncStorage.getItem('authToken')) ||
+        (await AsyncStorage.getItem('token'));
       console.log(`🔑 Token obtenido: ${token ? 'Presente' : 'No encontrado'}`);
       return token;
-    } catch (error) {
-      console.error('❌ Error obteniendo token:', error);
+    } catch (e) {
+      console.error('❌ Error obteniendo token:', e);
       return null;
     }
   };
 
-  // Función para hacer peticiones HTTP
+  // 4) Petición con cancelación
   const hacerPeticion = async (url) => {
+    console.log(`🌐 GET ${url}`);
+
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+
     try {
-      console.log(`🌐 Haciendo petición a: ${url}`);
-      
       const authToken = await obtenerToken();
-      
       const headers = {
         'Content-Type': 'application/json',
+        Accept: 'application/json',
+        ...(authToken && !/^temp(-register)?-token$/.test(authToken) ? { Authorization: `Bearer ${authToken}` } : {})
       };
 
-      // Agregar autorización solo si hay token válido
-      if (authToken && authToken !== '' && authToken !== 'temp-token' && authToken !== 'temp-register-token') {
-        headers['Authorization'] = `Bearer ${authToken}`;
-        console.log('🔒 Authorization header agregado');
-      } else {
-        console.log('⚠️ Petición sin token de autorización');
+      const resp = await fetch(url, { headers, signal: controller.signal });
+      console.log(`📡 Status: ${resp.status}`);
+      if (!resp.ok) {
+        const text = await resp.text();
+        console.log('❌ Error body:', text);
+        throw new Error(`HTTP ${resp.status} ${resp.statusText}`);
+      }
+      const data = await resp.json();
+
+      // Log claro del shape
+      const payload = getPayload(data);
+      console.log('✅ JSON OK', Array.isArray(payload) ? ['<array>'] : Object.keys(payload));
+      if (Array.isArray(payload) && payload[0]) {
+        console.log('🧪 Ejemplo item:', Object.keys(payload[0]));
       }
 
-      const response = await fetch(url, {
-        method: 'GET',
-        headers,
-      });
-
-      console.log(`📡 Response status: ${response.status}`);
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.log(`❌ Error response: ${errorText}`);
-        throw new Error(`Error ${response.status}: ${response.statusText}`);
+      return data; // devolvemos RAW; los helpers ya desempaquetan
+    } catch (e) {
+      if (e.name === 'AbortError') {
+        console.log('⛔ Fetch abortado');
+        return null;
       }
-
-      const data = await response.json();
-      console.log(`✅ Datos recibidos exitosamente`);
-      console.log(`📊 Estructura de respuesta:`, Object.keys(data));
-      return data;
-    } catch (error) {
-      console.error(`❌ Error en petición: ${error.message}`);
-      throw error;
+      console.error('❌ Fetch error:', e.message);
+      throw e;
     }
   };
 
-  // FUNCIÓN: Cargar historial completo de viajes
+  // ====== CARGADORES ======
+
   const cargarHistorialCompleto = async (id) => {
     try {
       setLoading(true);
       setError(null);
-      
-      console.log(`🔍 Cargando historial completo para motorista: ${id}`);
 
-      const data = await hacerPeticion(`${API_BASE_URL}/motoristas/${id}/historial-completo`);
-      
-      console.log('📊 Respuesta del backend:', data);
+      const safeId = encodeURIComponent(id);
+      // /motoristas/:id/historial-completo
+      const url = `${API_BASE_URL}/motoristas/${safeId}/historial-completo`;
+      const data = await hacerPeticion(url);
+      if (!data) return; // abortado
 
-      // Verificar si hay datos
-      if (data && data.historialCompleto && data.historialCompleto.length > 0) {
-        console.log(`📊 Procesando ${data.historialCompleto.length} viajes`);
-        
-        // Procesar todos los viajes
-        const todosLosViajes = data.historialCompleto.map(viaje => 
-          transformarViajeAPI(viaje, data.camionAsignado)
-        );
+      const lista = getListaViajes(data);
+      if (Array.isArray(lista)) {
+        const todos = lista.map((v) => transformarViajeAPI(v)).filter(Boolean);
+        console.log('🧾 Viajes transformados (historial):', todos.length);
 
-        // Procesar próximos destinos
-        const viajesFuturos = data.historialCompleto.filter(viaje => {
-          const fechaViaje = new Date(viaje.fechaSalida);
-          return fechaViaje >= new Date() && ['programado', 'pendiente', 'confirmado'].includes(viaje.estado);
-        });
-
-        const proximosDestinos = viajesFuturos.slice(0, 3).map(viaje => ({
-          id: viaje._id,
-          tipo: `${viaje.origen} → ${viaje.destino}`,
-          fecha: formatearFecha(viaje.fechaSalida),
-          hora: formatearHora(viaje.fechaSalida)
-        }));
-
-        // Actualizar estado
-        setTrips(todosLosViajes);
-        setViajesPorDia(data.viajesPorDia || []);
-        setProximosDestinos(proximosDestinos);
-        setTotalTrips(data.totalViajes || todosLosViajes.length);
-        setEstadisticas(data.estadisticas || {
-          programados: viajesFuturos.length,
-          completados: todosLosViajes.filter(v => ['completado', 'finalizado'].includes(v.estado)).length,
-          cancelados: todosLosViajes.filter(v => v.estado === 'cancelado').length,
-          enProgreso: todosLosViajes.filter(v => ['en_transito', 'iniciado'].includes(v.estado)).length
-        });
-        setHistorialViajes(todosLosViajes);
-
-        console.log(`✅ Historial cargado: ${todosLosViajes.length} viajes`);
-      } else {
-        console.log(`ℹ️ Respuesta del backend indica no hay viajes para el motorista ${id}`);
-        console.log(`ℹ️ Mensaje del backend: ${data?.message || 'Sin mensaje'}`);
-        
-        // Estado limpio pero informativo
-        setTrips([]);
+        setTrips(todos);
         setViajesPorDia([]);
         setProximosDestinos([]);
-        setTotalTrips(0);
-        setEstadisticas({
-          programados: 0,
-          completados: 0,
-          cancelados: 0,
-          enProgreso: 0
-        });
-        setHistorialViajes([]);
+        setTotalTrips(getTotalViajes(data, todos));
+        const payload = getPayload(data);
+        setEstadisticas(
+          payload?.estadisticas || {
+            programados: todos.filter((x) => ['programado','pendiente','confirmado'].includes(x.estado)).length,
+            completados: todos.filter((x) => ['completado','finalizado'].includes(x.estado)).length,
+            cancelados:  todos.filter((x) => x.estado === 'cancelado').length,
+            enProgreso:  todos.filter((x) => ['en_transito','iniciado','en_curso'].includes(x.estado)).length,
+          }
+        );
+        setHistorialViajes(todos);
+        return;
       }
 
-    } catch (error) {
-      console.error('❌ Error al cargar historial completo:', error);
-      setError(`Error de conexión: ${error.message}`);
-      
-      // Estado de error
+      // Fallback antiguo (por si viene otra estructura)
+      const payload = getPayload(data);
+      const raw = Array.isArray(payload?.historialCompleto) ? payload.historialCompleto : [];
+      const todos = raw.map((v) => transformarViajeAPI(v, payload?.camionAsignado)).filter(Boolean);
+
+      setTrips(todos);
+      setViajesPorDia(payload?.viajesPorDia || []);
+      setProximosDestinos([]);
+      setTotalTrips(payload?.totalViajes || todos.length);
+      setEstadisticas(
+        payload?.estadisticas || {
+          programados: todos.filter((x) => ['programado','pendiente','confirmado'].includes(x.estado)).length,
+          completados: todos.filter((x) => ['completado','finalizado'].includes(x.estado)).length,
+          cancelados:  todos.filter((x) => x.estado === 'cancelado').length,
+          enProgreso:  todos.filter((x) => ['en_transito','iniciado','en_curso'].includes(x.estado)).length,
+        }
+      );
+      setHistorialViajes(todos);
+    } catch (e) {
+      setError(`Error de conexión: ${e.message}`);
       setTrips([]);
       setViajesPorDia([]);
       setProximosDestinos([]);
       setTotalTrips(0);
-      setEstadisticas({
-        programados: 0,
-        completados: 0,
-        cancelados: 0,
-        enProgreso: 0
-      });
+      setEstadisticas({ programados: 0, completados: 0, cancelados: 0, enProgreso: 0 });
       setHistorialViajes([]);
     } finally {
       setLoading(false);
     }
   };
 
-  // FUNCIÓN: Cargar viajes programados
   const cargarViajesMotorista = async (id) => {
     try {
       setLoading(true);
       setError(null);
 
-      console.log(`🔍 Cargando viajes programados para motorista: ${id}`);
+      const safeId = encodeURIComponent(id);
+      // /motoristas/:id/viajes-programados
+      const url = `${API_BASE_URL}/motoristas/${safeId}/viajes-programados`;
+      const data = await hacerPeticion(url);
+      if (!data) return; // abortado
 
-      const data = await hacerPeticion(`${API_BASE_URL}/motoristas/${id}/viajes-programados`);
+      const lista = getListaViajes(data);
+      if (Array.isArray(lista)) {
+        const todos = lista.map((v) => transformarViajeAPI(v)).filter(Boolean);
+        const prox = todos.slice(0, 3).map((t) => ({
+          id: t.id,
+          tipo: `${t.origen} → ${t.destino}`,
+          fecha: t.fecha,
+          hora: t.hora,
+        }));
+        console.log('🧾 Viajes transformados (proximos):', todos.length);
 
-      if (data && data.viajesPorDia && data.viajesPorDia.length > 0) {
-        console.log(`📊 Procesando viajes programados`);
-        
-        const todosLosViajes = [];
-        const proximosDestinos = [];
-
-        data.viajesPorDia.forEach(dia => {
-          dia.viajes.forEach(viaje => {
-            const viajeTransformado = transformarViajeAPI(viaje, data.camionAsignado);
-            todosLosViajes.push(viajeTransformado);
-
-            if (proximosDestinos.length < 3) {
-              proximosDestinos.push({
-                id: viaje._id,
-                tipo: `${viaje.origen} → ${viaje.destino}`,
-                fecha: formatearFecha(viaje.fechaSalida),
-                hora: formatearHora(viaje.fechaSalida)
-              });
-            }
-          });
-        });
-
-        setTrips(todosLosViajes);
-        setViajesPorDia(data.viajesPorDia);
-        setProximosDestinos(proximosDestinos);
-        setTotalTrips(data.totalViajes || todosLosViajes.length);
-        setHistorialViajes(todosLosViajes.slice(-5));
-
-        console.log(`✅ Viajes programados cargados: ${todosLosViajes.length} viajes`);
-      } else {
-        console.log(`ℹ️ No se encontraron viajes programados para el motorista ${id}`);
-        
-        setTrips([]);
+        setTrips(todos);
         setViajesPorDia([]);
-        setProximosDestinos([]);
-        setTotalTrips(0);
-        setHistorialViajes([]);
+        setProximosDestinos(prox);
+        setTotalTrips(getTotalViajes(data, todos));
+        setHistorialViajes(todos.slice(-5));
+
+        const payload = getPayload(data);
+        if (payload?.estadisticas) setEstadisticas(payload.estadisticas);
+        return;
       }
 
-    } catch (error) {
-      console.error('❌ Error al cargar viajes del motorista:', error);
-      setError(`Error de conexión: ${error.message}`);
-      
+      // Fallback por shape agrupado por día
+      const todos = [];
+      const prox = [];
+      const payload = getPayload(data);
+
+      (payload.viajesPorDia || []).forEach((dia) => {
+        (dia.viajes || []).forEach((v) => {
+          const t = transformarViajeAPI(v, payload.camionAsignado);
+          if (t) todos.push(t);
+
+          if (prox.length < 3) {
+            const f = v.fechaSalida ?? v.departureTime ?? v.fecha ?? v.horarios?.fechaSalida;
+            prox.push({
+              id: v._id || v.id,
+              tipo: `${t?.origen || v.origen} → ${t?.destino || v.destino}`,
+              fecha: formatearFecha(f),
+              hora: formatearHora(f),
+            });
+          }
+        });
+      });
+
+      setTrips(todos);
+      setViajesPorDia(payload.viajesPorDia || []);
+      setProximosDestinos(prox);
+      setTotalTrips(payload.totalViajes || todos.length);
+      setHistorialViajes(todos.slice(-5));
+    } catch (e) {
+      setError(`Error de conexión: ${e.message}`);
       setTrips([]);
       setViajesPorDia([]);
       setProximosDestinos([]);
@@ -302,44 +397,47 @@ export const useTrips = (motoristaId = null, tipoConsulta = 'programados') => {
     }
   };
 
-  // FUNCIÓN: Cargar todos los viajes (vista administrativa)
   const cargarTodosLosViajes = async () => {
     try {
       setLoading(true);
       setError(null);
 
-      console.log(`🔍 Cargando todos los viajes (vista administrativa)`);
+      const url = `${API_BASE_URL}/viajes?scope=proximos`;
+      const data = await hacerPeticion(url);
+      if (!data) return; // abortado
 
-      const data = await hacerPeticion(`${API_BASE_URL}/motoristas/viajes-programados/todos`);
-
-      if (data && data.viajesPorDia && data.viajesPorDia.length > 0) {
-        const todosLosViajes = [];
-
-        data.viajesPorDia.forEach(dia => {
-          dia.motoristasConViajes.forEach(motoristaData => {
-            motoristaData.viajes.forEach(viaje => {
-              const viajeTransformado = transformarViajeAPI(viaje, motoristaData.camion);
-              viajeTransformado.motorista = motoristaData.motorista;
-              todosLosViajes.push(viajeTransformado);
-            });
-          });
-        });
-
-        setTrips(todosLosViajes);
-        setViajesPorDia(data.viajesPorDia);
-        setTotalTrips(data.totalViajes || todosLosViajes.length);
-
-        console.log(`✅ Todos los viajes cargados: ${todosLosViajes.length} viajes`);
-      } else {
-        setTrips([]);
+      const lista = getListaViajes(data);
+      if (Array.isArray(lista)) {
+        const todos = lista.map((v) => transformarViajeAPI(v)).filter(Boolean);
+        setTrips(todos);
         setViajesPorDia([]);
-        setTotalTrips(0);
+        setTotalTrips(getTotalViajes(data, todos));
+        const payload = getPayload(data);
+        if (payload?.estadisticas) setEstadisticas(payload.estadisticas);
+        return;
       }
 
-    } catch (error) {
-      console.error('❌ Error al cargar todos los viajes:', error);
-      setError(`Error de conexión: ${error.message}`);
-      
+      // Fallback
+      const todos = [];
+      const payload = getPayload(data);
+
+      (payload.viajesPorDia || []).forEach((dia) => {
+        (dia.motoristasConViajes || []).forEach((m) => {
+          (m.viajes || []).forEach((v) => {
+            const t = transformarViajeAPI(v, m.camion);
+            if (t) {
+              t.motorista = m.motorista;
+              todos.push(t);
+            }
+          });
+        });
+      });
+
+      setTrips(todos);
+      setViajesPorDia(payload.viajesPorDia || []);
+      setTotalTrips(payload.totalViajes || todos.length);
+    } catch (e) {
+      setError(`Error de conexión: ${e.message}`);
       setTrips([]);
       setViajesPorDia([]);
       setTotalTrips(0);
@@ -348,75 +446,60 @@ export const useTrips = (motoristaId = null, tipoConsulta = 'programados') => {
     }
   };
 
-  // useEffect con manejo de dependencias
+  // ====== EFFECT PRINCIPAL ======
   useEffect(() => {
-    console.log(`🔄 useEffect ejecutado. motoristaId: ${motoristaId}, tipoConsulta: ${tipoConsulta}`);
-    
-    if (motoristaId && 
-        motoristaId !== 'null' && 
-        motoristaId !== 'undefined' && 
-        motoristaId.trim() !== '') {
-      
-      console.log(`🚀 Iniciando carga de datos para motorista: ${motoristaId}, tipo: ${tipoConsulta}`);
-      
-      if (tipoConsulta === 'historial') {
-        cargarHistorialCompleto(motoristaId);
+    let mounted = true;
+
+    const run = async () => {
+      const storedId = (await AsyncStorage.getItem('motoristaId')) || '';
+      const paramId = String(motoristaId ?? '').trim();
+      const id = (paramId || storedId).trim();
+
+      console.log(`🔄 useEffect -> motoristaId(param)="${paramId}" | motoristaId(storage)="${storedId}" | usando="${id}"  tipo="${tipoConsulta}"`);
+
+      if (!mounted) return;
+
+      if (id) {
+        if (tipoConsulta === 'historial') {
+          await cargarHistorialCompleto(id);
+        } else {
+          await cargarViajesMotorista(id);
+        }
       } else {
-        cargarViajesMotorista(motoristaId);
+        await cargarTodosLosViajes();
       }
-    } else {
-      console.log(`⏳ motoristaId no válido: ${motoristaId}`);
-      
-      if (!motoristaId || motoristaId === 'null' || motoristaId === 'undefined') {
-        setLoading(true);
-        setError(null);
-        console.log('🔄 Esperando motoristaId válido...');
-      } else {
-        console.log(`ℹ️ Cargando vista administrativa`);
-        cargarTodosLosViajes();
-      }
-    }
+    };
+
+    run();
+
+    return () => {
+      mounted = false;
+      abortRef.current?.abort();
+    };
   }, [motoristaId, tipoConsulta]);
 
-  // Funciones auxiliares
-  const getTripById = (id) => {
-    return trips.find(trip => trip.id === id);
-  };
+  // ====== Helpers públicos ======
+  const getTripById = (id) => trips.find((t) => t.id === id);
 
   const refrescarViajes = () => {
-    console.log(`🔄 Refrescando viajes...`);
-    
-    if (motoristaId && motoristaId !== 'null' && motoristaId !== 'undefined') {
-      if (tipoConsulta === 'historial') {
-        cargarHistorialCompleto(motoristaId);
-      } else {
-        cargarViajesMotorista(motoristaId);
-      }
+    console.log('🔄 Refrescando viajes…');
+    const id = String(motoristaId ?? '').trim();
+    if (id) {
+      if (tipoConsulta === 'historial') cargarHistorialCompleto(id);
+      else cargarViajesMotorista(id);
     } else {
       cargarTodosLosViajes();
     }
   };
 
-  const getViajesHoy = () => {
-    return trips.filter(trip => trip.fecha === 'Hoy');
-  };
+  const getViajesHoy = () => trips.filter((t) => t.fecha === 'Hoy');
 
   const getEstadisticas = () => {
-    const viajesTotales = trips.length;
-    const viajesHoy = getViajesHoy().length;
-    const viajesPendientes = trips.filter(trip => 
-      ['programado', 'pendiente'].includes(trip.estado)
-    ).length;
-    const viajesCompletados = trips.filter(trip => 
-      ['completado', 'finalizado'].includes(trip.estado)
-    ).length;
-
-    return {
-      total: viajesTotales,
-      hoy: viajesHoy,
-      pendientes: viajesPendientes,
-      completados: viajesCompletados
-    };
+    const total = trips.length;
+    const hoy = getViajesHoy().length;
+    const pendientes = trips.filter((t) => ['programado', 'pendiente'].includes(t.estado)).length;
+    const completados = trips.filter((t) => ['completado', 'finalizado'].includes(t.estado)).length;
+    return { total, hoy, pendientes, completados };
   };
 
   return {
@@ -435,6 +518,6 @@ export const useTrips = (motoristaId = null, tipoConsulta = 'programados') => {
     cargarTodosLosViajes,
     cargarHistorialCompleto,
     getViajesHoy,
-    getEstadisticas
+    getEstadisticas,
   };
 };
