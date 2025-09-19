@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, Image, RefreshControl, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Image, RefreshControl, TouchableOpacity } from 'react-native';
 import { useTrips } from '../hooks/useTrips';
 import { useProfile } from '../hooks/useProfile';
 import { useAuth } from '../Context/authContext';
@@ -11,31 +11,25 @@ const ViajesScreen = ({ navigation }) => {
   const { user, isAuthenticated } = useAuth();
   const { profile, loading: profileLoading } = useProfile();
   const [motoristaId, setMotoristaId] = useState(null);
-  
-  // Función para obtener el ID del motorista desde el contexto y AsyncStorage
+
+  // Obtener ID del motorista desde AsyncStorage -> Context -> Profile
   const obtenerMotoristaId = async () => {
     try {
-      // 1. Prioridad: AsyncStorage (donde lo guarda el contexto)
       const storedId = await AsyncStorage.getItem('motoristaId');
       if (storedId) {
         console.log('ID encontrado en AsyncStorage:', storedId);
         return storedId;
       }
-
-      // 2. Fallback: Contexto
       const contextId = user?._id || user?.id;
       if (contextId) {
         console.log('ID encontrado en contexto:', contextId);
         return contextId.toString();
       }
-
-      // 3. Fallback: Profile
       const profileId = profile?.id || profile?._id;
       if (profileId) {
         console.log('ID encontrado en profile:', profileId);
         return profileId.toString();
       }
-
       console.log('No se encontró ID de motorista');
       return null;
     } catch (error) {
@@ -44,7 +38,7 @@ const ViajesScreen = ({ navigation }) => {
     }
   };
 
-  // Efecto para obtener y establecer el motorista ID
+  // Efecto para fijar motoristaId
   useEffect(() => {
     const setupMotoristaId = async () => {
       if (isAuthenticated) {
@@ -58,14 +52,13 @@ const ViajesScreen = ({ navigation }) => {
         setMotoristaId(null);
       }
     };
-
     setupMotoristaId();
   }, [user, profile, isAuthenticated]);
 
-  // Hook useTrips - solo se ejecuta cuando tenemos motoristaId
+  // Hook useTrips en modo historial por motorista
   const { 
     trips,
-    loading, 
+    loading,
     error,
     refrescarViajes,
     totalTrips,
@@ -74,19 +67,26 @@ const ViajesScreen = ({ navigation }) => {
 
   const [filtroEstado, setFiltroEstado] = useState('todos');
 
-  // Función para obtener viajes filtrados
-  const getViajesFiltrados = () => {
-    if (filtroEstado === 'todos') {
-      return trips;
+  // Log útil cuando cambian los viajes
+  useEffect(() => {
+    console.log(`📦 Trips en pantalla: ${trips.length}`);
+    if (trips[0]) {
+      console.log('🧪 Ejemplo trip render:', {
+        id: trips[0].id, estado: trips[0].estado, subtitulo: trips[0].subtitulo
+      });
     }
-    
+  }, [trips]);
+
+  // Filtros en memoria
+  const getViajesFiltrados = () => {
+    if (filtroEstado === 'todos') return trips;
     switch (filtroEstado) {
       case 'programados':
         return trips.filter(v => ['programado', 'pendiente', 'confirmado'].includes(v.estado));
       case 'completados':
         return trips.filter(v => ['completado', 'finalizado'].includes(v.estado));
       case 'en_transito':
-        return trips.filter(v => ['en_transito', 'iniciado'].includes(v.estado));
+        return trips.filter(v => ['en_transito', 'iniciado', 'en_curso'].includes(v.estado));
       case 'cancelados':
         return trips.filter(v => v.estado === 'cancelado');
       default:
@@ -97,7 +97,7 @@ const ViajesScreen = ({ navigation }) => {
   const handleInfoPress = (item) => {
     navigation.navigate('InfoViaje', {
       trip: {
-        id: item.id,
+        id: item.id || item._id,
         tipo: item.tipo,
         cotizacion: item.cotizacion || item.cliente || 'Cliente no especificado',
         camion: item.camion || 'N/A',
@@ -120,7 +120,6 @@ const ViajesScreen = ({ navigation }) => {
     refrescarViajes();
   };
 
-  // Función para obtener el conteo de cada filtro
   const getConteoFiltro = (filtro) => {
     switch (filtro) {
       case 'programados':
@@ -128,7 +127,7 @@ const ViajesScreen = ({ navigation }) => {
       case 'completados':
         return estadisticas?.completados || trips.filter(v => ['completado', 'finalizado'].includes(v.estado)).length;
       case 'en_transito':
-        return estadisticas?.enProgreso || trips.filter(v => ['en_transito', 'iniciado'].includes(v.estado)).length;
+        return estadisticas?.enProgreso || trips.filter(v => ['en_transito', 'iniciado', 'en_curso'].includes(v.estado)).length;
       case 'cancelados':
         return estadisticas?.cancelados || trips.filter(v => v.estado === 'cancelado').length;
       default:
@@ -136,20 +135,28 @@ const ViajesScreen = ({ navigation }) => {
     }
   };
 
-  // Obtener datos organizados
   const viajesFiltrados = getViajesFiltrados();
 
-  // Condición de loading corregida
+  // Loading / estados iniciales
   if (profileLoading || (isAuthenticated && !motoristaId) || (motoristaId && loading)) {
     return (
       <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
         <Text style={styles.loadingText}>Cargando viajes...</Text>
-        {!isAuthenticated && (
-          <Text style={styles.errorText}>Por favor, inicia sesión</Text>
-        )}
-        {isAuthenticated && !motoristaId && (
-          <Text style={styles.debugText}>Obteniendo ID de motorista...</Text>
-        )}
+        {!isAuthenticated && <Text style={styles.errorText}>Por favor, inicia sesión</Text>}
+        {isAuthenticated && !motoristaId && <Text style={styles.debugText}>Obteniendo ID de motorista...</Text>}
+      </View>
+    );
+  }
+
+  // Mostrar error del hook si lo hay
+  if (error) {
+    return (
+      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center', paddingHorizontal: 20 }]}>
+        <Text style={styles.errorText}>No se pudieron cargar los viajes.</Text>
+        <Text style={styles.debugText}>{String(error)}</Text>
+        <TouchableOpacity style={[styles.resetFilterButton, { marginTop: 16 }]} onPress={onRefresh}>
+          <Text style={styles.resetFilterText}>Reintentar</Text>
+        </TouchableOpacity>
       </View>
     );
   }
@@ -158,9 +165,7 @@ const ViajesScreen = ({ navigation }) => {
     <View style={styles.container}>
       <ScrollView 
         style={styles.content}
-        refreshControl={
-          <RefreshControl refreshing={loading} onRefresh={onRefresh} />
-        }
+        refreshControl={<RefreshControl refreshing={!!loading} onRefresh={onRefresh} />}
       >
         {/* Título */}
         <Text style={styles.title}>Historial de viajes</Text>
@@ -255,13 +260,12 @@ const ViajesScreen = ({ navigation }) => {
                 : `Viajes ${filtroEstado === 'programados' ? 'programados' : 
                               filtroEstado === 'completados' ? 'completados' :
                               filtroEstado === 'en_transito' ? 'en tránsito' :
-                              filtroEstado === 'cancelados' ? 'cancelados' : filtroEstado}`
-              }
+                              filtroEstado === 'cancelados' ? 'cancelados' : filtroEstado}`}
             </Text>
             
             {viajesFiltrados.map((item) => (
               <HistoryItem
-                key={item.id}
+                key={item.id || item._id}
                 item={item}
                 onInfoPress={handleInfoPress}
               />
@@ -276,8 +280,7 @@ const ViajesScreen = ({ navigation }) => {
                 : `No tienes viajes ${filtroEstado === 'programados' ? 'programados' : 
                                       filtroEstado === 'completados' ? 'completados' :
                                       filtroEstado === 'en_transito' ? 'en tránsito' :
-                                      filtroEstado === 'cancelados' ? 'cancelados' : filtroEstado}`
-              }
+                                      filtroEstado === 'cancelados' ? 'cancelados' : filtroEstado}`}
             </Text>
             <Text style={styles.noTripsSubtext}>
               {filtroEstado === 'todos'

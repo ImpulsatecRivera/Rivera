@@ -20,6 +20,10 @@ export const AuthProvider = ({ children }) => {
   // 🆕 ESTADO PARA SPLASHSCREEN2 DESPUÉS DEL LOGIN
   const [showPostLoginSplash, setShowPostLoginSplash] = useState(false);
 
+  // ✅ NUEVO: exponer token e id para que otros hooks (useTrips) no dependan de AsyncStorage
+  const [token, setToken] = useState(null);
+  const [motoristaId, setMotoristaId] = useState(null);
+
   useEffect(() => {
     checkAuthStatus();
     
@@ -36,14 +40,14 @@ export const AuthProvider = ({ children }) => {
     try {
       console.log('🔍 Verificando sesión guardada...');
       
-      const token = await AsyncStorage.getItem('userToken');
+      const tokenStr = await AsyncStorage.getItem('userToken');
       const loginTime = await AsyncStorage.getItem('loginTime');
       const onboardingCompleted = await AsyncStorage.getItem('onboardingCompleted');
       const userData = await AsyncStorage.getItem('userData');
       const savedUserType = await AsyncStorage.getItem('userType');
-      const motoristaId = await AsyncStorage.getItem('motoristaId'); // ✅ Verificar ID
+      const storedMotoristaId = await AsyncStorage.getItem('motoristaId'); // ✅ Verificar ID
 
-      if (token && loginTime) {
+      if (tokenStr && loginTime) {
         const currentTime = Date.now();
         const timeSinceLogin = currentTime - parseInt(loginTime);
         
@@ -53,13 +57,17 @@ export const AuthProvider = ({ children }) => {
         if (timeSinceLogin < SESSION_TIMEOUT) {
           const remainingTime = SESSION_TIMEOUT - timeSinceLogin;
           console.log(`✅ Sesión válida. Expira en: ${Math.round(remainingTime / 1000 / 60)} minutos`);
-          console.log(`📋 Motorista ID guardado: ${motoristaId}`);
+          console.log(`📋 Motorista ID guardado: ${storedMotoristaId}`);
           
           // Restaurar estado
           setIsAuthenticated(true);
           setHasCompletedOnboarding(onboardingCompleted === 'true');
           setUser(userData ? JSON.parse(userData) : null);
           setUserType(savedUserType);
+
+          // ✅ NUEVO: restaurar token e id en memoria
+          setToken(tokenStr);
+          setMotoristaId(storedMotoristaId || null);
           
           // 🆕 NO MOSTRAR SPLASHSCREEN2 EN SESIONES RESTAURADAS
           setShowPostLoginSplash(false);
@@ -132,6 +140,10 @@ export const AuthProvider = ({ children }) => {
       setHasCompletedOnboarding(false);
       setUserType(null);
       setUser(null);
+
+      // ✅ NUEVO: limpiar token e id en memoria
+      setToken(null);
+      setMotoristaId(null);
       
       // 🆕 RESETEAR SPLASHSCREEN2
       setShowPostLoginSplash(false);
@@ -157,11 +169,13 @@ export const AuthProvider = ({ children }) => {
         console.error('❌ No se encontró ID del usuario en loginData');
         throw new Error('ID de usuario no disponible');
       }
+
+      const tokenValue = loginData.token || 'temp-token';
       
       // 💾 GUARDAR EN ASYNCSTORAGE
       await AsyncStorage.multiSet([
-        ['userToken', loginData.token || 'temp-token'],
-        ['authToken', loginData.token || ''], // ✅ Para compatibilidad
+        ['userToken', tokenValue],
+        ['authToken', tokenValue], // ✅ Para compatibilidad
         ['loginTime', currentTime.toString()],
         ['userData', JSON.stringify(loginData.user)],
         ['userType', loginData.userType],
@@ -174,6 +188,10 @@ export const AuthProvider = ({ children }) => {
       setUserType(loginData.userType);
       setIsAuthenticated(true);
       setHasCompletedOnboarding(true); // Motoristas existentes no necesitan onboarding
+
+      // ✅ NUEVO: mantener token e id en memoria
+      setToken(tokenValue);
+      setMotoristaId(userId.toString());
       
       // 🆕 ACTIVAR SPLASHSCREEN2 DESPUÉS DEL LOGIN EXITOSO
       setShowPostLoginSplash(true);
@@ -222,6 +240,10 @@ export const AuthProvider = ({ children }) => {
       setUserType('Motorista');
       setIsAuthenticated(true);
       setHasCompletedOnboarding(false); // ❌ Mostrar onboarding para nuevos usuarios
+
+      // ✅ NUEVO: token temporal e id en memoria
+      setToken('temp-register-token');
+      setMotoristaId(userId.toString());
       
       // 🆕 NO MOSTRAR SPLASHSCREEN2 EN REGISTRO (VAN DIRECTO AL ONBOARDING)
       setShowPostLoginSplash(false);
@@ -286,6 +308,10 @@ export const AuthProvider = ({ children }) => {
     // 🆕 NUEVOS VALORES PARA SPLASHSCREEN2
     showPostLoginSplash,
     setShowPostLoginSplash,
+
+    // ✅ NUEVO: disponibles para otros hooks/ pantallas
+    token,
+    motoristaId,
     
     login,
     register,
