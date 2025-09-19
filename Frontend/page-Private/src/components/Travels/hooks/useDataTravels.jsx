@@ -120,7 +120,7 @@ export const useTravels = () => {
       
       // 🎯 USAR EL MISMO ENDPOINT QUE RIVERA TRANSPORT MAP con cache-busting
       const cacheBuster = new Date().getTime();
-      const response = await axios.get(`riveraproject-production.up.railway.app/api/viajes/map-data?t=${cacheBuster}`, {
+      const response = await axios.get(`https://riveraproject-production.up.railway.app/api/viajes/map-data?t=${cacheBuster}`, {
         headers: {
           'Content-Type': 'application/json',
           'Cache-Control': 'no-cache',

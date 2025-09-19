@@ -123,9 +123,9 @@ const ProgramTripModal = ({
 
       // Cargar todos los recursos en paralelo
       const [camionesData, conductoresData, cotizacionesData] = await Promise.allSettled([
-        cargarDatos('riveraproject-production.up.railway.app/api/camiones', 'Camiones'),
-        cargarDatos('riveraproject-production.up.railway.app/api/motoristas', 'Motoristas'),
-        cargarDatos('riveraproject-production.up.railway.app/api/cotizaciones', 'Cotizaciones')
+        cargarDatos('https://riveraproject-production.up.railway.app/api/camiones', 'Camiones'),
+        cargarDatos('https://riveraproject-production.up.railway.app/api/motoristas', 'Motoristas'),
+        cargarDatos('https://riveraproject-production.up.railway.app/api/cotizaciones', 'Cotizaciones')
       ]);
 
       // Procesar camiones

@@ -96,7 +96,7 @@ const ProfileScreen = () => {
       }
 
       const userId = user.id || user._id;
-      const apiUrl = `riveraproject-production.up.railway.app/api/clientes/${userId}`;
+      const apiUrl = `https://riveraproject-production.up.railway.app/api/clientes/${userId}`;
       
       const response = await fetch(apiUrl, {
         method: 'GET',
@@ -207,7 +207,7 @@ const ProfileScreen = () => {
       }
 
       const userId = user.id || user._id;
-      const apiUrl = `riveraproject-production.up.railway.app/api/clientes/${userId}`;
+      const apiUrl = `https://riveraproject-production.up.railway.app/api/clientes/${userId}`;
       
       // Función para convertir fecha a formato ISO si es necesario
       const formatDateForAPI = (dateString) => {

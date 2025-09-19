@@ -14,7 +14,7 @@ import Icon from 'react-native-vector-icons/Ionicons';
 import { useAuth } from '../context/authContext'; // ✅ AGREGAR ESTA IMPORTACIÓN
 
 // ✅ CONFIGURACIÓN DE LA API - CORREGIDA
-const API_BASE_URL = 'riveraproject-production.up.railway.app';
+const API_BASE_URL = 'https://riveraproject-production.up.railway.app';
 
 const RegistrarseCliente2 = ({ navigation, route }) => {
   // ✅ OBTENER DATOS DE LA PANTALLA ANTERIOR
