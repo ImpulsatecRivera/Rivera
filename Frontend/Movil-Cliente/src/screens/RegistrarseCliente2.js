@@ -9,20 +9,25 @@ import {
   Alert,
   StyleSheet,
   ActivityIndicator,
+  Image,
+  Modal,
+  Pressable,
+  Platform,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
-import { useAuth } from '../context/authContext'; // ✅ AGREGAR ESTA IMPORTACIÓN
+import { useAuth } from '../context/authContext';
 
-// ✅ CONFIGURACIÓN DE LA API - CORREGIDA
+// CONFIGURACIÓN DE LA API
 const API_BASE_URL = 'https://riveraproject-production.up.railway.app';
 
 const RegistrarseCliente2 = ({ navigation, route }) => {
-  // ✅ OBTENER DATOS DE LA PANTALLA ANTERIOR
+  // OBTENER DATOS DE LA PANTALLA ANTERIOR
   const { email, password } = route.params || {};
   
-  // ✅ OBTENER FUNCIONES DEL CONTEXTO DE AUTENTICACIÓN
+  // OBTENER FUNCIONES DEL CONTEXTO DE AUTENTICACIÓN
   const { register } = useAuth();
 
+  // Estados del formulario
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [dui, setDui] = useState('');
@@ -30,6 +35,9 @@ const RegistrarseCliente2 = ({ navigation, route }) => {
   const [fechaNacimiento, setFechaNacimiento] = useState('');
   const [direccion, setDireccion] = useState('');
   const [loading, setLoading] = useState(false);
+
+  // Estados para imagen de perfil (simplificado)
+  const [showImageInfo, setShowImageInfo] = useState(false);
 
   const validateForm = () => {
     if (!firstName.trim()) {
@@ -160,11 +168,10 @@ const RegistrarseCliente2 = ({ navigation, route }) => {
     return truncated;
   };
 
-  // ✅ FUNCIÓN PARA CONECTAR CON EL BACKEND
+  // FUNCIÓN PARA CONECTAR CON EL BACKEND (SIN IMAGEN POR AHORA)
   const registerUser = async (userData) => {
     try {
       console.log('🚀 Enviando datos al backend:', userData);
-      // ✅ USAR LA RUTA CORRECTA
       const url = `${API_BASE_URL}/api/register-cliente`;
       console.log('🌐 URL completa:', url);
       
@@ -177,7 +184,6 @@ const RegistrarseCliente2 = ({ navigation, route }) => {
       });
 
       console.log('📊 Status de respuesta:', response.status);
-      console.log('📊 Status text:', response.statusText);
 
       const contentType = response.headers.get('content-type');
       console.log('📊 Content-Type:', contentType);
@@ -224,7 +230,7 @@ const RegistrarseCliente2 = ({ navigation, route }) => {
 
     setLoading(true);
     try {
-      // ✅ CONVERTIR FECHA AL FORMATO QUE ESPERA EL BACKEND
+      // CONVERTIR FECHA AL FORMATO QUE ESPERA EL BACKEND
       const convertDateFormat = (dateStr) => {
         if (dateStr.includes('/')) {
           const [day, month, year] = dateStr.split('/');
@@ -260,12 +266,7 @@ const RegistrarseCliente2 = ({ navigation, route }) => {
         console.log('✅ Registro exitoso!');
         console.log('📋 RESPUESTA COMPLETA DEL BACKEND:', JSON.stringify(result.data, null, 2));
         
-        // 🔍 DEBUG: Verificar qué nos devuelve el backend
-        console.log('🔍 result.data.user:', result.data.user);
-        console.log('🔍 result.data.token:', result.data.token);
-        console.log('🔍 result.data.success:', result.data.success);
-        
-        // ✅ EXTRAER DATOS DE LA RESPUESTA PARA EL CONTEXTO
+        // EXTRAER DATOS DE LA RESPUESTA PARA EL CONTEXTO
         const registrationData = {
           user: {
             id: result.data.user?.id || result.data.user?._id || null,
@@ -277,16 +278,16 @@ const RegistrarseCliente2 = ({ navigation, route }) => {
             idNumber: dui,
             phone: phone,
             address: direccion,
-            birthDate: fechaNacimiento
+            birthDate: fechaNacimiento,
+            profileImage: result.data.user?.profileImage || null
           },
           token: result.data.token || 'no-token-received',
           userType: result.data.userType || 'Cliente'
         };
 
         console.log('📦 DATOS PREPARADOS PARA CONTEXTO:', JSON.stringify(registrationData, null, 2));
-        console.log('🔍 ID extraído:', registrationData.user.id);
 
-        // ✅ GUARDAR EN EL CONTEXTO DE AUTENTICACIÓN
+        // GUARDAR EN EL CONTEXTO DE AUTENTICACIÓN
         console.log('💾 Guardando datos en el contexto...');
         const authResult = await register(registrationData);
         
@@ -325,6 +326,16 @@ const RegistrarseCliente2 = ({ navigation, route }) => {
     }
   };
 
+  const showImageOptions = () => {
+    Alert.alert(
+      'Foto de Perfil',
+      'La funcionalidad de subir fotos estará disponible próximamente. Por ahora puedes completar tu registro sin foto.',
+      [
+        { text: 'Entendido', style: 'default' }
+      ]
+    );
+  };
+
   const handleGoBack = () => {
     console.log('⬅️ Botón Atrás presionado');
     navigation.goBack();
@@ -357,7 +368,7 @@ const RegistrarseCliente2 = ({ navigation, route }) => {
             Solo necesitamos algunos datos más para completar tu perfil
           </Text>
           
-          {/* ✅ DEBUG: Mostrar email recibido (remover en producción) */}
+          {/* DEBUG: Mostrar email recibido (remover en producción) */}
           {__DEV__ && (
             <View style={{ backgroundColor: '#f0f0f0', padding: 10, marginBottom: 10, borderRadius: 5 }}>
               <Text style={{ fontSize: 12, color: '#333' }}>
@@ -365,6 +376,22 @@ const RegistrarseCliente2 = ({ navigation, route }) => {
               </Text>
             </View>
           )}
+
+          {/* SECCIÓN DE IMAGEN DE PERFIL SIMPLIFICADA */}
+          <View style={styles.profileImageSection}>
+            <Text style={styles.profileImageTitle}>Foto de perfil (opcional)</Text>
+            
+            <TouchableOpacity 
+              style={styles.profileImageContainer}
+              onPress={showImageOptions}
+            >
+              <View style={styles.placeholderImage}>
+                <Icon name="camera" size={40} color="#9ca3af" />
+                <Text style={styles.placeholderText}>Agregar foto</Text>
+                <Text style={styles.placeholderSubtext}>Próximamente</Text>
+              </View>
+            </TouchableOpacity>
+          </View>
           
           {/* Campo Primer Nombre */}
           <View style={styles.inputContainer}>
@@ -511,9 +538,50 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#6b7280',
     textAlign: 'center',
-    marginBottom: 40,
+    marginBottom: 32,
     lineHeight: 22,
   },
+  
+  // Estilos para imagen de perfil simplificada
+  profileImageSection: {
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  profileImageTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1f2937',
+    marginBottom: 12,
+  },
+  profileImageContainer: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    marginBottom: 16,
+  },
+  placeholderImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 60,
+    backgroundColor: '#f3f4f6',
+    borderWidth: 2,
+    borderColor: '#e5e7eb',
+    borderStyle: 'dashed',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  placeholderText: {
+    marginTop: 8,
+    fontSize: 12,
+    color: '#9ca3af',
+    fontWeight: '500',
+  },
+  placeholderSubtext: {
+    fontSize: 10,
+    color: '#d1d5db',
+    fontStyle: 'italic',
+  },
+
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
