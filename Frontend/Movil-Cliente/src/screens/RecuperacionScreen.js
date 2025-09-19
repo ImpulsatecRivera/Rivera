@@ -56,7 +56,7 @@ const RecuperacionScreen = ({ navigation }) => {
 
     setLoading(true);
     try {
-      const API_URL = 'https://riveraproject-5.onrender.com/api/recovery/requestCode';
+      const API_URL = 'https://riveraproject-production.up.railway.app/api/recovery/requestCode';
       
       const requestPayload = {
         email: email.trim().toLowerCase(),

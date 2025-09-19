@@ -45,7 +45,7 @@ const RealtimeProgressBar = ({
 
       try {
         // 🔧 RUTA CORRECTA: Usar el endpoint de métricas en tiempo real para verificar API
-        const response = await fetch(`https://riveraproject-5.onrender.com/api/viajes/real-time-metrics`);
+        const response = await fetch(`https://riveraproject-production.up.railway.app/api/viajes/real-time-metrics`);
         if (response.ok) {
           setApiAvailable(true);
           setIsConnected(true);
@@ -77,7 +77,7 @@ const RealtimeProgressBar = ({
     const pollInterval = setInterval(async () => {
       try {
         // 🔧 RUTA CORRECTA: Obtener detalles específicos del viaje
-        const response = await fetch(`https://riveraproject-5.onrender.com/api/viajes/${viajeId}`);
+        const response = await fetch(`https://riveraproject-production.up.railway.app/api/viajes/${viajeId}`);
         
         if (response.ok) {
           const result = await response.json();
@@ -212,15 +212,15 @@ const RealtimeProgressBar = ({
 
       if (action === 'start') {
         // No hay endpoint específico para iniciar, usar actualización de progreso
-        endpoint = `https://riveraproject-5.onrender.com/api/viajes/${viajeId}/progress`;
+        endpoint = `https://riveraproject-production.up.railway.app/api/viajes/${viajeId}/progress`;
         body = { progreso: 10, estado: 'en_curso', observaciones: 'Iniciado manualmente' };
       } else if (action === 'progress') {
         // 🔧 RUTA CORRECTA: Actualizar progreso
-        endpoint = `https://riveraproject-5.onrender.com/api/viajes/${viajeId}/progress`;
+        endpoint = `https://riveraproject-production.up.railway.app/api/viajes/${viajeId}/progress`;
         body = { progreso: newProgress, observaciones: descripcion || `Progreso actualizado a ${newProgress}%` };
       } else if (action === 'complete') {
         // 🔧 RUTA CORRECTA: Completar viaje
-        endpoint = `https://riveraproject-5.onrender.com/api/viajes/${viajeId}/complete`;
+        endpoint = `https://riveraproject-production.up.railway.app/api/viajes/${viajeId}/complete`;
         body = { observaciones: descripcion || 'Completado manualmente' };
       }
 
@@ -287,7 +287,7 @@ const RealtimeProgressBar = ({
 
     try {
       // 🔧 RUTA CORRECTA: Actualizar ubicación
-      const response = await fetch(`https://riveraproject-5.onrender.com/api/viajes/${viajeId}/location`, {
+      const response = await fetch(`https://riveraproject-production.up.railway.app/api/viajes/${viajeId}/location`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json'

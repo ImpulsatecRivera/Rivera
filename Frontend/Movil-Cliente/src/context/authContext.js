@@ -114,7 +114,7 @@ export const AuthProvider = ({ children }) => {
   // ✅ NUEVA FUNCIÓN: Verificar token con el backend
   const verifyTokenWithBackend = async (token) => {
     try {
-      const response = await fetch('https://riveraproject-5.onrender.com/api/login/checkAuth', {
+      const response = await fetch('https://riveraproject-production.up.railway.app/api/login/checkAuth', {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -328,7 +328,7 @@ export const AuthProvider = ({ children }) => {
         return { success: false, error: 'Esta función es solo para usuarios de Google' };
       }
 
-      const response = await fetch('https://riveraproject-5.onrender.com/api/login/complete-profile', {
+      const response = await fetch('https://riveraproject-production.up.railway.app/api/login/complete-profile', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

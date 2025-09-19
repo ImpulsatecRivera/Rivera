@@ -73,7 +73,7 @@ export const useProfile = () => {
       console.log('🔑 Auth token:', authToken ? 'Presente' : 'No presente');
 
       // Hacer petición al backend para obtener datos actualizados
-      const response = await fetch(`https://riveraproject-5.onrender.com/api/motoristas/${motoristaId}`, {
+      const response = await fetch(`https://riveraproject-production.up.railway.app/api/motoristas/${motoristaId}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',

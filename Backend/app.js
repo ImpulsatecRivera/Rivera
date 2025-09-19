@@ -20,12 +20,7 @@ import path from "path";
 
 
 //Traemos el archivo json
-const swaggerDocument = JSON.parse(
-    fs.readFileSync(
-        path.resolve("../Backend/Documentacion.json"),
-        "utf-8"
-    )
-);
+
 
 const app = express();
 
@@ -77,6 +72,5 @@ app.use("/api/empleados", empleadoRoutes);
 app.use("/api/motoristas", motoristasRoutes);
 app.use("/api/proveedores", proveedoresRoutes);
 app.use("/api/auto-update", autoUpdateRoutes);
-app.use("/api/docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
 export default app;
