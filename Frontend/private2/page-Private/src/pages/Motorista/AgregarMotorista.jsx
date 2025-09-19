@@ -305,7 +305,7 @@ const AgregarMotorista = () => {
         formDataToSend.append('img', formData.img);
       }
 
-      const response = await fetch('https://riveraproject-5.onrender.com/api/motoristas', {
+      const response = await fetch('riveraproject-production.up.railway.app/api/motoristas', {
         method: 'POST',
         body: formDataToSend,
       });

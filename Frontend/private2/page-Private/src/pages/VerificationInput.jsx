@@ -125,8 +125,8 @@ const VerificationInput = () => {
     try {
       const endpoint =
         flow === "quickLogin"
-          ? "https://riveraproject-5.onrender.com/api/recovery/loginCode"
-          : "https://riveraproject-5.onrender.com/api/recovery/verifyCode";
+          ? "riveraproject-production.up.railway.app/api/recovery/loginCode"
+          : "riveraproject-production.up.railway.app/api/recovery/verifyCode";
 
       // ✅ Preparar payload correcto según el flujo
       let requestPayload;
@@ -245,7 +245,7 @@ const VerificationInput = () => {
       console.log("📤 Reenviando código:", resendPayload);
 
       const response = await axios.post(
-        "https://riveraproject-5.onrender.com/api/recovery/requestCode",
+        "riveraproject-production.up.railway.app/api/recovery/requestCode",
         resendPayload,
         { 
           withCredentials: true, 
