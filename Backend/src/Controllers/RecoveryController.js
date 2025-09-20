@@ -1,5 +1,6 @@
 import EmpleadosModel from "../Models/Empleados.js";
 import MotoristasModel from "../Models/Motorista.js"
+import ClientesModelo from "../Models/Clientes.js"; 
 import bcryptjs from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { EnviarEmail, html } from "../Utils/RecoveryPass.js";
@@ -28,6 +29,24 @@ const buscarUsuario = async (criterio, valor) => {
       ]
     });
     if (userFound) userType = "Empleado";
+    // 3. Si no se encuentra en Motoristas, buscar en Clientes
+if (!userFound) {
+  if (criterio === "email") {
+    userFound = await ClientesModelo.findOne({ 
+      email: { $regex: new RegExp(`^${valor}$`, 'i') } 
+    });
+    if (userFound) userType = "Cliente";
+  } else if (criterio === "phone") {
+    userFound = await ClientesModelo.findOne({
+      $or: [
+        { phone: valor },
+        { phone: valor.replace('+503', '') },
+        { phone: valor.replace('+', '') }
+      ]
+    });
+    if (userFound) userType = "Cliente";
+  }
+}
   }
 
   // Si no se encuentra en Empleados, buscar en Motoristas
@@ -75,6 +94,7 @@ const actualizarContrasena = async (decoded, hashedPassword) => {
       },
       { new: true }
     );
+    
   }
 
   // Si no se encuentra en el modelo específico, buscar en ambos
@@ -98,7 +118,18 @@ const actualizarContrasena = async (decoded, hashedPassword) => {
         { new: true }
       );
     }
-  }
+    } else if (decoded.userType === "Cliente") {
+  updatedUser = await ClientesModelo.findOneAndUpdate(
+    { $or: [{ email: decoded.email }, { _id: decoded.id }] },
+    { 
+      password: hashedPassword,
+      passwordUpdatedAt: new Date()
+    },
+    { new: true }
+  );
+}
+  
+
 
   return updatedUser;
 };
