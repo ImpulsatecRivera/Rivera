@@ -11,10 +11,12 @@ import {
   ActivityIndicator,
   Image,
   Modal,
+  Pressable,
   Platform,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useAuth } from '../context/authContext';
+// Solo Expo Image Picker - NO react-native-permissions
 import * as ImagePicker from 'expo-image-picker';
 
 // CONFIGURACIÓN DE LA API
@@ -39,92 +41,6 @@ const RegistrarseCliente2 = ({ navigation, route }) => {
   // Estados para imagen de perfil
   const [selectedImage, setSelectedImage] = useState(null);
   const [showImageModal, setShowImageModal] = useState(false);
-
-  // FUNCIÓN PARA TOMAR FOTO CON LA CÁMARA (EXPO VERSION)
-  const takePhotoFromCamera = async () => {
-    console.log('Intentando abrir cámara...');
-    
-    try {
-      // Solicitar permisos
-      const { status } = await ImagePicker.requestCameraPermissionsAsync();
-      
-      if (status !== 'granted') {
-        Alert.alert('Error', 'Se necesita permiso de cámara para tomar fotos');
-        return;
-      }
-
-      console.log('Permisos de cámara concedidos, lanzando cámara...');
-
-      const result = await ImagePicker.launchCameraAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        aspect: [1, 1],
-        quality: 0.8,
-      });
-
-      console.log('Resultado de cámara:', result);
-
-      if (!result.canceled && result.assets[0]) {
-        console.log('Imagen de cámara seleccionada exitosamente');
-        setSelectedImage(result.assets[0]);
-        setShowImageModal(false);
-      }
-    } catch (error) {
-      console.error('Error al usar cámara:', error);
-      Alert.alert('Error', 'No se pudo acceder a la cámara');
-    }
-  };
-
-  // FUNCIÓN PARA SELECCIONAR IMAGEN DE LA GALERÍA (EXPO VERSION)
-  const selectImageFromGallery = async () => {
-    console.log('Intentando abrir galería...');
-    
-    try {
-      // Solicitar permisos
-      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      
-      if (status !== 'granted') {
-        Alert.alert('Error', 'Se necesita permiso para acceder a la galería');
-        return;
-      }
-
-      console.log('Permisos de galería concedidos, lanzando galería...');
-
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        aspect: [1, 1],
-        quality: 0.8,
-      });
-
-      console.log('Resultado de galería:', result);
-
-      if (!result.canceled && result.assets[0]) {
-        console.log('Imagen de galería seleccionada exitosamente');
-        setSelectedImage(result.assets[0]);
-        setShowImageModal(false);
-      }
-    } catch (error) {
-      console.error('Error al acceder a galería:', error);
-      Alert.alert('Error', 'No se pudo acceder a la galería');
-    }
-  };
-
-  // FUNCIÓN PARA REMOVER IMAGEN SELECCIONADA
-  const removeSelectedImage = () => {
-    Alert.alert(
-      'Remover imagen',
-      '¿Estás seguro de que quieres remover esta imagen?',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        { 
-          text: 'Remover', 
-          style: 'destructive',
-          onPress: () => setSelectedImage(null)
-        }
-      ]
-    );
-  };
 
   const validateForm = () => {
     if (!firstName.trim()) {
@@ -255,111 +171,142 @@ const RegistrarseCliente2 = ({ navigation, route }) => {
     return truncated;
   };
 
-  // FUNCIÓN PARA CONECTAR CON EL BACKEND CON IMAGEN
-  const registerUser = async (userData) => {
+  // FUNCIÓN PARA SOLICITAR PERMISOS DE CÁMARA (Expo)
+  const requestCameraPermission = async () => {
+    try {
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      return status === 'granted';
+    } catch (error) {
+      console.log('Error solicitando permiso de cámara:', error);
+      return false;
+    }
+  };
+
+  // FUNCIÓN PARA SOLICITAR PERMISOS DE GALERÍA (Expo)
+  const requestMediaLibraryPermission = async () => {
+    try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      return status === 'granted';
+    } catch (error) {
+      console.log('Error solicitando permiso de galería:', error);
+      return false;
+    }
+  };
+
+  // FUNCIÓN PARA TOMAR FOTO CON LA CÁMARA (Expo)
+  const takePhotoWithCamera = async () => {
+    const hasPermission = await requestCameraPermission();
+    if (!hasPermission) {
+      Alert.alert('Permiso denegado', 'Necesitas permitir el acceso a la cámara para tomar fotos.');
+      return;
+    }
+
+    try {
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        const asset = result.assets[0];
+        setSelectedImage({
+          uri: asset.uri,
+          type: 'image/jpeg',
+          name: `photo_${Date.now()}.jpg`,
+        });
+        setShowImageModal(false);
+      }
+    } catch (error) {
+      console.log('Error tomando foto:', error);
+      Alert.alert('Error', 'No se pudo tomar la foto. Intenta de nuevo.');
+    }
+  };
+
+  // FUNCIÓN PARA SELECCIONAR FOTO DE LA GALERÍA (Expo)
+  const selectFromGallery = async () => {
+    const hasPermission = await requestMediaLibraryPermission();
+    if (!hasPermission) {
+      Alert.alert('Permiso denegado', 'Necesitas permitir el acceso a la galería para seleccionar fotos.');
+      return;
+    }
+
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        const asset = result.assets[0];
+        setSelectedImage({
+          uri: asset.uri,
+          type: 'image/jpeg',
+          name: asset.fileName || `image_${Date.now()}.jpg`,
+        });
+        setShowImageModal(false);
+      }
+    } catch (error) {
+      console.log('Error seleccionando imagen:', error);
+      Alert.alert('Error', 'No se pudo seleccionar la imagen. Intenta de nuevo.');
+    }
+  };
+
+  // FUNCIÓN PARA CONECTAR CON EL BACKEND USANDO FORMDATA (consistente con tu backend)
+  const registerUser = async (userData, imageFile) => {
     try {
       console.log('🚀 Enviando datos al backend:', userData);
       const url = `${API_BASE_URL}/api/register-cliente`;
       console.log('🌐 URL completa:', url);
       
-      // Si hay imagen, usar FormData con el campo correcto
-      if (selectedImage) {
-        const formData = new FormData();
-        
-        // Agregar todos los campos de texto
-        formData.append('firstName', userData.firstName);
-        formData.append('lastName', userData.lastName);
-        formData.append('email', userData.email);
-        formData.append('idNumber', userData.idNumber);
-        formData.append('birthDate', userData.birthDate);
-        formData.append('password', userData.password);
-        formData.append('phone', userData.phone);
-        formData.append('address', userData.address);
-        
-        // FORMATO CORRECTO PARA LA IMAGEN - CAMPO DEBE SER 'profileImage'
-        const imageData = {
-          uri: selectedImage.uri,
-          type: selectedImage.type || 'image/jpeg',
-          name: selectedImage.fileName || `profile_${Date.now()}.jpg`,
+      // Crear FormData para enviar datos + imagen (como espera tu backend)
+      const formData = new FormData();
+      
+      // Agregar todos los campos de texto
+      Object.keys(userData).forEach(key => {
+        formData.append(key, userData[key]);
+      });
+      
+      // Agregar imagen si existe (campo 'profileImage' como en tu backend)
+      if (imageFile) {
+        formData.append('profileImage', {
+          uri: imageFile.uri,
+          type: imageFile.type,
+          name: imageFile.name,
+        });
+        console.log('📸 Imagen agregada al FormData:', imageFile.name);
+      }
+
+      const response = await fetch(url, {
+        method: 'POST',
+        // NO establecer Content-Type para FormData - React Native lo hace automáticamente
+        body: formData,
+      });
+
+      console.log('📊 Status de respuesta:', response.status);
+
+      const contentType = response.headers.get('content-type');
+      console.log('📊 Content-Type:', contentType);
+
+      if (!contentType || !contentType.includes('application/json')) {
+        const textResponse = await response.text();
+        console.error('❌ Respuesta no es JSON:', textResponse);
+        return { 
+          success: false, 
+          error: `Servidor no respondió JSON. Respuesta: ${textResponse.substring(0, 100)}...` 
         };
-        
-        formData.append('profileImage', imageData); // CAMBIAR 'img' por 'profileImage'
+      }
 
-        console.log('📤 Enviando FormData con imagen...');
-        console.log('🖼️ Datos de imagen:', imageData);
+      const result = await response.json();
+      console.log('📋 Respuesta del servidor:', result);
 
-        const response = await fetch(url, {
-          method: 'POST',
-          // NO incluir Content-Type - React Native lo configura automáticamente
-          body: formData,
-        });
-
-        console.log('📊 Status de respuesta:', response.status);
-
-        // MEJORAR EL MANEJO DE ERRORES
-        const responseText = await response.text();
-        console.log('📄 Respuesta cruda (primeros 500 chars):', responseText.substring(0, 500));
-
-        // Verificar si la respuesta es HTML (página de error)
-        if (responseText.trim().startsWith('<')) {
-          console.error('❌ El servidor devolvió HTML en lugar de JSON');
-          console.error('📄 Status code:', response.status);
-          return { 
-            success: false, 
-            error: `Error del servidor (${response.status}): ${response.status === 413 ? 'Imagen muy grande' : 'Error interno del servidor'}` 
-          };
-        }
-
-        let result;
-        try {
-          result = JSON.parse(responseText);
-        } catch (parseError) {
-          console.error('❌ Error parseando JSON:', parseError);
-          return { 
-            success: false, 
-            error: `Respuesta inválida del servidor. Status: ${response.status}` 
-          };
-        }
-
-        console.log('📋 Respuesta del servidor:', result);
-
-        if (response.ok) {
-          return { success: true, data: result };
-        } else {
-          return { success: false, error: result.Message || result.message || `Error del servidor: ${response.status}` };
-        }
+      if (response.ok) {
+        return { success: true, data: result };
       } else {
-        // Sin imagen, usar JSON normal
-        const response = await fetch(url, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(userData),
-        });
-
-        console.log('📊 Status de respuesta:', response.status);
-
-        const contentType = response.headers.get('content-type');
-        console.log('📊 Content-Type:', contentType);
-
-        if (!contentType || !contentType.includes('application/json')) {
-          const textResponse = await response.text();
-          console.error('❌ Respuesta no es JSON:', textResponse);
-          return { 
-            success: false, 
-            error: `Servidor no respondió JSON. Respuesta: ${textResponse.substring(0, 100)}...` 
-          };
-        }
-
-        const result = await response.json();
-        console.log('📋 Respuesta del servidor:', result);
-
-        if (response.ok) {
-          return { success: true, data: result };
-        } else {
-          return { success: false, error: result.Message || result.message || 'Error desconocido' };
-        }
+        return { success: false, error: result.Message || result.message || 'Error desconocido' };
       }
       
     } catch (error) {
@@ -415,17 +362,9 @@ const RegistrarseCliente2 = ({ navigation, route }) => {
       };
       
       console.log('📝 Datos a enviar:', userData);
-      console.log('🖼️ Imagen seleccionada:', selectedImage ? 'Sí' : 'No');
-      if (selectedImage) {
-        console.log('📷 Detalles de imagen:', {
-          uri: selectedImage.uri,
-          type: selectedImage.type,
-          fileName: selectedImage.fileName,
-          fileSize: selectedImage.fileSize,
-        });
-      }
+      console.log('📸 Imagen seleccionada:', selectedImage ? 'Sí' : 'No');
       
-      const result = await registerUser(userData);
+      const result = await registerUser(userData, selectedImage);
       
       if (result.success) {
         console.log('✅ Registro exitoso!');
@@ -444,7 +383,7 @@ const RegistrarseCliente2 = ({ navigation, route }) => {
             phone: phone,
             address: direccion,
             birthDate: fechaNacimiento,
-            profileImage: result.data.user?.profileImage?.url || result.data.user?.profileImage || null
+            profileImage: result.data.user?.profileImage || null
           },
           token: result.data.token || 'no-token-received',
           userType: result.data.userType || 'Cliente'
@@ -495,6 +434,10 @@ const RegistrarseCliente2 = ({ navigation, route }) => {
     setShowImageModal(true);
   };
 
+  const removeImage = () => {
+    setSelectedImage(null);
+  };
+
   const handleGoBack = () => {
     console.log('⬅️ Botón Atrás presionado');
     navigation.goBack();
@@ -533,11 +476,6 @@ const RegistrarseCliente2 = ({ navigation, route }) => {
               <Text style={{ fontSize: 12, color: '#333' }}>
                 DEBUG: Email recibido: {email}
               </Text>
-              {selectedImage && (
-                <Text style={{ fontSize: 12, color: '#333' }}>
-                  DEBUG: Imagen: {selectedImage.fileName || 'Sin nombre'}
-                </Text>
-              )}
             </View>
           )}
 
@@ -551,14 +489,8 @@ const RegistrarseCliente2 = ({ navigation, route }) => {
             >
               {selectedImage ? (
                 <View style={styles.selectedImageContainer}>
-                  <Image 
-                    source={{ uri: selectedImage.uri }} 
-                    style={styles.selectedImage}
-                  />
-                  <TouchableOpacity 
-                    style={styles.removeImageButton}
-                    onPress={removeSelectedImage}
-                  >
+                  <Image source={{ uri: selectedImage.uri }} style={styles.selectedImage} />
+                  <TouchableOpacity style={styles.removeImageButton} onPress={removeImage}>
                     <Icon name="close-circle" size={24} color="#ef4444" />
                   </TouchableOpacity>
                 </View>
@@ -572,7 +504,7 @@ const RegistrarseCliente2 = ({ navigation, route }) => {
             </TouchableOpacity>
           </View>
           
-          {/* Resto de los campos del formulario */}
+          {/* Campos del formulario */}
           <View style={styles.inputContainer}>
             <Icon name="person-outline" size={20} color="#666" style={styles.inputIcon} />
             <TextInput
@@ -649,12 +581,14 @@ const RegistrarseCliente2 = ({ navigation, route }) => {
             />
           </View>
 
+          {/* Texto de términos */}
           <Text style={styles.termsText}>
             Al hacer click en el botón{' '}
             <Text style={styles.termsHighlight}>Crear cuenta</Text>
             ,{'\n'}aceptas la oferta pública y nuestros términos.
           </Text>
 
+          {/* Botón crear cuenta */}
           <TouchableOpacity 
             style={[styles.primaryButton, loading && styles.buttonDisabled]}
             onPress={handleCreateAccount}
@@ -667,6 +601,7 @@ const RegistrarseCliente2 = ({ navigation, route }) => {
             )}
           </TouchableOpacity>
 
+          {/* Indicadores de página */}
           <View style={styles.pageIndicatorContainer}>
             <TouchableOpacity onPress={handleGoBack} style={styles.backButton}>
               <Icon name="arrow-back" size={20} color="#9ca3af" />
@@ -690,27 +625,20 @@ const RegistrarseCliente2 = ({ navigation, route }) => {
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Seleccionar imagen</Text>
-            <Text style={styles.modalSubtitle}>¿Cómo te gustaría agregar tu foto?</Text>
+            <Text style={styles.modalTitle}>Seleccionar foto de perfil</Text>
             
-            <TouchableOpacity 
-              style={styles.modalOption}
-              onPress={takePhotoFromCamera}
-            >
-              <Icon name="camera" size={24} color="#4CAF50" />
+            <TouchableOpacity style={styles.modalOption} onPress={takePhotoWithCamera}>
+              <Icon name="camera-outline" size={24} color="#4CAF50" />
               <Text style={styles.modalOptionText}>Tomar foto</Text>
             </TouchableOpacity>
             
-            <TouchableOpacity 
-              style={styles.modalOption}
-              onPress={selectImageFromGallery}
-            >
-              <Icon name="images" size={24} color="#4CAF50" />
-              <Text style={styles.modalOptionText}>Elegir de galería</Text>
+            <TouchableOpacity style={styles.modalOption} onPress={selectFromGallery}>
+              <Icon name="images-outline" size={24} color="#4CAF50" />
+              <Text style={styles.modalOptionText}>Seleccionar de galería</Text>
             </TouchableOpacity>
             
             <TouchableOpacity 
-              style={styles.modalCancelButton}
+              style={styles.modalCancelButton} 
               onPress={() => setShowImageModal(false)}
             >
               <Text style={styles.modalCancelText}>Cancelar</Text>
@@ -768,28 +696,6 @@ const styles = StyleSheet.create({
     borderRadius: 60,
     marginBottom: 16,
   },
-  selectedImageContainer: {
-    width: '100%',
-    height: '100%',
-    position: 'relative',
-  },
-  selectedImage: {
-    width: '100%',
-    height: '100%',
-    borderRadius: 60,
-  },
-  removeImageButton: {
-    position: 'absolute',
-    top: -5,
-    right: -5,
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-  },
   placeholderImage: {
     width: '100%',
     height: '100%',
@@ -812,58 +718,22 @@ const styles = StyleSheet.create({
     color: '#d1d5db',
     fontStyle: 'italic',
   },
-
-  // Estilos del modal
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
+  selectedImageContainer: {
+    position: 'relative',
+    width: '100%',
+    height: '100%',
   },
-  modalContent: {
+  selectedImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 60,
+  },
+  removeImageButton: {
+    position: 'absolute',
+    top: -5,
+    right: -5,
     backgroundColor: '#fff',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    paddingHorizontal: 24,
-    paddingTop: 24,
-    paddingBottom: 40,
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#1f2937',
-    textAlign: 'center',
-    marginBottom: 8,
-  },
-  modalSubtitle: {
-    fontSize: 14,
-    color: '#6b7280',
-    textAlign: 'center',
-    marginBottom: 24,
-  },
-  modalOption: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 16,
-    paddingHorizontal: 20,
-    backgroundColor: '#f9fafb',
     borderRadius: 12,
-    marginBottom: 12,
-  },
-  modalOptionText: {
-    fontSize: 16,
-    color: '#1f2937',
-    marginLeft: 16,
-    fontWeight: '500',
-  },
-  modalCancelButton: {
-    paddingVertical: 16,
-    alignItems: 'center',
-    marginTop: 8,
-  },
-  modalCancelText: {
-    fontSize: 16,
-    color: '#6b7280',
-    fontWeight: '500',
   },
 
   inputContainer: {
@@ -953,6 +823,52 @@ const styles = StyleSheet.create({
     height: 8,
     backgroundColor: '#1f2937',
     borderRadius: 4,
+  },
+
+  // Estilos para el modal
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingHorizontal: 24,
+    paddingVertical: 32,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1f2937',
+    textAlign: 'center',
+    marginBottom: 24,
+  },
+  modalOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    backgroundColor: '#f9fafb',
+    marginBottom: 12,
+  },
+  modalOptionText: {
+    fontSize: 16,
+    color: '#1f2937',
+    marginLeft: 12,
+    fontWeight: '500',
+  },
+  modalCancelButton: {
+    paddingVertical: 16,
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  modalCancelText: {
+    fontSize: 16,
+    color: '#6b7280',
+    fontWeight: '500',
   },
 });
 
