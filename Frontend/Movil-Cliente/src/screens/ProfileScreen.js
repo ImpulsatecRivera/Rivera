@@ -132,6 +132,7 @@ const ProfileScreen = () => {
           diasDesdeRegistro: actividadData?.diasDesdeRegistro ? Number(actividadData.diasDesdeRegistro) : null,
           ultimoAcceso: String(actividadData?.ultimoAcceso || 'No registrado'),
           edad: String(clienteData?.edad || 'No disponible'),
+          profileImage: clienteData?.profileImage?.url || null, // Agregar URL de imagen de perfil
         };
 
         setUserInfo(formattedUserInfo);
@@ -165,6 +166,7 @@ const ProfileScreen = () => {
       diasDesdeRegistro: 245,
       ultimoAcceso: 'Hace 2 horas',
       edad: '39 años',
+      profileImage: null, // Para testing sin imagen
     };
   };
 
@@ -471,16 +473,24 @@ const ProfileScreen = () => {
             </View>
           </Animated.View>
 
-          {/* Profile Card con animación Lottie */}
+          {/* Profile Card con imagen o animación Lottie */}
           <View style={styles.profileCard}>
             <View style={styles.avatarContainer}>
               <View style={styles.avatar}>
-                <LottieView
-                  source={ProfileAnimation}
-                  autoPlay
-                  loop
-                  style={styles.avatarLottie}
-                />
+                {userInfo?.profileImage ? (
+                  <Image 
+                    source={{ uri: userInfo.profileImage }} 
+                    style={styles.profileImageStyle}
+                    resizeMode="cover"
+                  />
+                ) : (
+                  <LottieView
+                    source={ProfileAnimation}
+                    autoPlay
+                    loop
+                    style={styles.avatarLottie}
+                  />
+                )}
               </View>
               <View style={styles.avatarOverlay}>
                 <TouchableOpacity style={styles.avatarEditButton}>
@@ -895,6 +905,11 @@ const styles = StyleSheet.create({
   avatarLottie: {
     width: 80,
     height: 80,
+  },
+  profileImageStyle: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 50,
   },
   avatarOverlay: {
     position: 'absolute',
