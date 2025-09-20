@@ -23,11 +23,11 @@ import FocusAwareStatusBar from '../components/FocusAwareStatusBar';
 import LottieView from 'lottie-react-native';
 
 // Importa tus animaciones Lottie
-import EditAnimation from "../assets/lottie/Portfolio Writer.json"; // Animación de editar
-import SaveAnimation from "../assets/lottie/Blue successful login.json"; // Animación de guardar
-import ProfileAnimation from "../assets/lottie/Profile Avatar of Young Boy.json"; // Animación de perfil
-import LogoutAnimation from "../assets/lottie/Login.json"; // Animación de logout
-import LoadingAnimation from "../assets/lottie/Sandy Loading.json"; // Animación de carga
+import EditAnimation from "../assets/lottie/Portfolio Writer.json";
+import SaveAnimation from "../assets/lottie/Blue successful login.json";
+import ProfileAnimation from "../assets/lottie/Profile Avatar of Young Boy.json";
+import LogoutAnimation from "../assets/lottie/Login.json";
+import LoadingAnimation from "../assets/lottie/Sandy Loading.json";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -50,6 +50,10 @@ const ProfileScreen = () => {
   const [error, setError] = useState(null);
   const [activeField, setActiveField] = useState(null);
   const [successVisible, setSuccessVisible] = useState(false);
+  
+  // Estados específicos para imagen de perfil
+  const [imageLoadError, setImageLoadError] = useState(false);
+  const [imageLoading, setImageLoading] = useState(false);
 
   // Animaciones
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -86,6 +90,7 @@ const ProfileScreen = () => {
         setLoading(true);
       }
       setError(null);
+      setImageLoadError(false); // Reset image error state
 
       if (!user?.id && !user?._id) {
         console.log('No hay user ID, usando datos dummy para debug');
@@ -132,8 +137,10 @@ const ProfileScreen = () => {
           diasDesdeRegistro: actividadData?.diasDesdeRegistro ? Number(actividadData.diasDesdeRegistro) : null,
           ultimoAcceso: String(actividadData?.ultimoAcceso || 'No registrado'),
           edad: String(clienteData?.edad || 'No disponible'),
-          profileImage: clienteData?.profileImage?.url || null, // Agregar URL de imagen de perfil
+          profileImage: clienteData?.profileImage?.url || null,
         };
+
+        console.log('Profile image URL:', formattedUserInfo.profileImage); // Debug
 
         setUserInfo(formattedUserInfo);
         setEditingUserInfo({ ...formattedUserInfo });
@@ -197,6 +204,69 @@ const ProfileScreen = () => {
     } catch {
       return 'Fecha inválida';
     }
+  };
+
+  // Funciones para manejo de imagen de perfil
+  const handleImageLoadStart = () => {
+    setImageLoading(true);
+    setImageLoadError(false);
+  };
+
+  const handleImageLoadEnd = () => {
+    setImageLoading(false);
+  };
+
+  const handleImageError = (error) => {
+    console.log('Error cargando imagen de perfil:', error.nativeEvent?.error);
+    setImageLoadError(true);
+    setImageLoading(false);
+  };
+
+  // Función auxiliar: Verificar si debe mostrar imagen o Lottie
+  const shouldShowImage = () => {
+    return userInfo?.profileImage && 
+           !imageLoadError && 
+           userInfo.profileImage.trim() !== '';
+  };
+
+  // Componente para el Avatar con manejo mejorado
+  const ProfileAvatar = () => {
+    if (shouldShowImage()) {
+      return (
+        <View style={styles.avatar}>
+          {imageLoading && (
+            <View style={styles.imageLoadingOverlay}>
+              <ActivityIndicator size="small" color={ACCENT} />
+            </View>
+          )}
+          
+          <Image 
+            source={{ uri: userInfo.profileImage }}
+            style={[
+              styles.profileImageStyle,
+              imageLoading && styles.profileImageLoading
+            ]}
+            resizeMode="cover"
+            onLoadStart={handleImageLoadStart}
+            onLoadEnd={handleImageLoadEnd}
+            onError={handleImageError}
+            defaultSource={undefined} // Para evitar imagen por defecto de RN
+          />
+        </View>
+      );
+    }
+    
+    // Mostrar Lottie por defecto
+    return (
+      <View style={styles.avatar}>
+        <LottieView
+          source={ProfileAnimation}
+          autoPlay
+          loop
+          style={styles.avatarLottie}
+        />
+      </View>
+    );
   };
 
   // Función: Guardar cambios
@@ -302,7 +372,7 @@ const ProfileScreen = () => {
 
         // Recargar datos del perfil SIN mostrar loading
         setTimeout(() => {
-          fetchUserProfile(true); // Cambiado a true para usar refreshing en lugar de loading
+          fetchUserProfile(true);
         }, 1000);
         
       } else {
@@ -473,25 +543,11 @@ const ProfileScreen = () => {
             </View>
           </Animated.View>
 
-          {/* Profile Card con imagen o animación Lottie */}
+          {/* Profile Card con imagen mejorada */}
           <View style={styles.profileCard}>
             <View style={styles.avatarContainer}>
-              <View style={styles.avatar}>
-                {userInfo?.profileImage ? (
-                  <Image 
-                    source={{ uri: userInfo.profileImage }} 
-                    style={styles.profileImageStyle}
-                    resizeMode="cover"
-                  />
-                ) : (
-                  <LottieView
-                    source={ProfileAnimation}
-                    autoPlay
-                    loop
-                    style={styles.avatarLottie}
-                  />
-                )}
-              </View>
+              <ProfileAvatar />
+              
               <View style={styles.avatarOverlay}>
                 <TouchableOpacity style={styles.avatarEditButton}>
                   <LottieView
@@ -513,6 +569,7 @@ const ProfileScreen = () => {
             </View>
           </View>
 
+          {/* Resto del código permanece igual... */}
           {/* Botones de acción */}
           <View style={styles.actionButtons}>
             {!editMode ? (
@@ -901,6 +958,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     overflow: 'hidden',
+    position: 'relative',
   },
   avatarLottie: {
     width: 80,
@@ -910,6 +968,21 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
     borderRadius: 50,
+  },
+  profileImageLoading: {
+    opacity: 0.7,
+  },
+  imageLoadingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.8)',
+    borderRadius: 50,
+    zIndex: 1,
   },
   avatarOverlay: {
     position: 'absolute',
