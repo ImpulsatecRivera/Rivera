@@ -33,6 +33,8 @@ import SaveAnimation from "../assets/lottie/Blue successful login.json";
 import ProfileAnimation from "../assets/lottie/Profile Avatar of Young Boy.json";
 import LogoutAnimation from "../assets/lottie/Login.json";
 import LoadingAnimation from "../assets/lottie/Sandy Loading.json";
+// Asegúrate de cambiar este nombre por tu archivo real de animación de cámara
+import CameraAnimation from "../assets/lottie/Face Scan.json"; 
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -61,6 +63,8 @@ const ProfileScreen = () => {
   const [imageLoading, setImageLoading] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [imagePickerVisible, setImagePickerVisible] = useState(false);
+  // CORREGIDO: Eliminada la declaración duplicada
+  const [cameraLoadingVisible, setCameraLoadingVisible] = useState(false);
 
   // Animaciones
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -306,11 +310,18 @@ const ProfileScreen = () => {
   const takePhotoWithCamera = async () => {
     try {
       hideImagePicker();
+      
+      // Mostrar loading de cámara con Lottie por más tiempo
+      setCameraLoadingVisible(true);
+      
+      // Esperar más tiempo para mostrar la animación completa (6 segundos)
+      await new Promise(resolve => setTimeout(resolve, 6000));
 
       // Verificar permisos de cámara
       const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
       
       if (permissionResult.granted === false) {
+        setCameraLoadingVisible(false);
         Alert.alert(
           'Permiso denegado',
           'Se necesita permiso para acceder a la cámara.',
@@ -318,6 +329,9 @@ const ProfileScreen = () => {
         );
         return;
       }
+
+      // Ocultar loading justo antes de abrir cámara
+      setCameraLoadingVisible(false);
 
       // Lanzar cámara
       const result = await ImagePicker.launchCameraAsync({
@@ -334,6 +348,7 @@ const ProfileScreen = () => {
         await uploadProfileImage(resizedImage.uri, 'profile_image.jpg');
       }
     } catch (error) {
+      setCameraLoadingVisible(false);
       console.error('Error taking photo with camera:', error);
       Alert.alert('Error', 'No se pudo tomar la foto con la cámara');
     }
@@ -948,6 +963,20 @@ const ProfileScreen = () => {
         </Pressable>
       </Modal>
 
+      {/* Modal de loading de cámara - Solo animación Lottie */}
+      <Modal transparent visible={cameraLoadingVisible} animationType="fade">
+        <View style={styles.cameraLoadingBackdrop}>
+          <Animated.View style={styles.cameraLoadingCard}>
+            <LottieView
+              source={CameraAnimation}
+              autoPlay
+              loop
+              style={styles.cameraLoadingLottie}
+            />
+          </Animated.View>
+        </View>
+      </Modal>
+
       {/* Modal de confirmación moderno */}
       <Modal transparent visible={confirmVisible} animationType="fade" onRequestClose={closeConfirm}>
         <Pressable style={styles.backdrop} onPress={closeConfirm}>
@@ -1078,7 +1107,7 @@ const getActivityLabel = (activity) => {
   }
 };
 
-// Estilos
+// Estilos (mantienen los mismos estilos originales)
 const styles = StyleSheet.create({
   container: { 
     flex: 1, 
@@ -1145,6 +1174,27 @@ const styles = StyleSheet.create({
     color: ACCENT,
     marginTop: 4,
     fontWeight: '600',
+  },
+  
+  // Estilos para el modal de loading de cámara (simplificado)
+  cameraLoadingBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.8)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+  },
+  cameraLoadingCard: {
+    width: 200,
+    height: 200,
+    backgroundColor: 'transparent',
+    borderRadius: 100,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  cameraLoadingLottie: {
+    width: 180,
+    height: 180,
   },
   
   loadingContainer: {
