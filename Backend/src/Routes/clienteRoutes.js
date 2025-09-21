@@ -13,7 +13,25 @@ router.get('/resumen-usuarios', clienteCon.getResumenUsuarios);
 // Rutas con parámetros van AL FINAL
 router.route("/:id")
   .get(clienteCon.getClienteById)    
-  .put(clienteCon.PutClientes)       
   .delete(clienteCon.deleteClientes);
 
-export default router;  // ← Removido el "7" extra
+// Ruta PUT separada para manejar upload de imagen con middleware específico
+router.put("/:id", 
+  // Middleware para manejar el upload de imagen
+  (req, res, next) => {
+    clienteCon.uploadProfileImage(req, res, (err) => {
+      if (err) {
+        return res.status(400).json({
+          success: false,
+          message: "Error al procesar imagen",
+          error: err.message
+        });
+      }
+      next();
+    });
+  },
+  // Controlador principal
+  clienteCon.PutClientes
+);
+
+export default router;
