@@ -15,13 +15,23 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.movilcliente.app"
+      "bundleIdentifier": "com.movilcliente.app",
+      "infoPlist": {
+        "NSCameraUsageDescription": "Esta app necesita acceso a la cámara para tomar fotos de perfil.",
+        "NSPhotoLibraryUsageDescription": "Esta app necesita acceso a la galería para seleccionar fotos de perfil."
+      }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./src/assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.READ_MEDIA_IMAGES"
+      ],
       "edgeToEdgeEnabled": true,
       "package": "com.movilcliente.app"
     },
@@ -29,7 +39,14 @@
       "favicon": "./src/assets/favicon.png"
     },
     "plugins": [
-      "expo-web-browser"
+      "expo-web-browser",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Esta app necesita acceso a la galería para seleccionar fotos de perfil.",
+          "cameraPermission": "Esta app necesita acceso a la cámara para tomar fotos de perfil."
+        }
+      ]
     ],
     "extra": {
       "googleClientId": "1035488574954-2agjnnugu7d1lnhen68e6n06lvfdip3u.apps.googleusercontent.com",

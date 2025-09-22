@@ -7,9 +7,12 @@ import {
   Image, 
   StyleSheet,
   Alert,
-  ActivityIndicator
+  ActivityIndicator,
+  Dimensions
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
+
+const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
 const RecuperacionTelefonoScreen = ({ navigation }) => {
   const [telefono, setTelefono] = useState('');
@@ -182,99 +185,105 @@ const RecuperacionTelefonoScreen = ({ navigation }) => {
         </TouchableOpacity>
       </View>
 
-      {/* Ilustración */}
-      <View style={styles.imageContainer}>
-        <Image 
-          source={require('../images/recuperarcontra.png')} // Ajusta la ruta según tu estructura
-          style={styles.image}
-          resizeMode="contain"
-        />
-      </View>
-
-      {/* Contenido principal */}
-      <View style={styles.content}>
-        {/* Título */}
-        <Text style={styles.title}>
-          Verificación por SMS
-        </Text>
-
-        {/* Subtítulo */}
-        <Text style={styles.subtitle}>
-          No te preocupes, puede pasar. Introduce tu número de teléfono de El Salvador y te enviaremos un código de verificación por SMS.
-        </Text>
-
-        {/* Campo de entrada con prefijo */}
-        <View style={styles.inputContainer}>
-          <View style={styles.prefixContainer}>
-            <Text style={styles.flagEmoji}>🇸🇻</Text>
-            <Text style={styles.prefixText}>+503</Text>
-          </View>
-          <TextInput
-            style={[
-              styles.input,
-              telefonoError && styles.inputError
-            ]}
-            placeholder="2234-5678"
-            value={telefono}
-            onChangeText={handleTelefonoChange}
-            keyboardType="phone-pad"
-            maxLength={9} // 4 + 1 (guión) + 4
-            autoCorrect={false}
-            editable={!loading}
-            placeholderTextColor="#9ca3af"
+      {/* Contenido principal centrado */}
+      <View style={styles.mainContent}>
+        {/* Ilustración */}
+        <View style={styles.imageContainer}>
+          <Image 
+            source={require('../images/recuperarcontra.png')} // Ajusta la ruta según tu estructura
+            style={styles.image}
+            resizeMode="contain"
           />
         </View>
 
-        {/* Mensaje de error */}
-        {telefonoError ? (
-          <View style={styles.errorContainer}>
-            <Icon name="error-outline" size={16} color="#ef4444" />
-            <Text style={styles.errorText}>{telefonoError}</Text>
-          </View>
-        ) : null}
-
-        {/* Texto de ayuda */}
-        <View style={styles.helpContainer}>
-          <Icon name="info-outline" size={16} color="#6b7280" />
-          <Text style={styles.helpText}>
-            Números válidos empiezan con 2, 6 o 7 (ejemplo: 2234-5678, 6789-1234, 7456-7890)
+        {/* Contenido de texto y formulario */}
+        <View style={styles.content}>
+          {/* Título */}
+          <Text style={styles.title}>
+            Verificación por SMS
           </Text>
+
+          {/* Subtítulo */}
+          <Text style={styles.subtitle}>
+            No te preocupes, puede pasar. Introduce tu número de teléfono de El Salvador y te enviaremos un código de verificación por SMS.
+          </Text>
+
+          {/* Campo de entrada con prefijo */}
+          <View style={styles.inputContainer}>
+            <View style={styles.prefixContainer}>
+              <Text style={styles.flagEmoji}>🇸🇻</Text>
+              <Text style={styles.prefixText}>+503</Text>
+            </View>
+            <TextInput
+              style={[
+                styles.input,
+                telefonoError && styles.inputError
+              ]}
+              placeholder="2234-5678"
+              value={telefono}
+              onChangeText={handleTelefonoChange}
+              keyboardType="phone-pad"
+              maxLength={9} // 4 + 1 (guión) + 4
+              autoCorrect={false}
+              editable={!loading}
+              placeholderTextColor="#9ca3af"
+            />
+          </View>
+
+          {/* Mensaje de error */}
+          {telefonoError ? (
+            <View style={styles.errorContainer}>
+              <Icon name="error-outline" size={16} color="#ef4444" />
+              <Text style={styles.errorText}>{telefonoError}</Text>
+            </View>
+          ) : null}
+
+          {/* Texto de ayuda */}
+          <View style={styles.helpContainer}>
+            <Icon name="info-outline" size={16} color="#6b7280" />
+            <Text style={styles.helpText}>
+              Números válidos empiezan con 2, 6 o 7 (ejemplo: 2234-5678, 6789-1234, 7456-7890)
+            </Text>
+          </View>
         </View>
       </View>
 
-      {/* Indicadores de progreso */}
-      <View style={styles.progressContainer}>
-        <View style={[styles.progressBar, styles.progressActive]} />
-        <View style={[styles.progressDot]} />
-        <View style={[styles.progressDot]} />
-      </View>
+      {/* Sección inferior fija */}
+      <View style={styles.bottomSection}>
+        {/* Indicadores de progreso */}
+        <View style={styles.progressContainer}>
+          <View style={[styles.progressBar, styles.progressActive]} />
+          <View style={[styles.progressDot]} />
+          <View style={[styles.progressDot]} />
+        </View>
 
-      {/* Botón Siguiente */}
-      <View style={styles.buttonContainer}>
-        <TouchableOpacity 
-          style={[styles.button, isButtonDisabled && styles.buttonDisabled]}
-          onPress={handleNext}
-          disabled={isButtonDisabled}
-        >
-          {loading ? (
-            <View style={styles.loadingContainer}>
-              <ActivityIndicator color="#fff" size="small" />
-              <Text style={styles.loadingText}>Enviando código...</Text>
-            </View>
-          ) : (
-            <Text style={[styles.buttonText, isButtonDisabled && styles.buttonTextDisabled]}>
-              Enviar código SMS
-            </Text>
-          )}
-        </TouchableOpacity>
-      </View>
+        {/* Botón Siguiente */}
+        <View style={styles.buttonContainer}>
+          <TouchableOpacity 
+            style={[styles.button, isButtonDisabled && styles.buttonDisabled]}
+            onPress={handleNext}
+            disabled={isButtonDisabled}
+          >
+            {loading ? (
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator color="#fff" size="small" />
+                <Text style={styles.loadingText}>Enviando código...</Text>
+              </View>
+            ) : (
+              <Text style={[styles.buttonText, isButtonDisabled && styles.buttonTextDisabled]}>
+                Enviar código SMS
+              </Text>
+            )}
+          </TouchableOpacity>
+        </View>
 
-      {/* Footer */}
-      <View style={styles.footer}>
-        <Text style={styles.footerText}>
-          Rivera distribuidora y{'\n'}
-          transporte || 2025
-        </Text>
+        {/* Footer */}
+        <View style={styles.footer}>
+          <Text style={styles.footerText}>
+            Rivera distribuidora y{'\n'}
+            transporte || 2025
+          </Text>
+        </View>
       </View>
     </View>
   );
@@ -286,45 +295,56 @@ const styles = StyleSheet.create({
     backgroundColor: '#f9fafb',
   },
   header: {
-    paddingHorizontal: 16,
-    paddingTop: 48,
-    paddingBottom: 16,
+    paddingHorizontal: screenWidth * 0.04, // 4% del ancho
+    paddingTop: screenHeight * 0.06, // 6% de la altura
+    paddingBottom: screenHeight * 0.02, // 2% de la altura
+  },
+  mainContent: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: screenWidth * 0.06, // 6% del ancho
+    marginTop: -screenHeight * 0.05, // Ajuste para centrar mejor
   },
   imageContainer: {
     alignItems: 'center',
-    marginBottom: 32,
-    paddingHorizontal: 24,
+    marginBottom: screenHeight * 0.04, // 4% de la altura
+    width: '100%',
   },
   image: {
-    width: 256,
-    height: 192,
+    width: Math.min(screenWidth * 0.7, 256), // Máximo 70% del ancho o 256px
+    height: Math.min(screenWidth * 0.7 * 0.75, 192), // Mantener proporción
   },
   content: {
-    flex: 1,
-    paddingHorizontal: 24,
+    width: '100%',
+    maxWidth: 400, // Ancho máximo para pantallas grandes
+    alignItems: 'center',
   },
   title: {
-    fontSize: 24,
+    fontSize: Math.min(screenWidth * 0.06, 24), // Responsive font size
     fontWeight: 'bold',
     color: '#111827',
-    marginBottom: 16,
+    marginBottom: screenHeight * 0.02,
     textAlign: 'center',
   },
   subtitle: {
-    fontSize: 14,
+    fontSize: Math.min(screenWidth * 0.037, 14),
     color: '#6b7280',
-    marginBottom: 32,
+    marginBottom: screenHeight * 0.04,
     textAlign: 'center',
     lineHeight: 20,
+    paddingHorizontal: screenWidth * 0.02,
   },
   inputContainer: {
     flexDirection: 'row',
     backgroundColor: '#f3f4f6',
     borderRadius: 8,
-    marginBottom: 12,
+    marginBottom: screenHeight * 0.015,
     alignItems: 'center',
     borderWidth: 1,
     borderColor: 'transparent',
+    width: '100%',
+    maxWidth: 350,
   },
   inputError: {
     borderColor: '#ef4444',
@@ -349,7 +369,7 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
-    paddingVertical: 16,
+    paddingVertical: screenHeight * 0.02,
     paddingHorizontal: 16,
     fontSize: 16,
     color: '#374151',
@@ -357,8 +377,10 @@ const styles = StyleSheet.create({
   errorContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: screenHeight * 0.015,
     paddingHorizontal: 4,
+    width: '100%',
+    maxWidth: 350,
   },
   errorText: {
     color: '#ef4444',
@@ -369,8 +391,10 @@ const styles = StyleSheet.create({
   helpContainer: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    marginBottom: 20,
+    marginBottom: screenHeight * 0.025,
     paddingHorizontal: 4,
+    width: '100%',
+    maxWidth: 350,
   },
   helpText: {
     fontSize: 12,
@@ -379,11 +403,14 @@ const styles = StyleSheet.create({
     flex: 1,
     lineHeight: 16,
   },
+  bottomSection: {
+    paddingBottom: screenHeight * 0.03,
+  },
   progressContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 24,
+    marginBottom: screenHeight * 0.03,
     paddingHorizontal: 24,
   },
   progressBar: {
@@ -404,14 +431,17 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   buttonContainer: {
-    paddingHorizontal: 24,
-    marginBottom: 24,
+    paddingHorizontal: screenWidth * 0.06,
+    marginBottom: screenHeight * 0.03,
+    alignItems: 'center',
   },
   button: {
     backgroundColor: '#10b981',
     borderRadius: 8,
-    paddingVertical: 16,
+    paddingVertical: screenHeight * 0.02,
     alignItems: 'center',
+    width: '100%',
+    maxWidth: 350,
   },
   buttonDisabled: {
     backgroundColor: '#d1d5db',
@@ -435,7 +465,6 @@ const styles = StyleSheet.create({
   },
   footer: {
     paddingHorizontal: 24,
-    paddingBottom: 24,
     alignItems: 'center',
   },
   footerText: {

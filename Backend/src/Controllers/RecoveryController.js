@@ -1,5 +1,6 @@
 import EmpleadosModel from "../Models/Empleados.js";
-import MotoristasModel from "../Models/Motorista.js"
+import MotoristasModel from "../Models/Motorista.js";
+import ClientesModelo from "../Models/Clientes.js"; 
 import bcryptjs from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { EnviarEmail, html } from "../Utils/RecoveryPass.js";
@@ -8,12 +9,12 @@ import { EnviarSms } from "../Utils/EnviarSms.js";
 
 const RecoveryPass = {};
 
-// Función auxiliar para buscar usuario en ambos modelos
+// Función auxiliar para buscar usuario en TODOS los modelos - ESTRUCTURA CORREGIDA
 const buscarUsuario = async (criterio, valor) => {
   let userFound = null;
   let userType = null;
 
-  // Buscar en Empleados
+  // 1. Buscar en Empleados
   if (criterio === "email") {
     userFound = await EmpleadosModel.findOne({ 
       email: { $regex: new RegExp(`^${valor}$`, 'i') } 
@@ -30,7 +31,7 @@ const buscarUsuario = async (criterio, valor) => {
     if (userFound) userType = "Empleado";
   }
 
-  // Si no se encuentra en Empleados, buscar en Motoristas
+  // 2. Si no se encuentra en Empleados, buscar en Motoristas
   if (!userFound) {
     if (criterio === "email") {
       userFound = await MotoristasModel.findOne({ 
@@ -49,10 +50,29 @@ const buscarUsuario = async (criterio, valor) => {
     }
   }
 
+  // 3. Si no se encuentra en Motoristas, buscar en Clientes - CORREGIDO
+  if (!userFound) {
+    if (criterio === "email") {
+      userFound = await ClientesModelo.findOne({ 
+        email: { $regex: new RegExp(`^${valor}$`, 'i') } 
+      });
+      if (userFound) userType = "Cliente";
+    } else if (criterio === "phone") {
+      userFound = await ClientesModelo.findOne({
+        $or: [
+          { phone: valor },
+          { phone: valor.replace('+503', '') },
+          { phone: valor.replace('+', '') }
+        ]
+      });
+      if (userFound) userType = "Cliente";
+    }
+  }
+
   return { userFound, userType };
 };
 
-// Función auxiliar para actualizar contraseña en ambos modelos
+// Función auxiliar para actualizar contraseña en TODOS los modelos - ESTRUCTURA CORREGIDA
 const actualizarContrasena = async (decoded, hashedPassword) => {
   let updatedUser = null;
 
@@ -75,10 +95,20 @@ const actualizarContrasena = async (decoded, hashedPassword) => {
       },
       { new: true }
     );
+  } else if (decoded.userType === "Cliente") {
+    updatedUser = await ClientesModelo.findOneAndUpdate(
+      { $or: [{ email: decoded.email }, { _id: decoded.id }] },
+      { 
+        password: hashedPassword,
+        passwordUpdatedAt: new Date()
+      },
+      { new: true }
+    );
   }
 
-  // Si no se encuentra en el modelo específico, buscar en ambos
+  // Si no se encuentra en el modelo específico, buscar en TODOS los modelos
   if (!updatedUser) {
+    // Buscar en Empleados
     updatedUser = await EmpleadosModel.findOneAndUpdate(
       { $or: [{ email: decoded.email }, { _id: decoded.id }] },
       { 
@@ -88,8 +118,21 @@ const actualizarContrasena = async (decoded, hashedPassword) => {
       { new: true }
     );
 
+    // Si no está en Empleados, buscar en Motoristas
     if (!updatedUser) {
       updatedUser = await MotoristasModel.findOneAndUpdate(
+        { $or: [{ email: decoded.email }, { _id: decoded.id }] },
+        { 
+          password: hashedPassword,
+          passwordUpdatedAt: new Date()
+        },
+        { new: true }
+      );
+    }
+
+    // Si no está en Motoristas, buscar en Clientes
+    if (!updatedUser) {
+      updatedUser = await ClientesModelo.findOneAndUpdate(
         { $or: [{ email: decoded.email }, { _id: decoded.id }] },
         { 
           password: hashedPassword,
@@ -196,8 +239,6 @@ RecoveryPass.requestCode = async (req, res) => {
 
     const token = jwt.sign(tokenPayload, config.JWT.secret, { expiresIn: "20m" });
 
-    // NO usar cookies - enviar token en response JSON
-
     // Enviar código según método seleccionado
     try {
       if (via === "sms") {
@@ -240,7 +281,7 @@ RecoveryPass.requestCode = async (req, res) => {
           method: "sms",
           userType: userType,
           messageId: smsResult.messageId,
-          recoveryToken: token  // ENVIAR TOKEN EN RESPONSE
+          recoveryToken: token
         });
         
       } else {
@@ -263,7 +304,7 @@ RecoveryPass.requestCode = async (req, res) => {
           sentTo: `***@${emailToUse.split('@')[1]}`,
           method: "email",
           userType: userType,
-          recoveryToken: token  // ENVIAR TOKEN EN RESPONSE
+          recoveryToken: token
         });
       }
     } catch (sendError) {
@@ -284,7 +325,7 @@ RecoveryPass.requestCode = async (req, res) => {
 
 // Verificar código
 RecoveryPass.verifyCode = async (req, res) => {
-  const { code, recoveryToken } = req.body;  // RECIBIR TOKEN DEL BODY
+  const { code, recoveryToken } = req.body;
 
   console.log("Verificando código:", code);
 
@@ -356,7 +397,7 @@ RecoveryPass.verifyCode = async (req, res) => {
       success: true,
       method: decoded.via,
       userType: decoded.userType,
-      verifiedToken: newToken  // DEVOLVER NUEVO TOKEN
+      verifiedToken: newToken
     });
 
   } catch (error) {
@@ -367,7 +408,7 @@ RecoveryPass.verifyCode = async (req, res) => {
 
 // Cambiar contraseña
 RecoveryPass.newPassword = async (req, res) => {
-  const { newPassword, verifiedToken } = req.body;  // RECIBIR TOKEN DEL BODY
+  const { newPassword, verifiedToken } = req.body;
 
   console.log("Solicitud de cambio de contraseña");
 
@@ -426,9 +467,9 @@ RecoveryPass.newPassword = async (req, res) => {
   }
 };
 
-// Iniciar sesión con código (sin cambiar contraseña) - ACTUALIZADO
+// Iniciar sesión con código (sin cambiar contraseña)
 RecoveryPass.IniciarSesionConCodigo = async (req, res) => {
-  const { code, verifiedToken } = req.body;  // RECIBIR TOKEN DEL BODY
+  const { code, verifiedToken } = req.body;
 
   console.log("Intento de inicio de sesión con código");
 
@@ -473,7 +514,7 @@ RecoveryPass.IniciarSesionConCodigo = async (req, res) => {
         email: decoded.email,
         userType: decoded.userType
       },
-      authToken: authToken  // DEVOLVER TOKEN DE AUTENTICACIÓN
+      authToken: authToken
     });
 
   } catch (error) {
@@ -482,21 +523,25 @@ RecoveryPass.IniciarSesionConCodigo = async (req, res) => {
   }
 };
 
-// Función auxiliar para debugging (remover en producción)
+// Función auxiliar para debugging
 RecoveryPass.debugUsers = async (req, res) => {
   try {
     const empleados = await EmpleadosModel.find({}, { email: 1, phone: 1, _id: 1 }).limit(5);
     const motoristas = await MotoristasModel.find({}, { email: 1, phone: 1, _id: 1 }).limit(5);
+    const clientes = await ClientesModelo.find({}, { email: 1, phone: 1, _id: 1 }).limit(5);
     
     console.log("Empleados en DB:", empleados);
     console.log("Motoristas en DB:", motoristas);
+    console.log("Clientes en DB:", clientes);
     
     res.json({ 
       empleados,
       motoristas,
+      clientes,
       total: {
         empleados: empleados.length,
-        motoristas: motoristas.length
+        motoristas: motoristas.length,
+        clientes: clientes.length
       }
     });
   } catch (error) {

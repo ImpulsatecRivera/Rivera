@@ -15,6 +15,7 @@ import {
   TextInput,
   Animated,
   Dimensions,
+  Platform,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
@@ -22,12 +23,16 @@ import { useAuth } from '../context/authContext';
 import FocusAwareStatusBar from '../components/FocusAwareStatusBar';
 import LottieView from 'lottie-react-native';
 
+// Importaciones de Expo
+import * as ImagePicker from 'expo-image-picker';
+import * as ImageManipulator from 'expo-image-manipulator';
+
 // Importa tus animaciones Lottie
-import EditAnimation from "../assets/lottie/Portfolio Writer.json"; // Animación de editar
-import SaveAnimation from "../assets/lottie/Blue successful login.json"; // Animación de guardar
-import ProfileAnimation from "../assets/lottie/Profile Avatar of Young Boy.json"; // Animación de perfil
-import LogoutAnimation from "../assets/lottie/Login.json"; // Animación de logout
-import LoadingAnimation from "../assets/lottie/Sandy Loading.json"; // Animación de carga
+import EditAnimation from "../assets/lottie/Portfolio Writer.json";
+import SaveAnimation from "../assets/lottie/Blue successful login.json";
+import ProfileAnimation from "../assets/lottie/Profile Avatar of Young Boy.json";
+import LogoutAnimation from "../assets/lottie/Login.json";
+import LoadingAnimation from "../assets/lottie/Sandy Loading.json";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -39,7 +44,7 @@ const TEXT_SECONDARY = '#64748B';
 const ACCENT = '#3B82F6';
 
 const ProfileScreen = () => {
-  // Estados para manejo de datos y UI
+  // Estados existentes...
   const [userInfo, setUserInfo] = useState(null);
   const [editingUserInfo, setEditingUserInfo] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -50,6 +55,12 @@ const ProfileScreen = () => {
   const [error, setError] = useState(null);
   const [activeField, setActiveField] = useState(null);
   const [successVisible, setSuccessVisible] = useState(false);
+  
+  // Estados específicos para imagen de perfil
+  const [imageLoadError, setImageLoadError] = useState(false);
+  const [imageLoading, setImageLoading] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [imagePickerVisible, setImagePickerVisible] = useState(false);
 
   // Animaciones
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -86,6 +97,7 @@ const ProfileScreen = () => {
         setLoading(true);
       }
       setError(null);
+      setImageLoadError(false);
 
       if (!user?.id && !user?._id) {
         console.log('No hay user ID, usando datos dummy para debug');
@@ -132,7 +144,10 @@ const ProfileScreen = () => {
           diasDesdeRegistro: actividadData?.diasDesdeRegistro ? Number(actividadData.diasDesdeRegistro) : null,
           ultimoAcceso: String(actividadData?.ultimoAcceso || 'No registrado'),
           edad: String(clienteData?.edad || 'No disponible'),
+          profileImage: clienteData?.profileImage || null,
         };
+
+        console.log('Profile image URL:', formattedUserInfo.profileImage);
 
         setUserInfo(formattedUserInfo);
         setEditingUserInfo({ ...formattedUserInfo });
@@ -165,6 +180,7 @@ const ProfileScreen = () => {
       diasDesdeRegistro: 245,
       ultimoAcceso: 'Hace 2 horas',
       edad: '39 años',
+      profileImage: null,
     };
   };
 
@@ -197,7 +213,290 @@ const ProfileScreen = () => {
     }
   };
 
-  // Función: Guardar cambios
+  // Funciones para manejo de imagen de perfil
+  const handleImageLoadStart = () => {
+    setImageLoading(true);
+    setImageLoadError(false);
+  };
+
+  const handleImageLoadEnd = () => {
+    setImageLoading(false);
+  };
+
+  const handleImageError = (error) => {
+    console.log('Error cargando imagen de perfil:', error.nativeEvent?.error);
+    setImageLoadError(true);
+    setImageLoading(false);
+  };
+
+  // Función auxiliar: Verificar si debe mostrar imagen o Lottie
+  const shouldShowImage = () => {
+    return userInfo?.profileImage && 
+           !imageLoadError && 
+           userInfo.profileImage.trim() !== '';
+  };
+
+  // Funciones para el selector de imagen
+  const showImagePicker = () => {
+    setImagePickerVisible(true);
+  };
+
+  const hideImagePicker = () => {
+    setImagePickerVisible(false);
+  };
+
+  // Función para redimensionar imagen con Expo
+  const resizeImage = async (imageUri) => {
+    try {
+      const resizedImage = await ImageManipulator.manipulateAsync(
+        imageUri,
+        [
+          { resize: { width: 800, height: 800 } }
+        ],
+        {
+          compress: 0.8,
+          format: ImageManipulator.SaveFormat.JPEG,
+        }
+      );
+      return resizedImage;
+    } catch (error) {
+      console.log('Error resizing image:', error);
+      return { uri: imageUri };
+    }
+  };
+
+  // Función para seleccionar imagen de la galería con Expo
+  const pickImageFromGallery = async () => {
+    try {
+      hideImagePicker();
+
+      // Verificar permisos
+      const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      
+      if (permissionResult.granted === false) {
+        Alert.alert(
+          'Permiso denegado',
+          'Se necesita permiso para acceder a la galería de fotos.',
+          [{ text: 'OK' }]
+        );
+        return;
+      }
+
+      // Lanzar selector de imagen
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+        base64: false,
+      });
+
+      if (!result.canceled && result.assets && result.assets[0]) {
+        const asset = result.assets[0];
+        const resizedImage = await resizeImage(asset.uri);
+        await uploadProfileImage(resizedImage.uri, 'profile_image.jpg');
+      }
+    } catch (error) {
+      console.error('Error picking image from gallery:', error);
+      Alert.alert('Error', 'No se pudo seleccionar la imagen de la galería');
+    }
+  };
+
+  // Función para tomar foto con cámara usando Expo
+  const takePhotoWithCamera = async () => {
+    try {
+      hideImagePicker();
+
+      // Verificar permisos de cámara
+      const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
+      
+      if (permissionResult.granted === false) {
+        Alert.alert(
+          'Permiso denegado',
+          'Se necesita permiso para acceder a la cámara.',
+          [{ text: 'OK' }]
+        );
+        return;
+      }
+
+      // Lanzar cámara
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+        base64: false,
+      });
+
+      if (!result.canceled && result.assets && result.assets[0]) {
+        const asset = result.assets[0];
+        const resizedImage = await resizeImage(asset.uri);
+        await uploadProfileImage(resizedImage.uri, 'profile_image.jpg');
+      }
+    } catch (error) {
+      console.error('Error taking photo with camera:', error);
+      Alert.alert('Error', 'No se pudo tomar la foto con la cámara');
+    }
+  };
+
+  // Función principal: Subir imagen de perfil
+  const uploadProfileImage = async (imageUri, fileName) => {
+    try {
+      setUploadingImage(true);
+      
+      if (!user?.id && !user?._id) {
+        throw new Error('No se encontró el ID del usuario');
+      }
+
+      const userId = user.id || user._id;
+      const apiUrl = `https://riveraproject-production.up.railway.app/api/clientes/${userId}`;
+      
+      // Crear FormData
+      const formData = new FormData();
+      
+      // Agregar la imagen
+      const imageObject = {
+        uri: imageUri,
+        type: 'image/jpeg',
+        name: fileName || 'profile_image.jpg',
+      };
+
+      formData.append('profileImage', imageObject);
+
+      console.log('Subiendo imagen:', fileName);
+      console.log('URI de imagen:', imageUri);
+      
+      const response = await fetch(apiUrl, {
+        method: 'PUT',
+        headers: {
+          // NO enviar Content-Type, fetch lo configura automáticamente para FormData
+          'Authorization': token ? `Bearer ${token}` : '',
+        },
+        body: formData,
+      });
+
+      let data;
+      try {
+        data = await response.json();
+      } catch (parseError) {
+        console.error('Error parsing response:', parseError);
+        throw new Error('Error en la respuesta del servidor');
+      }
+
+      console.log('Respuesta del servidor:', data);
+
+      if (response.ok && data.success) {
+        // Actualizar la imagen en el estado local inmediatamente
+        const newImageUrl = data.data.cliente.profileImage;
+        
+        setUserInfo(prev => ({ 
+          ...prev, 
+          profileImage: newImageUrl 
+        }));
+        
+        setEditingUserInfo(prev => ({ 
+          ...prev, 
+          profileImage: newImageUrl 
+        }));
+
+        // Mostrar mensaje de éxito
+        setSuccessVisible(true);
+        setTimeout(() => {
+          setSuccessVisible(false);
+        }, 3000);
+
+        // Recargar perfil después de un momento
+        setTimeout(() => {
+          fetchUserProfile(true);
+        }, 1000);
+        
+      } else {
+        throw new Error(data?.message || 'Error al subir la imagen');
+      }
+      
+    } catch (error) {
+      console.error('Error al subir imagen:', error);
+      
+      let errorMessage = 'No se pudo subir la imagen';
+      if (error.message.includes('Network')) {
+        errorMessage = 'Sin conexión a internet';
+      } else if (error.message.includes('401')) {
+        errorMessage = 'Sesión expirada. Inicia sesión nuevamente';
+      } else if (error.message.includes('Archivo demasiado grande')) {
+        errorMessage = 'La imagen es demasiado grande. Máximo 5MB';
+      } else if (error.message.includes('Tipo de archivo inválido')) {
+        errorMessage = 'Solo se permiten imágenes (JPG, PNG, GIF)';
+      } else {
+        errorMessage = error.message || 'Error desconocido';
+      }
+      
+      Alert.alert('Error al subir imagen', errorMessage, [
+        {
+          text: 'OK',
+          onPress: () => {
+            if (error.message.includes('401')) {
+              logout();
+              navigation.reset({
+                index: 0,
+                routes: [{ name: 'Login' }],
+              });
+            }
+          }
+        }
+      ]);
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
+  // Componente para el Avatar con manejo mejorado
+  const ProfileAvatar = () => {
+    if (shouldShowImage()) {
+      return (
+        <View style={styles.avatar}>
+          {(imageLoading || uploadingImage) && (
+            <View style={styles.imageLoadingOverlay}>
+              <ActivityIndicator size="small" color={ACCENT} />
+              {uploadingImage && (
+                <Text style={styles.uploadingText}>Subiendo...</Text>
+              )}
+            </View>
+          )}
+          
+          <Image 
+            source={{ uri: userInfo.profileImage }}
+            style={[
+              styles.profileImageStyle,
+              (imageLoading || uploadingImage) && styles.profileImageLoading
+            ]}
+            resizeMode="cover"
+            onLoadStart={handleImageLoadStart}
+            onLoadEnd={handleImageLoadEnd}
+            onError={handleImageError}
+          />
+        </View>
+      );
+    }
+    
+    return (
+      <View style={styles.avatar}>
+        {uploadingImage && (
+          <View style={styles.imageLoadingOverlay}>
+            <ActivityIndicator size="small" color={ACCENT} />
+            <Text style={styles.uploadingText}>Subiendo...</Text>
+          </View>
+        )}
+        <LottieView
+          source={ProfileAnimation}
+          autoPlay
+          loop
+          style={[styles.avatarLottie, uploadingImage && styles.profileImageLoading]}
+        />
+      </View>
+    );
+  };
+
+  // Función: Guardar cambios (código existente permanece igual)
   const handleSaveChanges = async () => {
     try {
       setSaving(true);
@@ -209,15 +508,12 @@ const ProfileScreen = () => {
       const userId = user.id || user._id;
       const apiUrl = `https://riveraproject-production.up.railway.app/api/clientes/${userId}`;
       
-      // Función para convertir fecha a formato ISO si es necesario
       const formatDateForAPI = (dateString) => {
         if (!dateString || dateString === 'No registrada' || dateString === 'Fecha inválida') {
           return null;
         }
         
-        // Si ya está en formato válido, devolverlo
         if (dateString.includes('/')) {
-          // Convertir de DD/MM/YYYY a formato ISO
           const parts = dateString.split('/');
           if (parts.length === 3) {
             const day = parts[0].padStart(2, '0');
@@ -230,10 +526,8 @@ const ProfileScreen = () => {
         return dateString;
       };
       
-      // Preparar solo los campos que han cambiado o son válidos
       const updateData = {};
       
-      // Solo incluir campos que tienen valores válidos
       if (editingUserInfo.firstName && editingUserInfo.firstName.trim()) {
         updateData.firstName = editingUserInfo.firstName.trim();
       }
@@ -258,7 +552,6 @@ const ProfileScreen = () => {
         updateData.address = editingUserInfo.address.trim();
       }
       
-      // Manejar fecha de nacimiento con validación
       const formattedBirthDate = formatDateForAPI(editingUserInfo.birthDate);
       if (formattedBirthDate) {
         updateData.birthDate = formattedBirthDate;
@@ -284,23 +577,18 @@ const ProfileScreen = () => {
       console.log('Respuesta del servidor:', data);
 
       if (response.ok && data.success) {
-        // Actualizar el estado local con los datos guardados
         setUserInfo({ ...editingUserInfo });
         setEditMode(false);
         setActiveField(null);
         setSaving(false);
         
-        // Mostrar SweetAlert de éxito directamente
         setSuccessVisible(true);
-        
-        // Auto cerrar después de 3 segundos
         setTimeout(() => {
           setSuccessVisible(false);
         }, 3000);
 
-        // Recargar datos del perfil SIN mostrar loading
         setTimeout(() => {
-          fetchUserProfile(true); // Cambiado a true para usar refreshing en lugar de loading
+          fetchUserProfile(true);
         }, 1000);
         
       } else {
@@ -339,14 +627,13 @@ const ProfileScreen = () => {
     }
   };
 
-  // Función: Cancelar edición
+  // Resto de las funciones existentes...
   const handleCancelEdit = () => {
     setEditingUserInfo({ ...userInfo });
     setEditMode(false);
     setActiveField(null);
   };
 
-  // Función: Activar modo edición
   const handleStartEdit = () => {
     setEditMode(true);
     Animated.sequence([
@@ -363,19 +650,16 @@ const ProfileScreen = () => {
     ]).start();
   };
 
-  // Función: Refrescar datos
   const onRefresh = () => {
     fetchUserProfile(true);
   };
 
-  // Efecto: Cargar datos cuando la pantalla se enfoca
   useFocusEffect(
     React.useCallback(() => {
       fetchUserProfile();
     }, [user])
   );
 
-  // Función: Manejo de logout
   const openConfirm = () => setConfirmVisible(true);
   const closeConfirm = () => setConfirmVisible(false);
   
@@ -471,19 +755,20 @@ const ProfileScreen = () => {
             </View>
           </Animated.View>
 
-          {/* Profile Card con animación Lottie */}
+          {/* Profile Card con imagen mejorada */}
           <View style={styles.profileCard}>
             <View style={styles.avatarContainer}>
-              <View style={styles.avatar}>
-                <LottieView
-                  source={ProfileAnimation}
-                  autoPlay
-                  loop
-                  style={styles.avatarLottie}
-                />
-              </View>
+              <ProfileAvatar />
+              
               <View style={styles.avatarOverlay}>
-                <TouchableOpacity style={styles.avatarEditButton}>
+                <TouchableOpacity 
+                  style={[
+                    styles.avatarEditButton,
+                    uploadingImage && styles.avatarEditButtonDisabled
+                  ]}
+                  onPress={showImagePicker}
+                  disabled={uploadingImage}
+                >
                   <LottieView
                     source={EditAnimation}
                     autoPlay
@@ -628,6 +913,41 @@ const ProfileScreen = () => {
         </ScrollView>
       </Animated.View>
 
+      {/* Modal selector de imagen */}
+      <Modal transparent visible={imagePickerVisible} animationType="fade" onRequestClose={hideImagePicker}>
+        <Pressable style={styles.backdrop} onPress={hideImagePicker}>
+          <Pressable style={styles.imagePickerModal}>
+            <Text style={styles.imagePickerTitle}>Cambiar foto de perfil</Text>
+            
+            <TouchableOpacity 
+              style={styles.imagePickerOption}
+              onPress={takePhotoWithCamera}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.imagePickerIcon}>📷</Text>
+              <Text style={styles.imagePickerText}>Tomar foto</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={styles.imagePickerOption}
+              onPress={pickImageFromGallery}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.imagePickerIcon}>🖼️</Text>
+              <Text style={styles.imagePickerText}>Elegir de galería</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={styles.imagePickerCancel}
+              onPress={hideImagePicker}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.imagePickerCancelText}>Cancelar</Text>
+            </TouchableOpacity>
+          </Pressable>
+        </Pressable>
+      </Modal>
+
       {/* Modal de confirmación moderno */}
       <Modal transparent visible={confirmVisible} animationType="fade" onRequestClose={closeConfirm}>
         <Pressable style={styles.backdrop} onPress={closeConfirm}>
@@ -758,7 +1078,7 @@ const getActivityLabel = (activity) => {
   }
 };
 
-// Estilos modernos
+// Estilos
 const styles = StyleSheet.create({
   container: { 
     flex: 1, 
@@ -767,8 +1087,66 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
   },
-
-  // Estados de loading y error
+  
+  // Nuevos estilos para image picker
+  imagePickerModal: {
+    backgroundColor: CARD_BG,
+    borderRadius: 20,
+    padding: 24,
+    margin: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+    elevation: 10,
+  },
+  imagePickerTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: TEXT_PRIMARY,
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  imagePickerOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 12,
+    marginBottom: 12,
+  },
+  imagePickerIcon: {
+    fontSize: 24,
+    marginRight: 16,
+  },
+  imagePickerText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: TEXT_PRIMARY,
+  },
+  imagePickerCancel: {
+    paddingVertical: 16,
+    alignItems: 'center',
+    borderTopWidth: 1,
+    borderTopColor: '#E2E8F0',
+    marginTop: 8,
+  },
+  imagePickerCancelText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: TEXT_SECONDARY,
+  },
+  avatarEditButtonDisabled: {
+    opacity: 0.5,
+  },
+  uploadingText: {
+    fontSize: 12,
+    color: ACCENT,
+    marginTop: 4,
+    fontWeight: '600',
+  },
+  
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -820,8 +1198,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
   },
-
-  // Header moderno
   header: {
     backgroundColor: GREEN,
     paddingTop: 20,
@@ -864,8 +1240,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#FFFFFF',
   },
-
-  // Profile card mejorado
   profileCard: {
     backgroundColor: CARD_BG,
     marginHorizontal: 24,
@@ -891,10 +1265,31 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     overflow: 'hidden',
+    position: 'relative',
   },
   avatarLottie: {
     width: 80,
     height: 80,
+  },
+  profileImageStyle: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 50,
+  },
+  profileImageLoading: {
+    opacity: 0.7,
+  },
+  imageLoadingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.8)',
+    borderRadius: 50,
+    zIndex: 1,
   },
   avatarOverlay: {
     position: 'absolute',
@@ -939,8 +1334,6 @@ const styles = StyleSheet.create({
     color: TEXT_SECONDARY, 
     marginTop: 4 
   },
-
-  // Botones de acción
   actionButtons: {
     paddingHorizontal: 24,
     marginTop: 20,
@@ -1014,8 +1407,6 @@ const styles = StyleSheet.create({
     width: 20,
     height: 20,
   },
-
-  // SweetAlert Styles
   sweetAlertBackdrop: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.6)',
@@ -1083,8 +1474,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     textAlign: 'center',
   },
-
-  // Secciones de información
   infoSection: {
     backgroundColor: CARD_BG,
     marginHorizontal: 24,
@@ -1103,8 +1492,6 @@ const styles = StyleSheet.create({
     color: TEXT_PRIMARY, 
     marginBottom: 20 
   },
-
-  // Campo editable
   editableField: {
     marginBottom: 16,
     padding: 16,
@@ -1146,8 +1533,6 @@ const styles = StyleSheet.create({
     color: TEXT_PRIMARY,
     fontWeight: '500',
   },
-
-  // Info item
   infoItem: {
     marginBottom: 16,
     padding: 16,
@@ -1173,8 +1558,6 @@ const styles = StyleSheet.create({
     color: TEXT_PRIMARY,
     fontWeight: '500',
   },
-
-  // Botón de logout
   buttonContainer: { 
     paddingHorizontal: 24, 
     paddingBottom: 30 
@@ -1200,8 +1583,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     marginLeft: 8,
   },
-
-  // Modal moderno
   backdrop: {
     flex: 1, 
     backgroundColor: 'rgba(0,0,0,0.5)',

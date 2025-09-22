@@ -9,20 +9,27 @@ import {
   Alert,
   StyleSheet,
   ActivityIndicator,
+  Image,
+  Modal,
+  Pressable,
+  Platform,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
-import { useAuth } from '../context/authContext'; // ✅ AGREGAR ESTA IMPORTACIÓN
+import { useAuth } from '../context/authContext';
+// Solo Expo Image Picker - NO react-native-permissions
+import * as ImagePicker from 'expo-image-picker';
 
-// ✅ CONFIGURACIÓN DE LA API - CORREGIDA
+// CONFIGURACIÓN DE LA API
 const API_BASE_URL = 'https://riveraproject-production.up.railway.app';
 
 const RegistrarseCliente2 = ({ navigation, route }) => {
-  // ✅ OBTENER DATOS DE LA PANTALLA ANTERIOR
+  // OBTENER DATOS DE LA PANTALLA ANTERIOR
   const { email, password } = route.params || {};
   
-  // ✅ OBTENER FUNCIONES DEL CONTEXTO DE AUTENTICACIÓN
+  // OBTENER FUNCIONES DEL CONTEXTO DE AUTENTICACIÓN
   const { register } = useAuth();
 
+  // Estados del formulario
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [dui, setDui] = useState('');
@@ -30,6 +37,10 @@ const RegistrarseCliente2 = ({ navigation, route }) => {
   const [fechaNacimiento, setFechaNacimiento] = useState('');
   const [direccion, setDireccion] = useState('');
   const [loading, setLoading] = useState(false);
+
+  // Estados para imagen de perfil
+  const [selectedImage, setSelectedImage] = useState(null);
+  const [showImageModal, setShowImageModal] = useState(false);
 
   const validateForm = () => {
     if (!firstName.trim()) {
@@ -160,24 +171,122 @@ const RegistrarseCliente2 = ({ navigation, route }) => {
     return truncated;
   };
 
-  // ✅ FUNCIÓN PARA CONECTAR CON EL BACKEND
-  const registerUser = async (userData) => {
+  // FUNCIÓN PARA SOLICITAR PERMISOS DE CÁMARA (Expo)
+  const requestCameraPermission = async () => {
+    try {
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      return status === 'granted';
+    } catch (error) {
+      console.log('Error solicitando permiso de cámara:', error);
+      return false;
+    }
+  };
+
+  // FUNCIÓN PARA SOLICITAR PERMISOS DE GALERÍA (Expo)
+  const requestMediaLibraryPermission = async () => {
+    try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      return status === 'granted';
+    } catch (error) {
+      console.log('Error solicitando permiso de galería:', error);
+      return false;
+    }
+  };
+
+  // FUNCIÓN PARA TOMAR FOTO CON LA CÁMARA (Expo)
+  const takePhotoWithCamera = async () => {
+    const hasPermission = await requestCameraPermission();
+    if (!hasPermission) {
+      Alert.alert('Permiso denegado', 'Necesitas permitir el acceso a la cámara para tomar fotos.');
+      return;
+    }
+
+    try {
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        const asset = result.assets[0];
+        setSelectedImage({
+          uri: asset.uri,
+          type: 'image/jpeg',
+          name: `photo_${Date.now()}.jpg`,
+        });
+        setShowImageModal(false);
+      }
+    } catch (error) {
+      console.log('Error tomando foto:', error);
+      Alert.alert('Error', 'No se pudo tomar la foto. Intenta de nuevo.');
+    }
+  };
+
+  // FUNCIÓN PARA SELECCIONAR FOTO DE LA GALERÍA (Expo)
+  const selectFromGallery = async () => {
+    const hasPermission = await requestMediaLibraryPermission();
+    if (!hasPermission) {
+      Alert.alert('Permiso denegado', 'Necesitas permitir el acceso a la galería para seleccionar fotos.');
+      return;
+    }
+
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        const asset = result.assets[0];
+        setSelectedImage({
+          uri: asset.uri,
+          type: 'image/jpeg',
+          name: asset.fileName || `image_${Date.now()}.jpg`,
+        });
+        setShowImageModal(false);
+      }
+    } catch (error) {
+      console.log('Error seleccionando imagen:', error);
+      Alert.alert('Error', 'No se pudo seleccionar la imagen. Intenta de nuevo.');
+    }
+  };
+
+  // FUNCIÓN PARA CONECTAR CON EL BACKEND USANDO FORMDATA (consistente con tu backend)
+  const registerUser = async (userData, imageFile) => {
     try {
       console.log('🚀 Enviando datos al backend:', userData);
-      // ✅ USAR LA RUTA CORRECTA
       const url = `${API_BASE_URL}/api/register-cliente`;
       console.log('🌐 URL completa:', url);
       
+      // Crear FormData para enviar datos + imagen (como espera tu backend)
+      const formData = new FormData();
+      
+      // Agregar todos los campos de texto
+      Object.keys(userData).forEach(key => {
+        formData.append(key, userData[key]);
+      });
+      
+      // Agregar imagen si existe (campo 'profileImage' como en tu backend)
+      if (imageFile) {
+        formData.append('profileImage', {
+          uri: imageFile.uri,
+          type: imageFile.type,
+          name: imageFile.name,
+        });
+        console.log('📸 Imagen agregada al FormData:', imageFile.name);
+      }
+
       const response = await fetch(url, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(userData),
+        // NO establecer Content-Type para FormData - React Native lo hace automáticamente
+        body: formData,
       });
 
       console.log('📊 Status de respuesta:', response.status);
-      console.log('📊 Status text:', response.statusText);
 
       const contentType = response.headers.get('content-type');
       console.log('📊 Content-Type:', contentType);
@@ -224,7 +333,7 @@ const RegistrarseCliente2 = ({ navigation, route }) => {
 
     setLoading(true);
     try {
-      // ✅ CONVERTIR FECHA AL FORMATO QUE ESPERA EL BACKEND
+      // CONVERTIR FECHA AL FORMATO QUE ESPERA EL BACKEND
       const convertDateFormat = (dateStr) => {
         if (dateStr.includes('/')) {
           const [day, month, year] = dateStr.split('/');
@@ -253,19 +362,15 @@ const RegistrarseCliente2 = ({ navigation, route }) => {
       };
       
       console.log('📝 Datos a enviar:', userData);
+      console.log('📸 Imagen seleccionada:', selectedImage ? 'Sí' : 'No');
       
-      const result = await registerUser(userData);
+      const result = await registerUser(userData, selectedImage);
       
       if (result.success) {
         console.log('✅ Registro exitoso!');
         console.log('📋 RESPUESTA COMPLETA DEL BACKEND:', JSON.stringify(result.data, null, 2));
         
-        // 🔍 DEBUG: Verificar qué nos devuelve el backend
-        console.log('🔍 result.data.user:', result.data.user);
-        console.log('🔍 result.data.token:', result.data.token);
-        console.log('🔍 result.data.success:', result.data.success);
-        
-        // ✅ EXTRAER DATOS DE LA RESPUESTA PARA EL CONTEXTO
+        // EXTRAER DATOS DE LA RESPUESTA PARA EL CONTEXTO
         const registrationData = {
           user: {
             id: result.data.user?.id || result.data.user?._id || null,
@@ -277,16 +382,16 @@ const RegistrarseCliente2 = ({ navigation, route }) => {
             idNumber: dui,
             phone: phone,
             address: direccion,
-            birthDate: fechaNacimiento
+            birthDate: fechaNacimiento,
+            profileImage: result.data.user?.profileImage || null
           },
           token: result.data.token || 'no-token-received',
           userType: result.data.userType || 'Cliente'
         };
 
         console.log('📦 DATOS PREPARADOS PARA CONTEXTO:', JSON.stringify(registrationData, null, 2));
-        console.log('🔍 ID extraído:', registrationData.user.id);
 
-        // ✅ GUARDAR EN EL CONTEXTO DE AUTENTICACIÓN
+        // GUARDAR EN EL CONTEXTO DE AUTENTICACIÓN
         console.log('💾 Guardando datos en el contexto...');
         const authResult = await register(registrationData);
         
@@ -325,6 +430,14 @@ const RegistrarseCliente2 = ({ navigation, route }) => {
     }
   };
 
+  const showImageOptions = () => {
+    setShowImageModal(true);
+  };
+
+  const removeImage = () => {
+    setSelectedImage(null);
+  };
+
   const handleGoBack = () => {
     console.log('⬅️ Botón Atrás presionado');
     navigation.goBack();
@@ -357,7 +470,7 @@ const RegistrarseCliente2 = ({ navigation, route }) => {
             Solo necesitamos algunos datos más para completar tu perfil
           </Text>
           
-          {/* ✅ DEBUG: Mostrar email recibido (remover en producción) */}
+          {/* DEBUG: Mostrar email recibido (remover en producción) */}
           {__DEV__ && (
             <View style={{ backgroundColor: '#f0f0f0', padding: 10, marginBottom: 10, borderRadius: 5 }}>
               <Text style={{ fontSize: 12, color: '#333' }}>
@@ -365,8 +478,33 @@ const RegistrarseCliente2 = ({ navigation, route }) => {
               </Text>
             </View>
           )}
+
+          {/* SECCIÓN DE IMAGEN DE PERFIL */}
+          <View style={styles.profileImageSection}>
+            <Text style={styles.profileImageTitle}>Foto de perfil (opcional)</Text>
+            
+            <TouchableOpacity 
+              style={styles.profileImageContainer}
+              onPress={showImageOptions}
+            >
+              {selectedImage ? (
+                <View style={styles.selectedImageContainer}>
+                  <Image source={{ uri: selectedImage.uri }} style={styles.selectedImage} />
+                  <TouchableOpacity style={styles.removeImageButton} onPress={removeImage}>
+                    <Icon name="close-circle" size={24} color="#ef4444" />
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <View style={styles.placeholderImage}>
+                  <Icon name="camera" size={40} color="#9ca3af" />
+                  <Text style={styles.placeholderText}>Agregar foto</Text>
+                  <Text style={styles.placeholderSubtext}>Toca para seleccionar</Text>
+                </View>
+              )}
+            </TouchableOpacity>
+          </View>
           
-          {/* Campo Primer Nombre */}
+          {/* Campos del formulario */}
           <View style={styles.inputContainer}>
             <Icon name="person-outline" size={20} color="#666" style={styles.inputIcon} />
             <TextInput
@@ -379,7 +517,6 @@ const RegistrarseCliente2 = ({ navigation, route }) => {
             />
           </View>
 
-          {/* Campo Apellido */}
           <View style={styles.inputContainer}>
             <Icon name="person-outline" size={20} color="#666" style={styles.inputIcon} />
             <TextInput
@@ -392,7 +529,6 @@ const RegistrarseCliente2 = ({ navigation, route }) => {
             />
           </View>
 
-          {/* Campo DUI */}
           <View style={styles.inputContainer}>
             <Icon name="card-outline" size={20} color="#666" style={styles.inputIcon} />
             <TextInput
@@ -406,7 +542,6 @@ const RegistrarseCliente2 = ({ navigation, route }) => {
             />
           </View>
 
-          {/* Campo Teléfono */}
           <View style={styles.inputContainer}>
             <Icon name="call-outline" size={20} color="#666" style={styles.inputIcon} />
             <TextInput
@@ -420,7 +555,6 @@ const RegistrarseCliente2 = ({ navigation, route }) => {
             />
           </View>
 
-          {/* Campo Fecha de nacimiento */}
           <View style={styles.inputContainer}>
             <Icon name="calendar-outline" size={20} color="#666" style={styles.inputIcon} />
             <TextInput
@@ -434,7 +568,6 @@ const RegistrarseCliente2 = ({ navigation, route }) => {
             />
           </View>
 
-          {/* Campo Dirección */}
           <View style={[styles.inputContainer, { marginBottom: 24 }]}>
             <Icon name="location-outline" size={20} color="#666" style={styles.inputIcon} />
             <TextInput
@@ -482,6 +615,37 @@ const RegistrarseCliente2 = ({ navigation, route }) => {
           </View>
         </View>
       </ScrollView>
+
+      {/* MODAL PARA SELECCIONAR IMAGEN */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={showImageModal}
+        onRequestClose={() => setShowImageModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Seleccionar foto de perfil</Text>
+            
+            <TouchableOpacity style={styles.modalOption} onPress={takePhotoWithCamera}>
+              <Icon name="camera-outline" size={24} color="#4CAF50" />
+              <Text style={styles.modalOptionText}>Tomar foto</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity style={styles.modalOption} onPress={selectFromGallery}>
+              <Icon name="images-outline" size={24} color="#4CAF50" />
+              <Text style={styles.modalOptionText}>Seleccionar de galería</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={styles.modalCancelButton} 
+              onPress={() => setShowImageModal(false)}
+            >
+              <Text style={styles.modalCancelText}>Cancelar</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -511,9 +675,67 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#6b7280',
     textAlign: 'center',
-    marginBottom: 40,
+    marginBottom: 32,
     lineHeight: 22,
   },
+  
+  // Estilos para imagen de perfil
+  profileImageSection: {
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  profileImageTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1f2937',
+    marginBottom: 12,
+  },
+  profileImageContainer: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    marginBottom: 16,
+  },
+  placeholderImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 60,
+    backgroundColor: '#f3f4f6',
+    borderWidth: 2,
+    borderColor: '#e5e7eb',
+    borderStyle: 'dashed',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  placeholderText: {
+    marginTop: 8,
+    fontSize: 12,
+    color: '#9ca3af',
+    fontWeight: '500',
+  },
+  placeholderSubtext: {
+    fontSize: 10,
+    color: '#d1d5db',
+    fontStyle: 'italic',
+  },
+  selectedImageContainer: {
+    position: 'relative',
+    width: '100%',
+    height: '100%',
+  },
+  selectedImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 60,
+  },
+  removeImageButton: {
+    position: 'absolute',
+    top: -5,
+    right: -5,
+    backgroundColor: '#fff',
+    borderRadius: 12,
+  },
+
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -601,6 +823,52 @@ const styles = StyleSheet.create({
     height: 8,
     backgroundColor: '#1f2937',
     borderRadius: 4,
+  },
+
+  // Estilos para el modal
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingHorizontal: 24,
+    paddingVertical: 32,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1f2937',
+    textAlign: 'center',
+    marginBottom: 24,
+  },
+  modalOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    backgroundColor: '#f9fafb',
+    marginBottom: 12,
+  },
+  modalOptionText: {
+    fontSize: 16,
+    color: '#1f2937',
+    marginLeft: 12,
+    fontWeight: '500',
+  },
+  modalCancelButton: {
+    paddingVertical: 16,
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  modalCancelText: {
+    fontSize: 16,
+    color: '#6b7280',
+    fontWeight: '500',
   },
 });
 

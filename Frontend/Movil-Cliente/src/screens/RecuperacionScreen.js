@@ -38,6 +38,50 @@ const RecuperacionScreen = ({ navigation }) => {
     }
   };
 
+  const createTimeoutPromise = (ms) => {
+    return new Promise((_, reject) => {
+      setTimeout(() => {
+        reject(new Error('TIMEOUT'));
+      }, ms);
+    });
+  };
+
+  const fetchWithTimeout = async (url, options, timeout = 10000) => {
+    try {
+      const fetchPromise = fetch(url, options);
+      const timeoutPromise = createTimeoutPromise(timeout);
+      
+      return await Promise.race([fetchPromise, timeoutPromise]);
+    } catch (error) {
+      if (error.message === 'TIMEOUT') {
+        throw new Error('La conexión tardó demasiado. Verifica tu internet e intenta de nuevo.');
+      }
+      throw error;
+    }
+  };
+
+  const attemptApiCall = async (retryCount = 0) => {
+    const API_URL = 'https://riveraproject-production.up.railway.app/api/recovery/requestCode';
+    
+    const requestPayload = {
+      email: email.trim().toLowerCase(),
+    };
+    
+    console.log(`Intento ${retryCount + 1} - Enviando petición a:`, API_URL);
+    console.log('Payload:', requestPayload);
+
+    const response = await fetchWithTimeout(API_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      body: JSON.stringify(requestPayload),
+    }, 10000); // 10 segundos de timeout
+
+    return response;
+  };
+
   const handleNext = async () => {
     if (!email) {
       setEmailError('El email es requerido');
@@ -55,47 +99,112 @@ const RecuperacionScreen = ({ navigation }) => {
     }
 
     setLoading(true);
+    setEmailError(''); // Limpiar errores previos
+
     try {
-      const API_URL = 'https://riveraproject-production.up.railway.app/api/recovery/requestCode';
+      let response;
+      let lastError;
+      let maxRetries = 2; // Máximo 2 reintentos (3 intentos total)
       
-      const requestPayload = {
-        email: email.trim().toLowerCase(),
-      };
-      
-      const response = await fetch(API_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-        body: JSON.stringify(requestPayload),
-      });
+      for (let attempt = 0; attempt <= maxRetries; attempt++) {
+        try {
+          response = await attemptApiCall(attempt);
+          break; // Si llegamos aquí, la petición fue exitosa
+        } catch (error) {
+          lastError = error;
+          
+          // Si es timeout y no es el último intento, continuar
+          if (error.message.includes('tardó demasiado') && attempt < maxRetries) {
+            console.log(`Intento ${attempt + 1} falló por timeout, reintentando...`);
+            continue;
+          }
+          
+          // Si no es timeout o es el último intento, lanzar el error
+          throw error;
+        }
+      }
+
+      console.log('Status de respuesta:', response.status);
+      console.log('Headers de respuesta:', response.headers);
 
       const responseText = await response.text();
+      console.log('Respuesta del servidor:', responseText);
 
+      // Verificar si la respuesta es HTML (error del servidor)
       if (responseText.includes('<html>') || responseText.includes('<!DOCTYPE')) {
-        throw new Error('El servidor devolvió HTML en lugar de JSON. Verifica que la API esté funcionando correctamente.');
+        throw new Error('El servidor está teniendo problemas. Intenta de nuevo en unos minutos.');
+      }
+
+      // Verificar si la respuesta está vacía
+      if (!responseText || responseText.trim() === '') {
+        throw new Error('El servidor no respondió correctamente. Intenta de nuevo.');
       }
 
       let data;
       try {
         data = JSON.parse(responseText);
       } catch (parseError) {
-        throw new Error('Respuesta inválida del servidor');
+        console.error('Error al parsear JSON:', parseError);
+        throw new Error('Respuesta inválida del servidor. Intenta de nuevo.');
       }
 
+      console.log('Datos parseados:', data);
+
+      // Manejar diferentes códigos de estado HTTP
       if (!response.ok) {
-        Alert.alert('Error', data.message || 'Error al enviar código de recuperación');
+        let errorMessage = 'Error al enviar código de recuperación';
+        let alertTitle = 'Error';
+        
+        switch (response.status) {
+          case 400:
+            // Verificar si es específicamente "usuario no encontrado"
+            if (data.message && data.message.toLowerCase().includes('usuario no encontrado')) {
+              errorMessage = 'No existe una cuenta registrada con este correo electrónico';
+              alertTitle = 'Email no registrado';
+            } else {
+              errorMessage = data.message || 'Los datos enviados no son válidos';
+            }
+            break;
+          case 404:
+            errorMessage = 'No existe una cuenta con este correo electrónico';
+            alertTitle = 'Email no registrado';
+            break;
+          case 422:
+            errorMessage = 'El formato del correo no es válido';
+            break;
+          case 429:
+            errorMessage = 'Demasiados intentos. Espera unos minutos antes de intentar de nuevo';
+            break;
+          case 500:
+            errorMessage = 'Error interno del servidor. Intenta de nuevo más tarde';
+            break;
+          case 503:
+            errorMessage = 'El servicio no está disponible temporalmente';
+            break;
+          default:
+            errorMessage = data.message || `Error ${response.status}: ${errorMessage}`;
+        }
+
+        Alert.alert(alertTitle, errorMessage);
         return;
       }
 
+      // Verificar si la respuesta indica éxito pero sin email encontrado
+      if (data.success === false || data.error) {
+        const errorMessage = data.message || data.error || 'No se encontró una cuenta con este correo';
+        Alert.alert('Email no encontrado', errorMessage);
+        return;
+      }
+
+      // Buscar token de recuperación
       let recoveryToken = null;
       const possibleTokenFields = [
         'token', 'recoveryToken', 'reset_token', 'resetToken', 
         'access_token', 'accessToken', 'verification_token',
-        'verificationToken', 'temp_token', 'tempToken'
+        'verificationToken', 'temp_token', 'tempToken', 'code'
       ];
       
+      // Buscar en el objeto principal
       for (const field of possibleTokenFields) {
         if (data[field]) {
           recoveryToken = data[field];
@@ -103,6 +212,7 @@ const RecuperacionScreen = ({ navigation }) => {
         }
       }
       
+      // Buscar en data.data si existe
       if (!recoveryToken && data.data && typeof data.data === 'object') {
         for (const field of possibleTokenFields) {
           if (data.data[field]) {
@@ -111,11 +221,22 @@ const RecuperacionScreen = ({ navigation }) => {
           }
         }
       }
+
+      // Verificar si se envió el código exitosamente
+      const wasCodeSent = data.success === true || 
+                         data.message?.toLowerCase().includes('enviado') ||
+                         data.message?.toLowerCase().includes('sent') ||
+                         response.status === 200;
+
+      if (!wasCodeSent) {
+        throw new Error('No se pudo confirmar el envío del código. Intenta de nuevo.');
+      }
       
       if (!recoveryToken) {
+        console.warn('No se recibió token de recuperación:', data);
         Alert.alert(
-          'Advertencia',
-          `No se recibió token de recuperación del servidor. Esto puede causar problemas en los siguientes pasos.\n\n¿Deseas continuar de todas formas?`,
+          'Código Enviado',
+          'Se ha enviado un código a tu correo, pero no se recibió token del servidor. ¿Deseas continuar?',
           [
             { text: 'Cancelar', style: 'cancel' },
             { 
@@ -130,20 +251,27 @@ const RecuperacionScreen = ({ navigation }) => {
       proceedToNextScreen(recoveryToken);
       
     } catch (error) {
-      if (error.message.includes('HTML')) {
-        Alert.alert(
-          'Error del Servidor', 
-          'La API no está respondiendo correctamente.\n\nVerifica que el servidor esté funcionando.'
-        );
+      console.error('Error en handleNext:', error);
+      
+      let userMessage = 'Error desconocido. Intenta de nuevo.';
+      
+      if (error.message.includes('tardó demasiado') || error.message === 'TIMEOUT') {
+        userMessage = 'La conexión es muy lenta. Hemos intentado varias veces sin éxito. Verifica tu internet e intenta de nuevo.';
       } else if (error.message === 'Network request failed' || error.name === 'TypeError') {
-        Alert.alert(
-          'Error de Conexión', 
-          'No se pudo conectar al servidor.\n\nVerifica tu conexión a internet.'
-        );
+        userMessage = 'No se pudo conectar al servidor. Verifica tu conexión a internet.';
+      } else if (error.message.includes('servidor está teniendo problemas')) {
+        userMessage = 'El servidor está teniendo problemas. Intenta de nuevo en unos minutos.';
+      } else if (error.message.includes('no respondió correctamente')) {
+        userMessage = 'El servidor no respondió correctamente. Intenta de nuevo.';
+      } else if (error.message.includes('Respuesta inválida')) {
+        userMessage = 'Respuesta inválida del servidor. Intenta de nuevo.';
       } else {
-        Alert.alert('Error', error.message || 'No se pudo enviar el código. Intenta de nuevo.');
+        userMessage = error.message || 'No se pudo enviar el código. Intenta de nuevo.';
       }
+      
+      Alert.alert('Error', userMessage);
     } finally {
+      // Asegurar que siempre se resetee el loading
       setLoading(false);
     }
   };
@@ -151,7 +279,7 @@ const RecuperacionScreen = ({ navigation }) => {
   const proceedToNextScreen = (token) => {
     Alert.alert(
       'Código Enviado', 
-      'Se ha enviado un código de recuperación a tu email. Revisa tu bandeja de entrada.',
+      'Se ha enviado un código de recuperación a tu email. Revisa tu bandeja de entrada y carpeta de spam.',
       [
         { 
           text: 'Continuar', 
