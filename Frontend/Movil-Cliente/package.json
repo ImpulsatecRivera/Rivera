@@ -33,7 +33,6 @@
     "expo-crypto": "~14.1.5",
     "expo-linear-gradient": "~14.1.5",
     "expo-image-picker": "~17.0.8",
-    "expo-linear-gradient": "^14.1.5",
     "expo-permissions": "^14.4.0",
     "expo-secure-store": "~14.2.4",
     "expo-status-bar": "~3.0.8",
