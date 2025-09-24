@@ -33,7 +33,13 @@ app.use(cookieParser());
 app.use(cors({
   origin: [
     "https://rivera-project-dun.vercel.app",
-    "https://rivera-project-gp76.vercel.app"
+    "https://rivera-project-gp76.vercel.app",
+    /^exp:\/\/.*$/,
+      /^http:\/\/.*\.exp\.direct.*$/,
+      /^https:\/\/.*\.exp\.direct.*$/,
+      /^http:\/\/localhost.*$/,
+      /^http:\/\/192\.168\..*$/,
+      /^http:\/\/10\.0\..*$/,
   ],
   credentials: true,
   methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
