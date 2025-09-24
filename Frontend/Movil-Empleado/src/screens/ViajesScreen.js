@@ -1,98 +1,113 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, Image, RefreshControl, TouchableOpacity } from 'react-native';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  Image,
+  RefreshControl,
+  TouchableOpacity,
+  FlatList,
+  ScrollView,
+} from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTrips } from '../hooks/useTrips';
 import { useProfile } from '../hooks/useProfile';
+// ⚠️ Asegúrate de usar el mismo case que tu carpeta real
 import { useAuth } from '../Context/authContext';
 import HistoryItem from '../components/HistoryItem';
 import senalImg from '../images/senal.png';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const ViajesScreen = ({ navigation }) => {
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, motoristaId: ctxMotoristaId } = useAuth();
   const { profile, loading: profileLoading } = useProfile();
-  const [motoristaId, setMotoristaId] = useState(null);
 
-  // Obtener ID del motorista desde AsyncStorage -> Context -> Profile
-  const obtenerMotoristaId = async () => {
+  const [motoristaId, setMotoristaId] = useState(null);
+  const [filtroEstado, setFiltroEstado] = useState('todos');
+
+  // --- Obtiene el ID del motorista desde: Context -> AsyncStorage -> Profile
+  const obtenerMotoristaId = useCallback(async () => {
     try {
+      if (ctxMotoristaId) return String(ctxMotoristaId);
+
       const storedId = await AsyncStorage.getItem('motoristaId');
-      if (storedId) {
-        console.log('ID encontrado en AsyncStorage:', storedId);
-        return storedId;
-      }
+      if (storedId) return storedId;
+
       const contextId = user?._id || user?.id;
-      if (contextId) {
-        console.log('ID encontrado en contexto:', contextId);
-        return contextId.toString();
-      }
-      const profileId = profile?.id || profile?._id;
-      if (profileId) {
-        console.log('ID encontrado en profile:', profileId);
-        return profileId.toString();
-      }
-      console.log('No se encontró ID de motorista');
+      if (contextId) return String(contextId);
+
+      const profileId = profile?._id || profile?.id;
+      if (profileId) return String(profileId);
+
       return null;
-    } catch (error) {
-      console.error('Error obteniendo motorista ID:', error);
+    } catch {
       return null;
     }
-  };
+  }, [ctxMotoristaId, user, profile]);
 
-  // Efecto para fijar motoristaId
+  // --- Fija motoristaId cuando hay sesión
   useEffect(() => {
     const setupMotoristaId = async () => {
-      if (isAuthenticated) {
-        const id = await obtenerMotoristaId();
-        if (id && id !== motoristaId) {
-          console.log('Estableciendo motorista ID:', id);
-          setMotoristaId(id);
-        }
-      } else {
-        console.log('Usuario no autenticado');
+      if (!isAuthenticated) {
         setMotoristaId(null);
+        return;
+      }
+      const id = await obtenerMotoristaId();
+      if (id && id !== motoristaId) {
+        setMotoristaId(id);
       }
     };
     setupMotoristaId();
-  }, [user, profile, isAuthenticated]);
+  }, [isAuthenticated, obtenerMotoristaId]);
 
-  // Hook useTrips en modo historial por motorista
-  const { 
+  // --- Hook: cargar HISTORIAL de viajes del motorista
+  const {
     trips,
     loading,
     error,
     refrescarViajes,
-    totalTrips,
-    estadisticas
+    totalTrips,   // lo dejamos por compat, pero no lo usamos para contar
+    estadisticas, // idem
   } = useTrips(motoristaId, 'historial');
 
-  const [filtroEstado, setFiltroEstado] = useState('todos');
+  // Totales siempre desde lo que se renderiza
+  const totalRender = useMemo(() => trips.length, [trips]);
 
-  // Log útil cuando cambian los viajes
-  useEffect(() => {
-    console.log(`📦 Trips en pantalla: ${trips.length}`);
-    if (trips[0]) {
-      console.log('🧪 Ejemplo trip render:', {
-        id: trips[0].id, estado: trips[0].estado, subtitulo: trips[0].subtitulo
-      });
-    }
+  // --- Filtro en memoria con useMemo
+  const viajesFiltrados = useMemo(() => {
+    return trips.filter((v) => {
+      const e = (v.estado || '').toLowerCase();
+      if (filtroEstado === 'todos') return true;
+      if (filtroEstado === 'programados')
+        return ['programado', 'pendiente', 'confirmado'].includes(e);
+      if (filtroEstado === 'completados')
+        return ['completado', 'finalizado'].includes(e);
+      if (filtroEstado === 'en_transito')
+        return ['en_transito', 'iniciado', 'en_curso'].includes(e);
+      if (filtroEstado === 'cancelados') return e === 'cancelado';
+      return e === filtroEstado;
+    });
+  }, [trips, filtroEstado]);
+
+  // Contadores SIEMPRE calculados en cliente para ser consistentes
+  const counts = useMemo(() => {
+    const norm = (x) => (x || '').toLowerCase();
+    const programados = trips.filter((v) =>
+      ['programado', 'pendiente', 'confirmado'].includes(norm(v.estado))
+    ).length;
+    const completados = trips.filter((v) =>
+      ['completado', 'finalizado'].includes(norm(v.estado))
+    ).length;
+    const enTransito = trips.filter((v) =>
+      ['en_transito', 'iniciado', 'en_curso'].includes(norm(v.estado))
+    ).length;
+    const cancelados = trips.filter((v) => norm(v.estado) === 'cancelado').length;
+
+    return { programados, completados, enTransito, cancelados, total: trips.length };
   }, [trips]);
 
-  // Filtros en memoria
-  const getViajesFiltrados = () => {
-    if (filtroEstado === 'todos') return trips;
-    switch (filtroEstado) {
-      case 'programados':
-        return trips.filter(v => ['programado', 'pendiente', 'confirmado'].includes(v.estado));
-      case 'completados':
-        return trips.filter(v => ['completado', 'finalizado'].includes(v.estado));
-      case 'en_transito':
-        return trips.filter(v => ['en_transito', 'iniciado', 'en_curso'].includes(v.estado));
-      case 'cancelados':
-        return trips.filter(v => v.estado === 'cancelado');
-      default:
-        return trips.filter(v => v.estado === filtroEstado);
-    }
-  };
+  const onRefresh = useCallback(() => {
+    refrescarViajes();
+  }, [refrescarViajes]);
 
   const handleInfoPress = (item) => {
     navigation.navigate('InfoViaje', {
@@ -110,187 +125,154 @@ const ViajesScreen = ({ navigation }) => {
         destino: item.destino,
         fecha: item.fecha,
         hora: item.hora,
-        ...item
-      }
+        ...item,
+      },
     });
   };
 
-  const onRefresh = () => {
-    console.log('Refrescando viajes...');
-    refrescarViajes();
-  };
-
-  const getConteoFiltro = (filtro) => {
-    switch (filtro) {
-      case 'programados':
-        return estadisticas?.programados || trips.filter(v => ['programado', 'pendiente', 'confirmado'].includes(v.estado)).length;
-      case 'completados':
-        return estadisticas?.completados || trips.filter(v => ['completado', 'finalizado'].includes(v.estado)).length;
-      case 'en_transito':
-        return estadisticas?.enProgreso || trips.filter(v => ['en_transito', 'iniciado', 'en_curso'].includes(v.estado)).length;
-      case 'cancelados':
-        return estadisticas?.cancelados || trips.filter(v => v.estado === 'cancelado').length;
-      default:
-        return 0;
-    }
-  };
-
-  const viajesFiltrados = getViajesFiltrados();
-
-  // Loading / estados iniciales
+  // --- Loading / estados iniciales
   if (profileLoading || (isAuthenticated && !motoristaId) || (motoristaId && loading)) {
     return (
-      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+      <View style={[styles.container, styles.center]}>
         <Text style={styles.loadingText}>Cargando viajes...</Text>
         {!isAuthenticated && <Text style={styles.errorText}>Por favor, inicia sesión</Text>}
-        {isAuthenticated && !motoristaId && <Text style={styles.debugText}>Obteniendo ID de motorista...</Text>}
       </View>
     );
   }
 
-  // Mostrar error del hook si lo hay
+  // --- Error
   if (error) {
     return (
-      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center', paddingHorizontal: 20 }]}>
+      <View style={[styles.container, styles.center, { paddingHorizontal: 20 }]}>
         <Text style={styles.errorText}>No se pudieron cargar los viajes.</Text>
-        <Text style={styles.debugText}>{String(error)}</Text>
-        <TouchableOpacity style={[styles.resetFilterButton, { marginTop: 16 }]} onPress={onRefresh}>
+        <TouchableOpacity
+          style={[styles.resetFilterButton, { marginTop: 16 }]}
+          onPress={onRefresh}
+        >
           <Text style={styles.resetFilterText}>Reintentar</Text>
         </TouchableOpacity>
       </View>
     );
   }
 
+  // --- Render principal
   return (
     <View style={styles.container}>
-      <ScrollView 
-        style={styles.content}
-        refreshControl={<RefreshControl refreshing={!!loading} onRefresh={onRefresh} />}
-      >
-        {/* Título */}
-        <Text style={styles.title}>Historial de viajes</Text>
+      <FlatList
+        data={viajesFiltrados}
+        keyExtractor={(item) => String(item.id || item._id)}
+        renderItem={({ item }) => (
+          <HistoryItem item={item} onInfoPress={handleInfoPress} />
+        )}
+        contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 28 }}
+        ListHeaderComponent={
+          <>
+            {/* Título */}
+            <Text style={styles.title}>Historial de viajes</Text>
 
-        {/* Subtítulo + imagen */}
-        <View style={styles.greetingContainer}>
-          <Text style={styles.subtitle}>
-            Aquí podrás ver todos tus viajes realizados con nosotros
-          </Text>
-          <Image source={senalImg} style={styles.avatarImage} />
-        </View>
+            {/* Subtítulo + imagen */}
+            <View style={styles.greetingContainer}>
+              <Text style={styles.subtitle}>
+                Aquí podrás ver todos tus viajes realizados con nosotros
+              </Text>
+              <Image source={senalImg} style={styles.avatarImage} />
+            </View>
 
-        {/* Estadísticas rápidas */}
-        <View style={styles.statsContainer}>
-          <View style={styles.statCard}>
-            <Text style={styles.statNumber}>{totalTrips}</Text>
-            <Text style={styles.statLabel}>Total viajes</Text>
-          </View>
-          <View style={styles.statCard}>
-            <Text style={[styles.statNumber, { color: '#4CAF50' }]}>
-              {getConteoFiltro('programados')}
-            </Text>
-            <Text style={styles.statLabel}>Programados</Text>
-          </View>
-          <View style={styles.statCard}>
-            <Text style={[styles.statNumber, { color: '#2196F3' }]}>
-              {getConteoFiltro('completados')}
-            </Text>
-            <Text style={styles.statLabel}>Completados</Text>
-          </View>
-        </View>
-
-        {/* Filtros */}
-        <View style={styles.filterContainer}>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            {[
-              { key: 'todos', label: 'Todos', count: totalTrips },
-              { key: 'programados', label: 'Programados', count: getConteoFiltro('programados') },
-              { key: 'completados', label: 'Completados', count: getConteoFiltro('completados') },
-              { key: 'en_transito', label: 'En tránsito', count: getConteoFiltro('en_transito') },
-              { key: 'cancelados', label: 'Cancelados', count: getConteoFiltro('cancelados') }
-            ].map((filtro) => (
-              <TouchableOpacity
-                key={filtro.key}
-                style={[
-                  styles.filterButton,
-                  filtroEstado === filtro.key && styles.filterButtonActive
-                ]}
-                onPress={() => setFiltroEstado(filtro.key)}
-              >
-                <Text style={[
-                  styles.filterText,
-                  filtroEstado === filtro.key && styles.filterTextActive
-                ]}>
-                  {filtro.label} ({filtro.count})
+            {/* Estadísticas rápidas (siempre basadas en trips) */}
+            <View style={styles.statsContainer}>
+              <View style={styles.statCard}>
+                <Text style={styles.statNumber}>{counts.total}</Text>
+                <Text style={styles.statLabel}>Total viajes</Text>
+              </View>
+              <View style={styles.statCard}>
+                <Text style={[styles.statNumber, { color: '#4CAF50' }]}>
+                  {counts.programados}
                 </Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        </View>
+                <Text style={styles.statLabel}>Programados</Text>
+              </View>
+              <View style={styles.statCard}>
+                <Text style={[styles.statNumber, { color: '#2196F3' }]}>
+                  {counts.completados}
+                </Text>
+                <Text style={styles.statLabel}>Completados</Text>
+              </View>
+            </View>
 
-        {/* Información de debug */}
-        <View style={styles.debugInfo}>
-          <Text style={styles.debugText}>
-            Mostrando {viajesFiltrados.length} de {totalTrips} viajes
-          </Text>
-          <Text style={styles.debugText}>
-            Filtro actual: {filtroEstado}
-          </Text>
-          <Text style={styles.debugText}>
-            Motorista ID: {motoristaId}
-          </Text>
-          <Text style={styles.debugText}>
-            Usuario autenticado: {isAuthenticated ? 'Sí' : 'No'}
-          </Text>
-          <Text style={styles.debugText}>
-            Usuario del contexto: {user?.name || 'No disponible'}
-          </Text>
-          {error && (
-            <Text style={styles.debugError}>
-              Error: {error}
-            </Text>
-          )}
-        </View>
+            {/* Filtros */}
+            <View style={styles.filterContainer}>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                {[
+                  { key: 'todos', label: 'Todos', count: counts.total },
+                  { key: 'programados', label: 'Programados', count: counts.programados },
+                  { key: 'completados', label: 'Completados', count: counts.completados },
+                  { key: 'en_transito', label: 'En tránsito', count: counts.enTransito },
+                  { key: 'cancelados', label: 'Cancelados', count: counts.cancelados },
+                ].map((f) => (
+                  <TouchableOpacity
+                    key={f.key}
+                    style={[
+                      styles.filterButton,
+                      filtroEstado === f.key && styles.filterButtonActive,
+                    ]}
+                    onPress={() => setFiltroEstado(f.key)}
+                  >
+                    <Text
+                      style={[
+                        styles.filterText,
+                        filtroEstado === f.key && styles.filterTextActive,
+                      ]}
+                    >
+                      {f.label} ({f.count})
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
 
-        {/* Lista de viajes */}
-        {viajesFiltrados.length > 0 ? (
-          <View style={styles.historyList}>
+            {/* Encabezado de sección lista */}
             <Text style={styles.sectionTitle}>
-              {filtroEstado === 'todos' 
-                ? 'Todos tus viajes' 
-                : `Viajes ${filtroEstado === 'programados' ? 'programados' : 
-                              filtroEstado === 'completados' ? 'completados' :
-                              filtroEstado === 'en_transito' ? 'en tránsito' :
-                              filtroEstado === 'cancelados' ? 'cancelados' : filtroEstado}`}
+              {filtroEstado === 'todos'
+                ? 'Todos tus viajes'
+                : `Viajes ${
+                    filtroEstado === 'programados'
+                      ? 'programados'
+                      : filtroEstado === 'completados'
+                      ? 'completados'
+                      : filtroEstado === 'en_transito'
+                      ? 'en tránsito'
+                      : filtroEstado === 'cancelados'
+                      ? 'cancelados'
+                      : filtroEstado
+                  }`}
             </Text>
-            
-            {viajesFiltrados.map((item) => (
-              <HistoryItem
-                key={item.id || item._id}
-                item={item}
-                onInfoPress={handleInfoPress}
-              />
-            ))}
-          </View>
-        ) : (
+          </>
+        }
+        ListEmptyComponent={
           <View style={styles.noTripsContainer}>
             <Text style={styles.noTripsIcon}>📋</Text>
             <Text style={styles.noTripsText}>
-              {filtroEstado === 'todos' 
+              {filtroEstado === 'todos'
                 ? 'No tienes viajes registrados'
-                : `No tienes viajes ${filtroEstado === 'programados' ? 'programados' : 
-                                      filtroEstado === 'completados' ? 'completados' :
-                                      filtroEstado === 'en_transito' ? 'en tránsito' :
-                                      filtroEstado === 'cancelados' ? 'cancelados' : filtroEstado}`}
+                : `No tienes viajes ${
+                    filtroEstado === 'programados'
+                      ? 'programados'
+                      : filtroEstado === 'completados'
+                      ? 'completados'
+                      : filtroEstado === 'en_transito'
+                      ? 'en tránsito'
+                      : filtroEstado === 'cancelados'
+                      ? 'cancelados'
+                      : filtroEstado
+                  }`}
             </Text>
             <Text style={styles.noTripsSubtext}>
               {filtroEstado === 'todos'
                 ? 'Cuando tengas viajes asignados, aparecerán aquí'
-                : 'Prueba con otro filtro para ver más viajes'
-              }
+                : 'Prueba con otro filtro para ver más viajes'}
             </Text>
-            
+
             {filtroEstado !== 'todos' && (
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.resetFilterButton}
                 onPress={() => setFiltroEstado('todos')}
               >
@@ -298,21 +280,18 @@ const ViajesScreen = ({ navigation }) => {
               </TouchableOpacity>
             )}
           </View>
-        )}
-      </ScrollView>
+        }
+        refreshControl={
+          <RefreshControl refreshing={!!loading} onRefresh={onRefresh} />
+        }
+      />
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f8f9fa',
-  },
-  content: {
-    flex: 1,
-    paddingHorizontal: 20,
-  },
+  container: { flex: 1, backgroundColor: '#f8f9fa' },
+  center: { justifyContent: 'center', alignItems: 'center' },
   title: {
     fontSize: 28,
     fontWeight: 'bold',
@@ -326,17 +305,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 20,
   },
-  subtitle: {
-    fontSize: 16,
-    color: '#666',
-    flex: 1,
-    marginRight: 15,
-  },
-  avatarImage: {
-    width: 120,
-    height: 120,
-    resizeMode: 'contain',
-  },
+  subtitle: { fontSize: 16, color: '#666', flex: 1, marginRight: 15 },
+  avatarImage: { width: 120, height: 120, resizeMode: 'contain' },
   statsContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -355,19 +325,9 @@ const styles = StyleSheet.create({
     shadowRadius: 2,
     elevation: 2,
   },
-  statNumber: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#000',
-  },
-  statLabel: {
-    fontSize: 12,
-    color: '#666',
-    marginTop: 5,
-  },
-  filterContainer: {
-    marginBottom: 20,
-  },
+  statNumber: { fontSize: 24, fontWeight: 'bold', color: '#000' },
+  statLabel: { fontSize: 12, color: '#666', marginTop: 5 },
+  filterContainer: { marginBottom: 20 },
   filterButton: {
     backgroundColor: '#fff',
     paddingHorizontal: 16,
@@ -377,57 +337,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#e0e0e0',
   },
-  filterButtonActive: {
-    backgroundColor: '#4CAF50',
-    borderColor: '#4CAF50',
-  },
-  filterText: {
-    fontSize: 14,
-    color: '#666',
-  },
-  filterTextActive: {
-    color: '#fff',
-    fontWeight: '600',
-  },
-  debugInfo: {
-    backgroundColor: '#e3f2fd',
-    borderLeftWidth: 4,
-    borderLeftColor: '#2196F3',
-    padding: 12,
-    marginBottom: 15,
-    borderRadius: 8,
-  },
-  debugText: {
-    fontSize: 12,
-    color: '#1976d2',
-    marginBottom: 2,
-  },
-  debugError: {
-    fontSize: 12,
-    color: '#d32f2f',
-    marginTop: 5,
-    fontWeight: 'bold',
-  },
-  loadingText: {
-    fontSize: 18,
-    color: '#666',
-    marginBottom: 10,
-  },
-  errorText: {
-    fontSize: 16,
-    color: '#d32f2f',
-    textAlign: 'center',
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#000',
-    marginBottom: 15,
-  },
-  historyList: {
-    marginTop: 10,
-    marginBottom: 20,
-  },
+  filterButtonActive: { backgroundColor: '#4CAF50', borderColor: '#4CAF50' },
+  filterText: { fontSize: 14, color: '#666' },
+  filterTextActive: { color: '#fff', fontWeight: '600' },
+  sectionTitle: { fontSize: 18, fontWeight: 'bold', color: '#000', marginBottom: 15 },
   noTripsContainer: {
     alignItems: 'center',
     padding: 40,
@@ -435,10 +348,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     marginVertical: 20,
   },
-  noTripsIcon: {
-    fontSize: 48,
-    marginBottom: 15,
-  },
+  noTripsIcon: { fontSize: 48, marginBottom: 15 },
   noTripsText: {
     fontSize: 18,
     fontWeight: '600',
@@ -446,23 +356,14 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 8,
   },
-  noTripsSubtext: {
-    fontSize: 14,
-    color: '#666',
-    textAlign: 'center',
-    marginBottom: 20,
-  },
+  noTripsSubtext: { fontSize: 14, color: '#666', textAlign: 'center', marginBottom: 20 },
   resetFilterButton: {
     backgroundColor: '#4CAF50',
     paddingHorizontal: 20,
     paddingVertical: 10,
     borderRadius: 8,
   },
-  resetFilterText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '600',
-  },
+  resetFilterText: { color: '#fff', fontSize: 14, fontWeight: '600' },
 });
 
 export default ViajesScreen;
