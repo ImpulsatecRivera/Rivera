@@ -2,11 +2,14 @@
 import { useState, useEffect, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// Base URL: toma EXPO_PUBLIC_API_URL (sin barras finales) o cae a Railway
+/* ====================== Base URL ====================== */
+/** Acepta EXPO_PUBLIC_API_URL con o sin /api al final. */
+const RAW_BASE = (process.env.EXPO_PUBLIC_API_URL || '').replace(/\/+$/, '');
+const CLEAN_BASE = RAW_BASE.replace(/\/api$/i, '');
 const API_BASE_URL =
-  (process.env.EXPO_PUBLIC_API_URL?.replace(/\/+$/, '') || 'https://riveraproject-production.up.railway.app') + '/api';
+  (CLEAN_BASE || 'https://riveraproject-production.up.railway.app') + '/api';
 
-// ====================== Utilidades de formato ======================
+/* ====================== Utilidades de formato ====================== */
 const formatearFecha = (fecha) => {
   if (!fecha) return '';
   const fechaObj = new Date(fecha);
@@ -46,43 +49,54 @@ const obtenerIconoViaje = (descripcion = '') => {
 const obtenerColorEstado = (estado = '') => {
   switch (String(estado).toLowerCase()) {
     case 'programado': return '#4CAF50';
-    case 'pendiente': return '#FF9800';
+    case 'pendiente':  return '#FF9800';
     case 'confirmado': return '#2196F3';
-    case 'en_transito': return '#9C27B0';
+    case 'en_transito':
     case 'en curso':
-    case 'en_curso': return '#9C27B0';
+    case 'en_curso':   return '#9C27B0';
     case 'completado':
     case 'finalizado': return '#8BC34A';
-    case 'cancelado': return '#F44336';
-    default: return '#757575';
+    case 'cancelado':  return '#F44336';
+    default:           return '#757575';
   }
 };
 
-// ====================== Normalización / helpers ======================
+/* ====================== Normalización / helpers ====================== */
 const normalizarEstado = (estado) => {
   const e = (estado?.actual ?? estado ?? '').toString().toLowerCase();
-  return e === 'en_curso' ? 'en_transito' : e;
+  if (e === 'en_curso') return 'en_transito';
+  return e || 'programado';
 };
+
+const pickFechaSalida = (raw) =>
+  raw?.fechaSalida ??
+  raw?.fecha ??
+  raw?.createdAt ??
+  raw?.departureTime ??
+  raw?.salida ??
+  raw?.horarios?.fechaSalida ??
+  null;
+
+const pickFechaLlegada = (raw) =>
+  raw?.fechaLlegada ??
+  raw?.arrivalTime ??
+  raw?.llegada ??
+  raw?.horarios?.fechaLlegadaEstimada ??
+  null;
 
 const transformarViajeAPI = (raw, camionGlobal = null) => {
   if (!raw) return null;
 
-  const id = (raw._id || raw.id)?.toString();
+  const id = (
+    raw._id ||
+    raw.id ||
+    raw.folio ||
+    raw.codigo ||
+    `${pickFechaSalida(raw) || Date.now()}-${Math.random()}`
+  )?.toString();
 
-  const fechaSalida =
-    raw.fechaSalida ??
-    raw.departureTime ??
-    raw.fecha ??
-    raw.salida ??
-    raw.horarios?.fechaSalida ??
-    null;
-
-  const fechaLlegada =
-    raw.fechaLlegada ??
-    raw.arrivalTime ??
-    raw.llegada ??
-    raw.horarios?.fechaLlegadaEstimada ??
-    null;
+  const fechaSalida = pickFechaSalida(raw);
+  const fechaLlegada = pickFechaLlegada(raw);
 
   const estado = normalizarEstado(raw.estado ?? raw.estadoActual);
 
@@ -139,45 +153,89 @@ const transformarViajeAPI = (raw, camionGlobal = null) => {
     estado,
     origen,
     destino,
-    carga: raw.carga,
+    carga: raw.carga || raw.tipoCarga,
     _fechaSalidaISO: fechaSalida,
     _fechaLlegadaISO: fechaLlegada,
+    raw,
   };
 };
 
-const getPayload = (data) => (data && data.success && data.data) ? data.data : data;
+const getPayload = (data) =>
+  data && data.success && data.data ? data.data : data;
 
-const getListaViajes = (data) => {
-  if (!data) return [];
-  if (Array.isArray(data)) return data;
+/** Recolecta viajes desde todas las variantes posibles del backend */
+const collectAllTripsFromPayload = (data) => {
+  const payload = getPayload(data) || {};
+  const all = [];
 
-  const payload = getPayload(data);
-  if (Array.isArray(payload)) return payload;
-  if (typeof payload !== 'object') return [];
-
-  return (
+  // 1) Listas planas conocidas
+  const flat =
     payload.historialCompleto ||
     payload.trips ||
     payload.viajes ||
     payload.items ||
     payload.result ||
+    payload.viajesProgramados || // posible nombre
     payload.data?.trips ||
     payload.data?.viajes ||
-    []
-  );
+    [];
+  if (Array.isArray(flat)) all.push(...flat);
+
+  // 2) Agrupado por MES
+  (payload.historialPorMes || []).forEach((mes) => {
+    if (Array.isArray(mes?.items)) all.push(...mes.items);
+    if (Array.isArray(mes?.viajes)) all.push(...mes.viajes);
+  });
+
+  // 3) Agrupado por DÍA
+  (payload.viajesPorDia || []).forEach((dia) => {
+    if (Array.isArray(dia?.items)) all.push(...dia.items);
+    if (Array.isArray(dia?.viajes)) all.push(...dia.viajes);
+    if (Array.isArray(dia?.motoristasConViajes)) {
+      dia.motoristasConViajes.forEach((mc) => {
+        if (Array.isArray(mc?.viajes)) {
+          mc.viajes.forEach((v) =>
+            all.push({ ...v, camion: mc?.camion, motorista: mc?.motorista })
+          );
+        }
+      });
+    }
+  });
+
+  // 4) Motoristas con viajes a nivel raíz
+  (payload.motoristasConViajes || []).forEach((m) => {
+    if (Array.isArray(m?.viajes)) {
+      m.viajes.forEach((v) =>
+        all.push({ ...v, camion: v?.camion || m?.camion, motorista: m?.motorista })
+      );
+    }
+  });
+
+  // 5) Variante anidada en payload.data
+  if (payload.data) {
+    (payload.data.viajesPorDia || []).forEach((dia) => {
+      if (Array.isArray(dia?.viajes)) all.push(...dia.viajes);
+      if (Array.isArray(dia?.items)) all.push(...dia.items);
+    });
+    if (Array.isArray(payload.data?.historialCompleto)) {
+      all.push(...payload.data.historialCompleto);
+    }
+  }
+
+  return all;
 };
 
 const getTotalViajes = (data, lista) => {
   const payload = getPayload(data);
   return Number(
     payload?.total ??
-    payload?.totalViajes ??
-    payload?.count ??
-    (Array.isArray(lista) ? lista.length : 0)
+      payload?.totalViajes ??
+      payload?.count ??
+      (Array.isArray(lista) ? lista.length : 0)
   );
 };
 
-// ====================== Hook principal ======================
+/* ====================== Hook principal ====================== */
 export const useTrips = (motoristaId = null, tipoConsulta = 'programados') => {
   const [trips, setTrips] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -234,12 +292,18 @@ export const useTrips = (motoristaId = null, tipoConsulta = 'programados') => {
         throw new Error(`HTTP ${resp.status} ${resp.statusText}`);
       }
       const data = await resp.json();
+      const payload = getPayload(data) || {};
+      console.log(
+        '✅ JSON OK',
+        Array.isArray(payload) ? ['<array>'] : Object.keys(payload)
+      );
 
-      const payload = getPayload(data);
-      console.log('✅ JSON OK', Array.isArray(payload) ? ['<array>'] : Object.keys(payload));
-      if (Array.isArray(payload) && payload[0]) {
-        console.log('🧪 Ejemplo item:', Object.keys(payload[0]));
-      }
+      if (payload?.historialCompleto)
+        console.log('ℹ️ historialCompleto len:', Array.isArray(payload.historialCompleto) ? payload.historialCompleto.length : 'no-array');
+      if (payload?.viajesPorDia)
+        console.log('ℹ️ viajesPorDia len:', Array.isArray(payload.viajesPorDia) ? payload.viajesPorDia.length : 'no-array');
+      if (Array.isArray(payload?.viajes))
+        console.log('ℹ️ viajes (plano) len:', payload.viajes.length);
 
       return data;
     } catch (e) {
@@ -252,7 +316,44 @@ export const useTrips = (motoristaId = null, tipoConsulta = 'programados') => {
     }
   };
 
-  // ====================== Cargadores ======================
+  /* ====================== Fallbacks ====================== */
+  const cargarProximosFallback = async (id) => {
+    try {
+      const url = `${API_BASE_URL}/viajes/conductor/${encodeURIComponent(id)}?scope=proximos`;
+      const data = await hacerPeticion(url);
+      if (!data) return [];
+      const payload = getPayload(data) || {};
+      const rawTrips = collectAllTripsFromPayload(data);
+      const todos = rawTrips
+        .map((v) => transformarViajeAPI(v, payload?.camionAsignado))
+        .filter(Boolean);
+      console.log('🛟 Fallback proximos ->', todos.length);
+      return todos;
+    } catch (e) {
+      console.log('⚠️ Fallback proximos falló:', e.message);
+      return [];
+    }
+  };
+
+  const cargarHistorialFallback = async (id) => {
+    try {
+      const url = `${API_BASE_URL}/viajes/conductor/${encodeURIComponent(id)}?scope=historial`;
+      const data = await hacerPeticion(url);
+      if (!data) return [];
+      const payload = getPayload(data) || {};
+      const rawTrips = collectAllTripsFromPayload(data);
+      const todos = rawTrips
+        .map((v) => transformarViajeAPI(v, payload?.camionAsignado))
+        .filter(Boolean);
+      console.log('🛟 Fallback historial ->', todos.length);
+      return todos;
+    } catch (e) {
+      console.log('⚠️ Fallback historial falló:', e.message);
+      return [];
+    }
+  };
+
+  /* ====================== Cargadores ====================== */
   const cargarHistorialCompleto = async (id) => {
     try {
       setLoading(true);
@@ -263,42 +364,37 @@ export const useTrips = (motoristaId = null, tipoConsulta = 'programados') => {
       const data = await hacerPeticion(url);
       if (!data) return;
 
-      const lista = getListaViajes(data);
-      if (Array.isArray(lista)) {
-        const todos = lista.map((v) => transformarViajeAPI(v)).filter(Boolean);
-        console.log('🧾 Viajes transformados (historial):', todos.length);
+      const payload = getPayload(data) || {};
+      const rawTrips = collectAllTripsFromPayload(data);
 
-        setTrips(todos);
-        setViajesPorDia([]);
-        setProximosDestinos([]);
-        setTotalTrips(getTotalViajes(data, todos));
-        const payload = getPayload(data);
-        setEstadisticas(
-          payload?.estadisticas || {
-            programados: todos.filter((x) => ['programado', 'pendiente', 'confirmado'].includes(x.estado)).length,
-            completados: todos.filter((x) => ['completado', 'finalizado'].includes(x.estado)).length,
-            cancelados: todos.filter((x) => x.estado === 'cancelado').length,
-            enProgreso: todos.filter((x) => ['en_transito', 'iniciado', 'en_curso'].includes(x.estado)).length,
-          }
-        );
-        setHistorialViajes(todos);
-        return;
+      let todos = rawTrips
+        .map((v) => transformarViajeAPI(v, payload?.camionAsignado))
+        .filter(Boolean);
+
+      // ⛑️ Fallback si vino vacío
+      if (todos.length === 0) {
+        const fb = await cargarHistorialFallback(id);
+        if (fb.length) todos = fb;
       }
 
-      const payload = getPayload(data);
-      const raw = Array.isArray(payload?.historialCompleto) ? payload.historialCompleto : [];
-      const todos = raw.map((v) => transformarViajeAPI(v, payload?.camionAsignado)).filter(Boolean);
+      console.log('🧾 Viajes transformados (historial):', todos.length);
 
       setTrips(todos);
       setViajesPorDia(payload?.viajesPorDia || []);
       setProximosDestinos([]);
-      setTotalTrips(payload?.totalViajes || todos.length);
+      setTotalTrips(getTotalViajes(data, todos));
       setEstadisticas(
         payload?.estadisticas || {
-          programados: todos.filter((x) => ['programado', 'pendiente', 'confirmado'].includes(x.estado)).length,
-          completados: todos.filter((x) => ['completado', 'finalizado'].includes(x.estado)).length,
+          programados: todos.filter((x) =>
+            ['programado', 'pendiente', 'confirmado'].includes(x.estado)
+          ).length,
+          completados: todos.filter((x) =>
+            ['completado', 'finalizado'].includes(x.estado)
+          ).length,
           cancelados: todos.filter((x) => x.estado === 'cancelado').length,
-          enProgreso: todos.filter((x) => ['en_transito', 'iniciado', 'en_curso'].includes(x.estado)).length,
+          enProgreso: todos.filter((x) =>
+            ['en_transito', 'iniciado', 'en_curso'].includes(x.estado)
+          ).length,
         }
       );
       setHistorialViajes(todos);
@@ -325,55 +421,40 @@ export const useTrips = (motoristaId = null, tipoConsulta = 'programados') => {
       const data = await hacerPeticion(url);
       if (!data) return;
 
-      const lista = getListaViajes(data);
-      if (Array.isArray(lista)) {
-        const todos = lista.map((v) => transformarViajeAPI(v)).filter(Boolean);
-        const prox = todos.slice(0, 3).map((t) => ({
-          id: t.id,
-          tipo: `${t.origen} → ${t.destino}`,
-          fecha: t.fecha,
-          hora: t.hora,
-        }));
-        console.log('🧾 Viajes transformados (proximos):', todos.length);
+      const payload = getPayload(data) || {};
+      const rawTrips = collectAllTripsFromPayload(data);
 
-        setTrips(todos);
-        setViajesPorDia([]);
-        setProximosDestinos(prox);
-        setTotalTrips(getTotalViajes(data, todos));
-        setHistorialViajes(todos.slice(-5));
+      let todos = rawTrips
+        .map((v) => transformarViajeAPI(v, payload?.camionAsignado))
+        .filter(Boolean);
 
-        const payload = getPayload(data);
-        if (payload?.estadisticas) setEstadisticas(payload.estadisticas);
-        return;
+      // ⛑️ Fallback si vino vacío
+      if (todos.length === 0) {
+        const fb = await cargarProximosFallback(id);
+        if (fb.length) todos = fb;
       }
 
-      // Fallback agrupado por día
-      const todos = [];
-      const prox = [];
-      const payload = getPayload(data);
-
-      (payload.viajesPorDia || []).forEach((dia) => {
-        (dia.viajes || []).forEach((v) => {
-          const t = transformarViajeAPI(v, payload.camionAsignado);
-          if (t) todos.push(t);
-
-          if (prox.length < 3) {
-            const f = v.fechaSalida ?? v.departureTime ?? v.fecha ?? v.horarios?.fechaSalida;
-            prox.push({
-              id: v._id || v.id,
-              tipo: `${t?.origen || v.origen} → ${t?.destino || v.destino}`,
-              fecha: formatearFecha(f),
-              hora: formatearHora(f),
-            });
-          }
-        });
+      // Próximos 3 por fecha de salida
+      const ordenados = [...todos].sort((a, b) => {
+        const ta = new Date(a._fechaSalidaISO || 0).getTime();
+        const tb = new Date(b._fechaSalidaISO || 0).getTime();
+        return ta - tb;
       });
+      const prox = ordenados.slice(0, 3).map((t) => ({
+        id: t.id,
+        tipo: `${t.origen} → ${t.destino}`,
+        fecha: t.fecha,
+        hora: t.hora,
+      }));
+
+      console.log('🧾 Viajes transformados (proximos):', todos.length);
 
       setTrips(todos);
-      setViajesPorDia(payload.viajesPorDia || []);
+      setViajesPorDia(payload?.viajesPorDia || []);
       setProximosDestinos(prox);
-      setTotalTrips(payload.totalViajes || todos.length);
+      setTotalTrips(getTotalViajes(data, todos));
       setHistorialViajes(todos.slice(-5));
+      if (payload?.estadisticas) setEstadisticas(payload.estadisticas);
     } catch (e) {
       setError(`Error de conexión: ${e.message}`);
       setTrips([]);
@@ -395,47 +476,30 @@ export const useTrips = (motoristaId = null, tipoConsulta = 'programados') => {
       const data = await hacerPeticion(url);
       if (!data) return;
 
-      const lista = getListaViajes(data);
-      if (Array.isArray(lista)) {
-        const todos = lista.map((v) => transformarViajeAPI(v)).filter(Boolean);
-        setTrips(todos);
-        setViajesPorDia([]);
-        setTotalTrips(getTotalViajes(data, todos));
-        const payload = getPayload(data);
-        if (payload?.estadisticas) setEstadisticas(payload.estadisticas);
-        return;
-      }
+      const payload = getPayload(data) || {};
+      const rawTrips = collectAllTripsFromPayload(data);
 
-      // Fallback
-      const todos = [];
-      const payload = getPayload(data);
-
-      (payload.viajesPorDia || []).forEach((dia) => {
-        (dia.motoristasConViajes || []).forEach((m) => {
-          (m.viajes || []).forEach((v) => {
-            const t = transformarViajeAPI(v, m.camion);
-            if (t) {
-              t.motorista = m.motorista;
-              todos.push(t);
-            }
-          });
-        });
-      });
+      const todos = rawTrips
+        .map((v) => transformarViajeAPI(v, v?.camion || payload?.camionAsignado))
+        .filter(Boolean);
 
       setTrips(todos);
-      setViajesPorDia(payload.viajesPorDia || []);
-      setTotalTrips(payload.totalViajes || todos.length);
+      setViajesPorDia(payload?.viajesPorDia || []);
+      setProximosDestinos([]);
+      setTotalTrips(getTotalViajes(data, todos));
+      if (payload?.estadisticas) setEstadisticas(payload.estadisticas);
     } catch (e) {
       setError(`Error de conexión: ${e.message}`);
       setTrips([]);
       setViajesPorDia([]);
+      setProximosDestinos([]);
       setTotalTrips(0);
     } finally {
       setLoading(false);
     }
   };
 
-  // ====================== Effect principal ======================
+  /* ====================== Effect principal ====================== */
   useEffect(() => {
     let mounted = true;
 
@@ -469,17 +533,20 @@ export const useTrips = (motoristaId = null, tipoConsulta = 'programados') => {
     };
   }, [motoristaId, tipoConsulta]);
 
-  // ====================== API pública del hook ======================
+  /* ====================== API pública del hook ====================== */
   const getTripById = (id) => trips.find((t) => t.id === id);
 
-  const refrescarViajes = () => {
+  const refrescarViajes = async () => {
     console.log('🔄 Refrescando viajes…');
-    const id = String(motoristaId ?? '').trim();
+    const storedId = (await AsyncStorage.getItem('motoristaId')) || '';
+    const paramId = String(motoristaId ?? '').trim();
+    const id = (paramId || storedId).trim();
+
     if (id) {
-      if (tipoConsulta === 'historial') cargarHistorialCompleto(id);
-      else cargarViajesMotorista(id);
+      if (tipoConsulta === 'historial') await cargarHistorialCompleto(id);
+      else await cargarViajesMotorista(id);
     } else {
-      cargarTodosLosViajes();
+      await cargarTodosLosViajes();
     }
   };
 
@@ -488,8 +555,12 @@ export const useTrips = (motoristaId = null, tipoConsulta = 'programados') => {
   const getEstadisticas = () => {
     const total = trips.length;
     const hoy = getViajesHoy().length;
-    const pendientes = trips.filter((t) => ['programado', 'pendiente'].includes(t.estado)).length;
-    const completados = trips.filter((t) => ['completado', 'finalizado'].includes(t.estado)).length;
+    const pendientes = trips.filter((t) =>
+      ['programado', 'pendiente'].includes(t.estado)
+    ).length;
+    const completados = trips.filter((t) =>
+      ['completado', 'finalizado'].includes(t.estado)
+    ).length;
     return { total, hoy, pendientes, completados };
   };
 

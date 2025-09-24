@@ -3,7 +3,10 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../Context/authContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const BASE_URL = 'https://riveraproject-production.up.railway.app';
+// Base URL compatible con EXPO_PUBLIC_API_URL (con o sin /api)
+const RAW = (process.env.EXPO_PUBLIC_API_URL || 'https://riveraproject-production.up.railway.app').replace(/\/+$/, '');
+const CLEAN = RAW.replace(/\/api$/i, '');
+const API_BASE = `${CLEAN}/api`;
 
 export const useProfile = () => {
   const { user, token, logout: authLogout } = useAuth();
@@ -19,6 +22,7 @@ export const useProfile = () => {
     cargo: 'Motorista',
     camion: 'Sin asignar',
     camionInfo: null,
+    img: undefined,
   });
 
   const [loading, setLoading] = useState(true);
@@ -27,20 +31,18 @@ export const useProfile = () => {
     try {
       let motoristaId = await AsyncStorage.getItem('motoristaId');
       if (motoristaId) {
-        console.log('🆔 ID encontrado en AsyncStorage:', motoristaId);
+        console.log('🆔 ID en AsyncStorage:', motoristaId);
         return motoristaId;
       }
       if (user?._id) {
-        console.log('🆔 ID encontrado en contexto user._id:', user._id);
         await AsyncStorage.setItem('motoristaId', String(user._id));
         return String(user._id);
       }
       if (user?.id) {
-        console.log('🆔 ID encontrado en contexto user.id:', user.id);
         await AsyncStorage.setItem('motoristaId', String(user.id));
         return String(user.id);
       }
-      console.log('❌ No se encontró ID de motorista en ninguna fuente');
+      console.log('❌ No se encontró ID de motorista');
       return null;
     } catch (error) {
       console.error('❌ Error al obtener motorista ID:', error);
@@ -52,21 +54,15 @@ export const useProfile = () => {
     try {
       setLoading(true);
       const motoristaId = await obtenerMotoristaId();
-      if (!motoristaId) {
-        throw new Error('No se encontró ID de motorista. Por favor, inicia sesión nuevamente.');
-      }
+      if (!motoristaId) throw new Error('No se encontró ID de motorista');
 
-      // Usa token del contexto o el que esté guardado
       const authToken =
         (await AsyncStorage.getItem('authToken')) ||
         (await AsyncStorage.getItem('userToken')) ||
         token;
 
-      console.log('🌐 Conectando al backend con ID:', motoristaId);
-      console.log('🔑 Auth token:', authToken ? 'Presente' : 'No presente');
-
-      // Petición al backend (Railway)
-      const response = await fetch(`${BASE_URL}/api/motoristas/${motoristaId}`, {
+      console.log('🌐 Perfil ->', `${API_BASE}/motoristas/${motoristaId}`);
+      const res = await fetch(`${API_BASE}/motoristas/${motoristaId}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -75,16 +71,17 @@ export const useProfile = () => {
         },
       });
 
-      console.log('📡 Response status:', response.status);
+      console.log('📡 Profile status:', res.status);
 
-      if (!response.ok) {
-        const errorData = await response.text().catch(() => '');
-        console.log('❌ Error response:', errorData);
+      if (!res.ok) {
+        const errText = await res.text().catch(() => '');
+        console.log('❌ Profile error body:', errText);
         if (user) {
-          console.log('📋 Usando datos del contexto como fallback');
-          setProfile({
+          // fallback con datos del contexto
+          setProfile((prev) => ({
+            ...prev,
             id: motoristaId,
-            nombre: `${user.name || ''} ${user.lastName || ''}`.trim(),
+            nombre: `${user.nombre || user.name || ''} ${user.apellido || user.lastName || ''}`.trim(),
             email: user.email || 'No disponible',
             telefono: user.phone || 'No disponible',
             direccion: user.address || 'No disponible',
@@ -92,68 +89,60 @@ export const useProfile = () => {
               ? new Date(user.birthDate).toLocaleDateString('es-ES')
               : 'No disponible',
             tarjeta: user.circulationCard || 'No disponible',
-            cargo: 'Motorista',
             camion: 'Sin conexión al servidor',
             camionInfo: null,
             img: user.img,
-          });
+          }));
           return;
         }
-        throw new Error(`Error ${response.status}: ${errorData}`);
+        throw new Error(`Error ${res.status}: ${errText}`);
       }
 
-      // ✅ Algunas APIs envían { success, data, message }
-      const raw = await response.json();
+      const raw = await res.json();
       const payload = raw && raw.success && raw.data ? raw.data : raw;
+      const m = Array.isArray(payload) ? payload[0] : payload;
 
-      // Si viene array, toma el primero
-      const motoristaData = Array.isArray(payload) ? payload[0] : payload;
-
-      console.log('✅ Datos recibidos del backend:', {
-        id: motoristaData?._id || motoristaData?.id,
-        name: motoristaData?.name,
-        email: motoristaData?.email,
-        camion: motoristaData?.camionAsignado ? 'Asignado' : 'Sin asignar',
+      console.log('✅ Perfil recibido:', {
+        id: m?._id || m?.id,
+        name: m?.name,
+        email: m?.email,
+        camion: m?.camionAsignado ? 'Asignado' : 'Sin asignar',
       });
 
-      if (!motoristaData || typeof motoristaData !== 'object') {
-        throw new Error('Respuesta de perfil inesperada');
-      }
+      if (!m || typeof m !== 'object') throw new Error('Respuesta de perfil inesperada');
+
+      const finalId = m._id || m.id || motoristaId;
 
       setProfile({
-        id: motoristaData._id || motoristaData.id || motoristaId,
-        nombre: `${motoristaData.name || ''} ${motoristaData.lastName || ''}`.trim(),
-        email: motoristaData.email || 'No disponible',
-        telefono: motoristaData.phone || 'No disponible',
-        direccion: motoristaData.address || 'No disponible',
-        fechaNacimiento: motoristaData.birthDate
-          ? new Date(motoristaData.birthDate).toLocaleDateString('es-ES')
+        id: finalId,
+        nombre: `${m.name || ''} ${m.lastName || ''}`.trim(),
+        email: m.email || 'No disponible',
+        telefono: m.phone || 'No disponible',
+        direccion: m.address || 'No disponible',
+        fechaNacimiento: m.birthDate
+          ? new Date(m.birthDate).toLocaleDateString('es-ES')
           : 'No disponible',
-        tarjeta: motoristaData.circulationCard || 'No disponible',
+        tarjeta: m.circulationCard || 'No disponible',
         cargo: 'Motorista',
-        camion: motoristaData.camionAsignado
-          ? `${motoristaData.camionAsignado.name || motoristaData.camionAsignado.alias || 'Camión'} - ${
-              motoristaData.camionAsignado.licensePlate || motoristaData.camionAsignado.placa || ''
-            }`.trim()
+        camion: m.camionAsignado
+          ? `${m.camionAsignado.name || m.camionAsignado.alias || 'Camión'} - ${(m.camionAsignado.licensePlate || m.camionAsignado.placa || '').trim()}`
           : 'Sin asignar',
-        camionInfo: motoristaData.camionAsignado || null,
-        img: motoristaData.img,
+        camionInfo: m.camionAsignado || null,
+        img: m.img,
       });
 
       // Mantén AsyncStorage sincronizado si cambió el ID
-      const finalId = motoristaData._id || motoristaData.id;
-      if (finalId && String(finalId) !== String(motoristaId)) {
+      if (String(finalId) !== String(motoristaId)) {
         await AsyncStorage.setItem('motoristaId', String(finalId));
-        console.log('🔄 ID actualizado en AsyncStorage:', finalId);
+        console.log('🔄 motoristaId actualizado en AsyncStorage:', finalId);
       }
     } catch (error) {
       console.error('❌ Error al cargar perfil:', error.message);
       if (user) {
-        console.log('📋 Usando datos del contexto por error');
         const fallbackId = await obtenerMotoristaId();
         setProfile({
           id: fallbackId,
-          nombre: `${user.name || 'Usuario'} ${user.lastName || ''}`.trim(),
+          nombre: `${user.nombre || user.name || 'Usuario'} ${user.apellido || user.lastName || ''}`.trim(),
           email: user.email || 'No disponible',
           telefono: user.phone || 'No disponible',
           direccion: user.address || 'No disponible',
@@ -183,6 +172,9 @@ export const useProfile = () => {
     try {
       const success = await authLogout();
       if (success) {
+        // Limpia storage relevante para evitar IDs/tokens huérfanos
+        await AsyncStorage.multiRemove(['motoristaId', 'authToken', 'userToken', 'token']);
+
         setProfile({
           id: null,
           nombre: '',
@@ -194,8 +186,9 @@ export const useProfile = () => {
           cargo: 'Motorista',
           camion: 'Sin asignar',
           camionInfo: null,
+          img: undefined,
         });
-        console.log('Sesión cerrada correctamente');
+        console.log('Sesión cerrada y storage limpiado');
       }
     } catch (error) {
       console.error('Error al cerrar sesión:', error);
@@ -203,21 +196,15 @@ export const useProfile = () => {
   };
 
   useEffect(() => {
-    console.log('🔄 useProfile useEffect ejecutado');
-    console.log('👤 User del contexto:', user ? 'Presente' : 'No presente');
-    console.log('🔑 Token del contexto:', token ? 'Presente' : 'No presente');
+    console.log('🔄 useProfile effect');
+    console.log('👤 User en contexto:', user ? 'Presente' : 'No');
+    console.log('🔑 Token en contexto:', token ? 'Presente' : 'No');
     if (user || token) {
       fetchProfile();
     } else {
-      console.log('⏳ Esperando datos del contexto...');
       setLoading(false);
     }
   }, [user, token]);
 
-  return {
-    profile,
-    loading,
-    fetchProfile,
-    logout,
-  };
+  return { profile, loading, fetchProfile, logout };
 };
