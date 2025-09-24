@@ -2,6 +2,17 @@
   "name": "movil-cliente",
   "version": "1.0.0",
   "main": "index.js",
+  "expo": {
+    "plugins": [
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Esta app necesita acceso a la galería para seleccionar fotos de perfil.",
+          "cameraPermission": "Esta app necesita acceso a la cámara para tomar fotos de perfil."
+        }
+      ]
+    ]
+  },
   "scripts": {
     "start": "METRO_DISABLE_FS_WATCH=true expo start",
     "android": "METRO_DISABLE_FS_WATCH=true expo run:android",
@@ -18,8 +29,12 @@
     "@react-navigation/stack": "^7.4.7",
     "expo": "~54.0.0",
     "expo-auth-session": "~6.2.1",
+    "expo-camera": "~17.0.8",
     "expo-crypto": "~14.1.5",
+    "expo-linear-gradient": "~14.1.5",
+    "expo-image-picker": "~17.0.8",
     "expo-linear-gradient": "^14.1.5",
+    "expo-permissions": "^14.4.0",
     "expo-secure-store": "~14.2.4",
     "expo-status-bar": "~3.0.8",
     "expo-web-browser": "~14.2.0",
@@ -29,13 +44,16 @@
     "react": "19.1.0",
     "react-native": "0.81.4",
     "react-native-gesture-handler": "^2.28.0",
+    "react-native-image-picker": "^8.2.1",
+    "react-native-image-resizer": "^1.4.5",
     "react-native-linear-gradient": "^2.8.3",
     "react-native-reanimated": "^4.1.0",
     "react-native-safe-area-context": "^5.6.0",
     "react-native-screens": "~4.16.0",
     "react-native-splash-screen": "^3.3.0",
     "react-native-svg": "15.12.1",
-    "react-native-vector-icons": "^10.3.0"
+    "react-native-vector-icons": "^10.3.0",
+    "expo-image-manipulator": "~14.0.7"
   },
   "devDependencies": {
     "@babel/core": "^7.20.0",
