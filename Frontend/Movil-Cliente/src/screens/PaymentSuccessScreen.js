@@ -1,3 +1,4 @@
+// Corrección en PaymentSuccessScreen.js
 import React from 'react';
 import {
   SafeAreaView,
@@ -15,11 +16,37 @@ const GREEN = '#10AC84';
 const PaymentSuccessScreen = () => {
   const navigation = useNavigation();
   const route = useRoute();
-  const { metodoPago = 'Efectivo' } = route.params || {};
+  
+  // ✅ Corregir los nombres de los parámetros para que coincidan con IntegratedTruckRequestScreen
+  const { 
+    metodoPago = 'Efectivo',
+    truckTypeName = 'Camión', // ✅ Cambiar de truckType a truckTypeName
+    price = 0, // ✅ Usar price en lugar de estimatedPrice
+    estimatedTime = 0,
+    pickupLocation = '', // ✅ Cambiar de pickupAddress a pickupLocation
+    destinationLocation = '', // ✅ Cambiar de destinationAddress a destinationLocation
+    departureTime = '',
+    arrivalTime = '',
+    quoteId = '',
+    quoteData = null
+  } = route.params || {};
 
   const goHome = () => {
     // Volver al tab "Dashboard" dentro del TabNavigator (Main)
     navigation.navigate('Main', { screen: 'Dashboard' });
+  };
+
+  // ✅ Función para ver detalles de la cotización
+  const viewQuoteDetails = () => {
+    if (quoteData && quoteId) {
+      navigation.navigate('QuoteDetailsScreen', {
+        quote: quoteData
+      });
+    } else {
+      console.log('No hay datos de cotización disponibles');
+      // Fallback: ir al dashboard
+      goHome();
+    }
   };
 
   return (
@@ -50,6 +77,43 @@ const PaymentSuccessScreen = () => {
             Tu cotización se realizó correctamente.
           </Text>
 
+          {/* ✅ Información adicional de la cotización */}
+          {truckTypeName && (
+            <View style={styles.infoSection}>
+              <Text style={styles.infoLabel}>Tipo de camión:</Text>
+              <Text style={styles.infoValue}>{truckTypeName}</Text>
+            </View>
+          )}
+
+          {price > 0 && (
+            <View style={styles.infoSection}>
+              <Text style={styles.infoLabel}>Precio estimado:</Text>
+              <Text style={styles.priceValue}>${price.toLocaleString('en-US', { minimumFractionDigits: 2 })}</Text>
+            </View>
+          )}
+
+          {estimatedTime > 0 && (
+            <View style={styles.infoSection}>
+              <Text style={styles.infoLabel}>Tiempo estimado:</Text>
+              <Text style={styles.infoValue}>{estimatedTime} minutos</Text>
+            </View>
+          )}
+
+          {/* ✅ Mostrar rutas si están disponibles */}
+          {pickupLocation && destinationLocation && (
+            <View style={styles.routeSection}>
+              <View style={styles.routePoint}>
+                <View style={[styles.routeDot, { backgroundColor: GREEN }]} />
+                <Text style={styles.routeText}>{pickupLocation}</Text>
+              </View>
+              <View style={styles.routeLine} />
+              <View style={styles.routePoint}>
+                <View style={[styles.routeDot, { backgroundColor: '#EF4444' }]} />
+                <Text style={styles.routeText}>{destinationLocation}</Text>
+              </View>
+            </View>
+          )}
+
           {/* Chip del método de pago */}
           <View style={styles.chip}>
             <Text style={styles.chipIcon}>{metodoPago === 'Transferencia' ? '💳' : '💵'}</Text>
@@ -66,10 +130,18 @@ const PaymentSuccessScreen = () => {
             Algunos datos se informarán o podrían cambiar al confirmar la cotización.
           </Text>
 
-          {/* CTA */}
-          <TouchableOpacity style={styles.cta} onPress={goHome} activeOpacity={0.9}>
-            <Text style={styles.ctaText}>Volver al inicio</Text>
-          </TouchableOpacity>
+          {/* ✅ Botones de acción mejorados */}
+          <View style={styles.actionButtons}>
+            {quoteData && quoteId && (
+              <TouchableOpacity style={styles.detailsButton} onPress={viewQuoteDetails} activeOpacity={0.9}>
+                <Text style={styles.detailsButtonText}>Ver detalles</Text>
+              </TouchableOpacity>
+            )}
+
+            <TouchableOpacity style={styles.cta} onPress={goHome} activeOpacity={0.9}>
+              <Text style={styles.ctaText}>Volver al inicio</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
     </SafeAreaView>
@@ -165,7 +237,67 @@ const styles = StyleSheet.create({
     color: '#374151',
     textAlign: 'center',
     marginTop: 6,
-    marginBottom: 12,
+    marginBottom: 16,
+  },
+
+  // ✅ Nuevos estilos para información adicional
+  infoSection: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    width: '100%',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    backgroundColor: '#F9FAFB',
+    borderRadius: 8,
+    marginBottom: 8,
+  },
+  infoLabel: {
+    fontSize: 13,
+    color: '#6B7280',
+    fontWeight: '500',
+  },
+  infoValue: {
+    fontSize: 14,
+    color: '#111827',
+    fontWeight: '600',
+  },
+  priceValue: {
+    fontSize: 16,
+    color: GREEN,
+    fontWeight: '700',
+  },
+
+  // ✅ Estilos para mostrar ruta
+  routeSection: {
+    width: '100%',
+    backgroundColor: '#F9FAFB',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+  },
+  routePoint: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  routeDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    marginRight: 12,
+  },
+  routeText: {
+    flex: 1,
+    fontSize: 12,
+    color: '#374151',
+    fontWeight: '500',
+  },
+  routeLine: {
+    width: 2,
+    height: 16,
+    backgroundColor: '#D1D5DB',
+    marginLeft: 5,
+    marginVertical: 4,
   },
 
   chip: {
@@ -175,7 +307,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 999,
-    marginBottom: 12,
+    marginBottom: 16,
   },
   chipIcon: {
     fontSize: 16,
@@ -190,15 +322,34 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#6B7280',
     textAlign: 'center',
+    lineHeight: 18,
   },
 
-  cta: {
+  // ✅ Estilos mejorados para botones
+  actionButtons: {
+    width: '100%',
     marginTop: 20,
+    gap: 12,
+  },
+  detailsButton: {
+    backgroundColor: '#F3F4F6',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  detailsButtonText: {
+    color: '#374151',
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  cta: {
     backgroundColor: GREEN,
     paddingVertical: 14,
     paddingHorizontal: 20,
     borderRadius: 14,
-    minWidth: 220,
     alignItems: 'center',
     shadowColor: GREEN,
     shadowOpacity: 0.25,
@@ -212,5 +363,4 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
 });
-
 export default PaymentSuccessScreen;

@@ -15,6 +15,7 @@ const RecuperacionScreen = ({ navigation }) => {
   const [email, setEmail] = useState('');
   const [emailError, setEmailError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [recoveryToken, setRecoveryToken] = useState(null); // Estado para guardar el token
 
   const validateEmail = (email) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -77,9 +78,52 @@ const RecuperacionScreen = ({ navigation }) => {
         'Accept': 'application/json',
       },
       body: JSON.stringify(requestPayload),
-    }, 10000); // 10 segundos de timeout
+    }, 10000);
 
     return response;
+  };
+
+  // Función mejorada para extraer el token de la respuesta
+  const extractRecoveryToken = (data) => {
+    console.log('Buscando token en respuesta:', data);
+    
+    const possibleTokenFields = [
+      'token', 'recoveryToken', 'reset_token', 'resetToken', 
+      'access_token', 'accessToken', 'verification_token',
+      'verificationToken', 'temp_token', 'tempToken', 'code',
+      'recovery_code', 'recoveryCode', 'session_token', 'sessionToken'
+    ];
+    
+    // Buscar en el objeto principal
+    for (const field of possibleTokenFields) {
+      if (data[field] && typeof data[field] === 'string') {
+        console.log(`Token encontrado en campo '${field}':`, data[field]);
+        return data[field];
+      }
+    }
+    
+    // Buscar en data.data si existe
+    if (data.data && typeof data.data === 'object') {
+      for (const field of possibleTokenFields) {
+        if (data.data[field] && typeof data.data[field] === 'string') {
+          console.log(`Token encontrado en data.${field}:`, data.data[field]);
+          return data.data[field];
+        }
+      }
+    }
+    
+    // Buscar en data.result si existe
+    if (data.result && typeof data.result === 'object') {
+      for (const field of possibleTokenFields) {
+        if (data.result[field] && typeof data.result[field] === 'string') {
+          console.log(`Token encontrado en result.${field}:`, data.result[field]);
+          return data.result[field];
+        }
+      }
+    }
+    
+    console.warn('No se encontró token de recuperación en la respuesta');
+    return null;
   };
 
   const handleNext = async () => {
@@ -99,27 +143,26 @@ const RecuperacionScreen = ({ navigation }) => {
     }
 
     setLoading(true);
-    setEmailError(''); // Limpiar errores previos
+    setEmailError('');
+    setRecoveryToken(null); // Limpiar token previo
 
     try {
       let response;
       let lastError;
-      let maxRetries = 2; // Máximo 2 reintentos (3 intentos total)
+      let maxRetries = 2;
       
       for (let attempt = 0; attempt <= maxRetries; attempt++) {
         try {
           response = await attemptApiCall(attempt);
-          break; // Si llegamos aquí, la petición fue exitosa
+          break;
         } catch (error) {
           lastError = error;
           
-          // Si es timeout y no es el último intento, continuar
           if (error.message.includes('tardó demasiado') && attempt < maxRetries) {
             console.log(`Intento ${attempt + 1} falló por timeout, reintentando...`);
             continue;
           }
           
-          // Si no es timeout o es el último intento, lanzar el error
           throw error;
         }
       }
@@ -130,12 +173,10 @@ const RecuperacionScreen = ({ navigation }) => {
       const responseText = await response.text();
       console.log('Respuesta del servidor:', responseText);
 
-      // Verificar si la respuesta es HTML (error del servidor)
       if (responseText.includes('<html>') || responseText.includes('<!DOCTYPE')) {
         throw new Error('El servidor está teniendo problemas. Intenta de nuevo en unos minutos.');
       }
 
-      // Verificar si la respuesta está vacía
       if (!responseText || responseText.trim() === '') {
         throw new Error('El servidor no respondió correctamente. Intenta de nuevo.');
       }
@@ -157,7 +198,6 @@ const RecuperacionScreen = ({ navigation }) => {
         
         switch (response.status) {
           case 400:
-            // Verificar si es específicamente "usuario no encontrado"
             if (data.message && data.message.toLowerCase().includes('usuario no encontrado')) {
               errorMessage = 'No existe una cuenta registrada con este correo electrónico';
               alertTitle = 'Email no registrado';
@@ -196,32 +236,6 @@ const RecuperacionScreen = ({ navigation }) => {
         return;
       }
 
-      // Buscar token de recuperación
-      let recoveryToken = null;
-      const possibleTokenFields = [
-        'token', 'recoveryToken', 'reset_token', 'resetToken', 
-        'access_token', 'accessToken', 'verification_token',
-        'verificationToken', 'temp_token', 'tempToken', 'code'
-      ];
-      
-      // Buscar en el objeto principal
-      for (const field of possibleTokenFields) {
-        if (data[field]) {
-          recoveryToken = data[field];
-          break;
-        }
-      }
-      
-      // Buscar en data.data si existe
-      if (!recoveryToken && data.data && typeof data.data === 'object') {
-        for (const field of possibleTokenFields) {
-          if (data.data[field]) {
-            recoveryToken = data.data[field];
-            break;
-          }
-        }
-      }
-
       // Verificar si se envió el código exitosamente
       const wasCodeSent = data.success === true || 
                          data.message?.toLowerCase().includes('enviado') ||
@@ -231,24 +245,15 @@ const RecuperacionScreen = ({ navigation }) => {
       if (!wasCodeSent) {
         throw new Error('No se pudo confirmar el envío del código. Intenta de nuevo.');
       }
-      
-      if (!recoveryToken) {
-        console.warn('No se recibió token de recuperación:', data);
-        Alert.alert(
-          'Código Enviado',
-          'Se ha enviado un código a tu correo, pero no se recibió token del servidor. ¿Deseas continuar?',
-          [
-            { text: 'Cancelar', style: 'cancel' },
-            { 
-              text: 'Continuar', 
-              onPress: () => proceedToNextScreen(null)
-            }
-          ]
-        );
-        return;
+
+      // Extraer y guardar el token de recuperación
+      const token = extractRecoveryToken(data);
+      if (token) {
+        setRecoveryToken(token); // Guardar el token en el estado
+        console.log('Token de recuperación guardado:', token);
       }
       
-      proceedToNextScreen(recoveryToken);
+      proceedToNextScreen(token);
       
     } catch (error) {
       console.error('Error en handleNext:', error);
@@ -271,12 +276,34 @@ const RecuperacionScreen = ({ navigation }) => {
       
       Alert.alert('Error', userMessage);
     } finally {
-      // Asegurar que siempre se resetee el loading
       setLoading(false);
     }
   };
   
   const proceedToNextScreen = (token) => {
+    // Mejorar el manejo cuando no hay token
+    if (!token) {
+      Alert.alert(
+        'Código Enviado', 
+        'Se ha enviado un código de recuperación a tu email. Revisa tu bandeja de entrada y carpeta de spam.\n\nNota: No se recibió un token de autenticación del servidor, pero puedes continuar.',
+        [
+          { text: 'Cancelar', style: 'cancel' },
+          { 
+            text: 'Continuar', 
+            onPress: () => navigation.navigate('Recuperacion2Screen', { 
+              email: email.trim().toLowerCase(),
+              via: 'email',
+              recoveryToken: null,
+              timestamp: Date.now(),
+              fromScreen: 'RecuperacionScreen'
+            })
+          }
+        ]
+      );
+      return;
+    }
+
+    // Cuando sí hay token, proceder normalmente
     Alert.alert(
       'Código Enviado', 
       'Se ha enviado un código de recuperación a tu email. Revisa tu bandeja de entrada y carpeta de spam.',
@@ -287,7 +314,8 @@ const RecuperacionScreen = ({ navigation }) => {
             email: email.trim().toLowerCase(),
             via: 'email',
             recoveryToken: token,
-            timestamp: Date.now()
+            timestamp: Date.now(),
+            fromScreen: 'RecuperacionScreen'
           })
         }
       ]
@@ -353,6 +381,15 @@ const RecuperacionScreen = ({ navigation }) => {
             Solo se aceptan direcciones de email válidas
           </Text>
         </View>
+
+        {/* Mostrar estado del token para debugging */}
+        {__DEV__ && recoveryToken && (
+          <View style={styles.debugContainer}>
+            <Text style={styles.debugText}>
+              Token guardado: {recoveryToken.substring(0, 10)}...
+            </Text>
+          </View>
+        )}
       </View>
 
       <View style={styles.progressContainer}>
@@ -465,6 +502,17 @@ const styles = StyleSheet.create({
     color: '#6b7280',
     fontSize: 13,
     marginLeft: 6,
+  },
+  debugContainer: {
+    backgroundColor: '#f0f9ff',
+    padding: 8,
+    borderRadius: 4,
+    marginBottom: 16,
+  },
+  debugText: {
+    fontSize: 12,
+    color: '#0369a1',
+    fontFamily: 'monospace',
   },
   progressContainer: {
     flexDirection: 'row',

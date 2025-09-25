@@ -31,9 +31,9 @@
     "expo-auth-session": "~6.2.1",
     "expo-camera": "~17.0.8",
     "expo-crypto": "~14.1.5",
-    "expo-linear-gradient": "~14.1.5",
+    "expo-image-manipulator": "~14.0.7",
     "expo-image-picker": "~17.0.8",
-    "expo-linear-gradient": "^14.1.5",
+    "expo-linear-gradient": "~14.1.5",
     "expo-permissions": "^14.4.0",
     "expo-secure-store": "~14.2.4",
     "expo-status-bar": "~3.0.8",
@@ -53,10 +53,12 @@
     "react-native-splash-screen": "^3.3.0",
     "react-native-svg": "15.12.1",
     "react-native-vector-icons": "^10.3.0",
-    "expo-image-manipulator": "~14.0.7"
+    "react-native-webview": "^13.16.0",
+    "expo-location": "~19.0.7"
   },
   "devDependencies": {
     "@babel/core": "^7.20.0",
+    "@react-native-community/cli": "^20.0.2",
     "babel-preset-expo": "^54.0.1"
   },
   "private": true
