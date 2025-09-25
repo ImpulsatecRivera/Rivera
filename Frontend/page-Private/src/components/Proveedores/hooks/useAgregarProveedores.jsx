@@ -179,9 +179,9 @@ const useSupplierForm = () => {
       console.log('Datos completos:', dataToSend);
 
       console.log('=== ENVIANDO PETICIÓN ===');
-      console.log('URL:', 'https://riveraproject-production.up.railway.app/api/proveedores');
+      console.log('URL:', 'https://riveraproject-production-933e.up.railway.app/api/proveedores');
 
-      const response = await fetch('https://riveraproject-production.up.railway.app/api/proveedores', {
+      const response = await fetch('https://riveraproject-production-933e.up.railway.app/api/proveedores', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

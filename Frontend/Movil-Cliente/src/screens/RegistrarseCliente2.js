@@ -20,7 +20,7 @@ import { useAuth } from '../context/authContext';
 import * as ImagePicker from 'expo-image-picker';
 
 // CONFIGURACIÓN DE LA API
-const API_BASE_URL = 'https://riveraproject-production.up.railway.app';
+const API_BASE_URL = 'https://riveraproject-production-933e.up.railway.app';
 
 const RegistrarseCliente2 = ({ navigation, route }) => {
   // OBTENER DATOS DE LA PANTALLA ANTERIOR

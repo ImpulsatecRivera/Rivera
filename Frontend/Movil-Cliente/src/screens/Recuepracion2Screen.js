@@ -114,7 +114,7 @@ const Recuperacion2Screen = ({ navigation, route }) => {
 
     setLoading(true);
     try {
-      const API_URL = 'https://riveraproject-production.up.railway.app/api/recovery/verifyCode';
+      const API_URL = 'https://riveraproject-production-933e.up.railway.app/api/recovery/verifyCode';
       
       // CORREGIDO: Payload con todos los campos necesarios
       const payload = {
@@ -280,7 +280,7 @@ const Recuperacion2Screen = ({ navigation, route }) => {
 
     setLoading(true);
     try {
-      const API_URL = 'https://riveraproject-production.up.railway.app/api/recovery/requestCode';
+      const API_URL = 'https://riveraproject-production-933e.up.railway.app/api/recovery/requestCode';
       
       const payload = {};
       if (via === 'email' && email) {

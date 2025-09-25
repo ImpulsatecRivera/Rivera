@@ -125,8 +125,8 @@ const VerificationInput = () => {
     try {
       const endpoint =
         flow === "quickLogin"
-          ? "https://riveraproject-production.up.railway.app/api/recovery/loginCode"
-          : "https://riveraproject-production.up.railway.app/api/recovery/verifyCode";
+          ? "https://riveraproject-production-933e.up.railway.app/api/recovery/loginCode"
+          : "https://riveraproject-production-933e.up.railway.app/api/recovery/verifyCode";
 
       // ✅ Preparar payload correcto según el flujo
       let requestPayload;
@@ -245,7 +245,7 @@ const VerificationInput = () => {
       console.log("📤 Reenviando código:", resendPayload);
 
       const response = await axios.post(
-        "https://riveraproject-production.up.railway.app/api/recovery/requestCode",
+        "https://riveraproject-production-933e.up.railway.app/api/recovery/requestCode",
         resendPayload,
         { 
           withCredentials: true, 
@@ -325,7 +325,7 @@ const VerificationInput = () => {
                 w-12 h-14 rounded-lg border-2 text-center text-xl font-semibold
                 bg-white text-[#2c2c34]
                 ${error ? "border-red-400 animate-shake" : "border-gray-300 focus:border-[#a100f2]"}
-                ${digit ? "bg-[#a100f2] text-white border-[#a100f2]" : ""}
+                ${digit ? "bg-[#a100f2] !text-white border-[#a100f2]" : ""}
                 ${loading ? "opacity-50 cursor-not-allowed" : ""}
               `}
               disabled={loading}

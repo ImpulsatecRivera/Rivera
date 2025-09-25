@@ -29,7 +29,7 @@ const CompletedTrips = () => {
     
     try {
       // 🔧 RUTA CORRECTA: /completed
-      const res = await axios.get('https://riveraproject-production.up.railway.app/api/viajes/completed');
+      const res = await axios.get('https://riveraproject-production-933e.up.railway.app/api/viajes/completed');
       
       console.log('✅ Viajes completados recibidos:', res.data);
       
