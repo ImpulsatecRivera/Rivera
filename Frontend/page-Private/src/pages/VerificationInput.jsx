@@ -125,8 +125,8 @@ const VerificationInput = () => {
     try {
       const endpoint =
         flow === "quickLogin"
-          ? "https://riveraproject-5.onrender.com/api/recovery/loginCode"
-          : "https://riveraproject-5.onrender.com/api/recovery/verifyCode";
+          ? "https://riveraproject-production.up.railway.app/api/recovery/loginCode"
+          : "https://riveraproject-production.up.railway.app/api/recovery/verifyCode";
 
       // ✅ Preparar payload correcto según el flujo
       let requestPayload;
