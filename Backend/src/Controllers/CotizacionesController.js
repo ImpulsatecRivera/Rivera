@@ -5,7 +5,6 @@ const cotizacionesController = {}
 
 cotizacionesController.getAllCotizaciones = async(req, res) => {
     try {
-        // 🔍 Obtener parámetros de consulta opcionales
         const { 
             page = 1, 
             limit = 10, 
@@ -15,7 +14,6 @@ cotizacionesController.getAllCotizaciones = async(req, res) => {
             sortOrder = 'desc' 
         } = req.query;
 
-        // ✅ Validar parámetros de paginación
         const pageNum = parseInt(page);
         const limitNum = parseInt(limit);
 
@@ -31,7 +29,6 @@ cotizacionesController.getAllCotizaciones = async(req, res) => {
             });
         }
 
-        // 🔍 Construir filtros
         const filtros = {};
         
         if (status) {
@@ -53,8 +50,7 @@ cotizacionesController.getAllCotizaciones = async(req, res) => {
             filtros.clientId = clientId;
         }
 
-        // ✅ Validar campo de ordenamiento
-        const camposValidos = ['createdAt', 'deliveryDate', 'price', 'quoteName', 'status'];
+        const camposValidos = ['createdAt', 'deliveryDate', 'fechaNecesaria', 'price', 'quoteName', 'status'];
         if (!camposValidos.includes(sortBy)) {
             return res.status(400).json({ 
                 message: `Campo de ordenamiento inválido. Valores permitidos: ${camposValidos.join(', ')}` 
@@ -68,22 +64,18 @@ cotizacionesController.getAllCotizaciones = async(req, res) => {
             });
         }
 
-        // 📊 Calcular offset para paginación
         const skip = (pageNum - 1) * limitNum;
 
-        // 🔍 Obtener cotizaciones con filtros y paginación
         const cotizaciones = await CotizacionesModel
             .find(filtros)
-            .populate('clientId', 'name email phone') // Poblar datos del cliente
+            .populate('clientId', 'name email phone')
             .sort({ [sortBy]: sortOrder === 'desc' ? -1 : 1 })
             .skip(skip)
             .limit(limitNum);
 
-        // 📈 Obtener total de documentos para metadata
         const total = await CotizacionesModel.countDocuments(filtros);
         const totalPages = Math.ceil(total / limitNum);
 
-        // ✅ Respuesta exitosa con metadata
         res.status(200).json({
             message: "Cotizaciones obtenidas exitosamente",
             data: cotizaciones,
@@ -110,42 +102,36 @@ cotizacionesController.getCotizacionById = async(req, res) => {
     try {
         const { id } = req.params;
 
-        // ✅ Validar que el ID sea proporcionado
         if (!id) {
             return res.status(400).json({ 
                 message: "ID de cotización es requerido" 
             });
         }
 
-        // ✅ Validar formato del ObjectId
         if (!mongoose.Types.ObjectId.isValid(id)) {
             return res.status(400).json({ 
                 message: "Formato de ID inválido" 
             });
         }
 
-        // 🔍 Buscar cotización con datos del cliente poblados
         const cotizacion = await CotizacionesModel
             .findById(id)
-            .populate('clientId', 'name email phone address'); // Poblar datos del cliente
+            .populate('clientId', 'name email phone address');
         
-        // ❌ Validar que la cotización exista
         if (!cotizacion) {
             return res.status(404).json({ 
                 message: "Cotización no encontrada" 
             });
         }
 
-        // ✅ Agregar información adicional útil
         const cotizacionConInfo = {
             ...cotizacion.toObject(),
-            // Campos virtuales calculados
             estaVencida: cotizacion.estaVencida,
             duracionEstimada: cotizacion.duracionEstimada,
-            // Estado de las fechas
             fechaInfo: {
-                diasParaVencimiento: Math.ceil((cotizacion.costos.validezCotizacion - new Date()) / (1000 * 60 * 60 * 24)),
-                diasParaEntrega: Math.ceil((new Date(cotizacion.deliveryDate) - new Date()) / (1000 * 60 * 60 * 24))
+                diasParaVencimiento: cotizacion.costos.validezCotizacion ? 
+                    Math.ceil((cotizacion.costos.validezCotizacion - new Date()) / (1000 * 60 * 60 * 24)) : null,
+                diasParaNecesidad: Math.ceil((new Date(cotizacion.fechaNecesaria) - new Date()) / (1000 * 60 * 60 * 24))
             }
         };
         
@@ -157,7 +143,6 @@ cotizacionesController.getCotizacionById = async(req, res) => {
     } catch (error) {
         console.error('Error al obtener cotización por ID:', error);
         
-        // 🔍 Manejo específico de errores de Mongoose
         if (error.name === 'CastError') {
             return res.status(400).json({ 
                 message: "Formato de ID inválido" 
@@ -179,20 +164,29 @@ cotizacionesController.createCotizacion = async (req, res) => {
             quoteName,
             travelLocations,
             truckType,
+            fechaNecesaria,
             deliveryDate,
             paymentMethod,
-            price,
             ruta,
             carga,
             horarios,
-            costos,
             observaciones,
-            notasInternas
+            notasInternas,
+            pickupLocation,
+            destinationLocation,
+            estimatedDistance
         } = req.body;
 
-        // 🔒 VALIDACIONES ESTRICTAS COMPLETAS
-        
-        // Validación de campos básicos requeridos
+        console.log('📦 Datos recibidos para crear cotización:', {
+            clientId,
+            quoteName,
+            pickupLocation,
+            destinationLocation,
+            fechaNecesaria,
+            paymentMethod
+        });
+
+        // ✅ VALIDACIONES BÁSICAS
         if (!clientId) {
             return res.status(400).json({ 
                 message: "Error de validación", 
@@ -200,22 +194,21 @@ cotizacionesController.createCotizacion = async (req, res) => {
             });
         }
 
-        if (!quoteDescription || !quoteName || !travelLocations || !deliveryDate || !price) {
+        if (!mongoose.Types.ObjectId.isValid(clientId)) {
             return res.status(400).json({ 
                 message: "Error de validación", 
-                error: "Los campos quoteDescription, quoteName, travelLocations, deliveryDate y price son requeridos" 
+                error: "ID de cliente inválido" 
             });
         }
 
-        // Validación de precio
-        if (typeof price !== 'number' || price <= 0) {
+        if (!quoteDescription || !quoteName || !travelLocations || !fechaNecesaria) {
             return res.status(400).json({ 
                 message: "Error de validación", 
-                error: "El precio debe ser un número mayor a 0" 
+                error: "Los campos quoteDescription, quoteName, travelLocations y fechaNecesaria son requeridos" 
             });
         }
 
-        // Validación estricta de ruta
+        // ✅ VALIDACIÓN DE RUTA
         if (!ruta || !ruta.origen || !ruta.destino) {
             return res.status(400).json({ 
                 message: "Error de validación", 
@@ -223,7 +216,6 @@ cotizacionesController.createCotizacion = async (req, res) => {
             });
         }
 
-        // Validación de nombres de origen y destino
         if (!ruta.origen.nombre || !ruta.destino.nombre) {
             return res.status(400).json({ 
                 message: "Error de validación", 
@@ -231,7 +223,6 @@ cotizacionesController.createCotizacion = async (req, res) => {
             });
         }
 
-        // Validación estricta de coordenadas del origen
         if (!ruta.origen.coordenadas || 
             typeof ruta.origen.coordenadas.lat !== 'number' || 
             typeof ruta.origen.coordenadas.lng !== 'number' ||
@@ -239,11 +230,10 @@ cotizacionesController.createCotizacion = async (req, res) => {
             ruta.origen.coordenadas.lng < -180 || ruta.origen.coordenadas.lng > 180) {
             return res.status(400).json({ 
                 message: "Error de validación", 
-                error: "Las coordenadas del origen son requeridas y deben ser números válidos (lat: -90 a 90, lng: -180 a 180)" 
+                error: "Las coordenadas del origen son requeridas y deben ser números válidos" 
             });
         }
 
-        // Validación estricta de coordenadas del destino
         if (!ruta.destino.coordenadas || 
             typeof ruta.destino.coordenadas.lat !== 'number' || 
             typeof ruta.destino.coordenadas.lng !== 'number' ||
@@ -251,11 +241,10 @@ cotizacionesController.createCotizacion = async (req, res) => {
             ruta.destino.coordenadas.lng < -180 || ruta.destino.coordenadas.lng > 180) {
             return res.status(400).json({ 
                 message: "Error de validación", 
-                error: "Las coordenadas del destino son requeridas y deben ser números válidos (lat: -90 a 90, lng: -180 a 180)" 
+                error: "Las coordenadas del destino son requeridas y deben ser números válidos" 
             });
         }
 
-        // Validación de distancia y tiempo de ruta
         if (typeof ruta.distanciaTotal !== 'number' || ruta.distanciaTotal <= 0) {
             return res.status(400).json({ 
                 message: "Error de validación", 
@@ -270,7 +259,7 @@ cotizacionesController.createCotizacion = async (req, res) => {
             });
         }
 
-        // Validación estricta de carga
+        // ✅ VALIDACIÓN DE CARGA
         if (!carga || !carga.descripcion) {
             return res.status(400).json({ 
                 message: "Error de validación", 
@@ -285,23 +274,7 @@ cotizacionesController.createCotizacion = async (req, res) => {
             });
         }
 
-        // Validación de categoría de carga
-        const categoriasValidas = [
-            'alimentos_perecederos', 'alimentos_no_perecederos', 'bebidas',
-            'materiales_construccion', 'textiles', 'electronicos', 'medicamentos',
-            'maquinaria', 'vehiculos', 'quimicos', 'combustibles', 'papel_carton',
-            'muebles', 'productos_agricolas', 'metales', 'plasticos',
-            'vidrio_ceramica', 'productos_limpieza', 'cosmeticos', 'juguetes', 'otros'
-        ];
-
-        if (carga.categoria && !categoriasValidas.includes(carga.categoria)) {
-            return res.status(400).json({ 
-                message: "Error de validación", 
-                error: `La categoría de carga debe ser una de: ${categoriasValidas.join(', ')}` 
-            });
-        }
-
-        // Validación estricta de horarios
+        // ✅ VALIDACIÓN DE HORARIOS
         if (!horarios || !horarios.fechaSalida || !horarios.fechaLlegadaEstimada) {
             return res.status(400).json({ 
                 message: "Error de validación", 
@@ -316,9 +289,9 @@ cotizacionesController.createCotizacion = async (req, res) => {
             });
         }
 
-        // Validar que la fecha de salida no sea en el pasado
         const fechaSalida = new Date(horarios.fechaSalida);
         const fechaLlegada = new Date(horarios.fechaLlegadaEstimada);
+        const fechaNec = new Date(fechaNecesaria);
         const ahora = new Date();
 
         if (fechaSalida < ahora) {
@@ -335,44 +308,14 @@ cotizacionesController.createCotizacion = async (req, res) => {
             });
         }
 
-        // Validación estricta de costos
-        if (!costos) {
+        if (fechaNec < ahora) {
             return res.status(400).json({ 
                 message: "Error de validación", 
-                error: "Los costos son requeridos" 
+                error: "La fecha necesaria no puede ser en el pasado" 
             });
         }
 
-        if (typeof costos.combustible !== 'number' || costos.combustible < 0) {
-            return res.status(400).json({ 
-                message: "Error de validación", 
-                error: "El costo de combustible debe ser un número mayor o igual a 0" 
-            });
-        }
-
-        if (typeof costos.peajes !== 'number' || costos.peajes < 0) {
-            return res.status(400).json({ 
-                message: "Error de validación", 
-                error: "El costo de peajes debe ser un número mayor o igual a 0" 
-            });
-        }
-
-        if (typeof costos.conductor !== 'number' || costos.conductor < 0) {
-            return res.status(400).json({ 
-                message: "Error de validación", 
-                error: "El costo del conductor debe ser un número mayor o igual a 0" 
-            });
-        }
-
-        // Validar truckType si se proporciona
-        if (truckType && !categoriasValidas.includes(truckType)) {
-            return res.status(400).json({ 
-                message: "Error de validación", 
-                error: `El tipo de camión debe ser uno de: ${categoriasValidas.join(', ')}` 
-            });
-        }
-
-        // Validar paymentMethod si se proporciona
+        // ✅ VALIDACIÓN DE MÉTODO DE PAGO
         const metodosPagoValidos = ['efectivo', 'transferencia', 'cheque', 'credito', 'tarjeta'];
         if (paymentMethod && !metodosPagoValidos.includes(paymentMethod)) {
             return res.status(400).json({ 
@@ -381,16 +324,21 @@ cotizacionesController.createCotizacion = async (req, res) => {
             });
         }
 
-        // ✅ CREAR COTIZACIÓN CON VALIDACIONES ESTRICTAS PASADAS
+        // ✅ CREAR COTIZACIÓN (SIN PRECIO)
         const nuevaCotizacion = new CotizacionesModel({
             clientId,
             quoteDescription,
             quoteName,
             travelLocations,
             truckType: truckType || 'otros',
-            deliveryDate: new Date(deliveryDate),
+            fechaNecesaria: fechaNec,
+            deliveryDate: deliveryDate ? new Date(deliveryDate) : fechaLlegada,
             paymentMethod: paymentMethod || 'efectivo',
-            price,
+            // price: NO SE INCLUYE - será null por defecto
+            
+            pickupLocation: pickupLocation || ruta.origen.nombre,
+            destinationLocation: destinationLocation || ruta.destino.nombre,
+            estimatedDistance: estimatedDistance || ruta.distanciaTotal,
             
             ruta: {
                 origen: {
@@ -434,8 +382,8 @@ cotizacionesController.createCotizacion = async (req, res) => {
             },
             
             horarios: {
-                fechaSalida: new Date(horarios.fechaSalida),
-                fechaLlegadaEstimada: new Date(horarios.fechaLlegadaEstimada),
+                fechaSalida: fechaSalida,
+                fechaLlegadaEstimada: fechaLlegada,
                 tiempoEstimadoViaje: horarios.tiempoEstimadoViaje,
                 flexibilidadHoraria: horarios.flexibilidadHoraria || {
                     permitida: true,
@@ -444,23 +392,22 @@ cotizacionesController.createCotizacion = async (req, res) => {
                 horarioPreferido: horarios.horarioPreferido
             },
             
-            costos: {
-                combustible: costos.combustible,
-                peajes: costos.peajes,
-                conductor: costos.conductor,
-                otros: costos.otros || 0,
-                impuestos: costos.impuestos || 0,
-                moneda: costos.moneda || 'USD',
-                validezCotizacion: costos.validezCotizacion ? new Date(costos.validezCotizacion) : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
-                // subtotal y total se calculan automáticamente en el middleware pre-save
-            },
+            // costos: se inicializan en 0 por defecto en el modelo
             
             observaciones,
             notasInternas
         });
 
-        // Guardar la cotización (esto activará el middleware pre-save)
         const cotizacionGuardada = await nuevaCotizacion.save();
+
+        console.log('✅ Cotización creada exitosamente:', {
+            id: cotizacionGuardada._id,
+            quoteName: cotizacionGuardada.quoteName,
+            pickupLocation: cotizacionGuardada.pickupLocation,
+            destinationLocation: cotizacionGuardada.destinationLocation,
+            fechaNecesaria: cotizacionGuardada.fechaNecesaria,
+            price: cotizacionGuardada.price
+        });
 
         res.status(201).json({
             message: "Cotización creada exitosamente",
@@ -468,7 +415,8 @@ cotizacionesController.createCotizacion = async (req, res) => {
         });
 
     } catch (error) {
-        // Manejar errores de validación de Mongoose
+        console.error('❌ Error creando cotización:', error);
+        
         if (error.name === 'ValidationError') {
             const errores = Object.values(error.errors).map(err => err.message);
             return res.status(400).json({
@@ -477,7 +425,6 @@ cotizacionesController.createCotizacion = async (req, res) => {
             });
         }
 
-        // Manejar error de referencia de cliente inválido
         if (error.name === 'CastError' && error.path === 'clientId') {
             return res.status(400).json({
                 message: "Error de validación",
@@ -485,7 +432,6 @@ cotizacionesController.createCotizacion = async (req, res) => {
             });
         }
 
-        // Error de datos duplicados
         if (error.code === 11000) {
             return res.status(400).json({
                 message: "Error de duplicación",
@@ -507,26 +453,26 @@ cotizacionesController.updateCotizacion = async(req, res) => {
             price, 
             costos, 
             status, 
-            motivoRechazo 
+            motivoRechazo,
+            pickupLocation,
+            destinationLocation,
+            estimatedDistance
         } = req.body;
 
-        console.log('✏️ Actualizando cotización:', { id, status, price });
+        console.log('✏️ Actualizando cotización:', { id, status, price, pickupLocation, destinationLocation });
 
-        // ✅ Validar que el ID sea proporcionado
         if (!id) {
             return res.status(400).json({ 
                 message: "ID de cotización es requerido" 
             });
         }
 
-        // ✅ Validar formato del ObjectId
         if (!mongoose.Types.ObjectId.isValid(id)) {
             return res.status(400).json({ 
                 message: "Formato de ID inválido" 
             });
         }
 
-        // 🔍 Buscar la cotización existente
         const cotizacionExistente = await CotizacionesModel.findById(id);
         
         if (!cotizacionExistente) {
@@ -535,24 +481,35 @@ cotizacionesController.updateCotizacion = async(req, res) => {
             });
         }
 
-        // 📝 Preparar objeto de actualización
         const actualizacion = {};
 
-        // 💰 ACTUALIZAR PRECIO SI SE PROPORCIONA
+        // ✨ ACTUALIZAR CAMPOS DE UBICACIÓN
+        if (pickupLocation !== undefined) {
+            actualizacion.pickupLocation = pickupLocation;
+        }
+
+        if (destinationLocation !== undefined) {
+            actualizacion.destinationLocation = destinationLocation;
+        }
+
+        if (estimatedDistance !== undefined && typeof estimatedDistance === 'number' && estimatedDistance >= 0) {
+            actualizacion.estimatedDistance = estimatedDistance;
+        }
+
+        // 💰 ACTUALIZAR PRECIO (cuando el transportista responde)
         if (price !== undefined) {
-            if (typeof price !== 'number' || price <= 0) {
+            if (typeof price !== 'number' || price < 0) {
                 return res.status(400).json({ 
-                    message: "El precio debe ser un número mayor a 0" 
+                    message: "El precio debe ser un número mayor o igual a 0" 
                 });
             }
             actualizacion.price = price;
         }
 
-        // 💰 ACTUALIZAR COSTOS SI SE PROPORCIONAN
+        // 💰 ACTUALIZAR COSTOS
         if (costos && typeof costos === 'object') {
-            const costosActualizados = { ...cotizacionExistente.costos };
+            const costosActualizados = { ...cotizacionExistente.costos.toObject() };
 
-            // Validar y actualizar cada campo de costos
             if (costos.combustible !== undefined) {
                 if (typeof costos.combustible !== 'number' || costos.combustible < 0) {
                     return res.status(400).json({ 
@@ -562,7 +519,14 @@ cotizacionesController.updateCotizacion = async(req, res) => {
                 costosActualizados.combustible = costos.combustible;
             }
 
-
+            if (costos.peajes !== undefined) {
+                if (typeof costos.peajes !== 'number' || costos.peajes < 0) {
+                    return res.status(400).json({ 
+                        message: "El costo de peajes debe ser un número mayor o igual a 0" 
+                    });
+                }
+                costosActualizados.peajes = costos.peajes;
+            }
 
             if (costos.conductor !== undefined) {
                 if (typeof costos.conductor !== 'number' || costos.conductor < 0) {
@@ -593,6 +557,7 @@ cotizacionesController.updateCotizacion = async(req, res) => {
 
             // 📊 RECALCULAR SUBTOTAL Y TOTAL
             costosActualizados.subtotal = (costosActualizados.combustible || 0) +
+                                         (costosActualizados.peajes || 0) +
                                          (costosActualizados.conductor || 0) +
                                          (costosActualizados.otros || 0);
             
@@ -601,7 +566,7 @@ cotizacionesController.updateCotizacion = async(req, res) => {
             actualizacion.costos = costosActualizados;
         }
 
-        // 📅 MANEJAR CAMBIOS DE STATUS Y FECHAS AUTOMÁTICAS
+        // 📅 MANEJAR CAMBIOS DE STATUS
         if (status !== undefined) {
             const statusValidos = ['pendiente', 'enviada', 'aceptada', 'rechazada', 'ejecutada', 'cancelada'];
             
@@ -613,13 +578,11 @@ cotizacionesController.updateCotizacion = async(req, res) => {
 
             actualizacion.status = status;
 
-            // 📅 ACTUALIZAR FECHAS AUTOMÁTICAMENTE SEGÚN EL STATUS
             const ahora = new Date();
 
             switch (status) {
                 case 'enviada':
                     actualizacion.fechaEnvio = ahora;
-                    // Limpiar fechas posteriores si se regresa a enviada
                     actualizacion.fechaAceptacion = null;
                     actualizacion.fechaRechazo = null;
                     actualizacion.motivoRechazo = null;
@@ -627,25 +590,20 @@ cotizacionesController.updateCotizacion = async(req, res) => {
 
                 case 'aceptada':
                     actualizacion.fechaAceptacion = ahora;
-                    // Si no tenía fecha de envío, establecerla
                     if (!cotizacionExistente.fechaEnvio) {
                         actualizacion.fechaEnvio = ahora;
                     }
-                    // Limpiar campos de rechazo
                     actualizacion.fechaRechazo = null;
                     actualizacion.motivoRechazo = null;
                     break;
 
                 case 'rechazada':
                     actualizacion.fechaRechazo = ahora;
-                    // Si no tenía fecha de envío, establecerla
                     if (!cotizacionExistente.fechaEnvio) {
                         actualizacion.fechaEnvio = ahora;
                     }
-                    // Limpiar campos de aceptación
                     actualizacion.fechaAceptacion = null;
                     
-                    // Validar motivo de rechazo
                     if (!motivoRechazo || motivoRechazo.trim() === '') {
                         return res.status(400).json({ 
                             message: "El motivo de rechazo es requerido cuando el status es 'rechazada'" 
@@ -655,21 +613,17 @@ cotizacionesController.updateCotizacion = async(req, res) => {
                     break;
 
                 case 'ejecutada':
-                    // Para ejecutar, debe haber sido aceptada primero
                     if (cotizacionExistente.status !== 'aceptada') {
                         return res.status(400).json({ 
                             message: "Solo se pueden ejecutar cotizaciones que han sido aceptadas" 
                         });
                     }
-                    // No modificar fechas anteriores, solo establecer el status
                     break;
 
                 case 'cancelada':
-                    // No modificar fechas, solo el status
                     break;
 
                 case 'pendiente':
-                    // Si se regresa a pendiente, limpiar todas las fechas
                     actualizacion.fechaEnvio = null;
                     actualizacion.fechaAceptacion = null;
                     actualizacion.fechaRechazo = null;
@@ -678,27 +632,23 @@ cotizacionesController.updateCotizacion = async(req, res) => {
             }
         }
 
-        // 🔍 Verificar que hay algo que actualizar
         if (Object.keys(actualizacion).length === 0) {
             return res.status(400).json({ 
                 message: "No se proporcionaron campos válidos para actualizar" 
             });
         }
 
-        // ✅ REALIZAR LA ACTUALIZACIÓN
         const cotizacionActualizada = await CotizacionesModel.findByIdAndUpdate(
             id,
             actualizacion,
             { 
-                new: true, // Devolver el documento actualizado
-                runValidators: true // Ejecutar validaciones del modelo
+                new: true,
+                runValidators: true
             }
         ).populate('clientId', 'name email phone');
 
-        // ✅ Log de auditoría
-        console.log(`Cotización actualizada - ID: ${id}, Status: ${status}, Usuario: ${req.user?.id || 'Sistema'}`);
+        console.log(`✅ Cotización actualizada - ID: ${id}, Status: ${status}, Precio: ${price}`);
 
-        // ✅ Respuesta exitosa
         res.status(200).json({
             message: "Cotización actualizada exitosamente",
             data: cotizacionActualizada,
@@ -712,9 +662,8 @@ cotizacionesController.updateCotizacion = async(req, res) => {
         });
 
     } catch (error) {
-        console.error('Error al actualizar cotización:', error);
+        console.error('❌ Error al actualizar cotización:', error);
 
-        // 🔍 Manejo específico de errores
         if (error.name === 'CastError') {
             return res.status(400).json({ 
                 message: "Formato de ID inválido" 
@@ -734,27 +683,25 @@ cotizacionesController.updateCotizacion = async(req, res) => {
         });
     }
 }
+
 cotizacionesController.deleteCotizacion = async(req, res) => {
     try {
         const { id } = req.params;
         
         console.log('🗑️ Eliminando cotización:', { id });
 
-        // ✅ Validar que el ID sea proporcionado
         if (!id) {
             return res.status(400).json({ 
                 message: "ID de cotización es requerido" 
             });
         }
 
-        // ✅ Validar formato del ObjectId
         if (!mongoose.Types.ObjectId.isValid(id)) {
             return res.status(400).json({ 
                 message: "Formato de ID inválido" 
             });
         }
 
-        // 🔍 Primero verificar que la cotización existe
         const cotizacionExistente = await CotizacionesModel.findById(id);
         
         if (!cotizacionExistente) {
@@ -763,11 +710,9 @@ cotizacionesController.deleteCotizacion = async(req, res) => {
             });
         }
 
-        // 🗑️ Proceder con la eliminación directamente
         const cotizacionEliminada = await CotizacionesModel.findByIdAndDelete(id);
         
-        // ✅ Log de auditoría
-        console.log(`Cotización eliminada - ID: ${id}, Usuario: ${req.user?.id || 'Sistema'}`);
+        console.log(`✅ Cotización eliminada - ID: ${id}`);
         
         res.status(200).json({ 
             message: "Cotización eliminada exitosamente",
@@ -780,19 +725,11 @@ cotizacionesController.deleteCotizacion = async(req, res) => {
         });
 
     } catch (error) {
-        console.error('Error al eliminar cotización:', error);
+        console.error('❌ Error al eliminar cotización:', error);
         
-        // 🔍 Manejo específico de errores
         if (error.name === 'CastError') {
             return res.status(400).json({ 
                 message: "Formato de ID inválido" 
-            });
-        }
-
-        if (error.name === 'ValidationError') {
-            return res.status(400).json({ 
-                message: "Error de validación", 
-                errores: Object.values(error.errors).map(err => err.message) 
             });
         }
 
@@ -802,7 +739,5 @@ cotizacionesController.deleteCotizacion = async(req, res) => {
         });
     }
 }
-
-
 
 export default cotizacionesController;
