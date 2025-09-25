@@ -30,12 +30,11 @@ export const config = {
         CLIENT_ID: process.env.GOOGLE_CLIENT_ID,
         CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET
     },
-     TWILIO: {
-    ACCOUNT_SID: process.env.TWILIO_ACCOUNT_SID,
-    AUTH_TOKEN: process.env.TWILIO_AUTH_TOKEN,
-    PHONE_NUMBER: process.env.TWILIO_PHONE_NUMBER
+    TWILIO_ACCOUNT_SID: process.env.TWILIO_ACCOUNT_SID,
+    TWILIO_AUTH_TOKEN: process.env.TWILIO_AUTH_TOKEN,
+    TWILIO_PHONE_NUMBER: process.env.TWILIO_PHONE_NUMBER,
   }
-};
+
 
 console.log('🔧 [CONFIG] Variables de entorno cargadas:');
 console.log('TWILIO_ACCOUNT_SID:', config.TWILIO_ACCOUNT_SID ? '✅' : '❌');
