@@ -245,7 +245,7 @@ const VerificationInput = () => {
       console.log("📤 Reenviando código:", resendPayload);
 
       const response = await axios.post(
-        "https://riveraproject-5.onrender.com/api/recovery/requestCode",
+        "https://riveraproject-production.up.railway.app/api/recovery/requestCode",
         resendPayload,
         { 
           withCredentials: true, 
