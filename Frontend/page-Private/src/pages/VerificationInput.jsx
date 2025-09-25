@@ -325,7 +325,7 @@ const VerificationInput = () => {
                 w-12 h-14 rounded-lg border-2 text-center text-xl font-semibold
                 bg-white text-[#2c2c34]
                 ${error ? "border-red-400 animate-shake" : "border-gray-300 focus:border-[#a100f2]"}
-                ${digit ? "bg-[#a100f2] text-white border-[#a100f2]" : ""}
+                ${digit ? "bg-[#a100f2] !text-white border-[#a100f2]" : ""}
                 ${loading ? "opacity-50 cursor-not-allowed" : ""}
               `}
               disabled={loading}
