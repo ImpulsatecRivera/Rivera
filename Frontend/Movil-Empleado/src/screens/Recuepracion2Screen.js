@@ -93,7 +93,7 @@ const Recuperacion2Screen = ({ navigation, route }) => {
       console.log('📧 Email:', email);
       console.log('🎫 Recovery Token presente:', !!recoveryToken);
       
-      const API_URL = 'https://riveraproject-production.up.railway.app/api/recovery/verifyCode';
+      const API_URL = 'https://riveraproject-production-933e.up.railway.app/api/recovery/verifyCode';
       
       // PAYLOAD CORRECTO según el backend
       const payload = {
@@ -226,7 +226,7 @@ const Recuperacion2Screen = ({ navigation, route }) => {
     try {
       console.log('🔄 Reenviando código para:', email);
       
-      const API_URL = 'https://riveraproject-production.up.railway.app/api/recovery/requestCode';
+      const API_URL = 'https://riveraproject-production-933e.up.railway.app/api/recovery/requestCode';
       
       const response = await fetch(API_URL, {
         method: 'POST',

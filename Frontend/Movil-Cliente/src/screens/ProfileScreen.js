@@ -112,7 +112,7 @@ const ProfileScreen = () => {
       }
 
       const userId = user.id || user._id;
-      const apiUrl = `https://riveraproject-production.up.railway.app/api/clientes/${userId}`;
+      const apiUrl = `https://riveraproject-production-933e.up.railway.app/api/clientes/${userId}`;
       
       const response = await fetch(apiUrl, {
         method: 'GET',
@@ -364,7 +364,7 @@ const ProfileScreen = () => {
       }
 
       const userId = user.id || user._id;
-      const apiUrl = `https://riveraproject-production.up.railway.app/api/clientes/${userId}`;
+      const apiUrl = `https://riveraproject-production-933e.up.railway.app/api/clientes/${userId}`;
       
       // Crear FormData
       const formData = new FormData();
@@ -521,7 +521,7 @@ const ProfileScreen = () => {
       }
 
       const userId = user.id || user._id;
-      const apiUrl = `https://riveraproject-production.up.railway.app/api/clientes/${userId}`;
+      const apiUrl = `https://riveraproject-production-933e.up.railway.app/api/clientes/${userId}`;
       
       const formatDateForAPI = (dateString) => {
         if (!dateString || dateString === 'No registrada' || dateString === 'Fecha inválida') {

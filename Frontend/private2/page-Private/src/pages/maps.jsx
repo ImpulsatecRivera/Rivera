@@ -180,7 +180,7 @@ const RiveraTransportMapDemo = () => {
     try {
       setLoading(true);
       setError(null);
-      const apiUrl = 'https://riveraproject-production.up.railway.app/api/viajes/map-data';
+      const apiUrl = 'https://riveraproject-production-933e.up.railway.app/api/viajes/map-data';
       const response = await fetch(apiUrl, {
         method: 'GET',
         headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' }

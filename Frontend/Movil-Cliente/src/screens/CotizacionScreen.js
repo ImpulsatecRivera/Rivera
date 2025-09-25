@@ -226,7 +226,7 @@ const IntegratedTruckRequestScreen = () => {
       // Log para debugging
       console.log('📦 Payload final a enviar:', JSON.stringify(quoteData, null, 2));
 
-      const baseUrl = 'https://riveraproject-production.up.railway.app';
+      const baseUrl = 'https://riveraproject-production-933e.up.railway.app';
       const token = await AsyncStorage.getItem('clientToken');
 
       const response = await createQuote({

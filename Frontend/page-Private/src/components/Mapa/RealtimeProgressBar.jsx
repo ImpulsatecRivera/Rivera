@@ -12,7 +12,7 @@ const RealtimeProgressBar = ({
   viajeId,
   onStatusChange,
   apiConfig = {
-    baseUrl: process.env.REACT_APP_API_URL || 'https://riveraproject-production.up.railway.app',
+    baseUrl: process.env.REACT_APP_API_URL || 'https://riveraproject-production-933e.up.railway.app',
     endpoints: {
       getTripDetails: '/api/viajes/:id',
       updateProgress: '/api/viajes/:id/progress',

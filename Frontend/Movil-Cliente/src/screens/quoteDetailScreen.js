@@ -400,7 +400,7 @@ const QuoteDetailsScreen = () => {
               try {
                 console.log('Intentando aceptar cotización con ID:', quoteId);
                 
-                const response = await fetch(`https://riveraproject-production.up.railway.app/api/cotizaciones/${quoteId}`, {
+                const response = await fetch(`https://riveraproject-production-933e.up.railway.app/api/cotizaciones/${quoteId}`, {
                   method: 'PUT',
                   headers: {
                     'Content-Type': 'application/json',
@@ -483,7 +483,7 @@ const QuoteDetailsScreen = () => {
               try {
                 console.log('Intentando rechazar cotización con ID:', quoteId);
                 
-                const response = await fetch(`https://riveraproject-production.up.railway.app/api/cotizaciones/${quoteId}`, {
+                const response = await fetch(`https://riveraproject-production-933e.up.railway.app/api/cotizaciones/${quoteId}`, {
                   method: 'PUT',
                   headers: {
                     'Content-Type': 'application/json',

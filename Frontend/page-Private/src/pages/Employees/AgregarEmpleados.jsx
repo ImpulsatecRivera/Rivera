@@ -136,10 +136,10 @@ const AgregarEmpleado = () => {
       console.log('Incluye imagen:', !!formData.img);
 
       console.log('=== ENVIANDO PETICIÓN ===');
-      console.log('URL:', 'https://riveraproject-production.up.railway.app/api/empleados');
+      console.log('URL:', 'https://riveraproject-production-933e.up.railway.app/api/empleados');
 
       // Enviar petición
-      const response = await axios.post('https://riveraproject-production.up.railway.app/api/empleados', formDataToSend, {
+      const response = await axios.post('https://riveraproject-production-933e.up.railway.app/api/empleados', formDataToSend, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
