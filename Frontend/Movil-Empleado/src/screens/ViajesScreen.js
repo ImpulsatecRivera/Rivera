@@ -1,3 +1,4 @@
+// src/screens/ViajesScreen.js
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   View,
@@ -16,6 +17,18 @@ import { useProfile } from '../hooks/useProfile';
 import { useAuth } from '../Context/authContext';
 import HistoryItem from '../components/HistoryItem';
 import senalImg from '../images/senal.png';
+
+// Helper para deduplicar por una clave única
+const dedupeBy = (arr, getKey) => {
+  const seen = new Set();
+  return (arr || []).filter((x) => {
+    const k = getKey(x);
+    if (!k) return true;          // si no hay id, lo dejamos pasar
+    if (seen.has(k)) return false;
+    seen.add(k);
+    return true;
+  });
+};
 
 const ViajesScreen = ({ navigation }) => {
   const { user, isAuthenticated, motoristaId: ctxMotoristaId } = useAuth();
@@ -65,16 +78,22 @@ const ViajesScreen = ({ navigation }) => {
     loading,
     error,
     refrescarViajes,
-    totalTrips,   // lo dejamos por compat, pero no lo usamos para contar
+    totalTrips,   // lo dejamos por compat
     estadisticas, // idem
   } = useTrips(motoristaId, 'historial');
 
-  // Totales siempre desde lo que se renderiza
-  const totalRender = useMemo(() => trips.length, [trips]);
+  // ✅ DEDUPE una vez y úsalo para todo (lista y estadísticas)
+  const baseTrips = useMemo(
+    () => dedupeBy(trips, (x) => String(x._id || x.id || x.viajeId || x.codigo || '')),
+    [trips]
+  );
 
-  // --- Filtro en memoria con useMemo
+  // Totales siempre desde lo que se renderiza
+  const totalRender = useMemo(() => baseTrips.length, [baseTrips]);
+
+  // --- Filtro en memoria con useMemo (sobre baseTrips)
   const viajesFiltrados = useMemo(() => {
-    return trips.filter((v) => {
+    const filtrados = baseTrips.filter((v) => {
       const e = (v.estado || '').toLowerCase();
       if (filtroEstado === 'todos') return true;
       if (filtroEstado === 'programados')
@@ -86,24 +105,25 @@ const ViajesScreen = ({ navigation }) => {
       if (filtroEstado === 'cancelados') return e === 'cancelado';
       return e === filtroEstado;
     });
-  }, [trips, filtroEstado]);
+    return filtrados;
+  }, [baseTrips, filtroEstado]);
 
-  // Contadores SIEMPRE calculados en cliente para ser consistentes
+  // Contadores SIEMPRE calculados sobre baseTrips (sin duplicados)
   const counts = useMemo(() => {
     const norm = (x) => (x || '').toLowerCase();
-    const programados = trips.filter((v) =>
+    const programados = baseTrips.filter((v) =>
       ['programado', 'pendiente', 'confirmado'].includes(norm(v.estado))
     ).length;
-    const completados = trips.filter((v) =>
+    const completados = baseTrips.filter((v) =>
       ['completado', 'finalizado'].includes(norm(v.estado))
     ).length;
-    const enTransito = trips.filter((v) =>
+    const enTransito = baseTrips.filter((v) =>
       ['en_transito', 'iniciado', 'en_curso'].includes(norm(v.estado))
     ).length;
-    const cancelados = trips.filter((v) => norm(v.estado) === 'cancelado').length;
+    const cancelados = baseTrips.filter((v) => norm(v.estado) === 'cancelado').length;
 
-    return { programados, completados, enTransito, cancelados, total: trips.length };
-  }, [trips]);
+    return { programados, completados, enTransito, cancelados, total: baseTrips.length };
+  }, [baseTrips]);
 
   const onRefresh = useCallback(() => {
     refrescarViajes();
@@ -160,7 +180,10 @@ const ViajesScreen = ({ navigation }) => {
     <View style={styles.container}>
       <FlatList
         data={viajesFiltrados}
-        keyExtractor={(item) => String(item.id || item._id)}
+        keyExtractor={(item, index) => {
+          const id = item?.id ?? item?._id ?? item?.viajeId ?? item?.codigo;
+          return id ? String(id) : `row-${index}`;
+        }}
         renderItem={({ item }) => (
           <HistoryItem item={item} onInfoPress={handleInfoPress} />
         )}
@@ -178,7 +201,7 @@ const ViajesScreen = ({ navigation }) => {
               <Image source={senalImg} style={styles.avatarImage} />
             </View>
 
-            {/* Estadísticas rápidas (siempre basadas en trips) */}
+            {/* Estadísticas rápidas (siempre basadas en baseTrips) */}
             <View style={styles.statsContainer}>
               <View style={styles.statCard}>
                 <Text style={styles.statNumber}>{counts.total}</Text>
