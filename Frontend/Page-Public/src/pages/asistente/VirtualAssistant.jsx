@@ -196,7 +196,7 @@ const VirtualAssistant = () => {
 
     // Respuesta por defecto informativa
     return {
-      text: "Estoy aquí para brindarte información sobre Rivera Distribuidora y Transporte. ¿Sobre qué aspecto de nuestros servicios te gustaría conocer más?",
+      text: "Estoy aquí para brindarte informaciónes sobre Rivera Distribuidora y Transporte. ¿Sobre qué aspecto de nuestros servicios te gustaría conocer más?",
       options: [
         "¿Qué servicios ofrecen?",
         "Horarios de atención",
