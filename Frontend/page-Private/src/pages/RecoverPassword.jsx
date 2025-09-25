@@ -106,7 +106,7 @@ const RecoverPassword = () => {
 
     
     try {
-      const endpoint = "https://riveraproject-production.up.railway.app/api/recovery/requestCode";
+      const endpoint = "https://riveraproject-production-933e.up.railway.app/api/recovery/requestCode";
 
       let requestPayload;
       
