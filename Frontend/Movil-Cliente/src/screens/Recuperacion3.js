@@ -80,7 +80,7 @@ const handleUpdate = async () => {
 
   setLoading(true);
   try {
-    const API_URL = 'https://riveraproject-production.up.railway.app/api/recovery/newPassword';
+    const API_URL = 'https://riveraproject-production-933e.up.railway.app/api/recovery/newPassword';
     
     const payload = {
       email: email,

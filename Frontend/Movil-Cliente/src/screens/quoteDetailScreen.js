@@ -13,15 +13,92 @@ import {
 } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
+import LottieView from 'lottie-react-native';
+
+// Import Lottie animations
+import DeliveryTruck from "../assets/lottie/Car _ Ignite Animation.json";
+import CheckSuccess from "../assets/lottie/success tick.json";
+import ClockPending from "../assets/lottie/Tourists by car.json";
+import CancelError from "../assets/lottie/cancel animation.json";
+
+// Lottie configuration for each status
+const statusLottieConfig = {
+  pendiente: {
+    bg: '#FEF3C7',
+    text: '#92400E',
+    border: '#F59E0B',
+    icon: 'time-outline',
+    lottie: ClockPending,
+    loop: false
+  },
+  enviada: {
+    bg: '#DBEAFE',
+    text: '#1D4ED8',
+    border: '#3B82F6',
+    icon: 'paper-plane-outline',
+    lottie: DeliveryTruck,
+    loop: true
+  },
+  'en ruta': {
+    bg: '#DBEAFE',
+    text: '#0369A1',
+    border: '#0EA5E9',
+    icon: 'sync-outline',
+    lottie: DeliveryTruck,
+    loop: true
+  },
+  aceptada: {
+    bg: '#D1FAE5',
+    text: '#065F46',
+    border: '#10B981',
+    icon: 'checkmark-circle-outline',
+    lottie: CheckSuccess,
+    loop: false
+  },
+  completado: {
+    bg: '#D1FAE5',
+    text: '#065F46',
+    border: '#10B981',
+    icon: 'checkmark-circle-outline',
+    lottie: CheckSuccess,
+    loop: false
+  },
+  rechazada: {
+    bg: '#FEE2E2',
+    text: '#991B1B',
+    border: '#EF4444',
+    icon: 'close-circle-outline',
+    lottie: CancelError,
+    loop: true
+  },
+  cancelada: {
+    bg: '#F3F4F6',
+    text: '#374151',
+    border: '#6B7280',
+    icon: 'ban-outline',
+    lottie: CancelError,
+    loop: true
+  },
+  'en_proceso': {
+    bg: '#E0F2FE',
+    text: '#0369A1',
+    border: '#0EA5E9',
+    icon: 'sync-outline',
+    lottie: DeliveryTruck,
+    loop: true
+  }
+};
 
 const QuoteDetailsScreen = () => {
   const route = useRoute();
   const navigation = useNavigation();
   const [isLoading, setIsLoading] = useState(false);
   
-  const { quote } = route.params || {};
+  // FIXED: Accept both 'quote' and 'item' parameters for better compatibility
+  const { quote, item } = route.params || {};
+  const data = quote || item; // Use whichever one is provided
 
-  if (!quote) {
+  if (!data) {
     return (
       <SafeAreaView style={styles.container}>
         <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
@@ -55,6 +132,32 @@ const QuoteDetailsScreen = () => {
     ) || 'No especificado';
   };
 
+  // FIXED: Function to safely convert any value to string for rendering
+  const safeStringify = (value) => {
+    if (value === null || value === undefined) return 'No especificado';
+    if (typeof value === 'string') return value;
+    if (typeof value === 'number') return String(value);
+    if (typeof value === 'boolean') return value ? 'Sí' : 'No';
+    if (typeof value === 'object') {
+      // If it's a date
+      if (value instanceof Date) return value.toISOString();
+      // If it's an object with common ID patterns
+      if (value._id) return String(value._id);
+      if (value.id) return String(value.id);
+      // If it has a name property
+      if (value.name) return String(value.name);
+      // If it has email (for client objects)
+      if (value.email) return String(value.email);
+      // Otherwise try to stringify it safely
+      try {
+        return JSON.stringify(value);
+      } catch {
+        return '[Object]';
+      }
+    }
+    return String(value);
+  };
+
   // Función auxiliar para obtener precios
   const getPrice = () => {
     const priceOptions = [
@@ -62,6 +165,7 @@ const QuoteDetailsScreen = () => {
       quoteData.totalPrice,
       quoteData.estimatedPrice,
       quoteData.amount,
+      quoteData.total, // Added this for HistorialCard compatibility
       quoteData.costos?.total,
       quoteData.costos?.subtotal
     ].filter(price => price && typeof price === 'number' && price > 0);
@@ -117,110 +221,113 @@ const QuoteDetailsScreen = () => {
   const friendlyTruckType = truckTypeMap[rawTruckType] || rawTruckType;
 
   const mappedData = {
-    // Identificación
+    // Identificación - FIXED: Handle both data structures
     id: quoteData._id || quoteData.id || 'sin-id',
     
     // Estado
     status: (quoteData.status || 'pendiente').toLowerCase(),
     
-    // Información básica
-    title: getFirstAvailable(
+    // Información básica - FIXED: Add more fallbacks for HistorialCard data
+    title: safeStringify(getFirstAvailable(
+      quoteData.title,           // From HistorialCard
       quoteData.quoteName,
-      quoteData.title,
       quoteData.quoteDescription,
       quoteData.description,
       'Cotización sin título'
-    ),
+    )),
     
-    description: getFirstAvailable(
+    description: safeStringify(getFirstAvailable(
       quoteData.quoteDescription,
       quoteData.description,
       quoteData.observaciones,
       quoteData.notes,
       'Sin descripción disponible'
-    ),
+    )),
     
     // Precio
     price: getPrice(),
     
-    // Método de pago
-    paymentMethod: getFirstAvailable(
+    // Método de pago - FIXED: Add metodoPago for HistorialCard compatibility
+    paymentMethod: safeStringify(getFirstAvailable(
       quoteData.paymentMethod,
-      quoteData.metodoPago,
+      quoteData.metodoPago,       // From HistorialCard
       quoteData.payment_method,
       'Efectivo'
-    ),
+    )),
     
     // Tipo de camión - CORREGIDO con nombre amigable
-    truckType: friendlyTruckType,
-    truckTypeRaw: rawTruckType, // Guardamos el valor original por si se necesita
+    truckType: safeStringify(friendlyTruckType),
+    truckTypeRaw: safeStringify(rawTruckType),
     
-    // Ubicaciones - CORREGIDO con orden de prioridad correcto
-    pickupLocation: getFirstAvailable(
-      quoteData.pickupLocation,        // Campo directo del backend
+    // Ubicaciones - FIXED: Add lugarEntrega for HistorialCard compatibility
+    pickupLocation: safeStringify(getFirstAvailable(
+      quoteData.pickupLocation,
       quoteData.ruta?.origen?.nombre,
       quoteData.pickupAddress,
       quoteData.origin?.name,
       'Ubicación de recogida no especificada'
-    ),
+    )),
     
-    destinationLocation: getFirstAvailable(
-      quoteData.destinationLocation,   // Campo directo del backend
+    destinationLocation: safeStringify(getFirstAvailable(
+      quoteData.destinationLocation,
+      quoteData.lugarEntrega,     // From HistorialCard
       quoteData.ruta?.destino?.nombre,
       quoteData.destinationAddress,
       quoteData.destination?.name,
       'Ubicación de destino no especificada'
-    ),
+    )),
     
     // Coordenadas
     pickupCoordinates: getCoordinates(quoteData.ruta?.origen) || getCoordinates(quoteData.origin),
     destinationCoordinates: getCoordinates(quoteData.ruta?.destino) || getCoordinates(quoteData.destination),
     
     // Descripción del viaje
-    travelLocations: getFirstAvailable(
+    travelLocations: safeStringify(getFirstAvailable(
       quoteData.travelLocations,
       quoteData.travel_locations,
-      `De ${getFirstAvailable(quoteData.pickupLocation, quoteData.ruta?.origen?.nombre, 'origen')} a ${getFirstAvailable(quoteData.destinationLocation, quoteData.ruta?.destino?.nombre, 'destino')}`
-    ),
+      `De ${safeStringify(getFirstAvailable(quoteData.pickupLocation, quoteData.ruta?.origen?.nombre, 'origen'))} a ${safeStringify(getFirstAvailable(quoteData.destinationLocation, quoteData.lugarEntrega, quoteData.ruta?.destino?.nombre, 'destino'))}`
+    )),
     
-    // Horarios
-    departureTime: getFirstAvailable(
+    // Horarios - FIXED: Add HistorialCard field names
+    departureTime: safeStringify(getFirstAvailable(
       quoteData.departureTime,
+      quoteData.horaSalida,       // From HistorialCard
       quoteData.horarios?.fechaSalida,
       quoteData.scheduledDepartureTime,
       quoteData.departure_time
-    ),
+    )),
     
-    arrivalTime: getFirstAvailable(
+    arrivalTime: safeStringify(getFirstAvailable(
       quoteData.arrivalTime,
+      quoteData.horaLlegada,      // From HistorialCard
       quoteData.horarios?.fechaLlegadaEstimada,
       quoteData.scheduledArrivalTime,
       quoteData.estimatedArrivalTime,
       quoteData.arrival_time
-    ),
+    )),
     
-    deliveryDate: getFirstAvailable(
+    deliveryDate: safeStringify(getFirstAvailable(
       quoteData.deliveryDate,
       quoteData.horarios?.fechaLlegadaEstimada,
       quoteData.arrivalTime,
       quoteData.scheduledDeliveryDate,
       quoteData.delivery_date
-    ),
+    )),
     
-    // Tiempo y distancia - CORREGIDO
+    // Tiempo y distancia
     estimatedTime: quoteData.estimatedTime || 
                   quoteData.horarios?.tiempoEstimadoViaje || 
                   quoteData.estimated_time || 
                   0,
     
-    distance: quoteData.estimatedDistance ||     // Campo directo del backend
+    distance: quoteData.estimatedDistance ||
               quoteData.ruta?.distanciaTotal || 
               quoteData.distance || 
               0,
     
-    // Fechas del sistema
-    createdAt: quoteData.createdAt || quoteData.created_at,
-    updatedAt: quoteData.updatedAt || quoteData.updated_at,
+    // Fechas del sistema - FIXED: Handle _raw structure from HistorialCard
+    createdAt: safeStringify(quoteData.createdAt || quoteData._raw?.createdAt || quoteData.created_at),
+    updatedAt: safeStringify(quoteData.updatedAt || quoteData._raw?.updatedAt || quoteData.updated_at),
     
     // Costos detallados
     costos: quoteData.costos || quoteData.costs || {},
@@ -229,18 +336,26 @@ const QuoteDetailsScreen = () => {
     carga: quoteData.carga || quoteData.cargo || {},
     
     // Datos adicionales
-    observaciones: getFirstAvailable(
+    observaciones: safeStringify(getFirstAvailable(
       quoteData.observaciones,
       quoteData.notes,
       quoteData.comments,
       ''
-    ),
+    )),
     
-    clientId: quoteData.clientId || quoteData.client_id || '',
+    // FIXED: Add clienteId for HistorialCard compatibility - handle objects
+    clientId: (() => {
+      const clientIdValue = quoteData.clientId || quoteData.clienteId || quoteData.client_id;
+      // If it's an object with _id, email, phone, extract the _id
+      if (clientIdValue && typeof clientIdValue === 'object') {
+        return safeStringify(clientIdValue._id || clientIdValue.id || clientIdValue);
+      }
+      return safeStringify(clientIdValue || '');
+    })(),
     
     // Metadata
-    createdFrom: quoteData.createdFrom || quoteData.created_from || 'unknown',
-    version: quoteData.version || '1.0'
+    createdFrom: safeStringify(quoteData.createdFrom || quoteData.created_from || 'unknown'),
+    version: safeStringify(quoteData.version || '1.0')
   };
 
   console.log('=== DATOS MAPEADOS ===');
@@ -257,7 +372,7 @@ const QuoteDetailsScreen = () => {
 };
 
   // Aplicar el mapeo robusto
-  const mappedQuote = createRobustMapping(quote);
+  const mappedQuote = createRobustMapping(data);
 
   // Función para aceptar cotización
   const handleAcceptQuote = async () => {
@@ -285,7 +400,7 @@ const QuoteDetailsScreen = () => {
               try {
                 console.log('Intentando aceptar cotización con ID:', quoteId);
                 
-                const response = await fetch(`https://riveraproject-production.up.railway.app/api/cotizaciones/${quoteId}`, {
+                const response = await fetch(`https://riveraproject-production-933e.up.railway.app/api/cotizaciones/${quoteId}`, {
                   method: 'PUT',
                   headers: {
                     'Content-Type': 'application/json',
@@ -368,7 +483,7 @@ const QuoteDetailsScreen = () => {
               try {
                 console.log('Intentando rechazar cotización con ID:', quoteId);
                 
-                const response = await fetch(`https://riveraproject-production.up.railway.app/api/cotizaciones/${quoteId}`, {
+                const response = await fetch(`https://riveraproject-production-933e.up.railway.app/api/cotizaciones/${quoteId}`, {
                   method: 'PUT',
                   headers: {
                     'Content-Type': 'application/json',
@@ -408,23 +523,15 @@ const QuoteDetailsScreen = () => {
     }
   };
 
-  // Función para obtener colores según el estado
+  // Función para obtener colores y configuración Lottie según el estado
   const getStatusColor = (status) => {
-    const statusColors = {
-      'pendiente': { bg: '#FEF3C7', text: '#92400E', border: '#F59E0B', icon: 'time-outline' },
-      'enviada': { bg: '#DBEAFE', text: '#1D4ED8', border: '#3B82F6', icon: 'paper-plane-outline' },
-      'aceptada': { bg: '#D1FAE5', text: '#065F46', border: '#10B981', icon: 'checkmark-circle-outline' },
-      'rechazada': { bg: '#FEE2E2', text: '#991B1B', border: '#EF4444', icon: 'close-circle-outline' },
-      'ejecutada': { bg: '#E0E7FF', text: '#3730A3', border: '#8B5CF6', icon: 'checkmark-done-outline' },
-      'cancelada': { bg: '#F3F4F6', text: '#374151', border: '#6B7280', icon: 'ban-outline' },
-      'en_proceso': { bg: '#E0F2FE', text: '#0369A1', border: '#0EA5E9', icon: 'sync-outline' }
-    };
-    
-    return statusColors[status?.toLowerCase()] || { 
+    return statusLottieConfig[status?.toLowerCase()] || { 
       bg: '#E6FFFA', 
       text: '#0F766E', 
       border: '#14B8A6', 
-      icon: 'information-circle-outline' 
+      icon: 'information-circle-outline',
+      lottie: ClockPending,
+      loop: false
     };
   };
 
@@ -523,16 +630,25 @@ const QuoteDetailsScreen = () => {
             <Text style={styles.debugText}>Status: {mappedQuote.status}</Text>
             <Text style={styles.debugText}>Price: ${mappedQuote.price}</Text>
             <Text style={styles.debugText}>Source: {mappedQuote.createdFrom}</Text>
+            <Text style={styles.debugText}>Data Source: {quote ? 'quote param' : 'item param'}</Text>
           </View>
         )}
 
-        {/* Estado de la cotización */}
+        {/* Estado de la cotización con animación Lottie */}
         <View style={styles.statusSection}>
           <View style={[styles.statusBadge, { 
             backgroundColor: statusColors.bg, 
             borderColor: statusColors.border 
           }]}>
-            <Ionicons name={statusColors.icon} size={20} color={statusColors.text} />
+            <View style={styles.statusLottieContainer}>
+              <LottieView
+                source={statusColors.lottie}
+                autoPlay={true}
+                loop={statusColors.loop}
+                style={styles.statusLottieAnimation}
+                resizeMode="contain"
+              />
+            </View>
             <Text style={[styles.statusText, { color: statusColors.text }]}>
               {mappedQuote.status.charAt(0).toUpperCase() + mappedQuote.status.slice(1).replace('_', ' ')}
             </Text>
@@ -944,11 +1060,21 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
   },
+  statusLottieContainer: {
+    width: 24,
+    height: 24,
+    marginRight: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  statusLottieAnimation: {
+    width: '100%',
+    height: '100%',
+  },
   statusText: {
     fontSize: 16,
     fontWeight: 'bold',
     textTransform: 'capitalize',
-    marginLeft: 8,
   },
 
   // Section styles
