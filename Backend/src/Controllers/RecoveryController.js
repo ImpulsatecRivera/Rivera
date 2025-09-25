@@ -148,6 +148,22 @@ const actualizarContrasena = async (decoded, hashedPassword) => {
 
 // Solicitar código de recuperación
 RecoveryPass.requestCode = async (req, res) => {
+  RecoveryPass.requestCode = async (req, res) => {
+  console.log('🔥 [DEBUG] === INICIO REQUEST CODE ===');
+  console.log('🔥 [DEBUG] NODE_ENV:', process.env.NODE_ENV);
+  console.log('🔥 [DEBUG] Variables Twilio disponibles:');
+  console.log('  - ACCOUNT_SID:', process.env.TWILIO_ACCOUNT_SID ? 'SI' : 'NO');
+  console.log('  - AUTH_TOKEN:', process.env.TWILIO_AUTH_TOKEN ? 'SI' : 'NO');  
+  console.log('  - PHONE_NUMBER:', process.env.TWILIO_PHONE_NUMBER ? 'SI' : 'NO');
+  console.log('🔥 [DEBUG] Config object Twilio:');
+  console.log('  - config.TWILIO_ACCOUNT_SID:', config.TWILIO_ACCOUNT_SID ? 'SI' : 'NO');
+  console.log('  - config.TWILIO_AUTH_TOKEN:', config.TWILIO_AUTH_TOKEN ? 'SI' : 'NO');
+  console.log('  - config.TWILIO_PHONE_NUMBER:', config.TWILIO_PHONE_NUMBER ? 'SI' : 'NO');
+  
+  const { email, phone, via = "email" } = req.body;
+  console.log("🔥 [DEBUG] Request body:", { email, phone, via });
+
+  // ... resto de tu código
   const { email, phone, via = "email" } = req.body;
 
   console.log("Solicitud de código recibida:", { email, phone, via });
