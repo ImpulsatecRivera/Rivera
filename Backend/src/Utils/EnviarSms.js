@@ -2,19 +2,19 @@
 import twilio from "twilio";
 import { config } from "../config.js";
 
-// Configurar el cliente usando la estructura correcta
+// ✅ Usar variables del nivel raíz (sin .TWILIO)
 const client = twilio(
-  config.TWILIO.ACCOUNT_SID,  // Cambio aquí
-  config.TWILIO.AUTH_TOKEN    // Cambio aquí
+  config.TWILIO_ACCOUNT_SID,    // Correcto
+  config.TWILIO_AUTH_TOKEN      // Correcto
 );
 
 export const EnviarSms = async (to, message) => {
   try {
-    console.log(`📱 Enviando SMS desde: ${config.TWILIO.PHONE_NUMBER}`);
+    console.log(`📱 Enviando SMS desde: ${config.TWILIO_PHONE_NUMBER}`); // Correcto
     
     const msg = await client.messages.create({
       body: message,
-      from: config.TWILIO.PHONE_NUMBER,  // Cambio aquí
+      from: config.TWILIO_PHONE_NUMBER,  // Correcto
       to: to,
     });
     
