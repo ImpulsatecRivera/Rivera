@@ -18,18 +18,31 @@ const Recuperacion2Screen = ({ navigation, route }) => {
   const [email, setEmail] = useState(route?.params?.email || '');
   const [phone, setPhone] = useState(route?.params?.phone || '');
   const [via, setVia] = useState(route?.params?.via || 'email');
-  const [recoveryToken, setRecoveryToken] = useState(route?.params?.recoveryToken || '');
+  
+  // CORREGIDO: Mejor manejo del token de recuperación
+  const [recoveryToken, setRecoveryToken] = useState(() => {
+    const token = route?.params?.recoveryToken;
+    // Validar que el token no sea null, "null", undefined o vacío
+    if (!token || token === 'null' || token === 'undefined' || typeof token !== 'string' || token.trim() === '') {
+      console.warn('⚠️ Token de recuperación no válido recibido:', token);
+      return null;
+    }
+    console.log('✅ Token de recuperación válido recibido:', token.substring(0, 20) + '...');
+    return token;
+  });
 
   const inputRefs = useRef([]);
 
-  // Debug info
+  // Debug mejorado
   useEffect(() => {
-    console.log('🔍 Recuperacion2Screen params:', {
+    console.log('🔍 Recuperacion2Screen parámetros recibidos:', {
       email,
-      phone,
+      phone: phone ? `***${phone.slice(-4)}` : 'N/A',
       via,
-      recoveryToken: recoveryToken ? `${recoveryToken.substring(0, 20)}...` : 'null',
-      fromScreen: route?.params?.fromScreen
+      recoveryToken: recoveryToken ? `${recoveryToken.substring(0, 20)}...` : 'NULL',
+      hasValidToken: !!recoveryToken && recoveryToken !== 'null',
+      fromScreen: route?.params?.fromScreen,
+      allParams: Object.keys(route?.params || {})
     });
   }, []);
 
@@ -43,7 +56,7 @@ const Recuperacion2Screen = ({ navigation, route }) => {
   const formatTime = (seconds) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
-    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')} Sec`;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')} Seg`;
   };
 
   const handleOTPChange = (index, value) => {
@@ -82,12 +95,12 @@ const Recuperacion2Screen = ({ navigation, route }) => {
       return;
     }
 
-    // Verificación crítica del token
-    if (!recoveryToken) {
-      console.error('❌ No hay token de recuperación disponible');
+    // CORREGIDO: Verificación mejorada del token
+    if (!recoveryToken || recoveryToken === 'null' || recoveryToken.trim() === '') {
+      console.error('❌ No hay token de recuperación válido disponible');
       Alert.alert(
         'Token No Disponible', 
-        'No se encontró el token de recuperación. Necesitas solicitar un nuevo código.',
+        'No se encontró un token de recuperación válido. Es necesario solicitar un nuevo código para continuar.',
         [
           { text: 'Cancelar', style: 'cancel' },
           { 
@@ -103,28 +116,23 @@ const Recuperacion2Screen = ({ navigation, route }) => {
     try {
       const API_URL = 'https://riveraproject-production.up.railway.app/api/recovery/verifyCode';
       
-      // PAYLOAD CORREGIDO - El backend espera estos campos exactos
+      // CORREGIDO: Payload con todos los campos necesarios
       const payload = {
         code: otpCode,
-        recoveryToken: recoveryToken  // Este es el campo principal que espera el backend
+        recoveryToken: recoveryToken
       };
 
-      // Agregar email si está disponible (para compatibilidad con el backend)
-      if (email) {
-        payload.email = email;
-      }
+      // Agregar información adicional si está disponible
+      if (email) payload.email = email;
+      if (phone) payload.phone = phone;
+      if (via) payload.via = via;
 
-      // Agregar phone si está disponible
-      if (phone) {
-        payload.phone = phone;
-      }
-      
-      console.log('📤 Enviando verificación:', {
+      console.log('📤 Enviando verificación con payload:', {
         code: otpCode,
-        hasToken: !!recoveryToken,
-        tokenStart: recoveryToken ? recoveryToken.substring(0, 20) : 'null',
-        email,
-        phone,
+        hasRecoveryToken: !!recoveryToken,
+        tokenPreview: recoveryToken ? recoveryToken.substring(0, 20) + '...' : 'N/A',
+        email: email || 'N/A',
+        phone: phone ? `***${phone.slice(-4)}` : 'N/A',
         via
       });
       
@@ -137,10 +145,10 @@ const Recuperacion2Screen = ({ navigation, route }) => {
         body: JSON.stringify(payload),
       });
 
-      console.log('📡 Response status:', response.status);
+      console.log('📡 Estado de respuesta:', response.status);
 
       const responseText = await response.text();
-      console.log('📄 Response text:', responseText);
+      console.log('📄 Respuesta del servidor:', responseText);
 
       if (responseText.includes('<html>') || responseText.includes('<!DOCTYPE')) {
         throw new Error('El servidor devolvió HTML en lugar de JSON. Verifica que la API esté funcionando correctamente.');
@@ -150,12 +158,12 @@ const Recuperacion2Screen = ({ navigation, route }) => {
       try {
         data = JSON.parse(responseText);
       } catch (parseError) {
-        console.error('❌ Error parsing JSON:', parseError);
+        console.error('❌ Error al parsear JSON:', parseError);
         throw new Error('Respuesta inválida del servidor');
       }
 
       if (!response.ok) {
-        console.log('❌ Error response:', data);
+        console.log('❌ Respuesta de error:', data);
         
         if (response.status === 400) {
           const message = data.message || '';
@@ -210,8 +218,8 @@ const Recuperacion2Screen = ({ navigation, route }) => {
       // Verificación exitosa
       console.log('✅ Código verificado exitosamente:', data);
 
-      // Extraer el nuevo token si viene en la respuesta
-      let verifiedToken = data.verifiedToken || data.token || recoveryToken;
+      // Buscar el token verificado en la respuesta
+      const verifiedToken = data.verifiedToken || data.token || data.recoveryToken || recoveryToken;
 
       Alert.alert(
         'Código Verificado', 
@@ -225,8 +233,8 @@ const Recuperacion2Screen = ({ navigation, route }) => {
                 phone: phone,
                 via: via,
                 verifiedCode: otpCode,
-                recoveryToken: verifiedToken,  // Usar el token verificado
-                verifiedToken: verifiedToken,   // Mantener ambos nombres para compatibilidad
+                recoveryToken: verifiedToken,
+                verifiedToken: verifiedToken,
                 timestamp: Date.now()
               });
             }
@@ -237,20 +245,17 @@ const Recuperacion2Screen = ({ navigation, route }) => {
     } catch (error) {
       console.error('❌ Error en verificación:', error);
       
+      let errorMessage = 'No se pudo verificar el código. Intenta de nuevo.';
+      
       if (error.message.includes('HTML')) {
-        Alert.alert(
-          'Error del Servidor', 
-          'La API no está respondiendo correctamente.\n\nVerifica que el servidor esté funcionando.'
-        );
+        errorMessage = 'La API no está respondiendo correctamente.\n\nVerifica que el servidor esté funcionando.';
       } else if (error.message === 'Network request failed' || error.message.includes('network')) {
-        Alert.alert(
-          'Error de Conexión', 
-          'No se pudo conectar al servidor.\n\nVerifica tu conexión a internet.'
-        );
+        errorMessage = 'No se pudo conectar al servidor.\n\nVerifica tu conexión a internet.';
       } else {
-        Alert.alert('Error', error.message || 'No se pudo verificar el código. Intenta de nuevo.');
+        errorMessage = error.message || errorMessage;
       }
       
+      Alert.alert('Error', errorMessage);
       setOtpValues(['', '', '', '', '']);
       inputRefs.current[0]?.focus();
     } finally {
@@ -277,7 +282,6 @@ const Recuperacion2Screen = ({ navigation, route }) => {
     try {
       const API_URL = 'https://riveraproject-production.up.railway.app/api/recovery/requestCode';
       
-      // Crear payload según el método original
       const payload = {};
       if (via === 'email' && email) {
         payload.email = email;
@@ -286,7 +290,6 @@ const Recuperacion2Screen = ({ navigation, route }) => {
         payload.phone = phone;
         payload.via = 'sms';
       } else {
-        // Fallback a email si no está claro
         payload.email = email;
         payload.via = 'email';
       }
@@ -317,7 +320,7 @@ const Recuperacion2Screen = ({ navigation, route }) => {
       }
 
       if (response.ok) {
-        // Buscar y actualizar el token de recuperación
+        // CORREGIDO: Buscar y actualizar el token de recuperación
         const possibleTokenFields = [
           'recoveryToken', 'token', 'reset_token', 'resetToken', 
           'access_token', 'accessToken', 'verification_token',
@@ -326,19 +329,17 @@ const Recuperacion2Screen = ({ navigation, route }) => {
         
         let newToken = null;
         
-        // Buscar en el objeto principal
         for (const field of possibleTokenFields) {
-          if (data[field] && typeof data[field] === 'string') {
+          if (data[field] && typeof data[field] === 'string' && data[field].length > 10) {
             newToken = data[field];
             console.log(`🔑 Nuevo token encontrado en '${field}'`);
             break;
           }
         }
         
-        // Buscar en data.data si existe
-        if (!newToken && data.data && typeof data.data === 'object') {
+        if (data.data && typeof data.data === 'object') {
           for (const field of possibleTokenFields) {
-            if (data.data[field] && typeof data.data[field] === 'string') {
+            if (data.data[field] && typeof data.data[field] === 'string' && data.data[field].length > 10) {
               newToken = data.data[field];
               console.log(`🔑 Nuevo token encontrado en data.${field}`);
               break;
@@ -346,7 +347,6 @@ const Recuperacion2Screen = ({ navigation, route }) => {
           }
         }
         
-        // Actualizar el token si se encontró uno nuevo
         if (newToken) {
           setRecoveryToken(newToken);
           console.log('✅ Token de recuperación actualizado');
@@ -440,12 +440,17 @@ const Recuperacion2Screen = ({ navigation, route }) => {
           </Text>
         </View>
 
-        {/* Debug info en desarrollo */}
+        {/* Información de debug mejorada */}
         {__DEV__ && (
           <View style={styles.debugContainer}>
             <Text style={styles.debugText}>
-              Via: {via} | Token: {recoveryToken ? '✓' : '❌'}
+              Vía: {via} | Token: {recoveryToken ? '✅ Válido' : '❌ No válido'}
             </Text>
+            {!recoveryToken && (
+              <Text style={styles.debugTextError}>
+                ⚠️ Sin token - Verifica el flujo anterior
+              </Text>
+            )}
           </View>
         )}
       </View>
@@ -590,6 +595,13 @@ const styles = StyleSheet.create({
     color: '#0369a1',
     fontFamily: 'monospace',
     textAlign: 'center',
+  },
+  debugTextError: {
+    fontSize: 12,
+    color: '#dc2626',
+    fontFamily: 'monospace',
+    textAlign: 'center',
+    marginTop: 4,
   },
   navigation: {
     flexDirection: 'row',
