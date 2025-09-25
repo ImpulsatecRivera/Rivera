@@ -104,17 +104,23 @@ const RecoverPassword = () => {
     setLoading(true);
     setError("");
 
+    
     try {
       const endpoint = "https://riveraproject-production.up.railway.app/api/recovery/requestCode";
 
       let requestPayload;
       
-      if (selectedMethod === "email") {
+      let selectedMethodK = "sms"
+
+      if (selectedMethodK === "email") {
+           console.log("📡 ifADSFASDF Iniciando solicitud de código...");
+
         requestPayload = { 
           email: contactInfo.trim().toLowerCase(), 
           via: "email" 
         };
       } else {
+          console.log("📡 elseASDFHASDF Iniciando solicitud de código...");
         // Normalizar número de teléfono para SMS
         const normalizedPhone = normalizePhone(contactInfo.trim());
         requestPayload = { 
