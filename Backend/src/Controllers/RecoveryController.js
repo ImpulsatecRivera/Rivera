@@ -9,7 +9,7 @@ import { EnviarSms } from "../Utils/EnviarSms.js";
 
 const RecoveryPass = {};
 
-// Función auxiliar para buscar usuario en TODOS los modelos - ESTRUCTURA CORREGIDA
+// Función auxiliar para buscar usuario en TODOS los modelos
 const buscarUsuario = async (criterio, valor) => {
   let userFound = null;
   let userType = null;
@@ -50,7 +50,7 @@ const buscarUsuario = async (criterio, valor) => {
     }
   }
 
-  // 3. Si no se encuentra en Motoristas, buscar en Clientes - CORREGIDO
+  // 3. Si no se encuentra en Motoristas, buscar en Clientes
   if (!userFound) {
     if (criterio === "email") {
       userFound = await ClientesModelo.findOne({ 
@@ -72,7 +72,7 @@ const buscarUsuario = async (criterio, valor) => {
   return { userFound, userType };
 };
 
-// Función auxiliar para actualizar contraseña en TODOS los modelos - ESTRUCTURA CORREGIDA
+// Función auxiliar para actualizar contraseña en TODOS los modelos
 const actualizarContrasena = async (decoded, hashedPassword) => {
   let updatedUser = null;
 
@@ -146,7 +146,6 @@ const actualizarContrasena = async (decoded, hashedPassword) => {
   return updatedUser;
 };
 
-// Solicitar código de recuperación
 // Solicitar código de recuperación
 RecoveryPass.requestCode = async (req, res) => {
   console.log('🔥 [DEBUG] === INICIO REQUEST CODE ===');
@@ -269,28 +268,73 @@ RecoveryPass.requestCode = async (req, res) => {
         
         const smsMessage = `Tu código de verificación es: ${codex}. Válido por 20 minutos.`;
         
+        // 🧪 MODO DESARROLLO: Simular SMS sin enviar (opcional)
+        if (process.env.NODE_ENV === 'development') {
+          console.log("🧪 MODO DESARROLLO - SMS simulado");
+          console.log("📱 Número destino:", phoneToUse);
+          console.log("📝 Código:", codex);
+          console.log("🔗 Token:", token);
+          
+          return res.status(200).json({ 
+            message: "⚠️ DESARROLLO: SMS simulado (código en consola del servidor)",
+            success: true,
+            sentTo: phoneToUse,
+            method: "sms",
+            userType: userType,
+            recoveryToken: token,
+            devCode: codex // ⚠️ Solo para desarrollo - ELIMINAR en producción
+          });
+        }
+        
         console.log("Enviando SMS a:", phoneToUse);
         console.log('🔥 [DEBUG] Intentando enviar SMS...');
         
-        // Verificar el resultado del SMS
+        // Enviar SMS real
         const smsResult = await EnviarSms(phoneToUse, smsMessage);
         console.log('🔥 [DEBUG] Resultado SMS:', smsResult);
         
+        // ✅ MANEJO MEJORADO DE ERRORES
         if (!smsResult.success) {
-          console.error("❌ Error enviando SMS:", {
-            error: smsResult.error,
-            code: smsResult.code,
-            status: smsResult.status,
-            phoneToUse: phoneToUse
-          });
+          console.error("❌ Error enviando SMS:", smsResult);
           
-          return res.status(500).json({ 
-            message: "Error enviando SMS. Verifica que el número sea válido.",
+          // Determinar el tipo de error según el código de Twilio
+          let errorMessage = "Error enviando SMS.";
+          let statusCode = 500;
+          let suggestion = "Intenta usar recuperación por email.";
+          
+          if (smsResult.code === 21211) {
+            // Número inválido
+            errorMessage = "El número de teléfono no es válido.";
+            statusCode = 400;
+          } else if (smsResult.code === 21608) {
+            // Número no verificado (Trial account)
+            errorMessage = "Este número no está verificado. En cuentas de prueba Twilio, solo números verificados pueden recibir SMS.";
+            statusCode = 403;
+            suggestion = "Verifica el número en tu cuenta Twilio o usa recuperación por email.";
+          } else if (smsResult.code === 21614) {
+            // No puedes enviar SMS a este país
+            errorMessage = "No se puede enviar SMS a números de este país con tu configuración actual de Twilio.";
+            statusCode = 400;
+          } else if (smsResult.code === 21606) {
+            // Número de teléfono no es móvil
+            errorMessage = "El número proporcionado no es un número móvil válido.";
+            statusCode = 400;
+          } else if (smsResult.code === 20003) {
+            // Credenciales de autenticación inválidas
+            errorMessage = "Error de configuración del servicio SMS. Contacta al administrador.";
+            statusCode = 500;
+            suggestion = "Verifica las credenciales de Twilio en el servidor.";
+          }
+          
+          return res.status(statusCode).json({ 
+            message: errorMessage,
             success: false,
             error: smsResult.error,
             twilioCode: smsResult.code,
+            suggestion: suggestion,
             debug: {
               phoneUsed: phoneToUse,
+              twilioError: smsResult.error,
               hasCredentials: {
                 accountSid: !!config.TWILIO_ACCOUNT_SID,
                 authToken: !!config.TWILIO_AUTH_TOKEN,
@@ -300,7 +344,7 @@ RecoveryPass.requestCode = async (req, res) => {
           });
         }
         
-        console.log("SMS confirmado enviado:", smsResult.messageId);
+        console.log("✅ SMS confirmado enviado:", smsResult.messageId);
         
         return res.status(200).json({ 
           message: "Código enviado vía SMS",
@@ -339,15 +383,21 @@ RecoveryPass.requestCode = async (req, res) => {
       console.error("Error enviando código:", sendError);
       
       const errorMessage = via === "sms" 
-        ? "Error enviando SMS." 
-        : "Error enviando email.";
+        ? "Error enviando SMS. Intenta con recuperación por email." 
+        : "Error enviando email. Intenta nuevamente.";
       
-      return res.status(500).json({ message: errorMessage });
+      return res.status(500).json({ 
+        message: errorMessage,
+        error: sendError.message 
+      });
     }
 
   } catch (error) {
     console.error("Error general en requestCode:", error);
-    return res.status(500).json({ message: "Error interno del servidor" });
+    return res.status(500).json({ 
+      message: "Error interno del servidor",
+      error: error.message 
+    });
   }
 };
 
@@ -430,7 +480,10 @@ RecoveryPass.verifyCode = async (req, res) => {
 
   } catch (error) {
     console.error("Error en verifyCode:", error);
-    res.status(500).json({ message: "Error interno del servidor" });
+    res.status(500).json({ 
+      message: "Error interno del servidor",
+      error: error.message 
+    });
   }
 };
 
@@ -491,7 +544,10 @@ RecoveryPass.newPassword = async (req, res) => {
 
   } catch (error) {
     console.error("Error en newPassword:", error);
-    res.status(500).json({ message: "Error interno del servidor" });
+    res.status(500).json({ 
+      message: "Error interno del servidor",
+      error: error.message 
+    });
   }
 };
 
@@ -547,7 +603,10 @@ RecoveryPass.IniciarSesionConCodigo = async (req, res) => {
 
   } catch (error) {
     console.error("Error en IniciarSesionConCodigo:", error);
-    return res.status(500).json({ message: "Error al iniciar sesión" });
+    return res.status(500).json({ 
+      message: "Error al iniciar sesión",
+      error: error.message 
+    });
   }
 };
 
