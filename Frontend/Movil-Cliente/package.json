@@ -52,7 +52,8 @@
     "react-native-splash-screen": "^3.3.0",
     "react-native-svg": "15.12.1",
     "react-native-vector-icons": "^10.3.0",
-    "expo-image-manipulator": "~14.0.7"
+    "expo-image-manipulator": "~14.0.7",
+    "expo-location": "~19.0.7"
   },
   "devDependencies": {
     "@babel/core": "^7.20.0",
