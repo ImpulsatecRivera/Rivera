@@ -1,3 +1,4 @@
+// src/navigation/AppNavigator.js
 import React, { useState, useEffect } from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
@@ -27,6 +28,9 @@ import Recuperacion5 from '../screens/Recuperacion5';
 import OnboardingScreen1 from '../screens/pantallacarga1';
 import OnboardingScreen2 from '../screens/pantallacarga2';
 import OnboardingScreen3 from '../screens/pantallacarga3';
+
+// ✨ NUEVO: importar EditProfileScreen (único import añadido)
+import EditProfileScreen from '../screens/EditProfileScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
@@ -267,6 +271,18 @@ const AppNavigator = () => {
           gestureEnabled: false,
         }}
       />
+
+      {/* ✨ NUEVO: EditarPerfil (única ruta añadida) */}
+      <Stack.Screen
+        name="EditarPerfil"
+        component={EditProfileScreen}
+        options={{
+          headerShown: true,
+          title: 'Editar perfil',
+          presentation: 'card',
+        }}
+      />
+
       <Stack.Screen 
         name="InfoViaje" 
         component={InfoViajeScreen}
