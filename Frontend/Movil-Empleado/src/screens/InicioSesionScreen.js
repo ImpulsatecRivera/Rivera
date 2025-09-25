@@ -45,7 +45,7 @@ const InicioSesionScreen = ({ navigation }) => {
       console.log('🔐 Iniciando sesión...', { email });
       
       // ✅ IP CONFIGURADA CORRECTAMENTE
-      const API_URL = 'https://riveraproject-production.up.railway.app/api/login';
+      const API_URL = 'https://riveraproject-production-933e.up.railway.app/api/login';
       
       console.log('🌐 Conectando a:', API_URL);
       const response = await fetch(API_URL, {

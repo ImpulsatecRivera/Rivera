@@ -20,7 +20,7 @@ const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const BG = '#F5F5F5';
 const LOGO_WIDTH = Math.min(SCREEN_WIDTH * 0.6, 280);
 const LOGO_HEIGHT = 80;
-const API_BASE_URL = 'https://riveraproject-production.up.railway.app';
+const API_BASE_URL = 'https://riveraproject-production-933e.up.railway.app';
 
 const DashboardScreen = () => {
   const navigation = useNavigation();

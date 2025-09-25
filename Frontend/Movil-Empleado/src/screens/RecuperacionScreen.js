@@ -51,7 +51,7 @@ const handleNext = async () => {
   try {
     console.log('🔐 Solicitando código de recuperación para:', email);
     
-    const API_URL = 'https://riveraproject-production.up.railway.app/api/recovery/requestCode';
+    const API_URL = 'https://riveraproject-production-933e.up.railway.app/api/recovery/requestCode';
     
     const response = await fetch(API_URL, {
       method: 'POST',

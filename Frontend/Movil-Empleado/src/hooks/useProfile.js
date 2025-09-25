@@ -4,7 +4,7 @@ import { useAuth } from '../Context/authContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Base URL compatible con EXPO_PUBLIC_API_URL (con o sin /api)
-const RAW = (process.env.EXPO_PUBLIC_API_URL || 'https://riveraproject-production.up.railway.app').replace(/\/+$/, '');
+const RAW = (process.env.EXPO_PUBLIC_API_URL || 'https://riveraproject-production-933e.up.railway.app').replace(/\/+$/, '');
 const CLEAN = RAW.replace(/\/api$/i, '');
 const API_BASE = `${CLEAN}/api`;
 
