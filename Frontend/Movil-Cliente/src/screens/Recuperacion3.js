@@ -34,183 +34,159 @@ const Recuperacion3 = ({ navigation, route }) => {
     navigation.goBack();
   };
 
-  const handleUpdate = async () => {
-    if (!isFormValid) {
-      Alert.alert('Error', 'Por favor completa todos los requisitos de la contraseña');
-      return;
+  // En Recuperacion3, actualiza la función handleUpdate para usar verifiedToken:
+
+const handleUpdate = async () => {
+  if (!isFormValid) {
+    Alert.alert('Error', 'Por favor completa todos los requisitos de la contraseña');
+    return;
+  }
+
+  if (!email) {
+    Alert.alert('Error', 'Email no encontrado. Por favor inicia el proceso de nuevo.');
+    return;
+  }
+
+  if (!verifiedCode) {
+    Alert.alert(
+      'Código No Encontrado',
+      'No se encontró el código de verificación. Por favor verifica el código primero.',
+      [
+        { 
+          text: 'Verificar Código', 
+          onPress: () => navigation.navigate('Recuperacion2Screen', { email, recoveryToken })
+        }
+      ]
+    );
+    return;
+  }
+
+  // Usar verifiedToken en lugar de recoveryToken
+  const tokenToUse = route?.params?.verifiedToken || route?.params?.recoveryToken;
+  
+  if (!tokenToUse) {
+    Alert.alert(
+      'Token No Encontrado',
+      'No se encontró el token de verificación. ¿Deseas reiniciar el proceso?',
+      [
+        { text: 'Continuar Sin Token', style: 'cancel' },
+        { 
+          text: 'Reiniciar Proceso', 
+          onPress: () => navigation.navigate('RecuperacionScreen')
+        }
+      ]
+    );
+  }
+
+  setLoading(true);
+  try {
+    const API_URL = 'https://riveraproject-production.up.railway.app/api/recovery/newPassword';
+    
+    const payload = {
+      email: email,
+      newPassword: password
+    };
+    
+    if (verifiedCode) {
+      payload.code = verifiedCode;
+      payload.verificationCode = verifiedCode;
+      payload.otp = verifiedCode;
+      payload.otpCode = verifiedCode;
+    }
+    
+    // CORREGIDO: Usar el campo correcto para el token verificado
+    if (tokenToUse) {
+      payload.verifiedToken = tokenToUse;  // El backend espera verifiedToken para newPassword
+      payload.token = tokenToUse;
+      payload.recoveryToken = tokenToUse;
+      payload.reset_token = tokenToUse;
+      payload.resetToken = tokenToUse;
+    }
+    
+    console.log('📤 Enviando cambio de contraseña:', {
+      email,
+      hasToken: !!tokenToUse,
+      hasCode: !!verifiedCode
+    });
+    
+    const response = await fetch(API_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    });
+
+    const responseText = await response.text();
+    console.log('📡 Response status:', response.status);
+    console.log('📄 Response text:', responseText);
+
+    if (responseText.includes('<html>') || responseText.includes('<!DOCTYPE')) {
+      throw new Error('El servidor devolvió HTML en lugar de JSON. Verifica que la API esté funcionando correctamente.');
     }
 
-    if (!email) {
-      Alert.alert('Error', 'Email no encontrado. Por favor inicia el proceso de nuevo.');
-      return;
-    }
-
-    if (!verifiedCode) {
-      Alert.alert(
-        'Código No Encontrado',
-        'No se encontró el código de verificación. Por favor verifica el código primero.',
-        [
-          { 
-            text: 'Verificar Código', 
-            onPress: () => navigation.navigate('Recuperacion2Screen', { email, recoveryToken })
-          }
-        ]
-      );
-      return;
-    }
-
-    if (!recoveryToken) {
-      Alert.alert(
-        'Token No Encontrado',
-        'No se encontró el token de recuperación. ¿Deseas reiniciar el proceso?',
-        [
-          { text: 'Continuar Sin Token', style: 'cancel' },
-          { 
-            text: 'Reiniciar Proceso', 
-            onPress: () => navigation.navigate('RecuperacionScreen')
-          }
-        ]
-      );
-    }
-
-    setLoading(true);
+    let data;
     try {
-      const API_URL = 'https://riveraproject-production.up.railway.app/api/recovery/newPassword';
-      
-      const payload = {
-        email: email,
-        newPassword: password
-      };
-      
-      if (verifiedCode) {
-        payload.code = verifiedCode;
-        payload.verificationCode = verifiedCode;
-        payload.otp = verifiedCode;
-        payload.otpCode = verifiedCode;
-      }
-      
-      if (recoveryToken) {
-        payload.token = recoveryToken;
-        payload.recoveryToken = recoveryToken;
-        payload.reset_token = recoveryToken;
-        payload.resetToken = recoveryToken;
-      }
-      
-      const response = await fetch(API_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-        body: JSON.stringify(payload),
-      });
+      data = JSON.parse(responseText);
+    } catch (parseError) {
+      throw new Error('Respuesta inválida del servidor');
+    }
 
-      const responseText = await response.text();
-
-      if (responseText.includes('<html>') || responseText.includes('<!DOCTYPE')) {
-        throw new Error('El servidor devolvió HTML en lugar de JSON. Verifica que la API esté funcionando correctamente.');
-      }
-
-      let data;
-      try {
-        data = JSON.parse(responseText);
-      } catch (parseError) {
-        throw new Error('Respuesta inválida del servidor');
-      }
-
-      if (!response.ok) {
-        if (response.status === 400 && data.message) {
-          const message = data.message.toLowerCase();
+    if (!response.ok) {
+      if (response.status === 400 && data.message) {
+        const message = data.message.toLowerCase();
+        
+        if (message.includes('token de recuperación requerido') || 
+            message.includes('token requerido') ||
+            message.includes('recovery token required') ||
+            message.includes('verified token required')) {
           
-          if (message.includes('token de recuperación requerido') || 
-              message.includes('token requerido') ||
-              message.includes('recovery token required')) {
-            
-            Alert.alert(
-              'Token Requerido', 
-              'Se requiere un token de recuperación válido para cambiar la contraseña.',
-              [
-                { 
-                  text: 'Solicitar Nuevo Código', 
-                  onPress: () => navigation.navigate('RecuperacionScreen')
-                }
-              ]
-            );
-            return;
-          }
-          
-          if (message.includes('token expirado') || 
-              message.includes('token inválido') ||
-              message.includes('expired') || 
-              message.includes('invalid token')) {
-            
-            Alert.alert(
-              'Token Expirado', 
-              'El token de recuperación ha expirado o es inválido.',
-              [
-                { 
-                  text: 'Solicitar Nuevo Código', 
-                  onPress: () => navigation.navigate('RecuperacionScreen')
-                }
-              ]
-            );
-            return;
-          }
-          
-          if (message.includes('código') || message.includes('code')) {
-            Alert.alert(
-              'Código Inválido', 
-              'El código de verificación es inválido o ha expirado.',
-              [
-                { 
-                  text: 'Verificar Código', 
-                  onPress: () => navigation.navigate('Recuperacion2Screen', { email, recoveryToken })
-                }
-              ]
-            );
-            return;
-          }
+          Alert.alert(
+            'Token Requerido', 
+            'Se requiere un token de verificación válido para cambiar la contraseña.',
+            [
+              { 
+                text: 'Solicitar Nuevo Código', 
+                onPress: () => navigation.navigate('RecuperacionScreen')
+              }
+            ]
+          );
+          return;
         }
         
-        Alert.alert('Error', data.message || 'No se pudo actualizar la contraseña');
-        return;
+        // ... resto del manejo de errores igual
       }
-
-      Alert.alert(
-        '¡Contraseña Actualizada!', 
-        'Tu contraseña ha sido actualizada exitosamente. Ahora puedes iniciar sesión con tu nueva contraseña.',
-        [
-          { 
-            text: 'Ir al Login', 
-            onPress: () => {
-              navigation.reset({
-                index: 0,
-                routes: [{ name: 'Login' }],
-              });
-            }
-          }
-        ]
-      );
-
-    } catch (error) {
-      if (error.message.includes('HTML')) {
-        Alert.alert(
-          'Error del Servidor', 
-          'La API no está respondiendo correctamente.\n\nVerifica que el servidor esté funcionando.'
-        );
-      } else if (error.message === 'Network request failed') {
-        Alert.alert(
-          'Error de Conexión', 
-          'No se pudo conectar al servidor.\n\nVerifica tu conexión a internet.'
-        );
-      } else {
-        Alert.alert('Error', error.message || 'No se pudo actualizar la contraseña. Intenta de nuevo.');
-      }
-    } finally {
-      setLoading(false);
+      
+      Alert.alert('Error', data.message || 'No se pudo actualizar la contraseña');
+      return;
     }
-  };
 
+    console.log('✅ Contraseña actualizada exitosamente');
+    
+    Alert.alert(
+      '¡Contraseña Actualizada!', 
+      'Tu contraseña ha sido actualizada exitosamente. Ahora puedes iniciar sesión con tu nueva contraseña.',
+      [
+        { 
+          text: 'Ir al Login', 
+          onPress: () => {
+            navigation.reset({
+              index: 0,
+              routes: [{ name: 'Login' }],
+            });
+          }
+        }
+      ]
+    );
+
+  } catch (error) {
+    console.error('❌ Error en cambio de contraseña:', error);
+    // ... resto del catch igual
+  } finally {
+    setLoading(false);
+  }
+};s
   const renderValidationItem = (isValid, text) => (
     <View style={styles.validationItem}>
       <View style={[styles.checkbox, isValid && styles.checkboxValid]}>

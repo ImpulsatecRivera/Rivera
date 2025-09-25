@@ -33,7 +33,8 @@ export const config = {
     TWILIO_ACCOUNT_SID: process.env.TWILIO_ACCOUNT_SID,
     TWILIO_AUTH_TOKEN: process.env.TWILIO_AUTH_TOKEN,
     TWILIO_PHONE_NUMBER: process.env.TWILIO_PHONE_NUMBER,
-};
+  }
+
 
 console.log('🔧 [CONFIG] Variables de entorno cargadas:');
 console.log('TWILIO_ACCOUNT_SID:', config.TWILIO_ACCOUNT_SID ? '✅' : '❌');

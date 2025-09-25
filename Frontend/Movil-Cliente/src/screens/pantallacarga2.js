@@ -1,24 +1,20 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Dimensions } from 'react-native';
-import LottieView from 'lottie-react-native'; // Descomenta cuando resuelvas el error de Babel
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import LottieView from 'lottie-react-native';
 import { useAuth } from '../context/authContext';
-
-const { height } = Dimensions.get('window');
+import AnimatedBottomNavigation from '../components/AnimatedNav';
 
 const OnboardingScreen2 = ({ navigation }) => {
   const { completeOnboarding } = useAuth();
 
-  // Función para ir a la siguiente pantalla
   const handleNext = () => {
     navigation.navigate('pantallacarga3');
   };
 
-  // Función para regresar a la pantalla anterior
   const handleBack = () => {
     navigation.goBack();
   };
 
-  // Función para saltar el onboarding
   const handleSkip = async () => {
     await completeOnboarding();
   };
@@ -35,19 +31,14 @@ const OnboardingScreen2 = ({ navigation }) => {
 
       {/* Illustration Container */}
       <View style={styles.illustrationContainer}>
-        {/* Contenedor para la animación Lottie */}
         <View style={styles.lottieContainer}>
-          {/* Placeholder temporal para animación de pago */}
-         
-        
           <LottieView
-            source={require('../assets/lottie/Make payment.json')} // Tu archivo Lottie de pago
+            source={require('../assets/lottie/Make payment.json')}
             autoPlay
             loop
             style={styles.lottieAnimation}
             resizeMode="contain"
           />
-         
         </View>
       </View>
 
@@ -59,28 +50,19 @@ const OnboardingScreen2 = ({ navigation }) => {
         </Text>
       </View>
 
-      {/* Bottom Navigation */}
-      <View style={styles.bottomContainer}>
-        <View style={styles.navigation}>
-          <TouchableOpacity style={styles.backButton} onPress={handleBack}>
-            <Text style={styles.backButtonText}>Atrás</Text>
-          </TouchableOpacity>
-          
-          <View style={styles.pagination}>
-            <View style={styles.dot} />
-            <View style={[styles.dot, styles.activeDot]} />
-            <View style={styles.dot} />
-          </View>
-          
-          <TouchableOpacity style={styles.nextButton} onPress={handleNext}>
-            <Text style={styles.nextButtonText}>Siguiente</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
+      {/* Navegación corregida */}
+      <AnimatedBottomNavigation
+        currentPage={1}
+        totalPages={3}
+        onNext={handleNext}
+        onBack={handleBack}
+        showHeader={false}
+      />
     </View>
   );
 };
 
+// Usar los mismos estilos de la pantalla 1
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -88,7 +70,6 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     backgroundColor: '#FFFFFF',
     paddingTop: 50,
-    width: '100%',
   },
   header: {
     flexDirection: 'row',
@@ -102,9 +83,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#000000',
   },
-  skipButton: {
-    // TouchableOpacity styles can be empty
-  },
+  skipButton: {},
   skipButtonText: {
     fontSize: 16,
     fontWeight: '600',
@@ -127,27 +106,6 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
   },
-  // Estilos temporales para el placeholder
-  placeholderAnimation: {
-    width: '100%',
-    height: '100%',
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#F8F9FA',
-    borderRadius: 20,
-    borderWidth: 2,
-    borderColor: '#E9ECEF',
-    borderStyle: 'dashed',
-  },
-  placeholderText: {
-    fontSize: 60,
-    marginBottom: 10,
-  },
-  placeholderSubtext: {
-    fontSize: 16,
-    color: '#6C757D',
-    textAlign: 'center',
-  },
   content: {
     paddingHorizontal: 40,
     alignItems: 'center',
@@ -166,45 +124,6 @@ const styles = StyleSheet.create({
     color: '#999999',
     lineHeight: 24,
     textAlign: 'center',
-  },
-  bottomContainer: {
-    paddingHorizontal: 40,
-    paddingBottom: 40,
-  },
-  navigation: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  backButton: {
-    // TouchableOpacity styles can be empty
-  },
-  backButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#CCCCCC',
-  },
-  pagination: {
-    flexDirection: 'row',
-  },
-  dot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: '#E0E0E0',
-    marginHorizontal: 5,
-  },
-  activeDot: {
-    backgroundColor: '#333333',
-    width: 30,
-  },
-  nextButton: {
-    // TouchableOpacity styles can be empty
-  },
-  nextButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#7ED321',
   },
 });
 
