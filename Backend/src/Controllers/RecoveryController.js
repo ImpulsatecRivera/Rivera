@@ -147,8 +147,8 @@ const actualizarContrasena = async (decoded, hashedPassword) => {
 };
 
 // Solicitar código de recuperación
+// Solicitar código de recuperación
 RecoveryPass.requestCode = async (req, res) => {
-  RecoveryPass.requestCode = async (req, res) => {
   console.log('🔥 [DEBUG] === INICIO REQUEST CODE ===');
   console.log('🔥 [DEBUG] NODE_ENV:', process.env.NODE_ENV);
   console.log('🔥 [DEBUG] Variables Twilio disponibles:');
@@ -162,9 +162,6 @@ RecoveryPass.requestCode = async (req, res) => {
   
   const { email, phone, via = "email" } = req.body;
   console.log("🔥 [DEBUG] Request body:", { email, phone, via });
-
-  // ... resto de tu código
-  const { email, phone, via = "email" } = req.body;
 
   console.log("Solicitud de código recibida:", { email, phone, via });
 
@@ -273,18 +270,33 @@ RecoveryPass.requestCode = async (req, res) => {
         const smsMessage = `Tu código de verificación es: ${codex}. Válido por 20 minutos.`;
         
         console.log("Enviando SMS a:", phoneToUse);
+        console.log('🔥 [DEBUG] Intentando enviar SMS...');
         
         // Verificar el resultado del SMS
         const smsResult = await EnviarSms(phoneToUse, smsMessage);
+        console.log('🔥 [DEBUG] Resultado SMS:', smsResult);
         
         if (!smsResult.success) {
-          console.error("Error real enviando SMS:", smsResult.error);
+          console.error("❌ Error enviando SMS:", {
+            error: smsResult.error,
+            code: smsResult.code,
+            status: smsResult.status,
+            phoneToUse: phoneToUse
+          });
           
           return res.status(500).json({ 
-            message: "Error enviando SMS.",
+            message: "Error enviando SMS. Verifica que el número sea válido.",
             success: false,
             error: smsResult.error,
-            twilioCode: smsResult.code
+            twilioCode: smsResult.code,
+            debug: {
+              phoneUsed: phoneToUse,
+              hasCredentials: {
+                accountSid: !!config.TWILIO_ACCOUNT_SID,
+                authToken: !!config.TWILIO_AUTH_TOKEN,
+                phoneNumber: !!config.TWILIO_PHONE_NUMBER
+              }
+            }
           });
         }
         
