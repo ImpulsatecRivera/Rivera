@@ -237,7 +237,7 @@ const useTruckEdit = (fetchOptions, onUpdateSuccess) => {
           console.log(pair[0] + ': ' + pair[1]);
         }
 
-        response = await fetch(`riveraproject-production.up.railway.app/api/camiones/${selectedTruck.id}`, {
+        response = await fetch(`https://riveraproject-production-933e.up.railway.app/api/camiones/${selectedTruck.id}`, {
           method: 'PUT',
           credentials: 'include',
           body: formDataToSend
@@ -272,7 +272,7 @@ const useTruckEdit = (fetchOptions, onUpdateSuccess) => {
 
         console.log('=== DATOS JSON A ENVIAR ===', updateData);
 
-        response = await fetch(`riveraproject-production.up.railway.app/api/camiones/${selectedTruck.id}`, {
+        response = await fetch(`https://riveraproject-production-933e.up.railway.app/api/camiones/${selectedTruck.id}`, {
           method: 'PUT',
           ...fetchOptions,
           body: JSON.stringify(updateData)
