@@ -53,12 +53,8 @@
     "react-native-splash-screen": "^3.3.0",
     "react-native-svg": "15.12.1",
     "react-native-vector-icons": "^10.3.0",
-<<<<<<< HEAD
-    "react-native-webview": "^13.16.0"
-=======
-    "expo-image-manipulator": "~14.0.7",
+    "react-native-webview": "^13.16.0",
     "expo-location": "~19.0.7"
->>>>>>> b777704bc0a3657d55602eecb68950858a25a4b2
   },
   "devDependencies": {
     "@babel/core": "^7.20.0",
