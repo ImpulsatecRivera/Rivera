@@ -315,10 +315,12 @@ const DashboardScreen = () => {
                   {weather.loading ? '...' : weather.humidity}
                 </Text>
               </View>
-              <View style={styles.weatherDetailItem}>
-                <Text style={styles.weatherDetailLabel}>San Salvador</Text>
-                <Text style={styles.weatherDetailValue}>El Salvador</Text>
-              </View>
+             <View style={styles.weatherDetailItem}>
+  <Text style={styles.weatherDetailLabel}>
+    {weather.loading ? 'Ubicación' : (weather.location?.split(',')[0] || 'San Salvador')}
+  </Text>
+  <Text style={styles.weatherDetailValue}>El Salvador</Text>
+</View>
             </View>
           </View>
 

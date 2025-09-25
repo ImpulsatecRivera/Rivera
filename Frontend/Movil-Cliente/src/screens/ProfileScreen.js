@@ -929,39 +929,78 @@ const ProfileScreen = () => {
       </Animated.View>
 
       {/* Modal selector de imagen */}
-      <Modal transparent visible={imagePickerVisible} animationType="fade" onRequestClose={hideImagePicker}>
-        <Pressable style={styles.backdrop} onPress={hideImagePicker}>
-          <Pressable style={styles.imagePickerModal}>
-            <Text style={styles.imagePickerTitle}>Cambiar foto de perfil</Text>
-            
-            <TouchableOpacity 
-              style={styles.imagePickerOption}
-              onPress={takePhotoWithCamera}
-              activeOpacity={0.8}
-            >
-              <Text style={styles.imagePickerIcon}>📷</Text>
-              <Text style={styles.imagePickerText}>Tomar foto</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity 
-              style={styles.imagePickerOption}
-              onPress={pickImageFromGallery}
-              activeOpacity={0.8}
-            >
-              <Text style={styles.imagePickerIcon}>🖼️</Text>
-              <Text style={styles.imagePickerText}>Elegir de galería</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity 
-              style={styles.imagePickerCancel}
-              onPress={hideImagePicker}
-              activeOpacity={0.8}
-            >
-              <Text style={styles.imagePickerCancelText}>Cancelar</Text>
-            </TouchableOpacity>
-          </Pressable>
-        </Pressable>
-      </Modal>
+      {/* Modal selector de imagen MODERNO */}
+<Modal 
+  transparent 
+  visible={imagePickerVisible} 
+  animationType="slide" 
+  onRequestClose={hideImagePicker}
+>
+  <View style={styles.modernBackdrop}>
+    <Pressable style={styles.backdropTouchable} onPress={hideImagePicker} />
+    
+    <View style={styles.modernImagePickerCard}>
+      {/* Header del modal */}
+      <View style={styles.modalHeader}>
+        <View style={styles.modalHandle} />
+        <Text style={styles.modalTitle}>Cambiar foto de perfil</Text>
+        <Text style={styles.modalSubtitle}>Elige una opción para actualizar tu imagen</Text>
+      </View>
+
+      {/* Opciones mejoradas */}
+      <View style={styles.optionsContainer}>
+        {/* Opción Cámara */}
+        <TouchableOpacity 
+          style={styles.modernOption}
+          onPress={takePhotoWithCamera}
+          activeOpacity={0.7}
+        >
+          <View style={styles.optionContent}>
+            <View style={[styles.optionIconContainer, { backgroundColor: '#667eea' }]}>
+              <Text style={styles.optionIcon}>📷</Text>
+            </View>
+            <View style={styles.optionTextContainer}>
+              <Text style={styles.optionTitle}>Tomar Foto</Text>
+              <Text style={styles.optionDescription}>Usa la cámara para capturar una nueva imagen</Text>
+            </View>
+            <View style={styles.optionArrow}>
+              <Text style={styles.arrowIcon}>›</Text>
+            </View>
+          </View>
+        </TouchableOpacity>
+
+        {/* Opción Galería */}
+        <TouchableOpacity 
+          style={styles.modernOption}
+          onPress={pickImageFromGallery}
+          activeOpacity={0.7}
+        >
+          <View style={styles.optionContent}>
+            <View style={[styles.optionIconContainer, { backgroundColor: '#f093fb' }]}>
+              <Text style={styles.optionIcon}>🖼️</Text>
+            </View>
+            <View style={styles.optionTextContainer}>
+              <Text style={styles.optionTitle}>Elegir de Galería</Text>
+              <Text style={styles.optionDescription}>Selecciona una imagen existente</Text>
+            </View>
+            <View style={styles.optionArrow}>
+              <Text style={styles.arrowIcon}>›</Text>
+            </View>
+          </View>
+        </TouchableOpacity>
+      </View>
+
+      {/* Botón cancelar mejorado */}
+      <TouchableOpacity 
+        style={styles.modernCancelButton}
+        onPress={hideImagePicker}
+        activeOpacity={0.8}
+      >
+        <Text style={styles.modernCancelText}>Cancelar</Text>
+      </TouchableOpacity>
+    </View>
+  </View>
+</Modal>
 
       {/* Modal de loading de cámara - Solo animación Lottie */}
       <Modal transparent visible={cameraLoadingVisible} animationType="fade">
@@ -1712,6 +1751,123 @@ const styles = StyleSheet.create({
     fontWeight: '800', 
     fontSize: 16,
   },
+  // Estilos modernos para el modal selector de imagen
+modernBackdrop: {
+  flex: 1,
+  backgroundColor: 'rgba(0, 0, 0, 0.6)',
+  justifyContent: 'flex-end',
+},
+backdropTouchable: {
+  flex: 1,
+},
+modernImagePickerCard: {
+  backgroundColor: '#FFFFFF',
+  borderTopLeftRadius: 28,
+  borderTopRightRadius: 28,
+  paddingTop: 12,
+  paddingBottom: Platform.OS === 'ios' ? 40 : 24,
+  paddingHorizontal: 24,
+  shadowColor: '#000',
+  shadowOffset: { width: 0, height: -4 },
+  shadowOpacity: 0.15,
+  shadowRadius: 20,
+  elevation: 20,
+},
+modalHeader: {
+  alignItems: 'center',
+  paddingBottom: 24,
+},
+modalHandle: {
+  width: 36,
+  height: 4,
+  backgroundColor: '#E2E8F0',
+  borderRadius: 2,
+  marginBottom: 20,
+},
+modalTitle: {
+  fontSize: 22,
+  fontWeight: '800',
+  color: '#1E293B',
+  marginBottom: 8,
+  textAlign: 'center',
+},
+modalSubtitle: {
+  fontSize: 15,
+  color: '#64748B',
+  textAlign: 'center',
+  lineHeight: 20,
+},
+optionsContainer: {
+  marginBottom: 20,
+},
+modernOption: {
+  backgroundColor: '#F8FAFC',
+  borderRadius: 16,
+  marginBottom: 12,
+  borderWidth: 1,
+  borderColor: '#E2E8F0',
+  overflow: 'hidden',
+},
+optionContent: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  padding: 20,
+},
+optionIconContainer: {
+  width: 56,
+  height: 56,
+  borderRadius: 16,
+  justifyContent: 'center',
+  alignItems: 'center',
+  marginRight: 16,
+  shadowColor: '#000',
+  shadowOffset: { width: 0, height: 2 },
+  shadowOpacity: 0.1,
+  shadowRadius: 4,
+  elevation: 3,
+},
+optionIcon: {
+  fontSize: 24,
+  color: '#FFFFFF',
+},
+optionTextContainer: {
+  flex: 1,
+},
+optionTitle: {
+  fontSize: 17,
+  fontWeight: '700',
+  color: '#1E293B',
+  marginBottom: 4,
+},
+optionDescription: {
+  fontSize: 14,
+  color: '#64748B',
+  lineHeight: 18,
+},
+optionArrow: {
+  width: 24,
+  height: 24,
+  justifyContent: 'center',
+  alignItems: 'center',
+},
+arrowIcon: {
+  fontSize: 20,
+  color: '#94A3B8',
+  fontWeight: '300',
+},
+modernCancelButton: {
+  backgroundColor: '#F1F5F9',
+  borderRadius: 16,
+  paddingVertical: 16,
+  alignItems: 'center',
+  borderWidth: 1,
+  borderColor: '#E2E8F0',
+},
+modernCancelText: {
+  fontSize: 16,
+  fontWeight: '600',
+  color: '#64748B',
+},
 });
 
 export default ProfileScreen;
