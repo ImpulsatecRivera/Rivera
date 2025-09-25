@@ -22,7 +22,6 @@ router.get("/:id/viajes-programados", motoristasCon.getViajesProgramados);
 router.get("/:id/historial-completo", motoristasCon.getHistorialCompleto);
 
 // NUEVAS RUTAS DE DEBUG Y PRUEBA
-router.post("/:id/crear-viajes-prueba", motoristasCon.crearViajesPrueba);
 router.get("/:id/debug-viajes", motoristasCon.debugViajes);
 
 // Ruta genérica para obtener motorista por ID
