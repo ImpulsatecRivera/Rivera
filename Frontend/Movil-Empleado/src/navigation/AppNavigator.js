@@ -1,5 +1,6 @@
 // src/navigation/AppNavigator.js
 import React, { useState, useEffect } from 'react';
+import { Text } from 'react-native'; // 👈 Agrega esta línea
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
 import Icon from 'react-native-vector-icons/MaterialIcons';
@@ -35,46 +36,72 @@ import EditProfileScreen from '../screens/EditProfileScreen';
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
 
-// Navegador de pestañas principal
+// Navegador de pestañas principal mejorado
 const TabNavigator = () => {
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
-        tabBarIcon: ({ focused, color, size }) => {
-          let iconName;
+        tabBarIcon: ({ focused }) => {
           switch (route.name) {
             case 'Inicio':
-              iconName = 'home';
-              break;
+              return focused
+                ? <Text style={{ fontSize: 28 }}>🏠</Text>
+                : <Text style={{ fontSize: 24 }}>🏠</Text>;
             case 'Viajes':
-              iconName = 'local-shipping';
-              break;
+              return focused
+                ? <Text style={{ fontSize: 28 }}>🚚</Text>
+                : <Text style={{ fontSize: 24 }}>🚚</Text>;
             case 'Perfil':
-              iconName = 'person';
-              break;
+              return focused
+                ? <Text style={{ fontSize: 28 }}>👤</Text>
+                : <Text style={{ fontSize: 24 }}>👤</Text>;
             default:
-              iconName = 'help';
+              return <Text style={{ fontSize: 24 }}>❓</Text>;
           }
-          return <Icon name={iconName} size={size} color={color} />;
         },
         tabBarActiveTintColor: '#4CAF50',
-        tabBarInactiveTintColor: '#999',
+        tabBarInactiveTintColor: '#9E9E9E',
         headerShown: false,
         tabBarStyle: {
-          backgroundColor: '#fff',
-          borderTopWidth: 1,
-          borderTopColor: '#eee',
-          paddingBottom: 5,
-          height: 60,
-          elevation: 8,
-          shadowOffset: { width: 0, height: -2 },
-          shadowOpacity: 0.1,
-          shadowRadius: 4,
+          backgroundColor: '#FFFFFF',
+          borderTopWidth: 0,
+          paddingBottom: 20,
+          paddingTop: 12,
+          height: 85,
+          elevation: 25,
+          shadowOffset: { width: 0, height: -6 },
+          shadowOpacity: 0.2,
+          shadowRadius: 12,
+          shadowColor: '#000000',
+          borderTopLeftRadius: 25,
+          borderTopRightRadius: 25,
+          position: 'absolute',
+          bottom: 15,
+          left: 10,
+          right: 10,
+          borderWidth: 1,
+          borderColor: 'rgba(0,0,0,0.05)',
         },
         tabBarLabelStyle: {
           fontSize: 12,
-          fontWeight: '500',
+          fontWeight: '700',
+          letterSpacing: 0.3,
+          marginTop: 4,
+          textShadowColor: 'rgba(0,0,0,0.1)',
+          textShadowOffset: { width: 0, height: 1 },
+          textShadowRadius: 2,
         },
+        tabBarItemStyle: {
+          paddingVertical: 6,
+          borderRadius: 12,
+          marginHorizontal: 8,
+          backgroundColor: 'transparent',
+        },
+        tabBarIconStyle: {
+          marginBottom: 0,
+        },
+        tabBarAllowFontScaling: false,
+        tabBarAccessibilityLabel: route.name,
       })}
       initialRouteName="Inicio"
     >
@@ -83,6 +110,7 @@ const TabNavigator = () => {
         component={InicioScreen}
         options={{
           tabBarLabel: 'Inicio',
+          tabBarAccessibilityLabel: 'Pantalla de inicio',
         }}
       />
       <Tab.Screen 
@@ -90,6 +118,7 @@ const TabNavigator = () => {
         component={ViajesScreen}
         options={{
           tabBarLabel: 'Viajes',
+          tabBarAccessibilityLabel: 'Historial de viajes',
           tabBarBadge: null,
         }}
       />
@@ -98,6 +127,7 @@ const TabNavigator = () => {
         component={PerfilScreen}
         options={{
           tabBarLabel: 'Perfil',
+          tabBarAccessibilityLabel: 'Perfil de usuario',
         }}
       />
     </Tab.Navigator>
