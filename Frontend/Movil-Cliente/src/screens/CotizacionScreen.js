@@ -84,32 +84,96 @@ const IntegratedTruckRequestScreen = () => {
     }
   ];
 
-  // Verificar si es la primera cotización del usuario
-  const checkIfFirstQuote = async () => {
+  // === NUEVA LÓGICA PARA VERIFICAR COTIZACIONES EN EL BACKEND ===
+
+  // Función para obtener cotizaciones del usuario desde el backend
+  const fetchUserQuotes = async () => {
     try {
-      const hasCreatedQuote = await AsyncStorage.getItem('hasCreatedFirstQuote');
-      const isFirst = !hasCreatedQuote || hasCreatedQuote !== 'true';
-      setIsFirstQuote(isFirst);
-      return isFirst;
+      const clientId = await getClientId();
+      const token = await AsyncStorage.getItem('clientToken');
+      const baseUrl = 'https://riveraproject-production-933e.up.railway.app';
+      
+      if (!clientId || !token) {
+        console.log('❌ No hay clientId o token disponible');
+        return [];
+      }
+
+      const response = await fetch(`${baseUrl}/api/quotes/client/${clientId}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      console.log('📋 Cotizaciones obtenidas:', data);
+      
+      // Devolver array de cotizaciones (ajusta según tu estructura de respuesta)
+      return data.cotizaciones || data.quotes || data || [];
+      
     } catch (error) {
-      console.error('Error verificando primera cotización:', error);
-      return false;
+      console.error('❌ Error obteniendo cotizaciones:', error);
+      return []; // En caso de error, asumir que no hay cotizaciones
     }
   };
 
-  // Marcar que ya no es la primera cotización
+  // Función mejorada para verificar si es la primera cotización (consulta backend)
+  const checkIfFirstQuoteFromBackend = async () => {
+    try {
+      setIsLoading(true);
+      
+      // Obtener cotizaciones del usuario desde el backend
+      const userQuotes = await fetchUserQuotes();
+      
+      // Si no tiene cotizaciones, es primera vez
+      const isFirst = userQuotes.length === 0;
+      
+      console.log(`📊 Usuario tiene ${userQuotes.length} cotizaciones. Es primera vez: ${isFirst}`);
+      
+      setIsFirstQuote(isFirst);
+      return isFirst;
+      
+    } catch (error) {
+      console.error('❌ Error verificando cotizaciones:', error);
+      // En caso de error, asumir que NO es primera vez para evitar mostrar animación incorrectamente
+      setIsFirstQuote(false);
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Función para marcar que ya no es la primera cotización (solo guarda localmente como respaldo)
   const markFirstQuoteCompleted = async () => {
     try {
       await AsyncStorage.setItem('hasCreatedFirstQuote', 'true');
-      console.log('✅ Primera cotización marcada como completada');
+      console.log('✅ Primera cotización marcada como completada (respaldo local)');
     } catch (error) {
-      console.error('Error marcando primera cotización:', error);
+      console.error('❌ Error marcando primera cotización:', error);
     }
   };
 
-  // useEffect para verificar si es primera cotización al cargar
+  // === FUNCIÓN PARA RESET MANUAL (SOLO PARA TESTING) ===
+  const resetFirstQuoteFlag = async () => {
+    try {
+      await AsyncStorage.removeItem('hasCreatedFirstQuote');
+      console.log('🔄 Flag de primera cotización reseteado');
+      
+      // Volver a verificar desde el backend
+      await checkIfFirstQuoteFromBackend();
+    } catch (error) {
+      console.error('❌ Error reseteando flag:', error);
+    }
+  };
+
+  // useEffect modificado para usar la nueva lógica
   useEffect(() => {
-    checkIfFirstQuote();
+    checkIfFirstQuoteFromBackend();
   }, []);
 
   // Función para obtener cliente ID del storage
@@ -286,7 +350,7 @@ const IntegratedTruckRequestScreen = () => {
     }
   };
 
-  // Función para manejar la confirmación de la reserva con animación
+  // === LÓGICA MEJORADA EN handleConfirmBooking ===
   const handleConfirmBooking = async () => {
     try {
       Alert.alert(
@@ -301,10 +365,13 @@ const IntegratedTruckRequestScreen = () => {
             text: 'Confirmar',
             onPress: async () => {
               try {
+                // ✅ Verificar nuevamente si es primera cotización antes de crear
+                const isFirstBeforeCreating = await checkIfFirstQuoteFromBackend();
+                
                 const createdQuote = await createQuoteInBackend();
 
-                // Si es la primera cotización, mostrar animación
-                if (isFirstQuote) {
+                // Solo mostrar animación si era la primera cotización
+                if (isFirstBeforeCreating) {
                   await markFirstQuoteCompleted();
                   setShowFirstQuoteAnimation(true);
                   
@@ -925,36 +992,64 @@ const IntegratedTruckRequestScreen = () => {
     </TouchableOpacity>
   );
 
-  // Componente de animación para primera cotización
+  // Componente de animación para primera cotización - PANTALLA COMPLETA
   const FirstQuoteAnimation = () => (
     <Modal
       visible={showFirstQuoteAnimation}
-      transparent={true}
+      transparent={false}  // Cambiar a false para pantalla completa
       animationType="fade"
       statusBarTranslucent={true}
     >
-      <View style={styles.animationOverlay}>
-        <View style={styles.animationContainer}>
-          {/* 🎯 AQUÍ VA TU ARCHIVO LOTTIE */}
+      <View style={styles.fullscreenAnimationContainer}>
+        {/* Fondo con gradiente */}
+        <View style={styles.gradientBackground} />
+        
+        {/* Contenido centrado */}
+        <View style={styles.animationContent}>
+          {/* Animación Lottie más grande */}
           <LottieView
-            source={require('./celebration.json')} // 👈 CAMBIA POR TU ARCHIVO
+            source={require('../assets/lottie/Warehouse and delivery (1).json')}
             autoPlay
             loop={false}
-            style={styles.lottieAnimation}
+            style={styles.fullscreenLottieAnimation}
           />
           
-          <View style={styles.animationTextContainer}>
-            <Text style={styles.animationTitle}>¡Felicidades! 🎉</Text>
-            <Text style={styles.animationSubtitle}>
+          {/* Textos en la parte inferior */}
+          <View style={styles.fullscreenTextContainer}>
+            <Text style={styles.fullscreenAnimationTitle}>¡Felicidades! 🎉</Text>
+            <Text style={styles.fullscreenAnimationSubtitle}>
               Has creado tu primera cotización
             </Text>
-            <Text style={styles.animationDescription}>
+            <Text style={styles.fullscreenAnimationDescription}>
               ¡Bienvenido a nuestra plataforma de transporte!
             </Text>
           </View>
         </View>
       </View>
     </Modal>
+  );
+
+  // === CÓDIGO ADICIONAL PARA DEBUG ===
+  const DebugButton = () => (
+    __DEV__ && (
+      <TouchableOpacity
+        style={{
+          position: 'absolute',
+          top: 100,
+          right: 20,
+          backgroundColor: 'red',
+          padding: 10,
+          borderRadius: 5,
+          zIndex: 9999
+        }}
+        onPress={() => {
+          console.log('🔄 Verificando cotizaciones manualmente...');
+          checkIfFirstQuoteFromBackend();
+        }}
+      >
+        <Text style={{ color: 'white', fontSize: 12 }}>CHECK QUOTES</Text>
+      </TouchableOpacity>
+    )
   );
 
   return (
@@ -1027,6 +1122,9 @@ const IntegratedTruckRequestScreen = () => {
             </Text>
           </View>
         )}
+
+        {/* Debug button para testing */}
+        <DebugButton />
       </View>
 
       {/* Bottom Sheet - Selección de Camión */}
@@ -1285,7 +1383,7 @@ const IntegratedTruckRequestScreen = () => {
   );
 };
 
-// Estilos completos
+// Estilos completos con la animación actualizada
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -1993,59 +2091,65 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 
-  // === ESTILOS PARA LA ANIMACIÓN DE PRIMERA COTIZACIÓN ===
-  animationOverlay: {
+  // === ESTILOS PARA LA ANIMACIÓN DE PANTALLA COMPLETA - ACTUALIZADOS ===
+  fullscreenAnimationContainer: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.9)',
+    backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
   },
 
-  animationContainer: {
+  gradientBackground: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     backgroundColor: '#FFFFFF',
-    borderRadius: 24,
-    padding: 32,
+  },
+
+  animationContent: {
+    flex: 1,
     alignItems: 'center',
-    maxWidth: width * 0.85,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3,
-    shadowRadius: 20,
-    elevation: 15,
+    justifyContent: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 40,
   },
 
-  lottieAnimation: {
-    width: 200,
-    height: 200,
-    marginBottom: 24,
+  fullscreenLottieAnimation: {
+    width: width * 0.9,
+    height: height * 0.6,
+    marginBottom: 30,
   },
 
-  animationTextContainer: {
+  fullscreenTextContainer: {
     alignItems: 'center',
+    paddingHorizontal: 30,
   },
 
-  animationTitle: {
-    fontSize: 28,
-    fontWeight: '800',
+  fullscreenAnimationTitle: {
+    fontSize: 36,
+    fontWeight: '900',
     color: '#5D9646',
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+
+  fullscreenAnimationSubtitle: {
+    fontSize: 22,
+    fontWeight: '600',
+    color: '#34353A',
     marginBottom: 12,
     textAlign: 'center',
   },
 
-  animationSubtitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#34353A',
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-
-  animationDescription: {
-    fontSize: 15,
+  fullscreenAnimationDescription: {
+    fontSize: 16,
     color: '#5F8EAD',
     textAlign: 'center',
-    lineHeight: 22,
+    lineHeight: 24,
     fontWeight: '500',
+    maxWidth: 280,
   },
 });
 
