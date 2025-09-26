@@ -1,4 +1,4 @@
-import React, { useState, useRef, useContext } from 'react';
+import React, { useState, useRef, useContext, useEffect } from 'react';
 import {
   View,
   Text,
@@ -11,10 +11,12 @@ import {
   ActivityIndicator,
   ScrollView,
   Alert,
+  Modal,
 } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { useNavigation } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import LottieView from 'lottie-react-native';
 import { createQuote } from '../api/quotes';
 
 const { width, height } = Dimensions.get('window');
@@ -39,8 +41,7 @@ const IntegratedTruckRequestScreen = () => {
   const [mapReady, setMapReady] = useState(false);
 
   // Estados para datos del formulario
-  const [arrivalTime, setArrivalTime] = useState('10:30 AM');
-  const [departureTime, setDepartureTime] = useState('11:45 AM');
+  const [departureTime, setDepartureTime] = useState('10:00 AM');
   const [paymentMethod, setPaymentMethod] = useState('efectivo');
   const [quoteDescription, setQuoteDescription] = useState('');
   const [quoteName, setQuoteName] = useState('');
@@ -54,6 +55,10 @@ const IntegratedTruckRequestScreen = () => {
     otros: 0
   });
 
+  // Estados para la animación de primera cotización
+  const [showFirstQuoteAnimation, setShowFirstQuoteAnimation] = useState(false);
+  const [isFirstQuote, setIsFirstQuote] = useState(false);
+
   const [currentLocation] = useState({
     latitude: 13.7942,
     longitude: -89.5564,
@@ -66,7 +71,7 @@ const IntegratedTruckRequestScreen = () => {
       name: 'Camión Refrigerado',
       icon: '🧊',
       description: 'Para productos que requieren temperatura controlada',
-      category: 'alimentos_perecederos', // Valor válido del backend
+      category: 'alimentos_perecederos',
       basePrice: 50
     },
     {
@@ -74,10 +79,38 @@ const IntegratedTruckRequestScreen = () => {
       name: 'Camión Seco',
       icon: '📦',
       description: 'Para carga general sin refrigeración',
-      category: 'otros', // Genérico para cualquier carga seca
+      category: 'otros',
       basePrice: 35
     }
   ];
+
+  // Verificar si es la primera cotización del usuario
+  const checkIfFirstQuote = async () => {
+    try {
+      const hasCreatedQuote = await AsyncStorage.getItem('hasCreatedFirstQuote');
+      const isFirst = !hasCreatedQuote || hasCreatedQuote !== 'true';
+      setIsFirstQuote(isFirst);
+      return isFirst;
+    } catch (error) {
+      console.error('Error verificando primera cotización:', error);
+      return false;
+    }
+  };
+
+  // Marcar que ya no es la primera cotización
+  const markFirstQuoteCompleted = async () => {
+    try {
+      await AsyncStorage.setItem('hasCreatedFirstQuote', 'true');
+      console.log('✅ Primera cotización marcada como completada');
+    } catch (error) {
+      console.error('Error marcando primera cotización:', error);
+    }
+  };
+
+  // useEffect para verificar si es primera cotización al cargar
+  useEffect(() => {
+    checkIfFirstQuote();
+  }, []);
 
   // Función para obtener cliente ID del storage
   const getClientId = async () => {
@@ -96,14 +129,14 @@ const IntegratedTruckRequestScreen = () => {
 
   // Función para calcular costos estimados basados en distancia
   const calculateEstimatedCosts = (distance, truckType) => {
-    const baseFuelCost = 0.8; // $0.8 por km
-    const tollsPerKm = 0.1; // $0.1 por km en promedio
-    const driverBaseCost = truckType.basePrice * 0.4; // 40% del precio base para conductor
+    const baseFuelCost = 0.8;
+    const tollsPerKm = 0.1;
+    const driverBaseCost = truckType.basePrice * 0.4;
 
     const combustible = Math.round(distance * baseFuelCost);
     const peajes = Math.round(distance * tollsPerKm);
     const conductor = Math.round(driverBaseCost);
-    const otros = Math.round(truckType.basePrice * 0.2); // 20% para otros gastos
+    const otros = Math.round(truckType.basePrice * 0.2);
 
     return {
       combustible,
@@ -121,9 +154,7 @@ const IntegratedTruckRequestScreen = () => {
     return `Cotización ${selectedTruckType?.name} - ${dateStr} ${timeStr}`;
   };
 
-  // Función para crear la cotización en el backend (CORREGIDA)
-  // Función para crear la cotización en el backend (CORREGIDA COMPLETAMENTE)
-  // Función para crear la cotización en el backend (CORREGIDA COMPLETAMENTE)
+  // 🔥 FUNCIÓN CORREGIDA - Crear la cotización en el backend
   const createQuoteInBackend = async () => {
     try {
       setIsLoading(true);
@@ -133,44 +164,56 @@ const IntegratedTruckRequestScreen = () => {
         throw new Error('No se encontró información del cliente');
       }
 
-      // ✅ Generar fechas para el viaje
+      // 📅 FECHAS CORREGIDAS
       const now = new Date();
 
-      // Fecha cuando lo necesita (mañana por defecto)
+      // Fecha cuando lo necesita (mañana)
       const fechaNecesaria = new Date(now);
       fechaNecesaria.setDate(now.getDate() + 1);
-      fechaNecesaria.setHours(10, 0, 0, 0); // 10:00 AM
+      fechaNecesaria.setHours(8, 0, 0, 0); // 8:00 AM por defecto
 
-      // Fecha de salida (a partir de la hora seleccionada)
+      // 🕐 Parsear hora de salida correctamente
+      const [timeStr, ampm] = departureTime.split(' ');
+      const [hourStr, minuteStr] = timeStr.split(':');
+      let hour = parseInt(hourStr);
+      const minute = parseInt(minuteStr);
+
+      // Convertir AM/PM a 24 horas
+      if (ampm === 'PM' && hour !== 12) {
+        hour += 12;
+      } else if (ampm === 'AM' && hour === 12) {
+        hour = 0;
+      }
+
+      // Fecha de salida (mañana a la hora especificada)
       const departureDate = new Date(now);
       departureDate.setDate(now.getDate() + 1);
-      const [depHour, depMinPart] = departureTime.split(':');
-      const depMin = parseInt(depMinPart.replace(/[^\d]/g, ''));
-      departureDate.setHours(parseInt(depHour), depMin, 0, 0);
+      departureDate.setHours(hour, minute, 0, 0);
 
-      // Fecha de llegada (salida + tiempo estimado)
+      // ✅ Fecha de llegada = Salida + tiempo estimado (en minutos)
       const arrivalDate = new Date(departureDate);
-      arrivalDate.setHours(arrivalDate.getHours() + (estimatedTime / 60));
+      arrivalDate.setMinutes(arrivalDate.getMinutes() + estimatedTime);
 
-      // ✅ Preparar datos SIN precio, SIN costos, CON fechaNecesaria
+      // 📝 Log para debugging
+      console.log('🕐 Fechas calculadas:');
+      console.log('Fecha necesaria:', fechaNecesaria.toISOString());
+      console.log('Fecha salida:', departureDate.toISOString());
+      console.log('Fecha llegada:', arrivalDate.toISOString());
+      console.log('Tiempo estimado (min):', estimatedTime);
+
+      // Preparar datos
       const quoteData = {
         clientId,
         quoteDescription: quoteDescription || `Transporte de carga con ${selectedTruckType.name}`,
         quoteName: quoteName || generateQuoteName(),
         travelLocations: `De ${pickupAddress} a ${destinationAddress}`,
-        truckType: selectedTruckType.category, // ✅ Usar category del backend
+        truckType: selectedTruckType.category,
 
-        // ✅ NUEVO: Fecha cuando lo necesita
+        // ✅ Fechas corregidas
         fechaNecesaria: fechaNecesaria.toISOString(),
-
-        // deliveryDate es calculado automáticamente
         deliveryDate: arrivalDate.toISOString(),
 
         paymentMethod: paymentMethod,
-        // ❌ NO ENVIAR price - será null
-        // ❌ NO ENVIAR costos - se inicializan en 0
-
-        // Campos principales
         pickupLocation: pickupAddress,
         destinationLocation: destinationAddress,
         estimatedDistance: routeDistance,
@@ -200,7 +243,7 @@ const IntegratedTruckRequestScreen = () => {
           categoria: selectedTruckType.category,
           descripcion: quoteDescription || `Carga para transporte con ${selectedTruckType.name}`,
           peso: {
-            valor: 1000, // Peso por defecto en kg
+            valor: 1000,
             unidad: 'kg'
           },
           clasificacionRiesgo: 'normal'
@@ -216,14 +259,11 @@ const IntegratedTruckRequestScreen = () => {
           }
         },
 
-        // ❌ NO ENVIAR costos - el transportista los pone después
-
         observaciones: `Cotización generada desde app móvil. Método de pago: ${paymentMethod}. Tipo: ${selectedTruckType.name}`,
         createdFrom: 'mobile_app',
         version: '1.0'
       };
 
-      // Log para debugging
       console.log('📦 Payload final a enviar:', JSON.stringify(quoteData, null, 2));
 
       const baseUrl = 'https://riveraproject-production-933e.up.railway.app';
@@ -246,7 +286,7 @@ const IntegratedTruckRequestScreen = () => {
     }
   };
 
-  // Función para manejar la confirmación de la reserva
+  // Función para manejar la confirmación de la reserva con animación
   const handleConfirmBooking = async () => {
     try {
       Alert.alert(
@@ -263,38 +303,20 @@ const IntegratedTruckRequestScreen = () => {
               try {
                 const createdQuote = await createQuoteInBackend();
 
-                Alert.alert(
-                  'Cotización Creada',
-                  'Tu cotización ha sido creada exitosamente',
-                  [
-                    {
-                      text: 'Ver Detalles',
-                      onPress: () => {
-                        navigation.navigate('QuoteDetailsScreen', {
-                          quote: createdQuote.cotizacion || createdQuote
-                        });
-                      }
-                    },
-                    {
-                      text: 'Continuar',
-                      onPress: () => {
-                        // En IntegratedTruckRequestScreen.js - handleConfirmBooking
-                        navigation.navigate('PaymentSuccessScreen', {
-                          metodoPago: paymentMethod === 'efectivo' ? 'Efectivo' : paymentMethod,
-                          truckTypeName: selectedTruckType.name,
-                          price: 0, // ✅ Sin precio inicial
-                          estimatedTime: estimatedTime,
-                          pickupLocation: pickupAddress,
-                          destinationLocation: destinationAddress,
-                          departureTime: departureTime,
-                          arrivalTime: arrivalTime,
-                          quoteId: (createdQuote.cotizacion || createdQuote)._id,
-                          quoteData: createdQuote.cotizacion || createdQuote
-                        });
-                      }
-                    }
-                  ]
-                );
+                // Si es la primera cotización, mostrar animación
+                if (isFirstQuote) {
+                  await markFirstQuoteCompleted();
+                  setShowFirstQuoteAnimation(true);
+                  
+                  // Ocultar la animación después de 4 segundos y navegar
+                  setTimeout(() => {
+                    setShowFirstQuoteAnimation(false);
+                    navigateToSuccess(createdQuote);
+                  }, 4000);
+                } else {
+                  // Si no es la primera, mostrar alert normal
+                  showSuccessAlert(createdQuote);
+                }
               } catch (error) {
                 Alert.alert(
                   'Error',
@@ -310,6 +332,43 @@ const IntegratedTruckRequestScreen = () => {
       console.error('Error en confirmación:', error);
       Alert.alert('Error', 'Hubo un problema. Intenta de nuevo.');
     }
+  };
+
+  // Función para mostrar alert de éxito (cotizaciones posteriores)
+  const showSuccessAlert = (createdQuote) => {
+    Alert.alert(
+      'Cotización Creada',
+      'Tu cotización ha sido creada exitosamente',
+      [
+        {
+          text: 'Ver Detalles',
+          onPress: () => {
+            navigation.navigate('QuoteDetailsScreen', {
+              quote: createdQuote.cotizacion || createdQuote
+            });
+          }
+        },
+        {
+          text: 'Continuar',
+          onPress: () => navigateToSuccess(createdQuote)
+        }
+      ]
+    );
+  };
+
+  // Función para navegar a la pantalla de éxito
+  const navigateToSuccess = (createdQuote) => {
+    navigation.navigate('PaymentSuccessScreen', {
+      metodoPago: paymentMethod === 'efectivo' ? 'Efectivo' : paymentMethod,
+      truckTypeName: selectedTruckType.name,
+      price: 0,
+      estimatedTime: estimatedTime,
+      pickupLocation: pickupAddress,
+      destinationLocation: destinationAddress,
+      departureTime: departureTime,
+      quoteId: (createdQuote.cotizacion || createdQuote)._id,
+      quoteData: createdQuote.cotizacion || createdQuote
+    });
   };
 
   // Funciones para manejar la selección de camiones
@@ -456,7 +515,6 @@ const IntegratedTruckRequestScreen = () => {
     try {
       console.log('Coordenadas válidas, procediendo con la ruta directamente');
 
-      // Mostrar la ruta en el mapa inmediatamente
       if (webViewRef.current && mapReady) {
         const message = JSON.stringify({
           type: 'showRoute',
@@ -474,21 +532,19 @@ const IntegratedTruckRequestScreen = () => {
         webViewRef.current.postMessage(message);
       }
 
-      // Calcular distancia aproximada usando fórmula de Haversine
-      const R = 6371; // Radio de la Tierra en km
+      const R = 6371;
       const dLat = (destination.latitude - pickup.latitude) * Math.PI / 180;
       const dLon = (destination.longitude - pickup.longitude) * Math.PI / 180;
       const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
         Math.cos(pickup.latitude * Math.PI / 180) * Math.cos(destination.latitude * Math.PI / 180) *
         Math.sin(dLon / 2) * Math.sin(dLon / 2);
       const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-      const distance = R * c; // Distancia en km
+      const distance = R * c;
 
       setRouteDistance(Math.round(distance));
 
-      // Calcular precios y tiempo
       setTimeout(() => {
-        const calculatedTime = Math.round(distance * 1.5 + 15); // Tiempo base + tiempo de distancia
+        const calculatedTime = Math.round(distance * 1.5 + 15);
         const costs = calculateEstimatedCosts(distance, selectedTruckType);
         const totalPrice = costs.combustible + costs.peajes + costs.conductor + costs.otros;
 
@@ -541,7 +597,6 @@ const IntegratedTruckRequestScreen = () => {
         setPointStep(pointStep - 1);
       } else {
         setCurrentStep('selectTruck');
-        // Limpiar marcadores del mapa y direcciones
         if (webViewRef.current && mapReady) {
           webViewRef.current.postMessage(JSON.stringify({
             type: 'clearMap'
@@ -870,6 +925,38 @@ const IntegratedTruckRequestScreen = () => {
     </TouchableOpacity>
   );
 
+  // Componente de animación para primera cotización
+  const FirstQuoteAnimation = () => (
+    <Modal
+      visible={showFirstQuoteAnimation}
+      transparent={true}
+      animationType="fade"
+      statusBarTranslucent={true}
+    >
+      <View style={styles.animationOverlay}>
+        <View style={styles.animationContainer}>
+          {/* 🎯 AQUÍ VA TU ARCHIVO LOTTIE */}
+          <LottieView
+            source={require('./celebration.json')} // 👈 CAMBIA POR TU ARCHIVO
+            autoPlay
+            loop={false}
+            style={styles.lottieAnimation}
+          />
+          
+          <View style={styles.animationTextContainer}>
+            <Text style={styles.animationTitle}>¡Felicidades! 🎉</Text>
+            <Text style={styles.animationSubtitle}>
+              Has creado tu primera cotización
+            </Text>
+            <Text style={styles.animationDescription}>
+              ¡Bienvenido a nuestra plataforma de transporte!
+            </Text>
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
@@ -1097,18 +1184,7 @@ const IntegratedTruckRequestScreen = () => {
 
                   {/* Sección de Horarios */}
                   <View style={styles.timeSection}>
-                    <Text style={styles.sectionLabel}>Horarios</Text>
-
-                    <View style={styles.timeInputContainer}>
-                      <Text style={styles.timeLabel}>Hora de llegada</Text>
-                      <TextInput
-                        style={styles.timeInput}
-                        value={arrivalTime}
-                        onChangeText={setArrivalTime}
-                        placeholder="10:30 AM"
-                        placeholderTextColor="#999"
-                      />
-                    </View>
+                    <Text style={styles.sectionLabel}>Horario de salida</Text>
 
                     <View style={styles.timeInputContainer}>
                       <Text style={styles.timeLabel}>Hora de salida</Text>
@@ -1116,7 +1192,7 @@ const IntegratedTruckRequestScreen = () => {
                         style={styles.timeInput}
                         value={departureTime}
                         onChangeText={setDepartureTime}
-                        placeholder="11:45 AM"
+                        placeholder="10:00 AM"
                         placeholderTextColor="#999"
                       />
                     </View>
@@ -1177,12 +1253,12 @@ const IntegratedTruckRequestScreen = () => {
                     </TouchableOpacity>
                   </View>
 
-                  {/* Desglose de costos */}
-                  {estimatedPrice && (
+                  {/* Tiempo estimado */}
+                  {estimatedTime && (
                     <View style={styles.costBreakdown}>
-                      <Text style={styles.sectionLabel}>Tiempo de llegada</Text>
+                      <Text style={styles.sectionLabel}>Tiempo estimado</Text>
                       <View style={styles.costRow}>
-                        <Text style={styles.timeValue}>{estimatedTime} min</Text>
+                        <Text style={styles.timeValue}>{estimatedTime} minutos</Text>
                       </View>
                     </View>
                   )}
@@ -1202,6 +1278,9 @@ const IntegratedTruckRequestScreen = () => {
           )}
         </View>
       )}
+
+      {/* Animación de primera cotización */}
+      <FirstQuoteAnimation />
     </SafeAreaView>
   );
 };
@@ -1847,36 +1926,6 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
 
-  costLabel: {
-    fontSize: 15,
-    color: '#5F8EAD',
-    fontWeight: '500',
-  },
-
-  costValue: {
-    fontSize: 15,
-    color: '#34353A',
-    fontWeight: '600',
-  },
-
-  costSeparator: {
-    height: 1,
-    backgroundColor: 'rgba(93, 150, 70, 0.3)',
-    marginVertical: 12,
-  },
-
-  totalLabel: {
-    fontSize: 17,
-    color: '#5D9646',
-    fontWeight: '700',
-  },
-
-  totalValue: {
-    fontSize: 17,
-    color: '#5D9646',
-    fontWeight: '700',
-  },
-
   timeValue: {
     fontSize: 15,
     color: '#5F8EAD',
@@ -1942,6 +1991,61 @@ const styles = StyleSheet.create({
     color: '#34353A',
     fontWeight: '600',
     textAlign: 'center',
+  },
+
+  // === ESTILOS PARA LA ANIMACIÓN DE PRIMERA COTIZACIÓN ===
+  animationOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.9)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  animationContainer: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    padding: 32,
+    alignItems: 'center',
+    maxWidth: width * 0.85,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
+    elevation: 15,
+  },
+
+  lottieAnimation: {
+    width: 200,
+    height: 200,
+    marginBottom: 24,
+  },
+
+  animationTextContainer: {
+    alignItems: 'center',
+  },
+
+  animationTitle: {
+    fontSize: 28,
+    fontWeight: '800',
+    color: '#5D9646',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+
+  animationSubtitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#34353A',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+
+  animationDescription: {
+    fontSize: 15,
+    color: '#5F8EAD',
+    textAlign: 'center',
+    lineHeight: 22,
+    fontWeight: '500',
   },
 });
 
