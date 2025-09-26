@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, StyleSheet, ScrollView, Text, TouchableOpacity, RefreshControl, Alert, Animated } from 'react-native';
+import { View, StyleSheet, ScrollView, Text, TouchableOpacity, RefreshControl, Alert, Animated, Platform } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import LottieView from 'lottie-react-native';
 import { useTrips } from '../hooks/useTrips';
@@ -214,9 +214,9 @@ const InicioScreen = ({ navigation }) => {
   return (
     <View style={styles.container}>
       <StatusBar style="dark" />
-      
-      <ScrollView 
-        style={styles.content}
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl 
@@ -568,9 +568,14 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f0f4f8',
+    paddingBottom: Platform.OS === 'ios' ? 90 : 80, // 🔥 Espacio para la tab bar flotante
+  },
+  scrollView: {
+    flex: 1,
   },
   content: {
-    flex: 1,
+    flexGrow: 1,
+    // Puedes agregar aquí tus paddings horizontales si quieres
   },
   
   // ===== HEADER DINÁMICO =====
