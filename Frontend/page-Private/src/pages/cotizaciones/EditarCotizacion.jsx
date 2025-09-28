@@ -86,11 +86,11 @@ export default function EditarCotizacionForm({ cotizacionId, cotizacion: cotizac
     console.log('✅ Precios cargados:', nuevosPrecios);
   };
 
-  // Función para cambiar estado usando tu hook
-  const cambiarEstado = (nuevoEstado) => {
-    if (!datosOriginales) return;
-    actualizarEstadoCotizacion(datosOriginales, nuevoEstado);
-  };
+  // Función para cambiar estado usando tu hook (no usada en este flujo)
+  // const cambiarEstado = (nuevoEstado) => {
+  //   if (!datosOriginales) return;
+  //   actualizarEstadoCotizacion(datosOriginales, nuevoEstado);
+  // };
 
   // Función súper simple para cambiar valores
   const cambiarPrecio = (campo, valor) => {
@@ -252,7 +252,7 @@ export default function EditarCotizacionForm({ cotizacionId, cotizacion: cotizac
           onClick={onVolver}
         >
           <ArrowLeft className="w-5 h-5" />
-          <span className="text-lg font-medium">Editar Costos</span>
+          <span className="text-lg font-medium">Cotizar Solicitud del Cliente</span>
         </div>
         
         {mensaje && (
@@ -271,10 +271,10 @@ export default function EditarCotizacionForm({ cotizacionId, cotizacion: cotizac
           <DollarSign className="w-8 h-8 text-green-600" />
           <div>
             <h1 className="text-2xl font-bold text-gray-900">
-              Editar Precios y Costos
+              Cotizar Solicitud del Cliente
             </h1>
             <p className="text-gray-600">
-              Cotización: {datosOriginales.numeroDetizacion || 'N/A'}
+              Agrega precios y envía la cotización: {datosOriginales.numeroDetizacion || 'N/A'}
             </p>
           </div>
         </div>
@@ -300,8 +300,20 @@ export default function EditarCotizacionForm({ cotizacionId, cotizacion: cotizac
             </div>
             <div>
               <span className="font-medium text-gray-600">Estado:</span>
-              <span className="ml-2 px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs">
-                {datosOriginales.status || 'pendiente'}
+              <span className={`ml-2 px-3 py-1 rounded-full text-xs font-medium ${
+                datosOriginales.status === 'pendiente' ? 'bg-orange-100 text-orange-800' :
+                datosOriginales.status === 'enviada' ? 'bg-blue-100 text-blue-800' :
+                datosOriginales.status === 'aceptada' ? 'bg-green-100 text-green-800' :
+                datosOriginales.status === 'rechazada' ? 'bg-red-100 text-red-800' :
+                datosOriginales.status === 'ejecutada' ? 'bg-purple-100 text-purple-800' :
+                'bg-gray-100 text-gray-800'
+              }`}>
+                {datosOriginales.status === 'pendiente' ? '⏳ Pendiente de cotizar' :
+                 datosOriginales.status === 'enviada' ? '📤 Enviada al cliente' :
+                 datosOriginales.status === 'aceptada' ? '✅ Aceptada por cliente' :
+                 datosOriginales.status === 'rechazada' ? '❌ Rechazada por cliente' :
+                 datosOriginales.status === 'ejecutada' ? '🚛 En ejecución' :
+                 datosOriginales.status || 'Desconocido'}
               </span>
             </div>
             <div>
@@ -343,16 +355,23 @@ export default function EditarCotizacionForm({ cotizacionId, cotizacion: cotizac
             {/* Precio principal */}
             <div className="p-4 border-2 border-green-200 rounded-lg bg-green-50">
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                💲 Precio Principal
+                💲 Precio Principal *
               </label>
               <input
                 type="text"
                 value={precios.price}
                 onChange={(e) => cambiarPrecio('price', e.target.value)}
-                placeholder="Ingresa el precio principal"
-                className="w-full px-4 py-3 border border-gray-300 rounded-md text-lg font-medium focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                placeholder="Ingresa el precio principal (requerido para enviar)"
+                className={`w-full px-4 py-3 border rounded-md text-lg font-medium focus:ring-2 focus:ring-green-500 focus:border-green-500 ${
+                  parseFloat(precios.price) <= 0 ? 'border-red-300 bg-red-50' : 'border-gray-300 bg-white'
+                }`}
               />
-              <p className="text-xs text-gray-500 mt-1">Valor actual: ${parseFloat(precios.price) || 0}</p>
+              <div className="flex justify-between items-center mt-1">
+                <p className="text-xs text-gray-500">Valor actual: ${parseFloat(precios.price) || 0}</p>
+                {parseFloat(precios.price) <= 0 && (
+                  <p className="text-xs text-red-600">⚠️ Precio requerido para enviar</p>
+                )}
+              </div>
             </div>
 
             {/* Desglose de costos */}
@@ -440,66 +459,80 @@ export default function EditarCotizacionForm({ cotizacionId, cotizacion: cotizac
           </div>
         </div>
 
-        {/* Cambio de estado */}
-        <div className="mb-8 p-6 bg-yellow-50 border border-yellow-200 rounded-lg">
-          <h3 className="text-lg font-semibold mb-4 text-gray-800">🔄 Cambiar Estado de la Cotización</h3>
-          <div className="flex flex-wrap gap-3">
+        {/* Información del flujo */}
+        <div className="mb-8 p-6 bg-blue-50 border border-blue-200 rounded-lg">
+          <h3 className="text-lg font-semibold mb-4 text-gray-800 flex items-center gap-2">
+            📋 Estado de la Cotización
+          </h3>
+          <div className="space-y-3">
             {datosOriginales.status === 'pendiente' && (
-              <button
-                onClick={() => cambiarEstado('enviada')}
-                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm"
-              >
-                Marcar como Enviada
-              </button>
+              <div className="flex items-center gap-3 text-orange-700">
+                <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
+                <span>Solicitud recibida del cliente - Esperando que agregues precios</span>
+              </div>
             )}
-            
             {datosOriginales.status === 'enviada' && (
-              <>
-                <button
-                  onClick={() => cambiarEstado('aceptada')}
-                  className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors text-sm"
-                >
-                  Marcar como Aceptada
-                </button>
-                <button
-                  onClick={() => cambiarEstado('rechazada')}
-                  className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors text-sm"
-                >
-                  Marcar como Rechazada
-                </button>
-              </>
+              <div className="flex items-center gap-3 text-blue-700">
+                <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                <span>Cotización enviada al cliente - Esperando respuesta</span>
+              </div>
             )}
-            
             {datosOriginales.status === 'aceptada' && (
-              <button
-                onClick={() => cambiarEstado('ejecutada')}
-                className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors text-sm"
-              >
-                Marcar como Ejecutada
-              </button>
+              <div className="flex items-center gap-3 text-green-700">
+                <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                <span>✅ Cliente aceptó la cotización - Lista para ejecutar</span>
+              </div>
+            )}
+            {datosOriginales.status === 'rechazada' && (
+              <div className="flex items-center gap-3 text-red-700">
+                <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+                <span>❌ Cliente rechazó la cotización</span>
+              </div>
             )}
             
-            {datosOriginales.status !== 'cancelada' && datosOriginales.status !== 'ejecutada' && (
-              <button
-                onClick={() => cambiarEstado('cancelada')}
-                className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors text-sm"
-              >
-                Cancelar
-              </button>
-            )}
+            <div className="mt-4 p-3 bg-white rounded border text-sm text-gray-600">
+              💡 <strong>Flujo:</strong> Cliente envía solicitud → Tú agregas precios → Envías cotización → Cliente acepta/rechaza
+            </div>
           </div>
         </div>
 
-        {/* Botón guardar */}
-        <div className="flex justify-end">
+        {/* Botones de acción */}
+        <div className="flex gap-4 justify-end">
+          {/* Botón guardar borrador */}
           <button
-            onClick={guardarCambios}
+            onClick={guardarBorrador}
             disabled={guardando}
-            className="flex items-center gap-2 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+            className="flex items-center gap-2 px-6 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
           >
             <Save className="w-4 h-4" />
-            {guardando ? 'Guardando...' : 'Guardar Cambios'}
+            {guardando ? 'Guardando...' : 'Guardar Borrador'}
           </button>
+
+          {/* Botón enviar al cliente */}
+          <button
+            onClick={enviarCotizacionAlCliente}
+            disabled={guardando || datosOriginales.status === 'enviada'}
+            className="flex items-center gap-2 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium text-lg"
+          >
+            📤 {guardando ? 'Enviando...' : 'Enviar Cotización al Cliente'}
+          </button>
+        </div>
+
+        {/* Información sobre los botones */}
+        <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+          <div className="flex items-start gap-3">
+            <div className="text-yellow-600 text-xl">💡</div>
+            <div className="text-sm text-yellow-800">
+              <p className="font-medium mb-2">Diferencia entre botones:</p>
+              <ul className="space-y-1">
+                <li>• <strong>Guardar Borrador:</strong> Solo guarda los precios, no notifica al cliente</li>
+                <li>• <strong>Enviar Cotización:</strong> Guarda los precios Y envía la cotización al cliente</li>
+              </ul>
+              {datosOriginales.status === 'enviada' && (
+                <p className="mt-2 text-blue-700 font-medium">✅ Esta cotización ya fue enviada al cliente</p>
+              )}
+            </div>
+          </div>
         </div>
 
         {/* Debug info */}
