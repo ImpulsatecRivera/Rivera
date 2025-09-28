@@ -7,6 +7,7 @@ import ProfileScreen from '../screens/ProfileScreen';
 import HistorialScreen from '../screens/HistorialScreen';
 import CotizacionScreen from '../screens/CotizacionScreen';
 import QuoteDetailsScreen from '../screens/quoteDetailScreen'; // Nueva pantalla
+import CotizacionFactura from '../screens/cotizacionFactura'; 
 import PaymentSuccessScreen from '../screens/PaymentSuccessScreen'; 
 import SplashScreen from '../screens/SplashScreen';
 import LoginScreen from '../screens/LoginScreen';
@@ -294,6 +295,30 @@ const AppNavigator = () => {
           presentation: 'card',
           gestureEnabled: true,
           headerShown: false, // La pantalla maneja su propio header
+          cardStyleInterpolator: ({ current, layouts }) => {
+            return {
+              cardStyle: {
+                transform: [
+                  {
+                    translateX: current.progress.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [layouts.screen.width, 0],
+                    }),
+                  },
+                ],
+              },
+            };
+          },
+        }}
+      />
+
+      <Stack.Screen 
+        name="cotizacionFactura" // ✅ Cambiado aquí
+        component={CotizacionFactura} // ✅ Cambiado aquí
+        options={{
+          presentation: 'card',
+          gestureEnabled: true,
+          headerShown: false,
           cardStyleInterpolator: ({ current, layouts }) => {
             return {
               cardStyle: {

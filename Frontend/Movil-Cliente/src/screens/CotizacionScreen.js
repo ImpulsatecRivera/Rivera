@@ -1,4 +1,4 @@
-import React, { useState, useRef, useContext } from 'react';
+import React, { useState, useRef, useContext, useEffect } from 'react';
 import {
   View,
   Text,
@@ -11,11 +11,13 @@ import {
   ActivityIndicator,
   ScrollView,
   Alert,
+  Modal,
 } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { useNavigation } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { createQuote } from '../api/quotes';
+import LottieView from 'lottie-react-native';
+import { createQuote, fetchQuotesByClient } from '../api/quotes';
 
 const { width, height } = Dimensions.get('window');
 const GREEN = '#10AC84';
@@ -39,8 +41,7 @@ const IntegratedTruckRequestScreen = () => {
   const [mapReady, setMapReady] = useState(false);
 
   // Estados para datos del formulario
-  const [arrivalTime, setArrivalTime] = useState('10:30 AM');
-  const [departureTime, setDepartureTime] = useState('11:45 AM');
+  const [departureTime, setDepartureTime] = useState('10:00 AM');
   const [paymentMethod, setPaymentMethod] = useState('efectivo');
   const [quoteDescription, setQuoteDescription] = useState('');
   const [quoteName, setQuoteName] = useState('');
@@ -54,6 +55,11 @@ const IntegratedTruckRequestScreen = () => {
     otros: 0
   });
 
+  // Estados para las animaciones de cotización
+  const [showFirstQuoteAnimation, setShowFirstQuoteAnimation] = useState(false);
+  const [showSuccessAnimation, setShowSuccessAnimation] = useState(false);
+  const [isFirstQuote, setIsFirstQuote] = useState(false);
+
   const [currentLocation] = useState({
     latitude: 13.7942,
     longitude: -89.5564,
@@ -66,7 +72,7 @@ const IntegratedTruckRequestScreen = () => {
       name: 'Camión Refrigerado',
       icon: '🧊',
       description: 'Para productos que requieren temperatura controlada',
-      category: 'alimentos_perecederos', // Valor válido del backend
+      category: 'alimentos_perecederos',
       basePrice: 50
     },
     {
@@ -74,10 +80,190 @@ const IntegratedTruckRequestScreen = () => {
       name: 'Camión Seco',
       icon: '📦',
       description: 'Para carga general sin refrigeración',
-      category: 'otros', // Genérico para cualquier carga seca
+      category: 'otros',
       basePrice: 35
     }
   ];
+
+  // === LÓGICA CORREGIDA PARA VERIFICAR COTIZACIONES EN EL BACKEND ===
+
+  // Función para obtener cotizaciones del usuario - USANDO LA LÓGICA QUE FUNCIONA EN HISTORIALSCREEN
+  const fetchUserQuotes = async () => {
+    try {
+      const clientId = await getClientId();
+      const token = await AsyncStorage.getItem('clientToken');
+      const baseUrl = 'https://riveraproject-production-933e.up.railway.app';
+      
+      console.log('🔍 Verificando datos de autenticación:');
+      console.log('- clientId:', clientId);
+      console.log('- token existe:', !!token);
+      
+      if (!clientId) {
+        console.log('❌ No hay clientId disponible');
+        throw new Error('No hay datos de autenticación');
+      }
+
+      // 🎯 MÉTODO 1: Usar la función API que funciona en HistorialScreen
+      let quotes = [];
+      try {
+        console.log('📡 Intentando fetchQuotesByClient (método que funciona en HistorialScreen)...');
+        const data = await fetchQuotesByClient({
+          baseUrl,
+          token,
+          clientId,
+        });
+        
+        // Normalizar respuesta como en HistorialScreen
+        if (Array.isArray(data)) {
+          quotes = data;
+        } else {
+          const keys = ['items', 'results', 'data', 'cotizaciones', 'quotes', 'rows', 'list'];
+          for (const k of keys) {
+            if (data && Array.isArray(data[k])) {
+              quotes = data[k];
+              break;
+            }
+          }
+        }
+        
+        if (quotes.length > 0) {
+          console.log('✅ fetchQuotesByClient funcionó! Cotizaciones encontradas:', quotes.length);
+          return quotes;
+        }
+      } catch (error) {
+        console.log('⚠️ fetchQuotesByClient falló, intentando método fallback...');
+      }
+
+      // 🎯 MÉTODO 2: Fallback - usar endpoint que funciona en HistorialScreen
+      console.log('📡 Intentando método fallback: /api/cotizaciones...');
+      const response = await fetch(`${baseUrl}/api/cotizaciones`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const allQuotes = await response.json();
+      console.log('📡 Respuesta de /api/cotizaciones:', allQuotes);
+      
+      // Normalizar y filtrar por clientId como en HistorialScreen
+      let normalizedQuotes = [];
+      if (Array.isArray(allQuotes)) {
+        normalizedQuotes = allQuotes;
+      } else {
+        const keys = ['items', 'results', 'data', 'cotizaciones', 'quotes', 'rows', 'list'];
+        for (const k of keys) {
+          if (allQuotes && Array.isArray(allQuotes[k])) {
+            normalizedQuotes = allQuotes[k];
+            break;
+          }
+        }
+      }
+      
+      // Filtrar por clientId
+      const userQuotes = normalizedQuotes.filter(quote => {
+        const quoteClientId = quote.clientId || quote.clienteId || quote.client_id;
+        return String(quoteClientId || '') === String(clientId);
+      });
+      
+      console.log('📊 Total cotizaciones en BD:', normalizedQuotes.length);
+      console.log('📊 Cotizaciones del usuario:', userQuotes.length);
+      console.log('✅ Método fallback exitoso!');
+      
+      return userQuotes;
+      
+    } catch (error) {
+      console.error('❌ Error obteniendo cotizaciones:', error);
+      throw error; // Re-lanzar el error para manejo en checkIfFirstQuoteFromBackend
+    }
+  };
+
+  // Función CORREGIDA para verificar si es la primera cotización - AHORA USANDO LA LÓGICA QUE FUNCIONA
+  const checkIfFirstQuoteFromBackend = async () => {
+    try {
+      setIsLoading(true);
+      
+      // Obtener cotizaciones del usuario usando la lógica que funciona en HistorialScreen
+      const userQuotes = await fetchUserQuotes();
+      
+      // Si no tiene cotizaciones, es primera vez
+      const isFirst = userQuotes.length === 0;
+      const quotesCount = userQuotes.length;
+      
+      console.log(`📊 Usuario tiene ${quotesCount} cotizaciones. Es primera vez: ${isFirst}`);
+      
+      setIsFirstQuote(isFirst);
+      return { isFirst, quotesCount };
+      
+    } catch (error) {
+      console.error('❌ Error verificando cotizaciones:', error);
+      
+      // En caso de error REAL, asumir que NO es primera vez para seguridad
+      // Esto evita mostrar la animación si hay problemas de conectividad
+      console.log('⚠️ Por seguridad, asumiendo que NO es primera vez debido a error de conexión');
+      
+      setIsFirstQuote(false);
+      return { isFirst: false, quotesCount: -1 };
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Función para marcar que ya no es la primera cotización (solo guarda localmente como respaldo)
+  const markFirstQuoteCompleted = async () => {
+    try {
+      await AsyncStorage.setItem('hasCreatedFirstQuote', 'true');
+      console.log('✅ Primera cotización marcada como completada (respaldo local)');
+    } catch (error) {
+      console.error('❌ Error marcando primera cotización:', error);
+    }
+  };
+
+  // === FUNCIÓN ADICIONAL PARA DEBUGGING ===
+  const debugQuotesState = async () => {
+    if (__DEV__) {
+      try {
+        const userQuotes = await fetchUserQuotes();
+        const localFlag = await AsyncStorage.getItem('hasCreatedFirstQuote');
+        
+        console.log('🐛 DEBUG - Estado de cotizaciones:');
+        console.log('- Cotizaciones en backend:', userQuotes.length);
+        console.log('- Flag local:', localFlag);
+        console.log('- isFirstQuote (estado):', isFirstQuote);
+        
+        Alert.alert(
+          'Debug Info',
+          `Backend: ${userQuotes.length} cotizaciones\nLocal flag: ${localFlag}\nEstado: ${isFirstQuote ? 'Primera vez' : 'No es primera vez'}`,
+          [{ text: 'OK' }]
+        );
+      } catch (error) {
+        console.error('Error en debug:', error);
+      }
+    }
+  };
+
+  // === FUNCIÓN PARA RESET MANUAL (SOLO PARA TESTING) ===
+  const resetFirstQuoteFlag = async () => {
+    try {
+      await AsyncStorage.removeItem('hasCreatedFirstQuote');
+      console.log('🔄 Flag de primera cotización reseteado');
+      
+      // Volver a verificar desde el backend
+      await checkIfFirstQuoteFromBackend();
+    } catch (error) {
+      console.error('❌ Error reseteando flag:', error);
+    }
+  };
+
+  // useEffect modificado para usar la nueva lógica
+  useEffect(() => {
+    checkIfFirstQuoteFromBackend();
+  }, []);
 
   // Función para obtener cliente ID del storage
   const getClientId = async () => {
@@ -96,14 +282,14 @@ const IntegratedTruckRequestScreen = () => {
 
   // Función para calcular costos estimados basados en distancia
   const calculateEstimatedCosts = (distance, truckType) => {
-    const baseFuelCost = 0.8; // $0.8 por km
-    const tollsPerKm = 0.1; // $0.1 por km en promedio
-    const driverBaseCost = truckType.basePrice * 0.4; // 40% del precio base para conductor
+    const baseFuelCost = 0.8;
+    const tollsPerKm = 0.1;
+    const driverBaseCost = truckType.basePrice * 0.4;
 
     const combustible = Math.round(distance * baseFuelCost);
     const peajes = Math.round(distance * tollsPerKm);
     const conductor = Math.round(driverBaseCost);
-    const otros = Math.round(truckType.basePrice * 0.2); // 20% para otros gastos
+    const otros = Math.round(truckType.basePrice * 0.2);
 
     return {
       combustible,
@@ -121,9 +307,7 @@ const IntegratedTruckRequestScreen = () => {
     return `Cotización ${selectedTruckType?.name} - ${dateStr} ${timeStr}`;
   };
 
-  // Función para crear la cotización en el backend (CORREGIDA)
-  // Función para crear la cotización en el backend (CORREGIDA COMPLETAMENTE)
-  // Función para crear la cotización en el backend (CORREGIDA COMPLETAMENTE)
+  // 🔥 FUNCIÓN CORREGIDA - Crear la cotización en el backend
   const createQuoteInBackend = async () => {
     try {
       setIsLoading(true);
@@ -133,44 +317,56 @@ const IntegratedTruckRequestScreen = () => {
         throw new Error('No se encontró información del cliente');
       }
 
-      // ✅ Generar fechas para el viaje
+      // 📅 FECHAS CORREGIDAS
       const now = new Date();
 
-      // Fecha cuando lo necesita (mañana por defecto)
+      // Fecha cuando lo necesita (mañana)
       const fechaNecesaria = new Date(now);
       fechaNecesaria.setDate(now.getDate() + 1);
-      fechaNecesaria.setHours(10, 0, 0, 0); // 10:00 AM
+      fechaNecesaria.setHours(8, 0, 0, 0); // 8:00 AM por defecto
 
-      // Fecha de salida (a partir de la hora seleccionada)
+      // 🕐 Parsear hora de salida correctamente
+      const [timeStr, ampm] = departureTime.split(' ');
+      const [hourStr, minuteStr] = timeStr.split(':');
+      let hour = parseInt(hourStr);
+      const minute = parseInt(minuteStr);
+
+      // Convertir AM/PM a 24 horas
+      if (ampm === 'PM' && hour !== 12) {
+        hour += 12;
+      } else if (ampm === 'AM' && hour === 12) {
+        hour = 0;
+      }
+
+      // Fecha de salida (mañana a la hora especificada)
       const departureDate = new Date(now);
       departureDate.setDate(now.getDate() + 1);
-      const [depHour, depMinPart] = departureTime.split(':');
-      const depMin = parseInt(depMinPart.replace(/[^\d]/g, ''));
-      departureDate.setHours(parseInt(depHour), depMin, 0, 0);
+      departureDate.setHours(hour, minute, 0, 0);
 
-      // Fecha de llegada (salida + tiempo estimado)
+      // ✅ Fecha de llegada = Salida + tiempo estimado (en minutos)
       const arrivalDate = new Date(departureDate);
-      arrivalDate.setHours(arrivalDate.getHours() + (estimatedTime / 60));
+      arrivalDate.setMinutes(arrivalDate.getMinutes() + estimatedTime);
 
-      // ✅ Preparar datos SIN precio, SIN costos, CON fechaNecesaria
+      // 📝 Log para debugging
+      console.log('🕐 Fechas calculadas:');
+      console.log('Fecha necesaria:', fechaNecesaria.toISOString());
+      console.log('Fecha salida:', departureDate.toISOString());
+      console.log('Fecha llegada:', arrivalDate.toISOString());
+      console.log('Tiempo estimado (min):', estimatedTime);
+
+      // Preparar datos
       const quoteData = {
         clientId,
         quoteDescription: quoteDescription || `Transporte de carga con ${selectedTruckType.name}`,
         quoteName: quoteName || generateQuoteName(),
         travelLocations: `De ${pickupAddress} a ${destinationAddress}`,
-        truckType: selectedTruckType.category, // ✅ Usar category del backend
+        truckType: selectedTruckType.category,
 
-        // ✅ NUEVO: Fecha cuando lo necesita
+        // ✅ Fechas corregidas
         fechaNecesaria: fechaNecesaria.toISOString(),
-
-        // deliveryDate es calculado automáticamente
         deliveryDate: arrivalDate.toISOString(),
 
         paymentMethod: paymentMethod,
-        // ❌ NO ENVIAR price - será null
-        // ❌ NO ENVIAR costos - se inicializan en 0
-
-        // Campos principales
         pickupLocation: pickupAddress,
         destinationLocation: destinationAddress,
         estimatedDistance: routeDistance,
@@ -200,7 +396,7 @@ const IntegratedTruckRequestScreen = () => {
           categoria: selectedTruckType.category,
           descripcion: quoteDescription || `Carga para transporte con ${selectedTruckType.name}`,
           peso: {
-            valor: 1000, // Peso por defecto en kg
+            valor: 1000,
             unidad: 'kg'
           },
           clasificacionRiesgo: 'normal'
@@ -216,14 +412,11 @@ const IntegratedTruckRequestScreen = () => {
           }
         },
 
-        // ❌ NO ENVIAR costos - el transportista los pone después
-
         observaciones: `Cotización generada desde app móvil. Método de pago: ${paymentMethod}. Tipo: ${selectedTruckType.name}`,
         createdFrom: 'mobile_app',
         version: '1.0'
       };
 
-      // Log para debugging
       console.log('📦 Payload final a enviar:', JSON.stringify(quoteData, null, 2));
 
       const baseUrl = 'https://riveraproject-production-933e.up.railway.app';
@@ -246,7 +439,7 @@ const IntegratedTruckRequestScreen = () => {
     }
   };
 
-  // Función para manejar la confirmación de la reserva
+  // === LÓGICA CORREGIDA EN handleConfirmBooking - DOS ANIMACIONES DIFERENTES ===
   const handleConfirmBooking = async () => {
     try {
       Alert.alert(
@@ -261,40 +454,41 @@ const IntegratedTruckRequestScreen = () => {
             text: 'Confirmar',
             onPress: async () => {
               try {
+                // ✅ Verificar ANTES de crear y guardar el conteo
+                const { isFirst, quotesCount } = await checkIfFirstQuoteFromBackend();
+                
+                console.log(`🔍 Antes de crear: Es primera vez: ${isFirst}, Cotizaciones existentes: ${quotesCount}`);
+                
+                // Crear la cotización en el backend
                 const createdQuote = await createQuoteInBackend();
-
-                Alert.alert(
-                  'Cotización Creada',
-                  'Tu cotización ha sido creada exitosamente',
-                  [
-                    {
-                      text: 'Ver Detalles',
-                      onPress: () => {
-                        navigation.navigate('QuoteDetailsScreen', {
-                          quote: createdQuote.cotizacion || createdQuote
-                        });
-                      }
-                    },
-                    {
-                      text: 'Continuar',
-                      onPress: () => {
-                        // En IntegratedTruckRequestScreen.js - handleConfirmBooking
-                        navigation.navigate('PaymentSuccessScreen', {
-                          metodoPago: paymentMethod === 'efectivo' ? 'Efectivo' : paymentMethod,
-                          truckTypeName: selectedTruckType.name,
-                          price: 0, // ✅ Sin precio inicial
-                          estimatedTime: estimatedTime,
-                          pickupLocation: pickupAddress,
-                          destinationLocation: destinationAddress,
-                          departureTime: departureTime,
-                          arrivalTime: arrivalTime,
-                          quoteId: (createdQuote.cotizacion || createdQuote)._id,
-                          quoteData: createdQuote.cotizacion || createdQuote
-                        });
-                      }
-                    }
-                  ]
-                );
+                
+                // ✅ Mostrar animación correspondiente según el tipo de usuario
+                if (isFirst && quotesCount === 0) {
+                  // 🌟 PRIMERA COTIZACIÓN - Animación especial para nuevos usuarios
+                  console.log('🎉 Mostrando animación de PRIMERA cotización (nuevos usuarios)');
+                  await markFirstQuoteCompleted();
+                  setShowFirstQuoteAnimation(true);
+                  
+                  setTimeout(() => {
+                    setShowFirstQuoteAnimation(false);
+                    setTimeout(() => {
+                      navigateToSuccess(createdQuote);
+                    }, 300);
+                  }, 10900);
+                } else {
+                  // 🎊 COTIZACIONES POSTERIORES - Animación de éxito para usuarios recurrentes
+                  console.log('🎊 Mostrando animación de ÉXITO (usuarios recurrentes)');
+                  setShowSuccessAnimation(true);
+                  
+                  // Duración para la animación de éxito (ajusta según tu archivo Lottie)
+                  setTimeout(() => {
+                    setShowSuccessAnimation(false);
+                    setTimeout(() => {
+                      navigateToSuccess(createdQuote);
+                    }, 300);
+                  }, 3000); // 3 segundos para la animación de éxito (ajústalo según necesites)
+                }
+                
               } catch (error) {
                 Alert.alert(
                   'Error',
@@ -310,6 +504,21 @@ const IntegratedTruckRequestScreen = () => {
       console.error('Error en confirmación:', error);
       Alert.alert('Error', 'Hubo un problema. Intenta de nuevo.');
     }
+  };
+
+  // Función para navegar a la pantalla de éxito
+  const navigateToSuccess = (createdQuote) => {
+    navigation.navigate('PaymentSuccessScreen', {
+      metodoPago: paymentMethod === 'efectivo' ? 'Efectivo' : paymentMethod,
+      truckTypeName: selectedTruckType.name,
+      price: 0,
+      estimatedTime: estimatedTime,
+      pickupLocation: pickupAddress,
+      destinationLocation: destinationAddress,
+      departureTime: departureTime,
+      quoteId: (createdQuote.cotizacion || createdQuote)._id,
+      quoteData: createdQuote.cotizacion || createdQuote
+    });
   };
 
   // Funciones para manejar la selección de camiones
@@ -456,7 +665,6 @@ const IntegratedTruckRequestScreen = () => {
     try {
       console.log('Coordenadas válidas, procediendo con la ruta directamente');
 
-      // Mostrar la ruta en el mapa inmediatamente
       if (webViewRef.current && mapReady) {
         const message = JSON.stringify({
           type: 'showRoute',
@@ -474,21 +682,19 @@ const IntegratedTruckRequestScreen = () => {
         webViewRef.current.postMessage(message);
       }
 
-      // Calcular distancia aproximada usando fórmula de Haversine
-      const R = 6371; // Radio de la Tierra en km
+      const R = 6371;
       const dLat = (destination.latitude - pickup.latitude) * Math.PI / 180;
       const dLon = (destination.longitude - pickup.longitude) * Math.PI / 180;
       const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
         Math.cos(pickup.latitude * Math.PI / 180) * Math.cos(destination.latitude * Math.PI / 180) *
         Math.sin(dLon / 2) * Math.sin(dLon / 2);
       const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-      const distance = R * c; // Distancia en km
+      const distance = R * c;
 
       setRouteDistance(Math.round(distance));
 
-      // Calcular precios y tiempo
       setTimeout(() => {
-        const calculatedTime = Math.round(distance * 1.5 + 15); // Tiempo base + tiempo de distancia
+        const calculatedTime = Math.round(distance * 1.5 + 15);
         const costs = calculateEstimatedCosts(distance, selectedTruckType);
         const totalPrice = costs.combustible + costs.peajes + costs.conductor + costs.otros;
 
@@ -541,7 +747,6 @@ const IntegratedTruckRequestScreen = () => {
         setPointStep(pointStep - 1);
       } else {
         setCurrentStep('selectTruck');
-        // Limpiar marcadores del mapa y direcciones
         if (webViewRef.current && mapReady) {
           webViewRef.current.postMessage(JSON.stringify({
             type: 'clearMap'
@@ -870,6 +1075,95 @@ const IntegratedTruckRequestScreen = () => {
     </TouchableOpacity>
   );
 
+  // Componente de animación para primera cotización - PARA NUEVOS USUARIOS
+  const FirstQuoteAnimation = () => (
+    <Modal
+      visible={showFirstQuoteAnimation}
+      transparent={false}
+      animationType="fade"
+      statusBarTranslucent={true}
+    >
+      <View style={styles.cinematicContainer}>
+        <LottieView
+          source={require('../assets/lottie/Warehouse and delivery (1).json')}
+          autoPlay
+          loop={false}
+          style={styles.cinematicLottieAnimation}
+          resizeMode="contain"
+        />
+      </View>
+    </Modal>
+  );
+
+  // Componente de animación para cotizaciones posteriores - PARA USUARIOS RECURRENTES
+  const SuccessQuoteAnimation = () => (
+    <Modal
+      visible={showSuccessAnimation}
+      transparent={false}
+      animationType="fade"
+      statusBarTranslucent={true}
+    >
+      <View style={styles.cinematicContainer}>
+        <LottieView
+          source={require('../assets/lottie/Cred tick animation.json')} // 👈 CAMBIA ESTA RUTA POR TU ARCHIVO LOTTIE DE ÉXITO
+          autoPlay
+          loop={false}
+          style={styles.cinematicLottieAnimation}
+          resizeMode="contain"
+        />
+      </View>
+    </Modal>
+  );
+
+  // === COMPONENTE DEBUG MEJORADO ===
+  const DebugButton = () => (
+    __DEV__ && (
+      <View style={{ position: 'absolute', top: 100, right: 20, zIndex: 9999 }}>
+        <TouchableOpacity
+          style={{
+            backgroundColor: 'red',
+            padding: 10,
+            borderRadius: 5,
+            marginBottom: 5
+          }}
+          onPress={debugQuotesState}
+        >
+          <Text style={{ color: 'white', fontSize: 10 }}>DEBUG STATE</Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity
+          style={{
+            backgroundColor: 'orange',
+            padding: 10,
+            borderRadius: 5,
+            marginBottom: 5
+          }}
+          onPress={() => {
+            console.log('🔄 Verificando cotizaciones manualmente...');
+            checkIfFirstQuoteFromBackend();
+          }}
+        >
+          <Text style={{ color: 'white', fontSize: 10 }}>CHECK QUOTES</Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity
+          style={{
+            backgroundColor: 'purple',
+            padding: 10,
+            borderRadius: 5,
+          }}
+          onPress={async () => {
+            await AsyncStorage.removeItem('hasCreatedFirstQuote');
+            console.log('🔄 Flag local reseteado');
+            Alert.alert('Reset', 'Flag local reseteado');
+          }}
+        >
+          <Text style={{ color: 'white', fontSize: 10 }}>RESET FLAG</Text>
+        </TouchableOpacity>
+      </View>
+    )
+  );
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
@@ -940,6 +1234,9 @@ const IntegratedTruckRequestScreen = () => {
             </Text>
           </View>
         )}
+
+        {/* Debug button para testing */}
+        <DebugButton />
       </View>
 
       {/* Bottom Sheet - Selección de Camión */}
@@ -1097,18 +1394,7 @@ const IntegratedTruckRequestScreen = () => {
 
                   {/* Sección de Horarios */}
                   <View style={styles.timeSection}>
-                    <Text style={styles.sectionLabel}>Horarios</Text>
-
-                    <View style={styles.timeInputContainer}>
-                      <Text style={styles.timeLabel}>Hora de llegada</Text>
-                      <TextInput
-                        style={styles.timeInput}
-                        value={arrivalTime}
-                        onChangeText={setArrivalTime}
-                        placeholder="10:30 AM"
-                        placeholderTextColor="#999"
-                      />
-                    </View>
+                    <Text style={styles.sectionLabel}>Horario de salida</Text>
 
                     <View style={styles.timeInputContainer}>
                       <Text style={styles.timeLabel}>Hora de salida</Text>
@@ -1116,7 +1402,7 @@ const IntegratedTruckRequestScreen = () => {
                         style={styles.timeInput}
                         value={departureTime}
                         onChangeText={setDepartureTime}
-                        placeholder="11:45 AM"
+                        placeholder="10:00 AM"
                         placeholderTextColor="#999"
                       />
                     </View>
@@ -1177,12 +1463,12 @@ const IntegratedTruckRequestScreen = () => {
                     </TouchableOpacity>
                   </View>
 
-                  {/* Desglose de costos */}
-                  {estimatedPrice && (
+                  {/* Tiempo estimado */}
+                  {estimatedTime && (
                     <View style={styles.costBreakdown}>
-                      <Text style={styles.sectionLabel}>Tiempo de llegada</Text>
+                      <Text style={styles.sectionLabel}>Tiempo estimado</Text>
                       <View style={styles.costRow}>
-                        <Text style={styles.timeValue}>{estimatedTime} min</Text>
+                        <Text style={styles.timeValue}>{estimatedTime} minutos</Text>
                       </View>
                     </View>
                   )}
@@ -1202,11 +1488,15 @@ const IntegratedTruckRequestScreen = () => {
           )}
         </View>
       )}
+
+      {/* Animaciones de cotización */}
+      <FirstQuoteAnimation />
+      <SuccessQuoteAnimation />
     </SafeAreaView>
   );
 };
 
-// Estilos completos
+// Estilos completos con la animación cinematográfica
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -1847,36 +2137,6 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
 
-  costLabel: {
-    fontSize: 15,
-    color: '#5F8EAD',
-    fontWeight: '500',
-  },
-
-  costValue: {
-    fontSize: 15,
-    color: '#34353A',
-    fontWeight: '600',
-  },
-
-  costSeparator: {
-    height: 1,
-    backgroundColor: 'rgba(93, 150, 70, 0.3)',
-    marginVertical: 12,
-  },
-
-  totalLabel: {
-    fontSize: 17,
-    color: '#5D9646',
-    fontWeight: '700',
-  },
-
-  totalValue: {
-    fontSize: 17,
-    color: '#5D9646',
-    fontWeight: '700',
-  },
-
   timeValue: {
     fontSize: 15,
     color: '#5F8EAD',
@@ -1942,6 +2202,19 @@ const styles = StyleSheet.create({
     color: '#34353A',
     fontWeight: '600',
     textAlign: 'center',
+  },
+
+  // === ESTILOS CINEMATOGRÁFICOS ===
+  cinematicContainer: {
+    flex: 1,
+    backgroundColor: '#FFFFFF', // Fondo blanco cinematográfico
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  cinematicLottieAnimation: {
+    width: width * 1.0,  // Pantalla completa
+    height: height * 1.0, // Pantalla completa
   },
 });
 
