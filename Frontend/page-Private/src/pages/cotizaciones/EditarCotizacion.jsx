@@ -13,6 +13,7 @@ export default function EditarCotizacionForm({ cotizacionId, cotizacion: cotizac
     showSweetAlert,
     closeSweetAlert
   } = useCotizaciones();
+
   // Estado simple y directo
   const [precios, setPrecios] = useState({
     price: '',
@@ -27,6 +28,23 @@ export default function EditarCotizacionForm({ cotizacionId, cotizacion: cotizac
   const [loading, setLoading] = useState(true);
   const [guardando, setGuardando] = useState(false);
   const [mensaje, setMensaje] = useState('');
+
+  // Función para cargar precios desde una cotización
+  const cargarPrecios = (cotizacion) => {
+    console.log('📝 Cargando precios desde cotización:', cotizacion);
+    
+    const nuevosPrecios = {
+      price: String(cotizacion.price || '0'),
+      combustible: String(cotizacion.costos?.combustible || '0'),
+      peajes: String(cotizacion.costos?.peajes || '0'),
+      conductor: String(cotizacion.costos?.conductor || '0'),
+      otros: String(cotizacion.costos?.otros || '0'),
+      impuestos: String(cotizacion.costos?.impuestos || '0')
+    };
+    
+    setPrecios(nuevosPrecios);
+    console.log('✅ Precios cargados:', nuevosPrecios);
+  };
 
   // Cargar datos iniciales - integrado con tu hook
   useEffect(() => {
@@ -69,29 +87,6 @@ export default function EditarCotizacionForm({ cotizacionId, cotizacion: cotizac
     }
   }, [cotizacionId, cotizacionProp, cotizaciones, hookLoading]);
 
-  // Función para cargar precios desde una cotización
-  const cargarPrecios = (cotizacion) => {
-    console.log('📝 Cargando precios desde cotización:', cotizacion);
-    
-    const nuevosPrecios = {
-      price: String(cotizacion.price || '0'),
-      combustible: String(cotizacion.costos?.combustible || '0'),
-      peajes: String(cotizacion.costos?.peajes || '0'),
-      conductor: String(cotizacion.costos?.conductor || '0'),
-      otros: String(cotizacion.costos?.otros || '0'),
-      impuestos: String(cotizacion.costos?.impuestos || '0')
-    };
-    
-    setPrecios(nuevosPrecios);
-    console.log('✅ Precios cargados:', nuevosPrecios);
-  };
-
-  // Función para cambiar estado usando tu hook (no usada en este flujo)
-  // const cambiarEstado = (nuevoEstado) => {
-  //   if (!datosOriginales) return;
-  //   actualizarEstadoCotizacion(datosOriginales, nuevoEstado);
-  // };
-
   // Función súper simple para cambiar valores
   const cambiarPrecio = (campo, valor) => {
     console.log(`🔄 Cambiando ${campo} a: "${valor}"`);
@@ -119,8 +114,8 @@ export default function EditarCotizacionForm({ cotizacionId, cotizacion: cotizac
     return { subtotal, total };
   };
 
-  // Guardar cambios usando tu hook
-  const guardarCambios = async () => {
+  // Guardar como borrador (sin enviar al cliente)
+  const guardarBorrador = async () => {
     if (!datosOriginales || !datosOriginales.id && !datosOriginales._id) {
       showSweetAlert({
         title: 'Error',
@@ -132,7 +127,7 @@ export default function EditarCotizacionForm({ cotizacionId, cotizacion: cotizac
     }
 
     setGuardando(true);
-    setMensaje('Guardando cambios...');
+    setMensaje('Guardando borrador...');
     
     try {
       const { subtotal, total } = calcularTotales();
@@ -151,48 +146,153 @@ export default function EditarCotizacionForm({ cotizacionId, cotizacion: cotizac
         }
       };
       
-      console.log('💾 Datos a guardar:', datosParaGuardar);
-      console.log('🆔 ID de cotización:', datosOriginales.id || datosOriginales._id);
+      console.log('💾 Guardando borrador:', datosParaGuardar);
       
-      // Usar tu función del hook
       const resultado = await actualizarCotizacionAPI(
         datosOriginales.id || datosOriginales._id, 
         datosParaGuardar
       );
       
       if (resultado.success) {
-        setMensaje('¡Guardado exitosamente!');
+        setMensaje('Borrador guardado');
         showSweetAlert({
-          title: '¡Guardado!',
-          text: 'Los costos han sido actualizados correctamente.',
+          title: 'Borrador Guardado',
+          text: 'Los precios se han guardado como borrador. Puedes continuar editando o enviar la cotización al cliente.',
           type: 'success',
           onConfirm: closeSweetAlert
         });
         
-        // Limpiar mensaje después de 3 segundos
         setTimeout(() => setMensaje(''), 3000);
       } else {
         setMensaje('Error al guardar');
         showSweetAlert({
           title: 'Error',
-          text: resultado.message || 'No se pudieron guardar los cambios',
+          text: resultado.message || 'No se pudo guardar el borrador',
           type: 'error',
           onConfirm: closeSweetAlert
         });
       }
       
     } catch (error) {
-      console.error('Error guardando:', error);
+      console.error('Error guardando borrador:', error);
       setMensaje('Error al guardar');
       showSweetAlert({
         title: 'Error',
-        text: 'Ocurrió un error al guardar los cambios.',
+        text: 'Ocurrió un error al guardar el borrador.',
         type: 'error',
         onConfirm: closeSweetAlert
       });
     } finally {
       setGuardando(false);
     }
+  };
+
+  // Función auxiliar para procesar el envío
+  const procesarEnvioCotizacion = async () => {
+    setGuardando(true);
+    setMensaje('Enviando cotización al cliente...');
+    
+    try {
+      const { subtotal, total } = calcularTotales();
+      
+      const datosParaGuardar = {
+        price: parseFloat(precios.price) || 0,
+        costos: {
+          combustible: parseFloat(precios.combustible) || 0,
+          peajes: parseFloat(precios.peajes) || 0,
+          conductor: parseFloat(precios.conductor) || 0,
+          otros: parseFloat(precios.otros) || 0,
+          impuestos: parseFloat(precios.impuestos) || 0,
+          subtotal: subtotal,
+          total: total,
+          moneda: datosOriginales.costos?.moneda || 'USD'
+        },
+        fechaEnvio: new Date().toISOString(),
+        enviadaPorAdmin: true
+      };
+      
+      console.log('📤 Enviando cotización:', datosParaGuardar);
+      
+      // Paso 1: Guardar los precios
+      const resultadoGuardar = await actualizarCotizacionAPI(
+        datosOriginales.id || datosOriginales._id, 
+        datosParaGuardar
+      );
+      
+      if (resultadoGuardar.success) {
+        // Paso 2: Cambiar estado a "enviada"
+        const cotizacionActualizada = { ...datosOriginales, ...datosParaGuardar };
+        await actualizarEstadoCotizacion(cotizacionActualizada, 'enviada');
+        
+        setMensaje('¡Cotización enviada al cliente!');
+        showSweetAlert({
+          title: '¡Cotización Enviada!',
+          text: `La cotización con precio $${datosParaGuardar.price.toFixed(2)} ha sido enviada al cliente. El cliente recibirá una notificación.`,
+          type: 'success',
+          onConfirm: () => {
+            closeSweetAlert();
+          }
+        });
+        
+        // Actualizar el estado local
+        setDatosOriginales(prev => ({ ...prev, status: 'enviada', ...datosParaGuardar }));
+        
+      } else {
+        throw new Error(resultadoGuardar.message || 'Error al guardar la cotización');
+      }
+      
+    } catch (error) {
+      console.error('Error enviando cotización:', error);
+      setMensaje('Error al enviar');
+      showSweetAlert({
+        title: 'Error al Enviar',
+        text: 'No se pudo enviar la cotización al cliente. Inténtalo de nuevo.',
+        type: 'error',
+        onConfirm: closeSweetAlert
+      });
+    } finally {
+      setGuardando(false);
+    }
+  };
+
+  // Enviar cotización al cliente (guardar + cambiar estado)
+  const enviarCotizacionAlCliente = async () => {
+    if (!datosOriginales || !datosOriginales.id && !datosOriginales._id) {
+      showSweetAlert({
+        title: 'Error',
+        text: 'No se puede enviar: datos de cotización no válidos',
+        type: 'error',
+        onConfirm: closeSweetAlert
+      });
+      return;
+    }
+
+    // Validar que haya precios
+    const precioTotal = parseFloat(precios.price) || 0;
+    if (precioTotal <= 0) {
+      showSweetAlert({
+        title: 'Precio requerido',
+        text: 'Debes ingresar un precio principal antes de enviar la cotización al cliente.',
+        type: 'warning',
+        onConfirm: closeSweetAlert
+      });
+      return;
+    }
+
+    // Confirmar envío
+    showSweetAlert({
+      title: '¿Enviar cotización al cliente?',
+      text: `Se enviará la cotización con un precio de $${precioTotal.toFixed(2)} al cliente. Esta acción notificará al cliente.`,
+      type: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Sí, enviar',
+      cancelButtonText: 'Cancelar',
+      onConfirm: async () => {
+        closeSweetAlert();
+        await procesarEnvioCotizacion();
+      },
+      onCancel: closeSweetAlert
+    });
   };
 
   if (loading || hookLoading) {
@@ -258,7 +358,7 @@ export default function EditarCotizacionForm({ cotizacionId, cotizacion: cotizac
         {mensaje && (
           <div className={`px-4 py-2 rounded text-white ${
             mensaje.includes('Error') ? 'bg-red-500' : 
-            mensaje.includes('exitosamente') ? 'bg-green-500' : 'bg-blue-500'
+            mensaje.includes('exitosamente') || mensaje.includes('enviada') ? 'bg-green-500' : 'bg-blue-500'
           }`}>
             {mensaje}
           </div>
@@ -342,6 +442,43 @@ export default function EditarCotizacionForm({ cotizacionId, cotizacion: cotizac
               </p>
             </div>
           )}
+        </div>
+
+        {/* Información del flujo */}
+        <div className="mb-8 p-6 bg-blue-50 border border-blue-200 rounded-lg">
+          <h3 className="text-lg font-semibold mb-4 text-gray-800 flex items-center gap-2">
+            📋 Estado de la Cotización
+          </h3>
+          <div className="space-y-3">
+            {datosOriginales.status === 'pendiente' && (
+              <div className="flex items-center gap-3 text-orange-700">
+                <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
+                <span>Solicitud recibida del cliente - Esperando que agregues precios</span>
+              </div>
+            )}
+            {datosOriginales.status === 'enviada' && (
+              <div className="flex items-center gap-3 text-blue-700">
+                <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                <span>Cotización enviada al cliente - Esperando respuesta</span>
+              </div>
+            )}
+            {datosOriginales.status === 'aceptada' && (
+              <div className="flex items-center gap-3 text-green-700">
+                <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                <span>✅ Cliente aceptó la cotización - Lista para ejecutar</span>
+              </div>
+            )}
+            {datosOriginales.status === 'rechazada' && (
+              <div className="flex items-center gap-3 text-red-700">
+                <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+                <span>❌ Cliente rechazó la cotización</span>
+              </div>
+            )}
+            
+            <div className="mt-4 p-3 bg-white rounded border text-sm text-gray-600">
+              💡 <strong>Flujo:</strong> Cliente envía solicitud → Tú agregas precios → Envías cotización → Cliente acepta/rechaza
+            </div>
+          </div>
         </div>
 
         {/* Campos editables de precios */}
@@ -455,43 +592,6 @@ export default function EditarCotizacionForm({ cotizacionId, cotizacion: cotizac
             <div className="flex justify-between text-lg font-semibold text-blue-600 border-t pt-2">
               <span>Total Final:</span>
               <span>${total.toFixed(2)}</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Información del flujo */}
-        <div className="mb-8 p-6 bg-blue-50 border border-blue-200 rounded-lg">
-          <h3 className="text-lg font-semibold mb-4 text-gray-800 flex items-center gap-2">
-            📋 Estado de la Cotización
-          </h3>
-          <div className="space-y-3">
-            {datosOriginales.status === 'pendiente' && (
-              <div className="flex items-center gap-3 text-orange-700">
-                <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
-                <span>Solicitud recibida del cliente - Esperando que agregues precios</span>
-              </div>
-            )}
-            {datosOriginales.status === 'enviada' && (
-              <div className="flex items-center gap-3 text-blue-700">
-                <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-                <span>Cotización enviada al cliente - Esperando respuesta</span>
-              </div>
-            )}
-            {datosOriginales.status === 'aceptada' && (
-              <div className="flex items-center gap-3 text-green-700">
-                <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                <span>✅ Cliente aceptó la cotización - Lista para ejecutar</span>
-              </div>
-            )}
-            {datosOriginales.status === 'rechazada' && (
-              <div className="flex items-center gap-3 text-red-700">
-                <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-                <span>❌ Cliente rechazó la cotización</span>
-              </div>
-            )}
-            
-            <div className="mt-4 p-3 bg-white rounded border text-sm text-gray-600">
-              💡 <strong>Flujo:</strong> Cliente envía solicitud → Tú agregas precios → Envías cotización → Cliente acepta/rechaza
             </div>
           </div>
         </div>
