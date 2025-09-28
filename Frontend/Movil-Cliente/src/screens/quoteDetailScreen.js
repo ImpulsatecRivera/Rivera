@@ -18,7 +18,7 @@ import LottieView from 'lottie-react-native';
 // Import Lottie animations
 import DeliveryTruck from "../assets/lottie/Car _ Ignite Animation.json";
 import CheckSuccess from "../assets/lottie/success tick.json";
-import ClockPending from "../assets/lottie/Tourists by car.json";
+import ClockPending from "../assets/lottie/Waiting (1).json";
 import CancelError from "../assets/lottie/cancel animation.json";
 
 // Lottie configuration for each status

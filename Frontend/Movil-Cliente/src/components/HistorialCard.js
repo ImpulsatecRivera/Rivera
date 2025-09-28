@@ -15,7 +15,7 @@ import LottieView from 'lottie-react-native';
 // Importa tus animaciones Lottie
 import DeliveryTruck from "../assets/lottie/Car _ Ignite Animation.json";
 import CheckSuccess from "../assets/lottie/success tick.json";
-import ClockPending from "../assets/lottie/Tourists by car.json";
+import ClockPending from "../assets/lottie/Waiting (1).json";
 import CancelError from "../assets/lottie/cancel animation.json";
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');

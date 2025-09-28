@@ -1,4 +1,4 @@
-// Corrección en PaymentSuccessScreen.js
+// PaymentSuccessScreen.js - Versión limpia, profesional y responsive
 import React from 'react';
 import {
   SafeAreaView,
@@ -7,24 +7,27 @@ import {
   StyleSheet,
   TouchableOpacity,
   Dimensions,
+  StatusBar,
+  ScrollView,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
+import LottieView from 'lottie-react-native';
 
-const { width } = Dimensions.get('window');
+const { width, height } = Dimensions.get('window');
 const GREEN = '#10AC84';
+const BLUE = '#3B82F6';
 
 const PaymentSuccessScreen = () => {
   const navigation = useNavigation();
   const route = useRoute();
   
-  // ✅ Corregir los nombres de los parámetros para que coincidan con IntegratedTruckRequestScreen
   const { 
     metodoPago = 'Efectivo',
-    truckTypeName = 'Camión', // ✅ Cambiar de truckType a truckTypeName
-    price = 0, // ✅ Usar price en lugar de estimatedPrice
+    truckTypeName = 'Camión',
+    price = 0,
     estimatedTime = 0,
-    pickupLocation = '', // ✅ Cambiar de pickupAddress a pickupLocation
-    destinationLocation = '', // ✅ Cambiar de destinationAddress a destinationLocation
+    pickupLocation = '',
+    destinationLocation = '',
     departureTime = '',
     arrivalTime = '',
     quoteId = '',
@@ -32,335 +35,469 @@ const PaymentSuccessScreen = () => {
   } = route.params || {};
 
   const goHome = () => {
-    // Volver al tab "Dashboard" dentro del TabNavigator (Main)
     navigation.navigate('Main', { screen: 'Dashboard' });
   };
 
-  // ✅ Función para ver detalles de la cotización
   const viewQuoteDetails = () => {
     if (quoteData && quoteId) {
-      navigation.navigate('QuoteDetailsScreen', {
+      navigation.navigate('cotizacionFactura', {
         quote: quoteData
       });
     } else {
       console.log('No hay datos de cotización disponibles');
-      // Fallback: ir al dashboard
       goHome();
     }
   };
 
   return (
     <SafeAreaView style={styles.safe}>
-      <View style={styles.wrap}>
-        {/* Tarjeta */}
-        <View style={styles.card}>
-          {/* Badge de éxito + confetti */}
-          <View style={styles.celebrateArea}>
-            <View style={styles.badgeOuter}>
-              <View style={styles.badgeInner}>
-                <Text style={styles.check}>✓</Text>
-              </View>
-            </View>
-
-            {/* Confetti (pequeños dots y rayitas) */}
-            <View style={[styles.dot, { top: 8, left: 28, backgroundColor: '#60A5FA' }]} />
-            <View style={[styles.dot, { top: 18, right: 40, backgroundColor: '#F59E0B' }]} />
-            <View style={[styles.dot, { bottom: 20, left: 40, backgroundColor: '#EF4444' }]} />
-            <View style={[styles.dot, { bottom: 8, right: 28, backgroundColor: '#A78BFA' }]} />
-            <View style={[styles.line, { top: 12, transform: [{ rotate: '25deg' }] }]} />
-            <View style={[styles.line, { bottom: 14, right: 30, transform: [{ rotate: '-30deg' }] }]} />
+      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+      
+      <ScrollView 
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        bounces={true}
+      >
+        {/* Header con Lottie */}
+        <View style={styles.header}>
+          <View style={styles.lottieContainer}>
+            <LottieView
+              source={require('../assets/lottie/Success.json')}
+              autoPlay
+              loop={false}
+              style={styles.lottieAnimation}
+              resizeMode="contain"
+            />
+            
+            {/* Elementos decorativos sutiles */}
+            <View style={[styles.decorativeDot, { top: 20, left: 30, backgroundColor: GREEN }]} />
+            <View style={[styles.decorativeDot, { top: 40, right: 25, backgroundColor: BLUE }]} />
+            <View style={[styles.decorativeDot, { bottom: 30, left: 20, backgroundColor: '#F59E0B' }]} />
+            <View style={[styles.decorativeDot, { bottom: 15, right: 35, backgroundColor: '#8B5CF6' }]} />
           </View>
-
-          {/* Título */}
-          <Text style={styles.title}>¡Cotización enviada!</Text>
+          
+          <Text style={styles.title}>¡Cotización Enviada!</Text>
           <Text style={styles.subtitle}>
-            Tu cotización se realizó correctamente.
+            Tu solicitud se procesó exitosamente
           </Text>
+        </View>
 
-          {/* ✅ Información adicional de la cotización */}
+        {/* Contenido principal */}
+        <View style={styles.content}>
+          
+          {/* Información básica */}
           {truckTypeName && (
-            <View style={styles.infoSection}>
-              <Text style={styles.infoLabel}>Tipo de camión:</Text>
-              <Text style={styles.infoValue}>{truckTypeName}</Text>
-            </View>
-          )}
-
-          {price > 0 && (
-            <View style={styles.infoSection}>
-              <Text style={styles.infoLabel}>Precio estimado:</Text>
-              <Text style={styles.priceValue}>${price.toLocaleString('en-US', { minimumFractionDigits: 2 })}</Text>
+            <View style={styles.infoCard}>
+              <View style={styles.cardHeader}>
+                <View style={styles.iconContainer}>
+                  <Text style={styles.icon}>🚛</Text>
+                </View>
+                <View style={styles.cardContent}>
+                  <Text style={styles.cardLabel}>TIPO DE CAMIÓN</Text>
+                  <Text style={styles.cardValue}>{truckTypeName}</Text>
+                </View>
+              </View>
             </View>
           )}
 
           {estimatedTime > 0 && (
-            <View style={styles.infoSection}>
-              <Text style={styles.infoLabel}>Tiempo estimado:</Text>
-              <Text style={styles.infoValue}>{estimatedTime} minutos</Text>
+            <View style={styles.infoCard}>
+              <View style={styles.cardHeader}>
+                <View style={styles.iconContainer}>
+                  <Text style={styles.icon}>⏱️</Text>
+                </View>
+                <View style={styles.cardContent}>
+                  <Text style={styles.cardLabel}>TIEMPO ESTIMADO</Text>
+                  <Text style={styles.cardValue}>{estimatedTime} minutos</Text>
+                </View>
+              </View>
             </View>
           )}
 
-          {/* ✅ Mostrar rutas si están disponibles */}
+          {/* Ruta del viaje */}
           {pickupLocation && destinationLocation && (
-            <View style={styles.routeSection}>
-              <View style={styles.routePoint}>
-                <View style={[styles.routeDot, { backgroundColor: GREEN }]} />
-                <Text style={styles.routeText}>{pickupLocation}</Text>
+            <View style={styles.routeCard}>
+              <View style={styles.routeHeader}>
+                <Text style={styles.routeIcon}>📍</Text>
+                <Text style={styles.routeTitle}>Ruta del viaje</Text>
               </View>
-              <View style={styles.routeLine} />
-              <View style={styles.routePoint}>
-                <View style={[styles.routeDot, { backgroundColor: '#EF4444' }]} />
-                <Text style={styles.routeText}>{destinationLocation}</Text>
+              
+              <View style={styles.routeContent}>
+                <View style={styles.routePoint}>
+                  <View style={[styles.routeDot, { backgroundColor: GREEN }]} />
+                  <Text style={styles.routeText}>{pickupLocation}</Text>
+                </View>
+                
+                <View style={styles.routeConnector}>
+                  <View style={styles.routeLine} />
+                  <Text style={styles.routeArrow}>→</Text>
+                </View>
+                
+                <View style={styles.routePoint}>
+                  <View style={[styles.routeDot, { backgroundColor: '#EF4444' }]} />
+                  <Text style={styles.routeText}>{destinationLocation}</Text>
+                </View>
               </View>
             </View>
           )}
 
-          {/* Chip del método de pago */}
-          <View style={styles.chip}>
-            <Text style={styles.chipIcon}>{metodoPago === 'Transferencia' ? '💳' : '💵'}</Text>
-            <Text style={styles.chipText}>
-              Pago con {metodoPago.toLowerCase()}
+          {/* Método de pago */}
+          <View style={styles.paymentCard}>
+            <View style={styles.paymentContent}>
+              <Text style={styles.paymentIcon}>
+                {metodoPago === 'Transferencia' ? '💳' : '💵'}
+              </Text>
+              <Text style={styles.paymentText}>
+                Pago con {metodoPago.toLowerCase()}
+              </Text>
+            </View>
+          </View>
+
+          {/* Próximos pasos */}
+          <View style={styles.infoBox}>
+            <View style={styles.infoBoxHeader}>
+              <Text style={styles.infoBoxIcon}>📋</Text>
+              <Text style={styles.infoBoxTitle}>Próximos pasos</Text>
+            </View>
+            <Text style={styles.infoBoxText}>
+              En el transcurso de 5 días te notificaremos el monto final a pagar.
+            </Text>
+            <Text style={styles.infoBoxSubtext}>
+              Algunos datos podrían ajustarse al confirmar la cotización definitiva.
             </Text>
           </View>
 
-          {/* Mensaje informativo */}
-          <Text style={styles.note}>
-            En el transcurso de 5 días te notificaremos el monto a pagar.
-          </Text>
-          <Text style={[styles.note, { marginTop: 2 }]}>
-            Algunos datos se informarán o podrían cambiar al confirmar la cotización.
-          </Text>
-
-          {/* ✅ Botones de acción mejorados */}
+          {/* Botones de acción */}
           <View style={styles.actionButtons}>
             {quoteData && quoteId && (
-              <TouchableOpacity style={styles.detailsButton} onPress={viewQuoteDetails} activeOpacity={0.9}>
-                <Text style={styles.detailsButtonText}>Ver detalles</Text>
+              <TouchableOpacity 
+                style={styles.secondaryButton} 
+                onPress={viewQuoteDetails} 
+                activeOpacity={0.7}
+              >
+                <Text style={styles.secondaryButtonText}>📄 Ver detalles</Text>
               </TouchableOpacity>
             )}
 
-            <TouchableOpacity style={styles.cta} onPress={goHome} activeOpacity={0.9}>
-              <Text style={styles.ctaText}>Volver al inicio</Text>
+            <TouchableOpacity 
+              style={styles.primaryButton} 
+              onPress={goHome} 
+              activeOpacity={0.7}
+            >
+              <Text style={styles.primaryButtonText}>Volver al inicio</Text>
             </TouchableOpacity>
           </View>
         </View>
-      </View>
+      </ScrollView>
     </SafeAreaView>
   );
 };
 
-const CARD_W = Math.min(width - 40, 420);
-
 const styles = StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: '#F3F7FA',
-  },
-  wrap: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 20,
-  },
-  card: {
-    width: CARD_W,
-    borderRadius: 24,
     backgroundColor: '#FFFFFF',
-    paddingVertical: 26,
-    paddingHorizontal: 22,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 6,
   },
 
-  celebrateArea: {
+  // === SCROLL ===
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: 40,
+    minHeight: height - 100, // Asegurar altura mínima
+  },
+
+  // === HEADER ===
+  header: {
+    alignItems: 'center',
+    paddingTop: 20,
+    paddingBottom: 30,
+    paddingHorizontal: 20,
+    backgroundColor: '#FFFFFF',
+  },
+
+  lottieContainer: {
     width: 160,
     height: 160,
-    marginBottom: 6,
+    marginBottom: 24,
+    position: 'relative',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  badgeOuter: {
-    width: 128,
-    height: 128,
-    borderRadius: 64,
-    backgroundColor: '#E7F7F1',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  badgeInner: {
-    width: 96,
-    height: 96,
-    borderRadius: 48,
-    backgroundColor: GREEN,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: GREEN,
-    shadowOpacity: 0.3,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 5,
-  },
-  check: {
-    color: '#FFFFFF',
-    fontSize: 44,
-    fontWeight: '900',
-    lineHeight: 48,
+  lottieAnimation: {
+    width: 140,
+    height: 140,
   },
 
-  dot: {
+  decorativeDot: {
     position: 'absolute',
     width: 8,
     height: 8,
     borderRadius: 4,
-  },
-  line: {
-    position: 'absolute',
-    width: 22,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: '#34D399',
+    opacity: 0.7,
   },
 
   title: {
-    fontSize: 20,
+    fontSize: 28,
     fontWeight: '800',
     color: '#111827',
     textAlign: 'center',
-    marginTop: 8,
+    marginBottom: 8,
+    letterSpacing: -0.5,
   },
   subtitle: {
-    fontSize: 14,
-    color: '#374151',
+    fontSize: 16,
+    color: '#6B7280',
     textAlign: 'center',
-    marginTop: 6,
-    marginBottom: 16,
+    fontWeight: '500',
+    lineHeight: 22,
   },
 
-  // ✅ Nuevos estilos para información adicional
-  infoSection: {
+  // === CONTENIDO ===
+  content: {
+    paddingHorizontal: 20,
+    paddingTop: 10,
+  },
+
+  // === CARDS DE INFORMACIÓN ===
+  infoCard: {
+    backgroundColor: '#F8FAFC',
+    borderRadius: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+
+  cardHeader: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    width: '100%',
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    backgroundColor: '#F9FAFB',
-    borderRadius: 8,
-    marginBottom: 8,
+    padding: 20,
   },
-  infoLabel: {
-    fontSize: 13,
+
+  iconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 16,
+    shadowColor: '#000',
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 3,
+  },
+
+  icon: {
+    fontSize: 20,
+  },
+
+  cardContent: {
+    flex: 1,
+  },
+
+  cardLabel: {
+    fontSize: 12,
     color: '#6B7280',
-    fontWeight: '500',
-  },
-  infoValue: {
-    fontSize: 14,
-    color: '#111827',
     fontWeight: '600',
+    marginBottom: 4,
+    letterSpacing: 0.5,
   },
-  priceValue: {
-    fontSize: 16,
-    color: GREEN,
+
+  cardValue: {
+    fontSize: 18,
+    color: '#111827',
     fontWeight: '700',
   },
 
-  // ✅ Estilos para mostrar ruta
-  routeSection: {
-    width: '100%',
-    backgroundColor: '#F9FAFB',
-    borderRadius: 12,
-    padding: 16,
+  // === RUTA ===
+  routeCard: {
+    backgroundColor: '#F0F9FF',
+    borderRadius: 16,
     marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#BAE6FD',
+    overflow: 'hidden',
   },
+
+  routeHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    backgroundColor: '#E0F2FE',
+    borderBottomWidth: 1,
+    borderBottomColor: '#BAE6FD',
+  },
+
+  routeIcon: {
+    fontSize: 16,
+    marginRight: 8,
+  },
+
+  routeTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#0369A1',
+  },
+
+  routeContent: {
+    padding: 20,
+  },
+
   routePoint: {
     flexDirection: 'row',
     alignItems: 'center',
+    marginBottom: 8,
   },
+
   routeDot: {
     width: 12,
     height: 12,
     borderRadius: 6,
     marginRight: 12,
   },
+
   routeText: {
     flex: 1,
-    fontSize: 12,
+    fontSize: 14,
     color: '#374151',
     fontWeight: '500',
+    lineHeight: 20,
   },
-  routeLine: {
-    width: 2,
-    height: 16,
-    backgroundColor: '#D1D5DB',
-    marginLeft: 5,
+
+  routeConnector: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingLeft: 6,
     marginVertical: 4,
   },
 
-  chip: {
+  routeLine: {
+    width: 2,
+    height: 16,
+    backgroundColor: '#CBD5E1',
+    marginRight: 12,
+  },
+
+  routeArrow: {
+    fontSize: 14,
+    color: '#64748B',
+    fontWeight: '600',
+  },
+
+  // === MÉTODO DE PAGO ===
+  paymentCard: {
+    backgroundColor: '#ECFDF5',
+    borderRadius: 50,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: '#BBF7D0',
+  },
+
+  paymentContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#E8F6F0',
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 999,
-    marginBottom: 16,
+    justifyContent: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 24,
   },
-  chipIcon: {
+
+  paymentIcon: {
+    fontSize: 18,
+    marginRight: 12,
+  },
+
+  paymentText: {
     fontSize: 16,
-    marginRight: 8,
-  },
-  chipText: {
-    color: GREEN,
+    color: '#059669',
     fontWeight: '700',
   },
 
-  note: {
-    fontSize: 13,
-    color: '#6B7280',
-    textAlign: 'center',
-    lineHeight: 18,
+  // === INFORMACIÓN ===
+  infoBox: {
+    backgroundColor: '#FFFBEB',
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 24,
+    borderWidth: 1,
+    borderColor: '#FED7AA',
   },
 
-  // ✅ Estilos mejorados para botones
-  actionButtons: {
-    width: '100%',
-    marginTop: 20,
-    gap: 12,
+  infoBoxHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
   },
-  detailsButton: {
-    backgroundColor: '#F3F4F6',
-    paddingVertical: 12,
-    paddingHorizontal: 20,
+
+  infoBoxIcon: {
+    fontSize: 16,
+    marginRight: 8,
+  },
+
+  infoBoxTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#92400E',
+  },
+
+  infoBoxText: {
+    fontSize: 14,
+    color: '#B45309',
+    lineHeight: 20,
+    fontWeight: '500',
+    marginBottom: 8,
+  },
+
+  infoBoxSubtext: {
+    fontSize: 13,
+    color: '#D97706',
+    lineHeight: 18,
+    fontWeight: '400',
+  },
+
+  // === BOTONES ===
+  actionButtons: {
+    gap: 12,
+    paddingBottom: 20,
+  },
+
+  secondaryButton: {
+    backgroundColor: '#F8FAFC',
+    paddingVertical: 16,
+    paddingHorizontal: 24,
     borderRadius: 12,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: '#E2E8F0',
   },
-  detailsButtonText: {
-    color: '#374151',
-    fontSize: 15,
+
+  secondaryButtonText: {
+    color: '#475569',
+    fontSize: 16,
     fontWeight: '600',
   },
-  cta: {
+
+  primaryButton: {
     backgroundColor: GREEN,
-    paddingVertical: 14,
-    paddingHorizontal: 20,
-    borderRadius: 14,
+    paddingVertical: 18,
+    paddingHorizontal: 24,
+    borderRadius: 12,
     alignItems: 'center',
     shadowColor: GREEN,
     shadowOpacity: 0.25,
     shadowRadius: 10,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 5,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 6,
   },
-  ctaText: {
+
+  primaryButtonText: {
     color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '800',
+    fontSize: 17,
+    fontWeight: '700',
   },
 });
+
 export default PaymentSuccessScreen;
