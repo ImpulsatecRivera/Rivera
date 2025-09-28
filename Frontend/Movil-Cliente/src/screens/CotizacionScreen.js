@@ -17,7 +17,7 @@ import { WebView } from 'react-native-webview';
 import { useNavigation } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import LottieView from 'lottie-react-native';
-import { createQuote } from '../api/quotes';
+import { createQuote, fetchQuotesByClient } from '../api/quotes';
 
 const { width, height } = Dimensions.get('window');
 const GREEN = '#10AC84';
@@ -55,8 +55,9 @@ const IntegratedTruckRequestScreen = () => {
     otros: 0
   });
 
-  // Estados para la animación de primera cotización
+  // Estados para las animaciones de cotización
   const [showFirstQuoteAnimation, setShowFirstQuoteAnimation] = useState(false);
+  const [showSuccessAnimation, setShowSuccessAnimation] = useState(false);
   const [isFirstQuote, setIsFirstQuote] = useState(false);
 
   const [currentLocation] = useState({
@@ -84,25 +85,62 @@ const IntegratedTruckRequestScreen = () => {
     }
   ];
 
-  // === NUEVA LÓGICA PARA VERIFICAR COTIZACIONES EN EL BACKEND ===
+  // === LÓGICA CORREGIDA PARA VERIFICAR COTIZACIONES EN EL BACKEND ===
 
-  // Función para obtener cotizaciones del usuario desde el backend
+  // Función para obtener cotizaciones del usuario - USANDO LA LÓGICA QUE FUNCIONA EN HISTORIALSCREEN
   const fetchUserQuotes = async () => {
     try {
       const clientId = await getClientId();
       const token = await AsyncStorage.getItem('clientToken');
       const baseUrl = 'https://riveraproject-production-933e.up.railway.app';
       
-      if (!clientId || !token) {
-        console.log('❌ No hay clientId o token disponible');
-        return [];
+      console.log('🔍 Verificando datos de autenticación:');
+      console.log('- clientId:', clientId);
+      console.log('- token existe:', !!token);
+      
+      if (!clientId) {
+        console.log('❌ No hay clientId disponible');
+        throw new Error('No hay datos de autenticación');
       }
 
-      const response = await fetch(`${baseUrl}/api/quotes/client/${clientId}`, {
+      // 🎯 MÉTODO 1: Usar la función API que funciona en HistorialScreen
+      let quotes = [];
+      try {
+        console.log('📡 Intentando fetchQuotesByClient (método que funciona en HistorialScreen)...');
+        const data = await fetchQuotesByClient({
+          baseUrl,
+          token,
+          clientId,
+        });
+        
+        // Normalizar respuesta como en HistorialScreen
+        if (Array.isArray(data)) {
+          quotes = data;
+        } else {
+          const keys = ['items', 'results', 'data', 'cotizaciones', 'quotes', 'rows', 'list'];
+          for (const k of keys) {
+            if (data && Array.isArray(data[k])) {
+              quotes = data[k];
+              break;
+            }
+          }
+        }
+        
+        if (quotes.length > 0) {
+          console.log('✅ fetchQuotesByClient funcionó! Cotizaciones encontradas:', quotes.length);
+          return quotes;
+        }
+      } catch (error) {
+        console.log('⚠️ fetchQuotesByClient falló, intentando método fallback...');
+      }
+
+      // 🎯 MÉTODO 2: Fallback - usar endpoint que funciona en HistorialScreen
+      console.log('📡 Intentando método fallback: /api/cotizaciones...');
+      const response = await fetch(`${baseUrl}/api/cotizaciones`, {
         method: 'GET',
         headers: {
-          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
         },
       });
 
@@ -110,39 +148,67 @@ const IntegratedTruckRequestScreen = () => {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
 
-      const data = await response.json();
-      console.log('📋 Cotizaciones obtenidas:', data);
+      const allQuotes = await response.json();
+      console.log('📡 Respuesta de /api/cotizaciones:', allQuotes);
       
-      // Devolver array de cotizaciones (ajusta según tu estructura de respuesta)
-      return data.cotizaciones || data.quotes || data || [];
+      // Normalizar y filtrar por clientId como en HistorialScreen
+      let normalizedQuotes = [];
+      if (Array.isArray(allQuotes)) {
+        normalizedQuotes = allQuotes;
+      } else {
+        const keys = ['items', 'results', 'data', 'cotizaciones', 'quotes', 'rows', 'list'];
+        for (const k of keys) {
+          if (allQuotes && Array.isArray(allQuotes[k])) {
+            normalizedQuotes = allQuotes[k];
+            break;
+          }
+        }
+      }
+      
+      // Filtrar por clientId
+      const userQuotes = normalizedQuotes.filter(quote => {
+        const quoteClientId = quote.clientId || quote.clienteId || quote.client_id;
+        return String(quoteClientId || '') === String(clientId);
+      });
+      
+      console.log('📊 Total cotizaciones en BD:', normalizedQuotes.length);
+      console.log('📊 Cotizaciones del usuario:', userQuotes.length);
+      console.log('✅ Método fallback exitoso!');
+      
+      return userQuotes;
       
     } catch (error) {
       console.error('❌ Error obteniendo cotizaciones:', error);
-      return []; // En caso de error, asumir que no hay cotizaciones
+      throw error; // Re-lanzar el error para manejo en checkIfFirstQuoteFromBackend
     }
   };
 
-  // Función mejorada para verificar si es la primera cotización (consulta backend)
+  // Función CORREGIDA para verificar si es la primera cotización - AHORA USANDO LA LÓGICA QUE FUNCIONA
   const checkIfFirstQuoteFromBackend = async () => {
     try {
       setIsLoading(true);
       
-      // Obtener cotizaciones del usuario desde el backend
+      // Obtener cotizaciones del usuario usando la lógica que funciona en HistorialScreen
       const userQuotes = await fetchUserQuotes();
       
       // Si no tiene cotizaciones, es primera vez
       const isFirst = userQuotes.length === 0;
+      const quotesCount = userQuotes.length;
       
-      console.log(`📊 Usuario tiene ${userQuotes.length} cotizaciones. Es primera vez: ${isFirst}`);
+      console.log(`📊 Usuario tiene ${quotesCount} cotizaciones. Es primera vez: ${isFirst}`);
       
       setIsFirstQuote(isFirst);
-      return isFirst;
+      return { isFirst, quotesCount };
       
     } catch (error) {
       console.error('❌ Error verificando cotizaciones:', error);
-      // En caso de error, asumir que NO es primera vez para evitar mostrar animación incorrectamente
+      
+      // En caso de error REAL, asumir que NO es primera vez para seguridad
+      // Esto evita mostrar la animación si hay problemas de conectividad
+      console.log('⚠️ Por seguridad, asumiendo que NO es primera vez debido a error de conexión');
+      
       setIsFirstQuote(false);
-      return false;
+      return { isFirst: false, quotesCount: -1 };
     } finally {
       setIsLoading(false);
     }
@@ -155,6 +221,29 @@ const IntegratedTruckRequestScreen = () => {
       console.log('✅ Primera cotización marcada como completada (respaldo local)');
     } catch (error) {
       console.error('❌ Error marcando primera cotización:', error);
+    }
+  };
+
+  // === FUNCIÓN ADICIONAL PARA DEBUGGING ===
+  const debugQuotesState = async () => {
+    if (__DEV__) {
+      try {
+        const userQuotes = await fetchUserQuotes();
+        const localFlag = await AsyncStorage.getItem('hasCreatedFirstQuote');
+        
+        console.log('🐛 DEBUG - Estado de cotizaciones:');
+        console.log('- Cotizaciones en backend:', userQuotes.length);
+        console.log('- Flag local:', localFlag);
+        console.log('- isFirstQuote (estado):', isFirstQuote);
+        
+        Alert.alert(
+          'Debug Info',
+          `Backend: ${userQuotes.length} cotizaciones\nLocal flag: ${localFlag}\nEstado: ${isFirstQuote ? 'Primera vez' : 'No es primera vez'}`,
+          [{ text: 'OK' }]
+        );
+      } catch (error) {
+        console.error('Error en debug:', error);
+      }
     }
   };
 
@@ -350,7 +439,7 @@ const IntegratedTruckRequestScreen = () => {
     }
   };
 
-  // === LÓGICA MEJORADA EN handleConfirmBooking ===
+  // === LÓGICA CORREGIDA EN handleConfirmBooking - DOS ANIMACIONES DIFERENTES ===
   const handleConfirmBooking = async () => {
     try {
       Alert.alert(
@@ -365,25 +454,41 @@ const IntegratedTruckRequestScreen = () => {
             text: 'Confirmar',
             onPress: async () => {
               try {
-                // ✅ Verificar nuevamente si es primera cotización antes de crear
-                const isFirstBeforeCreating = await checkIfFirstQuoteFromBackend();
+                // ✅ Verificar ANTES de crear y guardar el conteo
+                const { isFirst, quotesCount } = await checkIfFirstQuoteFromBackend();
                 
+                console.log(`🔍 Antes de crear: Es primera vez: ${isFirst}, Cotizaciones existentes: ${quotesCount}`);
+                
+                // Crear la cotización en el backend
                 const createdQuote = await createQuoteInBackend();
-
-                // Solo mostrar animación si era la primera cotización
-                if (isFirstBeforeCreating) {
+                
+                // ✅ Mostrar animación correspondiente según el tipo de usuario
+                if (isFirst && quotesCount === 0) {
+                  // 🌟 PRIMERA COTIZACIÓN - Animación especial para nuevos usuarios
+                  console.log('🎉 Mostrando animación de PRIMERA cotización (nuevos usuarios)');
                   await markFirstQuoteCompleted();
                   setShowFirstQuoteAnimation(true);
                   
-                  // Ocultar la animación después de 4 segundos y navegar
                   setTimeout(() => {
                     setShowFirstQuoteAnimation(false);
-                    navigateToSuccess(createdQuote);
-                  }, 4000);
+                    setTimeout(() => {
+                      navigateToSuccess(createdQuote);
+                    }, 300);
+                  }, 10900);
                 } else {
-                  // Si no es la primera, mostrar alert normal
-                  showSuccessAlert(createdQuote);
+                  // 🎊 COTIZACIONES POSTERIORES - Animación de éxito para usuarios recurrentes
+                  console.log('🎊 Mostrando animación de ÉXITO (usuarios recurrentes)');
+                  setShowSuccessAnimation(true);
+                  
+                  // Duración para la animación de éxito (ajusta según tu archivo Lottie)
+                  setTimeout(() => {
+                    setShowSuccessAnimation(false);
+                    setTimeout(() => {
+                      navigateToSuccess(createdQuote);
+                    }, 300);
+                  }, 3000); // 3 segundos para la animación de éxito (ajústalo según necesites)
                 }
+                
               } catch (error) {
                 Alert.alert(
                   'Error',
@@ -399,28 +504,6 @@ const IntegratedTruckRequestScreen = () => {
       console.error('Error en confirmación:', error);
       Alert.alert('Error', 'Hubo un problema. Intenta de nuevo.');
     }
-  };
-
-  // Función para mostrar alert de éxito (cotizaciones posteriores)
-  const showSuccessAlert = (createdQuote) => {
-    Alert.alert(
-      'Cotización Creada',
-      'Tu cotización ha sido creada exitosamente',
-      [
-        {
-          text: 'Ver Detalles',
-          onPress: () => {
-            navigation.navigate('QuoteDetailsScreen', {
-              quote: createdQuote.cotizacion || createdQuote
-            });
-          }
-        },
-        {
-          text: 'Continuar',
-          onPress: () => navigateToSuccess(createdQuote)
-        }
-      ]
-    );
   };
 
   // Función para navegar a la pantalla de éxito
@@ -992,63 +1075,92 @@ const IntegratedTruckRequestScreen = () => {
     </TouchableOpacity>
   );
 
-  // Componente de animación para primera cotización - PANTALLA COMPLETA
+  // Componente de animación para primera cotización - PARA NUEVOS USUARIOS
   const FirstQuoteAnimation = () => (
     <Modal
       visible={showFirstQuoteAnimation}
-      transparent={false}  // Cambiar a false para pantalla completa
+      transparent={false}
       animationType="fade"
       statusBarTranslucent={true}
     >
-      <View style={styles.fullscreenAnimationContainer}>
-        {/* Fondo con gradiente */}
-        <View style={styles.gradientBackground} />
-        
-        {/* Contenido centrado */}
-        <View style={styles.animationContent}>
-          {/* Animación Lottie más grande */}
-          <LottieView
-            source={require('../assets/lottie/Warehouse and delivery (1).json')}
-            autoPlay
-            loop={false}
-            style={styles.fullscreenLottieAnimation}
-          />
-          
-          {/* Textos en la parte inferior */}
-          <View style={styles.fullscreenTextContainer}>
-            <Text style={styles.fullscreenAnimationTitle}>¡Felicidades! 🎉</Text>
-            <Text style={styles.fullscreenAnimationSubtitle}>
-              Has creado tu primera cotización
-            </Text>
-            <Text style={styles.fullscreenAnimationDescription}>
-              ¡Bienvenido a nuestra plataforma de transporte!
-            </Text>
-          </View>
-        </View>
+      <View style={styles.cinematicContainer}>
+        <LottieView
+          source={require('../assets/lottie/Warehouse and delivery (1).json')}
+          autoPlay
+          loop={false}
+          style={styles.cinematicLottieAnimation}
+          resizeMode="contain"
+        />
       </View>
     </Modal>
   );
 
-  // === CÓDIGO ADICIONAL PARA DEBUG ===
+  // Componente de animación para cotizaciones posteriores - PARA USUARIOS RECURRENTES
+  const SuccessQuoteAnimation = () => (
+    <Modal
+      visible={showSuccessAnimation}
+      transparent={false}
+      animationType="fade"
+      statusBarTranslucent={true}
+    >
+      <View style={styles.cinematicContainer}>
+        <LottieView
+          source={require('../assets/lottie/Cred tick animation.json')} // 👈 CAMBIA ESTA RUTA POR TU ARCHIVO LOTTIE DE ÉXITO
+          autoPlay
+          loop={false}
+          style={styles.cinematicLottieAnimation}
+          resizeMode="contain"
+        />
+      </View>
+    </Modal>
+  );
+
+  // === COMPONENTE DEBUG MEJORADO ===
   const DebugButton = () => (
     __DEV__ && (
-      <TouchableOpacity
-        style={{
-          position: 'absolute',
-          top: 100,
-          right: 20,
-          backgroundColor: 'red',
-          padding: 10,
-          borderRadius: 5,
-          zIndex: 9999
-        }}
-        onPress={() => {
-          console.log('🔄 Verificando cotizaciones manualmente...');
-          checkIfFirstQuoteFromBackend();
-        }}
-      >
-        <Text style={{ color: 'white', fontSize: 12 }}>CHECK QUOTES</Text>
-      </TouchableOpacity>
+      <View style={{ position: 'absolute', top: 100, right: 20, zIndex: 9999 }}>
+        <TouchableOpacity
+          style={{
+            backgroundColor: 'red',
+            padding: 10,
+            borderRadius: 5,
+            marginBottom: 5
+          }}
+          onPress={debugQuotesState}
+        >
+          <Text style={{ color: 'white', fontSize: 10 }}>DEBUG STATE</Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity
+          style={{
+            backgroundColor: 'orange',
+            padding: 10,
+            borderRadius: 5,
+            marginBottom: 5
+          }}
+          onPress={() => {
+            console.log('🔄 Verificando cotizaciones manualmente...');
+            checkIfFirstQuoteFromBackend();
+          }}
+        >
+          <Text style={{ color: 'white', fontSize: 10 }}>CHECK QUOTES</Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity
+          style={{
+            backgroundColor: 'purple',
+            padding: 10,
+            borderRadius: 5,
+          }}
+          onPress={async () => {
+            await AsyncStorage.removeItem('hasCreatedFirstQuote');
+            console.log('🔄 Flag local reseteado');
+            Alert.alert('Reset', 'Flag local reseteado');
+          }}
+        >
+          <Text style={{ color: 'white', fontSize: 10 }}>RESET FLAG</Text>
+        </TouchableOpacity>
+      </View>
     )
   );
 
@@ -1377,13 +1489,14 @@ const IntegratedTruckRequestScreen = () => {
         </View>
       )}
 
-      {/* Animación de primera cotización */}
+      {/* Animaciones de cotización */}
       <FirstQuoteAnimation />
+      <SuccessQuoteAnimation />
     </SafeAreaView>
   );
 };
 
-// Estilos completos con la animación actualizada
+// Estilos completos con la animación cinematográfica
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -2091,65 +2204,17 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 
-  // === ESTILOS PARA LA ANIMACIÓN DE PANTALLA COMPLETA - ACTUALIZADOS ===
-  fullscreenAnimationContainer: {
+  // === ESTILOS CINEMATOGRÁFICOS ===
+  cinematicContainer: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#FFFFFF', // Fondo blanco cinematográfico
     alignItems: 'center',
     justifyContent: 'center',
   },
 
-  gradientBackground: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: '#FFFFFF',
-  },
-
-  animationContent: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 40,
-  },
-
-  fullscreenLottieAnimation: {
-    width: width * 0.9,
-    height: height * 0.6,
-    marginBottom: 30,
-  },
-
-  fullscreenTextContainer: {
-    alignItems: 'center',
-    paddingHorizontal: 30,
-  },
-
-  fullscreenAnimationTitle: {
-    fontSize: 36,
-    fontWeight: '900',
-    color: '#5D9646',
-    marginBottom: 16,
-    textAlign: 'center',
-  },
-
-  fullscreenAnimationSubtitle: {
-    fontSize: 22,
-    fontWeight: '600',
-    color: '#34353A',
-    marginBottom: 12,
-    textAlign: 'center',
-  },
-
-  fullscreenAnimationDescription: {
-    fontSize: 16,
-    color: '#5F8EAD',
-    textAlign: 'center',
-    lineHeight: 24,
-    fontWeight: '500',
-    maxWidth: 280,
+  cinematicLottieAnimation: {
+    width: width * 1.0,  // Pantalla completa
+    height: height * 1.0, // Pantalla completa
   },
 });
 
