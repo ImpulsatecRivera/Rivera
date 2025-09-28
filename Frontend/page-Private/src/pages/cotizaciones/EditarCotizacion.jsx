@@ -1,70 +1,72 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, FileText, User, Calendar, MapPin, Truck, CreditCard, Save, DollarSign, Package, Clock } from 'lucide-react';
+import { ArrowLeft, Save, DollarSign } from 'lucide-react';
 import { useCotizaciones } from '../../components/Cotizaciones/hook/useCotizaciones'; // Ajusta la ruta según tu estructura
 
 export default function EditarCotizacionForm({ cotizacionId, cotizacion: cotizacionProp, onVolver }) {
+  // Tu hook original
   const {
     cotizaciones,
     actualizarCotizacionAPI,
     actualizarEstadoCotizacion,
-    actualizarPrecioCotizacion,
-    loading,
+    loading: hookLoading,
     error,
     showSweetAlert,
     closeSweetAlert
   } = useCotizaciones();
 
-  // Estados del formulario - SOLO CAMPOS DE DINERO
-  const [formData, setFormData] = useState({
-    // Costos (EDITABLES) - Usar strings para permitir edición completa
+  // Estado simple y directo
+  const [precios, setPrecios] = useState({
     price: '',
     combustible: '',
     peajes: '',
     conductor: '',
     otros: '',
-    impuestos: '',
-    
-    // Solo para mostrar (NO EDITABLES)
-    cliente: '',
-    apellido: '',
-    email: '',
-    telefono: '',
-    quoteName: '',
-    quoteDescription: '',
-    metodoPago: '',
-    fechaEntrega: '',
-    lugarOrigen: '',
-    lugarDestino: '',
-    tipoCamion: '',
-    status: 'pendiente'
+    impuestos: ''
   });
 
-  const [cotizacionActual, setCotizacionActual] = useState(cotizacionProp || null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [hasChanges, setHasChanges] = useState(false);
-  const [loadingCotizacion, setLoadingCotizacion] = useState(false);
+  const [datosOriginales, setDatosOriginales] = useState({});
+  const [loading, setLoading] = useState(true);
+  const [guardando, setGuardando] = useState(false);
+  const [mensaje, setMensaje] = useState('');
 
-  // Buscar cotización por ID cuando se proporciona
+  // Función para cargar precios desde una cotización
+  const cargarPrecios = (cotizacion) => {
+    console.log('📝 Cargando precios desde cotización:', cotizacion);
+    
+    const nuevosPrecios = {
+      price: String(cotizacion.price || '0'),
+      combustible: String(cotizacion.costos?.combustible || '0'),
+      peajes: String(cotizacion.costos?.peajes || '0'),
+      conductor: String(cotizacion.costos?.conductor || '0'),
+      otros: String(cotizacion.costos?.otros || '0'),
+      impuestos: String(cotizacion.costos?.impuestos || '0')
+    };
+    
+    setPrecios(nuevosPrecios);
+    console.log('✅ Precios cargados:', nuevosPrecios);
+  };
+
+  // Cargar datos iniciales - integrado con tu hook
   useEffect(() => {
-    console.log('🔍 Debug - useEffect ejecutado:', { 
+    console.log('🔍 useEffect ejecutado:', { 
       cotizacionId, 
       cotizacionProp: !!cotizacionProp,
       cantidadCotizaciones: cotizaciones.length,
-      loading
+      hookLoading
     });
 
     // Si ya tenemos la cotización como prop, usarla directamente
     if (cotizacionProp) {
       console.log('📋 Usando cotización proporcionada como prop');
-      setCotizacionActual(cotizacionProp);
-      cargarDatosFormulario(cotizacionProp);
+      cargarPrecios(cotizacionProp);
+      setDatosOriginales(cotizacionProp);
+      setLoading(false);
       return;
     }
 
     // Si tenemos ID y cotizaciones están cargadas, buscar por ID
-    if (cotizacionId && cotizaciones.length > 0 && !loading) {
+    if (cotizacionId && cotizaciones.length > 0 && !hookLoading) {
       console.log('🔍 Buscando cotización por ID:', cotizacionId);
-      setLoadingCotizacion(true);
       
       const cotizacion = cotizaciones.find(c => {
         const currentId = c.id || c._id;
@@ -74,182 +76,231 @@ export default function EditarCotizacionForm({ cotizacionId, cotizacion: cotizac
       
       if (cotizacion) {
         console.log('✅ Cotización encontrada:', cotizacion);
-        setCotizacionActual(cotizacion);
-        cargarDatosFormulario(cotizacion);
+        cargarPrecios(cotizacion);
+        setDatosOriginales(cotizacion);
+        setLoading(false);
       } else {
         console.error('❌ No se encontró cotización con ID:', cotizacionId);
         console.log('📋 IDs disponibles:', cotizaciones.map(c => c.id || c._id));
+        setLoading(false);
       }
-      
-      setLoadingCotizacion(false);
     }
-  }, [cotizacionId, cotizacionProp, cotizaciones, loading]);
+  }, [cotizacionId, cotizacionProp, cotizaciones, hookLoading]);
 
-  const cargarDatosFormulario = (cotizacion) => {
-    console.log('📝 Cargando datos al formulario:', cotizacion);
+  // Función súper simple para cambiar valores
+  const cambiarPrecio = (campo, valor) => {
+    console.log(`🔄 Cambiando ${campo} a: "${valor}"`);
     
-    setFormData({
-      // Costos (EDITABLES) - Convertir a string para que sean editables
-      price: String(cotizacion.price || ''),
-      combustible: String(cotizacion.costos?.combustible || ''),
-      peajes: String(cotizacion.costos?.peajes || ''),
-      conductor: String(cotizacion.costos?.conductor || ''),
-      otros: String(cotizacion.costos?.otros || ''),
-      impuestos: String(cotizacion.costos?.impuestos || ''),
-      
-      // Solo para mostrar (NO EDITABLES)
-      cliente: cotizacion.clienteFirstName || cotizacion.cliente?.split(' ')[0] || '',
-      apellido: cotizacion.clienteLastName || cotizacion.cliente?.split(' ').slice(1).join(' ') || '',
-      email: cotizacion.email || '',
-      telefono: cotizacion.telefono || '',
-      quoteName: cotizacion.quoteName || '',
-      quoteDescription: cotizacion.quoteDescription || cotizacion.descripcion || '',
-      metodoPago: cotizacion.paymentMethod || '',
-      fechaEntrega: cotizacion.deliveryDate ? cotizacion.deliveryDate.split('T')[0] : '',
-      lugarOrigen: cotizacion.origen || '',
-      lugarDestino: cotizacion.destino || '',
-      tipoCamion: cotizacion.truckType || cotizacion.tipoVehiculo || '',
-      status: cotizacion.status || 'pendiente'
+    setPrecios(prev => {
+      const nuevo = { ...prev, [campo]: valor };
+      console.log('✅ Nuevo estado precios:', nuevo);
+      return nuevo;
     });
-    
-    console.log('✅ Datos cargados en el formulario');
   };
 
-  // SOLO permitir cambios en campos de dinero
-  const handleInputChange = (field, value) => {
-    // Lista de campos editables (solo relacionados con dinero)
-    const camposEditables = ['price', 'combustible', 'peajes', 'conductor', 'otros', 'impuestos'];
+  // Calcular totales
+  const calcularTotales = () => {
+    const nums = {
+      combustible: parseFloat(precios.combustible) || 0,
+      peajes: parseFloat(precios.peajes) || 0,
+      conductor: parseFloat(precios.conductor) || 0,
+      otros: parseFloat(precios.otros) || 0,
+      impuestos: parseFloat(precios.impuestos) || 0
+    };
     
-    if (camposEditables.includes(field)) {
-      // Convertir a número o mantener como string vacío si está vacío
-      const numericValue = value === '' ? '' : value;
-      
-      setFormData(prev => ({
-        ...prev,
-        [field]: numericValue
-      }));
-      setHasChanges(true);
-      
-      console.log(`✅ Campo "${field}" actualizado a:`, numericValue);
-    } else {
-      console.log(`🚫 Campo "${field}" no es editable`);
-    }
-  };
-
-  const calcularTotal = () => {
-    // Convertir valores a números, usando 0 como fallback para strings vacíos
-    const combustible = parseFloat(formData.combustible) || 0;
-    const peajes = parseFloat(formData.peajes) || 0;
-    const conductor = parseFloat(formData.conductor) || 0;
-    const otros = parseFloat(formData.otros) || 0;
-    const impuestos = parseFloat(formData.impuestos) || 0;
-    
-    const subtotal = combustible + peajes + conductor + otros;
-    const total = subtotal + impuestos;
-    
-    console.log('💰 Cálculo de totales:', {
-      combustible,
-      peajes,
-      conductor,
-      otros,
-      impuestos,
-      subtotal,
-      total
-    });
+    const subtotal = nums.combustible + nums.peajes + nums.conductor + nums.otros;
+    const total = subtotal + nums.impuestos;
     
     return { subtotal, total };
   };
 
-  const handleGuardarBorrador = async () => {
-    if (!cotizacionActual) return;
+  // Guardar como borrador (sin enviar al cliente)
+  const guardarBorrador = async () => {
+    if (!datosOriginales || !datosOriginales.id && !datosOriginales._id) {
+      showSweetAlert({
+        title: 'Error',
+        text: 'No se puede guardar: datos de cotización no válidos',
+        type: 'error',
+        onConfirm: closeSweetAlert
+      });
+      return;
+    }
 
-    setIsSubmitting(true);
+    setGuardando(true);
+    setMensaje('Guardando borrador...');
     
     try {
-      const { subtotal, total } = calcularTotal();
+      const { subtotal, total } = calcularTotales();
       
-      // SOLO enviar campos de costos
-      const datosActualizacion = {
-        price: Number(formData.price),
+      const datosParaGuardar = {
+        price: parseFloat(precios.price) || 0,
         costos: {
-          combustible: Number(formData.combustible),
-          peajes: Number(formData.peajes),
-          conductor: Number(formData.conductor),
-          otros: Number(formData.otros),
-          impuestos: Number(formData.impuestos),
+          combustible: parseFloat(precios.combustible) || 0,
+          peajes: parseFloat(precios.peajes) || 0,
+          conductor: parseFloat(precios.conductor) || 0,
+          otros: parseFloat(precios.otros) || 0,
+          impuestos: parseFloat(precios.impuestos) || 0,
           subtotal: subtotal,
           total: total,
-          moneda: cotizacionActual.costos?.moneda || 'USD'
+          moneda: datosOriginales.costos?.moneda || 'USD'
         }
       };
-
-      const resultado = await actualizarCotizacionAPI(cotizacionActual.id || cotizacionActual._id, datosActualizacion);
+      
+      console.log('💾 Guardando borrador:', datosParaGuardar);
+      
+      const resultado = await actualizarCotizacionAPI(
+        datosOriginales.id || datosOriginales._id, 
+        datosParaGuardar
+      );
       
       if (resultado.success) {
-        setHasChanges(false);
+        setMensaje('Borrador guardado');
         showSweetAlert({
-          title: '¡Guardado!',
-          text: 'Los costos han sido actualizados correctamente.',
+          title: 'Borrador Guardado',
+          text: 'Los precios se han guardado como borrador. Puedes continuar editando o enviar la cotización al cliente.',
           type: 'success',
           onConfirm: closeSweetAlert
         });
+        
+        setTimeout(() => setMensaje(''), 3000);
       } else {
+        setMensaje('Error al guardar');
         showSweetAlert({
           title: 'Error',
-          text: resultado.message,
+          text: resultado.message || 'No se pudo guardar el borrador',
           type: 'error',
           onConfirm: closeSweetAlert
         });
       }
+      
     } catch (error) {
-      console.error('Error al guardar:', error);
+      console.error('Error guardando borrador:', error);
+      setMensaje('Error al guardar');
       showSweetAlert({
         title: 'Error',
-        text: 'Ocurrió un error al guardar los cambios.',
+        text: 'Ocurrió un error al guardar el borrador.',
         type: 'error',
         onConfirm: closeSweetAlert
       });
     } finally {
-      setIsSubmitting(false);
+      setGuardando(false);
     }
   };
 
-  const handleCambiarEstado = (nuevoEstado) => {
-    if (!cotizacionActual) return;
-    actualizarEstadoCotizacion(cotizacionActual, nuevoEstado);
+  // Función auxiliar para procesar el envío
+  const procesarEnvioCotizacion = async () => {
+    setGuardando(true);
+    setMensaje('Enviando cotización al cliente...');
+    
+    try {
+      const { subtotal, total } = calcularTotales();
+      
+      const datosParaGuardar = {
+        price: parseFloat(precios.price) || 0,
+        costos: {
+          combustible: parseFloat(precios.combustible) || 0,
+          peajes: parseFloat(precios.peajes) || 0,
+          conductor: parseFloat(precios.conductor) || 0,
+          otros: parseFloat(precios.otros) || 0,
+          impuestos: parseFloat(precios.impuestos) || 0,
+          subtotal: subtotal,
+          total: total,
+          moneda: datosOriginales.costos?.moneda || 'USD'
+        },
+        fechaEnvio: new Date().toISOString(),
+        enviadaPorAdmin: true
+      };
+      
+      console.log('📤 Enviando cotización:', datosParaGuardar);
+      
+      // Paso 1: Guardar los precios
+      const resultadoGuardar = await actualizarCotizacionAPI(
+        datosOriginales.id || datosOriginales._id, 
+        datosParaGuardar
+      );
+      
+      if (resultadoGuardar.success) {
+        // Paso 2: Cambiar estado a "enviada"
+        const cotizacionActualizada = { ...datosOriginales, ...datosParaGuardar };
+        await actualizarEstadoCotizacion(cotizacionActualizada, 'enviada');
+        
+        setMensaje('¡Cotización enviada al cliente!');
+        showSweetAlert({
+          title: '¡Cotización Enviada!',
+          text: `La cotización con precio $${datosParaGuardar.price.toFixed(2)} ha sido enviada al cliente. El cliente recibirá una notificación.`,
+          type: 'success',
+          onConfirm: () => {
+            closeSweetAlert();
+          }
+        });
+        
+        // Actualizar el estado local
+        setDatosOriginales(prev => ({ ...prev, status: 'enviada', ...datosParaGuardar }));
+        
+      } else {
+        throw new Error(resultadoGuardar.message || 'Error al guardar la cotización');
+      }
+      
+    } catch (error) {
+      console.error('Error enviando cotización:', error);
+      setMensaje('Error al enviar');
+      showSweetAlert({
+        title: 'Error al Enviar',
+        text: 'No se pudo enviar la cotización al cliente. Inténtalo de nuevo.',
+        type: 'error',
+        onConfirm: closeSweetAlert
+      });
+    } finally {
+      setGuardando(false);
+    }
   };
 
-  const getEstadoColor = (estado) => {
-    const colores = {
-      'pendiente': 'bg-orange-100 text-orange-600 border-orange-200',
-      'enviada': 'bg-blue-100 text-blue-600 border-blue-200',
-      'aceptada': 'bg-green-100 text-green-600 border-green-200',
-      'rechazada': 'bg-red-100 text-red-600 border-red-200',
-      'ejecutada': 'bg-purple-100 text-purple-600 border-purple-200',
-      'cancelada': 'bg-gray-100 text-gray-600 border-gray-200'
-    };
-    return colores[estado] || 'bg-gray-100 text-gray-600 border-gray-200';
+  // Enviar cotización al cliente (guardar + cambiar estado)
+  const enviarCotizacionAlCliente = async () => {
+    if (!datosOriginales || !datosOriginales.id && !datosOriginales._id) {
+      showSweetAlert({
+        title: 'Error',
+        text: 'No se puede enviar: datos de cotización no válidos',
+        type: 'error',
+        onConfirm: closeSweetAlert
+      });
+      return;
+    }
+
+    // Validar que haya precios
+    const precioTotal = parseFloat(precios.price) || 0;
+    if (precioTotal <= 0) {
+      showSweetAlert({
+        title: 'Precio requerido',
+        text: 'Debes ingresar un precio principal antes de enviar la cotización al cliente.',
+        type: 'warning',
+        onConfirm: closeSweetAlert
+      });
+      return;
+    }
+
+    // Confirmar envío
+    showSweetAlert({
+      title: '¿Enviar cotización al cliente?',
+      text: `Se enviará la cotización con un precio de $${precioTotal.toFixed(2)} al cliente. Esta acción notificará al cliente.`,
+      type: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Sí, enviar',
+      cancelButtonText: 'Cancelar',
+      onConfirm: async () => {
+        closeSweetAlert();
+        await procesarEnvioCotizacion();
+      },
+      onCancel: closeSweetAlert
+    });
   };
 
-  const getEstadoTexto = (estado) => {
-    const textos = {
-      'pendiente': 'Pendiente',
-      'enviada': 'Enviada',
-      'aceptada': 'Aceptada',
-      'rechazada': 'Rechazada',
-      'ejecutada': 'Ejecutada',
-      'cancelada': 'Cancelada'
-    };
-    return textos[estado] || 'Desconocido';
-  };
-
-  // Estados de carga y error específicos
-  if (loading || loadingCotizacion) {
+  if (loading || hookLoading) {
     return (
       <div className="min-h-screen bg-gray-800 p-6 flex items-center justify-center">
         <div className="text-white text-center">
           <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-white mx-auto mb-4"></div>
-          <p>{loading ? 'Cargando datos...' : 'Buscando cotización...'}</p>
+          <p>{hookLoading ? 'Cargando cotizaciones...' : 'Buscando cotización...'}</p>
           {cotizacionId && <p className="text-sm text-gray-400 mt-2">ID: {cotizacionId}</p>}
         </div>
       </div>
@@ -273,449 +324,323 @@ export default function EditarCotizacionForm({ cotizacionId, cotizacion: cotizac
     );
   }
 
-  if (!cotizacionActual) {
+  if (!datosOriginales || Object.keys(datosOriginales).length === 0) {
     return (
       <div className="min-h-screen bg-gray-800 p-6 flex items-center justify-center">
         <div className="text-white text-center">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-white mx-auto mb-4"></div>
-          <p>Esperando datos de la cotización...</p>
+          <div className="text-yellow-400 text-xl mb-4">⚠️</div>
+          <p className="mb-4">No se encontraron datos de la cotización</p>
+          <button 
+            onClick={onVolver}
+            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+          >
+            Volver
+          </button>
         </div>
       </div>
     );
   }
 
-  const { subtotal, total } = calcularTotal();
+  const { subtotal, total } = calcularTotales();
 
   return (
     <div className="min-h-screen bg-gray-800 p-6">
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
-        <div className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity" onClick={onVolver}>
-          <ArrowLeft className="w-5 h-5 text-white" />
-          <span className="text-lg font-medium text-white">Editar Costos de Cotización</span>
+        <div 
+          className="flex items-center gap-3 cursor-pointer hover:opacity-80 text-white"
+          onClick={onVolver}
+        >
+          <ArrowLeft className="w-5 h-5" />
+          <span className="text-lg font-medium">Cotizar Solicitud del Cliente</span>
         </div>
         
-        {hasChanges && (
-          <div className="bg-yellow-500 text-black px-4 py-2 rounded-md text-sm font-medium">
-            Tienes cambios sin guardar
+        {mensaje && (
+          <div className={`px-4 py-2 rounded text-white ${
+            mensaje.includes('Error') ? 'bg-red-500' : 
+            mensaje.includes('exitosamente') || mensaje.includes('enviada') ? 'bg-green-500' : 'bg-blue-500'
+          }`}>
+            {mensaje}
           </div>
         )}
       </div>
 
-      {/* Main Content */}
-      <div className="bg-white rounded-2xl shadow-lg p-10 w-full max-w-8xl mx-auto" style={{minHeight: '90vh'}}>
-        {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-gray-800 rounded-full flex items-center justify-center">
-              <DollarSign className="w-6 h-6 text-white" />
+      {/* Contenido principal */}
+      <div className="bg-white rounded-lg shadow-lg p-8 max-w-4xl mx-auto">
+        <div className="flex items-center gap-4 mb-8">
+          <DollarSign className="w-8 h-8 text-green-600" />
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">
+              Cotizar Solicitud del Cliente
+            </h1>
+            <p className="text-gray-600">
+              Agrega precios y envía la cotización: {datosOriginales.numeroDetizacion || 'N/A'}
+            </p>
+          </div>
+        </div>
+
+        {/* Información del cliente (solo lectura) */}
+        <div className="mb-8 p-6 bg-gray-50 rounded-lg">
+          <h2 className="text-lg font-semibold mb-4 text-gray-800">Información del Cliente</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+            <div>
+              <span className="font-medium text-gray-600">Cliente:</span>
+              <span className="ml-2">
+                {datosOriginales.clienteFirstName} {datosOriginales.clienteLastName}
+                {!datosOriginales.clienteFirstName && datosOriginales.cliente}
+              </span>
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">
-                Editar Costos - {cotizacionActual.numeroDetizacion || 'Cotización'}
-              </h1>
-              <p className="text-sm text-gray-500">Solo puedes modificar precios y costos</p>
+              <span className="font-medium text-gray-600">Email:</span>
+              <span className="ml-2">{datosOriginales.email || 'No especificado'}</span>
             </div>
-          </div>
-          
-          {/* Estado actual */}
-          <div className="text-right">
-            <span className="text-sm font-medium text-gray-600 block mb-2">ESTADO ACTUAL</span>
-            <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full border ${getEstadoColor(formData.status)}`}>
-              <div className="w-2 h-2 bg-current rounded-full"></div>
-              <span className="font-medium">{getEstadoTexto(formData.status)}</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Client Information Section - SOLO LECTURA */}
-        <div className="mb-8">
-          <div className="flex items-center gap-2 mb-6">
-            <input type="checkbox" className="w-4 h-4" checked readOnly />
-            <label className="font-bold text-gray-700 text-lg">INFORMACIÓN DEL CLIENTE (Solo lectura)</label>
-          </div>
-          
-          <div className="space-y-6 bg-gray-50 p-6 rounded-lg">
-            {/* First Row */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Cliente
-                </label>
-                <div className="relative">
-                  <User className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
-                  <input
-                    type="text"
-                    value={formData.cliente}
-                    readOnly
-                    className="w-full pl-10 pr-3 py-3 border border-gray-300 rounded-md bg-gray-100 text-gray-500 cursor-not-allowed"
-                  />
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Apellido
-                </label>
-                <input
-                  type="text"
-                  value={formData.apellido}
-                  readOnly
-                  className="w-full px-3 py-3 border border-gray-300 rounded-md bg-gray-100 text-gray-500 cursor-not-allowed"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Email
-                </label>
-                <input
-                  type="email"
-                  value={formData.email}
-                  readOnly
-                  className="w-full px-3 py-3 border border-gray-300 rounded-md bg-gray-100 text-gray-500 cursor-not-allowed"
-                />
-              </div>
-            </div>
-
-            {/* Second Row */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Teléfono
-                </label>
-                <input
-                  type="tel"
-                  value={formData.telefono}
-                  readOnly
-                  className="w-full px-3 py-3 border border-gray-300 rounded-md bg-gray-100 text-gray-500 cursor-not-allowed"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Método de pago
-                </label>
-                <div className="relative">
-                  <CreditCard className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
-                  <input
-                    type="text"
-                    value={formData.metodoPago}
-                    readOnly
-                    className="w-full pl-10 pr-3 py-3 border border-gray-300 rounded-md bg-gray-100 text-gray-500 cursor-not-allowed"
-                  />
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Fecha de entrega
-                </label>
-                <div className="relative">
-                  <Calendar className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
-                  <input
-                    type="date"
-                    value={formData.fechaEntrega}
-                    readOnly
-                    className="w-full pl-10 pr-3 py-3 border border-gray-300 rounded-md bg-gray-100 text-gray-500 cursor-not-allowed"
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Cotización Information Section - SOLO LECTURA */}
-        <div className="mb-8">
-          <div className="flex items-center gap-2 mb-6">
-            <input type="checkbox" className="w-4 h-4" checked readOnly />
-            <label className="font-bold text-gray-700 text-lg">INFORMACIÓN DE LA COTIZACIÓN (Solo lectura)</label>
-          </div>
-          
-          <div className="space-y-6 bg-gray-50 p-6 rounded-lg">
-            {/* First Row */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Nombre de la cotización
-                </label>
-                <input
-                  type="text"
-                  value={formData.quoteName}
-                  readOnly
-                  className="w-full px-3 py-3 border border-gray-300 rounded-md bg-gray-100 text-gray-500 cursor-not-allowed"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Tipo de camión
-                </label>
-                <div className="relative">
-                  <Truck className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
-                  <input
-                    type="text"
-                    value={formData.tipoCamion}
-                    readOnly
-                    className="w-full pl-10 pr-3 py-3 border border-gray-300 rounded-md bg-gray-100 text-gray-500 cursor-not-allowed"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Second Row */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Lugar de origen
-                </label>
-                <div className="relative">
-                  <MapPin className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
-                  <input
-                    type="text"
-                    value={formData.lugarOrigen}
-                    readOnly
-                    className="w-full pl-10 pr-3 py-3 border border-gray-300 rounded-md bg-gray-100 text-gray-500 cursor-not-allowed"
-                  />
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Lugar de destino
-                </label>
-                <div className="relative">
-                  <MapPin className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
-                  <input
-                    type="text"
-                    value={formData.lugarDestino}
-                    readOnly
-                    className="w-full pl-10 pr-3 py-3 border border-gray-300 rounded-md bg-gray-100 text-gray-500 cursor-not-allowed"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Description */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Descripción del servicio
-              </label>
-              <div className="relative">
-                <FileText className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
-                <textarea
-                  value={formData.quoteDescription}
-                  readOnly
-                  rows={3}
-                  className="w-full pl-10 pr-3 py-3 border border-gray-300 rounded-md bg-gray-100 text-gray-500 cursor-not-allowed resize-none"
-                />
+              <span className="font-medium text-gray-600">Teléfono:</span>
+              <span className="ml-2">{datosOriginales.telefono || 'No especificado'}</span>
+            </div>
+            <div>
+              <span className="font-medium text-gray-600">Estado:</span>
+              <span className={`ml-2 px-3 py-1 rounded-full text-xs font-medium ${
+                datosOriginales.status === 'pendiente' ? 'bg-orange-100 text-orange-800' :
+                datosOriginales.status === 'enviada' ? 'bg-blue-100 text-blue-800' :
+                datosOriginales.status === 'aceptada' ? 'bg-green-100 text-green-800' :
+                datosOriginales.status === 'rechazada' ? 'bg-red-100 text-red-800' :
+                datosOriginales.status === 'ejecutada' ? 'bg-purple-100 text-purple-800' :
+                'bg-gray-100 text-gray-800'
+              }`}>
+                {datosOriginales.status === 'pendiente' ? '⏳ Pendiente de cotizar' :
+                 datosOriginales.status === 'enviada' ? '📤 Enviada al cliente' :
+                 datosOriginales.status === 'aceptada' ? '✅ Aceptada por cliente' :
+                 datosOriginales.status === 'rechazada' ? '❌ Rechazada por cliente' :
+                 datosOriginales.status === 'ejecutada' ? '🚛 En ejecución' :
+                 datosOriginales.status || 'Desconocido'}
+              </span>
+            </div>
+            <div>
+              <span className="font-medium text-gray-600">Origen:</span>
+              <span className="ml-2">{datosOriginales.origen || datosOriginales.lugarOrigen || 'No especificado'}</span>
+            </div>
+            <div>
+              <span className="font-medium text-gray-600">Destino:</span>
+              <span className="ml-2">{datosOriginales.destino || datosOriginales.lugarDestino || 'No especificado'}</span>
+            </div>
+            <div>
+              <span className="font-medium text-gray-600">Tipo de camión:</span>
+              <span className="ml-2">{datosOriginales.truckType || datosOriginales.tipoVehiculo || 'No especificado'}</span>
+            </div>
+            <div>
+              <span className="font-medium text-gray-600">Método de pago:</span>
+              <span className="ml-2">{datosOriginales.paymentMethod || datosOriginales.metodoPago || 'No especificado'}</span>
+            </div>
+          </div>
+          
+          {datosOriginales.quoteDescription && (
+            <div className="mt-4">
+              <span className="font-medium text-gray-600">Descripción:</span>
+              <p className="mt-1 text-gray-700 bg-white p-3 rounded border">
+                {datosOriginales.quoteDescription || datosOriginales.descripcion}
+              </p>
+            </div>
+          )}
+        </div>
+
+        {/* Información del flujo */}
+        <div className="mb-8 p-6 bg-blue-50 border border-blue-200 rounded-lg">
+          <h3 className="text-lg font-semibold mb-4 text-gray-800 flex items-center gap-2">
+            📋 Estado de la Cotización
+          </h3>
+          <div className="space-y-3">
+            {datosOriginales.status === 'pendiente' && (
+              <div className="flex items-center gap-3 text-orange-700">
+                <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
+                <span>Solicitud recibida del cliente - Esperando que agregues precios</span>
               </div>
+            )}
+            {datosOriginales.status === 'enviada' && (
+              <div className="flex items-center gap-3 text-blue-700">
+                <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                <span>Cotización enviada al cliente - Esperando respuesta</span>
+              </div>
+            )}
+            {datosOriginales.status === 'aceptada' && (
+              <div className="flex items-center gap-3 text-green-700">
+                <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                <span>✅ Cliente aceptó la cotización - Lista para ejecutar</span>
+              </div>
+            )}
+            {datosOriginales.status === 'rechazada' && (
+              <div className="flex items-center gap-3 text-red-700">
+                <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+                <span>❌ Cliente rechazó la cotización</span>
+              </div>
+            )}
+            
+            <div className="mt-4 p-3 bg-white rounded border text-sm text-gray-600">
+              💡 <strong>Flujo:</strong> Cliente envía solicitud → Tú agregas precios → Envías cotización → Cliente acepta/rechaza
             </div>
           </div>
         </div>
 
-        {/* Costos Section - EDITABLE */}
+        {/* Campos editables de precios */}
         <div className="mb-8">
-          <div className="flex items-center gap-2 mb-6">
-            <input type="checkbox" className="w-4 h-4" checked readOnly />
-            <label className="font-bold text-gray-700 text-lg">💰 COSTOS Y PRECIOS (Editable)</label>
-          </div>
+          <h2 className="text-lg font-semibold mb-6 text-gray-800 flex items-center gap-2">
+            <span className="text-green-600">💰</span>
+            Precios y Costos (Editables)
+          </h2>
           
-          <div className="space-y-6 border-2 border-green-200 bg-green-50 p-6 rounded-lg">
+          <div className="space-y-6">
             {/* Precio principal */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  💲 Precio principal
-                </label>
-                <div className="relative">
-                  <DollarSign className="absolute left-3 top-3 w-4 h-4 text-green-600" />
-                  <input
-                    type="number"
-                    value={formData.price}
-                    onChange={(e) => handleInputChange('price', e.target.value)}
-                    placeholder="0.00"
-                    step="0.01"
-                    min="0"
-                    className="w-full pl-10 pr-3 py-3 border-2 border-green-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white"
-                  />
-                </div>
+            <div className="p-4 border-2 border-green-200 rounded-lg bg-green-50">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                💲 Precio Principal *
+              </label>
+              <input
+                type="text"
+                value={precios.price}
+                onChange={(e) => cambiarPrecio('price', e.target.value)}
+                placeholder="Ingresa el precio principal (requerido para enviar)"
+                className={`w-full px-4 py-3 border rounded-md text-lg font-medium focus:ring-2 focus:ring-green-500 focus:border-green-500 ${
+                  parseFloat(precios.price) <= 0 ? 'border-red-300 bg-red-50' : 'border-gray-300 bg-white'
+                }`}
+              />
+              <div className="flex justify-between items-center mt-1">
+                <p className="text-xs text-gray-500">Valor actual: ${parseFloat(precios.price) || 0}</p>
+                {parseFloat(precios.price) <= 0 && (
+                  <p className="text-xs text-red-600">⚠️ Precio requerido para enviar</p>
+                )}
               </div>
             </div>
 
             {/* Desglose de costos */}
-            <div className="bg-white p-6 rounded-lg border-2 border-green-300">
-              <h4 className="font-medium text-gray-700 mb-4 flex items-center gap-2">
-                <Package className="w-4 h-4 text-green-600" />
-                Desglose de costos
-              </h4>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    ⛽ Combustible
-                  </label>
-                  <input
-                    type="number"
-                    value={formData.combustible}
-                    onChange={(e) => handleInputChange('combustible', e.target.value)}
-                    placeholder="0.00"
-                    step="0.01"
-                    min="0"
-                    className="w-full px-3 py-2 border-2 border-green-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    🛣️ Peajes
-                  </label>
-                  <input
-                    type="number"
-                    value={formData.peajes}
-                    onChange={(e) => handleInputChange('peajes', e.target.value)}
-                    placeholder="0.00"
-                    step="0.01"
-                    min="0"
-                    className="w-full px-3 py-2 border-2 border-green-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    👨‍💼 Conductor
-                  </label>
-                  <input
-                    type="number"
-                    value={formData.conductor}
-                    onChange={(e) => handleInputChange('conductor', e.target.value)}
-                    placeholder="0.00"
-                    step="0.01"
-                    min="0"
-                    className="w-full px-3 py-2 border-2 border-green-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    📋 Otros gastos
-                  </label>
-                  <input
-                    type="number"
-                    value={formData.otros}
-                    onChange={(e) => handleInputChange('otros', e.target.value)}
-                    placeholder="0.00"
-                    step="0.01"
-                    min="0"
-                    className="w-full px-3 py-2 border-2 border-green-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    🏛️ Impuestos
-                  </label>
-                  <input
-                    type="number"
-                    value={formData.impuestos}
-                    onChange={(e) => handleInputChange('impuestos', e.target.value)}
-                    placeholder="0.00"
-                    step="0.01"
-                    min="0"
-                    className="w-full px-3 py-2 border-2 border-green-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                  />
-                </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  ⛽ Combustible
+                </label>
+                <input
+                  type="text"
+                  value={precios.combustible}
+                  onChange={(e) => cambiarPrecio('combustible', e.target.value)}
+                  placeholder="0"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
               </div>
-              
-              {/* Totales */}
-              <div className="mt-6 pt-4 border-t-2 border-green-200 bg-green-50 p-4 rounded">
-                <div className="flex justify-between items-center mb-2">
-                  <span className="text-sm font-medium text-gray-600">Subtotal:</span>
-                  <span className="text-sm font-bold text-gray-800">${subtotal.toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-lg font-medium text-gray-700">Total:</span>
-                  <span className="text-xl font-bold text-green-600">${total.toFixed(2)}</span>
-                </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  🛣️ Peajes
+                </label>
+                <input
+                  type="text"
+                  value={precios.peajes}
+                  onChange={(e) => cambiarPrecio('peajes', e.target.value)}
+                  placeholder="0"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  👨‍💼 Conductor
+                </label>
+                <input
+                  type="text"
+                  value={precios.conductor}
+                  onChange={(e) => cambiarPrecio('conductor', e.target.value)}
+                  placeholder="0"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  📋 Otros Gastos
+                </label>
+                <input
+                  type="text"
+                  value={precios.otros}
+                  onChange={(e) => cambiarPrecio('otros', e.target.value)}
+                  placeholder="0"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  🏛️ Impuestos
+                </label>
+                <input
+                  type="text"
+                  value={precios.impuestos}
+                  onChange={(e) => cambiarPrecio('impuestos', e.target.value)}
+                  placeholder="0"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
               </div>
             </div>
           </div>
         </div>
 
-        {/* Estado Section */}
-        <div className="mb-8">
-          <div className="flex items-center gap-2 mb-6">
-            <input type="checkbox" className="w-4 h-4" checked readOnly />
-            <label className="font-bold text-gray-700 text-lg">ACCIONES DE ESTADO</label>
-          </div>
-          
-          <div className="flex flex-wrap gap-3">
-            {formData.status === 'pendiente' && (
-              <button
-                onClick={() => handleCambiarEstado('enviada')}
-                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm"
-              >
-                Marcar como Enviada
-              </button>
-            )}
-            
-            {formData.status === 'enviada' && (
-              <>
-                <button
-                  onClick={() => handleCambiarEstado('aceptada')}
-                  className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors text-sm"
-                >
-                  Marcar como Aceptada
-                </button>
-                <button
-                  onClick={() => handleCambiarEstado('rechazada')}
-                  className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors text-sm"
-                >
-                  Marcar como Rechazada
-                </button>
-              </>
-            )}
-            
-            {formData.status === 'aceptada' && (
-              <button
-                onClick={() => handleCambiarEstado('ejecutada')}
-                className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors text-sm"
-              >
-                Marcar como Ejecutada
-              </button>
-            )}
-            
-            {formData.status !== 'cancelada' && formData.status !== 'ejecutada' && (
-              <button
-                onClick={() => handleCambiarEstado('cancelada')}
-                className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors text-sm"
-              >
-                Cancelar
-              </button>
-            )}
+        {/* Totales */}
+        <div className="mb-8 p-6 bg-blue-50 border border-blue-200 rounded-lg">
+          <h3 className="text-lg font-semibold mb-4 text-gray-800">📊 Resumen de Totales</h3>
+          <div className="space-y-2">
+            <div className="flex justify-between">
+              <span className="text-gray-600">Subtotal (sin impuestos):</span>
+              <span className="font-medium">${subtotal.toFixed(2)}</span>
+            </div>
+            <div className="flex justify-between text-lg font-semibold text-blue-600 border-t pt-2">
+              <span>Total Final:</span>
+              <span>${total.toFixed(2)}</span>
+            </div>
           </div>
         </div>
 
-        {/* Action Buttons */}
+        {/* Botones de acción */}
         <div className="flex gap-4 justify-end">
-          <button 
-            onClick={handleGuardarBorrador}
-            disabled={isSubmitting || !hasChanges}
-            className="px-6 py-3 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors flex items-center gap-2 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+          {/* Botón guardar borrador */}
+          <button
+            onClick={guardarBorrador}
+            disabled={guardando}
+            className="flex items-center gap-2 px-6 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
           >
             <Save className="w-4 h-4" />
-            {isSubmitting ? 'Guardando costos...' : 'Guardar cambios de costos'}
+            {guardando ? 'Guardando...' : 'Guardar Borrador'}
+          </button>
+
+          {/* Botón enviar al cliente */}
+          <button
+            onClick={enviarCotizacionAlCliente}
+            disabled={guardando || datosOriginales.status === 'enviada'}
+            className="flex items-center gap-2 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium text-lg"
+          >
+            📤 {guardando ? 'Enviando...' : 'Enviar Cotización al Cliente'}
           </button>
         </div>
 
-        {/* Nota informativa */}
-        <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+        {/* Información sobre los botones */}
+        <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
           <div className="flex items-start gap-3">
-            <div className="text-blue-500 text-xl">ℹ️</div>
-            <div>
-              <h4 className="font-medium text-blue-800 mb-1">Información importante</h4>
-              <ul className="text-sm text-blue-700 space-y-1">
-                <li>• Solo puedes editar los campos relacionados con dinero (precios y costos)</li>
-                <li>• Los datos del cliente y la información de la cotización son de solo lectura</li>
-                <li>• Los totales se calculan automáticamente basándose en los costos que ingreses</li>
-                <li>• Para cambiar otros datos, contacta al administrador del sistema</li>
+            <div className="text-yellow-600 text-xl">💡</div>
+            <div className="text-sm text-yellow-800">
+              <p className="font-medium mb-2">Diferencia entre botones:</p>
+              <ul className="space-y-1">
+                <li>• <strong>Guardar Borrador:</strong> Solo guarda los precios, no notifica al cliente</li>
+                <li>• <strong>Enviar Cotización:</strong> Guarda los precios Y envía la cotización al cliente</li>
               </ul>
+              {datosOriginales.status === 'enviada' && (
+                <p className="mt-2 text-blue-700 font-medium">✅ Esta cotización ya fue enviada al cliente</p>
+              )}
             </div>
           </div>
+        </div>
+
+        {/* Debug info */}
+        <div className="mt-8 p-4 bg-gray-100 rounded border text-xs">
+          <h4 className="font-medium mb-2">🐛 Estado actual (debug):</h4>
+          <pre className="text-gray-600 overflow-x-auto">
+{JSON.stringify(precios, null, 2)}
+          </pre>
         </div>
       </div>
     </div>
