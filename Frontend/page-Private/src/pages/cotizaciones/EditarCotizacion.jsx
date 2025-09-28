@@ -115,27 +115,17 @@ export default function EditarCotizacionForm({ cotizacionId, cotizacion: cotizac
     console.log('✅ Datos cargados en el formulario');
   };
 
-  // CORREGIDO: Función para manejar cambios en inputs
+  // FUNCIÓN SIMPLIFICADA para manejar cambios en inputs
   const handleInputChange = (field, value) => {
-    // Lista de campos editables (solo relacionados con dinero)
-    const camposEditables = ['price', 'combustible', 'peajes', 'conductor', 'otros', 'impuestos'];
+    console.log(`🔄 Cambiando ${field} a:`, value);
     
-    if (camposEditables.includes(field)) {
-      console.log(`🔄 Actualizando campo "${field}" con valor:`, value);
-      
-      setFormData(prev => {
-        const newData = {
-          ...prev,
-          [field]: value // Mantener como string para permitir edición
-        };
-        console.log(`✅ Estado actualizado para "${field}":`, newData[field]);
-        return newData;
-      });
-      
-      setHasChanges(true);
-    } else {
-      console.log(`🚫 Campo "${field}" no es editable`);
-    }
+    setFormData(prevData => {
+      const newData = { ...prevData, [field]: value };
+      console.log(`✅ Nuevo estado:`, newData);
+      return newData;
+    });
+    
+    setHasChanges(true);
   };
 
   const calcularTotal = () => {
@@ -529,12 +519,10 @@ export default function EditarCotizacionForm({ cotizacionId, cotizacion: cotizac
                 <div className="relative">
                   <DollarSign className="absolute left-3 top-3 w-4 h-4 text-green-600" />
                   <input
-                    type="number"
+                    type="text"
                     value={formData.price}
                     onChange={(e) => handleInputChange('price', e.target.value)}
                     placeholder="0.00"
-                    step="0.01"
-                    min="0"
                     className="w-full pl-10 pr-3 py-3 border-2 border-green-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white"
                   />
                 </div>
@@ -554,12 +542,10 @@ export default function EditarCotizacionForm({ cotizacionId, cotizacion: cotizac
                     ⛽ Combustible
                   </label>
                   <input
-                    type="number"
+                    type="text"
                     value={formData.combustible}
                     onChange={(e) => handleInputChange('combustible', e.target.value)}
                     placeholder="0.00"
-                    step="0.01"
-                    min="0"
                     className="w-full px-3 py-2 border-2 border-green-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
                   />
                 </div>
@@ -569,12 +555,10 @@ export default function EditarCotizacionForm({ cotizacionId, cotizacion: cotizac
                     🛣️ Peajes
                   </label>
                   <input
-                    type="number"
+                    type="text"
                     value={formData.peajes}
                     onChange={(e) => handleInputChange('peajes', e.target.value)}
                     placeholder="0.00"
-                    step="0.01"
-                    min="0"
                     className="w-full px-3 py-2 border-2 border-green-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
                   />
                 </div>
@@ -584,12 +568,10 @@ export default function EditarCotizacionForm({ cotizacionId, cotizacion: cotizac
                     👨‍💼 Conductor
                   </label>
                   <input
-                    type="number"
+                    type="text"
                     value={formData.conductor}
                     onChange={(e) => handleInputChange('conductor', e.target.value)}
                     placeholder="0.00"
-                    step="0.01"
-                    min="0"
                     className="w-full px-3 py-2 border-2 border-green-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
                   />
                 </div>
@@ -599,12 +581,10 @@ export default function EditarCotizacionForm({ cotizacionId, cotizacion: cotizac
                     📋 Otros gastos
                   </label>
                   <input
-                    type="number"
+                    type="text"
                     value={formData.otros}
                     onChange={(e) => handleInputChange('otros', e.target.value)}
                     placeholder="0.00"
-                    step="0.01"
-                    min="0"
                     className="w-full px-3 py-2 border-2 border-green-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
                   />
                 </div>
@@ -614,12 +594,10 @@ export default function EditarCotizacionForm({ cotizacionId, cotizacion: cotizac
                     🏛️ Impuestos
                   </label>
                   <input
-                    type="number"
+                    type="text"
                     value={formData.impuestos}
                     onChange={(e) => handleInputChange('impuestos', e.target.value)}
                     placeholder="0.00"
-                    step="0.01"
-                    min="0"
                     className="w-full px-3 py-2 border-2 border-green-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
                   />
                 </div>
