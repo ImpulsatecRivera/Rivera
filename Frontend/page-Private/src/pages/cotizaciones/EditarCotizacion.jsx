@@ -115,22 +115,24 @@ export default function EditarCotizacionForm({ cotizacionId, cotizacion: cotizac
     console.log('✅ Datos cargados en el formulario');
   };
 
-  // SOLO permitir cambios en campos de dinero
+  // CORREGIDO: Función para manejar cambios en inputs
   const handleInputChange = (field, value) => {
     // Lista de campos editables (solo relacionados con dinero)
     const camposEditables = ['price', 'combustible', 'peajes', 'conductor', 'otros', 'impuestos'];
     
     if (camposEditables.includes(field)) {
-      // Convertir a número o mantener como string vacío si está vacío
-      const numericValue = value === '' ? '' : value;
+      console.log(`🔄 Actualizando campo "${field}" con valor:`, value);
       
-      setFormData(prev => ({
-        ...prev,
-        [field]: numericValue
-      }));
+      setFormData(prev => {
+        const newData = {
+          ...prev,
+          [field]: value // Mantener como string para permitir edición
+        };
+        console.log(`✅ Estado actualizado para "${field}":`, newData[field]);
+        return newData;
+      });
+      
       setHasChanges(true);
-      
-      console.log(`✅ Campo "${field}" actualizado a:`, numericValue);
     } else {
       console.log(`🚫 Campo "${field}" no es editable`);
     }
@@ -170,18 +172,20 @@ export default function EditarCotizacionForm({ cotizacionId, cotizacion: cotizac
       
       // SOLO enviar campos de costos
       const datosActualizacion = {
-        price: Number(formData.price),
+        price: Number(formData.price) || 0,
         costos: {
-          combustible: Number(formData.combustible),
-          peajes: Number(formData.peajes),
-          conductor: Number(formData.conductor),
-          otros: Number(formData.otros),
-          impuestos: Number(formData.impuestos),
+          combustible: Number(formData.combustible) || 0,
+          peajes: Number(formData.peajes) || 0,
+          conductor: Number(formData.conductor) || 0,
+          otros: Number(formData.otros) || 0,
+          impuestos: Number(formData.impuestos) || 0,
           subtotal: subtotal,
           total: total,
           moneda: cotizacionActual.costos?.moneda || 'USD'
         }
       };
+
+      console.log('💾 Guardando datos:', datosActualizacion);
 
       const resultado = await actualizarCotizacionAPI(cotizacionActual.id || cotizacionActual._id, datosActualizacion);
       
@@ -717,6 +721,24 @@ export default function EditarCotizacionForm({ cotizacionId, cotizacion: cotizac
             </div>
           </div>
         </div>
+
+        {/* Debug info - remover en producción */}
+        {process.env.NODE_ENV === 'development' && (
+          <div className="mt-6 p-4 bg-gray-100 border border-gray-300 rounded-lg">
+            <h4 className="font-medium text-gray-800 mb-2">🐛 Debug Info (solo desarrollo)</h4>
+            <pre className="text-xs text-gray-600 overflow-x-auto">
+              {JSON.stringify({
+                price: formData.price,
+                combustible: formData.combustible,
+                peajes: formData.peajes,
+                conductor: formData.conductor,
+                otros: formData.otros,
+                impuestos: formData.impuestos,
+                hasChanges
+              }, null, 2)}
+            </pre>
+          </div>
+        )}
       </div>
     </div>
   );
