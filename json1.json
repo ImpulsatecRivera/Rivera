@@ -1,0 +1,119 @@
+{
+  "quoteId": {"$oid": "507f1f77bcf86cd799439011"},
+  "tripDescription": "Transporte de frutas frescas a mercado central",
+  "truckId": {"$oid": "507f1f77bcf86cd799439012"},
+  "departureTime": {"$date": "2025-08-03T06:00:00.000Z"},
+  "arrivalTime": {"$date": "2025-08-03T14:00:00.000Z"},
+  "horarios": {
+    "ultimaActualizacion": {"$date": "2025-08-02T18:30:00.000Z"}
+  },
+  "ruta": {
+    "origen": {
+      "nombre": "Finca San José",
+      "coordenadas": {
+        "lat": 13.7942,
+        "lng": -88.8965
+      },
+      "tipo": "cliente"
+    },
+    "destino": {
+      "nombre": "Mercado Central San Salvador",
+      "coordenadas": {
+        "lat": 13.6929,
+        "lng": -89.2182
+      },
+      "tipo": "cliente"
+    },
+    "distanciaTotal": 120,
+    "tiempoEstimado": 480
+  },
+  "estado": {
+    "actual": "pendiente",
+    "fechaCambio": {"$date": "2025-08-02T18:30:00.000Z"},
+    "autoActualizar": true,
+    "historial": []
+  },
+  "tracking": {
+    "progreso": {
+      "porcentaje": 0,
+      "ultimaActualizacion": {"$date": "2025-08-02T18:30:00.000Z"},
+      "calculoAutomatico": true
+    }
+  },
+  "carga": {
+    "categoria": "alimentos_perecederos",
+    "subcategoria": "frutas tropicales",
+    "descripcion": "Mangos, papayas y piñas para venta al por mayor",
+    "peso": {
+      "valor": 2500,
+      "unidad": "kg"
+    },
+    "volumen": {
+      "valor": 8.5,
+      "unidad": "m3"
+    },
+    "clasificacionRiesgo": "perecedero",
+    "condicionesEspeciales": {
+      "temperaturaMinima": 8,
+      "temperaturaMaxima": 15,
+      "requiereVentilacion": true,
+      "evitarVibración": true,
+      "posicionVertical": false,
+      "protegerDeLuz": false
+    },
+    "valor": {
+      "montoDeclarado": 3500,
+      "moneda": "USD",
+      "asegurado": true,
+      "numeroPoliza": "FRES-2025-001"
+    },
+    "empaque": {
+      "tipo": "caja_carton",
+      "cantidad": 180,
+      "dimensiones": {
+        "largo": 60,
+        "ancho": 40,
+        "alto": 30
+      }
+    },
+    "documentacion": {
+      "facturaComercial": true,
+      "certificadoOrigen": true,
+      "permisoSanitario": true,
+      "licenciaImportacion": false,
+      "otros": ["Certificado fitosanitario"]
+    },
+    "codigos": {
+      "numeroLote": "FRES240803",
+      "fechaVencimiento": {"$date": "2025-08-10T00:00:00.000Z"}
+    },
+    "requisitoVehiculo": {
+      "tipoCarroceria": "refrigerado",
+      "capacidadMinima": 3,
+      "equipoEspecial": ["sistema_refrigeracion"]
+    }
+  },
+  "conductor": {
+    "id": {"$oid": "507f1f77bcf86cd799439013"},
+    "nombre": "Carlos Mendoza",
+    "telefono": "+503 7123-4567"
+  },
+  "costos": {
+    "combustible": 85,
+    "peajes": 12,
+    "otros": 25,
+    "total": 122
+  },
+  "alertas": [],
+  "condiciones": {
+    "clima": "soleado",
+    "trafico": "normal",
+    "carretera": "buena"
+  },
+  "metadata": {
+    "migrated": true,
+    "migratedAt": {"$date": "2025-08-02T18:30:00.000Z"},
+    "migratedFrom": "schema_v1",
+    "migratedTo": "schema_v2"
+  }
+}

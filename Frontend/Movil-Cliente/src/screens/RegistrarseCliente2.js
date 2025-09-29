@@ -11,25 +11,19 @@ import {
   ActivityIndicator,
   Image,
   Modal,
-  Pressable,
-  Platform,
+  StatusBar,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
+import LottieView from 'lottie-react-native';
 import { useAuth } from '../context/authContext';
-// Solo Expo Image Picker - NO react-native-permissions
 import * as ImagePicker from 'expo-image-picker';
 
-// CONFIGURACIÓN DE LA API
 const API_BASE_URL = 'https://riveraproject-production-933e.up.railway.app';
 
 const RegistrarseCliente2 = ({ navigation, route }) => {
-  // OBTENER DATOS DE LA PANTALLA ANTERIOR
   const { email, password } = route.params || {};
-  
-  // OBTENER FUNCIONES DEL CONTEXTO DE AUTENTICACIÓN
   const { register } = useAuth();
 
-  // Estados del formulario
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [dui, setDui] = useState('');
@@ -37,8 +31,6 @@ const RegistrarseCliente2 = ({ navigation, route }) => {
   const [fechaNacimiento, setFechaNacimiento] = useState('');
   const [direccion, setDireccion] = useState('');
   const [loading, setLoading] = useState(false);
-
-  // Estados para imagen de perfil
   const [selectedImage, setSelectedImage] = useState(null);
   const [showImageModal, setShowImageModal] = useState(false);
 
@@ -63,7 +55,6 @@ const RegistrarseCliente2 = ({ navigation, route }) => {
       return false;
     }
 
-    // Validar formato de DUI
     const duiPattern = /^\d{8}-\d$/;
     if (!duiPattern.test(dui)) {
       Alert.alert('Error', 'El DUI debe tener el formato correcto (12345678-9)');
@@ -80,7 +71,6 @@ const RegistrarseCliente2 = ({ navigation, route }) => {
       return false;
     }
 
-    // Validar formato de teléfono
     const phonePattern = /^\d{4}-\d{4}$/;
     if (!phonePattern.test(phone)) {
       Alert.alert('Error', 'El teléfono debe tener el formato correcto (1234-5678)');
@@ -97,7 +87,6 @@ const RegistrarseCliente2 = ({ navigation, route }) => {
       return false;
     }
 
-    // Validar formato y rango de fecha
     const datePattern = /^\d{2}\/\d{2}\/\d{4}$/;
     if (!datePattern.test(fechaNacimiento)) {
       Alert.alert('Error', 'La fecha debe tener el formato DD/MM/AAAA');
@@ -118,14 +107,12 @@ const RegistrarseCliente2 = ({ navigation, route }) => {
       return false;
     }
 
-    // Validar que la fecha sea válida
     const birthDate = new Date(year, month - 1, day);
     if (birthDate.getDate() !== day || birthDate.getMonth() !== month - 1 || birthDate.getFullYear() !== year) {
       Alert.alert('Error', 'La fecha ingresada no es válida');
       return false;
     }
 
-    // Validar edad mínima (ejemplo: 18 años)
     const today = new Date();
     const age = today.getFullYear() - year;
     if (age < 18) {
@@ -171,7 +158,6 @@ const RegistrarseCliente2 = ({ navigation, route }) => {
     return truncated;
   };
 
-  // FUNCIÓN PARA SOLICITAR PERMISOS DE CÁMARA (Expo)
   const requestCameraPermission = async () => {
     try {
       const { status } = await ImagePicker.requestCameraPermissionsAsync();
@@ -182,7 +168,6 @@ const RegistrarseCliente2 = ({ navigation, route }) => {
     }
   };
 
-  // FUNCIÓN PARA SOLICITAR PERMISOS DE GALERÍA (Expo)
   const requestMediaLibraryPermission = async () => {
     try {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -193,7 +178,6 @@ const RegistrarseCliente2 = ({ navigation, route }) => {
     }
   };
 
-  // FUNCIÓN PARA TOMAR FOTO CON LA CÁMARA (Expo)
   const takePhotoWithCamera = async () => {
     const hasPermission = await requestCameraPermission();
     if (!hasPermission) {
@@ -224,7 +208,6 @@ const RegistrarseCliente2 = ({ navigation, route }) => {
     }
   };
 
-  // FUNCIÓN PARA SELECCIONAR FOTO DE LA GALERÍA (Expo)
   const selectFromGallery = async () => {
     const hasPermission = await requestMediaLibraryPermission();
     if (!hasPermission) {
@@ -255,22 +238,18 @@ const RegistrarseCliente2 = ({ navigation, route }) => {
     }
   };
 
-  // FUNCIÓN PARA CONECTAR CON EL BACKEND USANDO FORMDATA (consistente con tu backend)
   const registerUser = async (userData, imageFile) => {
     try {
       console.log('🚀 Enviando datos al backend:', userData);
       const url = `${API_BASE_URL}/api/register-cliente`;
       console.log('🌐 URL completa:', url);
       
-      // Crear FormData para enviar datos + imagen (como espera tu backend)
       const formData = new FormData();
       
-      // Agregar todos los campos de texto
       Object.keys(userData).forEach(key => {
         formData.append(key, userData[key]);
       });
       
-      // Agregar imagen si existe (campo 'profileImage' como en tu backend)
       if (imageFile) {
         formData.append('profileImage', {
           uri: imageFile.uri,
@@ -282,7 +261,6 @@ const RegistrarseCliente2 = ({ navigation, route }) => {
 
       const response = await fetch(url, {
         method: 'POST',
-        // NO establecer Content-Type para FormData - React Native lo hace automáticamente
         body: formData,
       });
 
@@ -333,7 +311,6 @@ const RegistrarseCliente2 = ({ navigation, route }) => {
 
     setLoading(true);
     try {
-      // CONVERTIR FECHA AL FORMATO QUE ESPERA EL BACKEND
       const convertDateFormat = (dateStr) => {
         if (dateStr.includes('/')) {
           const [day, month, year] = dateStr.split('/');
@@ -370,7 +347,6 @@ const RegistrarseCliente2 = ({ navigation, route }) => {
         console.log('✅ Registro exitoso!');
         console.log('📋 RESPUESTA COMPLETA DEL BACKEND:', JSON.stringify(result.data, null, 2));
         
-        // EXTRAER DATOS DE LA RESPUESTA PARA EL CONTEXTO
         const registrationData = {
           user: {
             id: result.data.user?.id || result.data.user?._id || null,
@@ -391,7 +367,6 @@ const RegistrarseCliente2 = ({ navigation, route }) => {
 
         console.log('📦 DATOS PREPARADOS PARA CONTEXTO:', JSON.stringify(registrationData, null, 2));
 
-        // GUARDAR EN EL CONTEXTO DE AUTENTICACIÓN
         console.log('💾 Guardando datos en el contexto...');
         const authResult = await register(registrationData);
         
@@ -439,284 +414,471 @@ const RegistrarseCliente2 = ({ navigation, route }) => {
   };
 
   const handleGoBack = () => {
-    console.log('⬅️ Botón Atrás presionado');
     navigation.goBack();
   };
 
-  const handleDUIChange = (text) => {
-    const formatted = formatDUI(text);
-    setDui(formatted);
-  };
-
-  const handlePhoneChange = (text) => {
-    const formatted = formatPhone(text);
-    setPhone(formatted);
-  };
-
-  const handleDateChange = (text) => {
-    const formatted = formatDate(text);
-    setFechaNacimiento(formatted);
-  };
-
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView 
-        contentContainerStyle={styles.scrollContainer}
-        showsVerticalScrollIndicator={false}
-      >
-        <View style={styles.authContainer}>
-          <Text style={styles.title}>¡Ya casi{'\n'}terminamos!</Text>
-          <Text style={styles.subtitle}>
-            Solo necesitamos algunos datos más para completar tu perfil
-          </Text>
-          
-          {/* DEBUG: Mostrar email recibido (remover en producción) */}
-          {__DEV__ && (
-            <View style={{ backgroundColor: '#f0f0f0', padding: 10, marginBottom: 10, borderRadius: 5 }}>
-              <Text style={{ fontSize: 12, color: '#333' }}>
-                DEBUG: Email recibido: {email}
-              </Text>
-            </View>
-          )}
-
-          {/* SECCIÓN DE IMAGEN DE PERFIL */}
-          <View style={styles.profileImageSection}>
-            <Text style={styles.profileImageTitle}>Foto de perfil (opcional)</Text>
-            
-            <TouchableOpacity 
-              style={styles.profileImageContainer}
-              onPress={showImageOptions}
-            >
-              {selectedImage ? (
-                <View style={styles.selectedImageContainer}>
-                  <Image source={{ uri: selectedImage.uri }} style={styles.selectedImage} />
-                  <TouchableOpacity style={styles.removeImageButton} onPress={removeImage}>
-                    <Icon name="close-circle" size={24} color="#ef4444" />
-                  </TouchableOpacity>
-                </View>
-              ) : (
-                <View style={styles.placeholderImage}>
-                  <Icon name="camera" size={40} color="#9ca3af" />
-                  <Text style={styles.placeholderText}>Agregar foto</Text>
-                  <Text style={styles.placeholderSubtext}>Toca para seleccionar</Text>
-                </View>
-              )}
-            </TouchableOpacity>
-          </View>
-          
-          {/* Campos del formulario */}
-          <View style={styles.inputContainer}>
-            <Icon name="person-outline" size={20} color="#666" style={styles.inputIcon} />
-            <TextInput
-              style={styles.textInput}
-              placeholder="Primer nombre"
-              value={firstName}
-              onChangeText={setFirstName}
-              autoCapitalize="words"
-              placeholderTextColor="#999"
-            />
-          </View>
-
-          <View style={styles.inputContainer}>
-            <Icon name="person-outline" size={20} color="#666" style={styles.inputIcon} />
-            <TextInput
-              style={styles.textInput}
-              placeholder="Apellido"
-              value={lastName}
-              onChangeText={setLastName}
-              autoCapitalize="words"
-              placeholderTextColor="#999"
-            />
-          </View>
-
-          <View style={styles.inputContainer}>
-            <Icon name="card-outline" size={20} color="#666" style={styles.inputIcon} />
-            <TextInput
-              style={styles.textInput}
-              placeholder="DUI (12345678-9)"
-              value={dui}
-              onChangeText={handleDUIChange}
-              keyboardType="numeric"
-              maxLength={10}
-              placeholderTextColor="#999"
-            />
-          </View>
-
-          <View style={styles.inputContainer}>
-            <Icon name="call-outline" size={20} color="#666" style={styles.inputIcon} />
-            <TextInput
-              style={styles.textInput}
-              placeholder="Teléfono (1234-5678)"
-              value={phone}
-              onChangeText={handlePhoneChange}
-              keyboardType="numeric"
-              maxLength={9}
-              placeholderTextColor="#999"
-            />
-          </View>
-
-          <View style={styles.inputContainer}>
-            <Icon name="calendar-outline" size={20} color="#666" style={styles.inputIcon} />
-            <TextInput
-              style={styles.textInput}
-              placeholder="Fecha de nacimiento (DD/MM/AAAA)"
-              value={fechaNacimiento}
-              onChangeText={handleDateChange}
-              keyboardType="numeric"
-              maxLength={10}
-              placeholderTextColor="#999"
-            />
-          </View>
-
-          <View style={[styles.inputContainer, { marginBottom: 24 }]}>
-            <Icon name="location-outline" size={20} color="#666" style={styles.inputIcon} />
-            <TextInput
-              style={styles.textInput}
-              placeholder="Dirección completa"
-              value={direccion}
-              onChangeText={setDireccion}
-              multiline={true}
-              numberOfLines={2}
-              placeholderTextColor="#999"
-            />
-          </View>
-
-          {/* Texto de términos */}
-          <Text style={styles.termsText}>
-            Al hacer click en el botón{' '}
-            <Text style={styles.termsHighlight}>Crear cuenta</Text>
-            ,{'\n'}aceptas la oferta pública y nuestros términos.
-          </Text>
-
-          {/* Botón crear cuenta */}
-          <TouchableOpacity 
-            style={[styles.primaryButton, loading && styles.buttonDisabled]}
-            onPress={handleCreateAccount}
-            disabled={loading}
-          >
-            {loading ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text style={styles.primaryButtonText}>Crear cuenta</Text>
-            )}
+    <>
+      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+      <SafeAreaView style={styles.container}>
+        {/* Modern Header */}
+        <View style={styles.header}>
+          <TouchableOpacity onPress={handleGoBack} style={styles.backButton} activeOpacity={0.7}>
+            <Icon name="arrow-back" size={24} color="#1F2937" />
           </TouchableOpacity>
+          <View style={styles.headerTitleContainer}>
+            <Text style={styles.headerTitle}>Registro</Text>
+            <Text style={styles.headerStep}>Paso 2 de 2</Text>
+          </View>
+          <View style={styles.headerSpacer} />
+        </View>
 
-          {/* Indicadores de página */}
-          <View style={styles.pageIndicatorContainer}>
-            <TouchableOpacity onPress={handleGoBack} style={styles.backButton}>
-              <Icon name="arrow-back" size={20} color="#9ca3af" />
-              <Text style={styles.backText}>Atrás</Text>
-            </TouchableOpacity>
+        <ScrollView 
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          bounces={false}
+        >
+          
+          {/* Background with curved shapes */}
+          <View style={styles.backgroundShapes}>
+            <View style={styles.curvedShape1} />
+            <View style={styles.curvedShape2} />
+            <View style={styles.curvedShape3} />
+          </View>
+
+          {/* Content */}
+          <View style={styles.content}>
             
-            <View style={styles.dotsContainer}>
-              <View style={styles.dotInactive} />
-              <View style={styles.dotActive} />
+            {/* Header Section with Lottie */}
+            <View style={styles.headerSection}>
+              <View style={styles.titleWithLottieContainer}>
+                <View style={styles.titleColumn}>
+                  <Text style={styles.welcomeTitle}>¡Ya casi</Text>
+                  <Text style={styles.welcomeTitle2}>terminamos!</Text>
+                </View>
+                <View style={styles.lottieContainer}>
+                  <LottieView
+                    source={require('../assets/lottie/Man and Woman say Hi !.json')}
+                    autoPlay
+                    loop={false}
+                    style={styles.lottieAnimation}
+                  />
+                </View>
+              </View>
+              <Text style={styles.subtitle}>Completa tu perfil con algunos datos más</Text>
+            </View>
+
+            {/* Profile Image Section */}
+            <View style={styles.profileImageSection}>
+              <Text style={styles.profileImageLabel}>Foto de perfil</Text>
+              <TouchableOpacity 
+                style={styles.profileImageContainer}
+                onPress={showImageOptions}
+                activeOpacity={0.7}
+              >
+                {selectedImage ? (
+                  <View style={styles.selectedImageContainer}>
+                    <Image source={{ uri: selectedImage.uri }} style={styles.selectedImage} />
+                    <View style={styles.imageOverlay}>
+                      <Icon name="camera" size={24} color="#FFFFFF" />
+                    </View>
+                    <TouchableOpacity style={styles.removeImageButton} onPress={removeImage}>
+                      <Icon name="close" size={18} color="#FFFFFF" />
+                    </TouchableOpacity>
+                  </View>
+                ) : (
+                  <View style={styles.placeholderImage}>
+                    <View style={styles.cameraIconContainer}>
+                      <Icon name="camera-outline" size={28} color="#6B7280" />
+                    </View>
+                    <Text style={styles.placeholderText}>Agregar foto</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+              <Text style={styles.optionalText}>Opcional</Text>
+            </View>
+
+            {/* Form Section */}
+            <View style={styles.formSection}>
+              
+              {/* First Name */}
+              <View style={styles.inputContainer}>
+                <Text style={styles.inputLabel}>Nombre</Text>
+                <View style={styles.inputWrapper}>
+                  <Icon name="person-outline" size={20} color="#6B7280" style={styles.inputIcon} />
+                  <TextInput
+                    style={styles.textInput}
+                    placeholder="Tu primer nombre"
+                    value={firstName}
+                    onChangeText={setFirstName}
+                    autoCapitalize="words"
+                    placeholderTextColor="#9CA3AF"
+                  />
+                </View>
+              </View>
+
+              {/* Last Name */}
+              <View style={styles.inputContainer}>
+                <Text style={styles.inputLabel}>Apellido</Text>
+                <View style={styles.inputWrapper}>
+                  <Icon name="person-outline" size={20} color="#6B7280" style={styles.inputIcon} />
+                  <TextInput
+                    style={styles.textInput}
+                    placeholder="Tu apellido"
+                    value={lastName}
+                    onChangeText={setLastName}
+                    autoCapitalize="words"
+                    placeholderTextColor="#9CA3AF"
+                  />
+                </View>
+              </View>
+
+              {/* DUI */}
+              <View style={styles.inputContainer}>
+                <Text style={styles.inputLabel}>DUI</Text>
+                <View style={styles.inputWrapper}>
+                  <Icon name="card-outline" size={20} color="#6B7280" style={styles.inputIcon} />
+                  <TextInput
+                    style={styles.textInput}
+                    placeholder="12345678-9"
+                    value={dui}
+                    onChangeText={(text) => setDui(formatDUI(text))}
+                    keyboardType="numeric"
+                    maxLength={10}
+                    placeholderTextColor="#9CA3AF"
+                  />
+                </View>
+              </View>
+
+              {/* Phone */}
+              <View style={styles.inputContainer}>
+                <Text style={styles.inputLabel}>Teléfono</Text>
+                <View style={styles.inputWrapper}>
+                  <Icon name="call-outline" size={20} color="#6B7280" style={styles.inputIcon} />
+                  <TextInput
+                    style={styles.textInput}
+                    placeholder="1234-5678"
+                    value={phone}
+                    onChangeText={(text) => setPhone(formatPhone(text))}
+                    keyboardType="numeric"
+                    maxLength={9}
+                    placeholderTextColor="#9CA3AF"
+                  />
+                </View>
+              </View>
+
+              {/* Birth Date */}
+              <View style={styles.inputContainer}>
+                <Text style={styles.inputLabel}>Fecha de nacimiento</Text>
+                <View style={styles.inputWrapper}>
+                  <Icon name="calendar-outline" size={20} color="#6B7280" style={styles.inputIcon} />
+                  <TextInput
+                    style={styles.textInput}
+                    placeholder="DD/MM/AAAA"
+                    value={fechaNacimiento}
+                    onChangeText={(text) => setFechaNacimiento(formatDate(text))}
+                    keyboardType="numeric"
+                    maxLength={10}
+                    placeholderTextColor="#9CA3AF"
+                  />
+                </View>
+              </View>
+
+              {/* Address */}
+              <View style={styles.inputContainer}>
+                <Text style={styles.inputLabel}>Dirección</Text>
+                <View style={[styles.inputWrapper, { alignItems: 'flex-start' }]}>
+                  <Icon name="location-outline" size={20} color="#6B7280" style={[styles.inputIcon, { marginTop: 2 }]} />
+                  <TextInput
+                    style={[styles.textInput, { minHeight: 60 }]}
+                    placeholder="Tu dirección completa"
+                    value={direccion}
+                    onChangeText={setDireccion}
+                    multiline={true}
+                    numberOfLines={3}
+                    placeholderTextColor="#9CA3AF"
+                    textAlignVertical="top"
+                  />
+                </View>
+              </View>
+
+            </View>
+
+            {/* Terms */}
+            <Text style={styles.termsText}>
+              Al crear tu cuenta, aceptas nuestros términos y condiciones
+            </Text>
+
+            {/* Create Account Button */}
+            <View style={styles.buttonSection}>
+              <TouchableOpacity
+                style={[
+                  styles.createButton,
+                  loading && styles.buttonDisabled
+                ]}
+                onPress={handleCreateAccount}
+                disabled={loading}
+                activeOpacity={0.8}
+              >
+                <View style={styles.buttonContent}>
+                  {loading ? (
+                    <ActivityIndicator size="small" color="#FFFFFF" />
+                  ) : (
+                    <>
+                      <Text style={styles.buttonText}>Crear cuenta</Text>
+                      <View style={styles.arrowContainer}>
+                        <Icon name="checkmark" size={16} color="#FFFFFF" />
+                      </View>
+                    </>
+                  )}
+                </View>
+              </TouchableOpacity>
+            </View>
+
+            {/* Footer */}
+            <View style={styles.footerSection}>
+              <View style={styles.pageIndicator}>
+                <View style={styles.dotInactive} />
+                <View style={styles.dotActive} />
+              </View>
+            </View>
+
+          </View>
+
+        </ScrollView>
+
+        {/* Image Selection Modal */}
+        <Modal
+          animationType="slide"
+          transparent={true}
+          visible={showImageModal}
+          onRequestClose={() => setShowImageModal(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Seleccionar foto</Text>
+                <TouchableOpacity onPress={() => setShowImageModal(false)} style={styles.modalCloseButton}>
+                  <Icon name="close" size={24} color="#6B7280" />
+                </TouchableOpacity>
+              </View>
+              
+              <TouchableOpacity style={styles.modalOption} onPress={takePhotoWithCamera} activeOpacity={0.7}>
+                <View style={styles.modalIconContainer}>
+                  <Icon name="camera-outline" size={24} color="#1F2937" />
+                </View>
+                <View style={styles.modalOptionTextContainer}>
+                  <Text style={styles.modalOptionText}>Tomar foto</Text>
+                  <Text style={styles.modalOptionSubtext}>Usa tu cámara</Text>
+                </View>
+                <Icon name="chevron-forward" size={20} color="#9CA3AF" />
+              </TouchableOpacity>
+              
+              <TouchableOpacity style={styles.modalOption} onPress={selectFromGallery} activeOpacity={0.7}>
+                <View style={styles.modalIconContainer}>
+                  <Icon name="images-outline" size={24} color="#1F2937" />
+                </View>
+                <View style={styles.modalOptionTextContainer}>
+                  <Text style={styles.modalOptionText}>Galería</Text>
+                  <Text style={styles.modalOptionSubtext}>Selecciona una foto</Text>
+                </View>
+                <Icon name="chevron-forward" size={20} color="#9CA3AF" />
+              </TouchableOpacity>
             </View>
           </View>
-        </View>
-      </ScrollView>
-
-      {/* MODAL PARA SELECCIONAR IMAGEN */}
-      <Modal
-        animationType="slide"
-        transparent={true}
-        visible={showImageModal}
-        onRequestClose={() => setShowImageModal(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Seleccionar foto de perfil</Text>
-            
-            <TouchableOpacity style={styles.modalOption} onPress={takePhotoWithCamera}>
-              <Icon name="camera-outline" size={24} color="#4CAF50" />
-              <Text style={styles.modalOptionText}>Tomar foto</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity style={styles.modalOption} onPress={selectFromGallery}>
-              <Icon name="images-outline" size={24} color="#4CAF50" />
-              <Text style={styles.modalOptionText}>Seleccionar de galería</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity 
-              style={styles.modalCancelButton} 
-              onPress={() => setShowImageModal(false)}
-            >
-              <Text style={styles.modalCancelText}>Cancelar</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
-    </SafeAreaView>
+        </Modal>
+      </SafeAreaView>
+    </>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f9fafb',
+    backgroundColor: '#FFFFFF',
   },
-  scrollContainer: {
-    flexGrow: 1,
-    paddingHorizontal: 24,
-    paddingVertical: 32,
+
+  // Modern Header
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
   },
-  authContainer: {
-    flex: 1,
+  backButton: {
+    width: 40,
+    height: 40,
     justifyContent: 'center',
+    alignItems: 'center',
   },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#1f2937',
-    textAlign: 'center',
+  headerTitleContainer: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1F2937',
+    letterSpacing: -0.3,
+  },
+  headerStep: {
+    fontSize: 12,
+    color: '#9CA3AF',
+    marginTop: 2,
+  },
+  headerSpacer: {
+    width: 40,
+  },
+
+  scrollContent: {
+    flexGrow: 1,
+  },
+
+  // Background curved shapes
+  backgroundShapes: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  curvedShape1: {
+    position: 'absolute',
+    top: -100,
+    right: -80,
+    width: 280,
+    height: 280,
+    borderRadius: 140,
+    backgroundColor: '#4CAF50',
+    opacity: 0.1,
+    transform: [{ rotate: '45deg' }],
+  },
+  curvedShape2: {
+    position: 'absolute',
+    top: 200,
+    left: -120,
+    width: 220,
+    height: 220,
+    borderRadius: 110,
+    backgroundColor: '#007AFF',
+    opacity: 0.08,
+    transform: [{ rotate: '-30deg' }],
+  },
+  curvedShape3: {
+    position: 'absolute',
+    bottom: -150,
+    right: -100,
+    width: 300,
+    height: 300,
+    borderRadius: 150,
+    backgroundColor: '#4CAF50',
+    opacity: 0.06,
+    transform: [{ rotate: '60deg' }],
+  },
+
+  // Content
+  content: {
+    flex: 1,
+    paddingHorizontal: 32,
+    paddingTop: 40,
+    paddingBottom: 40,
+    zIndex: 1,
+  },
+
+  // Header Section with Lottie
+  headerSection: {
+    marginBottom: 32,
+  },
+  titleWithLottieContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     marginBottom: 12,
+  },
+  titleColumn: {
+    flex: 1,
+    maxWidth: '65%',
+  },
+  welcomeTitle: {
+    fontSize: 38,
+    fontWeight: '700',
+    color: '#1F2937',
+    lineHeight: 44,
+    letterSpacing: -1,
+  },
+  welcomeTitle2: {
+    fontSize: 38,
+    fontWeight: '300',
+    color: '#6B7280',
+    lineHeight: 44,
+    letterSpacing: -1,
+  },
+  lottieContainer: {
+    width: 90,
+    height: 90,
+    marginLeft: 8,
+  },
+  lottieAnimation: {
+    width: '100%',
+    height: '100%',
   },
   subtitle: {
     fontSize: 16,
-    color: '#6b7280',
-    textAlign: 'center',
-    marginBottom: 32,
-    lineHeight: 22,
+    color: '#9CA3AF',
+    fontWeight: '400',
+    lineHeight: 24,
   },
-  
-  // Estilos para imagen de perfil
+
+  // Profile Image
   profileImageSection: {
     alignItems: 'center',
-    marginBottom: 24,
+    marginBottom: 32,
   },
-  profileImageTitle: {
-    fontSize: 16,
+  profileImageLabel: {
+    fontSize: 14,
     fontWeight: '600',
-    color: '#1f2937',
-    marginBottom: 12,
+    color: '#374151',
+    marginBottom: 16,
+    letterSpacing: 0.2,
   },
   profileImageContainer: {
     width: 120,
     height: 120,
     borderRadius: 60,
-    marginBottom: 16,
+    marginBottom: 8,
   },
   placeholderImage: {
     width: '100%',
     height: '100%',
     borderRadius: 60,
-    backgroundColor: '#f3f4f6',
+    backgroundColor: '#F9FAFB',
     borderWidth: 2,
-    borderColor: '#e5e7eb',
-    borderStyle: 'dashed',
+    borderColor: '#E5E7EB',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  placeholderText: {
-    marginTop: 8,
-    fontSize: 12,
-    color: '#9ca3af',
-    fontWeight: '500',
+  cameraIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#FFFFFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
   },
-  placeholderSubtext: {
-    fontSize: 10,
-    color: '#d1d5db',
-    fontStyle: 'italic',
+  placeholderText: {
+    fontSize: 12,
+    color: '#6B7280',
+    fontWeight: '500',
   },
   selectedImageContainer: {
     position: 'relative',
@@ -728,30 +890,60 @@ const styles = StyleSheet.create({
     height: '100%',
     borderRadius: 60,
   },
+  imageOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 40,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    borderBottomLeftRadius: 60,
+    borderBottomRightRadius: 60,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   removeImageButton: {
     position: 'absolute',
-    top: -5,
-    right: -5,
-    backgroundColor: '#fff',
-    borderRadius: 12,
+    top: -4,
+    right: -4,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#EF4444',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  optionalText: {
+    fontSize: 12,
+    color: '#9CA3AF',
+    fontStyle: 'italic',
   },
 
+  // Form Section
+  formSection: {
+    marginBottom: 24,
+  },
   inputContainer: {
+    marginBottom: 24,
+  },
+  inputLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#374151',
+    marginBottom: 8,
+    letterSpacing: 0.2,
+  },
+  inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
-    minHeight: 56,
+    borderBottomWidth: 2,
+    borderBottomColor: '#E5E7EB',
+    paddingVertical: 12,
   },
   inputIcon: {
     marginRight: 12,
@@ -759,116 +951,146 @@ const styles = StyleSheet.create({
   textInput: {
     flex: 1,
     fontSize: 16,
-    color: '#1f2937',
-    minHeight: 20,
+    color: '#1F2937',
+    paddingVertical: 0,
   },
+
+  // Terms
   termsText: {
-    color: '#6b7280',
-    fontSize: 14,
+    color: '#6B7280',
+    fontSize: 13,
     textAlign: 'center',
     marginBottom: 32,
     lineHeight: 20,
   },
-  termsHighlight: {
-    color: '#ef4444',
-    fontWeight: '600',
+
+  // Button Section
+  buttonSection: {
+    alignItems: 'flex-end',
+    marginBottom: 32,
   },
-  primaryButton: {
-    backgroundColor: '#4CAF50',
-    borderRadius: 12,
-    paddingVertical: 16,
-    alignItems: 'center',
-    marginBottom: 40,
+  createButton: {
+    backgroundColor: '#1F2937',
+    borderRadius: 30,
+    paddingVertical: 18,
+    paddingHorizontal: 32,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 6,
+    minWidth: 180,
   },
   buttonDisabled: {
-    opacity: 0.7,
+    backgroundColor: '#9CA3AF',
   },
-  primaryButtonText: {
-    color: '#fff',
+  buttonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  buttonText: {
+    color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
+    marginRight: 12,
   },
-  pageIndicatorContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  arrowContainer: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    justifyContent: 'center',
     alignItems: 'center',
   },
-  backButton: {
-    flexDirection: 'row',
+
+  // Footer Section
+  footerSection: {
     alignItems: 'center',
-    padding: 8,
+    paddingBottom: 20,
   },
-  backText: {
-    color: '#9ca3af',
-    fontSize: 16,
-    marginLeft: 4,
-  },
-  dotsContainer: {
+  pageIndicator: {
     flexDirection: 'row',
     gap: 8,
-  },
-  dotInactive: {
-    width: 8,
-    height: 8,
-    backgroundColor: '#d1d5db',
-    borderRadius: 4,
   },
   dotActive: {
     width: 24,
     height: 8,
-    backgroundColor: '#1f2937',
+    backgroundColor: '#1F2937',
+    borderRadius: 4,
+  },
+  dotInactive: {
+    width: 8,
+    height: 8,
+    backgroundColor: '#D1D5DB',
     borderRadius: 4,
   },
 
-  // Estilos para el modal
+  // Modal Styles
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'flex-end',
   },
   modalContent: {
-    backgroundColor: '#fff',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingBottom: 40,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: 24,
-    paddingVertical: 32,
+    paddingTop: 24,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
   },
   modalTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#1f2937',
-    textAlign: 'center',
-    marginBottom: 24,
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#1F2937',
+    letterSpacing: -0.5,
+  },
+  modalCloseButton: {
+    width: 32,
+    height: 32,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   modalOption: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 16,
-    paddingHorizontal: 12,
+    paddingHorizontal: 24,
+    marginHorizontal: 16,
+    marginTop: 12,
     borderRadius: 12,
-    backgroundColor: '#f9fafb',
-    marginBottom: 12,
+    backgroundColor: '#F9FAFB',
+  },
+  modalIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#FFFFFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 16,
+  },
+  modalOptionTextContainer: {
+    flex: 1,
   },
   modalOptionText: {
     fontSize: 16,
-    color: '#1f2937',
-    marginLeft: 12,
-    fontWeight: '500',
+    color: '#1F2937',
+    fontWeight: '600',
+    marginBottom: 2,
   },
-  modalCancelButton: {
-    paddingVertical: 16,
-    alignItems: 'center',
-    marginTop: 8,
-  },
-  modalCancelText: {
-    fontSize: 16,
-    color: '#6b7280',
-    fontWeight: '500',
+  modalOptionSubtext: {
+    fontSize: 13,
+    color: '#6B7280',
   },
 });
 
