@@ -6,7 +6,7 @@ import DashboardScreen from '../screens/DashboardScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import HistorialScreen from '../screens/HistorialScreen';
 import CotizacionScreen from '../screens/CotizacionScreen';
-import QuoteDetailsScreen from '../screens/quoteDetailScreen'; // Nueva pantalla
+import QuoteDetailsScreen from '../screens/quoteDetailScreen';
 import CotizacionFactura from '../screens/cotizacionFactura'; 
 import PaymentSuccessScreen from '../screens/PaymentSuccessScreen'; 
 import SplashScreen from '../screens/SplashScreen';
@@ -16,12 +16,12 @@ import RegistrarseCliente2 from "../screens/RegistrarseCliente2";
 import CustomTabBar from '../components/CustomTabBar';
 
 // Pantallas de recuperación de contraseña
-import InicioRecuperar from "../screens/InicioRecuperarScren"; // inicio de recuperación
+import InicioRecuperar from "../screens/InicioRecuperarScren";
 import SeleccionarMetodoRecuperacionScreen from '../screens/SeleccionarMetodoRecuperacionScreen';
-import RecuperacionScreen from "../screens/RecuperacionScreen"; // Recuperación por email
-import Recuperacion2Screen from "../screens/Recuepracion2Screen"; // Segundo paso 
-import Recuperacion3 from "../screens/Recuperacion3"; // Nueva contraseña
-import RecuperacionTelefono from "../screens/RecuperacionTelefonoScreens"; // Recuperación por teléfono
+import RecuperacionScreen from "../screens/RecuperacionScreen";
+import Recuperacion2Screen from "../screens/Recuepracion2Screen";
+import Recuperacion3 from "../screens/Recuperacion3";
+import RecuperacionTelefono from "../screens/RecuperacionTelefonoScreens";
 
 // Pantallas de carga/onboarding
 import pantallacarga1 from "../screens/pantallacarga1";
@@ -73,7 +73,6 @@ const AppNavigator = () => {
       />
 
       {/* ===== FLUJO DE RECUPERACIÓN DE CONTRASEÑA ===== */}
-      {/* 1. Pantalla inicial "Olvidé mi contraseña" */}
       <Stack.Screen 
         name="InicioRecuperar" 
         component={InicioRecuperar}
@@ -92,7 +91,6 @@ const AppNavigator = () => {
         }}
       />
 
-      {/* 2. Seleccionar método de recuperación (Email o Teléfono) */}
       <Stack.Screen 
         name="seleccionarMetodoRecuperacion" 
         component={SeleccionarMetodoRecuperacionScreen}
@@ -125,8 +123,6 @@ const AppNavigator = () => {
         }}
       />
 
-      {/* === FLUJO POR EMAIL === */}
-      {/* 3a. Recuperación por Email - Paso 1 */}
       <Stack.Screen 
         name="Recuperacion" 
         component={RecuperacionScreen}
@@ -145,8 +141,6 @@ const AppNavigator = () => {
         }}
       />
 
-      {/* === FLUJO POR TELÉFONO === */}
-      {/* 3b. Recuperación por Teléfono - Paso 1 */}
       <Stack.Screen 
         name="RecuperacionTelefono" 
         component={RecuperacionTelefono}
@@ -165,8 +159,6 @@ const AppNavigator = () => {
         }}
       />
 
-      {/* === PASOS COMUNES PARA AMBOS MÉTODOS === */}
-      {/* 4. Código de verificación (Email o SMS) */}
       <Stack.Screen 
         name="Recuperacion2Screen" 
         component={Recuperacion2Screen}
@@ -185,7 +177,6 @@ const AppNavigator = () => {
         }}
       />
 
-      {/* 5. Nueva contraseña */}
       <Stack.Screen 
         name="Recuperacion3" 
         component={Recuperacion3}
@@ -209,15 +200,6 @@ const AppNavigator = () => {
         name="RegistrarseCliente" 
         component={RegistrarseCliente}
         options={{
-          headerShown: true,
-          title: 'Registro - Paso 1',
-          headerStyle: {
-            backgroundColor: '#4CAF50',
-          },
-          headerTintColor: '#fff',
-          headerTitleStyle: {
-            fontWeight: 'bold',
-          },
           presentation: 'card',
           gestureEnabled: true,
         }}
@@ -227,15 +209,6 @@ const AppNavigator = () => {
         name="RegistrarseCliente2" 
         component={RegistrarseCliente2}
         options={{
-          headerShown: true,
-          title: 'Registro - Paso 2',
-          headerStyle: {
-            backgroundColor: '#4CAF50',
-          },
-          headerTintColor: '#fff',
-          headerTitleStyle: {
-            fontWeight: 'bold',
-          },
           presentation: 'card',
           gestureEnabled: true,
         }}
@@ -246,7 +219,7 @@ const AppNavigator = () => {
         name="pantallacarga1" 
         component={pantallacarga1}
         options={{
-          gestureEnabled: false, // No permitir regresar durante la carga
+          gestureEnabled: false,
           presentation: 'card',
         }}
       />
@@ -287,14 +260,13 @@ const AppNavigator = () => {
         }}
       />
 
-      {/* ===== NUEVA PANTALLA DE DETALLES DE COTIZACIÓN ===== */}
       <Stack.Screen 
         name="QuoteDetails" 
         component={QuoteDetailsScreen}
         options={{
           presentation: 'card',
           gestureEnabled: true,
-          headerShown: false, // La pantalla maneja su propio header
+          headerShown: false,
           cardStyleInterpolator: ({ current, layouts }) => {
             return {
               cardStyle: {
@@ -313,8 +285,8 @@ const AppNavigator = () => {
       />
 
       <Stack.Screen 
-        name="cotizacionFactura" // ✅ Cambiado aquí
-        component={CotizacionFactura} // ✅ Cambiado aquí
+        name="cotizacionFactura"
+        component={CotizacionFactura}
         options={{
           presentation: 'card',
           gestureEnabled: true,

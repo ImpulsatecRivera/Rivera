@@ -1,55 +1,24 @@
 import React, { useEffect, useRef } from 'react';
 import {
   View,
-  Text,
   StyleSheet,
   SafeAreaView,
-  Animated,
-  Image,
+  Dimensions,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import LottieView from 'lottie-react-native';
+
+const { width, height } = Dimensions.get('window');
 
 const SplashScreen = () => {
   const navigation = useNavigation();
-  
-  // Animaciones
-  const letterScale = useRef(new Animated.Value(0.8)).current;
-  const letterOpacity = useRef(new Animated.Value(0)).current;
+  const animationRef = useRef(null);
 
   useEffect(() => {
-    // Animación de la imagen/logo
-    const letterAnimation = Animated.sequence([
-      // Fade in y scale up
-      Animated.parallel([
-        Animated.timing(letterOpacity, {
-          toValue: 1,
-          duration: 800,
-          useNativeDriver: true,
-        }),
-        Animated.timing(letterScale, {
-          toValue: 1,
-          duration: 800,
-          useNativeDriver: true,
-        }),
-      ]),
-      // Pequeña animación de "pulso"
-      Animated.loop(
-        Animated.sequence([
-          Animated.timing(letterScale, {
-            toValue: 1.05,
-            duration: 1000,
-            useNativeDriver: true,
-          }),
-          Animated.timing(letterScale, {
-            toValue: 1,
-            duration: 1000,
-            useNativeDriver: true,
-          }),
-        ])
-      ),
-    ]);
-
-    letterAnimation.start();
+    // Inicia la animación automáticamente
+    if (animationRef.current) {
+      animationRef.current.play();
+    }
 
     // Navegación después de la animación
     const checkAuthAndNavigate = async () => {
@@ -66,7 +35,7 @@ const SplashScreen = () => {
           } else {
             navigation.replace('Login');
           }
-        }, 3000); // 3 segundos
+        }, 4000); // 3 segundos
         
       } catch (error) {
         console.error('Error checking auth status:', error);
@@ -83,27 +52,17 @@ const SplashScreen = () => {
     <SafeAreaView style={styles.container}>
       <View style={styles.content}>
         
-        {/* Logo/Imagen animada */}
-        <Animated.View 
-          style={[
-            styles.logoContainer,
-            { 
-              opacity: letterOpacity,
-              transform: [{ scale: letterScale }]
-            }
-          ]}
-        >
-          {/* Reemplaza 'tu-imagen.png' con la ruta de tu imagen */}
-          <Image 
-            source={require('../images/logo.png')} // Para imagen local
-            // source={{uri: 'https://tu-url.com/imagen.png'}} // Para imagen remota
-            style={styles.logoImage}
-            resizeMode="contain"
-          />
-          
-          {/* Si quieres mantener también la letra R junto con la imagen, descomenta esto: */}
-          {/* <Text style={styles.letter}>R</Text> */}
-        </Animated.View>
+        {/* Animación Lottie */}
+        <LottieView
+          ref={animationRef}
+          source={require('../assets/lottie/SplashScreen BHS Gym App.json')} // Tu archivo Lottie
+          autoPlay
+          loop={true}
+          style={styles.lottie}
+          speed={1}
+          // Opcional: si quieres que la animación se reproduzca solo una vez
+          // loop={false}
+        />
         
       </View>
     </SafeAreaView>
@@ -113,42 +72,19 @@ const SplashScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF', // Fondo blanco como PedidosYa
+    backgroundColor: '#FFFFFF',
   },
   content: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  logoContainer: {
-    width: 120,
-    height: 120,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderRadius: 20,
-    // Opcional: agregar sombra
-    elevation: 8,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    backgroundColor: '#FFFFFF',
-  },
-  logoImage: {
-    width: 80,
-    height: 80,
-    // Si tu imagen es circular, puedes agregar:
-    // borderRadius: 40,
-  },
-  letter: {
-    fontSize: 72,
-    fontWeight: 'bold',
-    color: '#E91E63', // Color rosa/magenta como en la imagen
-    textAlign: 'center',
-    marginTop: 10, // Si quieres espacio entre imagen y letra
+  lottie: {
+    width: width, // Ancho completo de la pantalla
+    height: height * 0.8, // 80% del alto de la pantalla
+    // Si quieres que ocupe toda la pantalla:
+    // width: width,
+    // height: height,
   },
 });
 
