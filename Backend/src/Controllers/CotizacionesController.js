@@ -183,10 +183,12 @@ cotizacionesController.createCotizacion = async (req, res) => {
             pickupLocation,
             destinationLocation,
             fechaNecesaria,
-            paymentMethod
+            paymentMethod,
+            rutaOrigen: ruta?.origen?.nombre,
+            rutaDestino: ruta?.destino?.nombre
         });
 
-        // ✅ VALIDACIONES BÁSICAS
+        // VALIDACIONES BÁSICAS
         if (!clientId) {
             return res.status(400).json({ 
                 message: "Error de validación", 
@@ -208,7 +210,7 @@ cotizacionesController.createCotizacion = async (req, res) => {
             });
         }
 
-        // ✅ VALIDACIÓN DE RUTA
+        // VALIDACIÓN DE RUTA
         if (!ruta || !ruta.origen || !ruta.destino) {
             return res.status(400).json({ 
                 message: "Error de validación", 
@@ -220,6 +222,21 @@ cotizacionesController.createCotizacion = async (req, res) => {
             return res.status(400).json({ 
                 message: "Error de validación", 
                 error: "Los nombres del origen y destino son requeridos" 
+            });
+        }
+
+        // VALIDACIÓN CRÍTICA DE UBICACIONES
+        if (!pickupLocation || pickupLocation.trim() === '') {
+            return res.status(400).json({ 
+                message: "Error de validación", 
+                error: "pickupLocation es requerido y no puede estar vacío" 
+            });
+        }
+
+        if (!destinationLocation || destinationLocation.trim() === '') {
+            return res.status(400).json({ 
+                message: "Error de validación", 
+                error: "destinationLocation es requerido y no puede estar vacío" 
             });
         }
 
@@ -259,7 +276,7 @@ cotizacionesController.createCotizacion = async (req, res) => {
             });
         }
 
-        // ✅ VALIDACIÓN DE CARGA
+        // VALIDACIÓN DE CARGA
         if (!carga || !carga.descripcion) {
             return res.status(400).json({ 
                 message: "Error de validación", 
@@ -274,7 +291,7 @@ cotizacionesController.createCotizacion = async (req, res) => {
             });
         }
 
-        // ✅ VALIDACIÓN DE HORARIOS
+        // VALIDACIÓN DE HORARIOS
         if (!horarios || !horarios.fechaSalida || !horarios.fechaLlegadaEstimada) {
             return res.status(400).json({ 
                 message: "Error de validación", 
@@ -315,7 +332,7 @@ cotizacionesController.createCotizacion = async (req, res) => {
             });
         }
 
-        // ✅ VALIDACIÓN DE MÉTODO DE PAGO
+        // VALIDACIÓN DE MÉTODO DE PAGO
         const metodosPagoValidos = ['efectivo', 'transferencia', 'cheque', 'credito', 'tarjeta'];
         if (paymentMethod && !metodosPagoValidos.includes(paymentMethod)) {
             return res.status(400).json({ 
@@ -324,7 +341,7 @@ cotizacionesController.createCotizacion = async (req, res) => {
             });
         }
 
-        // ✅ CREAR COTIZACIÓN (SIN PRECIO)
+        // CREAR COTIZACIÓN CON UBICACIONES GARANTIZADAS
         const nuevaCotizacion = new CotizacionesModel({
             clientId,
             quoteDescription,
@@ -334,15 +351,15 @@ cotizacionesController.createCotizacion = async (req, res) => {
             fechaNecesaria: fechaNec,
             deliveryDate: deliveryDate ? new Date(deliveryDate) : fechaLlegada,
             paymentMethod: paymentMethod || 'efectivo',
-            // price: NO SE INCLUYE - será null por defecto
             
-            pickupLocation: pickupLocation || ruta.origen.nombre,
-            destinationLocation: destinationLocation || ruta.destino.nombre,
+            // CAMPOS CRÍTICOS - ASEGURAR VALORES EXPLÍCITOS
+            pickupLocation: pickupLocation.trim(),
+            destinationLocation: destinationLocation.trim(),
             estimatedDistance: estimatedDistance || ruta.distanciaTotal,
             
             ruta: {
                 origen: {
-                    nombre: ruta.origen.nombre,
+                    nombre: ruta.origen.nombre.trim(),
                     coordenadas: {
                         lat: ruta.origen.coordenadas.lat,
                         lng: ruta.origen.coordenadas.lng
@@ -350,7 +367,7 @@ cotizacionesController.createCotizacion = async (req, res) => {
                     tipo: ruta.origen.tipo || 'ciudad'
                 },
                 destino: {
-                    nombre: ruta.destino.nombre,
+                    nombre: ruta.destino.nombre.trim(),
                     coordenadas: {
                         lat: ruta.destino.coordenadas.lat,
                         lng: ruta.destino.coordenadas.lng
@@ -392,10 +409,25 @@ cotizacionesController.createCotizacion = async (req, res) => {
                 horarioPreferido: horarios.horarioPreferido
             },
             
-            // costos: se inicializan en 0 por defecto en el modelo
-            
             observaciones,
             notasInternas
+        });
+
+        // VALIDACIÓN FINAL ANTES DE GUARDAR
+        if (!nuevaCotizacion.pickupLocation || nuevaCotizacion.pickupLocation.trim() === '') {
+            nuevaCotizacion.pickupLocation = ruta.origen.nombre.trim();
+        }
+
+        if (!nuevaCotizacion.destinationLocation || nuevaCotizacion.destinationLocation.trim() === '') {
+            nuevaCotizacion.destinationLocation = ruta.destino.nombre.trim();
+        }
+
+        console.log('✅ PRE-GUARDADO - Verificación final:', {
+            pickupLocation: nuevaCotizacion.pickupLocation,
+            destinationLocation: nuevaCotizacion.destinationLocation,
+            rutaOrigen: nuevaCotizacion.ruta.origen.nombre,
+            rutaDestino: nuevaCotizacion.ruta.destino.nombre,
+            estimatedDistance: nuevaCotizacion.estimatedDistance
         });
 
         const cotizacionGuardada = await nuevaCotizacion.save();
