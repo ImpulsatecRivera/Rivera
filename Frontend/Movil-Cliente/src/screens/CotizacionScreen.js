@@ -1439,55 +1439,6 @@ const createQuoteInBackend = async () => {
     </Modal>
   );
 
-  // === COMPONENTE DEBUG MEJORADO ===
-  const DebugButton = () => (
-    __DEV__ && (
-      <View style={{ position: 'absolute', top: 100, right: 20, zIndex: 9999 }}>
-        <TouchableOpacity
-          style={{
-            backgroundColor: 'red',
-            padding: 10,
-            borderRadius: 5,
-            marginBottom: 5
-          }}
-          onPress={debugQuotesState}
-        >
-          <Text style={{ color: 'white', fontSize: 10 }}>DEBUG STATE</Text>
-        </TouchableOpacity>
-        
-        <TouchableOpacity
-          style={{
-            backgroundColor: 'orange',
-            padding: 10,
-            borderRadius: 5,
-            marginBottom: 5
-          }}
-          onPress={() => {
-            console.log('🔄 Verificando cotizaciones manualmente...');
-            checkIfFirstQuoteFromBackend();
-          }}
-        >
-          <Text style={{ color: 'white', fontSize: 10 }}>CHECK QUOTES</Text>
-        </TouchableOpacity>
-        
-        <TouchableOpacity
-          style={{
-            backgroundColor: 'purple',
-            padding: 10,
-            borderRadius: 5,
-          }}
-          onPress={async () => {
-            await AsyncStorage.removeItem('hasCreatedFirstQuote');
-            console.log('🔄 Flag local reseteado');
-            Alert.alert('Reset', 'Flag local reseteado');
-          }}
-        >
-          <Text style={{ color: 'white', fontSize: 10 }}>RESET FLAG</Text>
-        </TouchableOpacity>
-      </View>
-    )
-  );
-
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
@@ -1549,18 +1500,6 @@ const createQuoteInBackend = async () => {
             </View>
           </View>
         )}
-
-        {/* Debug indicator */}
-        {__DEV__ && (
-          <View style={styles.debugIndicator}>
-            <Text style={styles.debugText}>
-              Map Ready: {mapReady ? '✅' : '❌'}
-            </Text>
-          </View>
-        )}
-
-        {/* Debug button para testing */}
-        <DebugButton />
       </View>
 
       {/* Bottom Sheet - Selección de Camión */}
