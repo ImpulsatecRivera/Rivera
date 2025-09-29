@@ -60,6 +60,16 @@ const IntegratedTruckRequestScreen = () => {
   const [showSuccessAnimation, setShowSuccessAnimation] = useState(false);
   const [isFirstQuote, setIsFirstQuote] = useState(false);
 
+  // NUEVOS ESTADOS PARA FECHA, HORA Y CARGA
+  const [deliveryDate, setDeliveryDate] = useState('');
+  const [arrivalTime, setArrivalTime] = useState('');
+  const [requestDate, setRequestDate] = useState('');
+  const [cargoWeight, setCargoWeight] = useState('');
+  const [cargoWeightUnit, setCargoWeightUnit] = useState('kg');
+  const [cargoType, setCargoType] = useState('');
+  const [cargoDescription, setCargoDescription] = useState('');
+  const [riskClassification, setRiskClassification] = useState('normal');
+
   const [currentLocation] = useState({
     latitude: 13.7942,
     longitude: -89.5564,
@@ -84,6 +94,135 @@ const IntegratedTruckRequestScreen = () => {
       basePrice: 35
     }
   ];
+
+  // Opciones para clasificación de riesgo
+  const riskOptions = [
+    { value: 'normal', label: 'Normal', icon: '📦' },
+    { value: 'fragil', label: 'Frágil', icon: '🔍' },
+    { value: 'peligroso', label: 'Peligroso', icon: '⚠️' },
+    { value: 'perecedero', label: 'Perecedero', icon: '❄️' }
+  ];
+
+  // Opciones para unidades de peso
+  const weightUnits = [
+    { value: 'kg', label: 'Kilogramos (kg)' },
+    { value: 'lb', label: 'Libras (lb)' },
+    { value: 'ton', label: 'Toneladas (ton)' }
+  ];
+
+  // Función para inicializar fechas por defecto
+  const initializeDefaultDates = () => {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    
+    const requestDateStr = tomorrow.toISOString().split('T')[0]; // YYYY-MM-DD
+    const arrivalTimeStr = calculateArrivalTime(departureTime, estimatedTime);
+    
+    setRequestDate(requestDateStr);
+    setDeliveryDate(requestDateStr);
+    setArrivalTime(arrivalTimeStr);
+  };
+
+  // Función para calcular hora de llegada estimada
+  const calculateArrivalTime = (departure, estimatedMinutes) => {
+    if (!departure || !estimatedMinutes) return '';
+    
+    try {
+      const [timeStr, ampm] = departure.split(' ');
+      const [hourStr, minuteStr] = timeStr.split(':');
+      let hour = parseInt(hourStr);
+      const minute = parseInt(minuteStr);
+      
+      // Convertir AM/PM a 24 horas
+      if (ampm === 'PM' && hour !== 12) {
+        hour += 12;
+      } else if (ampm === 'AM' && hour === 12) {
+        hour = 0;
+      }
+      
+      // Crear fecha con hora de salida
+      const departureDateTime = new Date();
+      departureDateTime.setHours(hour, minute, 0, 0);
+      
+      // Agregar tiempo estimado
+      const arrivalDateTime = new Date(departureDateTime);
+      arrivalDateTime.setMinutes(arrivalDateTime.getMinutes() + estimatedMinutes);
+      
+      // Formatear a 12 horas
+      return arrivalDateTime.toLocaleTimeString('es-ES', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true
+      }).replace(/^0/, '');
+      
+    } catch (error) {
+      console.error('Error calculando hora de llegada:', error);
+      return '';
+    }
+  };
+
+  // Función para validar campos obligatorios
+  const validateCargoFields = () => {
+    const errors = [];
+    
+    if (!cargoWeight || cargoWeight.trim() === '') {
+      errors.push('El peso de la carga es obligatorio');
+    }
+    
+    if (!cargoType || cargoType.trim() === '') {
+      errors.push('El tipo de carga es obligatorio');
+    }
+    
+    if (!requestDate) {
+      errors.push('La fecha de realización es obligatoria');
+    }
+    
+    if (parseFloat(cargoWeight) <= 0) {
+      errors.push('El peso debe ser mayor a 0');
+    }
+    
+    return errors;
+  };
+
+  // Función para convertir peso a kilogramos (para el backend)
+  const convertWeightToKg = (weight, unit) => {
+    const weightNum = parseFloat(weight);
+    switch (unit) {
+      case 'lb':
+        return Math.round(weightNum * 0.453592 * 100) / 100; // libras a kg
+      case 'ton':
+        return Math.round(weightNum * 1000 * 100) / 100; // toneladas a kg
+      case 'kg':
+      default:
+        return Math.round(weightNum * 100) / 100; // ya en kg
+    }
+  };
+
+  // Función para verificar si todos los campos están completos
+  const isFormValid = () => {
+    return cargoWeight && 
+           cargoWeight.trim() !== '' && 
+           cargoType && 
+           cargoType.trim() !== '' && 
+           requestDate && 
+           deliveryDate && 
+           parseFloat(cargoWeight) > 0;
+  };
+
+  // useEffect para inicializar fechas cuando se calcula la ruta
+  useEffect(() => {
+    if (pointStep === 3 && estimatedTime && !requestDate) {
+      initializeDefaultDates();
+    }
+  }, [pointStep, estimatedTime]);
+
+  // useEffect para recalcular hora de llegada cuando cambia la hora de salida o tiempo estimado
+  useEffect(() => {
+    if (departureTime && estimatedTime) {
+      const newArrivalTime = calculateArrivalTime(departureTime, estimatedTime);
+      setArrivalTime(newArrivalTime);
+    }
+  }, [departureTime, estimatedTime]);
 
   // === LÓGICA CORREGIDA PARA VERIFICAR COTIZACIONES EN EL BACKEND ===
 
@@ -312,49 +451,56 @@ const IntegratedTruckRequestScreen = () => {
     try {
       setIsLoading(true);
 
+      // Validar campos de carga
+      const validationErrors = validateCargoFields();
+      if (validationErrors.length > 0) {
+        Alert.alert('Campos requeridos', validationErrors.join('\n'));
+        return;
+      }
+
       const clientId = await getClientId();
       if (!clientId) {
         throw new Error('No se encontró información del cliente');
       }
 
-      // 📅 FECHAS CORREGIDAS
       const now = new Date();
 
-      // Fecha cuando lo necesita (mañana)
-      const fechaNecesaria = new Date(now);
-      fechaNecesaria.setDate(now.getDate() + 1);
-      fechaNecesaria.setHours(8, 0, 0, 0); // 8:00 AM por defecto
+      // === FECHAS CORREGIDAS CON NUEVOS CAMPOS ===
+      
+      // Fecha cuando lo necesita (fecha seleccionada por el usuario)
+      const fechaNecesaria = new Date(requestDate + 'T08:00:00.000Z');
+      
+      // Fecha de entrega (fecha seleccionada por el usuario)
+      const deliveryDateParsed = new Date(deliveryDate + 'T00:00:00.000Z');
 
-      // 🕐 Parsear hora de salida correctamente
+      // Parsear hora de salida
       const [timeStr, ampm] = departureTime.split(' ');
       const [hourStr, minuteStr] = timeStr.split(':');
       let hour = parseInt(hourStr);
       const minute = parseInt(minuteStr);
 
-      // Convertir AM/PM a 24 horas
       if (ampm === 'PM' && hour !== 12) {
         hour += 12;
       } else if (ampm === 'AM' && hour === 12) {
         hour = 0;
       }
 
-      // Fecha de salida (mañana a la hora especificada)
-      const departureDate = new Date(now);
-      departureDate.setDate(now.getDate() + 1);
+      // Fecha de salida (fecha de entrega + hora especificada)
+      const departureDate = new Date(deliveryDateParsed);
       departureDate.setHours(hour, minute, 0, 0);
 
-      // ✅ Fecha de llegada = Salida + tiempo estimado (en minutos)
+      // Fecha de llegada (calcular desde hora de llegada estimada)
       const arrivalDate = new Date(departureDate);
       arrivalDate.setMinutes(arrivalDate.getMinutes() + estimatedTime);
 
-      // 📝 Log para debugging
       console.log('🕐 Fechas calculadas:');
       console.log('Fecha necesaria:', fechaNecesaria.toISOString());
+      console.log('Fecha entrega:', deliveryDate);
       console.log('Fecha salida:', departureDate.toISOString());
       console.log('Fecha llegada:', arrivalDate.toISOString());
-      console.log('Tiempo estimado (min):', estimatedTime);
+      console.log('Hora llegada estimada:', arrivalTime);
 
-      // Preparar datos
+      // Preparar datos con nueva estructura de carga
       const quoteData = {
         clientId,
         quoteDescription: quoteDescription || `Transporte de carga con ${selectedTruckType.name}`,
@@ -362,9 +508,10 @@ const IntegratedTruckRequestScreen = () => {
         travelLocations: `De ${pickupAddress} a ${destinationAddress}`,
         truckType: selectedTruckType.category,
 
-        // ✅ Fechas corregidas
+        // Fechas actualizadas
         fechaNecesaria: fechaNecesaria.toISOString(),
         deliveryDate: arrivalDate.toISOString(),
+        requestDate: requestDate,
 
         paymentMethod: paymentMethod,
         pickupLocation: pickupAddress,
@@ -389,30 +536,37 @@ const IntegratedTruckRequestScreen = () => {
             tipo: 'cliente'
           },
           distanciaTotal: routeDistance,
-          tiempoEstimado: estimatedTime / 60 // en horas
+          tiempoEstimado: estimatedTime / 60
         },
 
+        // === NUEVA ESTRUCTURA DE CARGA ===
         carga: {
           categoria: selectedTruckType.category,
-          descripcion: quoteDescription || `Carga para transporte con ${selectedTruckType.name}`,
+          tipo: cargoType || 'general',
+          descripcion: cargoDescription || quoteDescription || `Carga para transporte con ${selectedTruckType.name}`,
           peso: {
-            valor: 1000,
-            unidad: 'kg'
+            valor: convertWeightToKg(cargoWeight, cargoWeightUnit),
+            unidad: 'kg',
+            valorOriginal: parseFloat(cargoWeight),
+            unidadOriginal: cargoWeightUnit
           },
-          clasificacionRiesgo: 'normal'
+          clasificacionRiesgo: riskClassification,
+          observaciones: cargoDescription || 'Sin observaciones adicionales'
         },
 
         horarios: {
           fechaSalida: departureDate.toISOString(),
+          horaSalida: departureTime,
           fechaLlegadaEstimada: arrivalDate.toISOString(),
-          tiempoEstimadoViaje: estimatedTime / 60, // en horas
+          horaLlegadaEstimada: arrivalTime,
+          tiempoEstimadoViaje: estimatedTime / 60,
           flexibilidadHoraria: {
             permitida: true,
             rangoTolerancia: 2
           }
         },
 
-        observaciones: `Cotización generada desde app móvil. Método de pago: ${paymentMethod}. Tipo: ${selectedTruckType.name}`,
+        observaciones: `Cotización generada desde app móvil. Método de pago: ${paymentMethod}. Tipo: ${selectedTruckType.name}. Peso: ${cargoWeight} ${cargoWeightUnit}`,
         createdFrom: 'mobile_app',
         version: '1.0'
       };
@@ -442,9 +596,47 @@ const IntegratedTruckRequestScreen = () => {
   // === LÓGICA CORREGIDA EN handleConfirmBooking - DOS ANIMACIONES DIFERENTES ===
   const handleConfirmBooking = async () => {
     try {
+      // Validar campos requeridos antes de mostrar el Alert
+      const validationErrors = validateCargoFields();
+      
+      if (validationErrors.length > 0) {
+        Alert.alert(
+          'Campos requeridos', 
+          validationErrors.join('\n'),
+          [{ text: 'OK' }]
+        );
+        return;
+      }
+      
+      // Validaciones adicionales específicas
+      if (!requestDate) {
+        Alert.alert('Campo requerido', 'Por favor selecciona la fecha cuando necesitas el servicio');
+        return;
+      }
+      
+      if (!deliveryDate) {
+        Alert.alert('Campo requerido', 'Por favor selecciona la fecha de entrega');
+        return;
+      }
+      
+      // Validar que la fecha no sea en el pasado
+      const today = new Date();
+      const selectedDate = new Date(requestDate);
+      
+      if (selectedDate < today) {
+        Alert.alert('Fecha inválida', 'La fecha del servicio no puede ser en el pasado');
+        return;
+      }
+
       Alert.alert(
         'Confirmar Solicitud',
-        '¿Estás seguro de que quieres crear esta cotización?',
+        `¿Estás seguro de que quieres crear esta cotización?\n\n` +
+        `📅 Fecha: ${requestDate}\n` +
+        `🕐 Salida: ${departureTime}\n` +
+        `🏁 Llegada estimada: ${arrivalTime}\n` +
+        `📦 Carga: ${cargoType || 'No especificado'}\n` +
+        `⚖️ Peso: ${cargoWeight} ${cargoWeightUnit}\n` +
+        `💰 Pago: ${paymentMethod === 'efectivo' ? 'Efectivo' : 'Transferencia'}`,
         [
           {
             text: 'Cancelar',
@@ -1075,6 +1267,125 @@ const IntegratedTruckRequestScreen = () => {
     </TouchableOpacity>
   );
 
+  // NUEVOS COMPONENTES PARA FECHA, HORA Y CARGA
+
+  // Componente para selección de fecha
+  const DateInput = ({ label, value, onChange, icon = '📅' }) => (
+    <View style={styles.timeInputContainer}>
+      <Text style={styles.timeLabel}>{icon} {label}</Text>
+      <TextInput
+        style={styles.timeInput}
+        value={value}
+        onChangeText={onChange}
+        placeholder="YYYY-MM-DD"
+        placeholderTextColor="#999"
+      />
+    </View>
+  );
+
+  // Componente para selección de tiempo
+  const TimeInput = ({ label, value, onChange, icon = '🕐', editable = true }) => (
+    <View style={styles.timeInputContainer}>
+      <Text style={styles.timeLabel}>{icon} {label}</Text>
+      <TextInput
+        style={[styles.timeInput, !editable && styles.timeInputDisabled]}
+        value={value}
+        onChangeText={onChange}
+        placeholder="10:00 AM"
+        placeholderTextColor="#999"
+        editable={editable}
+      />
+      {!editable && (
+        <Text style={styles.calculatedLabel}>Calculado automáticamente</Text>
+      )}
+    </View>
+  );
+
+  // Componente para peso de carga
+  const WeightInput = () => (
+    <View style={styles.weightContainer}>
+      <Text style={styles.sectionLabel}>⚖️ Peso de la carga</Text>
+      
+      <View style={styles.weightInputRow}>
+        <TextInput
+          style={[styles.weightInput, styles.weightValueInput]}
+          value={cargoWeight}
+          onChangeText={setCargoWeight}
+          placeholder="0"
+          placeholderTextColor="#999"
+          keyboardType="numeric"
+        />
+        
+        <View style={styles.weightUnitContainer}>
+          <Text style={styles.weightUnitLabel}>Unidad:</Text>
+          {weightUnits.map((unit) => (
+            <TouchableOpacity
+              key={unit.value}
+              style={[
+                styles.weightUnitOption,
+                cargoWeightUnit === unit.value && styles.weightUnitSelected
+              ]}
+              onPress={() => setCargoWeightUnit(unit.value)}
+            >
+              <View style={[
+                styles.weightRadio,
+                cargoWeightUnit === unit.value && styles.weightRadioSelected
+              ]}>
+                {cargoWeightUnit === unit.value && <View style={styles.weightRadioInner} />}
+              </View>
+              <Text style={[
+                styles.weightUnitText,
+                cargoWeightUnit === unit.value && styles.weightUnitTextSelected
+              ]}>
+                {unit.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </View>
+      
+      {cargoWeight && cargoWeightUnit !== 'kg' && (
+        <Text style={styles.weightConversionText}>
+          ≈ {convertWeightToKg(cargoWeight, cargoWeightUnit)} kg
+        </Text>
+      )}
+    </View>
+  );
+
+  // Componente para clasificación de riesgo
+  const RiskClassification = () => (
+    <View style={styles.riskContainer}>
+      <Text style={styles.sectionLabel}>⚠️ Clasificación de riesgo</Text>
+      
+      <View style={styles.riskOptionsContainer}>
+        {riskOptions.map((option) => (
+          <TouchableOpacity
+            key={option.value}
+            style={[
+              styles.riskOption,
+              riskClassification === option.value && styles.riskOptionSelected
+            ]}
+            onPress={() => setRiskClassification(option.value)}
+          >
+            <Text style={styles.riskIcon}>{option.icon}</Text>
+            <Text style={[
+              styles.riskText,
+              riskClassification === option.value && styles.riskTextSelected
+            ]}>
+              {option.label}
+            </Text>
+            <View style={[
+              styles.riskRadio,
+              riskClassification === option.value && styles.riskRadioSelected
+            ]}>
+              {riskClassification === option.value && <View style={styles.riskRadioInner} />}
+            </View>
+          </TouchableOpacity>
+        ))}
+      </View>
+    </View>
+  );
+
   // Componente de animación para primera cotización - PARA NUEVOS USUARIOS
   const FirstQuoteAnimation = () => (
     <Modal
@@ -1105,7 +1416,7 @@ const IntegratedTruckRequestScreen = () => {
     >
       <View style={styles.cinematicContainer}>
         <LottieView
-          source={require('../assets/lottie/Cred tick animation.json')} // 👈 CAMBIA ESTA RUTA POR TU ARCHIVO LOTTIE DE ÉXITO
+          source={require('../assets/lottie/Cred tick animation.json')}
           autoPlay
           loop={false}
           style={styles.cinematicLottieAnimation}
@@ -1377,35 +1688,130 @@ const IntegratedTruckRequestScreen = () => {
                     </View>
                   </View>
 
-                  {/* Campos adicionales para descripción */}
+                  {/* NUEVAS SECCIONES DE FECHAS Y CARGA */}
+                  
+                  {/* Sección de Fechas y Horarios - ACTUALIZADA */}
+                  <View style={styles.timeSection}>
+                    <Text style={styles.sectionTitle}>📅 Fechas y Horarios</Text>
+
+                    <DateInput
+                      label="Fecha cuando necesita el servicio"
+                      value={requestDate}
+                      onChange={setRequestDate}
+                      icon="📋"
+                    />
+
+                    <DateInput
+                      label="Fecha de entrega/realización"
+                      value={deliveryDate}
+                      onChange={setDeliveryDate}
+                      icon="🚚"
+                    />
+
+                    <View style={styles.timeRow}>
+                      <View style={styles.timeColumn}>
+                        <TimeInput
+                          label="Hora de salida"
+                          value={departureTime}
+                          onChange={setDepartureTime}
+                          icon="🚀"
+                          editable={true}
+                        />
+                      </View>
+                      
+                      <View style={styles.timeColumn}>
+                        <TimeInput
+                          label="Hora de llegada estimada"
+                          value={arrivalTime}
+                          onChange={setArrivalTime}
+                          icon="🏁"
+                          editable={false}
+                        />
+                      </View>
+                    </View>
+
+                    {estimatedTime && (
+                      <View style={styles.estimatedTimeContainer}>
+                        <Text style={styles.estimatedTimeLabel}>⏱️ Tiempo estimado de viaje:</Text>
+                        <Text style={styles.estimatedTimeValue}>
+                          {estimatedTime} minutos ({Math.round(estimatedTime / 60 * 100) / 100} horas)
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+
+                  {/* Sección de Información de Carga - NUEVA */}
+                  <View style={styles.cargoSection}>
+                    <Text style={styles.sectionTitle}>📦 Información de la Carga</Text>
+
+                    {/* Tipo de carga */}
+                    <View style={styles.cargoInputContainer}>
+                      <Text style={styles.cargoLabel}>🏷️ Tipo de carga</Text>
+                      <TextInput
+                        style={styles.cargoInput}
+                        value={cargoType}
+                        onChangeText={setCargoType}
+                        placeholder="Ej: Electrodomésticos, Alimentos, Muebles, etc."
+                        placeholderTextColor="#999"
+                      />
+                    </View>
+
+                    {/* Peso de la carga */}
+                    <WeightInput />
+
+                    {/* Clasificación de riesgo */}
+                    <RiskClassification />
+
+                    {/* Descripción de carga */}
+                    <View style={styles.cargoInputContainer}>
+                      <Text style={styles.cargoLabel}>📝 Descripción de la carga (opcional)</Text>
+                      <TextInput
+                        style={styles.cargoDescriptionInput}
+                        value={cargoDescription}
+                        onChangeText={setCargoDescription}
+                        placeholder="Describe detalles importantes sobre la carga, dimensiones, cuidados especiales, etc."
+                        placeholderTextColor="#999"
+                        multiline={true}
+                        numberOfLines={3}
+                        textAlignVertical="top"
+                      />
+                    </View>
+
+                    {/* Resumen de carga */}
+                    {(cargoWeight || cargoType) && (
+                      <View style={styles.cargoSummary}>
+                        <Text style={styles.cargoSummaryTitle}>📋 Resumen de la carga:</Text>
+                        {cargoType && (
+                          <Text style={styles.cargoSummaryItem}>• Tipo: {cargoType}</Text>
+                        )}
+                        {cargoWeight && (
+                          <Text style={styles.cargoSummaryItem}>
+                            • Peso: {cargoWeight} {cargoWeightUnit}
+                            {cargoWeightUnit !== 'kg' && ` (${convertWeightToKg(cargoWeight, cargoWeightUnit)} kg)`}
+                          </Text>
+                        )}
+                        {riskClassification && (
+                          <Text style={styles.cargoSummaryItem}>
+                            • Clasificación: {riskOptions.find(r => r.value === riskClassification)?.label || riskClassification}
+                          </Text>
+                        )}
+                      </View>
+                    )}
+                  </View>
+
+                  {/* Información adicional para descripción */}
                   <View style={styles.additionalInfoSection}>
                     <Text style={styles.sectionLabel}>Información adicional</Text>
 
                     <TextInput
                       style={styles.descriptionInput}
-                      placeholder="Descripción de la carga (opcional)"
+                      placeholder="Descripción general del servicio (opcional)"
                       placeholderTextColor="#999"
                       value={quoteDescription}
                       onChangeText={setQuoteDescription}
                       multiline={true}
                       numberOfLines={3}
                     />
-                  </View>
-
-                  {/* Sección de Horarios */}
-                  <View style={styles.timeSection}>
-                    <Text style={styles.sectionLabel}>Horario de salida</Text>
-
-                    <View style={styles.timeInputContainer}>
-                      <Text style={styles.timeLabel}>Hora de salida</Text>
-                      <TextInput
-                        style={styles.timeInput}
-                        value={departureTime}
-                        onChangeText={setDepartureTime}
-                        placeholder="10:00 AM"
-                        placeholderTextColor="#999"
-                      />
-                    </View>
                   </View>
 
                   {/* Sección de Método de Pago */}
@@ -1462,27 +1868,71 @@ const IntegratedTruckRequestScreen = () => {
                       </View>
                     </TouchableOpacity>
                   </View>
+                </View>
 
-                  {/* Tiempo estimado */}
-                  {estimatedTime && (
-                    <View style={styles.costBreakdown}>
-                      <Text style={styles.sectionLabel}>Tiempo estimado</Text>
-                      <View style={styles.costRow}>
-                        <Text style={styles.timeValue}>{estimatedTime} minutos</Text>
+                {/* Botón Crear Cotización - ACTUALIZADO CON VALIDACIÓN */}
+                <View style={styles.bookButtonContainer}>
+                  {/* Indicador de campos faltantes */}
+                  {!isFormValid() && (
+                    <View style={styles.missingFieldsContainer}>
+                      <Text style={styles.missingFieldsTitle}>⚠️ Campos requeridos:</Text>
+                      {!cargoWeight && <Text style={styles.missingFieldItem}>• Peso de la carga</Text>}
+                      {!cargoType && <Text style={styles.missingFieldItem}>• Tipo de carga</Text>}
+                      {!requestDate && <Text style={styles.missingFieldItem}>• Fecha del servicio</Text>}
+                      {!deliveryDate && <Text style={styles.missingFieldItem}>• Fecha de entrega</Text>}
+                      {cargoWeight && parseFloat(cargoWeight) <= 0 && <Text style={styles.missingFieldItem}>• El peso debe ser mayor a 0</Text>}
+                    </View>
+                  )}
+
+                  {/* Botón principal */}
+                  <TouchableOpacity
+                    style={[
+                      styles.bookButton, 
+                      (isLoading || !isFormValid()) && styles.bookButtonDisabled
+                    ]}
+                    onPress={handleConfirmBooking}
+                    disabled={isLoading || !isFormValid()}
+                  >
+                    {isLoading ? (
+                      <View style={styles.loadingButtonContent}>
+                        <ActivityIndicator size="small" color="#FFFFFF" />
+                        <Text style={styles.bookButtonText}>Creando cotización...</Text>
+                      </View>
+                    ) : (
+                      <View style={styles.buttonContent}>
+                        <Text style={styles.bookButtonText}>
+                          {isFormValid() ? 'Crear cotización' : 'Completa todos los campos'}
+                        </Text>
+                        {isFormValid() && <Text style={styles.buttonSubtext}>Toca para continuar</Text>}
+                      </View>
+                    )}
+                  </TouchableOpacity>
+
+                  {/* Información adicional */}
+                  {isFormValid() && (
+                    <View style={styles.finalInfoContainer}>
+                      <Text style={styles.finalInfoTitle}>📋 Resumen final:</Text>
+                      <View style={styles.finalInfoGrid}>
+                        <View style={styles.finalInfoItem}>
+                          <Text style={styles.finalInfoLabel}>📅 Servicio:</Text>
+                          <Text style={styles.finalInfoValue}>{requestDate}</Text>
+                        </View>
+                        <View style={styles.finalInfoItem}>
+                          <Text style={styles.finalInfoLabel}>🚚 Entrega:</Text>
+                          <Text style={styles.finalInfoValue}>{deliveryDate}</Text>
+                        </View>
+                        <View style={styles.finalInfoItem}>
+                          <Text style={styles.finalInfoLabel}>🕐 Horario:</Text>
+                          <Text style={styles.finalInfoValue}>{departureTime} - {arrivalTime}</Text>
+                        </View>
+                        <View style={styles.finalInfoItem}>
+                          <Text style={styles.finalInfoLabel}>📦 Carga:</Text>
+                          <Text style={styles.finalInfoValue}>{cargoWeight} {cargoWeightUnit}</Text>
+                        </View>
                       </View>
                     </View>
                   )}
                 </View>
-
-                <TouchableOpacity
-                  style={[styles.bookButton, isLoading && styles.bookButtonDisabled]}
-                  onPress={handleConfirmBooking}
-                  disabled={isLoading}
-                >
-                  <Text style={styles.bookButtonText}>
-                    {isLoading ? 'Creando cotización...' : 'Crear cotización'}
-                  </Text>
-                </TouchableOpacity>
               </View>
             </ScrollView>
           )}
@@ -1496,7 +1946,7 @@ const IntegratedTruckRequestScreen = () => {
   );
 };
 
-// Estilos completos con la animación cinematográfica
+// Estilos completos con todas las nuevas funcionalidades
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -1938,28 +2388,6 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
 
-  // === INFORMACIÓN ADICIONAL ===
-  additionalInfoSection: {
-    marginBottom: 22,
-    paddingBottom: 18,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(52, 53, 58, 0.1)',
-  },
-
-  descriptionInput: {
-    backgroundColor: 'rgba(95, 142, 173, 0.05)',
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    fontSize: 15,
-    color: '#34353A',
-    borderWidth: 1,
-    borderColor: 'rgba(95, 142, 173, 0.2)',
-    marginBottom: 12,
-    textAlignVertical: 'top',
-    minHeight: 80,
-  },
-
   // === RUTA ===
   routeInfo: {
     marginBottom: 22,
@@ -2004,7 +2432,7 @@ const styles = StyleSheet.create({
     borderRadius: 1,
   },
 
-  // === HORARIOS ===
+  // === FECHAS Y HORARIOS - NUEVOS ESTILOS ===
   timeSection: {
     marginBottom: 22,
     paddingBottom: 18,
@@ -2040,6 +2468,313 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(95, 142, 173, 0.2)',
     fontWeight: '500',
+  },
+
+  timeRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 14,
+  },
+
+  timeColumn: {
+    flex: 1,
+  },
+
+  timeInputDisabled: {
+    backgroundColor: 'rgba(95, 142, 173, 0.02)',
+    color: '#5F8EAD',
+    fontStyle: 'italic',
+  },
+
+  calculatedLabel: {
+    fontSize: 11,
+    color: '#5F8EAD',
+    fontStyle: 'italic',
+    marginTop: 4,
+    textAlign: 'center',
+  },
+
+  estimatedTimeContainer: {
+    backgroundColor: 'rgba(93, 150, 70, 0.05)',
+    borderRadius: 10,
+    padding: 12,
+    marginTop: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(93, 150, 70, 0.2)',
+  },
+
+  estimatedTimeLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#5D9646',
+    marginBottom: 4,
+  },
+
+  estimatedTimeValue: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#34353A',
+  },
+
+  // === INFORMACIÓN DE CARGA - NUEVOS ESTILOS ===
+  cargoSection: {
+    marginBottom: 22,
+    paddingBottom: 18,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(52, 53, 58, 0.1)',
+  },
+
+  cargoInputContainer: {
+    marginBottom: 16,
+  },
+
+  cargoLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#5F8EAD',
+    marginBottom: 8,
+  },
+
+  cargoInput: {
+    backgroundColor: 'rgba(95, 142, 173, 0.05)',
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 15,
+    color: '#34353A',
+    borderWidth: 1,
+    borderColor: 'rgba(95, 142, 173, 0.2)',
+    fontWeight: '500',
+  },
+
+  cargoDescriptionInput: {
+    backgroundColor: 'rgba(95, 142, 173, 0.05)',
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 15,
+    color: '#34353A',
+    borderWidth: 1,
+    borderColor: 'rgba(95, 142, 173, 0.2)',
+    minHeight: 80,
+    textAlignVertical: 'top',
+  },
+
+  // === PESO DE CARGA ===
+  weightContainer: {
+    marginBottom: 16,
+  },
+
+  weightInputRow: {
+    marginBottom: 12,
+  },
+
+  weightValueInput: {
+    flex: 1,
+    marginBottom: 12,
+  },
+
+  weightInput: {
+    backgroundColor: 'rgba(95, 142, 173, 0.05)',
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 15,
+    color: '#34353A',
+    borderWidth: 1,
+    borderColor: 'rgba(95, 142, 173, 0.2)',
+    fontWeight: '500',
+  },
+
+  weightUnitContainer: {
+    marginTop: 8,
+  },
+
+  weightUnitLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#5F8EAD',
+    marginBottom: 8,
+  },
+
+  weightUnitOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    backgroundColor: 'rgba(95, 142, 173, 0.05)',
+    borderRadius: 8,
+    marginBottom: 6,
+    borderWidth: 1,
+    borderColor: 'rgba(95, 142, 173, 0.1)',
+  },
+
+  weightUnitSelected: {
+    backgroundColor: 'rgba(93, 150, 70, 0.1)',
+    borderColor: '#5D9646',
+    borderWidth: 1.5,
+  },
+
+  weightRadio: {
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    borderWidth: 2,
+    borderColor: 'rgba(52, 53, 58, 0.3)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 10,
+  },
+
+  weightRadioSelected: {
+    borderColor: '#5D9646',
+    backgroundColor: 'rgba(93, 150, 70, 0.1)',
+  },
+
+  weightRadioInner: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#5D9646',
+  },
+
+  weightUnitText: {
+    fontSize: 14,
+    color: '#34353A',
+    fontWeight: '500',
+  },
+
+  weightUnitTextSelected: {
+    color: '#5D9646',
+    fontWeight: '600',
+  },
+
+  weightConversionText: {
+    fontSize: 12,
+    color: '#5F8EAD',
+    fontStyle: 'italic',
+    textAlign: 'center',
+    marginTop: 8,
+    padding: 8,
+    backgroundColor: 'rgba(95, 142, 173, 0.05)',
+    borderRadius: 6,
+  },
+
+  // === CLASIFICACIÓN DE RIESGO ===
+  riskContainer: {
+    marginBottom: 16,
+  },
+
+  riskOptionsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+
+  riskOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    backgroundColor: 'rgba(95, 142, 173, 0.05)',
+    borderRadius: 10,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(95, 142, 173, 0.1)',
+    flex: 1,
+    minWidth: '48%',
+  },
+
+  riskOptionSelected: {
+    backgroundColor: 'rgba(93, 150, 70, 0.1)',
+    borderColor: '#5D9646',
+    borderWidth: 1.5,
+  },
+
+  riskIcon: {
+    fontSize: 16,
+    marginRight: 8,
+  },
+
+  riskText: {
+    fontSize: 13,
+    color: '#34353A',
+    fontWeight: '500',
+    flex: 1,
+  },
+
+  riskTextSelected: {
+    color: '#5D9646',
+    fontWeight: '600',
+  },
+
+  riskRadio: {
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    borderWidth: 2,
+    borderColor: 'rgba(52, 53, 58, 0.3)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  riskRadioSelected: {
+    borderColor: '#5D9646',
+    backgroundColor: 'rgba(93, 150, 70, 0.1)',
+  },
+
+  riskRadioInner: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#5D9646',
+  },
+
+  // === RESUMEN DE CARGA ===
+  cargoSummary: {
+    backgroundColor: 'rgba(93, 150, 70, 0.05)',
+    borderRadius: 10,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(93, 150, 70, 0.2)',
+    marginTop: 12,
+  },
+
+  cargoSummaryTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#5D9646',
+    marginBottom: 8,
+  },
+
+  cargoSummaryItem: {
+    fontSize: 13,
+    color: '#34353A',
+    marginBottom: 4,
+    fontWeight: '500',
+    lineHeight: 18,
+  },
+
+  // === INFORMACIÓN ADICIONAL ===
+  additionalInfoSection: {
+    marginBottom: 22,
+    paddingBottom: 18,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(52, 53, 58, 0.1)',
+  },
+
+  descriptionInput: {
+    backgroundColor: 'rgba(95, 142, 173, 0.05)',
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 15,
+    color: '#34353A',
+    borderWidth: 1,
+    borderColor: 'rgba(95, 142, 173, 0.2)',
+    marginBottom: 12,
+    textAlignVertical: 'top',
+    minHeight: 80,
   },
 
   // === MÉTODOS DE PAGO ===
@@ -2121,29 +2856,98 @@ const styles = StyleSheet.create({
     backgroundColor: '#5D9646',
   },
 
-  // === DESGLOSE DE COSTOS ===
-  costBreakdown: {
+  // === VALIDACIÓN Y BOTÓN FINAL ===
+  bookButtonContainer: {
+    marginTop: 10,
+  },
+
+  missingFieldsContainer: {
+    backgroundColor: 'rgba(239, 68, 68, 0.05)',
+    borderRadius: 10,
+    padding: 12,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(239, 68, 68, 0.2)',
+  },
+
+  missingFieldsTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#EF4444',
+    marginBottom: 6,
+  },
+
+  missingFieldItem: {
+    fontSize: 12,
+    color: '#EF4444',
+    marginBottom: 2,
+    marginLeft: 8,
+  },
+
+  loadingButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  buttonContent: {
+    alignItems: 'center',
+  },
+
+  buttonSubtext: {
+    fontSize: 12,
+    color: 'rgba(255, 255, 255, 0.8)',
+    marginTop: 2,
+    fontWeight: '500',
+  },
+
+  finalInfoContainer: {
     backgroundColor: 'rgba(93, 150, 70, 0.05)',
-    borderRadius: 14,
+    borderRadius: 12,
     padding: 16,
+    marginTop: 12,
     borderWidth: 1,
     borderColor: 'rgba(93, 150, 70, 0.2)',
   },
 
-  costRow: {
+  finalInfoTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#5D9646',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+
+  finalInfoGrid: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
+    flexWrap: 'wrap',
+    gap: 8,
   },
 
-  timeValue: {
-    fontSize: 15,
-    color: '#5F8EAD',
+  finalInfoItem: {
+    flex: 1,
+    minWidth: '48%',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 8,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(93, 150, 70, 0.1)',
+  },
+
+  finalInfoLabel: {
+    fontSize: 11,
     fontWeight: '600',
+    color: '#5F8EAD',
+    marginBottom: 2,
   },
 
-  // === CONFIRMAR ===
+  finalInfoValue: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#34353A',
+  },
+
+  // === BOTÓN PRINCIPAL ===
   bookButton: {
     backgroundColor: '#5D9646',
     borderRadius: 14,
@@ -2207,14 +3011,14 @@ const styles = StyleSheet.create({
   // === ESTILOS CINEMATOGRÁFICOS ===
   cinematicContainer: {
     flex: 1,
-    backgroundColor: '#FFFFFF', // Fondo blanco cinematográfico
+    backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
   },
 
   cinematicLottieAnimation: {
-    width: width * 1.0,  // Pantalla completa
-    height: height * 1.0, // Pantalla completa
+    width: width * 1.0,
+    height: height * 1.0,
   },
 });
 
