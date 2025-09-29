@@ -1,0 +1,282 @@
+% simulacion_aquifero_optimizacion.m
+% ---------------------------------------------------------
+% Simulación 2D de flujo subterráneo (ecuación de Darcy)
+% usando elementos finitos lineales (triángulos P1),
+% modelado de acuífero rectangular y optimización de pozos.
+% ---------------------------------------------------------
+% Requisitos: MATLAB base (no necesita toolboxes especiales).
+% Autor: (ejemplo5 educativo)
+% Fecha: (hoy)
+% ---------------------------------------------------------
+
+clear; close all; clc;
+%% -------------------- ENUNCIADO -------------------------
+% Contexto: Estimamos el campo de cabezas (h) en un acuífero
+% confinado de geometría rectangular sometido a condiciones
+% de contorno de Dirichlet (cabeza fija en bordes). Se ubican
+% varios pozos candidatos y se optimiza la tasa de extracción
+% por pozo para maximizar la extracción total sin superar un
+% abatimiento crítico (h_min).
+%
+% Objetivos:
+%  - Implementar FEM P1 para -div(K grad h) = Q (steady-state).
+%  - Presentar variables y modelo claramente.
+%  - Usar MATLAB para resolver y visualizar.
+%  - Optimizar las tasas de extracción (q_i) con restricciones
+%    lineales sobre la cabeza mínima permitida.
+%
+% Variables principales:
+%  - K: conductividad hidráulica (constante, isotrópica)
+%  - h: cabeza hidráulica (m)
+%  - Q: tasa de extracción (m^3/s por unidad de espesor)
+%  - nodes, elements: malla FEM triangular
+%  - q: vector de caudales por pozo (a optimizar)
+% ---------------------------------------------------------
+
+%% ------------------ PARÁMETROS DEL ACUÍFERO -------------
+Lx = 1000;    % m - longitud en x
+Ly = 800;     % m - longitud en y
+Nx = 31;      % nodos en x (discretización)
+Ny = 25;      % nodos en y
+K  = 10;      % m/d (conductividad hidráulica) -> unidades arbitrarias consistentes
+thickness = 1; % m (espesor efectivo, para unidad 2D)
+
+% Condición de contorno (Dirichlet) en todo el borde:
+h_boundary_value = 50; % m (nivel piezométrico en frontera)
+
+% Umbral mínimo de cabeza (no queremos bajar de esto en ningún punto)
+h_min_allowed = 40; % m
+
+% Límite superior por pozo
+q_max_per_well = 0.02; % m^3/s (ejemplo)
+
+% Número de pozos candidatos y sus ubicaciones aproximadas (x,y)
+well_candidates = [200 200;
+                   800 150;
+                   500 400;
+                   300 600;
+                   750 600]; % (m)
+nW = size(well_candidates,1);
+
+%% -------------------- GENERAR MALLA ---------------------
+% Generamos malla estructurada y la convertimos a triángulos P1
+xv = linspace(0,Lx,Nx);
+yv = linspace(0,Ly,Ny);
+[XX,YY] = meshgrid(xv,yv);
+nodes = [XX(:), YY(:)]; % Nx*Ny nodes
+
+% Triangulación por división de cada cuadrilátero en 2 triángulos
+elements = [];
+for j=1:Ny-1
+    for i=1:Nx-1
+        n1 = (j-1)*Nx + i;
+        n2 = n1 + 1;
+        n3 = n1 + Nx;
+        n4 = n3 + 1;
+        % dos triángulos: (n1,n2,n4) y (n1,n4,n3)
+        elements = [elements; n1 n2 n4; n1 n4 n3];
+    end
+end
+elements = int32(elements);
+nNodes = size(nodes,1);
+nElems = size(elements,1);
+
+%% ----------------- ENSAYO: visualizar malla ----------------
+figure('Name','Malla triangular P1'); trisurf(elements, nodes(:,1), nodes(:,2), zeros(nNodes,1));
+view(2); axis equal tight; title('Malla triangular (proyección XY)');
+xlabel('x (m)'); ylabel('y (m)'); shading interp; hold on;
+
+%% -------------- ENSAMBLAR MATRIZ GLOBAL (FEM P1) ---------
+% Matriz dispersión (stiffness) A y vector fuente f (sin pozos aún)
+I = []; J = []; V = []; % para ensamblaje sparse
+f = zeros(nNodes,1);
+
+for el = 1:nElems
+    % indices de nodos del elemento
+    idx = double(elements(el,:));
+    xy = nodes(idx,:); % 3x2
+    x1 = xy(1,1); y1 = xy(1,2);
+    x2 = xy(2,1); y2 = xy(2,2);
+    x3 = xy(3,1); y3 = xy(3,2);
+    % área del triángulo
+    Area = 0.5 * det([1 x1 y1; 1 x2 y2; 1 x3 y3]);
+    % B matrix (gradientes de las funciones base)
+    % using formula: grad phi_i = [a_i; b_i] / (2*A) where a_i,b_i from coordinates
+    % Construir matriz de forma
+    % Coeficientes para formas lineales:
+    a1 = x2*y3 - x3*y2;
+    a2 = x3*y1 - x1*y3;
+    a3 = x1*y2 - x2*y1;
+    % Gradientes: grad phi_i = [dy_j - dy_k ; dx_k - dx_j] / (2*Area)
+    b = [y2 - y3; y3 - y1; y1 - y2];
+    c = [x3 - x2; x1 - x3; x2 - x1];
+    % Element stiffness matrix Ke = (K * thickness) * (1/(4*Area)) * [b;c]*[b;c]^T
+    Ke = (K*thickness)/(4*Area) * (b * b' + c * c');
+    % Assemble
+    for a=1:3
+        for b_idx=1:3
+            I(end+1) = idx(a);
+            J(end+1) = idx(b_idx);
+            V(end+1) = Ke(a,b_idx);
+        end
+    end
+end
+
+A = sparse(I,J,V,nNodes,nNodes);
+
+%% --------------- CONDICIONES DE CONTORNO -----------------
+% nodos de borde (fijamos h = h_boundary_value)
+tol = 1e-6;
+isBoundary = (abs(nodes(:,1)-0)<tol) | (abs(nodes(:,1)-Lx)<tol) | ...
+             (abs(nodes(:,2)-0)<tol) | (abs(nodes(:,2)-Ly)<tol);
+bcNodes = find(isBoundary);
+interiorNodes = find(~isBoundary);
+
+h_boundary = h_boundary_value * ones(nNodes,1);
+
+% Para sistema A*h = f, aplicamos Dirichlet:
+% Separamos submatrices:
+A_ii = A(interiorNodes, interiorNodes);
+A_ib = A(interiorNodes, bcNodes);
+
+f_i = f(interiorNodes) - A_ib * h_boundary(bcNodes); % RHS ajustado por bordes
+
+%% --------------- SOLUCIÓN SIN POZOS (H0) -----------------
+h_interior0 = A_ii \ f_i;
+H0 = h_boundary;
+H0(interiorNodes) = h_interior0;
+
+% Visualizamos H0
+figure('Name','Cabeza piezométrica sin pozos (H0)');
+trisurf(elements, nodes(:,1), nodes(:,2), H0, 'EdgeColor','none'); view(2); colorbar;
+title('H0 (m) - sin extracción'); axis equal tight; xlabel('x'); ylabel('y');
+
+%% ----------------- RESPUESTA INFLUENCIA (G) --------------
+% Para superposición: resolver A * g_j = s_j (s_j = -1 en nodo j para unidad de extracción)
+% Observación: extraer (Q > 0 extracción) genera disminución de cabeza, por eso s_j = -1
+G = zeros(nNodes, nW); % cada columna: respuesta de cabeza a 1 unidad de extracción en pozo i
+
+well_node_idx = zeros(nW,1);
+for wi = 1:nW
+    % ubicar pozo en el nodo más cercano
+    [~, ni] = min( sum( (nodes - well_candidates(wi,:)).^2, 2) );
+    well_node_idx(wi) = ni;
+    s = zeros(nNodes,1);
+    s(ni) = -1; % unidad de extracción
+    % separar en interior/bc
+    s_i = s(interiorNodes) - A_ib * (0*h_boundary(bcNodes)); % no change from boundary because s at interior
+    % solve for interior contribution
+    g_i = A_ii \ s_i;
+    g = zeros(nNodes,1);
+    g(interiorNodes) = g_i;
+    % boundary nodes are zero response because Dirichlet fixed (g at bc = 0)
+    G(:,wi) = g;
+end
+
+% Quick plot of influence of first well (unit extraction)
+figure('Name','Influencia de pozo (unidad de extracción)');
+trisurf(elements, nodes(:,1), nodes(:,2), G(:,1),'EdgeColor','none'); view(2); colorbar;
+title('Respuesta de cabeza a extracción unidad en pozo 1'); axis equal tight;
+
+%% --------------- OPTIMIZACIÓN (PROGRAMACIÓN LINEAL) -------------
+% Queremos maximizar sum(q_i) subject to H0 + G * q >= h_min_allowed, 0 <= q_i <= q_max_per_well
+% Reescribimos como G * q >= h_min_allowed - H0
+b_lin = h_min_allowed - H0; % tamaño nNodes
+% Sólo nodos que impongan restricción: todos (incluir interior y borde)
+% Transformar a forma para linprog (linprog maneja A*q <= b), así convertimos:
+% -G * q <= -(h_min - H0)
+A_lin = -G; % nNodes x nW
+b_lin2 = -(b_lin);
+
+% bounds
+lb = zeros(nW,1);
+ub = q_max_per_well * ones(nW,1);
+
+% objetivo: maximizar sum(q) -> minimizar -sum(q) => f = -ones(nW,1)
+fobj = -ones(nW,1);
+
+% Usamos linprog (si no tienes Optimization Toolbox, alternativamente se puede usar simplex implementado o fmincon)
+opts = optimoptions('linprog','Display','none');
+[q_opt, fval, exitflag, output] = linprog(fobj, A_lin, b_lin2, [], [], lb, ub, opts);
+if exitflag ~= 1
+    warning('linprog no convergió con exitflag=%d. Revisa restricciones. Mostrando solución nula.', exitflag);
+    q_opt = zeros(nW,1);
+end
+total_extracted = sum(q_opt);
+
+%% --------------- SOLUCIÓN CON POZOS OPTIMIZADOS --------------
+% Cabeza resultante: H_opt = H0 + G * q_opt
+Hopt = H0 + G * q_opt;
+
+% Abatimiento (drawdown) = H0 - Hopt
+drawdown = H0 - Hopt;
+
+% Mostrar resultados por pozo
+fprintf('Resultados de optimización de pozos:\n');
+for wi=1:nW
+    fprintf(' Pozo %d en (%.0f,%.0f) m -> nodo %d: q_opt = %.5f m^3/s\n', ...
+        wi, well_candidates(wi,1), well_candidates(wi,2), well_node_idx(wi), q_opt(wi));
+end
+fprintf('Extracción total optimizada (suma de q): %.5f m^3/s\n', total_extracted);
+
+%% -------------------- VISUALIZACIONES ---------------------
+figure('Name','H0 vs H_opt');
+subplot(1,2,1);
+trisurf(elements, nodes(:,1), nodes(:,2), H0, 'EdgeColor','none'); view(2); axis equal tight; colorbar;
+title('H0 - sin pozos'); xlabel('x'); ylabel('y');
+
+subplot(1,2,2);
+trisurf(elements, nodes(:,1), nodes(:,2), Hopt, 'EdgeColor','none'); view(2); axis equal tight; colorbar;
+title('H_{opt} - con extracciones optimizadas');
+
+% Dibujo del abatimiento
+figure('Name','Abatimiento (H0 - Hopt)');
+trisurf(elements, nodes(:,1), nodes(:,2), drawdown, 'EdgeColor','none'); view(2); axis equal tight; colorbar;
+title('Abatimiento (m)'); xlabel('x'); ylabel('y');
+
+% Marcar pozos en el mapa
+figure('Name','Pozos y cabezas resultantes');
+trisurf(elements, nodes(:,1), nodes(:,2), Hopt, 'EdgeColor','none'); view(2);
+hold on;
+for wi=1:nW
+    plot3(nodes(well_node_idx(wi),1), nodes(well_node_idx(wi),2), Hopt(well_node_idx(wi)), 'kp', 'MarkerFaceColor','y', 'MarkerSize',12);
+    text(nodes(well_node_idx(wi),1)+10, nodes(well_node_idx(wi),2)+10, num2str(q_opt(wi),'%.4f'));
+end
+colorbar; title('Cabeza con pozos optimizados (marcados)'); axis equal tight;
+
+%% ------------------ PROCEDIMIENTO DESCRITO -----------------
+% 1) Construimos malla P1 (triángulos) sobre dominio rectangular.
+% 2) Ensamblamos la matriz de rigidez A para -div(K grad h).
+% 3) Impusimos condiciones Dirichlet en fronteras (h fijo).
+% 4) Calculamos H0 resolviendo A*h = f (f=0 sin pozos).
+% 5) Para cada pozo candidato resolvimos la respuesta de influencia G(:,i)
+%    ante una extracción unitaria (superposición).
+% 6) Formulamos un problema de optimización lineal:
+%      max sum(q_i)  s.t.  H0 + G*q >= h_min,  0<=q_i<=q_max
+%    que convertimos a forma compatible con linprog.
+% 7) Resolvimos y construimos la solución Hopt = H0 + G*q_opt.
+% 8) Visualizamos y presentamos resultados numéricos.
+%
+% Comentario sobre justificación:
+% - El uso de FEM P1 es adecuado para geometrías simples y permite
+%   capturar la distribución espacial de la cabeza.
+% - La superposición y precomputación de funciones de influencia (G)
+%   convierte la optimización en un problema lineal eficiente.
+% - La restricción H >= h_min protege el acuífero de sobreexplotación.
+%
+% Limitaciones y supuestos:
+% - Acuífero homogéneo, isotrópico, y de espesor constante.
+% - Condiciones estacionarias (estado estacionario).
+% - Pozos modelados como fuentes puntuales distribuidas al nodo más cercano.
+% - No considera transporte contaminante ni variabilidad estocástica.
+%
+% Sugerencias (extensiones posibles):
+% - Añadir heterogeneidad espacial K(x,y).
+% - Considerar condiciones de Neumann (flujo) en bordes.
+% - Simulación transitoria (añadir almacenamiento específico Ss).
+% - Uso de herramientas de optimización más complejas (costos, extracción mínima por pozo).
+% -----------------------------------------------------------
+
+
+
+vaya ahi esta

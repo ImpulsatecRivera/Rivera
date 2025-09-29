@@ -8,11 +8,16 @@ import {
   ScrollView,
   Alert,
   ActivityIndicator,
+  Dimensions,
+  StatusBar,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import LottieView from 'lottie-react-native';
 import CustomInput from '../components/CustomInput';
 import CustomButton from '../components/CustomButton';
 import { useAuth } from '../context/authContext';
+
+const { width, height } = Dimensions.get('window');
 
 const LoginScreen = () => {
   const [email, setEmail] = useState('');
@@ -86,132 +91,363 @@ const LoginScreen = () => {
   const handleRegister = () => navigation.navigate('RegistrarseCliente');
 
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        <View style={styles.content}>
-          <Text style={styles.title}>Bienvenido de vuelta!</Text>
-          <Text style={styles.subtitle}>Acceso exclusivo para clientes</Text>
+    <>
+      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+      <SafeAreaView style={styles.container}>
+        <ScrollView 
+          contentContainerStyle={styles.scrollContent} 
+          showsVerticalScrollIndicator={false}
+          bounces={false}
+        >
+          
+          {/* Background with curved shapes */}
+          <View style={styles.backgroundShapes}>
+            <View style={styles.curvedShape1} />
+            <View style={styles.curvedShape2} />
+            <View style={styles.curvedShape3} />
+          </View>
 
-          <View style={styles.form}>
-            <CustomInput
-              placeholder="Correo electrónico"
-              value={email}
-              onChangeText={setEmail}
-              iconName="person"
-              keyboardType="email-address"
-              autoCapitalize="none"
-              editable={!isLoading}
-            />
+          {/* Content */}
+          <View style={styles.content}>
+            
+            {/* Header with title */}
+            <View style={styles.headerSection}>
+              <Text style={styles.welcomeTitle}>Bienvenido</Text>
+              <Text style={styles.welcomeTitle2}>de vuelta</Text>
+              
+              {/* Lottie Animation */}
+              <View style={styles.lottieContainer}>
+                <LottieView
+                  source={require('../assets/lottie/Man and Woman say Hi !.json')}
+                  autoPlay
+                  loop={false}
+                  style={styles.lottieAnimation}
+                />
+              </View>
+              
+              <Text style={styles.subtitle}>Acceso exclusivo para clientes</Text>
+            </View>
 
-            <CustomInput
-              placeholder="Contraseña"
-              value={password}
-              onChangeText={setPassword}
-              isPassword={true}
-              iconName="lock"
-              editable={!isLoading}
-            />
+            {/* Form Section */}
+            <View style={styles.formSection}>
+              
+              {/* Email Input */}
+              <View style={styles.inputContainer}>
+                <Text style={styles.inputLabel}>Email</Text>
+                <CustomInput
+                  placeholder="tu@email.com"
+                  value={email}
+                  onChangeText={setEmail}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  editable={!isLoading}
+                  style={styles.modernInput}
+                />
+              </View>
 
-            <TouchableOpacity
-              style={styles.forgotPassword}
-              onPress={handleForgotPassword}
-              disabled={isLoading}
-            >
-              <Text style={styles.forgotPasswordText}>¿Olvidaste tu contraseña?</Text>
-            </TouchableOpacity>
+              {/* Password Input */}
+              <View style={styles.inputContainer}>
+                <Text style={styles.inputLabel}>Contraseña</Text>
+                <CustomInput
+                  placeholder="••••••••"
+                  value={password}
+                  onChangeText={setPassword}
+                  isPassword={true}
+                  editable={!isLoading}
+                  style={styles.modernInput}
+                />
+              </View>
 
-            <CustomButton
-              title={isLoading ? "Iniciando sesión..." : "Login"}
-              onPress={handleLogin}
-              backgroundColor={isLoading ? "#A5D6A7" : "#4CAF50"}
-              disabled={isLoading}
-            />
+              {/* Forgot Password */}
+              <TouchableOpacity
+                style={styles.forgotContainer}
+                onPress={handleForgotPassword}
+                disabled={isLoading}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.forgotText}>¿Olvidaste tu contraseña?</Text>
+              </TouchableOpacity>
 
+            </View>
+
+            {/* Login Button with circular design */}
+            <View style={styles.buttonSection}>
+              <TouchableOpacity
+                style={[
+                  styles.loginButton,
+                  isLoading && styles.loginButtonDisabled
+                ]}
+                onPress={handleLogin}
+                disabled={isLoading}
+                activeOpacity={0.8}
+              >
+                <View style={styles.buttonContent}>
+                  {isLoading ? (
+                    <ActivityIndicator size="small" color="#FFFFFF" />
+                  ) : (
+                    <>
+                      <Text style={styles.buttonText}>Login</Text>
+                      <View style={styles.arrowContainer}>
+                        <Text style={styles.arrow}>→</Text>
+                      </View>
+                    </>
+                  )}
+                </View>
+              </TouchableOpacity>
+            </View>
+
+            {/* Loading State */}
             {isLoading && (
               <View style={styles.loadingContainer}>
-                <ActivityIndicator size="small" color="#4CAF50" />
                 <Text style={styles.loadingText}>Verificando credenciales...</Text>
               </View>
             )}
-          </View>
 
-          {!isLoading && (
-            <View style={styles.registerContainer}>
-              <Text style={styles.registerText}>¿No tienes cuenta? </Text>
-              <TouchableOpacity onPress={handleRegister}>
-                <Text style={styles.registerLink}>Regístrate</Text>
+            {/* Register Section */}
+            <View style={styles.footerSection}>
+              <TouchableOpacity 
+                onPress={handleRegister}
+                disabled={isLoading}
+                activeOpacity={0.7}
+                style={styles.registerButton}
+              >
+                <Text style={styles.registerText}>Crear cuenta</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                onPress={handleForgotPassword}
+                disabled={isLoading}
+                activeOpacity={0.7}
+                style={styles.helpButton}
+              >
+                <Text style={styles.helpText}>¿Necesitas ayuda?</Text>
               </TouchableOpacity>
             </View>
-          )}
-        </View>
-      </ScrollView>
-    </SafeAreaView>
+
+          </View>
+
+        </ScrollView>
+      </SafeAreaView>
+    </>
   );
 };
 
 const styles = StyleSheet.create({
-  container: { 
-    flex: 1, 
-    backgroundColor: '#FFFFFF' 
+  container: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
   },
-  scrollContent: { 
-    flexGrow: 1, 
-    justifyContent: 'center' 
+  scrollContent: {
+    flexGrow: 1,
   },
-  content: { 
-    flex: 1, 
-    paddingHorizontal: 24, 
-    paddingVertical: 40, 
-    justifyContent: 'center' 
+
+  // Background curved shapes
+  backgroundShapes: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
   },
-  title: { 
-    fontSize: 28, 
-    fontWeight: 'bold', 
-    color: '#333', 
-    textAlign: 'center', 
-    marginBottom: 8 
+  curvedShape1: {
+    position: 'absolute',
+    top: -100,
+    right: -80,
+    width: 280,
+    height: 280,
+    borderRadius: 140,
+    backgroundColor: '#4CAF50',
+    opacity: 0.1,
+    transform: [{ rotate: '45deg' }],
   },
-  subtitle: { 
-    fontSize: 16, 
-    color: '#666', 
-    textAlign: 'center', 
-    marginBottom: 40 
+  curvedShape2: {
+    position: 'absolute',
+    top: 150,
+    left: -120,
+    width: 220,
+    height: 220,
+    borderRadius: 110,
+    backgroundColor: '#007AFF',
+    opacity: 0.08,
+    transform: [{ rotate: '-30deg' }],
   },
-  form: { 
-    marginBottom: 30 
+  curvedShape3: {
+    position: 'absolute',
+    bottom: -150,
+    right: -100,
+    width: 300,
+    height: 300,
+    borderRadius: 150,
+    backgroundColor: '#4CAF50',
+    opacity: 0.06,
+    transform: [{ rotate: '60deg' }],
   },
-  forgotPassword: { 
-    alignSelf: 'flex-end', 
-    marginBottom: 20 
+
+  // Content
+  content: {
+    flex: 1,
+    paddingHorizontal: 32,
+    paddingTop: 80,
+    zIndex: 1,
   },
-  forgotPasswordText: { 
-    color: '#007AFF', 
-    fontSize: 14 
+
+  // Header Section
+  headerSection: {
+    marginBottom: 60,
   },
-  loadingContainer: { 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    justifyContent: 'center', 
-    marginTop: 16 
+  welcomeTitle: {
+    fontSize: 42,
+    fontWeight: '700',
+    color: '#1F2937',
+    lineHeight: 48,
+    letterSpacing: -1,
   },
-  loadingText: { 
-    marginLeft: 8, 
-    color: '#666', 
-    fontSize: 14 
+  welcomeTitle2: {
+    fontSize: 42,
+    fontWeight: '300',
+    color: '#6B7280',
+    lineHeight: 48,
+    letterSpacing: -1,
+    marginBottom: 16,
   },
-  registerContainer: { 
-    flexDirection: 'row', 
-    justifyContent: 'center', 
-    alignItems: 'center' 
+  
+  // Lottie Animation
+  lottieContainer: {
+    alignItems: 'center',
+    marginVertical: 24,
   },
-  registerText: { 
-    color: '#666', 
-    fontSize: 14 
+  lottieAnimation: {
+    width: 120,
+    height: 120,
   },
-  registerLink: { 
-    color: '#007AFF', 
-    fontSize: 14, 
-    fontWeight: '600' 
+  
+  subtitle: {
+    fontSize: 16,
+    color: '#9CA3AF',
+    fontWeight: '400',
+    lineHeight: 24,
+  },
+
+  // Form Section
+  formSection: {
+    marginBottom: 50,
+  },
+  inputContainer: {
+    marginBottom: 28,
+  },
+  inputLabel: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#374151',
+    marginBottom: 12,
+    letterSpacing: 0.2,
+  },
+  modernInput: {
+    borderWidth: 0,
+    borderBottomWidth: 2,
+    borderBottomColor: '#E5E7EB',
+    borderRadius: 0,
+    backgroundColor: 'transparent',
+    paddingVertical: 16,
+    paddingHorizontal: 0,
+    fontSize: 16,
+    color: '#1F2937',
+  },
+
+  // Forgot Password
+  forgotContainer: {
+    alignSelf: 'flex-end',
+    marginTop: 16,
+    paddingVertical: 8,
+  },
+  forgotText: {
+    fontSize: 14,
+    color: '#6B7280',
+    fontWeight: '500',
+  },
+
+  // Button Section
+  buttonSection: {
+    alignItems: 'flex-end',
+    marginBottom: 40,
+  },
+  loginButton: {
+    backgroundColor: '#1F2937',
+    borderRadius: 30,
+    paddingVertical: 18,
+    paddingHorizontal: 32,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 6,
+    minWidth: 140,
+  },
+  loginButtonDisabled: {
+    backgroundColor: '#9CA3AF',
+  },
+  buttonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  buttonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+    marginRight: 12,
+  },
+  arrowContainer: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  arrow: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+
+  // Loading
+  loadingContainer: {
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  loadingText: {
+    fontSize: 14,
+    color: '#4CAF50',
+    fontWeight: '500',
+  },
+
+  // Footer Section
+  footerSection: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    paddingBottom: 50,
+  },
+  registerButton: {
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    marginBottom: 20,
+  },
+  registerText: {
+    fontSize: 16,
+    color: '#4CAF50',
+    fontWeight: '600',
+    textDecorationLine: 'underline',
+  },
+  helpButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+  },
+  helpText: {
+    fontSize: 14,
+    color: '#9CA3AF',
+    fontWeight: '500',
   },
 });
 
