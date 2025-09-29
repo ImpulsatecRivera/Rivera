@@ -25,7 +25,7 @@ import CancelError from "../assets/lottie/cancel animation.json";
 const { width } = Dimensions.get('window');
 const BG = '#F8F9FA';
 
-// Misma configuración de estados que tu card
+// Configuración de estados
 const statusConfig = {
   pendiente: {
     bg: '#FEF3C7',
@@ -59,6 +59,21 @@ const statusConfig = {
     lottie: CancelError,
     gradient: ['#FEE2E2', '#FCA5A5']
   },
+};
+
+// Mapeo de clasificación de riesgo con iconos
+const riskClassificationMap = {
+  'normal': { label: 'Normal', icon: '📦', color: '#10B981' },
+  'fragil': { label: 'Frágil', icon: '🔍', color: '#F59E0B' },
+  'peligroso': { label: 'Peligroso', icon: '⚠️', color: '#EF4444' },
+  'perecedero': { label: 'Perecedero', icon: '❄️', color: '#3B82F6' }
+};
+
+// Mapeo de unidades de peso
+const weightUnitLabels = {
+  'kg': 'Kilogramos',
+  'lb': 'Libras',
+  'ton': 'Toneladas'
 };
 
 // Funciones de utilidad
@@ -105,6 +120,64 @@ const formatShortDate = (dateStr) => {
   } catch {
     return dateStr;
   }
+};
+
+const formatTime = (iso) => {
+  if (!iso || iso === 'No especificado' || iso === '—') return '—';
+  try {
+    const date = new Date(iso);
+    if (isNaN(date.getTime())) return '—';
+    return date.toLocaleTimeString('es-SV', { 
+      hour: '2-digit', 
+      minute: '2-digit',
+      hour12: true
+    });
+  } catch (error) {
+    return '—';
+  }
+};
+
+// Función para formatear tiempo estimado de viaje
+const formatEstimatedTime = (minutes) => {
+  if (!minutes || minutes <= 0) return '—';
+  
+  // Si son menos de 60 minutos, solo mostrar minutos
+  if (minutes < 60) {
+    return `${Math.round(minutes)} minutos`;
+  }
+  
+  // Convertir a horas y minutos
+  const hours = Math.floor(minutes / 60);
+  const remainingMinutes = Math.round(minutes % 60);
+  
+  // Si no hay minutos restantes, solo mostrar horas
+  if (remainingMinutes === 0) {
+    return `${hours} ${hours === 1 ? 'hora' : 'horas'}`;
+  }
+  
+  // Mostrar horas y minutos
+  return `${hours} ${hours === 1 ? 'hora' : 'horas'} y ${remainingMinutes} minutos`;
+};
+
+// Función para formatear peso con unidad
+const formatWeight = (pesoObj) => {
+  if (!pesoObj) return 'No especificado';
+  
+  if (typeof pesoObj === 'object') {
+    const valor = pesoObj.valor || pesoObj.valorOriginal || 0;
+    const unidad = pesoObj.unidad || pesoObj.unidadOriginal || 'kg';
+    const unidadLabel = weightUnitLabels[unidad] || unidad;
+    
+    // Si hay valor original diferente, mostrarlo
+    if (pesoObj.valorOriginal && pesoObj.unidadOriginal && 
+        pesoObj.unidadOriginal !== 'kg') {
+      return `${pesoObj.valorOriginal} ${weightUnitLabels[pesoObj.unidadOriginal] || pesoObj.unidadOriginal} (${valor} kg)`;
+    }
+    
+    return `${valor} ${unidadLabel}`;
+  }
+  
+  return `${pesoObj} kg`;
 };
 
 export default function DetalleQuoteScreen() {
@@ -178,18 +251,33 @@ export default function DetalleQuoteScreen() {
     gradient: ['#F3F4F6', '#E5E7EB']
   };
 
+  // Extraer datos de carga y horarios con acceso robusto
+  const carga = item.carga || item._raw?.carga || {};
+  const horarios = item.horarios || item._raw?.horarios || {};
+  const requestDate = item.requestDate || item._raw?.requestDate;
+  const deliveryDate = item.deliveryDate || item._raw?.deliveryDate;
+
   const handleShare = async () => {
     try {
-      const shareContent = `
+      let shareContent = `
 🧾 Cotización: ${item.title || 'Sin título'}
-📍 Destino: ${item.lugarEntrega || 'No especificado'}
-📅 Salida: ${formatShortDate(item.horaSalida)}
-📅 Llegada: ${formatShortDate(item.horaLlegada)}
-💰 Total: ${formatCurrency(item.total)}
+📍 Origen: ${item.pickupLocation || 'No especificado'}
+📍 Destino: ${item.destinationLocation || item.location || 'No especificado'}
+📅 Salida: ${formatShortDate(item.horaSalida || horarios.fechaSalida)}
+📅 Llegada: ${formatShortDate(item.horaLlegada || horarios.fechaLlegadaEstimada)}
+💰 Total: ${formatCurrency(item.total || item.price)}
 📋 Estado: ${config.label.toUpperCase()}
-💳 Método de pago: ${item.metodoPago || 'No especificado'}
+💳 Método de pago: ${item.paymentMethod || item.metodoPago || 'No especificado'}
 🆔 ID: #${item.id?.slice(-6) || 'N/A'}
       `.trim();
+
+      // Agregar información de carga si existe
+      if (carga.peso) {
+        shareContent += `\n📦 Peso: ${formatWeight(carga.peso)}`;
+      }
+      if (carga.tipo) {
+        shareContent += `\n🏷️ Tipo: ${carga.tipo}`;
+      }
 
       await Share.share({
         message: shareContent,
@@ -250,58 +338,204 @@ export default function DetalleQuoteScreen() {
             </View>
             
             {/* Precio destacado */}
-            {item.total && item.total !== '—' && (
+            {(item.total || item.price) && (item.total !== '—' && item.price !== 0) && (
               <View style={styles.priceSection}>
                 <Text style={styles.priceLabel}>Total a Pagar</Text>
-                <Text style={styles.priceValue}>{formatCurrency(item.total)}</Text>
+                <Text style={styles.priceValue}>{formatCurrency(item.total || item.price)}</Text>
               </View>
             )}
           </View>
 
-          {/* Timeline de fechas (si hay fechas) */}
-          {(item.horaSalida || item.horaLlegada) && (
-            <View style={styles.timelineCard}>
-              <Text style={styles.sectionTitle}>📅 Cronograma</Text>
+          {/* === SECCIÓN: Fechas de Servicio === */}
+          {(requestDate || deliveryDate) && (
+            <View style={styles.serviceDatesCard}>
+              <Text style={styles.sectionTitle}>📅 Fechas del Servicio</Text>
               
-              {item.horaSalida && (
+              {requestDate && (
+                <DetailRow
+                  icon="📋"
+                  label="Fecha Solicitada"
+                  value={formatShortDate(requestDate)}
+                  color="#8B5CF6"
+                />
+              )}
+              
+              {deliveryDate && (
+                <DetailRow
+                  icon="🚚"
+                  label="Fecha de Entrega"
+                  value={formatShortDate(deliveryDate)}
+                  color="#10B981"
+                />
+              )}
+            </View>
+          )}
+          {/* Timeline de fechas */}
+          {(item.horaSalida || horarios.fechaSalida || item.horaLlegada || horarios.fechaLlegadaEstimada) && (
+            <View style={styles.timelineCard}>
+              <Text style={styles.sectionTitle}>🕐 Cronograma de Horarios</Text>
+              
+              {(item.horaSalida || horarios.fechaSalida) && (
                 <TimelineItem
                   icon="🚚"
-                  title="Fecha de Salida"
-                  time={formatDate(item.horaSalida)}
+                  title="Hora de Salida"
+                  time={formatTime(horarios.horaSalida || item.horaSalida)}
+                  subtitle={formatDate(horarios.fechaSalida || item.horaSalida)}
                   isActive={item.status === 'en ruta' || item.status === 'completado'}
                   color="#F59E0B"
                 />
               )}
               
-              {item.horaLlegada && (
+              {(item.horaLlegada || horarios.fechaLlegadaEstimada) && (
                 <TimelineItem
                   icon="📍"
-                  title="Fecha de Llegada Estimada"
-                  time={formatDate(item.horaLlegada)}
+                  title="Hora de Llegada Estimada"
+                  time={formatTime(horarios.horaLlegadaEstimada || item.horaLlegada)}
+                  subtitle={formatDate(horarios.fechaLlegadaEstimada || item.horaLlegada)}
                   isActive={item.status === 'completado'}
                   color="#10B981"
                   isLast={true}
                 />
               )}
+
+              {/* Tiempo estimado de viaje - CORREGIDO */}
+              {horarios.tiempoEstimadoViaje && (
+                <View style={styles.travelTimeContainer}>
+                  <Text style={styles.travelTimeIcon}>⏱️</Text>
+                  <View style={styles.travelTimeInfo}>
+                    <Text style={styles.travelTimeLabel}>Tiempo Estimado de Viaje</Text>
+                    <Text style={styles.travelTimeValue}>
+                      {formatEstimatedTime(horarios.tiempoEstimadoViaje)}
+                    </Text>
+                  </View>
+                </View>
+              )}
+
+              {/* Flexibilidad horaria */}
+              {horarios.flexibilidadHoraria?.permitida && (
+                <View style={styles.flexibilityBadge}>
+                  <Text style={styles.flexibilityIcon}>🔄</Text>
+                  <Text style={styles.flexibilityText}>
+                    Flexibilidad horaria: ±{horarios.flexibilidadHoraria.rangoTolerancia || 0} horas
+                  </Text>
+                </View>
+              )}
             </View>
           )}
 
-          {/* Detalles del viaje */}
+          {/* === SECCIÓN: Información de Carga === */}
+          {(carga && Object.keys(carga).length > 0) && (
+            <View style={styles.cargoCard}>
+              <Text style={styles.sectionTitle}>📦 Información de Carga</Text>
+              
+              {/* Tipo de carga */}
+              {carga.tipo && carga.tipo !== 'general' && (
+                <DetailRow
+                  icon="🏷️"
+                  label="Tipo de Carga"
+                  value={carga.tipo}
+                  color="#3B82F6"
+                />
+              )}
+
+              {/* Peso de la carga */}
+              {carga.peso && (
+                <View style={styles.weightCard}>
+                  <View style={styles.weightHeader}>
+                    <Text style={styles.weightIcon}>⚖️</Text>
+                    <Text style={styles.weightLabel}>Peso de la Carga</Text>
+                  </View>
+                  <Text style={styles.weightValue}>{formatWeight(carga.peso)}</Text>
+                  
+                  {/* Conversión si existe */}
+                  {carga.peso.unidadOriginal && carga.peso.unidadOriginal !== 'kg' && (
+                    <View style={styles.weightConversion}>
+                      <Text style={styles.conversionIcon}>↔️</Text>
+                      <Text style={styles.conversionText}>
+                        Original: {carga.peso.valorOriginal} {weightUnitLabels[carga.peso.unidadOriginal]}
+                      </Text>
+                    </View>
+                  )}
+                </View>
+              )}
+
+              {/* Clasificación de riesgo */}
+              {carga.clasificacionRiesgo && (
+                <View style={styles.riskContainer}>
+                  <Text style={styles.riskLabel}>⚠️ Clasificación de Riesgo</Text>
+                  <View style={[
+                    styles.riskBadge,
+                    { 
+                      backgroundColor: `${riskClassificationMap[carga.clasificacionRiesgo]?.color || '#6B7280'}15`,
+                      borderColor: riskClassificationMap[carga.clasificacionRiesgo]?.color || '#6B7280'
+                    }
+                  ]}>
+                    <Text style={styles.riskIcon}>
+                      {riskClassificationMap[carga.clasificacionRiesgo]?.icon || '📦'}
+                    </Text>
+                    <Text style={[
+                      styles.riskText,
+                      { color: riskClassificationMap[carga.clasificacionRiesgo]?.color || '#6B7280' }
+                    ]}>
+                      {riskClassificationMap[carga.clasificacionRiesgo]?.label || carga.clasificacionRiesgo}
+                    </Text>
+                  </View>
+                </View>
+              )}
+
+              {/* Descripción de la carga */}
+              {carga.descripcion && carga.descripcion !== 'No especificado' && (
+                <View style={styles.cargoDescriptionContainer}>
+                  <Text style={styles.cargoDescriptionLabel}>📝 Descripción</Text>
+                  <Text style={styles.cargoDescriptionText}>{carga.descripcion}</Text>
+                </View>
+              )}
+
+              {/* Observaciones de la carga */}
+              {carga.observaciones && carga.observaciones !== 'Sin observaciones adicionales' && (
+                <View style={styles.cargoObservationsContainer}>
+                  <Text style={styles.cargoObservationsLabel}>💬 Observaciones</Text>
+                  <Text style={styles.cargoObservationsText}>{carga.observaciones}</Text>
+                </View>
+              )}
+            </View>
+          )}
+
+          {/* Detalles del viaje - CORREGIDO */}
           <View style={styles.detailsCard}>
             <Text style={styles.sectionTitle}>🚛 Detalles del Viaje</Text>
             
+            {/* Origen */}
             <DetailRow
               icon="📍"
-              label="Destino"
-              value={item.lugarEntrega}
+              label="Punto de Recogida"
+              value={item.pickupLocation}
               color="#10B981"
             />
             
-            {item.metodoPago && (
+            {/* Destino */}
+            <DetailRow
+              icon="🎯"
+              label="Punto de Destino"
+              value={item.destinationLocation || item.location}
+              color="#EF4444"
+            />
+            
+            {/* Distancia */}
+            {item.estimatedDistance > 0 && (
+              <DetailRow
+                icon="📏"
+                label="Distancia"
+                value={`${item.estimatedDistance} km`}
+                color="#3B82F6"
+              />
+            )}
+            
+            {(item.paymentMethod || item.metodoPago) && (
               <DetailRow
                 icon="💳"
                 label="Método de Pago"
-                value={item.metodoPago}
+                value={item.paymentMethod || item.metodoPago}
                 color="#8B5CF6"
               />
             )}
@@ -314,7 +548,7 @@ export default function DetalleQuoteScreen() {
               
               {item._raw.quoteDescription && (
                 <View style={styles.descriptionContainer}>
-                  <Text style={styles.descriptionLabel}>Descripción</Text>
+                  <Text style={styles.descriptionLabel}>Descripción General</Text>
                   <Text style={styles.descriptionText}>{item._raw.quoteDescription}</Text>
                 </View>
               )}
@@ -369,7 +603,7 @@ export default function DetalleQuoteScreen() {
 }
 
 // Componente para elementos de timeline
-const TimelineItem = ({ icon, title, time, isActive, color, isLast = false }) => (
+const TimelineItem = ({ icon, title, time, subtitle, isActive, color, isLast = false }) => (
   <View style={styles.timelineItem}>
     <View style={styles.timelineIconContainer}>
       <View style={[
@@ -388,6 +622,7 @@ const TimelineItem = ({ icon, title, time, isActive, color, isLast = false }) =>
         {title}
       </Text>
       <Text style={styles.timelineTime}>{time}</Text>
+      {subtitle && <Text style={styles.timelineSubtitle}>{subtitle}</Text>}
     </View>
   </View>
 );
@@ -525,7 +760,19 @@ const styles = StyleSheet.create({
     color: '#059669',
   },
 
-  // Card styles generales
+  serviceDatesCard: {
+    backgroundColor: '#FFFFFF',
+    marginHorizontal: 20,
+    marginTop: 16,
+    borderRadius: 16,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+
   timelineCard: {
     backgroundColor: '#FFFFFF',
     marginHorizontal: 20,
@@ -538,6 +785,20 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 3,
   },
+  
+  cargoCard: {
+    backgroundColor: '#FFFFFF',
+    marginHorizontal: 20,
+    marginTop: 16,
+    borderRadius: 16,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  
   detailsCard: {
     backgroundColor: '#FFFFFF',
     marginHorizontal: 20,
@@ -581,7 +842,171 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
 
-  // Timeline styles
+  // Peso de carga
+  weightCard: {
+    backgroundColor: '#F9FAFB',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  weightHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  weightIcon: {
+    fontSize: 20,
+    marginRight: 8,
+  },
+  weightLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#6B7280',
+  },
+  weightValue: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#111827',
+    marginBottom: 8,
+  },
+  weightConversion: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#E5E7EB',
+  },
+  conversionIcon: {
+    fontSize: 14,
+    marginRight: 6,
+  },
+  conversionText: {
+    fontSize: 13,
+    color: '#6B7280',
+    fontStyle: 'italic',
+  },
+
+  // Clasificación de riesgo
+  riskContainer: {
+    marginBottom: 16,
+  },
+  riskLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#6B7280',
+    marginBottom: 8,
+  },
+  riskBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 20,
+    borderWidth: 1.5,
+  },
+  riskIcon: {
+    fontSize: 16,
+    marginRight: 8,
+  },
+  riskText: {
+    fontSize: 14,
+    fontWeight: '700',
+    textTransform: 'capitalize',
+  },
+
+  // Descripciones de carga
+  cargoDescriptionContainer: {
+    backgroundColor: '#F9FAFB',
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 16,
+    borderLeftWidth: 3,
+    borderLeftColor: '#3B82F6',
+  },
+  cargoDescriptionLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#6B7280',
+    marginBottom: 6,
+  },
+  cargoDescriptionText: {
+    fontSize: 14,
+    color: '#374151',
+    lineHeight: 20,
+  },
+  cargoObservationsContainer: {
+    backgroundColor: '#FFFBEB',
+    borderRadius: 12,
+    padding: 14,
+    borderLeftWidth: 3,
+    borderLeftColor: '#F59E0B',
+  },
+  cargoObservationsLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#92400E',
+    marginBottom: 6,
+  },
+  cargoObservationsText: {
+    fontSize: 14,
+    color: '#78350F',
+    lineHeight: 20,
+    fontStyle: 'italic',
+  },
+
+  // Tiempo de viaje
+  travelTimeContainer: {
+    flexDirection: 'row',
+    backgroundColor: '#F9FAFB',
+    borderRadius: 12,
+    padding: 14,
+    marginTop: 12,
+    alignItems: 'center',
+  },
+  travelTimeIcon: {
+    fontSize: 24,
+    marginRight: 12,
+  },
+  travelTimeInfo: {
+    flex: 1,
+  },
+  travelTimeLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#6B7280',
+    marginBottom: 4,
+  },
+  travelTimeValue: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#8B5CF6',
+  },
+
+  // Flexibilidad horaria
+  flexibilityBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#EFF6FF',
+    borderRadius: 10,
+    padding: 12,
+    marginTop: 12,
+    borderWidth: 1,
+    borderColor: '#DBEAFE',
+  },
+  flexibilityIcon: {
+    fontSize: 16,
+    marginRight: 8,
+  },
+  flexibilityText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#1E40AF',
+  },
+
+  // Timeline
   timelineItem: {
     flexDirection: 'row',
     marginBottom: 16,
@@ -616,12 +1041,18 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   timelineTime: {
-    fontSize: 13,
-    color: '#6B7280',
-    lineHeight: 18,
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#111827',
+    marginBottom: 2,
+  },
+  timelineSubtitle: {
+    fontSize: 12,
+    color: '#9CA3AF',
+    lineHeight: 16,
   },
 
-  // Detail row styles
+  // Detail row
   detailRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -655,7 +1086,7 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
 
-  // Description styles
+  // Description
   descriptionContainer: {
     backgroundColor: '#F9FAFB',
     padding: 16,
@@ -674,7 +1105,7 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
 
-  // Progress styles
+  // Progress
   progressContainer: {
     backgroundColor: '#F9FAFB',
     padding: 16,

@@ -446,152 +446,165 @@ const IntegratedTruckRequestScreen = () => {
     return `Cotización ${selectedTruckType?.name} - ${dateStr} ${timeStr}`;
   };
 
-  // 🔥 FUNCIÓN CORREGIDA - Crear la cotización en el backend
-  const createQuoteInBackend = async () => {
-    try {
-      setIsLoading(true);
+  // Función CORREGIDA - Crear la cotización en el backend
+const createQuoteInBackend = async () => {
+  try {
+    setIsLoading(true);
 
-      // Validar campos de carga
-      const validationErrors = validateCargoFields();
-      if (validationErrors.length > 0) {
-        Alert.alert('Campos requeridos', validationErrors.join('\n'));
-        return;
-      }
+    // VALIDACIÓN CRÍTICA AGREGADA
+    console.log('🔍 VALIDACIÓN PRE-ENVÍO:', {
+      pickupAddress,
+      destinationAddress,
+      pickupCoords,
+      destinationCoords
+    });
 
-      const clientId = await getClientId();
-      if (!clientId) {
-        throw new Error('No se encontró información del cliente');
-      }
-
-      const now = new Date();
-
-      // === FECHAS CORREGIDAS CON NUEVOS CAMPOS ===
-      
-      // Fecha cuando lo necesita (fecha seleccionada por el usuario)
-      const fechaNecesaria = new Date(requestDate + 'T08:00:00.000Z');
-      
-      // Fecha de entrega (fecha seleccionada por el usuario)
-      const deliveryDateParsed = new Date(deliveryDate + 'T00:00:00.000Z');
-
-      // Parsear hora de salida
-      const [timeStr, ampm] = departureTime.split(' ');
-      const [hourStr, minuteStr] = timeStr.split(':');
-      let hour = parseInt(hourStr);
-      const minute = parseInt(minuteStr);
-
-      if (ampm === 'PM' && hour !== 12) {
-        hour += 12;
-      } else if (ampm === 'AM' && hour === 12) {
-        hour = 0;
-      }
-
-      // Fecha de salida (fecha de entrega + hora especificada)
-      const departureDate = new Date(deliveryDateParsed);
-      departureDate.setHours(hour, minute, 0, 0);
-
-      // Fecha de llegada (calcular desde hora de llegada estimada)
-      const arrivalDate = new Date(departureDate);
-      arrivalDate.setMinutes(arrivalDate.getMinutes() + estimatedTime);
-
-      console.log('🕐 Fechas calculadas:');
-      console.log('Fecha necesaria:', fechaNecesaria.toISOString());
-      console.log('Fecha entrega:', deliveryDate);
-      console.log('Fecha salida:', departureDate.toISOString());
-      console.log('Fecha llegada:', arrivalDate.toISOString());
-      console.log('Hora llegada estimada:', arrivalTime);
-
-      // Preparar datos con nueva estructura de carga
-      const quoteData = {
-        clientId,
-        quoteDescription: quoteDescription || `Transporte de carga con ${selectedTruckType.name}`,
-        quoteName: quoteName || generateQuoteName(),
-        travelLocations: `De ${pickupAddress} a ${destinationAddress}`,
-        truckType: selectedTruckType.category,
-
-        // Fechas actualizadas
-        fechaNecesaria: fechaNecesaria.toISOString(),
-        deliveryDate: arrivalDate.toISOString(),
-        requestDate: requestDate,
-
-        paymentMethod: paymentMethod,
-        pickupLocation: pickupAddress,
-        destinationLocation: destinationAddress,
-        estimatedDistance: routeDistance,
-
-        ruta: {
-          origen: {
-            nombre: pickupAddress,
-            coordenadas: {
-              lat: pickupCoords.latitude,
-              lng: pickupCoords.longitude
-            },
-            tipo: 'cliente'
-          },
-          destino: {
-            nombre: destinationAddress,
-            coordenadas: {
-              lat: destinationCoords.latitude,
-              lng: destinationCoords.longitude
-            },
-            tipo: 'cliente'
-          },
-          distanciaTotal: routeDistance,
-          tiempoEstimado: estimatedTime / 60
-        },
-
-        // === NUEVA ESTRUCTURA DE CARGA ===
-        carga: {
-          categoria: selectedTruckType.category,
-          tipo: cargoType || 'general',
-          descripcion: cargoDescription || quoteDescription || `Carga para transporte con ${selectedTruckType.name}`,
-          peso: {
-            valor: convertWeightToKg(cargoWeight, cargoWeightUnit),
-            unidad: 'kg',
-            valorOriginal: parseFloat(cargoWeight),
-            unidadOriginal: cargoWeightUnit
-          },
-          clasificacionRiesgo: riskClassification,
-          observaciones: cargoDescription || 'Sin observaciones adicionales'
-        },
-
-        horarios: {
-          fechaSalida: departureDate.toISOString(),
-          horaSalida: departureTime,
-          fechaLlegadaEstimada: arrivalDate.toISOString(),
-          horaLlegadaEstimada: arrivalTime,
-          tiempoEstimadoViaje: estimatedTime / 60,
-          flexibilidadHoraria: {
-            permitida: true,
-            rangoTolerancia: 2
-          }
-        },
-
-        observaciones: `Cotización generada desde app móvil. Método de pago: ${paymentMethod}. Tipo: ${selectedTruckType.name}. Peso: ${cargoWeight} ${cargoWeightUnit}`,
-        createdFrom: 'mobile_app',
-        version: '1.0'
-      };
-
-      console.log('📦 Payload final a enviar:', JSON.stringify(quoteData, null, 2));
-
-      const baseUrl = 'https://riveraproject-production-933e.up.railway.app';
-      const token = await AsyncStorage.getItem('clientToken');
-
-      const response = await createQuote({
-        baseUrl,
-        token,
-        payload: quoteData
-      });
-
-      console.log('✅ Respuesta del backend:', response);
-      return response;
-
-    } catch (error) {
-      console.error('❌ Error creando cotización:', error);
-      throw error;
-    } finally {
-      setIsLoading(false);
+    if (!pickupAddress || !pickupAddress.trim()) {
+      throw new Error('La dirección de recogida es requerida');
     }
-  };
+
+    if (!destinationAddress || !destinationAddress.trim()) {
+      throw new Error('La dirección de destino es requerida');
+    }
+
+    if (!pickupCoords || !pickupCoords.latitude || !pickupCoords.longitude) {
+      throw new Error('Las coordenadas de recogida son inválidas');
+    }
+
+    if (!destinationCoords || !destinationCoords.latitude || !destinationCoords.longitude) {
+      throw new Error('Las coordenadas de destino son inválidas');
+    }
+
+    // Validar campos de carga
+    const validationErrors = validateCargoFields();
+    if (validationErrors.length > 0) {
+      Alert.alert('Campos requeridos', validationErrors.join('\n'));
+      return;
+    }
+
+    const clientId = await getClientId();
+    if (!clientId) {
+      throw new Error('No se encontró información del cliente');
+    }
+
+    const now = new Date();
+    const fechaNecesaria = new Date(requestDate + 'T08:00:00.000Z');
+    const deliveryDateParsed = new Date(deliveryDate + 'T00:00:00.000Z');
+
+    const [timeStr, ampm] = departureTime.split(' ');
+    const [hourStr, minuteStr] = timeStr.split(':');
+    let hour = parseInt(hourStr);
+    const minute = parseInt(minuteStr);
+
+    if (ampm === 'PM' && hour !== 12) {
+      hour += 12;
+    } else if (ampm === 'AM' && hour === 12) {
+      hour = 0;
+    }
+
+    const departureDate = new Date(deliveryDateParsed);
+    departureDate.setHours(hour, minute, 0, 0);
+
+    const arrivalDate = new Date(departureDate);
+    arrivalDate.setMinutes(arrivalDate.getMinutes() + estimatedTime);
+
+    console.log('📍 Ubicaciones confirmadas:', {
+      pickup: pickupAddress,
+      destination: destinationAddress,
+      pickupCoords: pickupCoords,
+      destinationCoords: destinationCoords
+    });
+
+    // Preparar datos con validación explícita de ubicaciones
+    const quoteData = {
+      clientId,
+      quoteDescription: quoteDescription || `Transporte de carga con ${selectedTruckType.name}`,
+      quoteName: quoteName || generateQuoteName(),
+      travelLocations: `De ${pickupAddress} a ${destinationAddress}`,
+      truckType: selectedTruckType.category,
+      fechaNecesaria: fechaNecesaria.toISOString(),
+      deliveryDate: arrivalDate.toISOString(),
+      requestDate: requestDate,
+      paymentMethod: paymentMethod,
+      
+      // CAMPOS CRÍTICOS - ASEGURAR QUE TENGAN VALORES
+      pickupLocation: pickupAddress.trim(),
+      destinationLocation: destinationAddress.trim(),
+      estimatedDistance: routeDistance,
+
+      ruta: {
+        origen: {
+          nombre: pickupAddress.trim(),
+          coordenadas: {
+            lat: pickupCoords.latitude,
+            lng: pickupCoords.longitude
+          },
+          tipo: 'cliente'
+        },
+        destino: {
+          nombre: destinationAddress.trim(),
+          coordenadas: {
+            lat: destinationCoords.latitude,
+            lng: destinationCoords.longitude
+          },
+          tipo: 'cliente'
+        },
+        distanciaTotal: routeDistance,
+        tiempoEstimado: estimatedTime
+      },
+
+      carga: {
+        categoria: selectedTruckType.category,
+        tipo: cargoType || 'general',
+        descripcion: cargoDescription || quoteDescription || `Carga para transporte con ${selectedTruckType.name}`,
+        peso: {
+          valor: convertWeightToKg(cargoWeight, cargoWeightUnit),
+          unidad: 'kg',
+          valorOriginal: parseFloat(cargoWeight),
+          unidadOriginal: cargoWeightUnit
+        },
+        clasificacionRiesgo: riskClassification,
+        observaciones: cargoDescription || 'Sin observaciones adicionales'
+      },
+
+      horarios: {
+        fechaSalida: departureDate.toISOString(),
+        horaSalida: departureTime,
+        fechaLlegadaEstimada: arrivalDate.toISOString(),
+        horaLlegadaEstimada: arrivalTime,
+        tiempoEstimadoViaje: estimatedTime,
+        flexibilidadHoraria: {
+          permitida: true,
+          rangoTolerancia: 2
+        }
+      },
+
+      observaciones: `Cotización generada desde app móvil. Método de pago: ${paymentMethod}. Tipo: ${selectedTruckType.name}. Peso: ${cargoWeight} ${cargoWeightUnit}`,
+      createdFrom: 'mobile_app',
+      version: '1.0'
+    };
+
+    console.log('📦 Payload final a enviar:', JSON.stringify(quoteData, null, 2));
+
+    const baseUrl = 'https://riveraproject-production-933e.up.railway.app';
+    const token = await AsyncStorage.getItem('clientToken');
+
+    const response = await createQuote({
+      baseUrl,
+      token,
+      payload: quoteData
+    });
+
+    console.log('✅ Respuesta del backend:', response);
+    return response;
+
+  } catch (error) {
+    console.error('❌ Error creando cotización:', error);
+    throw error;
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   // === LÓGICA CORREGIDA EN handleConfirmBooking - DOS ANIMACIONES DIFERENTES ===
   const handleConfirmBooking = async () => {
