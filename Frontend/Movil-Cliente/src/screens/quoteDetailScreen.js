@@ -207,12 +207,16 @@ const QuoteDetailsScreen = () => {
     const getPrice = () => {
       const priceOptions = [
         quoteData.price,
+        quoteData._raw?.price,
         quoteData.totalPrice,
         quoteData.estimatedPrice,
         quoteData.amount,
         quoteData.total,
+        quoteData._raw?.total,
         quoteData.costos?.total,
-        quoteData.costos?.subtotal
+        quoteData._raw?.costos?.total,
+        quoteData.costos?.subtotal,
+        quoteData._raw?.costos?.subtotal
       ].filter(price => price && typeof price === 'number' && price > 0);
 
       return priceOptions.length > 0 ? priceOptions[0] : 0;
@@ -261,29 +265,38 @@ const QuoteDetailsScreen = () => {
       'juguetes': 'Camión para Juguetes'
     };
 
-    const rawTruckType = quoteData.truckType || quoteData.carga?.categoria || 'otros';
+    const rawTruckType = quoteData.truckType || 
+                         quoteData._raw?.truckType || 
+                         quoteData.carga?.categoria || 
+                         quoteData._raw?.carga?.categoria || 
+                         'otros';
     const friendlyTruckType = truckTypeMap[rawTruckType] || rawTruckType;
 
     const mappedData = {
       // Identificación
-      id: quoteData._id || quoteData.id || 'sin-id',
+      id: quoteData._id || quoteData.id || quoteData._raw?._id || 'sin-id',
 
       // Estado
-      status: (quoteData.status || 'pendiente').toLowerCase(),
+      status: (quoteData.status || quoteData._raw?.status || 'pendiente').toLowerCase(),
 
       // Información básica
       title: safeStringify(getFirstAvailable(
         quoteData.title,
+        quoteData._raw?.title,
         quoteData.quoteName,
+        quoteData._raw?.quoteName,
         quoteData.quoteDescription,
+        quoteData._raw?.quoteDescription,
         quoteData.description,
         'Cotización sin título'
       )),
 
       description: safeStringify(getFirstAvailable(
         quoteData.quoteDescription,
+        quoteData._raw?.quoteDescription,
         quoteData.description,
         quoteData.observaciones,
+        quoteData._raw?.observaciones,
         quoteData.notes,
         'Sin descripción disponible'
       )),
@@ -294,6 +307,7 @@ const QuoteDetailsScreen = () => {
       // Método de pago
       paymentMethod: safeStringify(getFirstAvailable(
         quoteData.paymentMethod,
+        quoteData._raw?.paymentMethod,
         quoteData.metodoPago,
         quoteData.payment_method,
         'Efectivo'
@@ -303,9 +317,11 @@ const QuoteDetailsScreen = () => {
       truckType: safeStringify(friendlyTruckType),
       truckTypeRaw: safeStringify(rawTruckType),
 
-      // UBICACIONES - SIMPLIFICADO Y DIRECTO
+      // UBICACIONES - ACTUALIZADO PARA ACCEDER A _raw
       pickupLocation: safeStringify(
         quoteData.pickupLocation ||
+        quoteData._raw?.pickupLocation ||
+        quoteData._raw?.ruta?.origen?.nombre ||
         quoteData.ruta?.origen?.nombre ||
         quoteData.pickupAddress ||
         'Ubicación de recogida no especificada'
@@ -313,26 +329,33 @@ const QuoteDetailsScreen = () => {
 
       destinationLocation: safeStringify(
         quoteData.destinationLocation ||
+        quoteData._raw?.destinationLocation ||
+        quoteData._raw?.ruta?.destino?.nombre ||
         quoteData.ruta?.destino?.nombre ||
         quoteData.destinationAddress ||
         'Ubicación de destino no especificada'
       ),
 
-      // Coordenadas
-      pickupCoordinates: getCoordinates(quoteData.ruta?.origen),
-      destinationCoordinates: getCoordinates(quoteData.ruta?.destino),
+      // Coordenadas - ACTUALIZADO
+      pickupCoordinates: getCoordinates(quoteData._raw?.ruta?.origen || quoteData.ruta?.origen),
+      destinationCoordinates: getCoordinates(quoteData._raw?.ruta?.destino || quoteData.ruta?.destino),
 
       // Descripción del viaje
       travelLocations: safeStringify(getFirstAvailable(
         quoteData.travelLocations,
+        quoteData._raw?.travelLocations,
         quoteData.travel_locations,
-        `De ${quoteData.pickupLocation || quoteData.ruta?.origen?.nombre || 'origen'} a ${quoteData.destinationLocation || quoteData.ruta?.destino?.nombre || 'destino'}`
+        quoteData.lugarEntrega,
+        `De ${quoteData._raw?.pickupLocation || quoteData.pickupLocation || 'origen'} a ${quoteData._raw?.destinationLocation || quoteData.destinationLocation || 'destino'}`
       )),
 
-      // Horarios
+      // Horarios - ACTUALIZADO
       departureTime: safeStringify(getFirstAvailable(
         quoteData.departureTime,
         quoteData.horaSalida,
+        quoteData._raw?.horaSalida,
+        quoteData._raw?.horarios?.horaSalida,
+        quoteData._raw?.horarios?.fechaSalida,
         quoteData.horarios?.horaSalida,
         quoteData.horarios?.fechaSalida,
         quoteData.scheduledDepartureTime,
@@ -342,6 +365,9 @@ const QuoteDetailsScreen = () => {
       arrivalTime: safeStringify(getFirstAvailable(
         quoteData.arrivalTime,
         quoteData.horaLlegada,
+        quoteData._raw?.horaLlegada,
+        quoteData._raw?.horarios?.horaLlegadaEstimada,
+        quoteData._raw?.horarios?.fechaLlegadaEstimada,
         quoteData.horarios?.horaLlegadaEstimada,
         quoteData.horarios?.fechaLlegadaEstimada,
         quoteData.scheduledArrivalTime,
@@ -351,58 +377,79 @@ const QuoteDetailsScreen = () => {
 
       requestDate: safeStringify(getFirstAvailable(
         quoteData.requestDate,
-        quoteData.fechaNecesaria
+        quoteData._raw?.requestDate,
+        quoteData.fechaNecesaria,
+        quoteData._raw?.fechaNecesaria
       )),
 
       deliveryDate: safeStringify(getFirstAvailable(
         quoteData.deliveryDate,
+        quoteData._raw?.deliveryDate,
+        quoteData._raw?.horarios?.fechaLlegadaEstimada,
         quoteData.horarios?.fechaLlegadaEstimada,
         quoteData.arrivalTime,
         quoteData.scheduledDeliveryDate,
         quoteData.delivery_date
       )),
 
-      departureDateFull: safeStringify(quoteData.horarios?.fechaSalida),
-      arrivalDateFull: safeStringify(quoteData.horarios?.fechaLlegadaEstimada),
+      departureDateFull: safeStringify(
+        quoteData._raw?.horarios?.fechaSalida || 
+        quoteData.horarios?.fechaSalida
+      ),
+      arrivalDateFull: safeStringify(
+        quoteData._raw?.horarios?.fechaLlegadaEstimada || 
+        quoteData.horarios?.fechaLlegadaEstimada
+      ),
 
-      // Tiempo y distancia
-      estimatedTime: (quoteData.estimatedTime || quoteData.horarios?.tiempoEstimadoViaje || 0) * 60,
+      // Tiempo y distancia - ACTUALIZADO
+      estimatedTime: (
+        quoteData.estimatedTime || 
+        quoteData._raw?.estimatedTime ||
+        quoteData._raw?.ruta?.tiempoEstimado ||
+        quoteData.ruta?.tiempoEstimado ||
+        quoteData._raw?.horarios?.tiempoEstimadoViaje ||
+        quoteData.horarios?.tiempoEstimadoViaje || 
+        0
+      ) * 60,
 
       distance: quoteData.estimatedDistance ||
+        quoteData._raw?.estimatedDistance ||
+        quoteData._raw?.ruta?.distanciaTotal ||
         quoteData.ruta?.distanciaTotal ||
         quoteData.distance ||
         0,
 
-      // Información de horarios completa
+      // Información de horarios completa - ACTUALIZADO
       horarios: {
-        fechaSalida: quoteData.horarios?.fechaSalida,
-        horaSalida: quoteData.horarios?.horaSalida,
-        fechaLlegadaEstimada: quoteData.horarios?.fechaLlegadaEstimada,
-        horaLlegadaEstimada: quoteData.horarios?.horaLlegadaEstimada,
-        tiempoEstimadoViaje: quoteData.horarios?.tiempoEstimadoViaje,
-        flexibilidadHoraria: quoteData.horarios?.flexibilidadHoraria || {}
+        fechaSalida: quoteData._raw?.horarios?.fechaSalida || quoteData.horarios?.fechaSalida,
+        horaSalida: quoteData._raw?.horarios?.horaSalida || quoteData.horarios?.horaSalida,
+        fechaLlegadaEstimada: quoteData._raw?.horarios?.fechaLlegadaEstimada || quoteData.horarios?.fechaLlegadaEstimada,
+        horaLlegadaEstimada: quoteData._raw?.horarios?.horaLlegadaEstimada || quoteData.horarios?.horaLlegadaEstimada,
+        tiempoEstimadoViaje: quoteData._raw?.horarios?.tiempoEstimadoViaje || quoteData.horarios?.tiempoEstimadoViaje,
+        flexibilidadHoraria: quoteData._raw?.horarios?.flexibilidadHoraria || quoteData.horarios?.flexibilidadHoraria || {}
       },
 
       // Fechas del sistema
       createdAt: safeStringify(quoteData.createdAt || quoteData._raw?.createdAt || quoteData.created_at),
       updatedAt: safeStringify(quoteData.updatedAt || quoteData._raw?.updatedAt || quoteData.updated_at),
 
-      // Costos detallados
-      costos: quoteData.costos || quoteData.costs || {},
+      // Costos detallados - ACTUALIZADO
+      costos: quoteData._raw?.costos || quoteData.costos || quoteData.costs || {},
 
-      // Información de carga completa
+      // Información de carga completa - ACTUALIZADO
       carga: {
-        categoria: quoteData.carga?.categoria || rawTruckType,
-        tipo: quoteData.carga?.tipo || 'general',
-        descripcion: quoteData.carga?.descripcion || quoteData.carga?.description || '',
-        peso: quoteData.carga?.peso || {},
-        clasificacionRiesgo: quoteData.carga?.clasificacionRiesgo || 'normal',
-        observaciones: quoteData.carga?.observaciones || quoteData.carga?.notes || ''
+        categoria: quoteData._raw?.carga?.categoria || quoteData.carga?.categoria || rawTruckType,
+        tipo: quoteData._raw?.carga?.tipo || quoteData.carga?.tipo || 'general',
+        descripcion: quoteData._raw?.carga?.descripcion || quoteData.carga?.descripcion || quoteData.carga?.description || '',
+        peso: quoteData._raw?.carga?.peso || quoteData.carga?.peso || {},
+        clasificacionRiesgo: quoteData._raw?.carga?.clasificacionRiesgo || quoteData.carga?.clasificacionRiesgo || 'normal',
+        observaciones: quoteData._raw?.carga?.observaciones || quoteData.carga?.observaciones || quoteData.carga?.notes || ''
       },
 
       // Datos adicionales
       observaciones: safeStringify(getFirstAvailable(
         quoteData.observaciones,
+        quoteData._raw?.observaciones,
         quoteData.notes,
         quoteData.comments,
         ''
@@ -410,7 +457,7 @@ const QuoteDetailsScreen = () => {
 
       // Cliente ID
       clientId: (() => {
-        const clientIdValue = quoteData.clientId || quoteData.clienteId || quoteData.client_id;
+        const clientIdValue = quoteData.clientId || quoteData._raw?.clientId || quoteData.clienteId || quoteData.client_id;
         if (clientIdValue && typeof clientIdValue === 'object') {
           return safeStringify(clientIdValue._id || clientIdValue.id || clientIdValue);
         }
@@ -418,13 +465,17 @@ const QuoteDetailsScreen = () => {
       })(),
 
       // Metadata
-      createdFrom: safeStringify(quoteData.createdFrom || quoteData.created_from || 'unknown'),
-      version: safeStringify(quoteData.version || '1.0')
+      createdFrom: safeStringify(quoteData.createdFrom || quoteData._raw?.createdFrom || quoteData.created_from || 'unknown'),
+      version: safeStringify(quoteData.version || quoteData._raw?.version || '1.0')
     };
 
     console.log('=== DATOS MAPEADOS ===');
     console.log('pickupLocation:', mappedData.pickupLocation);
     console.log('destinationLocation:', mappedData.destinationLocation);
+    console.log('travelLocations:', mappedData.travelLocations);
+    console.log('distance:', mappedData.distance);
+    console.log('estimatedTime:', mappedData.estimatedTime);
+    console.log('carga:', mappedData.carga);
     console.log('=====================');
 
     return mappedData;
