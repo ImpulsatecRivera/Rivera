@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { ArrowLeft, Save, DollarSign } from 'lucide-react';
 import { useCotizaciones } from '../../components/Cotizaciones/hook/useCotizaciones'; // Ajusta la ruta según tu estructura
 
@@ -13,6 +13,9 @@ export default function EditarCotizacionForm({ cotizacionId, cotizacion: cotizac
     showSweetAlert,
     closeSweetAlert
   } = useCotizaciones();
+
+  // ✅ SOLUCIÓN: useRef para evitar múltiples cargas
+  const yaCargoRef = useRef(false);
 
   // Estado simple y directo - SIN convertir a String
   const [precios, setPrecios] = useState({
@@ -46,8 +49,11 @@ export default function EditarCotizacionForm({ cotizacionId, cotizacion: cotizac
     console.log('✅ Precios cargados:', nuevosPrecios);
   };
 
-  // Cargar datos iniciales - integrado con tu hook
+  // ✅ CORREGIDO: Cargar datos iniciales CON useRef para evitar re-cargas
   useEffect(() => {
+    // Si ya cargamos una vez, no volver a cargar
+    if (yaCargoRef.current) return;
+    
     console.log('🔍 useEffect ejecutado:', { 
       cotizacionId, 
       cotizacionProp: !!cotizacionProp,
@@ -61,6 +67,7 @@ export default function EditarCotizacionForm({ cotizacionId, cotizacion: cotizac
       cargarPrecios(cotizacionProp);
       setDatosOriginales(cotizacionProp);
       setLoading(false);
+      yaCargoRef.current = true;
       return;
     }
 
@@ -79,6 +86,7 @@ export default function EditarCotizacionForm({ cotizacionId, cotizacion: cotizac
         cargarPrecios(cotizacion);
         setDatosOriginales(cotizacion);
         setLoading(false);
+        yaCargoRef.current = true;
       } else {
         console.error('❌ No se encontró cotización con ID:', cotizacionId);
         console.log('📋 IDs disponibles:', cotizaciones.map(c => c.id || c._id));
