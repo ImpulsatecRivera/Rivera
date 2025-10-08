@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { ArrowLeft, Save, DollarSign } from 'lucide-react';
 import { useCotizaciones } from '../../components/Cotizaciones/hook/useCotizaciones'; // Ajusta la ruta según tu estructura
 
@@ -14,7 +14,10 @@ export default function EditarCotizacionForm({ cotizacionId, cotizacion: cotizac
     closeSweetAlert
   } = useCotizaciones();
 
-  // Estado simple y directo
+  // ✅ SOLUCIÓN: useRef para evitar múltiples cargas
+  const yaCargoRef = useRef(false);
+
+  // Estado simple y directo - SIN convertir a String
   const [precios, setPrecios] = useState({
     price: '',
     combustible: '',
@@ -34,20 +37,23 @@ export default function EditarCotizacionForm({ cotizacionId, cotizacion: cotizac
     console.log('📝 Cargando precios desde cotización:', cotizacion);
     
     const nuevosPrecios = {
-      price: String(cotizacion.price || '0'),
-      combustible: String(cotizacion.costos?.combustible || '0'),
-      peajes: String(cotizacion.costos?.peajes || '0'),
-      conductor: String(cotizacion.costos?.conductor || '0'),
-      otros: String(cotizacion.costos?.otros || '0'),
-      impuestos: String(cotizacion.costos?.impuestos || '0')
+      price: cotizacion.price?.toString() || '',
+      combustible: cotizacion.costos?.combustible?.toString() || '',
+      peajes: cotizacion.costos?.peajes?.toString() || '',
+      conductor: cotizacion.costos?.conductor?.toString() || '',
+      otros: cotizacion.costos?.otros?.toString() || '',
+      impuestos: cotizacion.costos?.impuestos?.toString() || ''
     };
     
     setPrecios(nuevosPrecios);
     console.log('✅ Precios cargados:', nuevosPrecios);
   };
 
-  // Cargar datos iniciales - integrado con tu hook
+  // ✅ CORREGIDO: Cargar datos iniciales CON useRef para evitar re-cargas
   useEffect(() => {
+    // Si ya cargamos una vez, no volver a cargar
+    if (yaCargoRef.current) return;
+    
     console.log('🔍 useEffect ejecutado:', { 
       cotizacionId, 
       cotizacionProp: !!cotizacionProp,
@@ -61,6 +67,7 @@ export default function EditarCotizacionForm({ cotizacionId, cotizacion: cotizac
       cargarPrecios(cotizacionProp);
       setDatosOriginales(cotizacionProp);
       setLoading(false);
+      yaCargoRef.current = true;
       return;
     }
 
@@ -79,6 +86,7 @@ export default function EditarCotizacionForm({ cotizacionId, cotizacion: cotizac
         cargarPrecios(cotizacion);
         setDatosOriginales(cotizacion);
         setLoading(false);
+        yaCargoRef.current = true;
       } else {
         console.error('❌ No se encontró cotización con ID:', cotizacionId);
         console.log('📋 IDs disponibles:', cotizaciones.map(c => c.id || c._id));
@@ -87,15 +95,23 @@ export default function EditarCotizacionForm({ cotizacionId, cotizacion: cotizac
     }
   }, [cotizacionId, cotizacionProp, cotizaciones, hookLoading]);
 
-  // Función súper simple para cambiar valores
+  // Función mejorada para cambiar valores
   const cambiarPrecio = (campo, valor) => {
-    console.log(`🔄 Cambiando ${campo} a: "${valor}"`);
+    // Permitir solo números y punto decimal
+    const valorLimpio = valor.replace(/[^\d.]/g, '');
     
-    setPrecios(prev => {
-      const nuevo = { ...prev, [campo]: valor };
-      console.log('✅ Nuevo estado precios:', nuevo);
-      return nuevo;
-    });
+    // Prevenir múltiples puntos decimales
+    const partes = valorLimpio.split('.');
+    const valorFinal = partes.length > 2 
+      ? partes[0] + '.' + partes.slice(1).join('') 
+      : valorLimpio;
+    
+    console.log(`🔄 Cambiando ${campo} a: "${valorFinal}"`);
+    
+    setPrecios(prev => ({
+      ...prev,
+      [campo]: valorFinal
+    }));
   };
 
   // Calcular totales
@@ -496,16 +512,17 @@ export default function EditarCotizacionForm({ cotizacionId, cotizacion: cotizac
               </label>
               <input
                 type="text"
+                inputMode="decimal"
                 value={precios.price}
                 onChange={(e) => cambiarPrecio('price', e.target.value)}
                 placeholder="Ingresa el precio principal (requerido para enviar)"
                 className={`w-full px-4 py-3 border rounded-md text-lg font-medium focus:ring-2 focus:ring-green-500 focus:border-green-500 ${
-                  parseFloat(precios.price) <= 0 ? 'border-red-300 bg-red-50' : 'border-gray-300 bg-white'
+                  !precios.price || parseFloat(precios.price) <= 0 ? 'border-red-300 bg-red-50' : 'border-gray-300 bg-white'
                 }`}
               />
               <div className="flex justify-between items-center mt-1">
                 <p className="text-xs text-gray-500">Valor actual: ${parseFloat(precios.price) || 0}</p>
-                {parseFloat(precios.price) <= 0 && (
+                {(!precios.price || parseFloat(precios.price) <= 0) && (
                   <p className="text-xs text-red-600">⚠️ Precio requerido para enviar</p>
                 )}
               </div>
@@ -519,6 +536,7 @@ export default function EditarCotizacionForm({ cotizacionId, cotizacion: cotizac
                 </label>
                 <input
                   type="text"
+                  inputMode="decimal"
                   value={precios.combustible}
                   onChange={(e) => cambiarPrecio('combustible', e.target.value)}
                   placeholder="0"
@@ -532,6 +550,7 @@ export default function EditarCotizacionForm({ cotizacionId, cotizacion: cotizac
                 </label>
                 <input
                   type="text"
+                  inputMode="decimal"
                   value={precios.peajes}
                   onChange={(e) => cambiarPrecio('peajes', e.target.value)}
                   placeholder="0"
@@ -545,6 +564,7 @@ export default function EditarCotizacionForm({ cotizacionId, cotizacion: cotizac
                 </label>
                 <input
                   type="text"
+                  inputMode="decimal"
                   value={precios.conductor}
                   onChange={(e) => cambiarPrecio('conductor', e.target.value)}
                   placeholder="0"
@@ -558,6 +578,7 @@ export default function EditarCotizacionForm({ cotizacionId, cotizacion: cotizac
                 </label>
                 <input
                   type="text"
+                  inputMode="decimal"
                   value={precios.otros}
                   onChange={(e) => cambiarPrecio('otros', e.target.value)}
                   placeholder="0"
@@ -571,6 +592,7 @@ export default function EditarCotizacionForm({ cotizacionId, cotizacion: cotizac
                 </label>
                 <input
                   type="text"
+                  inputMode="decimal"
                   value={precios.impuestos}
                   onChange={(e) => cambiarPrecio('impuestos', e.target.value)}
                   placeholder="0"
