@@ -13,6 +13,8 @@ import {
   Alert,
   Modal,
   Platform,
+  KeyboardAvoidingView,
+  Keyboard,
 } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { useNavigation } from '@react-navigation/native';
@@ -71,6 +73,9 @@ const IntegratedTruckRequestScreen = () => {
   const [showSuccessAnimation, setShowSuccessAnimation] = useState(false);
   const [isFirstQuote, setIsFirstQuote] = useState(false);
 
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
+
   const [deliveryDate, setDeliveryDate] = useState('');
   const [arrivalTime, setArrivalTime] = useState('');
   const [requestDate, setRequestDate] = useState('');
@@ -81,25 +86,25 @@ const IntegratedTruckRequestScreen = () => {
   const [riskClassification, setRiskClassification] = useState('normal');
 
   const truckTypes = [
-    {
-      id: 'refrigerado',
-      name: 'Camión Refrigerado',
-      icon: '🧊',
-      description: 'Temperatura controlada',
-      category: 'alimentos_perecederos',
-      basePrice: 50,
-      capacity: '4 personas'
-    },
-    {
-      id: 'seco',
-      name: 'Camión Seco',
-      icon: '📦',
-      description: 'Carga general',
-      category: 'otros',
-      basePrice: 35,
-      capacity: '4 personas'
-    }
-  ];
+  {
+    id: 'refrigerado',
+    name: 'Camión Refrigerado',
+    lottieSource: require('../assets/lottie/Moving.json'), // Tu archivo Lottie
+    description: 'Temperatura controlada',
+    category: 'alimentos_perecederos',
+    basePrice: 50,
+    capacity: '4 personas'
+  },
+  {
+    id: 'seco',
+    name: 'Camión Seco',
+    lottieSource: require('../assets/lottie/Moving.json'), // Tu archivo Lottie
+    description: 'Carga general',
+    category: 'otros',
+    basePrice: 35,
+    capacity: '4 personas'
+  }
+];
 
   const weightUnits = [
     { value: 'kg', label: 'kg' },
@@ -109,6 +114,28 @@ const IntegratedTruckRequestScreen = () => {
 
   useEffect(() => {
     requestLocationPermission();
+    
+    // Keyboard listeners
+    const keyboardWillShow = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
+      (e) => {
+        setKeyboardHeight(e.endCoordinates.height);
+        setIsKeyboardVisible(true);
+      }
+    );
+
+    const keyboardWillHide = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
+      () => {
+        setKeyboardHeight(0);
+        setIsKeyboardVisible(false);
+      }
+    );
+
+    return () => {
+      keyboardWillShow.remove();
+      keyboardWillHide.remove();
+    };
   }, []);
 
   const requestLocationPermission = async () => {
@@ -580,6 +607,8 @@ const IntegratedTruckRequestScreen = () => {
 
   const handleConfirmBooking = async () => {
     try {
+      Keyboard.dismiss();
+      
       const validationErrors = validateCargoFields();
       
       if (validationErrors.length > 0) {
@@ -682,7 +711,6 @@ const IntegratedTruckRequestScreen = () => {
         await new Promise(resolve => setTimeout(resolve, 1000));
       }
 
-      // Intentar búsqueda con y sin restricción de país
       const searchQueries = [
         `${encodeURIComponent(address)}, El Salvador`,
         `${encodeURIComponent(address)}, San Salvador`,
@@ -708,7 +736,6 @@ const IntegratedTruckRequestScreen = () => {
           const data = await response.json();
 
           if (data && data.length > 0) {
-            // Priorizar resultados en El Salvador
             const salvadorResult = data.find(r => 
               r.display_name.toLowerCase().includes('el salvador') ||
               r.display_name.toLowerCase().includes('san salvador')
@@ -785,6 +812,8 @@ const IntegratedTruckRequestScreen = () => {
   };
 
   const confirmLocation = async () => {
+    Keyboard.dismiss();
+    
     if (locationStep === 1 && pickupAddress.trim()) {
       const coords = await geocodeAddress(pickupAddress, 1);
       if (coords) {
@@ -847,13 +876,11 @@ const IntegratedTruckRequestScreen = () => {
   };
 
   const handleMapClick = async (coords) => {
-    // Solo responder a clics del mapa cuando estamos en modo de ubicaciones
     if (currentStep !== 'setLocations') return;
 
     setIsLoading(true);
 
     try {
-      // Intentar con diferentes niveles de zoom para mejor precisión
       const zoomLevels = [18, 16, 14, 12];
       let addressData = null;
 
@@ -877,7 +904,6 @@ const IntegratedTruckRequestScreen = () => {
             }
           }
           
-          // Esperar un poco antes del siguiente intento
           await new Promise(resolve => setTimeout(resolve, 300));
         } catch (error) {
           console.log(`Intento con zoom ${zoom} falló, probando siguiente...`);
@@ -885,7 +911,6 @@ const IntegratedTruckRequestScreen = () => {
         }
       }
 
-      // Si no se encontró con Nominatim, crear una dirección con coordenadas
       if (!addressData) {
         const formattedCoords = `Lat: ${coords.latitude.toFixed(5)}, Lng: ${coords.longitude.toFixed(5)}`;
         addressData = {
@@ -894,7 +919,6 @@ const IntegratedTruckRequestScreen = () => {
         };
       }
 
-      // Guardar la ubicación
       if (locationStep === 1) {
         setPickupAddress(addressData.display_name);
         setPickupCoords(coords);
@@ -925,7 +949,6 @@ const IntegratedTruckRequestScreen = () => {
     } catch (error) {
       console.error('Error con selección de mapa:', error);
       
-      // Incluso si hay error, usar las coordenadas
       const formattedCoords = `Lat: ${coords.latitude.toFixed(5)}, Lng: ${coords.longitude.toFixed(5)}`;
       const fallbackAddress = `Ubicación: ${formattedCoords}`;
       
@@ -992,6 +1015,8 @@ const IntegratedTruckRequestScreen = () => {
   };
 
   const handleBackPress = () => {
+    Keyboard.dismiss();
+    
     if (currentStep === 'setLocations') {
       if (locationStep > 1) {
         setLocationStep(1);
@@ -1211,26 +1236,35 @@ const IntegratedTruckRequestScreen = () => {
     </html>
   `;
 
-  const TruckOption = ({ truck, selected, onPress }) => {
-    return (
-      <TouchableOpacity
-        activeOpacity={0.9}
-        onPress={() => onPress(truck)}
-        style={[
-          styles.truckCard,
-          selected && styles.truckCardSelected
-        ]}
-      >
-        <View style={styles.truckCardContent}>
-          <Text style={styles.truckIcon}>{truck.icon}</Text>
-          <View style={styles.truckInfo}>
-            <Text style={styles.truckName}>{truck.name}</Text>
-            <Text style={styles.truckDescription}>{truck.description}</Text>
-          </View>
+ const TruckOption = ({ truck, selected, onPress }) => {
+  return (
+    <TouchableOpacity
+      activeOpacity={0.9}
+      onPress={() => onPress(truck)}
+      style={[
+        styles.truckCard,
+        selected && styles.truckCardSelected
+      ]}
+    >
+      <View style={styles.truckCardContent}>
+        {/* Reemplaza el Text con LottieView */}
+        <View style={styles.truckIconContainer}>
+          <LottieView
+            source={truck.lottieSource}
+            autoPlay
+            loop
+            style={styles.truckLottieIcon}
+            resizeMode="contain"
+          />
         </View>
-      </TouchableOpacity>
-    );
-  };
+        <View style={styles.truckInfo}>
+          <Text style={styles.truckName}>{truck.name}</Text>
+          <Text style={styles.truckDescription}>{truck.description}</Text>
+        </View>
+      </View>
+    </TouchableOpacity>
+  );
+};
 
   const FirstQuoteAnimation = () => (
     <Modal visible={showFirstQuoteAnimation} transparent={false} animationType="fade" statusBarTranslucent={true}>
@@ -1295,93 +1329,107 @@ const IntegratedTruckRequestScreen = () => {
       </View>
 
       {currentStep === 'setLocations' && (
-        <View style={styles.bottomSheet}>
-          <View style={styles.dragHandle} />
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.keyboardAvoidingView}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+        >
+          <View style={[
+            styles.bottomSheet,
+            isKeyboardVisible && { paddingBottom: Platform.OS === 'ios' ? 0 : keyboardHeight }
+          ]}>
+            <View style={styles.dragHandle} />
 
-          <View style={styles.locationContent}>
-            <Text style={styles.locationTitle}>Planifica tu viaje</Text>
+            <ScrollView 
+              style={styles.locationScrollContent}
+              contentContainerStyle={styles.locationContent}
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}
+            >
+              <Text style={styles.locationTitle}>Planifica tu viaje</Text>
 
-            {locationStep === 1 && (
-              <>
-                <View style={styles.inputContainer}>
-                  <View style={styles.locationDot} />
-                  <TextInput
-                    style={styles.addressInput}
-                    placeholder="Origen"
-                    placeholderTextColor={COLORS.mediumGray}
-                    value={pickupAddress}
-                    onChangeText={setPickupAddress}
-                    onFocus={() => {
-                      if (pickupAddress) {
-                        setPickupAddress('');
-                        setPickupCoords(null);
-                      }
-                    }}
-                  />
-                </View>
+              {locationStep === 1 && (
+                <>
+                  <View style={styles.inputContainer}>
+                    <View style={styles.locationDot} />
+                    <TextInput
+                      style={styles.addressInput}
+                      placeholder="Origen"
+                      placeholderTextColor={COLORS.mediumGray}
+                      value={pickupAddress}
+                      onChangeText={setPickupAddress}
+                      onFocus={() => {
+                        if (pickupAddress) {
+                          setPickupAddress('');
+                          setPickupCoords(null);
+                        }
+                      }}
+                    />
+                  </View>
 
-                {currentLocation && (
-                  <TouchableOpacity
-                    style={styles.currentLocationButton}
-                    onPress={useCurrentLocationAsPickup}
-                    disabled={isLoadingLocation}
-                  >
-                    <Text style={styles.currentLocationIcon}>📍</Text>
-                    <Text style={styles.currentLocationText}>Usar mi ubicación actual</Text>
-                  </TouchableOpacity>
-                )}
+                  {currentLocation && (
+                    <TouchableOpacity
+                      style={styles.currentLocationButton}
+                      onPress={useCurrentLocationAsPickup}
+                      disabled={isLoadingLocation}
+                    >
+                      <Text style={styles.currentLocationIcon}>📍</Text>
+                      <Text style={styles.currentLocationText}>Usar mi ubicación actual</Text>
+                    </TouchableOpacity>
+                  )}
 
-                {pickupAddress.trim().length > 5 && (
-                  <TouchableOpacity
-                    style={styles.primaryButton}
-                    onPress={confirmLocation}
-                    disabled={isLoading}
-                  >
-                    <Text style={styles.primaryButtonText}>Confirmar origen</Text>
-                  </TouchableOpacity>
-                )}
-              </>
-            )}
+                  {pickupAddress.trim().length > 5 && (
+                    <TouchableOpacity
+                      style={styles.primaryButton}
+                      onPress={confirmLocation}
+                      disabled={isLoading}
+                    >
+                      <Text style={styles.primaryButtonText}>Confirmar origen</Text>
+                    </TouchableOpacity>
+                  )}
+                </>
+              )}
 
-            {locationStep === 2 && (
-              <>
-                <View style={styles.inputContainer}>
-                  <View style={styles.locationDot} />
-                  <Text style={styles.fixedAddress} numberOfLines={1}>
-                    {pickupAddress}
-                  </Text>
-                </View>
+              {locationStep === 2 && (
+                <>
+                  <View style={styles.inputContainer}>
+                    <View style={styles.locationDot} />
+                    <Text style={styles.fixedAddress} numberOfLines={1}>
+                      {pickupAddress}
+                    </Text>
+                  </View>
 
-                <View style={styles.inputContainer}>
-                  <View style={[styles.locationDot, { backgroundColor: COLORS.black }]} />
-                  <TextInput
-                    style={styles.addressInput}
-                    placeholder="Destino"
-                    placeholderTextColor={COLORS.mediumGray}
-                    value={destinationAddress}
-                    onChangeText={setDestinationAddress}
-                    onFocus={() => {
-                      if (destinationAddress) {
-                        setDestinationAddress('');
-                        setDestinationCoords(null);
-                      }
-                    }}
-                  />
-                </View>
+                  <View style={styles.inputContainer}>
+                    <View style={[styles.locationDot, { backgroundColor: COLORS.black }]} />
+                    <TextInput
+                      style={styles.addressInput}
+                      placeholder="Destino"
+                      placeholderTextColor={COLORS.mediumGray}
+                      value={destinationAddress}
+                      onChangeText={setDestinationAddress}
+                      onFocus={() => {
+                        if (destinationAddress) {
+                          setDestinationAddress('');
+                          setDestinationCoords(null);
+                        }
+                      }}
+                    />
+                  </View>
 
-                {destinationAddress.trim().length > 5 && (
-                  <TouchableOpacity
-                    style={styles.primaryButton}
-                    onPress={confirmLocation}
-                    disabled={isLoading}
-                  >
-                    <Text style={styles.primaryButtonText}>Confirmar destino</Text>
-                  </TouchableOpacity>
-                )}
-              </>
-            )}
+                  {destinationAddress.trim().length > 5 && (
+                    <TouchableOpacity
+                      style={styles.primaryButton}
+                      onPress={confirmLocation}
+                      disabled={isLoading}
+                    >
+                      <Text style={styles.primaryButtonText}>Confirmar destino</Text>
+                    </TouchableOpacity>
+                  )}
+                </>
+              )}
+            </ScrollView>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       )}
 
       {currentStep === 'selectTruck' && (
@@ -1416,138 +1464,152 @@ const IntegratedTruckRequestScreen = () => {
       )}
 
       {currentStep === 'details' && (
-        <ScrollView style={styles.bottomSheet} contentContainerStyle={styles.detailsContent}>
-          <View style={styles.dragHandle} />
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.keyboardAvoidingView}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+        >
+          <ScrollView 
+            style={[
+              styles.bottomSheet,
+              isKeyboardVisible && { paddingBottom: Platform.OS === 'ios' ? 0 : keyboardHeight }
+            ]} 
+            contentContainerStyle={styles.detailsContent}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+          >
+            <View style={styles.dragHandle} />
 
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Fechas y horarios</Text>
-            
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Fecha del servicio</Text>
-              <TextInput
-                style={styles.textInput}
-                value={requestDate}
-                onChangeText={setRequestDate}
-                placeholder="YYYY-MM-DD"
-                placeholderTextColor={COLORS.mediumGray}
-              />
-            </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Hora de salida</Text>
-              <TextInput
-                style={styles.textInput}
-                value={departureTime}
-                onChangeText={setDepartureTime}
-                placeholder="10:00 AM"
-                placeholderTextColor={COLORS.mediumGray}
-              />
-            </View>
-          </View>
-
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Información de la carga</Text>
-            
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Tipo de carga</Text>
-              <TextInput
-                style={styles.textInput}
-                value={cargoType}
-                onChangeText={setCargoType}
-                placeholder="Ej: Electrodomésticos"
-                placeholderTextColor={COLORS.mediumGray}
-              />
-            </View>
-
-            <View style={styles.weightRow}>
-              <View style={[styles.inputGroup, { flex: 2 }]}>
-                <Text style={styles.inputLabel}>Peso</Text>
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Fechas y horarios</Text>
+              
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Fecha del servicio</Text>
                 <TextInput
                   style={styles.textInput}
-                  value={cargoWeight}
-                  onChangeText={setCargoWeight}
-                  placeholder="0"
+                  value={requestDate}
+                  onChangeText={setRequestDate}
+                  placeholder="YYYY-MM-DD"
                   placeholderTextColor={COLORS.mediumGray}
-                  keyboardType="numeric"
                 />
               </View>
 
-              <View style={[styles.inputGroup, { flex: 1, marginLeft: 12 }]}>
-                <Text style={styles.inputLabel}>Unidad</Text>
-                <View style={styles.unitPicker}>
-                  {weightUnits.map((unit) => (
-                    <TouchableOpacity
-                      key={unit.value}
-                      style={[
-                        styles.unitOption,
-                        cargoWeightUnit === unit.value && styles.unitOptionSelected
-                      ]}
-                      onPress={() => setCargoWeightUnit(unit.value)}
-                    >
-                      <Text style={[
-                        styles.unitText,
-                        cargoWeightUnit === unit.value && styles.unitTextSelected
-                      ]}>
-                        {unit.label}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Hora de salida</Text>
+                <TextInput
+                  style={styles.textInput}
+                  value={departureTime}
+                  onChangeText={setDepartureTime}
+                  placeholder="10:00 AM"
+                  placeholderTextColor={COLORS.mediumGray}
+                />
+              </View>
+            </View>
+
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Información de la carga</Text>
+              
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Tipo de carga</Text>
+                <TextInput
+                  style={styles.textInput}
+                  value={cargoType}
+                  onChangeText={setCargoType}
+                  placeholder="Ej: Electrodomésticos"
+                  placeholderTextColor={COLORS.mediumGray}
+                />
+              </View>
+
+              <View style={styles.weightRow}>
+                <View style={[styles.inputGroup, { flex: 2 }]}>
+                  <Text style={styles.inputLabel}>Peso</Text>
+                  <TextInput
+                    style={styles.textInput}
+                    value={cargoWeight}
+                    onChangeText={setCargoWeight}
+                    placeholder="0"
+                    placeholderTextColor={COLORS.mediumGray}
+                    keyboardType="numeric"
+                  />
+                </View>
+
+                <View style={[styles.inputGroup, { flex: 1, marginLeft: 12 }]}>
+                  <Text style={styles.inputLabel}>Unidad</Text>
+                  <View style={styles.unitPicker}>
+                    {weightUnits.map((unit) => (
+                      <TouchableOpacity
+                        key={unit.value}
+                        style={[
+                          styles.unitOption,
+                          cargoWeightUnit === unit.value && styles.unitOptionSelected
+                        ]}
+                        onPress={() => setCargoWeightUnit(unit.value)}
+                      >
+                        <Text style={[
+                          styles.unitText,
+                          cargoWeightUnit === unit.value && styles.unitTextSelected
+                        ]}>
+                          {unit.label}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
                 </View>
               </View>
             </View>
-          </View>
 
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Método de pago</Text>
-            
-            <TouchableOpacity
-              style={[
-                styles.paymentCard,
-                paymentMethod === 'efectivo' && styles.paymentCardSelected
-              ]}
-              onPress={() => setPaymentMethod('efectivo')}
-            >
-              <Text style={styles.paymentIcon}>💵</Text>
-              <Text style={styles.paymentText}>Efectivo</Text>
-            </TouchableOpacity>
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Método de pago</Text>
+              
+              <TouchableOpacity
+                style={[
+                  styles.paymentCard,
+                  paymentMethod === 'efectivo' && styles.paymentCardSelected
+                ]}
+                onPress={() => setPaymentMethod('efectivo')}
+              >
+                <Text style={styles.paymentIcon}>💵</Text>
+                <Text style={styles.paymentText}>Efectivo</Text>
+              </TouchableOpacity>
 
-            <TouchableOpacity
-              style={[
-                styles.paymentCard,
-                paymentMethod === 'transferencia' && styles.paymentCardSelected
-              ]}
-              onPress={() => setPaymentMethod('transferencia')}
-            >
-              <Text style={styles.paymentIcon}>💳</Text>
-              <Text style={styles.paymentText}>Transferencia</Text>
-            </TouchableOpacity>
-          </View>
+              <TouchableOpacity
+                style={[
+                  styles.paymentCard,
+                  paymentMethod === 'transferencia' && styles.paymentCardSelected
+                ]}
+                onPress={() => setPaymentMethod('transferencia')}
+              >
+                <Text style={styles.paymentIcon}>💳</Text>
+                <Text style={styles.paymentText}>Transferencia</Text>
+              </TouchableOpacity>
+            </View>
 
-          <View style={styles.finalButtonContainer}>
-            {!isFormValid() && (
-              <View style={styles.warningBox}>
-                <Text style={styles.warningText}>
-                  Completa todos los campos requeridos
-                </Text>
-              </View>
-            )}
-
-            <TouchableOpacity
-              style={[
-                styles.primaryButton,
-                !isFormValid() && styles.primaryButtonDisabled
-              ]}
-              onPress={handleConfirmBooking}
-              disabled={!isFormValid() || isLoading}
-            >
-              {isLoading ? (
-                <ActivityIndicator size="small" color={COLORS.white} />
-              ) : (
-                <Text style={styles.primaryButtonText}>Crear cotización</Text>
+            <View style={styles.finalButtonContainer}>
+              {!isFormValid() && (
+                <View style={styles.warningBox}>
+                  <Text style={styles.warningText}>
+                    Completa todos los campos requeridos
+                  </Text>
+                </View>
               )}
-            </TouchableOpacity>
-          </View>
-        </ScrollView>
+
+              <TouchableOpacity
+                style={[
+                  styles.primaryButton,
+                  !isFormValid() && styles.primaryButtonDisabled
+                ]}
+                onPress={handleConfirmBooking}
+                disabled={!isFormValid() || isLoading}
+              >
+                {isLoading ? (
+                  <ActivityIndicator size="small" color={COLORS.white} />
+                ) : (
+                  <Text style={styles.primaryButtonText}>Crear cotización</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </ScrollView>
+        </KeyboardAvoidingView>
       )}
 
       <FirstQuoteAnimation />
@@ -1629,6 +1691,13 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 8,
   },
+  keyboardAvoidingView: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    width: '100%',
+  },
   dragHandle: {
     width: 36,
     height: 4,
@@ -1639,9 +1708,12 @@ const styles = StyleSheet.create({
     marginTop: 8,
     marginBottom: 16,
   },
+  locationScrollContent: {
+    maxHeight: height * 0.65,
+  },
   locationContent: {
     padding: 16,
-    paddingBottom: 24,
+    paddingBottom: 40,
   },
   locationTitle: {
     fontSize: 26,
@@ -1709,42 +1781,6 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: COLORS.black,
   },
-
-  mapHintOverlay: {
-    position: 'absolute',
-    top: 80,
-    left: 16,
-    right: 16,
-    zIndex: 1000,
-    pointerEvents: 'none',
-  },
-
-  mapHintBanner: {
-    backgroundColor: 'rgba(0, 0, 0, 0.75)',
-    borderRadius: 8,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    alignItems: 'center',
-  },
-
-  mapHintText: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: COLORS.white,
-    textAlign: 'center',
-  },
-
-  changeLocationButton: {
-    alignItems: 'center',
-    paddingVertical: 12,
-    marginBottom: 8,
-  },
-
-  changeLocationText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: COLORS.blue,
-  },
   scrollContent: {
     flex: 1,
   },
@@ -1798,6 +1834,17 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: COLORS.mediumGray,
   },
+  truckIconContainer: {
+  width: 60,
+  height: 60,
+  marginRight: 16,
+  alignItems: 'center',
+  justifyContent: 'center',
+},
+truckLottieIcon: {
+  width: 60,
+  height: 60,
+},
   buttonContainer: {
     padding: 16,
     paddingBottom: 24,
@@ -1828,7 +1875,7 @@ const styles = StyleSheet.create({
   },
   detailsContent: {
     padding: 16,
-    paddingBottom: 100,
+    paddingBottom: 120,
   },
   section: {
     marginBottom: 24,
