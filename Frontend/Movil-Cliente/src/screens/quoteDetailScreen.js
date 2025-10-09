@@ -401,16 +401,15 @@ const QuoteDetailsScreen = () => {
         quoteData.horarios?.fechaLlegadaEstimada
       ),
 
-      // Tiempo y distancia - ACTUALIZADO
-      estimatedTime: (
+      // Tiempo y distancia - ACTUALIZADO (el tiempo ya viene en minutos desde el backend)
+      estimatedTime: 
         quoteData.estimatedTime || 
         quoteData._raw?.estimatedTime ||
         quoteData._raw?.ruta?.tiempoEstimado ||
         quoteData.ruta?.tiempoEstimado ||
         quoteData._raw?.horarios?.tiempoEstimadoViaje ||
         quoteData.horarios?.tiempoEstimadoViaje || 
-        0
-      ) * 60,
+        0,
 
       distance: quoteData.estimatedDistance ||
         quoteData._raw?.estimatedDistance ||
@@ -483,6 +482,7 @@ const QuoteDetailsScreen = () => {
 
   // Aplicar el mapeo robusto
   const mappedQuote = createRobustMapping(data);
+
   // Función para aceptar cotización
   const handleAcceptQuote = async () => {
     try {
@@ -672,7 +672,7 @@ const QuoteDetailsScreen = () => {
     return `${hours} ${hours === 1 ? 'hora' : 'horas'} y ${remainingMinutes} minutos`;
   };
 
-  // 👇 AGREGA ESTA FUNCIÓN AQUÍ
+  // Función para obtener colores del estado
   const getStatusColor = (status) => {
     return statusLottieConfig[status?.toLowerCase()] || {
       bg: '#E6FFFA',
@@ -690,7 +690,6 @@ const QuoteDetailsScreen = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* ... resto del JSX */}
       <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
 
       {/* Header */}
@@ -825,42 +824,41 @@ const QuoteDetailsScreen = () => {
           )}
         </View>
 
-        {/* === SECCIÓN DE HORARIOS ACTUALIZADA === */}
+        {/* Sección de Horarios - Solo muestra datos de la cotización */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>📅 Fechas y Horarios</Text>
 
-          {/* Fecha cuando necesita el servicio */}
-          {mappedQuote.requestDate && mappedQuote.requestDate !== 'No especificado' && (
-            <View style={styles.infoRow}>
-              <Text style={styles.label}>📋 Fecha Necesaria del Servicio</Text>
-              <Text style={styles.value}>{formatDate(mappedQuote.requestDate)}</Text>
-            </View>
-          )}
-
-          {/* Fecha de entrega */}
+          {/* Solo Fecha de entrega */}
           {mappedQuote.deliveryDate && mappedQuote.deliveryDate !== 'No especificado' && (
             <View style={styles.infoRow}>
-              <Text style={styles.label}>🚚 Fecha de Entrega/Realización</Text>
+              <Text style={styles.label}>🚚 Fecha de Entrega</Text>
               <Text style={styles.value}>{formatDate(mappedQuote.deliveryDate)}</Text>
             </View>
           )}
 
-          {/* Grid de horarios */}
-          <View style={styles.timeGrid}>
-            <View style={styles.timeCard}>
-              <Ionicons name="play-outline" size={20} color="#10B981" />
-              <Text style={styles.timeLabel}>Hora de Salida</Text>
-              <Text style={styles.timeValue}>{formatTime(mappedQuote.departureTime)}</Text>
-            </View>
+          {/* Grid de horarios - Solo si hay datos */}
+          {((mappedQuote.departureTime && mappedQuote.departureTime !== 'No especificado') ||
+            (mappedQuote.arrivalTime && mappedQuote.arrivalTime !== 'No especificado')) && (
+            <View style={styles.timeGrid}>
+              {mappedQuote.departureTime && mappedQuote.departureTime !== 'No especificado' && (
+                <View style={styles.timeCard}>
+                  <Ionicons name="play-outline" size={20} color="#10B981" />
+                  <Text style={styles.timeLabel}>Hora de Salida</Text>
+                  <Text style={styles.timeValue}>{formatTime(mappedQuote.departureTime)}</Text>
+                </View>
+              )}
 
-            <View style={styles.timeCard}>
-              <Ionicons name="flag-outline" size={20} color="#EF4444" />
-              <Text style={styles.timeLabel}>Hora de Llegada</Text>
-              <Text style={styles.timeValue}>{formatTime(mappedQuote.arrivalTime)}</Text>
+              {mappedQuote.arrivalTime && mappedQuote.arrivalTime !== 'No especificado' && (
+                <View style={styles.timeCard}>
+                  <Ionicons name="flag-outline" size={20} color="#EF4444" />
+                  <Text style={styles.timeLabel}>Hora de Llegada</Text>
+                  <Text style={styles.timeValue}>{formatTime(mappedQuote.arrivalTime)}</Text>
+                </View>
+              )}
             </View>
-          </View>
+          )}
 
-          {/* Tiempo estimado de viaje */}
+          {/* Tiempo estimado solo si existe */}
           {mappedQuote.estimatedTime > 0 && (
             <View style={styles.infoRow}>
               <Text style={styles.label}>⏱️ Tiempo Estimado de Viaje</Text>
@@ -869,22 +867,9 @@ const QuoteDetailsScreen = () => {
               </Text>
             </View>
           )}
-
-          {/* Flexibilidad horaria si existe */}
-          {mappedQuote.horarios?.flexibilidadHoraria?.permitida && (
-            <View style={styles.flexibilityContainer}>
-              <View style={styles.flexibilityHeader}>
-                <Ionicons name="time-outline" size={18} color="#3B82F6" />
-                <Text style={styles.flexibilityTitle}>Flexibilidad Horaria</Text>
-              </View>
-              <Text style={styles.flexibilityText}>
-                Tolerancia: {mappedQuote.horarios.flexibilidadHoraria.rangoTolerancia || 0} horas
-              </Text>
-            </View>
-          )}
         </View>
 
-        {/* === NUEVA SECCIÓN: INFORMACIÓN DE CARGA COMPLETA === */}
+        {/* Información de Carga Completa */}
         {mappedQuote.carga && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>📦 Información de Carga</Text>
@@ -1160,25 +1145,6 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#10AC84',
   },
-  idText: {
-    fontSize: 12,
-    fontFamily: 'monospace',
-    color: '#6B7280',
-    backgroundColor: '#F3F4F6',
-    padding: 8,
-    borderRadius: 6,
-  },
-  observacionesText: {
-    fontSize: 15,
-    color: '#374151',
-    lineHeight: 22,
-    fontStyle: 'italic',
-    backgroundColor: '#F9FAFB',
-    padding: 16,
-    borderRadius: 8,
-    borderLeftWidth: 4,
-    borderLeftColor: '#10AC84',
-  },
 
   // Badge styles
   paymentBadge: {
@@ -1310,34 +1276,6 @@ const styles = StyleSheet.create({
     color: '#8B5CF6',
   },
 
-  // === NUEVOS ESTILOS PARA FLEXIBILIDAD HORARIA ===
-  flexibilityContainer: {
-    backgroundColor: '#EFF6FF',
-    borderRadius: 10,
-    padding: 12,
-    marginTop: 12,
-    borderWidth: 1,
-    borderColor: '#DBEAFE',
-  },
-  flexibilityHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 6,
-  },
-  flexibilityTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#1E40AF',
-    marginLeft: 6,
-  },
-  flexibilityText: {
-    fontSize: 13,
-    color: '#1E3A8A',
-    marginLeft: 24,
-  },
-
-  // === NUEVOS ESTILOS PARA INFORMACIÓN DE CARGA ===
-
   // Badge de categoría
   categoryBadge: {
     backgroundColor: '#F3F4F6',
@@ -1439,61 +1377,6 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
     borderLeftWidth: 3,
     borderLeftColor: '#F59E0B',
-  },
-
-  // Cost styles
-  costContainer: {
-    backgroundColor: '#F9FAFB',
-    borderRadius: 12,
-    padding: 16,
-  },
-  costRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
-  },
-  totalRow: {
-    borderTopWidth: 2,
-    borderTopColor: '#10AC84',
-    borderBottomWidth: 0,
-    paddingTop: 12,
-    marginTop: 8,
-    backgroundColor: '#ECFDF5',
-    marginHorizontal: -16,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-  },
-  costLabel: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  costIcon: {
-    fontSize: 16,
-    marginRight: 8,
-  },
-  costText: {
-    fontSize: 15,
-    color: '#374151',
-    fontWeight: '500',
-  },
-  totalText: {
-    fontSize: 16,
-    color: '#065F46',
-    fontWeight: 'bold',
-  },
-  costValue: {
-    fontSize: 15,
-    color: '#111827',
-    fontWeight: '600',
-  },
-  totalValue: {
-    fontSize: 18,
-    color: '#10AC84',
-    fontWeight: 'bold',
   },
 
   // Footer styles
