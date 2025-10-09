@@ -21,6 +21,7 @@ import { useNavigation } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import LottieView from 'lottie-react-native';
 import * as Location from 'expo-location';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { createQuote, fetchQuotesByClient } from '../api/quotes';
 
 const { width, height } = Dimensions.get('window');
@@ -85,26 +86,40 @@ const IntegratedTruckRequestScreen = () => {
   const [cargoDescription, setCargoDescription] = useState('');
   const [riskClassification, setRiskClassification] = useState('normal');
 
+  // Estados para autocompletado
+  const [pickupSuggestions, setPickupSuggestions] = useState([]);
+  const [destinationSuggestions, setDestinationSuggestions] = useState([]);
+  const [showPickupSuggestions, setShowPickupSuggestions] = useState(false);
+  const [showDestinationSuggestions, setShowDestinationSuggestions] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
+  const searchTimeoutRef = useRef(null);
+
+  // Estados para los pickers de fecha/hora
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showTimePicker, setShowTimePicker] = useState(false);
+  const [tempDate, setTempDate] = useState(new Date());
+  const [tempTime, setTempTime] = useState(new Date());
+
   const truckTypes = [
-  {
-    id: 'refrigerado',
-    name: 'Camión Refrigerado',
-    lottieSource: require('../assets/lottie/Moving.json'), // Tu archivo Lottie
-    description: 'Temperatura controlada',
-    category: 'alimentos_perecederos',
-    basePrice: 50,
-    capacity: '4 personas'
-  },
-  {
-    id: 'seco',
-    name: 'Camión Seco',
-    lottieSource: require('../assets/lottie/Moving.json'), // Tu archivo Lottie
-    description: 'Carga general',
-    category: 'otros',
-    basePrice: 35,
-    capacity: '4 personas'
-  }
-];
+    {
+      id: 'refrigerado',
+      name: 'Camión Refrigerado',
+      lottieSource: require('../assets/lottie/Moving.json'),
+      description: 'Temperatura controlada',
+      category: 'alimentos_perecederos',
+      basePrice: 50,
+      capacity: '4 personas'
+    },
+    {
+      id: 'seco',
+      name: 'Camión Seco',
+      lottieSource: require('../assets/lottie/Moving.json'),
+      description: 'Carga general',
+      category: 'otros',
+      basePrice: 35,
+      capacity: '4 personas'
+    }
+  ];
 
   const weightUnits = [
     { value: 'kg', label: 'kg' },
@@ -115,7 +130,6 @@ const IntegratedTruckRequestScreen = () => {
   useEffect(() => {
     requestLocationPermission();
     
-    // Keyboard listeners
     const keyboardWillShow = Keyboard.addListener(
       Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
       (e) => {
@@ -135,6 +149,9 @@ const IntegratedTruckRequestScreen = () => {
     return () => {
       keyboardWillShow.remove();
       keyboardWillHide.remove();
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
     };
   }, []);
 
@@ -188,6 +205,147 @@ const IntegratedTruckRequestScreen = () => {
         longitude: -89.5564
       };
       setCurrentLocation(defaultLocation);
+    }
+  };
+
+  // Función para buscar sugerencias de lugares
+  const searchPlaces = async (query, isPickup = true) => {
+    if (!query || query.trim().length < 3) {
+      if (isPickup) {
+        setPickupSuggestions([]);
+        setShowPickupSuggestions(false);
+      } else {
+        setDestinationSuggestions([]);
+        setShowDestinationSuggestions(false);
+      }
+      setIsSearching(false);
+      return;
+    }
+
+    setIsSearching(true);
+
+    try {
+      const searchQuery = `${encodeURIComponent(query)}, El Salvador`;
+      
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${searchQuery}&limit=10&addressdetails=1`,
+        {
+          headers: {
+            'User-Agent': 'TruckApp/1.0',
+            'Accept-Language': 'es'
+          }
+        }
+      );
+
+      if (!response.ok) {
+        setIsSearching(false);
+        return;
+      }
+
+      const data = await response.json();
+
+      if (data && data.length > 0) {
+        const formattedSuggestions = data
+          .filter(place => 
+            place.display_name.toLowerCase().includes('el salvador') ||
+            place.display_name.toLowerCase().includes('san salvador')
+          )
+          .map(place => ({
+            id: place.place_id,
+            name: place.name || place.display_name.split(',')[0],
+            address: place.display_name,
+            latitude: parseFloat(place.lat),
+            longitude: parseFloat(place.lon),
+            type: place.type,
+            distance: place.distance || null
+          }));
+
+        if (isPickup) {
+          setPickupSuggestions(formattedSuggestions);
+          setShowPickupSuggestions(true);
+        } else {
+          setDestinationSuggestions(formattedSuggestions);
+          setShowDestinationSuggestions(true);
+        }
+      } else {
+        if (isPickup) {
+          setPickupSuggestions([]);
+          setShowPickupSuggestions(false);
+        } else {
+          setDestinationSuggestions([]);
+          setShowDestinationSuggestions(false);
+        }
+      }
+      
+      setIsSearching(false);
+    } catch (error) {
+      console.error('Error buscando lugares:', error);
+      setIsSearching(false);
+    }
+  };
+
+  // Debounce para la búsqueda
+  const handleSearchInput = (text, isPickup = true) => {
+    if (isPickup) {
+      setPickupAddress(text);
+    } else {
+      setDestinationAddress(text);
+    }
+
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+
+    searchTimeoutRef.current = setTimeout(() => {
+      searchPlaces(text, isPickup);
+    }, 500);
+  };
+
+  // Manejar selección de sugerencia
+  const handleSuggestionSelect = (suggestion, isPickup = true) => {
+    const coords = {
+      latitude: suggestion.latitude,
+      longitude: suggestion.longitude
+    };
+
+    if (isPickup) {
+      setPickupAddress(suggestion.address);
+      setPickupCoords(coords);
+      setShowPickupSuggestions(false);
+      setPickupSuggestions([]);
+
+      if (webViewRef.current && mapReady) {
+        webViewRef.current.postMessage(JSON.stringify({
+          type: 'addMarker',
+          coords: coords,
+          step: 1,
+          address: suggestion.address
+        }));
+      }
+
+      setTimeout(() => {
+        setLocationStep(2);
+      }, 800);
+    } else {
+      setDestinationAddress(suggestion.address);
+      setDestinationCoords(coords);
+      setShowDestinationSuggestions(false);
+      setDestinationSuggestions([]);
+
+      if (webViewRef.current && mapReady) {
+        webViewRef.current.postMessage(JSON.stringify({
+          type: 'addMarker',
+          coords: coords,
+          step: 2,
+          address: suggestion.address
+        }));
+      }
+
+      if (pickupCoords) {
+        setTimeout(() => {
+          calculateRouteDirectly(pickupCoords, coords);
+        }, 800);
+      }
     }
   };
 
@@ -247,6 +405,89 @@ const IntegratedTruckRequestScreen = () => {
     setRequestDate(requestDateStr);
     setDeliveryDate(requestDateStr);
     setArrivalTime(arrivalTimeStr);
+    setTempDate(tomorrow);
+    
+    // Inicializar tempTime con la hora actual de departureTime
+    const now = new Date();
+    const [timeStr, ampm] = departureTime.split(' ');
+    const [hourStr, minuteStr] = timeStr.split(':');
+    let hour = parseInt(hourStr);
+    const minute = parseInt(minuteStr);
+    
+    if (ampm === 'PM' && hour !== 12) {
+      hour += 12;
+    } else if (ampm === 'AM' && hour === 12) {
+      hour = 0;
+    }
+    
+    now.setHours(hour, minute, 0, 0);
+    setTempTime(now);
+  };
+
+  const handleDateChange = (event, selectedDate) => {
+    if (Platform.OS === 'android') {
+      setShowDatePicker(false);
+      
+      if (event.type === 'dismissed') {
+        return;
+      }
+    }
+
+    if (selectedDate) {
+      setTempDate(selectedDate);
+      const dateStr = selectedDate.toISOString().split('T')[0];
+      setRequestDate(dateStr);
+      setDeliveryDate(dateStr);
+    }
+  };
+
+  const handleTimeChange = (event, selectedTime) => {
+    if (Platform.OS === 'android') {
+      setShowTimePicker(false);
+      
+      if (event.type === 'dismissed') {
+        return;
+      }
+    }
+
+    if (selectedTime) {
+      setTempTime(selectedTime);
+      
+      const hours = selectedTime.getHours();
+      const minutes = selectedTime.getMinutes();
+      const ampm = hours >= 12 ? 'PM' : 'AM';
+      const displayHours = hours % 12 || 12;
+      const displayMinutes = minutes.toString().padStart(2, '0');
+      
+      const timeStr = `${displayHours}:${displayMinutes} ${ampm}`;
+      setDepartureTime(timeStr);
+    }
+  };
+
+  const openDatePicker = () => {
+    const currentDate = requestDate ? new Date(requestDate + 'T00:00:00') : new Date();
+    setTempDate(currentDate);
+    setShowDatePicker(true);
+  };
+
+  const openTimePicker = () => {
+    const now = new Date();
+    if (departureTime) {
+      const [timeStr, ampm] = departureTime.split(' ');
+      const [hourStr, minuteStr] = timeStr.split(':');
+      let hour = parseInt(hourStr);
+      const minute = parseInt(minuteStr);
+      
+      if (ampm === 'PM' && hour !== 12) {
+        hour += 12;
+      } else if (ampm === 'AM' && hour === 12) {
+        hour = 0;
+      }
+      
+      now.setHours(hour, minute, 0, 0);
+    }
+    setTempTime(now);
+    setShowTimePicker(true);
   };
 
   const calculateArrivalTime = (departure, estimatedMinutes) => {
@@ -701,138 +942,6 @@ const IntegratedTruckRequestScreen = () => {
     setCurrentStep('details');
   };
 
-  const geocodeAddress = async (address, step, retryCount = 0) => {
-    if (!address.trim()) return null;
-
-    setIsLoading(true);
-
-    try {
-      if (retryCount > 0) {
-        await new Promise(resolve => setTimeout(resolve, 1000));
-      }
-
-      const searchQueries = [
-        `${encodeURIComponent(address)}, El Salvador`,
-        `${encodeURIComponent(address)}, San Salvador`,
-        `${encodeURIComponent(address)}`
-      ];
-
-      let result = null;
-
-      for (const query of searchQueries) {
-        try {
-          const response = await fetch(
-            `https://nominatim.openstreetmap.org/search?format=json&q=${query}&limit=5&addressdetails=1&dedupe=1`,
-            {
-              headers: {
-                'User-Agent': 'TruckApp/1.0',
-                'Accept-Language': 'es'
-              }
-            }
-          );
-
-          if (!response.ok) continue;
-
-          const data = await response.json();
-
-          if (data && data.length > 0) {
-            const salvadorResult = data.find(r => 
-              r.display_name.toLowerCase().includes('el salvador') ||
-              r.display_name.toLowerCase().includes('san salvador')
-            );
-            
-            result = salvadorResult || data[0];
-            break;
-          }
-
-          await new Promise(resolve => setTimeout(resolve, 300));
-        } catch (error) {
-          console.log(`Búsqueda con "${query}" falló, intentando siguiente...`);
-          continue;
-        }
-      }
-
-      if (result) {
-        const coords = {
-          latitude: parseFloat(result.lat),
-          longitude: parseFloat(result.lon)
-        };
-
-        if (step === 1) {
-          setPickupCoords(coords);
-        } else if (step === 2) {
-          setDestinationCoords(coords);
-        }
-
-        const sendMarker = () => {
-          if (webViewRef.current && mapReady) {
-            webViewRef.current.postMessage(JSON.stringify({
-              type: 'addMarker',
-              coords: coords,
-              step: step,
-              address: result.display_name || address
-            }));
-          } else if (retryCount < 3) {
-            setTimeout(sendMarker, 500);
-          }
-        };
-
-        setTimeout(sendMarker, 300);
-        setIsLoading(false);
-        return coords;
-
-      } else {
-        if (retryCount < 1) {
-          return await geocodeAddress(address, step, retryCount + 1);
-        } else {
-          setIsLoading(false);
-          Alert.alert(
-            'Ubicación no encontrada', 
-            'No se pudo encontrar esta dirección. Intenta:\n• Ser más específico\n• Tocar directamente en el mapa\n• Usar tu ubicación actual',
-            [{ text: 'OK' }]
-          );
-          return null;
-        }
-      }
-    } catch (error) {
-      console.error('Error geocoding:', error);
-
-      if (retryCount < 1) {
-        return await geocodeAddress(address, step, retryCount + 1);
-      } else {
-        setIsLoading(false);
-        Alert.alert(
-          'Error de conexión',
-          'No se pudo conectar con el servicio de mapas. Por favor:\n• Verifica tu conexión a internet\n• Intenta tocar el mapa directamente',
-          [{ text: 'OK' }]
-        );
-        return null;
-      }
-    }
-  };
-
-  const confirmLocation = async () => {
-    Keyboard.dismiss();
-    
-    if (locationStep === 1 && pickupAddress.trim()) {
-      const coords = await geocodeAddress(pickupAddress, 1);
-      if (coords) {
-        setPickupCoords(coords);
-        setTimeout(() => {
-          setLocationStep(2);
-        }, 1000);
-      }
-    } else if (locationStep === 2 && destinationAddress.trim()) {
-      const coords = await geocodeAddress(destinationAddress, 2);
-      if (coords) {
-        setDestinationCoords(coords);
-        setTimeout(() => {
-          calculateRouteDirectly(pickupCoords, coords);
-        }, 1000);
-      }
-    }
-  };
-
   const calculateRouteDirectly = async (pickup, destination) => {
     if (!pickup || !destination) {
       setIsLoading(false);
@@ -877,6 +986,11 @@ const IntegratedTruckRequestScreen = () => {
 
   const handleMapClick = async (coords) => {
     if (currentStep !== 'setLocations') return;
+
+    // Ocultar sugerencias al hacer clic en el mapa
+    setShowPickupSuggestions(false);
+    setShowDestinationSuggestions(false);
+    setIsSearching(false);
 
     setIsLoading(true);
 
@@ -931,6 +1045,14 @@ const IntegratedTruckRequestScreen = () => {
             address: addressData.display_name
           }));
         }
+
+        setIsLoading(false);
+
+        // Avanzar automáticamente al paso 2
+        setTimeout(() => {
+          setLocationStep(2);
+        }, 1000);
+
       } else if (locationStep === 2) {
         setDestinationAddress(addressData.display_name);
         setDestinationCoords(coords);
@@ -943,9 +1065,17 @@ const IntegratedTruckRequestScreen = () => {
             address: addressData.display_name
           }));
         }
+
+        setIsLoading(false);
+
+        // Calcular ruta automáticamente
+        if (pickupCoords) {
+          setTimeout(() => {
+            calculateRouteDirectly(pickupCoords, coords);
+          }, 1000);
+        }
       }
       
-      setIsLoading(false);
     } catch (error) {
       console.error('Error con selección de mapa:', error);
       
@@ -964,6 +1094,14 @@ const IntegratedTruckRequestScreen = () => {
             address: fallbackAddress
           }));
         }
+
+        setIsLoading(false);
+
+        // Avanzar automáticamente al paso 2
+        setTimeout(() => {
+          setLocationStep(2);
+        }, 1000);
+
       } else if (locationStep === 2) {
         setDestinationAddress(fallbackAddress);
         setDestinationCoords(coords);
@@ -976,9 +1114,16 @@ const IntegratedTruckRequestScreen = () => {
             address: fallbackAddress
           }));
         }
+
+        setIsLoading(false);
+
+        // Calcular ruta automáticamente
+        if (pickupCoords) {
+          setTimeout(() => {
+            calculateRouteDirectly(pickupCoords, coords);
+          }, 1000);
+        }
       }
-      
-      setIsLoading(false);
     }
   };
 
@@ -1022,6 +1167,8 @@ const IntegratedTruckRequestScreen = () => {
         setLocationStep(1);
         setDestinationAddress('');
         setDestinationCoords(null);
+        setDestinationSuggestions([]);
+        setShowDestinationSuggestions(false);
       } else {
         navigation.goBack();
       }
@@ -1236,35 +1383,34 @@ const IntegratedTruckRequestScreen = () => {
     </html>
   `;
 
- const TruckOption = ({ truck, selected, onPress }) => {
-  return (
-    <TouchableOpacity
-      activeOpacity={0.9}
-      onPress={() => onPress(truck)}
-      style={[
-        styles.truckCard,
-        selected && styles.truckCardSelected
-      ]}
-    >
-      <View style={styles.truckCardContent}>
-        {/* Reemplaza el Text con LottieView */}
-        <View style={styles.truckIconContainer}>
-          <LottieView
-            source={truck.lottieSource}
-            autoPlay
-            loop
-            style={styles.truckLottieIcon}
-            resizeMode="contain"
-          />
+  const TruckOption = ({ truck, selected, onPress }) => {
+    return (
+      <TouchableOpacity
+        activeOpacity={0.9}
+        onPress={() => onPress(truck)}
+        style={[
+          styles.truckCard,
+          selected && styles.truckCardSelected
+        ]}
+      >
+        <View style={styles.truckCardContent}>
+          <View style={styles.truckIconContainer}>
+            <LottieView
+              source={truck.lottieSource}
+              autoPlay
+              loop
+              style={styles.truckLottieIcon}
+              resizeMode="contain"
+            />
+          </View>
+          <View style={styles.truckInfo}>
+            <Text style={styles.truckName}>{truck.name}</Text>
+            <Text style={styles.truckDescription}>{truck.description}</Text>
+          </View>
         </View>
-        <View style={styles.truckInfo}>
-          <Text style={styles.truckName}>{truck.name}</Text>
-          <Text style={styles.truckDescription}>{truck.description}</Text>
-        </View>
-      </View>
-    </TouchableOpacity>
-  );
-};
+      </TouchableOpacity>
+    );
+  };
 
   const FirstQuoteAnimation = () => (
     <Modal visible={showFirstQuoteAnimation} transparent={false} animationType="fade" statusBarTranslucent={true}>
@@ -1345,8 +1491,20 @@ const IntegratedTruckRequestScreen = () => {
               contentContainerStyle={styles.locationContent}
               keyboardShouldPersistTaps="handled"
               showsVerticalScrollIndicator={false}
+              onScrollBeginDrag={() => {
+                Keyboard.dismiss();
+                setShowPickupSuggestions(false);
+                setShowDestinationSuggestions(false);
+              }}
             >
               <Text style={styles.locationTitle}>Planifica tu viaje</Text>
+
+              <Text style={styles.locationHint}>
+                {locationStep === 1 
+                  ? '📍 Toca el mapa para seleccionar tu origen o busca un lugar'
+                  : '🎯 Toca el mapa para seleccionar tu destino o busca un lugar'
+                }
+              </Text>
 
               {locationStep === 1 && (
                 <>
@@ -1354,20 +1512,67 @@ const IntegratedTruckRequestScreen = () => {
                     <View style={styles.locationDot} />
                     <TextInput
                       style={styles.addressInput}
-                      placeholder="Origen"
+                      placeholder="Origen (ej: Metrocentro, Plaza Mundo)"
                       placeholderTextColor={COLORS.mediumGray}
                       value={pickupAddress}
-                      onChangeText={setPickupAddress}
+                      onChangeText={(text) => handleSearchInput(text, true)}
                       onFocus={() => {
-                        if (pickupAddress) {
-                          setPickupAddress('');
-                          setPickupCoords(null);
+                        if (pickupAddress && pickupSuggestions.length > 0) {
+                          setShowPickupSuggestions(true);
                         }
                       }}
                     />
+                    {pickupAddress.length > 0 && (
+                      <TouchableOpacity
+                        style={styles.clearButton}
+                        onPress={() => {
+                          setPickupAddress('');
+                          setPickupCoords(null);
+                          setPickupSuggestions([]);
+                          setShowPickupSuggestions(false);
+                        }}
+                      >
+                        <Text style={styles.clearButtonText}>✕</Text>
+                      </TouchableOpacity>
+                    )}
                   </View>
 
-                  {currentLocation && (
+                  {isSearching && locationStep === 1 && pickupAddress.length >= 3 && (
+                    <View style={styles.searchingContainer}>
+                      <ActivityIndicator size="small" color={COLORS.black} />
+                      <Text style={styles.searchingText}>Buscando lugares...</Text>
+                    </View>
+                  )}
+                  
+                  {showPickupSuggestions && pickupSuggestions.length > 0 && !isSearching && (
+                    <ScrollView 
+                      style={styles.suggestionsContainer}
+                      keyboardShouldPersistTaps="handled"
+                      nestedScrollEnabled={true}
+                    >
+                      {pickupSuggestions.map((suggestion) => (
+                        <TouchableOpacity
+                          key={suggestion.id}
+                          style={styles.suggestionItem}
+                          onPress={() => handleSuggestionSelect(suggestion, true)}
+                        >
+                          <View style={styles.suggestionIcon}>
+                            <Text style={styles.suggestionIconText}>📍</Text>
+                          </View>
+                          <View style={styles.suggestionContent}>
+                            <Text style={styles.suggestionName} numberOfLines={1}>
+                              {suggestion.name}
+                            </Text>
+                            <Text style={styles.suggestionAddress} numberOfLines={1}>
+                              {suggestion.address}
+                            </Text>
+                          </View>
+                        </TouchableOpacity>
+                      ))}
+                    </ScrollView>
+                  )}
+
+                  {currentLocation && !showPickupSuggestions && !pickupCoords && (
                     <TouchableOpacity
                       style={styles.currentLocationButton}
                       onPress={useCurrentLocationAsPickup}
@@ -1375,16 +1580,6 @@ const IntegratedTruckRequestScreen = () => {
                     >
                       <Text style={styles.currentLocationIcon}>📍</Text>
                       <Text style={styles.currentLocationText}>Usar mi ubicación actual</Text>
-                    </TouchableOpacity>
-                  )}
-
-                  {pickupAddress.trim().length > 5 && (
-                    <TouchableOpacity
-                      style={styles.primaryButton}
-                      onPress={confirmLocation}
-                      disabled={isLoading}
-                    >
-                      <Text style={styles.primaryButtonText}>Confirmar origen</Text>
                     </TouchableOpacity>
                   )}
                 </>
@@ -1403,27 +1598,64 @@ const IntegratedTruckRequestScreen = () => {
                     <View style={[styles.locationDot, { backgroundColor: COLORS.black }]} />
                     <TextInput
                       style={styles.addressInput}
-                      placeholder="Destino"
+                      placeholder="Destino (ej: Metrocentro, Plaza Mundo)"
                       placeholderTextColor={COLORS.mediumGray}
                       value={destinationAddress}
-                      onChangeText={setDestinationAddress}
+                      onChangeText={(text) => handleSearchInput(text, false)}
                       onFocus={() => {
-                        if (destinationAddress) {
-                          setDestinationAddress('');
-                          setDestinationCoords(null);
+                        if (destinationAddress && destinationSuggestions.length > 0) {
+                          setShowDestinationSuggestions(true);
                         }
                       }}
                     />
+                    {destinationAddress.length > 0 && (
+                      <TouchableOpacity
+                        style={styles.clearButton}
+                        onPress={() => {
+                          setDestinationAddress('');
+                          setDestinationCoords(null);
+                          setDestinationSuggestions([]);
+                          setShowDestinationSuggestions(false);
+                        }}
+                      >
+                        <Text style={styles.clearButtonText}>✕</Text>
+                      </TouchableOpacity>
+                    )}
                   </View>
 
-                  {destinationAddress.trim().length > 5 && (
-                    <TouchableOpacity
-                      style={styles.primaryButton}
-                      onPress={confirmLocation}
-                      disabled={isLoading}
+                  {isSearching && locationStep === 2 && destinationAddress.length >= 3 && (
+                    <View style={styles.searchingContainer}>
+                      <ActivityIndicator size="small" color={COLORS.black} />
+                      <Text style={styles.searchingText}>Buscando lugares...</Text>
+                    </View>
+                  )}
+                  
+                  {showDestinationSuggestions && destinationSuggestions.length > 0 && !isSearching && (
+                    <ScrollView 
+                      style={styles.suggestionsContainer}
+                      keyboardShouldPersistTaps="handled"
+                      nestedScrollEnabled={true}
                     >
-                      <Text style={styles.primaryButtonText}>Confirmar destino</Text>
-                    </TouchableOpacity>
+                      {destinationSuggestions.map((suggestion) => (
+                        <TouchableOpacity
+                          key={suggestion.id}
+                          style={styles.suggestionItem}
+                          onPress={() => handleSuggestionSelect(suggestion, false)}
+                        >
+                          <View style={styles.suggestionIcon}>
+                            <Text style={styles.suggestionIconText}>📍</Text>
+                          </View>
+                          <View style={styles.suggestionContent}>
+                            <Text style={styles.suggestionName} numberOfLines={1}>
+                              {suggestion.name}
+                            </Text>
+                            <Text style={styles.suggestionAddress} numberOfLines={1}>
+                              {suggestion.address}
+                            </Text>
+                          </View>
+                        </TouchableOpacity>
+                      ))}
+                    </ScrollView>
                   )}
                 </>
               )}
@@ -1484,45 +1716,85 @@ const IntegratedTruckRequestScreen = () => {
               <Text style={styles.sectionTitle}>Fechas y horarios</Text>
               
               <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Fecha del servicio</Text>
-                <TextInput
-                  style={styles.textInput}
-                  value={requestDate}
-                  onChangeText={setRequestDate}
-                  placeholder="YYYY-MM-DD"
-                  placeholderTextColor={COLORS.mediumGray}
-                />
+                <Text style={styles.inputLabel}>Fecha del servicio *</Text>
+                <TouchableOpacity 
+                  style={[
+                    styles.dateTimeButton,
+                    !requestDate && styles.dateTimeButtonEmpty
+                  ]}
+                  onPress={openDatePicker}
+                >
+                  <Text style={styles.dateTimeIcon}>📅</Text>
+                  <Text style={[
+                    styles.dateTimeText,
+                    !requestDate && styles.dateTimePlaceholder
+                  ]}>
+                    {requestDate ? (() => {
+                      const date = new Date(requestDate + 'T00:00:00');
+                      const options = { 
+                        weekday: 'short', 
+                        year: 'numeric', 
+                        month: 'long', 
+                        day: 'numeric' 
+                      };
+                      return date.toLocaleDateString('es-ES', options);
+                    })() : 'Selecciona una fecha'}
+                  </Text>
+                </TouchableOpacity>
               </View>
 
               <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Hora de salida</Text>
-                <TextInput
-                  style={styles.textInput}
-                  value={departureTime}
-                  onChangeText={setDepartureTime}
-                  placeholder="10:00 AM"
-                  placeholderTextColor={COLORS.mediumGray}
-                />
+                <Text style={styles.inputLabel}>Hora de salida *</Text>
+                <TouchableOpacity 
+                  style={styles.dateTimeButton}
+                  onPress={openTimePicker}
+                >
+                  <Text style={styles.dateTimeIcon}>🕐</Text>
+                  <Text style={styles.dateTimeText}>
+                    {departureTime}
+                  </Text>
+                </TouchableOpacity>
               </View>
+
+              {estimatedTime && (
+                <View style={styles.infoBox}>
+                  <Text style={styles.infoLabel}>⏱️ Tiempo estimado de viaje:</Text>
+                  <Text style={styles.infoValue}>{estimatedTime} minutos</Text>
+                </View>
+              )}
+
+              {routeDistance > 0 && (
+                <View style={styles.infoBox}>
+                  <Text style={styles.infoLabel}>📏 Distancia aproximada:</Text>
+                  <Text style={styles.infoValue}>{routeDistance} km</Text>
+                </View>
+              )}
+
+              {arrivalTime && (
+                <View style={styles.infoBox}>
+                  <Text style={styles.infoLabel}>🏁 Hora estimada de llegada:</Text>
+                  <Text style={styles.infoValue}>{arrivalTime}</Text>
+                </View>
+              )}
             </View>
 
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Información de la carga</Text>
               
               <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Tipo de carga</Text>
+                <Text style={styles.inputLabel}>Tipo de carga *</Text>
                 <TextInput
                   style={styles.textInput}
                   value={cargoType}
                   onChangeText={setCargoType}
-                  placeholder="Ej: Electrodomésticos"
+                  placeholder="Ej: Electrodomésticos, Muebles, Alimentos..."
                   placeholderTextColor={COLORS.mediumGray}
                 />
               </View>
 
               <View style={styles.weightRow}>
                 <View style={[styles.inputGroup, { flex: 2 }]}>
-                  <Text style={styles.inputLabel}>Peso</Text>
+                  <Text style={styles.inputLabel}>Peso *</Text>
                   <TextInput
                     style={styles.textInput}
                     value={cargoWeight}
@@ -1556,6 +1828,20 @@ const IntegratedTruckRequestScreen = () => {
                   </View>
                 </View>
               </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Descripción de la carga (opcional)</Text>
+                <TextInput
+                  style={[styles.textInput, styles.textArea]}
+                  value={cargoDescription}
+                  onChangeText={setCargoDescription}
+                  placeholder="Describe los detalles de tu carga..."
+                  placeholderTextColor={COLORS.mediumGray}
+                  multiline
+                  numberOfLines={3}
+                  textAlignVertical="top"
+                />
+              </View>
             </View>
 
             <View style={styles.section}>
@@ -1587,9 +1873,16 @@ const IntegratedTruckRequestScreen = () => {
             <View style={styles.finalButtonContainer}>
               {!isFormValid() && (
                 <View style={styles.warningBox}>
-                  <Text style={styles.warningText}>
-                    Completa todos los campos requeridos
-                  </Text>
+                  <Text style={styles.warningIcon}>⚠️</Text>
+                  <View style={styles.warningContent}>
+                    <Text style={styles.warningTitle}>Campos requeridos:</Text>
+                    <Text style={styles.warningText}>
+                      {!requestDate && '• Fecha del servicio\n'}
+                      {!cargoType && '• Tipo de carga\n'}
+                      {!cargoWeight && '• Peso de la carga\n'}
+                      {cargoWeight && parseFloat(cargoWeight) <= 0 && '• El peso debe ser mayor a 0'}
+                    </Text>
+                  </View>
                 </View>
               )}
 
@@ -1610,6 +1903,106 @@ const IntegratedTruckRequestScreen = () => {
             </View>
           </ScrollView>
         </KeyboardAvoidingView>
+      )}
+
+      {/* Date Picker Modal */}
+      {showDatePicker && Platform.OS === 'ios' && (
+        <Modal
+          transparent={true}
+          animationType="slide"
+          visible={showDatePicker}
+          onRequestClose={() => setShowDatePicker(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.pickerContainer}>
+              <View style={styles.pickerHeader}>
+                <TouchableOpacity onPress={() => setShowDatePicker(false)}>
+                  <Text style={styles.pickerButton}>Cancelar</Text>
+                </TouchableOpacity>
+                <Text style={styles.pickerTitle}>Selecciona la fecha</Text>
+                <TouchableOpacity onPress={() => {
+                  const dateStr = tempDate.toISOString().split('T')[0];
+                  setRequestDate(dateStr);
+                  setDeliveryDate(dateStr);
+                  setShowDatePicker(false);
+                }}>
+                  <Text style={[styles.pickerButton, styles.pickerButtonDone]}>Listo</Text>
+                </TouchableOpacity>
+              </View>
+              <DateTimePicker
+                value={tempDate}
+                mode="date"
+                display="spinner"
+                onChange={handleDateChange}
+                minimumDate={new Date()}
+                textColor={COLORS.black}
+                style={styles.dateTimePicker}
+              />
+            </View>
+          </View>
+        </Modal>
+      )}
+
+      {/* Date Picker para Android */}
+      {showDatePicker && Platform.OS === 'android' && (
+        <DateTimePicker
+          value={tempDate}
+          mode="date"
+          display="default"
+          onChange={handleDateChange}
+          minimumDate={new Date()}
+        />
+      )}
+
+      {/* Time Picker Modal */}
+      {showTimePicker && Platform.OS === 'ios' && (
+        <Modal
+          transparent={true}
+          animationType="slide"
+          visible={showTimePicker}
+          onRequestClose={() => setShowTimePicker(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.pickerContainer}>
+              <View style={styles.pickerHeader}>
+                <TouchableOpacity onPress={() => setShowTimePicker(false)}>
+                  <Text style={styles.pickerButton}>Cancelar</Text>
+                </TouchableOpacity>
+                <Text style={styles.pickerTitle}>Selecciona la hora</Text>
+                <TouchableOpacity onPress={() => {
+                  const hours = tempTime.getHours();
+                  const minutes = tempTime.getMinutes();
+                  const ampm = hours >= 12 ? 'PM' : 'AM';
+                  const displayHours = hours % 12 || 12;
+                  const displayMinutes = minutes.toString().padStart(2, '0');
+                  const timeStr = `${displayHours}:${displayMinutes} ${ampm}`;
+                  setDepartureTime(timeStr);
+                  setShowTimePicker(false);
+                }}>
+                  <Text style={[styles.pickerButton, styles.pickerButtonDone]}>Listo</Text>
+                </TouchableOpacity>
+              </View>
+              <DateTimePicker
+                value={tempTime}
+                mode="time"
+                display="spinner"
+                onChange={handleTimeChange}
+                textColor={COLORS.black}
+                style={styles.dateTimePicker}
+              />
+            </View>
+          </View>
+        </Modal>
+      )}
+
+      {/* Time Picker para Android */}
+      {showTimePicker && Platform.OS === 'android' && (
+        <DateTimePicker
+          value={tempTime}
+          mode="time"
+          display="default"
+          onChange={handleTimeChange}
+        />
       )}
 
       <FirstQuoteAnimation />
@@ -1719,7 +2112,13 @@ const styles = StyleSheet.create({
     fontSize: 26,
     fontWeight: '700',
     color: COLORS.black,
-    marginBottom: 20,
+    marginBottom: 8,
+  },
+  locationHint: {
+    fontSize: 14,
+    color: COLORS.mediumGray,
+    marginBottom: 16,
+    lineHeight: 20,
   },
   inputContainer: {
     flexDirection: 'row',
@@ -1756,6 +2155,20 @@ const styles = StyleSheet.create({
     color: COLORS.black,
     fontWeight: '500',
   },
+  clearButton: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: COLORS.mediumGray,
+    alignItems: 'center',
+    justifyContent: 'center',
+    opacity: 0.6,
+  },
+  clearButtonText: {
+    fontSize: 16,
+    color: COLORS.white,
+    fontWeight: '600',
+  },
   currentLocationButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1780,6 +2193,67 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '500',
     color: COLORS.black,
+  },
+  searchingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.white,
+    borderRadius: 8,
+    padding: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  searchingText: {
+    marginLeft: 12,
+    fontSize: 14,
+    color: COLORS.mediumGray,
+    fontWeight: '500',
+  },
+  suggestionsContainer: {
+    maxHeight: 300,
+    backgroundColor: COLORS.white,
+    borderRadius: 8,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    shadowColor: COLORS.black,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  suggestionItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
+  suggestionIcon: {
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: COLORS.lightGray,
+    borderRadius: 20,
+    marginRight: 12,
+  },
+  suggestionIconText: {
+    fontSize: 20,
+  },
+  suggestionContent: {
+    flex: 1,
+  },
+  suggestionName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: COLORS.black,
+    marginBottom: 4,
+  },
+  suggestionAddress: {
+    fontSize: 13,
+    color: COLORS.mediumGray,
   },
   scrollContent: {
     flex: 1,
@@ -1817,9 +2291,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
-  truckIcon: {
-    fontSize: 36,
+  truckIconContainer: {
+    width: 60,
+    height: 60,
     marginRight: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  truckLottieIcon: {
+    width: 60,
+    height: 60,
   },
   truckInfo: {
     flex: 1,
@@ -1834,17 +2315,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: COLORS.mediumGray,
   },
-  truckIconContainer: {
-  width: 60,
-  height: 60,
-  marginRight: 16,
-  alignItems: 'center',
-  justifyContent: 'center',
-},
-truckLottieIcon: {
-  width: 60,
-  height: 60,
-},
   buttonContainer: {
     padding: 16,
     paddingBottom: 24,
@@ -1905,6 +2375,97 @@ truckLottieIcon: {
     borderWidth: 1,
     borderColor: COLORS.border,
   },
+  textArea: {
+    minHeight: 80,
+    paddingTop: 12,
+  },
+  dateTimeButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.white,
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    shadowColor: COLORS.black,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  dateTimeIcon: {
+    fontSize: 20,
+    marginRight: 12,
+  },
+  dateTimeText: {
+    fontSize: 15,
+    color: COLORS.black,
+    fontWeight: '500',
+  },
+  dateTimeButtonEmpty: {
+    borderColor: COLORS.red,
+    borderWidth: 1.5,
+  },
+  dateTimePlaceholder: {
+    color: COLORS.mediumGray,
+    fontWeight: '400',
+  },
+  infoBox: {
+    backgroundColor: COLORS.lightGray,
+    borderRadius: 8,
+    padding: 12,
+    marginTop: 12,
+    borderLeftWidth: 3,
+    borderLeftColor: COLORS.black,
+  },
+  infoLabel: {
+    fontSize: 13,
+    color: COLORS.mediumGray,
+    marginBottom: 4,
+  },
+  infoValue: {
+    fontSize: 16,
+    color: COLORS.black,
+    fontWeight: '600',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  pickerContainer: {
+    backgroundColor: COLORS.white,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingBottom: Platform.OS === 'ios' ? 40 : 20,
+  },
+  pickerHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
+  pickerTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: COLORS.black,
+  },
+  pickerButton: {
+    fontSize: 16,
+    color: COLORS.mediumGray,
+  },
+  pickerButtonDone: {
+    color: COLORS.black,
+    fontWeight: '600',
+  },
+  dateTimePicker: {
+    height: 200,
+    backgroundColor: COLORS.white,
+  },
   weightRow: {
     flexDirection: 'row',
   },
@@ -1962,15 +2523,31 @@ truckLottieIcon: {
     marginTop: 16,
   },
   warningBox: {
+    flexDirection: 'row',
     backgroundColor: '#FFF3CD',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 12,
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    borderLeftWidth: 4,
+    borderLeftColor: '#F59E0B',
+  },
+  warningIcon: {
+    fontSize: 24,
+    marginRight: 12,
+  },
+  warningContent: {
+    flex: 1,
+  },
+  warningTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#92400E',
+    marginBottom: 4,
   },
   warningText: {
     fontSize: 13,
-    color: '#856404',
-    textAlign: 'center',
+    color: '#92400E',
+    lineHeight: 18,
   },
   animationContainer: {
     flex: 1,

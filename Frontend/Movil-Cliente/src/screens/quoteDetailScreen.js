@@ -10,6 +10,8 @@ import {
   Alert,
   StatusBar,
   ActivityIndicator,
+  TextInput,
+  Modal,
 } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
@@ -108,6 +110,8 @@ const QuoteDetailsScreen = () => {
   const route = useRoute();
   const navigation = useNavigation();
   const [isLoading, setIsLoading] = useState(false);
+  const [showRejectModal, setShowRejectModal] = useState(false);
+  const [rejectReason, setRejectReason] = useState('');
 
   // FIXED: Accept both 'quote' and 'item' parameters for better compatibility
   const { quote, item } = route.params || {};
@@ -159,22 +163,6 @@ const QuoteDetailsScreen = () => {
       val !== '—' &&
       val !== 'No especificado'
     ) || 'No especificado';
-  };
-
-  // Función para convertir peso a kilogramos (igual que en IntegratedTruckRequestScreen)
-  const convertWeightToKg = (weight, unit) => {
-    const weightNum = parseFloat(weight);
-    if (isNaN(weightNum)) return 0;
-
-    switch (unit) {
-      case 'lb':
-        return Math.round(weightNum * 0.453592 * 100) / 100;
-      case 'ton':
-        return Math.round(weightNum * 1000 * 100) / 100;
-      case 'kg':
-      default:
-        return Math.round(weightNum * 100) / 100;
-    }
   };
 
   // Función para formatear peso con unidad
@@ -317,7 +305,7 @@ const QuoteDetailsScreen = () => {
       truckType: safeStringify(friendlyTruckType),
       truckTypeRaw: safeStringify(rawTruckType),
 
-      // UBICACIONES - ACTUALIZADO PARA ACCEDER A _raw
+      // UBICACIONES
       pickupLocation: safeStringify(
         quoteData.pickupLocation ||
         quoteData._raw?.pickupLocation ||
@@ -336,7 +324,7 @@ const QuoteDetailsScreen = () => {
         'Ubicación de destino no especificada'
       ),
 
-      // Coordenadas - ACTUALIZADO
+      // Coordenadas
       pickupCoordinates: getCoordinates(quoteData._raw?.ruta?.origen || quoteData.ruta?.origen),
       destinationCoordinates: getCoordinates(quoteData._raw?.ruta?.destino || quoteData.ruta?.destino),
 
@@ -349,7 +337,7 @@ const QuoteDetailsScreen = () => {
         `De ${quoteData._raw?.pickupLocation || quoteData.pickupLocation || 'origen'} a ${quoteData._raw?.destinationLocation || quoteData.destinationLocation || 'destino'}`
       )),
 
-      // Horarios - ACTUALIZADO
+      // Horarios
       departureTime: safeStringify(getFirstAvailable(
         quoteData.departureTime,
         quoteData.horaSalida,
@@ -401,7 +389,7 @@ const QuoteDetailsScreen = () => {
         quoteData.horarios?.fechaLlegadaEstimada
       ),
 
-      // Tiempo y distancia - ACTUALIZADO (el tiempo ya viene en minutos desde el backend)
+      // Tiempo y distancia
       estimatedTime: 
         quoteData.estimatedTime || 
         quoteData._raw?.estimatedTime ||
@@ -418,7 +406,7 @@ const QuoteDetailsScreen = () => {
         quoteData.distance ||
         0,
 
-      // Información de horarios completa - ACTUALIZADO
+      // Información de horarios completa
       horarios: {
         fechaSalida: quoteData._raw?.horarios?.fechaSalida || quoteData.horarios?.fechaSalida,
         horaSalida: quoteData._raw?.horarios?.horaSalida || quoteData.horarios?.horaSalida,
@@ -432,10 +420,10 @@ const QuoteDetailsScreen = () => {
       createdAt: safeStringify(quoteData.createdAt || quoteData._raw?.createdAt || quoteData.created_at),
       updatedAt: safeStringify(quoteData.updatedAt || quoteData._raw?.updatedAt || quoteData.updated_at),
 
-      // Costos detallados - ACTUALIZADO
+      // Costos detallados
       costos: quoteData._raw?.costos || quoteData.costos || quoteData.costs || {},
 
-      // Información de carga completa - ACTUALIZADO
+      // Información de carga completa
       carga: {
         categoria: quoteData._raw?.carga?.categoria || quoteData.carga?.categoria || rawTruckType,
         tipo: quoteData._raw?.carga?.tipo || quoteData.carga?.tipo || 'general',
@@ -559,45 +547,62 @@ const QuoteDetailsScreen = () => {
         return;
       }
 
-      Alert.alert(
-        "Confirmar Rechazo",
-        "¿Estás seguro de que quieres rechazar esta cotización?",
-        [
-          { text: "Cancelar", style: "cancel" },
-          {
-            text: "Rechazar",
-            style: "destructive",
-            onPress: async () => {
-              setIsLoading(true);
-              try {
-                const response = await fetch(`https://riveraproject-production-933e.up.railway.app/api/cotizaciones/${quoteId}`, {
-                  method: 'PUT',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ status: 'rechazada' })
-                });
-
-                if (response.ok) {
-                  Alert.alert(
-                    "Cotización Rechazada",
-                    "La cotización ha sido rechazada",
-                    [{ text: "OK", onPress: () => navigation.goBack() }]
-                  );
-                } else {
-                  const errorData = await response.json().catch(() => ({ message: 'Error desconocido' }));
-                  throw new Error(errorData.message || `Error ${response.status}`);
-                }
-              } catch (error) {
-                console.error('Error al rechazar cotización:', error);
-                Alert.alert("Error", `No se pudo rechazar la cotización: ${error.message}`);
-              } finally {
-                setIsLoading(false);
-              }
-            }
-          }
-        ]
-      );
+      // Mostrar modal para ingresar motivo de rechazo
+      setShowRejectModal(true);
     } catch (error) {
-      console.error('Error al mostrar alerta de rechazo:', error);
+      console.error('Error al mostrar modal de rechazo:', error);
+    }
+  };
+
+  // Nueva función para confirmar el rechazo con motivo
+  const confirmRejectWithReason = async () => {
+    if (!rejectReason.trim()) {
+      Alert.alert("Campo requerido", "Por favor ingresa un motivo de rechazo");
+      return;
+    }
+
+    setShowRejectModal(false);
+    setIsLoading(true);
+
+    try {
+      const quoteId = mappedQuote.id;
+
+      const response = await fetch(
+        `https://riveraproject-production-933e.up.railway.app/api/cotizaciones/${quoteId}`,
+        {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            status: 'rechazada',
+            motivoRechazo: rejectReason.trim()
+          })
+        }
+      );
+
+      if (response.ok) {
+        setRejectReason('');
+        Alert.alert(
+          "Cotización Rechazada",
+          "La cotización ha sido rechazada correctamente",
+          [{ 
+            text: "OK", 
+            onPress: () => {
+              navigation.navigate('Main', {
+                screen: 'Dashboard',
+                params: { refresh: true }
+              });
+            }
+          }]
+        );
+      } else {
+        const errorData = await response.json().catch(() => ({ message: 'Error desconocido' }));
+        throw new Error(errorData.message || `Error ${response.status}`);
+      }
+    } catch (error) {
+      console.error('Error al rechazar cotización:', error);
+      Alert.alert("Error", `No se pudo rechazar la cotización:\n${error.message}`);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -654,21 +659,17 @@ const QuoteDetailsScreen = () => {
   const formatEstimatedTime = (minutes) => {
     if (!minutes || minutes <= 0) return '—';
 
-    // Si son menos de 60 minutos, solo mostrar minutos
     if (minutes < 60) {
       return `${Math.round(minutes)} minutos`;
     }
 
-    // Convertir a horas y minutos
     const hours = Math.floor(minutes / 60);
     const remainingMinutes = Math.round(minutes % 60);
 
-    // Si no hay minutos restantes, solo mostrar horas
     if (remainingMinutes === 0) {
       return `${hours} ${hours === 1 ? 'hora' : 'horas'}`;
     }
 
-    // Mostrar horas y minutos
     return `${hours} ${hours === 1 ? 'hora' : 'horas'} y ${remainingMinutes} minutos`;
   };
 
@@ -824,11 +825,10 @@ const QuoteDetailsScreen = () => {
           )}
         </View>
 
-        {/* Sección de Horarios - Solo muestra datos de la cotización */}
+        {/* Sección de Horarios */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>📅 Fechas y Horarios</Text>
 
-          {/* Solo Fecha de entrega */}
           {mappedQuote.deliveryDate && mappedQuote.deliveryDate !== 'No especificado' && (
             <View style={styles.infoRow}>
               <Text style={styles.label}>🚚 Fecha de Entrega</Text>
@@ -836,7 +836,6 @@ const QuoteDetailsScreen = () => {
             </View>
           )}
 
-          {/* Grid de horarios - Solo si hay datos */}
           {((mappedQuote.departureTime && mappedQuote.departureTime !== 'No especificado') ||
             (mappedQuote.arrivalTime && mappedQuote.arrivalTime !== 'No especificado')) && (
             <View style={styles.timeGrid}>
@@ -858,7 +857,6 @@ const QuoteDetailsScreen = () => {
             </View>
           )}
 
-          {/* Tiempo estimado solo si existe */}
           {mappedQuote.estimatedTime > 0 && (
             <View style={styles.infoRow}>
               <Text style={styles.label}>⏱️ Tiempo Estimado de Viaje</Text>
@@ -874,7 +872,6 @@ const QuoteDetailsScreen = () => {
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>📦 Información de Carga</Text>
 
-            {/* Tipo de carga */}
             {mappedQuote.carga.tipo && mappedQuote.carga.tipo !== 'general' && (
               <View style={styles.infoRow}>
                 <Text style={styles.label}>🏷️ Tipo de Carga</Text>
@@ -884,7 +881,6 @@ const QuoteDetailsScreen = () => {
               </View>
             )}
 
-            {/* Categoría */}
             {mappedQuote.carga.categoria && (
               <View style={styles.infoRow}>
                 <Text style={styles.label}>📂 Categoría</Text>
@@ -894,7 +890,6 @@ const QuoteDetailsScreen = () => {
               </View>
             )}
 
-            {/* Peso de la carga */}
             {mappedQuote.carga.peso && Object.keys(mappedQuote.carga.peso).length > 0 && (
               <View style={styles.cargoWeightContainer}>
                 <Text style={styles.label}>⚖️ Peso de la Carga</Text>
@@ -905,7 +900,6 @@ const QuoteDetailsScreen = () => {
                     </Text>
                   </View>
 
-                  {/* Mostrar conversión si la unidad original no es kg */}
                   {mappedQuote.carga.peso.unidadOriginal &&
                     mappedQuote.carga.peso.unidadOriginal !== 'kg' &&
                     mappedQuote.carga.peso.valorOriginal && (
@@ -920,7 +914,6 @@ const QuoteDetailsScreen = () => {
               </View>
             )}
 
-            {/* Clasificación de riesgo */}
             {mappedQuote.carga.clasificacionRiesgo && (
               <View style={styles.infoRow}>
                 <Text style={styles.label}>⚠️ Clasificación de Riesgo</Text>
@@ -944,7 +937,6 @@ const QuoteDetailsScreen = () => {
               </View>
             )}
 
-            {/* Descripción de la carga */}
             {mappedQuote.carga.descripcion && mappedQuote.carga.descripcion !== 'No especificado' && (
               <View style={styles.infoRow}>
                 <Text style={styles.label}>📝 Descripción</Text>
@@ -954,7 +946,6 @@ const QuoteDetailsScreen = () => {
               </View>
             )}
 
-            {/* Observaciones de la carga */}
             {mappedQuote.carga.observaciones && mappedQuote.carga.observaciones !== 'No especificado' && (
               <View style={styles.cargoObservationsContainer}>
                 <Text style={styles.label}>💬 Observaciones</Text>
@@ -968,6 +959,72 @@ const QuoteDetailsScreen = () => {
 
         <View style={styles.bottomPadding} />
       </ScrollView>
+
+      {/* Modal para ingresar motivo de rechazo */}
+      <Modal
+        visible={showRejectModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => {
+          setShowRejectModal(false);
+          setRejectReason('');
+        }}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.rejectModalContainer}>
+            <View style={styles.rejectModalHeader}>
+              <Ionicons name="close-circle" size={32} color="#EF4444" />
+              <Text style={styles.rejectModalTitle}>Rechazar Cotización</Text>
+            </View>
+
+            <Text style={styles.rejectModalLabel}>
+              Por favor, indica el motivo del rechazo:
+            </Text>
+
+            <TextInput
+              style={styles.rejectReasonInput}
+              placeholder="Ej: Precio muy alto, Fecha no disponible, etc."
+              placeholderTextColor="#9CA3AF"
+              value={rejectReason}
+              onChangeText={setRejectReason}
+              multiline
+              numberOfLines={4}
+              textAlignVertical="top"
+              maxLength={500}
+            />
+
+            <Text style={styles.characterCount}>
+              {rejectReason.length}/500 caracteres
+            </Text>
+
+            <View style={styles.rejectModalButtons}>
+              <TouchableOpacity
+                style={[styles.rejectModalButton, styles.cancelModalButton]}
+                onPress={() => {
+                  setShowRejectModal(false);
+                  setRejectReason('');
+                }}
+              >
+                <Text style={styles.cancelModalButtonText}>Cancelar</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  styles.rejectModalButton, 
+                  styles.confirmRejectButton,
+                  !rejectReason.trim() && styles.confirmRejectButtonDisabled
+                ]}
+                onPress={confirmRejectWithReason}
+                disabled={!rejectReason.trim()}
+              >
+                <Text style={styles.confirmRejectButtonText}>
+                  Confirmar Rechazo
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       {/* Loading overlay */}
       {isLoading && (
@@ -1021,8 +1078,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F8F9FA',
   },
-
-  // Header styles
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1056,8 +1111,6 @@ const styles = StyleSheet.create({
   refreshButton: {
     padding: 8,
   },
-
-  // Content styles
   content: {
     flex: 1,
   },
@@ -1065,8 +1118,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 10,
   },
-
-  // Status section
   statusSection: {
     alignItems: 'center',
     paddingVertical: 20,
@@ -1101,8 +1152,6 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     textTransform: 'capitalize',
   },
-
-  // Section styles
   section: {
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
@@ -1123,8 +1172,6 @@ const styles = StyleSheet.create({
     borderBottomColor: '#E5E7EB',
     paddingBottom: 8,
   },
-
-  // Info row styles
   infoRow: {
     marginBottom: 16,
   },
@@ -1145,8 +1192,6 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#10AC84',
   },
-
-  // Badge styles
   paymentBadge: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1183,8 +1228,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#4A5568',
   },
-
-  // Route styles
   routeContainer: {
     backgroundColor: '#F9FAFB',
     borderRadius: 12,
@@ -1242,8 +1285,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#3B82F6',
   },
-
-  // Time styles
   timeGrid: {
     flexDirection: 'row',
     marginBottom: 16,
@@ -1275,8 +1316,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#8B5CF6',
   },
-
-  // Badge de categoría
   categoryBadge: {
     backgroundColor: '#F3F4F6',
     paddingHorizontal: 14,
@@ -1291,8 +1330,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#374151',
   },
-
-  // Contenedor de peso de carga
   cargoWeightContainer: {
     marginBottom: 16,
   },
@@ -1325,8 +1362,6 @@ const styles = StyleSheet.create({
     marginLeft: 6,
     fontStyle: 'italic',
   },
-
-  // Badge de clasificación de riesgo
   riskBadge: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1350,8 +1385,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     textTransform: 'capitalize',
   },
-
-  // Descripción de carga
   cargoDescription: {
     fontSize: 15,
     color: '#374151',
@@ -1362,8 +1395,6 @@ const styles = StyleSheet.create({
     borderLeftWidth: 3,
     borderLeftColor: '#3B82F6',
   },
-
-  // Observaciones de carga
   cargoObservationsContainer: {
     marginTop: 8,
   },
@@ -1378,8 +1409,97 @@ const styles = StyleSheet.create({
     borderLeftWidth: 3,
     borderLeftColor: '#F59E0B',
   },
-
-  // Footer styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  rejectModalContainer: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    padding: 24,
+    width: '100%',
+    maxWidth: 400,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  rejectModalHeader: {
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  rejectModalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#1F2937',
+    marginTop: 12,
+  },
+  rejectModalLabel: {
+    fontSize: 15,
+    color: '#4B5563',
+    marginBottom: 12,
+    lineHeight: 22,
+  },
+  rejectReasonInput: {
+    backgroundColor: '#F9FAFB',
+    borderRadius: 12,
+    padding: 16,
+    fontSize: 15,
+    color: '#111827',
+    minHeight: 120,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    textAlignVertical: 'top',
+  },
+  characterCount: {
+    fontSize: 12,
+    color: '#9CA3AF',
+    textAlign: 'right',
+    marginTop: 8,
+    marginBottom: 20,
+  },
+  rejectModalButtons: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  rejectModalButton: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cancelModalButton: {
+    backgroundColor: '#F3F4F6',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  cancelModalButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#374151',
+  },
+  confirmRejectButton: {
+    backgroundColor: '#EF4444',
+    shadowColor: '#EF4444',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  confirmRejectButtonDisabled: {
+    backgroundColor: '#FCA5A5',
+    opacity: 0.6,
+  },
+  confirmRejectButtonText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+  },
   footer: {
     backgroundColor: '#FFFFFF',
     paddingHorizontal: 20,
@@ -1427,8 +1547,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
-
-  // Loading overlay
   loadingOverlay: {
     position: 'absolute',
     top: 0,
@@ -1457,8 +1575,6 @@ const styles = StyleSheet.create({
     color: '#374151',
     fontWeight: '600',
   },
-
-  // Error styles
   errorContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -1490,8 +1606,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
   },
-
-  // Utility styles
   bottomPadding: {
     height: 120,
   },
