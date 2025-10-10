@@ -27,7 +27,7 @@ const statusConfig = {
     borderColor: '#F59E0B',
     color: '#92400E',
     label: 'Pendiente',
-    lottie: null, // Usar ícono temporal hasta conseguir la animación
+    lottie: ClockPending,
     gradient: ['#FEF3C7', '#FCD34D']
   },
   'en ruta': {
@@ -54,6 +54,14 @@ const statusConfig = {
     lottie: CheckSuccess,
     gradient: ['#D1FAE5', '#6EE7B7']
   },
+  aceptada: {
+    bg: '#D1FAE5',
+    borderColor: '#10B981',
+    color: '#047857',
+    label: 'Aceptada',
+    lottie: CheckSuccess,
+    gradient: ['#D1FAE5', '#6EE7B7']
+  },
   cancelado: {
     bg: '#FEE2E2',
     borderColor: '#EF4444',
@@ -67,6 +75,22 @@ const statusConfig = {
     borderColor: '#EF4444',
     color: '#DC2626',
     label: 'Cancelada',
+    lottie: CancelError,
+    gradient: ['#FEE2E2', '#FCA5A5']
+  },
+  rechazada: {
+    bg: '#FEE2E2',
+    borderColor: '#EF4444',
+    color: '#DC2626',
+    label: 'Rechazada',
+    lottie: CancelError,
+    gradient: ['#FEE2E2', '#FCA5A5']
+  },
+  rechazado: {
+    bg: '#FEE2E2',
+    borderColor: '#EF4444',
+    color: '#DC2626',
+    label: 'Rechazado',
     lottie: CancelError,
     gradient: ['#FEE2E2', '#FCA5A5']
   },
@@ -93,6 +117,20 @@ const formatCurrency = (amount) => {
 const getSafeString = (value, fallback = '—') => {
   if (!value || value === '—') return fallback;
   return String(value);
+};
+
+// Función para normalizar el status y asegurarse de que mapee correctamente
+const normalizeStatus = (status) => {
+  if (!status) return 'pendiente';
+  
+  const statusStr = String(status).toLowerCase().trim();
+  
+  // Mapear variaciones de cancelado/rechazado
+  if (statusStr.includes('cancel')) return 'cancelada';
+  if (statusStr.includes('rechaz')) return 'rechazada';
+  if (statusStr.includes('en_ruta') || statusStr.includes('en ruta')) return 'en ruta';
+  
+  return statusStr;
 };
 
 export default function HistorialCard({ item, onPress, index = 0 }) {
@@ -139,7 +177,10 @@ export default function HistorialCard({ item, onPress, index = 0 }) {
   // Validar item
   if (!item) return null;
 
-  const config = statusConfig[(getSafeString(item.status, 'pendiente')).toLowerCase()] || {
+  // Normalizar el status antes de buscar en la configuración
+  const normalizedStatus = normalizeStatus(item.status);
+  
+  const config = statusConfig[normalizedStatus] || {
     bg: '#F3F4F6',
     borderColor: '#9CA3AF',
     color: '#374151',
@@ -238,6 +279,12 @@ export default function HistorialCard({ item, onPress, index = 0 }) {
     outputRange: ['0deg', '180deg'],
   });
 
+  // Determinar si es una cotización cancelada/rechazada
+  const isCancelled = normalizedStatus === 'cancelada' || 
+                     normalizedStatus === 'cancelado' || 
+                     normalizedStatus === 'rechazada' ||
+                     normalizedStatus === 'rechazado';
+
   return (
     <Animated.View
       style={[
@@ -257,6 +304,8 @@ export default function HistorialCard({ item, onPress, index = 0 }) {
           {
             borderColor: config.borderColor,
             shadowColor: config.borderColor,
+            // Asegurar que el borde sea más visible para canceladas
+            borderWidth: isCancelled ? 3 : 3,
           }
         ]}
         activeOpacity={1}
@@ -275,8 +324,8 @@ export default function HistorialCard({ item, onPress, index = 0 }) {
                   source={config.lottie}
                   autoPlay={true}
                   loop={
-                    item?.status === 'en ruta' ? true : // En ruta siempre en loop
-                    item?.status === 'cancelada' || item?.status === 'cancelado' ? true : // Canceladas en loop
+                    normalizedStatus === 'en ruta' ? true : // En ruta siempre en loop
+                    isCancelled ? true : // Canceladas/Rechazadas en loop
                     false // Completadas, ejecutadas, pendientes solo una vez
                   }
                   style={styles.statusLottie}
@@ -284,10 +333,10 @@ export default function HistorialCard({ item, onPress, index = 0 }) {
                 />
               ) : (
                 <Text style={styles.fallbackIcon}>
-                  {item?.status === 'pendiente' ? '⏱️' : 
-                   item?.status === 'en ruta' ? '🚛' :
-                   item?.status === 'completado' || item?.status === 'ejecutada' ? '✅' :
-                   item?.status === 'cancelado' || item?.status === 'cancelada' ? '❌' : '📄'}
+                  {normalizedStatus === 'pendiente' ? '⏱️' : 
+                   normalizedStatus === 'en ruta' ? '🚛' :
+                   normalizedStatus === 'completado' || normalizedStatus === 'ejecutada' || normalizedStatus === 'aceptada' ? '✅' :
+                   isCancelled ? '❌' : '📄'}
                 </Text>
               )}
             </View>
@@ -384,8 +433,18 @@ export default function HistorialCard({ item, onPress, index = 0 }) {
               />
             )}
 
+            {/* Mostrar mensaje especial para cotizaciones canceladas */}
+            {isCancelled && (
+              <View style={styles.cancelledNotice}>
+                <Text style={styles.cancelledIcon}>❌</Text>
+                <Text style={styles.cancelledText}>
+                  Esta cotización fue {config.label.toLowerCase()}
+                </Text>
+              </View>
+            )}
+
             {/* Progreso visual para entregas en ruta */}
-            {item?.status === 'en ruta' && (
+            {normalizedStatus === 'en ruta' && (
               <View style={styles.progressContainer}>
                 <Text style={styles.progressLabel}>Estado del envío</Text>
                 <View style={styles.progressBar}>
@@ -418,10 +477,15 @@ export default function HistorialCard({ item, onPress, index = 0 }) {
         )}
 
         {/* Indicador visual en la esquina para estados importantes */}
-        {(item?.status === 'completado' || item?.status === 'ejecutada' || item?.status === 'cancelado') && (
+        {(normalizedStatus === 'completado' || 
+          normalizedStatus === 'ejecutada' || 
+          normalizedStatus === 'aceptada' || 
+          isCancelled) && (
           <View style={[styles.cornerIndicator, { backgroundColor: config.borderColor }]}>
             <Text style={styles.cornerIcon}>
-              {(item?.status === 'completado' || item?.status === 'ejecutada') ? '✓' : '✕'}
+              {(normalizedStatus === 'completado' || 
+                normalizedStatus === 'ejecutada' || 
+                normalizedStatus === 'aceptada') ? '✓' : '✕'}
             </Text>
           </View>
         )}
@@ -477,7 +541,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 20,
     padding: 16,
-    borderWidth: 3, // Borde más grueso para que se vea mejor
+    borderWidth: 3,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
     shadowRadius: 8,
@@ -623,6 +687,28 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     color: '#059669',
+  },
+  cancelledNotice: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FEE2E2',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    marginTop: 8,
+    marginBottom: 8,
+    borderLeftWidth: 4,
+    borderLeftColor: '#EF4444',
+  },
+  cancelledIcon: {
+    fontSize: 20,
+    marginRight: 12,
+  },
+  cancelledText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#DC2626',
+    flex: 1,
   },
   progressContainer: {
     marginTop: 16,

@@ -1,57 +1,29 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import Animated, {
-  FadeInDown,
-  FadeOutDown,
-  useAnimatedStyle,
-  withTiming,
-  withSpring,
-} from 'react-native-reanimated';
 
-const AnimatedTouchableOpacity = Animated.createAnimatedComponent(TouchableOpacity);
-
-// Componente para botones animados
-const AnimatedButton = ({ children, onPress, delay = 0, style }) => {
+// Componente para botones
+const AnimatedButton = ({ children, onPress, style }) => {
   return (
-    <AnimatedTouchableOpacity
+    <TouchableOpacity
       style={[styles.button, style]}
       onPress={onPress}
-      entering={FadeInDown.delay(delay).springify()}
-      exiting={FadeOutDown}
     >
       {children}
-    </AnimatedTouchableOpacity>
+    </TouchableOpacity>
   );
 };
 
-// Componente para puntos de paginación animados
-const AnimatedDot = ({ isActive, delay = 0 }) => {
-  const animatedStyle = useAnimatedStyle(() => {
-    return {
-      backgroundColor: withTiming(
-        isActive ? '#333333' : '#E0E0E0',
-        { duration: 300 }
-      ),
-      width: withSpring(isActive ? 30 : 10, {
-        damping: 15,
-        stiffness: 150,
-      }),
-      transform: [
-        {
-          scale: withSpring(isActive ? 1.1 : 1, {
-            damping: 15,
-            stiffness: 150,
-          })
-        }
-      ],
-    };
-  });
-
+// Componente para puntos de paginación
+const AnimatedDot = ({ isActive }) => {
   return (
-    <Animated.View
-      style={[styles.dot, animatedStyle]}
-      entering={FadeInDown.delay(delay).springify()}
-      exiting={FadeOutDown}
+    <View
+      style={[
+        styles.dot,
+        {
+          backgroundColor: isActive ? '#333333' : '#E0E0E0',
+          width: isActive ? 30 : 10,
+        }
+      ]}
     />
   );
 };
@@ -66,29 +38,22 @@ const AnimatedBottomNavigation = ({
   nextText = "Siguiente",
   backText = "Atrás",
   skipText = "Saltar",
-  showHeader = false  // ✅ Nuevo prop para controlar el header
+  showHeader = false
 }) => {
   const showBackButton = currentPage > 0;
   const isLastPage = currentPage === totalPages - 1;
 
   return (
-    <Animated.View 
-      style={styles.container}
-      entering={FadeInDown.delay(600)}
-    >
+    <View style={styles.container}>
       {/* Header opcional */}
       {showHeader && (
         <View style={styles.header}>
-          <Animated.Text 
-            style={styles.pageIndicator}
-            entering={FadeInDown.delay(100)}
-          >
+          <Text style={styles.pageIndicator}>
             {currentPage + 1}/{totalPages}
-          </Animated.Text>
+          </Text>
           
           <AnimatedButton 
             onPress={onSkip} 
-            delay={200}
             style={styles.skipButton}
           >
             <Text style={styles.skipButtonText}>{skipText}</Text>
@@ -104,7 +69,6 @@ const AnimatedBottomNavigation = ({
             {showBackButton ? (
               <AnimatedButton 
                 onPress={onBack} 
-                delay={300}
                 style={styles.backButton}
               >
                 <Text style={styles.backButtonText}>{backText}</Text>
@@ -120,7 +84,6 @@ const AnimatedBottomNavigation = ({
               <AnimatedDot 
                 key={index}
                 isActive={index === currentPage}
-                delay={400 + (index * 50)}
               />
             ))}
           </View>
@@ -129,7 +92,6 @@ const AnimatedBottomNavigation = ({
           <View style={styles.navButton}>
             <AnimatedButton 
               onPress={onNext} 
-              delay={500}
               style={styles.nextButton}
             >
               <Text style={styles.nextButtonText}>
@@ -139,13 +101,13 @@ const AnimatedBottomNavigation = ({
           </View>
         </View>
       </View>
-    </Animated.View>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    justifyContent: 'flex-end', // ✅ Solo mostrar navegación en la parte inferior
+    justifyContent: 'flex-end',
   },
   header: {
     flexDirection: 'row',
@@ -201,7 +163,7 @@ const styles = StyleSheet.create({
     color: '#7ED321',
   },
   buttonPlaceholder: {
-    width: 60, // Espacio reservado cuando no hay botón atrás
+    width: 60,
   },
   pagination: {
     flexDirection: 'row',

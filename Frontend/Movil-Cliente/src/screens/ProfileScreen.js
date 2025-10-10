@@ -33,7 +33,6 @@ import SaveAnimation from "../assets/lottie/Blue successful login.json";
 import ProfileAnimation from "../assets/lottie/Profile Avatar of Young Boy.json";
 import LogoutAnimation from "../assets/lottie/Login.json";
 import LoadingAnimation from "../assets/lottie/Sandy Loading.json";
-// Asegúrate de cambiar este nombre por tu archivo real de animación de cámara
 import CameraAnimation from "../assets/lottie/Face Scan.json"; 
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -63,7 +62,6 @@ const ProfileScreen = () => {
   const [imageLoading, setImageLoading] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [imagePickerVisible, setImagePickerVisible] = useState(false);
-  // CORREGIDO: Eliminada la declaración duplicada
   const [cameraLoadingVisible, setCameraLoadingVisible] = useState(false);
 
   // Animaciones
@@ -133,6 +131,23 @@ const ProfileScreen = () => {
         const clienteData = data.data.cliente;
         const actividadData = data.data.actividad;
 
+        // ✅ FUNCIÓN AUXILIAR: Extraer URL de imagen
+        const extractImageUrl = (imageData) => {
+          if (!imageData) return null;
+          
+          // Si es un objeto con url
+          if (typeof imageData === 'object' && imageData.url) {
+            return imageData.url;
+          }
+          
+          // Si es un string directo
+          if (typeof imageData === 'string' && imageData.trim() !== '') {
+            return imageData;
+          }
+          
+          return null;
+        };
+
         const formattedUserInfo = {
           name: String(clienteData?.nombreCompleto || `${clienteData?.firstName || ''} ${clienteData?.lastName || ''}`.trim() || 'Usuario sin nombre'),
           firstName: String(clienteData?.firstName || ''),
@@ -148,10 +163,10 @@ const ProfileScreen = () => {
           diasDesdeRegistro: actividadData?.diasDesdeRegistro ? Number(actividadData.diasDesdeRegistro) : null,
           ultimoAcceso: String(actividadData?.ultimoAcceso || 'No registrado'),
           edad: String(clienteData?.edad || 'No disponible'),
-          profileImage: clienteData?.profileImage || null,
+          profileImage: extractImageUrl(clienteData?.profileImage),
         };
 
-        console.log('Profile image URL:', formattedUserInfo.profileImage);
+        console.log('Profile image URL extraída:', formattedUserInfo.profileImage);
 
         setUserInfo(formattedUserInfo);
         setEditingUserInfo({ ...formattedUserInfo });
@@ -233,11 +248,27 @@ const ProfileScreen = () => {
     setImageLoading(false);
   };
 
-  // Función auxiliar: Verificar si debe mostrar imagen o Lottie
+  // ✅ FUNCIÓN AUXILIAR MEJORADA: Extraer URL de imagen
+  const getImageUrl = (imageData) => {
+    if (!imageData) return null;
+    
+    // Si es un objeto con url
+    if (typeof imageData === 'object' && imageData.url) {
+      return imageData.url;
+    }
+    
+    // Si es un string directo
+    if (typeof imageData === 'string' && imageData.trim() !== '') {
+      return imageData;
+    }
+    
+    return null;
+  };
+
+  // ✅ FUNCIÓN CORREGIDA: Verificar si debe mostrar imagen o Lottie
   const shouldShowImage = () => {
-    return userInfo?.profileImage && 
-           !imageLoadError && 
-           userInfo.profileImage.trim() !== '';
+    const imageUrl = getImageUrl(userInfo?.profileImage);
+    return imageUrl && !imageLoadError;
   };
 
   // Funciones para el selector de imagen
@@ -354,7 +385,7 @@ const ProfileScreen = () => {
     }
   };
 
-  // Función principal: Subir imagen de perfil
+  // ✅ FUNCIÓN PRINCIPAL CORREGIDA: Subir imagen de perfil
   const uploadProfileImage = async (imageUri, fileName) => {
     try {
       setUploadingImage(true);
@@ -384,7 +415,6 @@ const ProfileScreen = () => {
       const response = await fetch(apiUrl, {
         method: 'PUT',
         headers: {
-          // NO enviar Content-Type, fetch lo configura automáticamente para FormData
           'Authorization': token ? `Bearer ${token}` : '',
         },
         body: formData,
@@ -401,8 +431,10 @@ const ProfileScreen = () => {
       console.log('Respuesta del servidor:', data);
 
       if (response.ok && data.success) {
-        // Actualizar la imagen en el estado local inmediatamente
-        const newImageUrl = data.data.cliente.profileImage;
+        // ✅ Extraer la URL correctamente (puede venir como objeto o string)
+        const newImageUrl = getImageUrl(data.data.cliente.profileImage);
+        
+        console.log('Nueva URL de imagen extraída:', newImageUrl);
         
         setUserInfo(prev => ({ 
           ...prev, 
@@ -464,9 +496,11 @@ const ProfileScreen = () => {
     }
   };
 
-  // Componente para el Avatar con manejo mejorado
+  // ✅ COMPONENTE MEJORADO: Avatar con manejo correcto de URL
   const ProfileAvatar = () => {
-    if (shouldShowImage()) {
+    const imageUrl = getImageUrl(userInfo?.profileImage);
+    
+    if (imageUrl && !imageLoadError) {
       return (
         <View style={styles.avatar}>
           {(imageLoading || uploadingImage) && (
@@ -479,7 +513,7 @@ const ProfileScreen = () => {
           )}
           
           <Image 
-            source={{ uri: userInfo.profileImage }}
+            source={{ uri: imageUrl }}
             style={[
               styles.profileImageStyle,
               (imageLoading || uploadingImage) && styles.profileImageLoading
@@ -511,7 +545,7 @@ const ProfileScreen = () => {
     );
   };
 
-  // Función: Guardar cambios (código existente permanece igual)
+  // Función: Guardar cambios
   const handleSaveChanges = async () => {
     try {
       setSaving(true);
@@ -928,79 +962,78 @@ const ProfileScreen = () => {
         </ScrollView>
       </Animated.View>
 
-      {/* Modal selector de imagen */}
       {/* Modal selector de imagen MODERNO */}
-<Modal 
-  transparent 
-  visible={imagePickerVisible} 
-  animationType="slide" 
-  onRequestClose={hideImagePicker}
->
-  <View style={styles.modernBackdrop}>
-    <Pressable style={styles.backdropTouchable} onPress={hideImagePicker} />
-    
-    <View style={styles.modernImagePickerCard}>
-      {/* Header del modal */}
-      <View style={styles.modalHeader}>
-        <View style={styles.modalHandle} />
-        <Text style={styles.modalTitle}>Cambiar foto de perfil</Text>
-        <Text style={styles.modalSubtitle}>Elige una opción para actualizar tu imagen</Text>
-      </View>
-
-      {/* Opciones mejoradas */}
-      <View style={styles.optionsContainer}>
-        {/* Opción Cámara */}
-        <TouchableOpacity 
-          style={styles.modernOption}
-          onPress={takePhotoWithCamera}
-          activeOpacity={0.7}
-        >
-          <View style={styles.optionContent}>
-            <View style={[styles.optionIconContainer, { backgroundColor: '#667eea' }]}>
-              <Text style={styles.optionIcon}>📷</Text>
-            </View>
-            <View style={styles.optionTextContainer}>
-              <Text style={styles.optionTitle}>Tomar Foto</Text>
-              <Text style={styles.optionDescription}>Usa la cámara para capturar una nueva imagen</Text>
-            </View>
-            <View style={styles.optionArrow}>
-              <Text style={styles.arrowIcon}>›</Text>
-            </View>
-          </View>
-        </TouchableOpacity>
-
-        {/* Opción Galería */}
-        <TouchableOpacity 
-          style={styles.modernOption}
-          onPress={pickImageFromGallery}
-          activeOpacity={0.7}
-        >
-          <View style={styles.optionContent}>
-            <View style={[styles.optionIconContainer, { backgroundColor: '#f093fb' }]}>
-              <Text style={styles.optionIcon}>🖼️</Text>
-            </View>
-            <View style={styles.optionTextContainer}>
-              <Text style={styles.optionTitle}>Elegir de Galería</Text>
-              <Text style={styles.optionDescription}>Selecciona una imagen existente</Text>
-            </View>
-            <View style={styles.optionArrow}>
-              <Text style={styles.arrowIcon}>›</Text>
-            </View>
-          </View>
-        </TouchableOpacity>
-      </View>
-
-      {/* Botón cancelar mejorado */}
-      <TouchableOpacity 
-        style={styles.modernCancelButton}
-        onPress={hideImagePicker}
-        activeOpacity={0.8}
+      <Modal 
+        transparent 
+        visible={imagePickerVisible} 
+        animationType="slide" 
+        onRequestClose={hideImagePicker}
       >
-        <Text style={styles.modernCancelText}>Cancelar</Text>
-      </TouchableOpacity>
-    </View>
-  </View>
-</Modal>
+        <View style={styles.modernBackdrop}>
+          <Pressable style={styles.backdropTouchable} onPress={hideImagePicker} />
+          
+          <View style={styles.modernImagePickerCard}>
+            {/* Header del modal */}
+            <View style={styles.modalHeader}>
+              <View style={styles.modalHandle} />
+              <Text style={styles.modalTitle}>Cambiar foto de perfil</Text>
+              <Text style={styles.modalSubtitle}>Elige una opción para actualizar tu imagen</Text>
+            </View>
+
+            {/* Opciones mejoradas */}
+            <View style={styles.optionsContainer}>
+              {/* Opción Cámara */}
+              <TouchableOpacity 
+                style={styles.modernOption}
+                onPress={takePhotoWithCamera}
+                activeOpacity={0.7}
+              >
+                <View style={styles.optionContent}>
+                  <View style={[styles.optionIconContainer, { backgroundColor: '#667eea' }]}>
+                    <Text style={styles.optionIcon}>📷</Text>
+                  </View>
+                  <View style={styles.optionTextContainer}>
+                    <Text style={styles.optionTitle}>Tomar Foto</Text>
+                    <Text style={styles.optionDescription}>Usa la cámara para capturar una nueva imagen</Text>
+                  </View>
+                  <View style={styles.optionArrow}>
+                    <Text style={styles.arrowIcon}>›</Text>
+                  </View>
+                </View>
+              </TouchableOpacity>
+
+              {/* Opción Galería */}
+              <TouchableOpacity 
+                style={styles.modernOption}
+                onPress={pickImageFromGallery}
+                activeOpacity={0.7}
+              >
+                <View style={styles.optionContent}>
+                  <View style={[styles.optionIconContainer, { backgroundColor: '#f093fb' }]}>
+                    <Text style={styles.optionIcon}>🖼️</Text>
+                  </View>
+                  <View style={styles.optionTextContainer}>
+                    <Text style={styles.optionTitle}>Elegir de Galería</Text>
+                    <Text style={styles.optionDescription}>Selecciona una imagen existente</Text>
+                  </View>
+                  <View style={styles.optionArrow}>
+                    <Text style={styles.arrowIcon}>›</Text>
+                  </View>
+                </View>
+              </TouchableOpacity>
+            </View>
+
+            {/* Botón cancelar mejorado */}
+            <TouchableOpacity 
+              style={styles.modernCancelButton}
+              onPress={hideImagePicker}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.modernCancelText}>Cancelar</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
 
       {/* Modal de loading de cámara - Solo animación Lottie */}
       <Modal transparent visible={cameraLoadingVisible} animationType="fade">
@@ -1146,7 +1179,7 @@ const getActivityLabel = (activity) => {
   }
 };
 
-// Estilos (mantienen los mismos estilos originales)
+// Estilos
 const styles = StyleSheet.create({
   container: { 
     flex: 1, 
@@ -1752,122 +1785,109 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   // Estilos modernos para el modal selector de imagen
-modernBackdrop: {
-  flex: 1,
-  backgroundColor: 'rgba(0, 0, 0, 0.6)',
-  justifyContent: 'flex-end',
-},
-backdropTouchable: {
-  flex: 1,
-},
-modernImagePickerCard: {
-  backgroundColor: '#FFFFFF',
-  borderTopLeftRadius: 28,
-  borderTopRightRadius: 28,
-  paddingTop: 12,
-  paddingBottom: Platform.OS === 'ios' ? 40 : 24,
-  paddingHorizontal: 24,
-  shadowColor: '#000',
-  shadowOffset: { width: 0, height: -4 },
-  shadowOpacity: 0.15,
-  shadowRadius: 20,
-  elevation: 20,
-},
-modalHeader: {
-  alignItems: 'center',
-  paddingBottom: 24,
-},
-modalHandle: {
-  width: 36,
-  height: 4,
-  backgroundColor: '#E2E8F0',
-  borderRadius: 2,
-  marginBottom: 20,
-},
-modalTitle: {
-  fontSize: 22,
-  fontWeight: '800',
-  color: '#1E293B',
-  marginBottom: 8,
-  textAlign: 'center',
-},
-modalSubtitle: {
-  fontSize: 15,
-  color: '#64748B',
-  textAlign: 'center',
-  lineHeight: 20,
-},
-optionsContainer: {
-  marginBottom: 20,
-},
-modernOption: {
-  backgroundColor: '#F8FAFC',
-  borderRadius: 16,
-  marginBottom: 12,
-  borderWidth: 1,
-  borderColor: '#E2E8F0',
-  overflow: 'hidden',
-},
-optionContent: {
-  flexDirection: 'row',
-  alignItems: 'center',
-  padding: 20,
-},
-optionIconContainer: {
-  width: 56,
-  height: 56,
-  borderRadius: 16,
-  justifyContent: 'center',
-  alignItems: 'center',
-  marginRight: 16,
-  shadowColor: '#000',
-  shadowOffset: { width: 0, height: 2 },
-  shadowOpacity: 0.1,
-  shadowRadius: 4,
-  elevation: 3,
-},
-optionIcon: {
-  fontSize: 24,
-  color: '#FFFFFF',
-},
-optionTextContainer: {
-  flex: 1,
-},
-optionTitle: {
-  fontSize: 17,
-  fontWeight: '700',
-  color: '#1E293B',
-  marginBottom: 4,
-},
-optionDescription: {
-  fontSize: 14,
-  color: '#64748B',
-  lineHeight: 18,
-},
-optionArrow: {
-  width: 24,
-  height: 24,
-  justifyContent: 'center',
-  alignItems: 'center',
-},
-arrowIcon: {
-  fontSize: 20,
-  color: '#94A3B8',
-  fontWeight: '300',
-},
-modernCancelButton: {
-  backgroundColor: '#F1F5F9',
-  borderRadius: 16,
-  paddingVertical: 16,
-  alignItems: 'center',
-  borderWidth: 1,
-  borderColor: '#E2E8F0',
-},
-modernCancelText: {
-  fontSize: 16,
-  fontWeight: '600',
-  color: '#64748B',
-},
+  modernBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    justifyContent: 'flex-end',
+  },
+  backdropTouchable: {
+    flex: 1,
+  },
+  modernImagePickerCard: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    paddingTop: 12,
+    paddingBottom: Platform.OS === 'ios' ? 40 : 24,
+    paddingHorizontal: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 20,
+    elevation: 20,
+  },
+  modalHeader: {
+    alignItems: 'center',
+    paddingBottom: 24,
+  },
+  modalHandle: {
+    width: 36,
+    height: 4,
+    backgroundColor: '#E2E8F0',
+    borderRadius: 2,
+    marginBottom: 20,
+  },
+  optionsContainer: {
+    marginBottom: 20,
+  },
+  modernOption: {
+    backgroundColor: '#F8FAFC',
+    borderRadius: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    overflow: 'hidden',
+  },
+  optionContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 20,
+  },
+  optionIconContainer: {
+    width: 56,
+    height: 56,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  optionIcon: {
+    fontSize: 24,
+    color: '#FFFFFF',
+  },
+  optionTextContainer: {
+    flex: 1,
+  },
+  optionTitle: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: '#1E293B',
+    marginBottom: 4,
+  },
+  optionDescription: {
+    fontSize: 14,
+    color: '#64748B',
+    lineHeight: 18,
+  },
+  optionArrow: {
+    width: 24,
+    height: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  arrowIcon: {
+    fontSize: 20,
+    color: '#94A3B8',
+    fontWeight: '300',
+  },
+  modernCancelButton: {
+    backgroundColor: '#F1F5F9',
+    borderRadius: 16,
+    paddingVertical: 16,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  modernCancelText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#64748B',
+  },
 });
 
 export default ProfileScreen;
