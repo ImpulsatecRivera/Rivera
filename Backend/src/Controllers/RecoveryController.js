@@ -9,70 +9,146 @@ import { EnviarSms } from "../Utils/EnviarSms.js";
 
 const RecoveryPass = {};
 
-// Función auxiliar para buscar usuario en TODOS los modelos
+// ========================================
+// FUNCIÓN AUXILIAR: Normalizar teléfono
+// ========================================
+const normalizarTelefono = (phone) => {
+  if (!phone) return null;
+  
+  // Convertir a string y limpiar
+  let cleaned = String(phone)
+    .trim()
+    .replace(/\s+/g, '')      // Eliminar espacios
+    .replace(/[-()]/g, '');   // Eliminar guiones y paréntesis
+  
+  // Remover prefijo + si existe
+  if (cleaned.startsWith('+')) {
+    cleaned = cleaned.substring(1);
+  }
+  
+  // Si empieza con 503, removerlo para tener solo los 8 dígitos
+  if (cleaned.startsWith('503') && cleaned.length > 8) {
+    cleaned = cleaned.substring(3);
+  }
+  
+  // Debe tener exactamente 8 dígitos para El Salvador
+  if (cleaned.length === 8 && /^\d{8}$/.test(cleaned)) {
+    return cleaned; // Retorna solo los 8 dígitos: "22345678"
+  }
+  
+  return null;
+};
+
+// ========================================
+// FUNCIÓN AUXILIAR: Buscar usuario MEJORADA
+// ========================================
 const buscarUsuario = async (criterio, valor) => {
   let userFound = null;
   let userType = null;
 
-  // 1. Buscar en Empleados
   if (criterio === "email") {
+    // Búsqueda por email
     userFound = await EmpleadosModel.findOne({ 
       email: { $regex: new RegExp(`^${valor}$`, 'i') } 
     });
     if (userFound) userType = "Empleado";
-  } else if (criterio === "phone") {
-    userFound = await EmpleadosModel.findOne({
-      $or: [
-        { phone: valor },
-        { phone: valor.replace('+503', '') },
-        { phone: valor.replace('+', '') }
-      ]
-    });
-    if (userFound) userType = "Empleado";
-  }
 
-  // 2. Si no se encuentra en Empleados, buscar en Motoristas
-  if (!userFound) {
-    if (criterio === "email") {
+    if (!userFound) {
       userFound = await MotoristasModel.findOne({ 
         email: { $regex: new RegExp(`^${valor}$`, 'i') } 
       });
       if (userFound) userType = "Motorista";
-    } else if (criterio === "phone") {
-      userFound = await MotoristasModel.findOne({
-        $or: [
-          { phone: valor },
-          { phone: valor.replace('+503', '') },
-          { phone: valor.replace('+', '') }
-        ]
-      });
-      if (userFound) userType = "Motorista";
     }
-  }
 
-  // 3. Si no se encuentra en Motoristas, buscar en Clientes
-  if (!userFound) {
-    if (criterio === "email") {
+    if (!userFound) {
       userFound = await ClientesModelo.findOne({ 
         email: { $regex: new RegExp(`^${valor}$`, 'i') } 
       });
       if (userFound) userType = "Cliente";
-    } else if (criterio === "phone") {
-      userFound = await ClientesModelo.findOne({
-        $or: [
-          { phone: valor },
-          { phone: valor.replace('+503', '') },
-          { phone: valor.replace('+', '') }
-        ]
+    }
+  } 
+  else if (criterio === "phone") {
+    // 🔥 BÚSQUEDA MEJORADA POR TELÉFONO
+    console.log("🔍 Buscando usuario por teléfono:", valor);
+    
+    // Normalizar el teléfono de búsqueda a 8 dígitos
+    const normalizedSearch = normalizarTelefono(valor);
+    
+    if (!normalizedSearch) {
+      console.log("❌ Número inválido después de normalizar");
+      return { userFound: null, userType: null };
+    }
+    
+    console.log("🔍 Número normalizado para búsqueda:", normalizedSearch);
+    
+    // Generar todas las variaciones posibles del número
+    const variaciones = [
+      normalizedSearch,                    // 22345678
+      `+503${normalizedSearch}`,           // +50322345678
+      `503${normalizedSearch}`,            // 50322345678
+      `${normalizedSearch.slice(0,4)}-${normalizedSearch.slice(4)}`, // 2234-5678
+    ];
+    
+    console.log("🔍 Buscando variaciones:", variaciones);
+    
+    // Buscar en Empleados
+    userFound = await EmpleadosModel.findOne({
+      $or: variaciones.map(v => ({ phone: v }))
+    });
+    
+    if (userFound) {
+      userType = "Empleado";
+      console.log("✅ Usuario encontrado en Empleados");
+      console.log("📱 Teléfono en BD:", userFound.phone);
+    }
+
+    // Si no se encuentra, buscar en Motoristas
+    if (!userFound) {
+      userFound = await MotoristasModel.findOne({
+        $or: variaciones.map(v => ({ phone: v }))
       });
-      if (userFound) userType = "Cliente";
+      
+      if (userFound) {
+        userType = "Motorista";
+        console.log("✅ Usuario encontrado en Motoristas");
+        console.log("📱 Teléfono en BD:", userFound.phone);
+      }
+    }
+
+    // Si no se encuentra, buscar en Clientes
+    if (!userFound) {
+      userFound = await ClientesModelo.findOne({
+        $or: variaciones.map(v => ({ phone: v }))
+      });
+      
+      if (userFound) {
+        userType = "Cliente";
+        console.log("✅ Usuario encontrado en Clientes");
+        console.log("📱 Teléfono en BD:", userFound.phone);
+      }
+    }
+    
+    if (!userFound) {
+      console.log("❌ No se encontró usuario con ninguna variación del teléfono");
+      
+      // 🔍 DEBUG: Mostrar algunos teléfonos en la BD
+      const empleadosSample = await EmpleadosModel.find({}, { phone: 1 }).limit(3);
+      const motoristasSample = await MotoristasModel.find({}, { phone: 1 }).limit(3);
+      const clientesSample = await ClientesModelo.find({}, { phone: 1 }).limit(3);
+      
+      console.log("📋 Muestra de teléfonos en BD:");
+      console.log("  Empleados:", empleadosSample.map(e => e.phone));
+      console.log("  Motoristas:", motoristasSample.map(m => m.phone));
+      console.log("  Clientes:", clientesSample.map(c => c.phone));
     }
   }
 
   return { userFound, userType };
 };
 
-// Función auxiliar para actualizar contraseña en TODOS los modelos
+// ========================================
+// FUNCIÓN AUXILIAR: Actualizar contraseña
+// ========================================
 const actualizarContrasena = async (decoded, hashedPassword) => {
   let updatedUser = null;
 
@@ -146,7 +222,9 @@ const actualizarContrasena = async (decoded, hashedPassword) => {
   return updatedUser;
 };
 
-// Solicitar código de recuperación
+// ========================================
+// ENDPOINT: Solicitar código de recuperación
+// ========================================
 RecoveryPass.requestCode = async (req, res) => {
   console.log('🔥 [DEBUG] === INICIO REQUEST CODE ===');
   console.log('🔥 [DEBUG] NODE_ENV:', process.env.NODE_ENV);
@@ -179,7 +257,6 @@ RecoveryPass.requestCode = async (req, res) => {
     }
 
     let userFound, userType;
-    let searchCriteria;
 
     // Buscar usuario según el método seleccionado
     if (via === "email") {
@@ -189,31 +266,17 @@ RecoveryPass.requestCode = async (req, res) => {
       const result = await buscarUsuario("email", normalizedEmail);
       userFound = result.userFound;
       userType = result.userType;
-      searchCriteria = `email: ${normalizedEmail}`;
       
     } else if (via === "sms") {
-      // Normalizar número de teléfono
-      let normalizedPhone = phone.trim();
+      // 🔥 NORMALIZACIÓN MEJORADA
+      console.log("📱 Teléfono recibido del frontend:", phone);
       
-      // Si no empieza con +, agregar código de país
-      if (!normalizedPhone.startsWith('+')) {
-        if (normalizedPhone.startsWith('503')) {
-          normalizedPhone = '+' + normalizedPhone;
-        } else {
-          normalizedPhone = '+503' + normalizedPhone;
-        }
-      }
-      
-      console.log("Buscando usuario por teléfono:", normalizedPhone);
-      
-      const result = await buscarUsuario("phone", normalizedPhone);
+      // El frontend envía: +50322345678
+      // Normalizar y buscar en todas las variaciones
+      const result = await buscarUsuario("phone", phone);
       userFound = result.userFound;
       userType = result.userType;
-      searchCriteria = `phone: ${normalizedPhone}`;
     }
-    
-    console.log("Criterio de búsqueda:", searchCriteria);
-    console.log("Usuario encontrado:", userFound ? `Sí (ID: ${userFound._id}, Tipo: ${userType})` : "No");
 
     // Si no se encuentra usuario
     if (!userFound) {
@@ -254,21 +317,18 @@ RecoveryPass.requestCode = async (req, res) => {
     // Enviar código según método seleccionado
     try {
       if (via === "sms") {
-        // Usar el teléfono del usuario encontrado
+        // Usar el teléfono del usuario tal como está en la BD
         let phoneToUse = userFound.phone;
         
-        // Agregar código de país si no lo tiene
-        if (!phoneToUse.startsWith('+')) {
-          if (phoneToUse.startsWith('503')) {
-            phoneToUse = '+' + phoneToUse;
-          } else {
-            phoneToUse = '+503' + phoneToUse;
-          }
+        // Asegurar formato +503XXXXXXXX para Twilio
+        const normalizedForTwilio = normalizarTelefono(phoneToUse);
+        if (normalizedForTwilio) {
+          phoneToUse = `+503${normalizedForTwilio}`;
         }
         
         const smsMessage = `Tu código de verificación es: ${codex}. Válido por 20 minutos.`;
         
-        // 🧪 MODO DESARROLLO: Simular SMS sin enviar (opcional)
+        // 🧪 MODO DESARROLLO: Simular SMS sin enviar
         if (process.env.NODE_ENV === 'development') {
           console.log("🧪 MODO DESARROLLO - SMS simulado");
           console.log("📱 Número destino:", phoneToUse);
@@ -303,24 +363,19 @@ RecoveryPass.requestCode = async (req, res) => {
           let suggestion = "Intenta usar recuperación por email.";
           
           if (smsResult.code === 21211) {
-            // Número inválido
             errorMessage = "El número de teléfono no es válido.";
             statusCode = 400;
           } else if (smsResult.code === 21608) {
-            // Número no verificado (Trial account)
             errorMessage = "Este número no está verificado. En cuentas de prueba Twilio, solo números verificados pueden recibir SMS.";
             statusCode = 403;
             suggestion = "Verifica el número en tu cuenta Twilio o usa recuperación por email.";
           } else if (smsResult.code === 21614) {
-            // No puedes enviar SMS a este país
             errorMessage = "No se puede enviar SMS a números de este país con tu configuración actual de Twilio.";
             statusCode = 400;
           } else if (smsResult.code === 21606) {
-            // Número de teléfono no es móvil
             errorMessage = "El número proporcionado no es un número móvil válido.";
             statusCode = 400;
           } else if (smsResult.code === 20003) {
-            // Credenciales de autenticación inválidas
             errorMessage = "Error de configuración del servicio SMS. Contacta al administrador.";
             statusCode = 500;
             suggestion = "Verifica las credenciales de Twilio en el servidor.";
@@ -331,16 +386,7 @@ RecoveryPass.requestCode = async (req, res) => {
             success: false,
             error: smsResult.error,
             twilioCode: smsResult.code,
-            suggestion: suggestion,
-            debug: {
-              phoneUsed: phoneToUse,
-              twilioError: smsResult.error,
-              hasCredentials: {
-                accountSid: !!config.TWILIO_ACCOUNT_SID,
-                authToken: !!config.TWILIO_AUTH_TOKEN,
-                phoneNumber: !!config.TWILIO_PHONE_NUMBER
-              }
-            }
+            suggestion: suggestion
           });
         }
         
@@ -401,22 +447,36 @@ RecoveryPass.requestCode = async (req, res) => {
   }
 };
 
-// Verificar código
-// En RecoveryPass.js - modificar el método verifyCode
+// ========================================
+// ENDPOINT: Verificar código
+// ========================================
 RecoveryPass.verifyCode = async (req, res) => {
-  const { code, recoveryToken, isPhoneVerification } = req.body; // ⭐ Agregar flag
+  const { code, recoveryToken, isPhoneVerification } = req.body;
 
   console.log("Verificando código:", code);
 
   try {
-    // ... tu código existente de validaciones ...
+    if (!code || !recoveryToken) {
+      return res.status(400).json({ message: "Código y token requeridos" });
+    }
+
+    if (code.length !== 5 || !/^\d{5}$/.test(code)) {
+      return res.status(400).json({ message: "El código debe tener 5 dígitos" });
+    }
 
     // Verificar token JWT
     let decoded;
     try {
       decoded = jwt.verify(recoveryToken, config.JWT.secret);
     } catch (jwtError) {
-      // ... tu manejo de errores existente ...
+      if (jwtError.name === 'TokenExpiredError') {
+        return res.status(401).json({ 
+          message: "El código ha expirado. Solicita un nuevo código." 
+        });
+      }
+      return res.status(401).json({ 
+        message: "Token inválido. Solicita un nuevo código." 
+      });
     }
 
     // Verificar código
@@ -471,8 +531,6 @@ RecoveryPass.verifyCode = async (req, res) => {
       console.log("✅ Teléfono verificado para:", updatedUser.phone);
     }
 
-    // ... tu código existente de crear nuevo token ...
-
     const newToken = jwt.sign(
       {
         email: decoded.email,
@@ -508,7 +566,9 @@ RecoveryPass.verifyCode = async (req, res) => {
   }
 };
 
-// Cambiar contraseña
+// ========================================
+// ENDPOINT: Cambiar contraseña
+// ========================================
 RecoveryPass.newPassword = async (req, res) => {
   const { newPassword, verifiedToken } = req.body;
 
@@ -572,7 +632,9 @@ RecoveryPass.newPassword = async (req, res) => {
   }
 };
 
-// Iniciar sesión con código (sin cambiar contraseña)
+// ========================================
+// ENDPOINT: Iniciar sesión con código
+// ========================================
 RecoveryPass.IniciarSesionConCodigo = async (req, res) => {
   const { code, verifiedToken } = req.body;
 
@@ -631,7 +693,9 @@ RecoveryPass.IniciarSesionConCodigo = async (req, res) => {
   }
 };
 
-// Función auxiliar para debugging
+// ========================================
+// ENDPOINT: Debug de usuarios (auxiliar)
+// ========================================
 RecoveryPass.debugUsers = async (req, res) => {
   try {
     const empleados = await EmpleadosModel.find({}, { email: 1, phone: 1, _id: 1 }).limit(5);
@@ -657,6 +721,9 @@ RecoveryPass.debugUsers = async (req, res) => {
   }
 };
 
+// ========================================
+// ENDPOINT: Enviar código para registro nuevo
+// ========================================
 RecoveryPass.sendVerificationForRegistration = async (req, res) => {
   console.log('🔥 [DEBUG] === ENVÍO DE CÓDIGO PARA REGISTRO ===');
   
@@ -786,6 +853,9 @@ RecoveryPass.sendVerificationForRegistration = async (req, res) => {
   }
 };
 
+// ========================================
+// ENDPOINT: Verificar código para registro
+// ========================================
 RecoveryPass.verifyCodeForRegistration = async (req, res) => {
   const { code, recoveryToken } = req.body;
 

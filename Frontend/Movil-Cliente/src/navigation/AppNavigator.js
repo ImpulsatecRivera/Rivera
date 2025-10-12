@@ -91,37 +91,29 @@ const AppNavigator = () => {
         }}
       />
 
-      <Stack.Screen 
-        name="seleccionarMetodoRecuperacion" 
-        component={SeleccionarMetodoRecuperacionScreen}
-        options={{
-          headerShown: true,
-          title: 'Método de Recuperación',
-          headerStyle: {
-            backgroundColor: '#4CAF50',
-          },
-          headerTintColor: '#fff',
-          headerTitleStyle: {
-            fontWeight: 'bold',
-          },
-          presentation: 'card',
-          gestureEnabled: true,
-          cardStyleInterpolator: ({ current, layouts }) => {
-            return {
-              cardStyle: {
-                transform: [
-                  {
-                    translateX: current.progress.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: [layouts.screen.width, 0],
-                    }),
-                  },
-                ],
-              },
-            };
-          },
-        }}
-      />
+     <Stack.Screen 
+  name="seleccionarMetodoRecuperacion" 
+  component={SeleccionarMetodoRecuperacionScreen}
+  options={{
+    headerShown: false,  // 👈 CAMBIAR ESTO A false
+    presentation: 'card',
+    gestureEnabled: true,
+    cardStyleInterpolator: ({ current, layouts }) => {
+      return {
+        cardStyle: {
+          transform: [
+            {
+              translateX: current.progress.interpolate({
+                inputRange: [0, 1],
+                outputRange: [layouts.screen.width, 0],
+              }),
+            },
+          ],
+        },
+      };
+    },
+  }}
+/>
 
       <Stack.Screen 
         name="Recuperacion" 
