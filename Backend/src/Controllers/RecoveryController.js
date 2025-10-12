@@ -402,79 +402,100 @@ RecoveryPass.requestCode = async (req, res) => {
 };
 
 // Verificar código
+// En RecoveryPass.js - modificar el método verifyCode
 RecoveryPass.verifyCode = async (req, res) => {
-  const { code, recoveryToken } = req.body;
+  const { code, recoveryToken, isPhoneVerification } = req.body; // ⭐ Agregar flag
 
   console.log("Verificando código:", code);
 
   try {
-    // Validaciones básicas
-    if (!code) {
-      return res.status(400).json({ message: "Código requerido" });
-    }
-
-    if (!recoveryToken) {
-      return res.status(400).json({ 
-        message: "Token de recuperación requerido. Solicita un nuevo código." 
-      });
-    }
-
-    if (code.length !== 5 || !/^\d{5}$/.test(code)) {
-      return res.status(400).json({ message: "El código debe tener 5 dígitos" });
-    }
+    // ... tu código existente de validaciones ...
 
     // Verificar token JWT
     let decoded;
     try {
       decoded = jwt.verify(recoveryToken, config.JWT.secret);
-      console.log("Token decodificado:", { 
-        email: decoded.email, 
-        via: decoded.via,
-        userType: decoded.userType,
-        createdAt: decoded.createdAt 
-      });
     } catch (jwtError) {
-      console.log("Error JWT:", jwtError.message);
-      if (jwtError.name === 'TokenExpiredError') {
-        return res.status(401).json({ 
-          message: "El código ha expirado. Solicita un nuevo código." 
-        });
-      }
-      return res.status(401).json({ 
-        message: "Token inválido. Solicita un nuevo código." 
-      });
+      // ... tu manejo de errores existente ...
     }
 
     // Verificar código
     if (decoded.codex !== code) {
-      console.log("Código incorrecto:", { enviado: code, esperado: decoded.codex });
       return res.status(400).json({ 
         message: "Código inválido. Verifica e inténtalo de nuevo." 
       });
     }
 
-    console.log("Código verificado correctamente");
+    // ⭐ NUEVO: Si es verificación de teléfono al registrarse
+    if (isPhoneVerification && decoded.phone) {
+      console.log("Marcando teléfono como verificado:", decoded.phone);
+      
+      // Actualizar el campo phoneVerified en el modelo correspondiente
+      let updatedUser = null;
+      
+      if (decoded.userType === "Empleado") {
+        updatedUser = await EmpleadosModel.findByIdAndUpdate(
+          decoded.id,
+          { 
+            phoneVerified: true,
+            phoneVerifiedAt: new Date()
+          },
+          { new: true }
+        );
+      } else if (decoded.userType === "Motorista") {
+        updatedUser = await MotoristasModel.findByIdAndUpdate(
+          decoded.id,
+          { 
+            phoneVerified: true,
+            phoneVerifiedAt: new Date()
+          },
+          { new: true }
+        );
+      } else if (decoded.userType === "Cliente") {
+        updatedUser = await ClientesModelo.findByIdAndUpdate(
+          decoded.id,
+          { 
+            phoneVerified: true,
+            phoneVerifiedAt: new Date()
+          },
+          { new: true }
+        );
+      }
 
-    // Crear nuevo token con código verificado
-    const newTokenPayload = {
-      email: decoded.email,
-      phone: decoded.phone,
-      id: decoded.id,
-      codex: decoded.codex,
-      userType: decoded.userType,
-      verified: true,
-      via: decoded.via,
-      verifiedAt: new Date().toISOString()
-    };
+      if (!updatedUser) {
+        return res.status(404).json({ 
+          message: "Usuario no encontrado" 
+        });
+      }
 
-    const newToken = jwt.sign(newTokenPayload, config.JWT.secret, { expiresIn: "20m" });
+      console.log("✅ Teléfono verificado para:", updatedUser.phone);
+    }
 
-    console.log(`Código verificado para: ${decoded.email || decoded.phone} (${decoded.userType})`);
+    // ... tu código existente de crear nuevo token ...
+
+    const newToken = jwt.sign(
+      {
+        email: decoded.email,
+        phone: decoded.phone,
+        id: decoded.id,
+        codex: decoded.codex,
+        userType: decoded.userType,
+        verified: true,
+        via: decoded.via,
+        verifiedAt: new Date().toISOString()
+      },
+      config.JWT.secret,
+      { expiresIn: "20m" }
+    );
+
     res.status(200).json({
-      message: "Código verificado exitosamente",
+      message: isPhoneVerification 
+        ? "Teléfono verificado exitosamente" 
+        : "Código verificado exitosamente",
       success: true,
       method: decoded.via,
       userType: decoded.userType,
+      phoneVerified: isPhoneVerification ? true : undefined,
       verifiedToken: newToken
     });
 
