@@ -4,12 +4,19 @@ import {
   Text, 
   TextInput, 
   TouchableOpacity, 
-  Image, 
   StyleSheet,
   Alert,
-  ActivityIndicator
+  ActivityIndicator,
+  StatusBar,
+  ScrollView,
+  KeyboardAvoidingView,
+  Platform,
+  Dimensions
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import LottieView from 'lottie-react-native';
+
+const { height } = Dimensions.get('window');
 
 const RecuperacionTelefonoScreen = ({ navigation }) => {
   const [telefono, setTelefono] = useState('');
@@ -17,7 +24,6 @@ const RecuperacionTelefonoScreen = ({ navigation }) => {
   const [telefonoError, setTelefonoError] = useState('');
 
   const handleNext = async () => {
-    // Validación final
     if (!isValidSalvadoranNumber(telefono)) {
       setTelefonoError('Número de teléfono inválido');
       return;
@@ -27,11 +33,9 @@ const RecuperacionTelefonoScreen = ({ navigation }) => {
     try {
       console.log('📱 Solicitando código SMS para:', telefono);
       
-      // Construir número completo con prefijo +503
       const fullPhoneNumber = `+503${telefono.replace('-', '')}`;
       console.log('📞 Número completo:', fullPhoneNumber);
       
-      // ✅ URL de la API
       const API_URL = 'https://riveraproject-production-933e.up.railway.app/api/recovery/requestCode';
       
       console.log('🌐 Conectando a:', API_URL);
@@ -43,17 +47,15 @@ const RecuperacionTelefonoScreen = ({ navigation }) => {
         },
         body: JSON.stringify({
           phone: fullPhoneNumber,
-          via: "sms" // Especificar que queremos SMS
+          via: "sms"
         }),
       });
 
       console.log('📡 Response status:', response.status);
 
-      // Verificar el contenido antes de parsear JSON
       const responseText = await response.text();
       console.log('📄 Response text (primeros 200 chars):', responseText.substring(0, 200));
 
-      // Verificar si la respuesta es HTML (error del servidor)
       if (responseText.includes('<html>') || responseText.includes('<!DOCTYPE')) {
         throw new Error('El servidor devolvió HTML en lugar de JSON. Verifica que la API esté funcionando correctamente.');
       }
@@ -76,7 +78,6 @@ const RecuperacionTelefonoScreen = ({ navigation }) => {
 
       console.log('✅ Código SMS enviado exitosamente:', data);
       
-      // ⭐ CRÍTICO: Extraer el recoveryToken de la respuesta
       const recoveryToken = data.recoveryToken || data.token;
       
       if (!recoveryToken) {
@@ -98,7 +99,7 @@ const RecuperacionTelefonoScreen = ({ navigation }) => {
               navigation.navigate('Recuperacion2Screen', { 
                 phone: fullPhoneNumber,
                 via: 'sms',
-                recoveryToken: recoveryToken, // ⭐ PASAR EL TOKEN
+                recoveryToken: recoveryToken,
                 fromScreen: 'RecuperacionTelefonoScreen',
                 timestamp: Date.now()
               });
@@ -110,7 +111,6 @@ const RecuperacionTelefonoScreen = ({ navigation }) => {
     } catch (error) {
       console.error('❌ Error al solicitar código SMS:', error);
       
-      // Manejo específico de errores
       if (error.message.includes('HTML')) {
         Alert.alert(
           'Error del Servidor', 
@@ -138,30 +138,18 @@ const RecuperacionTelefonoScreen = ({ navigation }) => {
     navigation.goBack();
   };
 
-  // Validar que sea un número salvadoreño válido
   const isValidSalvadoranNumber = (number) => {
-    // Remover guión para validación
     const cleanNumber = number.replace('-', '');
-    
-    // Debe tener exactamente 8 dígitos
     if (cleanNumber.length !== 8) return false;
-    
-    // Debe empezar con 2, 6, 7 (números válidos en El Salvador)
     const firstDigit = cleanNumber[0];
     if (!['2', '6', '7'].includes(firstDigit)) return false;
-    
-    // Solo dígitos
     return /^\d{8}$/.test(cleanNumber);
   };
 
   const formatTelefono = (text) => {
-    // Remover todo excepto números
     const cleaned = text.replace(/\D/g, '');
-    
-    // Limitar a 8 dígitos (formato salvadoreño)
     const limited = cleaned.slice(0, 8);
     
-    // Formatear con guiones (ej: 1234-5678)
     if (limited.length >= 5) {
       return limited.slice(0, 4) + '-' + limited.slice(4);
     }
@@ -174,19 +162,18 @@ const RecuperacionTelefonoScreen = ({ navigation }) => {
     setTelefono(formatted);
     setTelefonoError('');
 
-    // Validación en tiempo real
     if (formatted.length > 0) {
       const cleanNumber = formatted.replace('-', '');
       
       if (cleanNumber.length >= 1) {
         const firstDigit = cleanNumber[0];
         if (!['2', '6', '7'].includes(firstDigit)) {
-          setTelefonoError('Los números en El Salvador deben empezar con 2, 6 o 7');
+          setTelefonoError('Los números deben empezar con 2, 6 o 7');
         }
       }
       
       if (cleanNumber.length === 8 && !isValidSalvadoranNumber(formatted)) {
-        setTelefonoError('Número de teléfono no válido para El Salvador');
+        setTelefonoError('Número de teléfono no válido');
       }
     }
   };
@@ -194,274 +181,439 @@ const RecuperacionTelefonoScreen = ({ navigation }) => {
   const isButtonDisabled = !telefono || telefono.length < 9 || telefonoError || loading || !isValidSalvadoranNumber(telefono);
 
   return (
-    <View style={styles.container}>
-      {/* Header con X para cerrar */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={handleClose} disabled={loading}>
-          <Icon name="close" size={24} color="#666" />
-        </TouchableOpacity>
-      </View>
-
-      {/* Ilustración */}
-      <View style={styles.imageContainer}>
-        <Image 
-          source={require('../images/recuperarcontra.png')}
-          style={styles.image}
-          resizeMode="contain"
-        />
-      </View>
-
-      {/* Contenido principal */}
-      <View style={styles.content}>
-        {/* Título */}
-        <Text style={styles.title}>
-          Verificación por SMS
-        </Text>
-
-        {/* Subtítulo */}
-        <Text style={styles.subtitle}>
-          No te preocupes, puede pasar. Introduce tu número de teléfono de El Salvador y te enviaremos un código de verificación por SMS.
-        </Text>
-
-        {/* Campo de entrada con prefijo */}
-        <View style={styles.inputContainer}>
-          <View style={styles.prefixContainer}>
-            <Text style={styles.flagEmoji}>🇸🇻</Text>
-            <Text style={styles.prefixText}>+503</Text>
-          </View>
-          <TextInput
-            style={[
-              styles.input,
-              telefonoError && styles.inputError
-            ]}
-            placeholder="2234-5678"
-            value={telefono}
-            onChangeText={handleTelefonoChange}
-            keyboardType="phone-pad"
-            maxLength={9} // 4 + 1 (guión) + 4
-            autoCorrect={false}
-            editable={!loading}
-            placeholderTextColor="#9ca3af"
-          />
+    <>
+      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+      <KeyboardAvoidingView 
+        style={styles.container}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+      >
+        {/* Background curved shapes */}
+        <View style={styles.backgroundShapes}>
+          <View style={styles.curvedShape1} />
+          <View style={styles.curvedShape2} />
+          <View style={styles.curvedShape3} />
         </View>
 
-        {/* Mensaje de error */}
-        {telefonoError ? (
-          <View style={styles.errorContainer}>
-            <Icon name="error-outline" size={16} color="#ef4444" />
-            <Text style={styles.errorText}>{telefonoError}</Text>
-          </View>
-        ) : null}
-
-        {/* Texto de ayuda */}
-        <View style={styles.helpContainer}>
-          <Icon name="info-outline" size={16} color="#6b7280" />
-          <Text style={styles.helpText}>
-            Números válidos empiezan con 2, 6 o 7 (ejemplo: 2234-5678, 6789-1234, 7456-7890)
-          </Text>
-        </View>
-      </View>
-
-      {/* Indicadores de progreso */}
-      <View style={styles.progressContainer}>
-        <View style={[styles.progressBar, styles.progressActive]} />
-        <View style={[styles.progressDot]} />
-        <View style={[styles.progressDot]} />
-      </View>
-
-      {/* Botón Siguiente */}
-      <View style={styles.buttonContainer}>
-        <TouchableOpacity 
-          style={[styles.button, isButtonDisabled && styles.buttonDisabled]}
-          onPress={handleNext}
-          disabled={isButtonDisabled}
+        <ScrollView 
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          bounces={false}
         >
-          {loading ? (
-            <View style={styles.loadingContainer}>
-              <ActivityIndicator color="#fff" size="small" />
-              <Text style={styles.loadingText}>Enviando código...</Text>
-            </View>
-          ) : (
-            <Text style={[styles.buttonText, isButtonDisabled && styles.buttonTextDisabled]}>
-              Enviar código SMS
-            </Text>
-          )}
-        </TouchableOpacity>
-      </View>
+          {/* Header con X para cerrar */}
+          <View style={styles.header}>
+            <TouchableOpacity 
+              onPress={handleClose} 
+              disabled={loading}
+              style={styles.closeButton}
+              activeOpacity={0.7}
+            >
+              <Icon name="close" size={24} color="#6B7280" />
+            </TouchableOpacity>
+          </View>
 
-      {/* Footer */}
-      <View style={styles.footer}>
-        <Text style={styles.footerText}>
-          Rivera distribuidora y{'\n'}
-          transporte || 2025
-        </Text>
-      </View>
-    </View>
+          {/* Lottie Animation - SIN FONDOS */}
+          <View style={styles.lottieContainer}>
+            <LottieView
+              source={require('../assets/lottie/using mobile phone.json')}
+              autoPlay
+              loop={false}
+              style={styles.lottieAnimation}
+            />
+          </View>
+
+          {/* Contenido principal */}
+          <View style={styles.content}>
+            {/* Título con estilo moderno */}
+            <Text style={styles.title}>Recuperar</Text>
+            <Text style={styles.titleLight}>contraseña</Text>
+            
+            <Text style={styles.subtitle}>
+              Introduce tu número de teléfono de El Salvador y te enviaremos un código de verificación.
+            </Text>
+
+            {/* Campo de entrada moderno */}
+            <View style={styles.formSection}>
+              <Text style={styles.inputLabel}>Número de teléfono</Text>
+              
+              <View style={styles.inputWrapper}>
+                <View style={styles.prefixContainer}>
+                  <Text style={styles.flagEmoji}>🇸🇻</Text>
+                  <Text style={styles.prefixText}>+503</Text>
+                </View>
+                <TextInput
+                  style={[
+                    styles.input,
+                    telefonoError && styles.inputError
+                  ]}
+                  placeholder="2234-5678"
+                  value={telefono}
+                  onChangeText={handleTelefonoChange}
+                  keyboardType="phone-pad"
+                  maxLength={9}
+                  autoCorrect={false}
+                  editable={!loading}
+                  placeholderTextColor="#9CA3AF"
+                />
+              </View>
+
+              {/* Mensaje de error */}
+              {telefonoError ? (
+                <View style={styles.errorContainer}>
+                  <Icon name="error-outline" size={14} color="#EF4444" />
+                  <Text style={styles.errorText}>{telefonoError}</Text>
+                </View>
+              ) : null}
+
+              {/* Texto de ayuda */}
+              <View style={styles.helpContainer}>
+                <Icon name="info-outline" size={14} color="#9CA3AF" />
+                <Text style={styles.helpText}>
+                  Números válidos: 2234-5678, 6789-1234, 7456-7890
+                </Text>
+              </View>
+            </View>
+          </View>
+
+          {/* Espacio adicional para scroll */}
+          <View style={styles.spacer} />
+
+        </ScrollView>
+
+        {/* Footer fijo en la parte inferior */}
+        <View style={styles.footerContainer}>
+          {/* Indicadores de progreso */}
+          <View style={styles.progressContainer}>
+            <View style={[styles.progressDot, styles.progressActive]} />
+            <View style={styles.progressDot} />
+            <View style={styles.progressDot} />
+          </View>
+
+          {/* Botón */}
+          <View style={styles.buttonContainer}>
+            <TouchableOpacity 
+              style={[
+                styles.button, 
+                isButtonDisabled && styles.buttonDisabled
+              ]}
+              onPress={handleNext}
+              disabled={isButtonDisabled}
+              activeOpacity={0.8}
+            >
+              <View style={styles.buttonContent}>
+                {loading ? (
+                  <ActivityIndicator color="#FFFFFF" size="small" />
+                ) : (
+                  <>
+                    <Text style={styles.buttonText}>Enviar código</Text>
+                    <View style={styles.arrowContainer}>
+                      <Text style={styles.arrow}>→</Text>
+                    </View>
+                  </>
+                )}
+              </View>
+            </TouchableOpacity>
+
+            {loading && (
+              <Text style={styles.loadingText}>Enviando código...</Text>
+            )}
+          </View>
+
+          {/* Footer text */}
+          <View style={styles.footer}>
+            <Text style={styles.footerText}>
+              Rivera distribuidora y transporte © 2025
+            </Text>
+          </View>
+        </View>
+      </KeyboardAvoidingView>
+    </>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f9fafb',
+    backgroundColor: '#FFFFFF',
   },
+
+  // Background curved shapes
+  backgroundShapes: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  curvedShape1: {
+    position: 'absolute',
+    top: -100,
+    right: -80,
+    width: 280,
+    height: 280,
+    borderRadius: 140,
+    backgroundColor: '#4CAF50',
+    opacity: 0.08,
+    transform: [{ rotate: '45deg' }],
+  },
+  curvedShape2: {
+    position: 'absolute',
+    top: 200,
+    left: -120,
+    width: 220,
+    height: 220,
+    borderRadius: 110,
+    backgroundColor: '#1F2937',
+    opacity: 0.05,
+    transform: [{ rotate: '-30deg' }],
+  },
+  curvedShape3: {
+    position: 'absolute',
+    bottom: -150,
+    right: -100,
+    width: 300,
+    height: 300,
+    borderRadius: 150,
+    backgroundColor: '#4CAF50',
+    opacity: 0.06,
+    transform: [{ rotate: '60deg' }],
+  },
+
+  scrollContent: {
+    flexGrow: 1,
+    paddingBottom: 20,
+  },
+
   header: {
-    paddingHorizontal: 16,
-    paddingTop: 48,
+    paddingHorizontal: 24,
+    paddingTop: Platform.OS === 'ios' ? 60 : 40,
     paddingBottom: 16,
+    zIndex: 2,
   },
-  imageContainer: {
+  closeButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#F3F4F6',
+    justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 32,
-    paddingHorizontal: 24,
+    alignSelf: 'flex-start',
   },
-  image: {
-    width: 256,
-    height: 192,
+
+  // Lottie Animation - SOLO LA ANIMACIÓN, SIN FONDOS NI CÍRCULOS
+  lottieContainer: {
+    alignItems: 'center',
+    marginVertical: 20,
+    zIndex: 1,
   },
+  lottieAnimation: {
+    width: 150,
+    height: 150,
+  },
+
   content: {
-    flex: 1,
-    paddingHorizontal: 24,
+    paddingHorizontal: 28,
+    zIndex: 1,
   },
+
+  // Título con estilo del LoginScreen (más compacto)
   title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#111827',
-    marginBottom: 16,
-    textAlign: 'center',
+    fontSize: 32,
+    fontWeight: '700',
+    color: '#1F2937',
+    letterSpacing: -0.5,
+    lineHeight: 38,
+  },
+  titleLight: {
+    fontSize: 32,
+    fontWeight: '300',
+    color: '#6B7280',
+    marginBottom: 12,
+    letterSpacing: -0.5,
+    lineHeight: 38,
   },
   subtitle: {
     fontSize: 14,
-    color: '#6b7280',
+    color: '#9CA3AF',
     marginBottom: 32,
-    textAlign: 'center',
     lineHeight: 20,
+    fontWeight: '400',
   },
-  inputContainer: {
-    flexDirection: 'row',
-    backgroundColor: '#f3f4f6',
-    borderRadius: 8,
+
+  // Form section
+  formSection: {
+    marginBottom: 16,
+  },
+  inputLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#374151',
     marginBottom: 12,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'transparent',
+    letterSpacing: 0.2,
   },
-  inputError: {
-    borderColor: '#ef4444',
-    backgroundColor: '#fef2f2',
+  inputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderBottomWidth: 2,
+    borderBottomColor: '#E5E7EB',
+    paddingBottom: 4,
   },
   prefixContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingLeft: 16,
-    paddingRight: 12,
+    paddingRight: 10,
     borderRightWidth: 1,
-    borderRightColor: '#d1d5db',
+    borderRightColor: '#E5E7EB',
+    marginRight: 10,
   },
   flagEmoji: {
     fontSize: 18,
-    marginRight: 6,
+    marginRight: 4,
   },
   prefixText: {
-    fontSize: 16,
-    color: '#374151',
-    fontWeight: '500',
+    fontSize: 15,
+    color: '#1F2937',
+    fontWeight: '600',
   },
   input: {
     flex: 1,
-    paddingVertical: 16,
-    paddingHorizontal: 16,
-    fontSize: 16,
-    color: '#374151',
+    paddingVertical: 14,
+    fontSize: 17,
+    color: '#1F2937',
+    fontWeight: '500',
   },
+  inputError: {
+    borderBottomColor: '#EF4444',
+  },
+
   errorContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 12,
-    paddingHorizontal: 4,
+    marginTop: 10,
   },
   errorText: {
-    color: '#ef4444',
-    fontSize: 14,
+    color: '#EF4444',
+    fontSize: 12,
     marginLeft: 6,
+    fontWeight: '500',
     flex: 1,
   },
+
   helpContainer: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    marginBottom: 20,
-    paddingHorizontal: 4,
+    marginTop: 12,
+    backgroundColor: '#F9FAFB',
+    padding: 10,
+    borderRadius: 8,
   },
   helpText: {
-    fontSize: 12,
-    color: '#6b7280',
-    marginLeft: 6,
+    fontSize: 11,
+    color: '#6B7280',
+    marginLeft: 8,
     flex: 1,
     lineHeight: 16,
   },
+
+  spacer: {
+    height: 40,
+  },
+
+  // Footer container fijo
+  footerContainer: {
+    backgroundColor: '#FFFFFF',
+    paddingTop: 16,
+    paddingBottom: Platform.OS === 'ios' ? 20 : 16,
+    borderTopWidth: 1,
+    borderTopColor: '#F3F4F6',
+    zIndex: 2,
+  },
+
+  // Progress indicators
   progressContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 24,
-    paddingHorizontal: 24,
-  },
-  progressBar: {
-    width: 32,
-    height: 4,
-    backgroundColor: '#d1d5db',
-    borderRadius: 2,
-    marginRight: 8,
-  },
-  progressActive: {
-    backgroundColor: '#111827',
+    marginBottom: 20,
+    paddingHorizontal: 28,
   },
   progressDot: {
     width: 8,
     height: 8,
-    backgroundColor: '#d1d5db',
+    backgroundColor: '#E5E7EB',
     borderRadius: 4,
-    marginRight: 8,
+    marginHorizontal: 5,
   },
+  progressActive: {
+    backgroundColor: '#1F2937',
+    width: 28,
+    borderRadius: 4,
+  },
+
+  // Button
   buttonContainer: {
-    paddingHorizontal: 24,
-    marginBottom: 24,
+    paddingHorizontal: 28,
+    marginBottom: 16,
+    alignItems: 'flex-end',
   },
   button: {
-    backgroundColor: '#10b981',
-    borderRadius: 8,
+    backgroundColor: '#1F2937',
+    borderRadius: 30,
     paddingVertical: 16,
-    alignItems: 'center',
+    paddingHorizontal: 28,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 6,
+    minWidth: 170,
   },
   buttonDisabled: {
-    backgroundColor: '#d1d5db',
+    backgroundColor: '#9CA3AF',
+    shadowOpacity: 0.05,
   },
-  buttonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  buttonTextDisabled: {
-    color: '#9ca3af',
-  },
-  loadingContainer: {
+  buttonContent: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
   },
-  loadingText: {
-    color: '#fff',
+  buttonText: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '600',
+    marginRight: 10,
+  },
+  arrowContainer: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  arrow: {
+    color: '#FFFFFF',
     fontSize: 14,
-    marginLeft: 8,
+    fontWeight: 'bold',
   },
+
+  loadingText: {
+    fontSize: 12,
+    color: '#4CAF50',
+    fontWeight: '500',
+    marginTop: 8,
+    textAlign: 'right',
+  },
+
   footer: {
-    paddingHorizontal: 24,
-    paddingBottom: 24,
+    paddingHorizontal: 28,
     alignItems: 'center',
   },
   footerText: {
-    fontSize: 14,
-    color: '#9ca3af',
-    textAlign: 'center',
+    fontSize: 11,
+    color: '#9CA3AF',
+    fontWeight: '400',
   },
 });
 

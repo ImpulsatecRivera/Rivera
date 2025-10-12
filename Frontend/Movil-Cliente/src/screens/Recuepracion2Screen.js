@@ -4,11 +4,16 @@ import {
   Text, 
   TextInput, 
   TouchableOpacity, 
-  Image, 
   StyleSheet,
   Alert,
-  ActivityIndicator
+  ActivityIndicator,
+  StatusBar,
+  ScrollView,
+  KeyboardAvoidingView,
+  Platform
 } from 'react-native';
+import Icon from 'react-native-vector-icons/MaterialIcons';
+import LottieView from 'lottie-react-native';
 import { useAuth } from '../context/authContext';
 
 const API_BASE_URL = 'https://riveraproject-production-933e.up.railway.app';
@@ -24,7 +29,6 @@ const Recuperacion2Screen = ({ navigation, route }) => {
   const [phone, setPhone] = useState(route?.params?.phone || '');
   const [via, setVia] = useState(route?.params?.via || 'email');
   
-  // ⭐ NUEVO: Detectar si es registro o recuperación
   const [registrationData, setRegistrationData] = useState(route?.params?.registrationData || null);
   const isRegistrationMode = !!registrationData;
   
@@ -40,7 +44,6 @@ const Recuperacion2Screen = ({ navigation, route }) => {
 
   const inputRefs = useRef([]);
 
-  // Debug mejorado
   useEffect(() => {
     console.log('🔍 Recuperacion2Screen parámetros recibidos:', {
       mode: isRegistrationMode ? '🆕 REGISTRO' : '🔑 RECUPERACIÓN',
@@ -65,7 +68,7 @@ const Recuperacion2Screen = ({ navigation, route }) => {
   const formatTime = (seconds) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
-    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')} Seg`;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
   const handleOTPChange = (index, value) => {
@@ -96,8 +99,7 @@ const Recuperacion2Screen = ({ navigation, route }) => {
     }
   };
 
-  // ⭐ MODIFICADO: Manejar verificación según el modo
- const handleVerifyCode = async (code = null) => {
+  const handleVerifyCode = async (code = null) => {
     const otpCode = code || otpValues.join('');
     
     if (otpCode.length !== 5) {
@@ -125,10 +127,9 @@ const Recuperacion2Screen = ({ navigation, route }) => {
     console.log('🔐 Iniciando verificación en modo:', isRegistrationMode ? 'REGISTRO' : 'RECUPERACIÓN');
 
     try {
-      // 1️⃣ VERIFICAR CÓDIGO - ⭐ USAR RUTA ESPECÍFICA SEGÚN EL MODO
       const verifyURL = isRegistrationMode 
-        ? `${API_BASE_URL}/api/recovery/verifyCodeForRegistration`  // Para registro (usuario nuevo)
-        : `${API_BASE_URL}/api/recovery/verifyCode`;                // Para recuperación (usuario existente)
+        ? `${API_BASE_URL}/api/recovery/verifyCodeForRegistration`
+        : `${API_BASE_URL}/api/recovery/verifyCode`;
       
       console.log('🌐 URL de verificación:', verifyURL);
       
@@ -137,7 +138,6 @@ const Recuperacion2Screen = ({ navigation, route }) => {
         recoveryToken: recoveryToken
       };
 
-      // Solo agregar estos campos si NO es modo registro
       if (!isRegistrationMode) {
         if (email) payload.email = email;
         if (phone) payload.phone = phone;
@@ -233,13 +233,10 @@ const Recuperacion2Screen = ({ navigation, route }) => {
 
       console.log('✅ Código verificado correctamente:', verifyData);
 
-      // 2️⃣ FLUJO SEGÚN EL MODO
       if (isRegistrationMode) {
-        // 🆕 MODO REGISTRO: Completar registro
         console.log('🎯 Iniciando proceso de registro de usuario');
         await handleUserRegistration(verifyData);
       } else {
-        // 🔑 MODO RECUPERACIÓN: Ir a cambiar contraseña
         console.log('🎯 Navegando a cambio de contraseña');
         await handlePasswordRecovery(verifyData, otpCode);
       }
@@ -263,7 +260,7 @@ const Recuperacion2Screen = ({ navigation, route }) => {
       setLoading(false);
     }
   };
-  // ⭐ NUEVO: Completar registro de usuario
+
   const handleUserRegistration = async (verifyData) => {
     try {
       console.log('👤 Creando cuenta de usuario...');
@@ -277,14 +274,12 @@ const Recuperacion2Screen = ({ navigation, route }) => {
       
       const formData = new FormData();
       
-      // Agregar todos los campos
       Object.keys(registrationData).forEach(key => {
         if (key !== 'profileImage' && key !== 'phoneNormalized') {
           formData.append(key, registrationData[key]);
         }
       });
 
-      // Agregar imagen si existe
       if (registrationData.profileImage) {
         formData.append('profileImage', {
           uri: registrationData.profileImage.uri,
@@ -328,7 +323,6 @@ const Recuperacion2Screen = ({ navigation, route }) => {
         return;
       }
 
-      // 3️⃣ GUARDAR EN CONTEXTO
       console.log('💾 Guardando en contexto de autenticación...');
       
       const authData = {
@@ -340,7 +334,7 @@ const Recuperacion2Screen = ({ navigation, route }) => {
           lastName: registerResult.user?.lastName || registrationData.lastName,
           fullName: registerResult.user?.nombre || `${registrationData.firstName} ${registrationData.lastName}`,
           phone: registrationData.phone,
-          phoneVerified: true, // ⭐ Ya verificado
+          phoneVerified: true,
           profileImage: registerResult.user?.profileImage || null
         },
         token: registerResult.token,
@@ -364,7 +358,6 @@ const Recuperacion2Screen = ({ navigation, route }) => {
         return;
       }
 
-      // 4️⃣ ÉXITO
       setLoading(false);
       console.log('✅ Registro completado exitosamente');
       
@@ -389,7 +382,6 @@ const Recuperacion2Screen = ({ navigation, route }) => {
     }
   };
 
-  // ⭐ RECUPERACIÓN: Navegar a cambiar contraseña
   const handlePasswordRecovery = async (verifyData, otpCode) => {
     setLoading(false);
     
@@ -452,28 +444,46 @@ const Recuperacion2Screen = ({ navigation, route }) => {
 
     setLoading(true);
     try {
-      const requestURL = `${API_BASE_URL}/api/auth/requestCode`;
+      // ✅ USAR LA MISMA URL Y ESTRUCTURA QUE LA PRIMERA PANTALLA
+      const requestURL = `${API_BASE_URL}/api/recovery/requestCode`;
       
-      const payload = {};
+      let payload = {};
+      
       if (isRegistrationMode) {
-        // En modo registro, siempre por SMS
-        payload.phone = registrationData.phoneNormalized || phone;
-        payload.via = 'sms';
+        // Modo registro: usar teléfono con formato completo +503
+        const fullPhone = phone.startsWith('+503') ? phone : `+503${phone.replace('-', '')}`;
+        payload = {
+          phone: fullPhone,
+          via: 'sms'
+        };
       } else {
-        // En modo recuperación, según el método original
-        if (via === 'email' && email) {
-          payload.email = email;
-          payload.via = 'email';
-        } else if (via === 'sms' && phone) {
-          payload.phone = phone;
-          payload.via = 'sms';
+        // Modo recuperación: usar según el método original
+        if (via === 'sms' && phone) {
+          // Asegurar formato completo con +503
+          const fullPhone = phone.startsWith('+503') ? phone : `+503${phone.replace('-', '')}`;
+          payload = {
+            phone: fullPhone,
+            via: 'sms'
+          };
+        } else if (via === 'email' && email) {
+          payload = {
+            email: email,
+            via: 'email'
+          };
         } else {
-          payload.email = email;
-          payload.via = 'email';
+          // Fallback
+          if (email) {
+            payload = { email: email, via: 'email' };
+          } else if (phone) {
+            const fullPhone = phone.startsWith('+503') ? phone : `+503${phone.replace('-', '')}`;
+            payload = { phone: fullPhone, via: 'sms' };
+          }
         }
       }
       
-      console.log('📤 Reenviando código:', payload);
+      console.log('📤 Reenviando código a:', requestURL);
+      console.log('📦 Via:', payload.via);
+      console.log('📦 Destino:', payload.phone ? `***${payload.phone.slice(-4)}` : payload.email);
       
       const response = await fetch(requestURL, {
         method: 'POST',
@@ -484,41 +494,74 @@ const Recuperacion2Screen = ({ navigation, route }) => {
         body: JSON.stringify(payload),
       });
 
+      console.log('📡 Status reenvío:', response.status);
+
+      // Verificar contenido antes de parsear
       const responseText = await response.text();
-      console.log('📄 Respuesta reenvío:', responseText.substring(0, 200));
+      console.log('📄 Respuesta (primeros 200 chars):', responseText.substring(0, 200));
       
       if (responseText.includes('<html>') || responseText.includes('<!DOCTYPE')) {
-        throw new Error('El servidor devolvió HTML. La API no está funcionando correctamente.');
+        console.error('❌ El servidor devolvió HTML:', responseText.substring(0, 500));
+        throw new Error('El servidor devolvió HTML en lugar de JSON. Verifica que la API esté funcionando correctamente.');
       }
 
       let data;
       try {
         data = JSON.parse(responseText);
       } catch (parseError) {
+        console.error('❌ Error parseando JSON:', parseError);
+        console.error('❌ Texto recibido:', responseText);
         throw new Error('Respuesta inválida del servidor');
       }
 
-      if (response.ok && data.success) {
-        // Buscar y actualizar el token
-        const newToken = data.recoveryToken || data.token;
-        
-        if (newToken) {
-          setRecoveryToken(newToken);
-          console.log('✅ Token de recuperación actualizado');
-        }
-        
-        setTimeLeft(120);
-        setOtpValues(['', '', '', '', '']);
-        inputRefs.current[0]?.focus();
-        
-        const method = isRegistrationMode ? 'SMS' : (via === 'sms' ? 'teléfono' : 'email');
-        Alert.alert('Código Reenviado', `Se ha enviado un nuevo código a tu ${method}.`);
-      } else {
+      console.log('📋 Respuesta parseada:', data);
+
+      if (!response.ok) {
+        console.error('❌ Error del servidor:', data);
         Alert.alert('Error', data.message || 'No se pudo reenviar el código');
+        return;
       }
+
+      // ✅ Código reenviado exitosamente
+      console.log('✅ Código reenviado exitosamente:', data);
+      
+      // Actualizar el token si viene en la respuesta
+      const newToken = data.recoveryToken || data.token;
+      
+      if (newToken) {
+        setRecoveryToken(newToken);
+        console.log('🔑 Token actualizado:', newToken.substring(0, 20) + '...');
+      } else {
+        console.warn('⚠️ No se recibió nuevo token en la respuesta');
+      }
+      
+      // Resetear el formulario
+      setTimeLeft(120);
+      setOtpValues(['', '', '', '', '']);
+      inputRefs.current[0]?.focus();
+      
+      const method = via === 'sms' ? 'SMS' : 'email';
+      const destination = data.sentTo || payload.phone || payload.email;
+      
+      Alert.alert(
+        'Código Reenviado', 
+        `Se ha enviado un nuevo código por ${method} a ${destination}`
+      );
+      
     } catch (error) {
       console.error('❌ Error al reenviar código:', error);
-      Alert.alert('Error', error.message || 'No se pudo reenviar el código. Intenta de nuevo.');
+      
+      let errorMessage = 'No se pudo reenviar el código. Intenta de nuevo.';
+      
+      if (error.message.includes('HTML')) {
+        errorMessage = '🔴 La API no está respondiendo correctamente.\n\nVerifica que:\n• El servidor esté corriendo\n• La ruta /api/recovery/requestCode existe\n• El endpoint esté configurado correctamente';
+      } else if (error.message === 'Network request failed' || error.message.includes('network')) {
+        errorMessage = '🔴 No se pudo conectar al servidor.\n\nVerifica tu conexión a internet y que el servidor esté funcionando.';
+      } else {
+        errorMessage = error.message || errorMessage;
+      }
+      
+      Alert.alert('Error', errorMessage);
     } finally {
       setLoading(false);
     }
@@ -527,189 +570,317 @@ const Recuperacion2Screen = ({ navigation, route }) => {
   const isComplete = otpValues.every(value => value !== '');
 
   return (
-    <View style={styles.container}>
-      <View style={styles.content}>
-        <View style={styles.imageContainer}>
-          <Image 
-            source={require('../images/contra2.png')} 
-            style={styles.image}
-            resizeMode="contain"
-          />
+    <>
+      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+      <KeyboardAvoidingView 
+        style={styles.container}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
+        {/* Background curved shapes */}
+        <View style={styles.backgroundShapes}>
+          <View style={styles.curvedShape1} />
+          <View style={styles.curvedShape2} />
+          <View style={styles.curvedShape3} />
         </View>
 
-        <Text style={styles.title}>
-          {isRegistrationMode ? 'Verifica tu teléfono' : 'Código de verificación'}
-        </Text>
-
-        <Text style={styles.subtitle}>
-          Ingresa el código OTP enviado a • <Text style={styles.emailText}>
-            {isRegistrationMode 
-              ? `***${(phone || '').slice(-4)}` 
-              : (via === 'sms' ? `***${(phone || '').slice(-4)}` : email || 'tu email')
-            }
-          </Text>
-        </Text>
-
-        <View style={styles.otpContainer}>
-          {otpValues.map((value, index) => (
-            <TextInput
-              key={index}
-              ref={(ref) => inputRefs.current[index] = ref}
-              style={[
-                styles.otpInput,
-                value && styles.otpInputFilled,
-                loading && styles.otpInputDisabled
-              ]}
-              value={value}
-              onChangeText={(text) => handleOTPChange(index, text)}
-              onKeyPress={({ nativeEvent }) => handleKeyPress(index, nativeEvent.key)}
-              maxLength={1}
-              keyboardType="numeric"
-              textAlign="center"
-              placeholder="0"
-              placeholderTextColor="#9ca3af"
-              editable={!loading}
-              autoFocus={index === 0}
-            />
-          ))}
-        </View>
-
-        {loading && (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator color="#10b981" size="small" />
-            <Text style={styles.loadingText}>
-              {isRegistrationMode ? 'Creando tu cuenta...' : 'Verificando código...'}
-            </Text>
-          </View>
-        )}
-
-        <Text style={styles.timer}>
-          {formatTime(timeLeft)}
-        </Text>
-
-        <View style={styles.resendContainer}>
-          <Text style={styles.resendText}>
-            ¿No recibiste nada?{' '}
-            <Text 
-              style={[styles.resendLink, (timeLeft > 0 || loading) && styles.resendLinkDisabled]} 
-              onPress={(timeLeft === 0 && !loading) ? handleResend : null}
-            >
-              {timeLeft > 0 ? 'Reenviar en' : 'Reenviar'}
-            </Text>
-          </Text>
-        </View>
-
-        {/* Información de debug */}
-        {__DEV__ && (
-          <View style={styles.debugContainer}>
-            <Text style={styles.debugText}>
-              Modo: {isRegistrationMode ? '🆕 REGISTRO' : '🔑 RECUPERACIÓN'} | Token: {recoveryToken ? '✅' : '❌'}
-            </Text>
-            {!recoveryToken && (
-              <Text style={styles.debugTextError}>
-                ⚠️ Sin token - Verifica el flujo anterior
-              </Text>
-            )}
-          </View>
-        )}
-      </View>
-
-      <View style={styles.navigation}>
-        <TouchableOpacity onPress={handleBack} disabled={loading}>
-          <Text style={[styles.navButton, loading && styles.navButtonDisabled]}>Atrás</Text>
-        </TouchableOpacity>
-        
-        <View style={styles.progressContainer}>
-          <View style={styles.progressDot} />
-          <View style={[styles.progressBar, styles.progressActive]} />
-          <View style={styles.progressDot} />
-        </View>
-        
-        <TouchableOpacity 
-          onPress={handleNext} 
-          disabled={!isComplete || loading}
+        <ScrollView 
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          bounces={false}
         >
-          <Text style={[
-            styles.navButton, 
-            styles.nextButton,
-            (!isComplete || loading) && styles.navButtonDisabled
-          ]}>
-            {loading ? 'Verificando...' : (isRegistrationMode ? 'Crear cuenta' : 'Verificar')}
-          </Text>
-        </TouchableOpacity>
-      </View>
+          {/* Header con botón atrás */}
+          <View style={styles.header}>
+            <TouchableOpacity 
+              onPress={handleBack} 
+              disabled={loading}
+              style={styles.backButton}
+              activeOpacity={0.7}
+            >
+              <Icon name="arrow-back" size={24} color="#6B7280" />
+            </TouchableOpacity>
+          </View>
 
-      <View style={styles.footer}>
-        <Text style={styles.footerText}>
-          Rivera distribuidora y{'\n'}
-          transporte || 2025
-        </Text>
-      </View>
-    </View>
+          {/* Lottie Animation */}
+          <View style={styles.lottieContainer}>
+            <LottieView
+              source={require('../assets/lottie/password.json')}
+              autoPlay
+              loop={false}
+              style={styles.lottieAnimation}
+            />
+          </View>
+
+          {/* Content */}
+          <View style={styles.content}>
+            <Text style={styles.title}>
+              {isRegistrationMode ? 'Verifica tu' : 'Código de'}
+            </Text>
+            <Text style={styles.titleLight}>
+              {isRegistrationMode ? 'teléfono' : 'verificación'}
+            </Text>
+
+            <Text style={styles.subtitle}>
+              Ingresa el código OTP enviado a{'\n'}
+              <Text style={styles.contactText}>
+                {isRegistrationMode 
+                  ? `***${(phone || '').slice(-4)}` 
+                  : (via === 'sms' ? `***${(phone || '').slice(-4)}` : email || 'tu email')
+                }
+              </Text>
+            </Text>
+
+            {/* OTP Inputs modernos */}
+            <View style={styles.otpContainer}>
+              {otpValues.map((value, index) => (
+                <TextInput
+                  key={index}
+                  ref={(ref) => inputRefs.current[index] = ref}
+                  style={[
+                    styles.otpInput,
+                    value && styles.otpInputFilled,
+                    loading && styles.otpInputDisabled
+                  ]}
+                  value={value}
+                  onChangeText={(text) => handleOTPChange(index, text)}
+                  onKeyPress={({ nativeEvent }) => handleKeyPress(index, nativeEvent.key)}
+                  maxLength={1}
+                  keyboardType="numeric"
+                  textAlign="center"
+                  placeholder="0"
+                  placeholderTextColor="#D1D5DB"
+                  editable={!loading}
+                  autoFocus={index === 0}
+                />
+              ))}
+            </View>
+
+            {loading && (
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator color="#4CAF50" size="small" />
+                <Text style={styles.loadingText}>
+                  {isRegistrationMode ? 'Creando tu cuenta...' : 'Verificando código...'}
+                </Text>
+              </View>
+            )}
+
+            {/* Timer */}
+            <View style={styles.timerContainer}>
+              <Icon name="schedule" size={16} color="#6B7280" />
+              <Text style={styles.timer}>{formatTime(timeLeft)}</Text>
+            </View>
+
+            {/* Resend */}
+            <View style={styles.resendContainer}>
+              <Text style={styles.resendText}>¿No recibiste el código?</Text>
+              <TouchableOpacity 
+                onPress={handleResend}
+                disabled={timeLeft > 0 || loading}
+                style={styles.resendButton}
+              >
+                <Text style={[
+                  styles.resendLink, 
+                  (timeLeft > 0 || loading) && styles.resendLinkDisabled
+                ]}>
+                  {timeLeft > 0 ? 'Espera...' : 'Reenviar código'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          <View style={styles.spacer} />
+        </ScrollView>
+
+        {/* Footer fijo */}
+        <View style={styles.footerContainer}>
+          {/* Progress indicators */}
+          <View style={styles.progressContainer}>
+            <View style={styles.progressDot} />
+            <View style={[styles.progressDot, styles.progressActive]} />
+            <View style={styles.progressDot} />
+          </View>
+
+          {/* Button */}
+          <View style={styles.buttonContainer}>
+            <TouchableOpacity 
+              style={[
+                styles.button, 
+                (!isComplete || loading) && styles.buttonDisabled
+              ]}
+              onPress={handleNext}
+              disabled={!isComplete || loading}
+              activeOpacity={0.8}
+            >
+              <View style={styles.buttonContent}>
+                {loading ? (
+                  <ActivityIndicator color="#FFFFFF" size="small" />
+                ) : (
+                  <>
+                    <Text style={styles.buttonText}>
+                      {isRegistrationMode ? 'Crear cuenta' : 'Verificar'}
+                    </Text>
+                    <View style={styles.arrowContainer}>
+                      <Text style={styles.arrow}>→</Text>
+                    </View>
+                  </>
+                )}
+              </View>
+            </TouchableOpacity>
+          </View>
+
+          {/* Footer text */}
+          <View style={styles.footer}>
+            <Text style={styles.footerText}>
+              Rivera distribuidora y transporte © 2025
+            </Text>
+          </View>
+        </View>
+      </KeyboardAvoidingView>
+    </>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f9fafb',
+    backgroundColor: '#FFFFFF',
   },
-  content: {
-    flex: 1,
+
+  // Background shapes
+  backgroundShapes: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  curvedShape1: {
+    position: 'absolute',
+    top: -100,
+    right: -80,
+    width: 280,
+    height: 280,
+    borderRadius: 140,
+    backgroundColor: '#4CAF50',
+    opacity: 0.08,
+    transform: [{ rotate: '45deg' }],
+  },
+  curvedShape2: {
+    position: 'absolute',
+    top: 200,
+    left: -120,
+    width: 220,
+    height: 220,
+    borderRadius: 110,
+    backgroundColor: '#1F2937',
+    opacity: 0.05,
+    transform: [{ rotate: '-30deg' }],
+  },
+  curvedShape3: {
+    position: 'absolute',
+    bottom: -150,
+    right: -100,
+    width: 300,
+    height: 300,
+    borderRadius: 150,
+    backgroundColor: '#4CAF50',
+    opacity: 0.06,
+    transform: [{ rotate: '60deg' }],
+  },
+
+  scrollContent: {
+    flexGrow: 1,
+    paddingBottom: 20,
+  },
+
+  header: {
     paddingHorizontal: 24,
-    paddingTop: 64,
+    paddingTop: Platform.OS === 'ios' ? 60 : 40,
+    paddingBottom: 16,
+    zIndex: 2,
   },
-  imageContainer: {
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#F3F4F6',
+    justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 32,
+    alignSelf: 'flex-start',
   },
-  image: {
-    width: 256,
-    height: 320,
+
+  // Lottie
+  lottieContainer: {
+    alignItems: 'center',
+    marginVertical: 20,
+    zIndex: 1,
   },
+  lottieAnimation: {
+    width: 140,
+    height: 140,
+  },
+
+  content: {
+    paddingHorizontal: 28,
+    zIndex: 1,
+  },
+
   title: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#111827',
-    marginBottom: 16,
-    textAlign: 'center',
+    fontSize: 32,
+    fontWeight: '700',
+    color: '#1F2937',
+    letterSpacing: -0.5,
+    lineHeight: 38,
+  },
+  titleLight: {
+    fontSize: 32,
+    fontWeight: '300',
+    color: '#6B7280',
+    marginBottom: 12,
+    letterSpacing: -0.5,
+    lineHeight: 38,
   },
   subtitle: {
     fontSize: 14,
-    color: '#6b7280',
+    color: '#9CA3AF',
     marginBottom: 32,
     textAlign: 'center',
+    lineHeight: 20,
   },
-  emailText: {
+  contactText: {
     fontWeight: '600',
-    color: '#111827',
+    color: '#1F2937',
   },
+
+  // OTP Inputs modernos
   otpContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
     marginBottom: 24,
+    gap: 10,
   },
   otpInput: {
-    width: 48,
-    height: 48,
-    backgroundColor: '#e5e7eb',
-    borderRadius: 8,
-    marginHorizontal: 8,
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#374151',
+    width: 50,
+    height: 56,
+    backgroundColor: '#F9FAFB',
+    borderRadius: 12,
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#1F2937',
     borderWidth: 2,
-    borderColor: 'transparent',
+    borderColor: '#E5E7EB',
   },
   otpInputFilled: {
-    backgroundColor: '#10b981',
-    color: '#fff',
-    borderColor: '#059669',
+    backgroundColor: '#F0FDF4',
+    borderColor: '#4CAF50',
+    color: '#1F2937',
   },
   otpInputDisabled: {
-    backgroundColor: '#f3f4f6',
-    color: '#9ca3af',
+    backgroundColor: '#F3F4F6',
+    borderColor: '#E5E7EB',
+    color: '#9CA3AF',
   },
+
   loadingContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
@@ -717,98 +888,137 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   loadingText: {
-    color: '#10b981',
-    fontSize: 14,
+    color: '#4CAF50',
+    fontSize: 13,
     marginLeft: 8,
     fontWeight: '500',
   },
-  timer: {
-    textAlign: 'center',
-    color: '#6b7280',
-    fontSize: 14,
+
+  timerContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
     marginBottom: 24,
   },
+  timer: {
+    color: '#6B7280',
+    fontSize: 14,
+    marginLeft: 6,
+    fontWeight: '500',
+  },
+
   resendContainer: {
-    marginBottom: 32,
+    alignItems: 'center',
+    marginBottom: 20,
   },
   resendText: {
-    textAlign: 'center',
-    color: '#6b7280',
-    fontSize: 14,
+    color: '#9CA3AF',
+    fontSize: 13,
+    marginBottom: 8,
+  },
+  resendButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
   },
   resendLink: {
-    color: '#3b82f6',
+    color: '#4CAF50',
+    fontSize: 14,
     fontWeight: '600',
+    textDecorationLine: 'underline',
   },
   resendLinkDisabled: {
-    color: '#9ca3af',
+    color: '#D1D5DB',
+    textDecorationLine: 'none',
   },
-  debugContainer: {
-    backgroundColor: '#f0f9ff',
-    padding: 8,
-    borderRadius: 4,
-    marginTop: 16,
+
+  spacer: {
+    height: 40,
   },
-  debugText: {
-    fontSize: 12,
-    color: '#0369a1',
-    fontFamily: 'monospace',
-    textAlign: 'center',
+
+  // Footer fijo
+  footerContainer: {
+    backgroundColor: '#FFFFFF',
+    paddingTop: 16,
+    paddingBottom: Platform.OS === 'ios' ? 20 : 16,
+    borderTopWidth: 1,
+    borderTopColor: '#F3F4F6',
+    zIndex: 2,
   },
-  debugTextError: {
-    fontSize: 12,
-    color: '#dc2626',
-    fontFamily: 'monospace',
-    textAlign: 'center',
-    marginTop: 4,
-  },
-  navigation: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 24,
-    marginBottom: 24,
-  },
-  navButton: {
-    color: '#6b7280',
-    fontWeight: '600',
-  },
-  navButtonDisabled: {
-    color: '#d1d5db',
-  },
-  nextButton: {
-    color: '#10b981',
-  },
+
   progressContainer: {
     flexDirection: 'row',
+    justifyContent: 'center',
     alignItems: 'center',
+    marginBottom: 20,
+    paddingHorizontal: 28,
   },
   progressDot: {
     width: 8,
     height: 8,
-    backgroundColor: '#d1d5db',
+    backgroundColor: '#E5E7EB',
     borderRadius: 4,
-    marginHorizontal: 4,
-  },
-  progressBar: {
-    width: 32,
-    height: 8,
-    backgroundColor: '#d1d5db',
-    borderRadius: 4,
-    marginHorizontal: 4,
+    marginHorizontal: 5,
   },
   progressActive: {
-    backgroundColor: '#111827',
+    backgroundColor: '#1F2937',
+    width: 28,
+    borderRadius: 4,
   },
+
+  buttonContainer: {
+    paddingHorizontal: 28,
+    marginBottom: 16,
+    alignItems: 'flex-end',
+  },
+  button: {
+    backgroundColor: '#1F2937',
+    borderRadius: 30,
+    paddingVertical: 16,
+    paddingHorizontal: 28,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 6,
+    minWidth: 170,
+  },
+  buttonDisabled: {
+    backgroundColor: '#9CA3AF',
+    shadowOpacity: 0.05,
+  },
+  buttonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  buttonText: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '600',
+    marginRight: 10,
+  },
+  arrowContainer: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  arrow: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+
   footer: {
-    paddingHorizontal: 24,
-    paddingBottom: 24,
+    paddingHorizontal: 28,
     alignItems: 'center',
   },
   footerText: {
-    fontSize: 14,
-    color: '#9ca3af',
-    textAlign: 'center',
+    fontSize: 11,
+    color: '#9CA3AF',
+    fontWeight: '400',
   },
 });
 

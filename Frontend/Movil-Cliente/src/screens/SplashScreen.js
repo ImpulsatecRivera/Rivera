@@ -55,7 +55,7 @@ const SplashScreen = () => {
         {/* Animación Lottie */}
         <LottieView
           ref={animationRef}
-          source={require('../assets/lottie/SplashScreen BHS Gym App.json')} // Tu archivo Lottie
+          source={require('../assets/lottie/smoove - hero animation.json')} // Tu archivo Lottie
           autoPlay
           loop={true}
           style={styles.lottie}
