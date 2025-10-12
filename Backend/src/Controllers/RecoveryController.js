@@ -47,7 +47,7 @@ const buscarUsuario = async (criterio, valor) => {
   let userType = null;
 
   if (criterio === "email") {
-    // Búsqueda por email
+    // Búsqueda por email (sin cambios)
     userFound = await EmpleadosModel.findOne({ 
       email: { $regex: new RegExp(`^${valor}$`, 'i') } 
     });
@@ -227,23 +227,12 @@ const actualizarContrasena = async (decoded, hashedPassword) => {
 // ========================================
 RecoveryPass.requestCode = async (req, res) => {
   console.log('🔥 [DEBUG] === INICIO REQUEST CODE ===');
-  console.log('🔥 [DEBUG] NODE_ENV:', process.env.NODE_ENV);
-  console.log('🔥 [DEBUG] Variables Twilio disponibles:');
-  console.log('  - ACCOUNT_SID:', process.env.TWILIO_ACCOUNT_SID ? 'SI' : 'NO');
-  console.log('  - AUTH_TOKEN:', process.env.TWILIO_AUTH_TOKEN ? 'SI' : 'NO');  
-  console.log('  - PHONE_NUMBER:', process.env.TWILIO_PHONE_NUMBER ? 'SI' : 'NO');
-  console.log('🔥 [DEBUG] Config object Twilio:');
-  console.log('  - config.TWILIO_ACCOUNT_SID:', config.TWILIO_ACCOUNT_SID ? 'SI' : 'NO');
-  console.log('  - config.TWILIO_AUTH_TOKEN:', config.TWILIO_AUTH_TOKEN ? 'SI' : 'NO');
-  console.log('  - config.TWILIO_PHONE_NUMBER:', config.TWILIO_PHONE_NUMBER ? 'SI' : 'NO');
   
   const { email, phone, via = "email" } = req.body;
-  console.log("🔥 [DEBUG] Request body:", { email, phone, via });
-
-  console.log("Solicitud de código recibida:", { email, phone, via });
+  console.log("📥 Request body:", { email, phone, via });
 
   try {
-    // Validaciones de entrada según el método
+    // Validaciones de entrada
     if (via === "email" && !email) {
       return res.status(400).json({ message: "Email es requerido" });
     }
@@ -261,7 +250,7 @@ RecoveryPass.requestCode = async (req, res) => {
     // Buscar usuario según el método seleccionado
     if (via === "email") {
       const normalizedEmail = email.trim().toLowerCase();
-      console.log("Buscando usuario por email:", normalizedEmail);
+      console.log("🔍 Buscando por email:", normalizedEmail);
       
       const result = await buscarUsuario("email", normalizedEmail);
       userFound = result.userFound;
@@ -272,7 +261,7 @@ RecoveryPass.requestCode = async (req, res) => {
       console.log("📱 Teléfono recibido del frontend:", phone);
       
       // El frontend envía: +50322345678
-      // Normalizar y buscar en todas las variaciones
+      // Normalizar a formato consistente
       const result = await buscarUsuario("phone", phone);
       userFound = result.userFound;
       userType = result.userType;
@@ -281,16 +270,20 @@ RecoveryPass.requestCode = async (req, res) => {
     // Si no se encuentra usuario
     if (!userFound) {
       const searchTerm = via === "email" ? "email" : "número de teléfono";
-      console.log(`Usuario no encontrado con ${searchTerm}:`, via === "email" ? email : phone);
+      console.log(`❌ Usuario no encontrado con ${searchTerm}:`, via === "email" ? email : phone);
       
       return res.status(400).json({ 
-        message: `Usuario no encontrado con ese ${searchTerm}` 
+        message: `Usuario no encontrado con ese ${searchTerm}`,
+        debug: {
+          received: via === "email" ? email : phone,
+          normalized: via === "sms" ? normalizarTelefono(phone) : null
+        }
       });
     }
 
-    // Verificación adicional para SMS: usuario debe tener teléfono registrado
+    // Verificación adicional para SMS
     if (via === "sms" && !userFound.phone) {
-      console.log("Usuario encontrado pero sin teléfono registrado");
+      console.log("❌ Usuario encontrado pero sin teléfono registrado");
       return res.status(400).json({
         message: "La cuenta no tiene número de teléfono registrado. Usa recuperación por email."
       });
@@ -298,7 +291,7 @@ RecoveryPass.requestCode = async (req, res) => {
 
     // Generar código de 5 dígitos
     const codex = Math.floor(10000 + Math.random() * 90000).toString();
-    console.log("Código generado:", codex);
+    console.log("🔑 Código generado:", codex);
 
     // Crear token JWT
     const tokenPayload = { 
@@ -326,71 +319,53 @@ RecoveryPass.requestCode = async (req, res) => {
           phoneToUse = `+503${normalizedForTwilio}`;
         }
         
+        console.log("📤 Enviando SMS a:", phoneToUse);
+        
         const smsMessage = `Tu código de verificación es: ${codex}. Válido por 20 minutos.`;
         
-        // 🧪 MODO DESARROLLO: Simular SMS sin enviar
+        // 🧪 MODO DESARROLLO
         if (process.env.NODE_ENV === 'development') {
           console.log("🧪 MODO DESARROLLO - SMS simulado");
           console.log("📱 Número destino:", phoneToUse);
           console.log("📝 Código:", codex);
-          console.log("🔗 Token:", token);
           
           return res.status(200).json({ 
-            message: "⚠️ DESARROLLO: SMS simulado (código en consola del servidor)",
+            message: "⚠️ DESARROLLO: SMS simulado (código en consola)",
             success: true,
             sentTo: phoneToUse,
             method: "sms",
             userType: userType,
             recoveryToken: token,
-            devCode: codex // ⚠️ Solo para desarrollo - ELIMINAR en producción
+            devCode: codex
           });
         }
         
-        console.log("Enviando SMS a:", phoneToUse);
-        console.log('🔥 [DEBUG] Intentando enviar SMS...');
-        
         // Enviar SMS real
         const smsResult = await EnviarSms(phoneToUse, smsMessage);
-        console.log('🔥 [DEBUG] Resultado SMS:', smsResult);
         
-        // ✅ MANEJO MEJORADO DE ERRORES
         if (!smsResult.success) {
           console.error("❌ Error enviando SMS:", smsResult);
           
-          // Determinar el tipo de error según el código de Twilio
           let errorMessage = "Error enviando SMS.";
           let statusCode = 500;
-          let suggestion = "Intenta usar recuperación por email.";
           
           if (smsResult.code === 21211) {
             errorMessage = "El número de teléfono no es válido.";
             statusCode = 400;
           } else if (smsResult.code === 21608) {
-            errorMessage = "Este número no está verificado. En cuentas de prueba Twilio, solo números verificados pueden recibir SMS.";
+            errorMessage = "Este número no está verificado en Twilio.";
             statusCode = 403;
-            suggestion = "Verifica el número en tu cuenta Twilio o usa recuperación por email.";
-          } else if (smsResult.code === 21614) {
-            errorMessage = "No se puede enviar SMS a números de este país con tu configuración actual de Twilio.";
-            statusCode = 400;
-          } else if (smsResult.code === 21606) {
-            errorMessage = "El número proporcionado no es un número móvil válido.";
-            statusCode = 400;
-          } else if (smsResult.code === 20003) {
-            errorMessage = "Error de configuración del servicio SMS. Contacta al administrador.";
-            statusCode = 500;
-            suggestion = "Verifica las credenciales de Twilio en el servidor.";
           }
           
           return res.status(statusCode).json({ 
             message: errorMessage,
             success: false,
             error: smsResult.error,
-            twilioCode: smsResult.code,
-            suggestion: suggestion
+            twilioCode: smsResult.code
           });
         }
         
-        console.log("✅ SMS confirmado enviado:", smsResult.messageId);
+        console.log("✅ SMS enviado exitosamente");
         
         return res.status(200).json({ 
           message: "Código enviado vía SMS",
@@ -403,18 +378,16 @@ RecoveryPass.requestCode = async (req, res) => {
         });
         
       } else {
-        // Para EMAIL
+        // EMAIL (sin cambios)
         const emailToUse = userFound.email;
         
-        console.log("Enviando email a:", emailToUse);
+        console.log("📧 Enviando email a:", emailToUse);
         await EnviarEmail(
           emailToUse,
           "Tu código de verificación",
           "Hola, este es tu código de verificación para recuperar tu contraseña.",
           html(codex)
         );
-        
-        console.log("Email enviado exitosamente");
         
         return res.status(200).json({ 
           message: "Código enviado vía email",
@@ -426,7 +399,7 @@ RecoveryPass.requestCode = async (req, res) => {
         });
       }
     } catch (sendError) {
-      console.error("Error enviando código:", sendError);
+      console.error("❌ Error enviando código:", sendError);
       
       const errorMessage = via === "sms" 
         ? "Error enviando SMS. Intenta con recuperación por email." 
@@ -439,7 +412,7 @@ RecoveryPass.requestCode = async (req, res) => {
     }
 
   } catch (error) {
-    console.error("Error general en requestCode:", error);
+    console.error("❌ Error general en requestCode:", error);
     return res.status(500).json({ 
       message: "Error interno del servidor",
       error: error.message 
