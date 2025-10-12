@@ -119,7 +119,7 @@ const AppNavigator = () => {
         name="Recuperacion" 
         component={RecuperacionScreen}
         options={{
-          headerShown: true,
+          headerShown: false,
           title: 'Verificar Email',
           headerStyle: {
             backgroundColor: '#4CAF50',
@@ -137,7 +137,7 @@ const AppNavigator = () => {
         name="RecuperacionTelefono" 
         component={RecuperacionTelefono}
         options={{
-          headerShown: true,
+          headerShown: false,
           title: 'Verificar Teléfono',
           headerStyle: {
             backgroundColor: '#4CAF50',
@@ -155,7 +155,7 @@ const AppNavigator = () => {
         name="Recuperacion2Screen" 
         component={Recuperacion2Screen}
         options={{
-          headerShown: true,
+          headerShown: false,
           title: 'Código de Verificación',
           headerStyle: {
             backgroundColor: '#4CAF50',
@@ -173,7 +173,7 @@ const AppNavigator = () => {
         name="Recuperacion3" 
         component={Recuperacion3}
         options={{
-          headerShown: true,
+          headerShown: false,
           title: 'Nueva Contraseña',
           headerStyle: {
             backgroundColor: '#4CAF50',
