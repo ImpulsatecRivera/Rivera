@@ -31,7 +31,7 @@ const RecuperacionTelefonoScreen = ({ navigation }) => {
       const fullPhoneNumber = `+503${telefono.replace('-', '')}`;
       console.log('📞 Número completo:', fullPhoneNumber);
       
-      // ✅ IP CONFIGURADA - Ajusta según tu configuración
+      // ✅ URL de la API
       const API_URL = 'https://riveraproject-production-933e.up.railway.app/api/recovery/requestCode';
       
       console.log('🌐 Conectando a:', API_URL);
@@ -51,7 +51,7 @@ const RecuperacionTelefonoScreen = ({ navigation }) => {
 
       // Verificar el contenido antes de parsear JSON
       const responseText = await response.text();
-      console.log('📄 Response text:', responseText);
+      console.log('📄 Response text (primeros 200 chars):', responseText.substring(0, 200));
 
       // Verificar si la respuesta es HTML (error del servidor)
       if (responseText.includes('<html>') || responseText.includes('<!DOCTYPE')) {
@@ -66,12 +66,26 @@ const RecuperacionTelefonoScreen = ({ navigation }) => {
         throw new Error('Respuesta inválida del servidor');
       }
 
+      console.log('📦 Data parseada:', data);
+
       if (!response.ok) {
+        console.error('❌ Error del servidor:', data);
         Alert.alert('Error', data.message || 'Error al enviar código SMS');
         return;
       }
 
       console.log('✅ Código SMS enviado exitosamente:', data);
+      
+      // ⭐ CRÍTICO: Extraer el recoveryToken de la respuesta
+      const recoveryToken = data.recoveryToken || data.token;
+      
+      if (!recoveryToken) {
+        console.error('❌ El servidor no devolvió un token de recuperación');
+        Alert.alert('Error', 'El servidor no proporcionó un token válido. Intenta de nuevo.');
+        return;
+      }
+      
+      console.log('🔑 Token recibido:', recoveryToken.substring(0, 20) + '...');
       
       Alert.alert(
         'Código Enviado', 
@@ -79,10 +93,16 @@ const RecuperacionTelefonoScreen = ({ navigation }) => {
         [
           { 
             text: 'Continuar', 
-           onPress: () => navigation.navigate('Recuperacion2Screen', { 
-  phone: fullPhoneNumber,
-  via: 'sms'
-})
+            onPress: () => {
+              console.log('🎯 Navegando a Recuperacion2Screen con token');
+              navigation.navigate('Recuperacion2Screen', { 
+                phone: fullPhoneNumber,
+                via: 'sms',
+                recoveryToken: recoveryToken, // ⭐ PASAR EL TOKEN
+                fromScreen: 'RecuperacionTelefonoScreen',
+                timestamp: Date.now()
+              });
+            }
           }
         ]
       );
@@ -97,7 +117,7 @@ const RecuperacionTelefonoScreen = ({ navigation }) => {
           '🔴 La API no está respondiendo correctamente.\n\n' +
           'Verifica que:\n' +
           '• El servidor esté corriendo\n' +
-          '• La ruta /api/requestCode existe\n' +
+          '• La ruta /api/recovery/requestCode existe\n' +
           '• El endpoint esté configurado correctamente'
         );
       } else if (error.message === 'Network request failed') {
@@ -185,7 +205,7 @@ const RecuperacionTelefonoScreen = ({ navigation }) => {
       {/* Ilustración */}
       <View style={styles.imageContainer}>
         <Image 
-          source={require('../images/recuperarcontra.png')} // Ajusta la ruta según tu estructura
+          source={require('../images/recuperarcontra.png')}
           style={styles.image}
           resizeMode="contain"
         />
