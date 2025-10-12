@@ -97,7 +97,7 @@ const Recuperacion2Screen = ({ navigation, route }) => {
   };
 
   // ⭐ MODIFICADO: Manejar verificación según el modo
-  const handleVerifyCode = async (code = null) => {
+ const handleVerifyCode = async (code = null) => {
     const otpCode = code || otpValues.join('');
     
     if (otpCode.length !== 5) {
@@ -125,22 +125,29 @@ const Recuperacion2Screen = ({ navigation, route }) => {
     console.log('🔐 Iniciando verificación en modo:', isRegistrationMode ? 'REGISTRO' : 'RECUPERACIÓN');
 
     try {
-      // 1️⃣ VERIFICAR CÓDIGO
-      const verifyURL = `${API_BASE_URL}/api/auth/verifyCode`;
+      // 1️⃣ VERIFICAR CÓDIGO - ⭐ USAR RUTA ESPECÍFICA SEGÚN EL MODO
+      const verifyURL = isRegistrationMode 
+        ? `${API_BASE_URL}/api/recovery/verifyCodeForRegistration`  // Para registro (usuario nuevo)
+        : `${API_BASE_URL}/api/recovery/verifyCode`;                // Para recuperación (usuario existente)
+      
+      console.log('🌐 URL de verificación:', verifyURL);
       
       const payload = {
         code: otpCode,
-        recoveryToken: recoveryToken,
-        isPhoneVerification: isRegistrationMode // ⭐ Flag para el backend
+        recoveryToken: recoveryToken
       };
 
-      if (email) payload.email = email;
-      if (phone) payload.phone = phone;
-      if (via) payload.via = via;
+      // Solo agregar estos campos si NO es modo registro
+      if (!isRegistrationMode) {
+        if (email) payload.email = email;
+        if (phone) payload.phone = phone;
+        if (via) payload.via = via;
+      }
 
       console.log('📤 Enviando verificación:', {
+        mode: isRegistrationMode ? 'REGISTRO' : 'RECUPERACIÓN',
+        url: verifyURL,
         code: otpCode,
-        isPhoneVerification: isRegistrationMode,
         hasRecoveryToken: !!recoveryToken
       });
       
@@ -156,6 +163,7 @@ const Recuperacion2Screen = ({ navigation, route }) => {
       console.log('📡 Estado de respuesta verificación:', verifyResponse.status);
 
       const verifyText = await verifyResponse.text();
+      console.log('📄 Respuesta (primeros 200 chars):', verifyText.substring(0, 200));
       
       if (verifyText.includes('<html>') || verifyText.includes('<!DOCTYPE')) {
         throw new Error('El servidor devolvió HTML en lugar de JSON. Verifica que la API esté funcionando correctamente.');
@@ -168,6 +176,8 @@ const Recuperacion2Screen = ({ navigation, route }) => {
         console.error('❌ Error al parsear JSON:', parseError);
         throw new Error('Respuesta inválida del servidor');
       }
+
+      console.log('📋 Datos verificación parseados:', verifyData);
 
       if (!verifyResponse.ok) {
         console.log('❌ Error en verificación:', verifyData);
@@ -226,9 +236,11 @@ const Recuperacion2Screen = ({ navigation, route }) => {
       // 2️⃣ FLUJO SEGÚN EL MODO
       if (isRegistrationMode) {
         // 🆕 MODO REGISTRO: Completar registro
+        console.log('🎯 Iniciando proceso de registro de usuario');
         await handleUserRegistration(verifyData);
       } else {
         // 🔑 MODO RECUPERACIÓN: Ir a cambiar contraseña
+        console.log('🎯 Navegando a cambio de contraseña');
         await handlePasswordRecovery(verifyData, otpCode);
       }
 
@@ -251,7 +263,6 @@ const Recuperacion2Screen = ({ navigation, route }) => {
       setLoading(false);
     }
   };
-
   // ⭐ NUEVO: Completar registro de usuario
   const handleUserRegistration = async (verifyData) => {
     try {
