@@ -296,114 +296,91 @@ const RegistrarseCliente2 = ({ navigation, route }) => {
     }
   };
 
-  const handleCreateAccount = async () => {
-    console.log('🚀 INICIANDO REGISTRO...');
+  // RegistrarseCliente2.js - Modificar esta función
+const handleCreateAccount = async () => {
+  console.log('🚀 INICIANDO PROCESO DE REGISTRO...');
 
-    if (!validateForm()) {
-      console.log('❌ Validación fallida');
-      return;
+  if (!validateForm()) {
+    console.log('❌ Validación fallida');
+    return;
+  }
+
+  if (!email || !password) {
+    Alert.alert('Error', 'Faltan datos del email o contraseña. Regresa a la pantalla anterior.');
+    return;
+  }
+
+  setLoading(true);
+  
+  try {
+    // Normalizar teléfono para envío (agregar +503)
+    let normalizedPhone = phone.replace(/\D/g, ''); // quitar guiones
+    if (!normalizedPhone.startsWith('503')) {
+      normalizedPhone = '503' + normalizedPhone;
     }
+    normalizedPhone = '+' + normalizedPhone;
 
-    if (!email || !password) {
-      Alert.alert('Error', 'Faltan datos del email o contraseña. Regresa a la pantalla anterior.');
-      return;
-    }
+    console.log('📱 Enviando código SMS a:', normalizedPhone);
 
-    setLoading(true);
-    try {
-      const convertDateFormat = (dateStr) => {
-        if (dateStr.includes('/')) {
-          const [day, month, year] = dateStr.split('/');
-          const dayNum = parseInt(day, 10);
-          const monthNum = parseInt(month, 10);
-          const yearNum = parseInt(year, 10);
-          
-          if (isNaN(dayNum) || isNaN(monthNum) || isNaN(yearNum)) {
-            throw new Error('Fecha inválida');
-          }
-          
-          return `${yearNum}-${monthNum.toString().padStart(2, '0')}-${dayNum.toString().padStart(2, '0')}`;
-        }
-        return dateStr;
-      };
+    // 🔥 ENVIAR CÓDIGO DE VERIFICACIÓN SMS
+    const smsResponse = await fetch(`${API_BASE_URL}/api/auth/requestCode`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        phone: normalizedPhone,
+        via: 'sms'
+      })
+    });
 
-      const userData = {
-        firstName: firstName.trim(),
-        lastName: lastName.trim(),
-        email: email.trim(),
-        idNumber: dui.trim(),
-        birthDate: convertDateFormat(fechaNacimiento),
-        password: password.trim(),
-        phone: phone.trim(),
-        address: direccion.trim()
-      };
-      
-      console.log('📝 Datos a enviar:', userData);
-      console.log('📸 Imagen seleccionada:', selectedImage ? 'Sí' : 'No');
-      
-      const result = await registerUser(userData, selectedImage);
-      
-      if (result.success) {
-        console.log('✅ Registro exitoso!');
-        console.log('📋 RESPUESTA COMPLETA DEL BACKEND:', JSON.stringify(result.data, null, 2));
-        
-        const registrationData = {
-          user: {
-            id: result.data.user?.id || result.data.user?._id || null,
-            _id: result.data.user?.id || result.data.user?._id || null,
-            email: result.data.user?.email || email,
-            firstName: result.data.user?.firstName || firstName,
-            lastName: result.data.user?.lastName || lastName,
-            fullName: result.data.user?.nombre || `${firstName} ${lastName}`,
-            idNumber: dui,
-            phone: phone,
-            address: direccion,
-            birthDate: fechaNacimiento,
-            profileImage: result.data.user?.profileImage || null
-          },
-          token: result.data.token || 'no-token-received',
-          userType: result.data.userType || 'Cliente'
-        };
+    const smsData = await smsResponse.json();
+    console.log('📋 Respuesta SMS:', smsData);
 
-        console.log('📦 DATOS PREPARADOS PARA CONTEXTO:', JSON.stringify(registrationData, null, 2));
-
-        console.log('💾 Guardando datos en el contexto...');
-        const authResult = await register(registrationData);
-        
-        console.log('📋 RESULTADO DEL CONTEXTO:', authResult);
-        
-        if (authResult.success) {
-          console.log('✅ Datos guardados en contexto exitosamente');
-          Alert.alert(
-            'Éxito', 
-            '¡Cuenta creada exitosamente!', 
-            [
-              { 
-                text: 'Continuar', 
-                onPress: () => {
-                  console.log('🎯 Navegando a pantalla de carga');
-                  navigation.navigate('pantallacarga1');
-                }
-              }
-            ]
-          );
-        } else {
-          console.error('❌ Error guardando en contexto:', authResult.error);
-          Alert.alert('Error', 'Cuenta creada pero hubo un problema con la sesión. Intenta iniciar sesión.');
-        }
-        
-      } else {
-        console.error('❌ Error en el registro:', result.error);
-        Alert.alert('Error', result.error);
-      }
-      
-    } catch (error) {
-      console.error('💥 Exception durante el registro:', error);
-      Alert.alert('Error', 'No se pudo crear la cuenta. Intenta de nuevo.');
-    } finally {
+    if (!smsData.success) {
+      Alert.alert('Error', smsData.message || 'No se pudo enviar el código SMS');
       setLoading(false);
+      return;
     }
-  };
+
+    // ✅ SMS enviado exitosamente
+    console.log('✅ Código SMS enviado');
+    
+    // Preparar datos para la pantalla de verificación
+    const convertDateFormat = (dateStr) => {
+      if (dateStr.includes('/')) {
+        const [day, month, year] = dateStr.split('/');
+        return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+      }
+      return dateStr;
+    };
+
+    const registrationData = {
+      firstName: firstName.trim(),
+      lastName: lastName.trim(),
+      email: email.trim(),
+      idNumber: dui.trim(),
+      birthDate: convertDateFormat(fechaNacimiento),
+      password: password.trim(),
+      phone: phone.trim(),
+      phoneNormalized: normalizedPhone,
+      address: direccion.trim(),
+      profileImage: selectedImage
+    };
+
+    setLoading(false);
+
+    // 🎯 NAVEGAR A PANTALLA DE VERIFICACIÓN
+    navigation.navigate('Recuperacion2Screen', {
+      recoveryToken: smsData.recoveryToken,
+      registrationData: registrationData,
+      phoneNumber: normalizedPhone
+    });
+
+  } catch (error) {
+    console.error('💥 Error enviando SMS:', error);
+    Alert.alert('Error', 'No se pudo enviar el código. Verifica tu conexión.');
+    setLoading(false);
+  }
+};
 
   const showImageOptions = () => {
     setShowImageModal(true);

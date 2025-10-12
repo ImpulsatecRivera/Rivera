@@ -52,6 +52,8 @@ const motoristaSchema = new Schema({
         type: String,      // Tarjeta de circulación o licencia de conducir
         required: true     // Campo obligatorio para validar capacidad legal de conducir
     },
+    phoneVerified: { type: Boolean, default: false }, // ⭐ AGREGAR ESTO
+  phoneVerifiedAt: { type: Date }, // ⭐ AGREGAR ESTO (opcional)
     
     // Información multimedia
     img: {

@@ -44,6 +44,8 @@ const clienteSchema = new Schema({
     type: Boolean, 
     default: false 
   },
+  phoneVerified: { type: Boolean, default: false }, // ⭐ AGREGAR ESTO
+  phoneVerifiedAt: { type: Date }, // ⭐ AGREGAR ESTO (opcional)
   
   // ✅ INFORMACIÓN OPCIONAL PARA USUARIOS DE GOOGLE
   // Información de identificación
