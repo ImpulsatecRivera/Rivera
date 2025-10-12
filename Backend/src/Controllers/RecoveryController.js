@@ -657,4 +657,209 @@ RecoveryPass.debugUsers = async (req, res) => {
   }
 };
 
+RecoveryPass.sendVerificationForRegistration = async (req, res) => {
+  console.log('🔥 [DEBUG] === ENVÍO DE CÓDIGO PARA REGISTRO ===');
+  
+  const { phone } = req.body;
+  
+  try {
+    // Validación
+    if (!phone) {
+      return res.status(400).json({ message: "Número de teléfono es requerido" });
+    }
+
+    // Normalizar número
+    let normalizedPhone = phone.trim();
+    if (!normalizedPhone.startsWith('+')) {
+      if (normalizedPhone.startsWith('503')) {
+        normalizedPhone = '+' + normalizedPhone;
+      } else {
+        normalizedPhone = '+503' + normalizedPhone;
+      }
+    }
+
+    console.log("📱 Enviando SMS de verificación para registro a:", normalizedPhone);
+
+    // ⭐ OPCIONAL: Verificar que NO exista ya un usuario con este teléfono
+    const existingUser = await buscarUsuario("phone", normalizedPhone);
+    if (existingUser.userFound) {
+      return res.status(400).json({ 
+        message: "Este número de teléfono ya está registrado. Intenta iniciar sesión.",
+        alreadyExists: true
+      });
+    }
+
+    // Generar código de 5 dígitos
+    const codex = Math.floor(10000 + Math.random() * 90000).toString();
+    console.log("🔑 Código generado:", codex);
+
+    // Crear token JWT (sin ID de usuario, solo con teléfono)
+    const tokenPayload = { 
+      phone: normalizedPhone,
+      codex, 
+      purpose: 'registration', // ⭐ Identificar que es para registro
+      verified: false,
+      via: 'sms',
+      createdAt: new Date().toISOString()
+    };
+
+    const token = jwt.sign(tokenPayload, config.JWT.secret, { expiresIn: "20m" });
+
+    // Enviar SMS
+    try {
+      // Modo desarrollo: Simular SMS
+      if (process.env.NODE_ENV === 'development') {
+        console.log("🧪 MODO DESARROLLO - SMS simulado");
+        console.log("📱 Número destino:", normalizedPhone);
+        console.log("📝 Código:", codex);
+        
+        return res.status(200).json({ 
+          message: "⚠️ DESARROLLO: SMS simulado (código en consola)",
+          success: true,
+          sentTo: normalizedPhone,
+          method: "sms",
+          recoveryToken: token,
+          devCode: codex // ⚠️ Solo en desarrollo
+        });
+      }
+
+      // Enviar SMS real
+      const smsMessage = `Tu código de verificación es: ${codex}. Válido por 20 minutos.`;
+      console.log('📤 Enviando SMS...');
+      
+      const smsResult = await EnviarSms(normalizedPhone, smsMessage);
+      console.log('📋 Resultado SMS:', smsResult);
+      
+      if (!smsResult.success) {
+        console.error("❌ Error enviando SMS:", smsResult);
+        
+        let errorMessage = "Error enviando SMS.";
+        let statusCode = 500;
+        
+        if (smsResult.code === 21211) {
+          errorMessage = "El número de teléfono no es válido.";
+          statusCode = 400;
+        } else if (smsResult.code === 21608) {
+          errorMessage = "Este número no está verificado en Twilio. En cuentas de prueba, solo números verificados pueden recibir SMS.";
+          statusCode = 403;
+        } else if (smsResult.code === 21614) {
+          errorMessage = "No se puede enviar SMS a números de este país.";
+          statusCode = 400;
+        } else if (smsResult.code === 20003) {
+          errorMessage = "Error de configuración del servicio SMS.";
+          statusCode = 500;
+        }
+        
+        return res.status(statusCode).json({ 
+          message: errorMessage,
+          success: false,
+          error: smsResult.error,
+          twilioCode: smsResult.code
+        });
+      }
+      
+      console.log("✅ SMS enviado exitosamente");
+      
+      return res.status(200).json({ 
+        message: "Código enviado vía SMS",
+        success: true,
+        sentTo: `***${normalizedPhone.slice(-4)}`,
+        method: "sms",
+        messageId: smsResult.messageId,
+        recoveryToken: token
+      });
+      
+    } catch (sendError) {
+      console.error("❌ Error enviando SMS:", sendError);
+      return res.status(500).json({ 
+        message: "Error enviando SMS. Intenta nuevamente.",
+        error: sendError.message 
+      });
+    }
+
+  } catch (error) {
+    console.error("❌ Error en sendVerificationForRegistration:", error);
+    return res.status(500).json({ 
+      message: "Error interno del servidor",
+      error: error.message 
+    });
+  }
+};
+
+RecoveryPass.verifyCodeForRegistration = async (req, res) => {
+  const { code, recoveryToken } = req.body;
+
+  console.log("🔐 Verificando código para registro");
+
+  try {
+    if (!code || !recoveryToken) {
+      return res.status(400).json({ message: "Código y token requeridos" });
+    }
+
+    if (code.length !== 5 || !/^\d{5}$/.test(code)) {
+      return res.status(400).json({ message: "El código debe tener 5 dígitos" });
+    }
+
+    // Verificar token JWT
+    let decoded;
+    try {
+      decoded = jwt.verify(recoveryToken, config.JWT.secret);
+    } catch (jwtError) {
+      if (jwtError.name === 'TokenExpiredError') {
+        return res.status(401).json({ 
+          message: "El código ha expirado. Solicita un nuevo código." 
+        });
+      }
+      return res.status(401).json({ 
+        message: "Token inválido. Solicita un nuevo código." 
+      });
+    }
+
+    // Verificar que sea para registro
+    if (decoded.purpose !== 'registration') {
+      return res.status(400).json({ 
+        message: "Token no válido para registro" 
+      });
+    }
+
+    // Verificar código
+    if (decoded.codex !== code) {
+      console.log("❌ Código incorrecto");
+      return res.status(400).json({ 
+        message: "Código inválido. Verifica e inténtalo de nuevo." 
+      });
+    }
+
+    console.log("✅ Código verificado correctamente para registro");
+
+    // Crear nuevo token con código verificado
+    const verifiedToken = jwt.sign(
+      {
+        phone: decoded.phone,
+        codex: decoded.codex,
+        purpose: 'registration',
+        verified: true,
+        verifiedAt: new Date().toISOString()
+      },
+      config.JWT.secret,
+      { expiresIn: "20m" }
+    );
+
+    res.status(200).json({
+      message: "Teléfono verificado exitosamente",
+      success: true,
+      phoneVerified: true,
+      phone: decoded.phone,
+      verifiedToken: verifiedToken
+    });
+
+  } catch (error) {
+    console.error("❌ Error en verifyCodeForRegistration:", error);
+    res.status(500).json({ 
+      message: "Error interno del servidor",
+      error: error.message 
+    });
+  }
+};
+
 export default RecoveryPass;

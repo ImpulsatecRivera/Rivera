@@ -323,7 +323,7 @@ const handleCreateAccount = async () => {
     console.log('📱 Enviando código SMS a:', normalizedPhone);
 
     // 🔥 ENVIAR CÓDIGO DE VERIFICACIÓN SMS
-    const smsResponse = await fetch(`${API_BASE_URL}/api/auth/requestCode`, {
+    const smsResponse = await fetch(`${API_BASE_URL}/api/recovery/sendVerificationForRegistration`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({

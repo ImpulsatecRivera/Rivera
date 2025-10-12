@@ -9,8 +9,13 @@ import {
   Alert,
   ActivityIndicator
 } from 'react-native';
+import { useAuth } from '../context/authContext';
+
+const API_BASE_URL = 'https://riveraproject-production-933e.up.railway.app';
 
 const Recuperacion2Screen = ({ navigation, route }) => {
+  const { register } = useAuth();
+
   const [otpValues, setOtpValues] = useState(['', '', '', '', '']);
   const [timeLeft, setTimeLeft] = useState(120);
   const [loading, setLoading] = useState(false);
@@ -19,10 +24,12 @@ const Recuperacion2Screen = ({ navigation, route }) => {
   const [phone, setPhone] = useState(route?.params?.phone || '');
   const [via, setVia] = useState(route?.params?.via || 'email');
   
-  // CORREGIDO: Mejor manejo del token de recuperación
+  // ⭐ NUEVO: Detectar si es registro o recuperación
+  const [registrationData, setRegistrationData] = useState(route?.params?.registrationData || null);
+  const isRegistrationMode = !!registrationData;
+  
   const [recoveryToken, setRecoveryToken] = useState(() => {
     const token = route?.params?.recoveryToken;
-    // Validar que el token no sea null, "null", undefined o vacío
     if (!token || token === 'null' || token === 'undefined' || typeof token !== 'string' || token.trim() === '') {
       console.warn('⚠️ Token de recuperación no válido recibido:', token);
       return null;
@@ -36,9 +43,11 @@ const Recuperacion2Screen = ({ navigation, route }) => {
   // Debug mejorado
   useEffect(() => {
     console.log('🔍 Recuperacion2Screen parámetros recibidos:', {
+      mode: isRegistrationMode ? '🆕 REGISTRO' : '🔑 RECUPERACIÓN',
       email,
       phone: phone ? `***${phone.slice(-4)}` : 'N/A',
       via,
+      hasRegistrationData: !!registrationData,
       recoveryToken: recoveryToken ? `${recoveryToken.substring(0, 20)}...` : 'NULL',
       hasValidToken: !!recoveryToken && recoveryToken !== 'null',
       fromScreen: route?.params?.fromScreen,
@@ -87,6 +96,7 @@ const Recuperacion2Screen = ({ navigation, route }) => {
     }
   };
 
+  // ⭐ MODIFICADO: Manejar verificación según el modo
   const handleVerifyCode = async (code = null) => {
     const otpCode = code || otpValues.join('');
     
@@ -95,7 +105,6 @@ const Recuperacion2Screen = ({ navigation, route }) => {
       return;
     }
 
-    // CORREGIDO: Verificación mejorada del token
     if (!recoveryToken || recoveryToken === 'null' || recoveryToken.trim() === '') {
       console.error('❌ No hay token de recuperación válido disponible');
       Alert.alert(
@@ -105,7 +114,7 @@ const Recuperacion2Screen = ({ navigation, route }) => {
           { text: 'Cancelar', style: 'cancel' },
           { 
             text: 'Nuevo Código', 
-            onPress: () => navigation.navigate('RecuperacionScreen')
+            onPress: () => navigation.navigate(isRegistrationMode ? 'RegistrarseCliente2' : 'RecuperacionScreen')
           }
         ]
       );
@@ -113,30 +122,29 @@ const Recuperacion2Screen = ({ navigation, route }) => {
     }
 
     setLoading(true);
+    console.log('🔐 Iniciando verificación en modo:', isRegistrationMode ? 'REGISTRO' : 'RECUPERACIÓN');
+
     try {
-      const API_URL = 'https://riveraproject-production-933e.up.railway.app/api/recovery/verifyCode';
+      // 1️⃣ VERIFICAR CÓDIGO
+      const verifyURL = `${API_BASE_URL}/api/auth/verifyCode`;
       
-      // CORREGIDO: Payload con todos los campos necesarios
       const payload = {
         code: otpCode,
-        recoveryToken: recoveryToken
+        recoveryToken: recoveryToken,
+        isPhoneVerification: isRegistrationMode // ⭐ Flag para el backend
       };
 
-      // Agregar información adicional si está disponible
       if (email) payload.email = email;
       if (phone) payload.phone = phone;
       if (via) payload.via = via;
 
-      console.log('📤 Enviando verificación con payload:', {
+      console.log('📤 Enviando verificación:', {
         code: otpCode,
-        hasRecoveryToken: !!recoveryToken,
-        tokenPreview: recoveryToken ? recoveryToken.substring(0, 20) + '...' : 'N/A',
-        email: email || 'N/A',
-        phone: phone ? `***${phone.slice(-4)}` : 'N/A',
-        via
+        isPhoneVerification: isRegistrationMode,
+        hasRecoveryToken: !!recoveryToken
       });
       
-      const response = await fetch(API_URL, {
+      const verifyResponse = await fetch(verifyURL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -145,34 +153,30 @@ const Recuperacion2Screen = ({ navigation, route }) => {
         body: JSON.stringify(payload),
       });
 
-      console.log('📡 Estado de respuesta:', response.status);
+      console.log('📡 Estado de respuesta verificación:', verifyResponse.status);
 
-      const responseText = await response.text();
-      console.log('📄 Respuesta del servidor:', responseText);
-
-      if (responseText.includes('<html>') || responseText.includes('<!DOCTYPE')) {
+      const verifyText = await verifyResponse.text();
+      
+      if (verifyText.includes('<html>') || verifyText.includes('<!DOCTYPE')) {
         throw new Error('El servidor devolvió HTML en lugar de JSON. Verifica que la API esté funcionando correctamente.');
       }
 
-      let data;
+      let verifyData;
       try {
-        data = JSON.parse(responseText);
+        verifyData = JSON.parse(verifyText);
       } catch (parseError) {
         console.error('❌ Error al parsear JSON:', parseError);
         throw new Error('Respuesta inválida del servidor');
       }
 
-      if (!response.ok) {
-        console.log('❌ Respuesta de error:', data);
+      if (!verifyResponse.ok) {
+        console.log('❌ Error en verificación:', verifyData);
         
-        if (response.status === 400) {
-          const message = data.message || '';
+        if (verifyResponse.status === 400) {
+          const message = verifyData.message || '';
           
           if (message.includes('Token de recuperación requerido') || 
-              message.includes('Token requerido') ||
-              message.includes('Recovery token required') ||
-              message.includes('recoveryToken')) {
-            
+              message.includes('Token requerido')) {
             Alert.alert(
               'Token Requerido', 
               'El servidor requiere un token de recuperación válido.\n\n¿Deseas solicitar un nuevo código?',
@@ -180,7 +184,7 @@ const Recuperacion2Screen = ({ navigation, route }) => {
                 { text: 'Cancelar', style: 'cancel' },
                 { 
                   text: 'Nuevo Código', 
-                  onPress: () => navigation.navigate('RecuperacionScreen')
+                  onPress: () => navigation.navigate(isRegistrationMode ? 'RegistrarseCliente2' : 'RecuperacionScreen')
                 }
               ]
             );
@@ -194,7 +198,7 @@ const Recuperacion2Screen = ({ navigation, route }) => {
               [
                 { 
                   text: 'Nuevo Código', 
-                  onPress: () => navigation.navigate('RecuperacionScreen')
+                  onPress: () => navigation.navigate(isRegistrationMode ? 'RegistrarseCliente2' : 'RecuperacionScreen')
                 }
               ]
             );
@@ -205,42 +209,28 @@ const Recuperacion2Screen = ({ navigation, route }) => {
             Alert.alert('Error', 'Código de verificación incorrecto. Inténtalo de nuevo.');
             setOtpValues(['', '', '', '', '']);
             inputRefs.current[0]?.focus();
+            setLoading(false);
             return;
           }
         }
         
-        Alert.alert('Error', data.message || 'Código de verificación incorrecto');
+        Alert.alert('Error', verifyData.message || 'Código de verificación incorrecto');
         setOtpValues(['', '', '', '', '']);
         inputRefs.current[0]?.focus();
+        setLoading(false);
         return;
       }
 
-      // Verificación exitosa
-      console.log('✅ Código verificado exitosamente:', data);
+      console.log('✅ Código verificado correctamente:', verifyData);
 
-      // Buscar el token verificado en la respuesta
-      const verifiedToken = data.verifiedToken || data.token || data.recoveryToken || recoveryToken;
-
-      Alert.alert(
-        'Código Verificado', 
-        'El código es correcto. Ahora puedes crear tu nueva contraseña.',
-        [
-          { 
-            text: 'Continuar', 
-            onPress: () => {
-              navigation.navigate('Recuperacion3', { 
-                email: email,
-                phone: phone,
-                via: via,
-                verifiedCode: otpCode,
-                recoveryToken: verifiedToken,
-                verifiedToken: verifiedToken,
-                timestamp: Date.now()
-              });
-            }
-          }
-        ]
-      );
+      // 2️⃣ FLUJO SEGÚN EL MODO
+      if (isRegistrationMode) {
+        // 🆕 MODO REGISTRO: Completar registro
+        await handleUserRegistration(verifyData);
+      } else {
+        // 🔑 MODO RECUPERACIÓN: Ir a cambiar contraseña
+        await handlePasswordRecovery(verifyData, otpCode);
+      }
 
     } catch (error) {
       console.error('❌ Error en verificación:', error);
@@ -258,13 +248,179 @@ const Recuperacion2Screen = ({ navigation, route }) => {
       Alert.alert('Error', errorMessage);
       setOtpValues(['', '', '', '', '']);
       inputRefs.current[0]?.focus();
-    } finally {
       setLoading(false);
     }
   };
 
+  // ⭐ NUEVO: Completar registro de usuario
+  const handleUserRegistration = async (verifyData) => {
+    try {
+      console.log('👤 Creando cuenta de usuario...');
+      console.log('📦 Datos de registro:', {
+        firstName: registrationData.firstName,
+        lastName: registrationData.lastName,
+        email: registrationData.email,
+        phone: registrationData.phone,
+        hasImage: !!registrationData.profileImage
+      });
+      
+      const formData = new FormData();
+      
+      // Agregar todos los campos
+      Object.keys(registrationData).forEach(key => {
+        if (key !== 'profileImage' && key !== 'phoneNormalized') {
+          formData.append(key, registrationData[key]);
+        }
+      });
+
+      // Agregar imagen si existe
+      if (registrationData.profileImage) {
+        formData.append('profileImage', {
+          uri: registrationData.profileImage.uri,
+          type: registrationData.profileImage.type,
+          name: registrationData.profileImage.name,
+        });
+        console.log('📸 Imagen agregada al FormData');
+      }
+
+      const registerURL = `${API_BASE_URL}/api/register-cliente`;
+      console.log('🌐 Enviando registro a:', registerURL);
+
+      const registerResponse = await fetch(registerURL, {
+        method: 'POST',
+        body: formData,
+      });
+
+      console.log('📊 Status registro:', registerResponse.status);
+
+      const registerText = await registerResponse.text();
+      console.log('📄 Respuesta registro (raw):', registerText.substring(0, 200));
+
+      if (registerText.includes('<html>') || registerText.includes('<!DOCTYPE')) {
+        throw new Error('El servidor de registro devolvió HTML. Verifica el endpoint.');
+      }
+
+      let registerResult;
+      try {
+        registerResult = JSON.parse(registerText);
+      } catch (parseError) {
+        console.error('❌ Error parseando respuesta de registro');
+        throw new Error('Respuesta inválida del servidor de registro');
+      }
+
+      console.log('📋 Respuesta registro (parsed):', registerResult);
+
+      if (!registerResponse.ok) {
+        console.error('❌ Error en registro:', registerResult);
+        Alert.alert('Error', registerResult.Message || registerResult.message || 'Error al crear la cuenta');
+        setLoading(false);
+        return;
+      }
+
+      // 3️⃣ GUARDAR EN CONTEXTO
+      console.log('💾 Guardando en contexto de autenticación...');
+      
+      const authData = {
+        user: {
+          id: registerResult.user?.id || registerResult.user?._id,
+          _id: registerResult.user?.id || registerResult.user?._id,
+          email: registerResult.user?.email || registrationData.email,
+          firstName: registerResult.user?.firstName || registrationData.firstName,
+          lastName: registerResult.user?.lastName || registrationData.lastName,
+          fullName: registerResult.user?.nombre || `${registrationData.firstName} ${registrationData.lastName}`,
+          phone: registrationData.phone,
+          phoneVerified: true, // ⭐ Ya verificado
+          profileImage: registerResult.user?.profileImage || null
+        },
+        token: registerResult.token,
+        userType: registerResult.userType || 'Cliente'
+      };
+
+      console.log('📦 Datos para contexto:', {
+        userId: authData.user.id,
+        email: authData.user.email,
+        hasToken: !!authData.token,
+        phoneVerified: authData.user.phoneVerified
+      });
+
+      const authResult = await register(authData);
+      console.log('📋 Resultado de contexto:', authResult);
+
+      if (!authResult.success) {
+        console.error('❌ Error guardando en contexto:', authResult.error);
+        Alert.alert('Error', 'Cuenta creada pero hubo un problema con la sesión. Intenta iniciar sesión.');
+        setLoading(false);
+        return;
+      }
+
+      // 4️⃣ ÉXITO
+      setLoading(false);
+      console.log('✅ Registro completado exitosamente');
+      
+      Alert.alert(
+        '¡Bienvenido!',
+        'Tu cuenta ha sido creada exitosamente',
+        [
+          {
+            text: 'Continuar',
+            onPress: () => {
+              console.log('🎯 Navegando a pantallacarga1');
+              navigation.navigate('pantallacarga1');
+            }
+          }
+        ]
+      );
+
+    } catch (error) {
+      console.error('💥 Error registrando usuario:', error);
+      Alert.alert('Error', error.message || 'No se pudo crear la cuenta');
+      setLoading(false);
+    }
+  };
+
+  // ⭐ RECUPERACIÓN: Navegar a cambiar contraseña
+  const handlePasswordRecovery = async (verifyData, otpCode) => {
+    setLoading(false);
+    
+    const verifiedToken = verifyData.verifiedToken || verifyData.token || verifyData.recoveryToken || recoveryToken;
+    
+    console.log('🔑 Código verificado para recuperación, navegando a cambiar contraseña');
+    
+    Alert.alert(
+      'Código Verificado', 
+      'El código es correcto. Ahora puedes crear tu nueva contraseña.',
+      [
+        { 
+          text: 'Continuar', 
+          onPress: () => {
+            navigation.navigate('Recuperacion3', { 
+              email: email,
+              phone: phone,
+              via: via,
+              verifiedCode: otpCode,
+              recoveryToken: verifiedToken,
+              verifiedToken: verifiedToken,
+              timestamp: Date.now()
+            });
+          }
+        }
+      ]
+    );
+  };
+
   const handleBack = () => {
-    navigation.goBack();
+    if (isRegistrationMode) {
+      Alert.alert(
+        'Cancelar registro',
+        '¿Estás seguro de cancelar? Perderás los datos ingresados.',
+        [
+          { text: 'No', style: 'cancel' },
+          { text: 'Sí, cancelar', onPress: () => navigation.goBack(), style: 'destructive' }
+        ]
+      );
+    } else {
+      navigation.goBack();
+    }
   };
 
   const handleNext = () => {
@@ -272,6 +428,11 @@ const Recuperacion2Screen = ({ navigation, route }) => {
   };
 
   const handleResend = async () => {
+    if (isRegistrationMode && !phone) {
+      Alert.alert('Error', 'No se pudo reenviar el código. Número de teléfono no encontrado.');
+      return;
+    }
+
     const contactInfo = email || phone;
     if (!contactInfo) {
       Alert.alert('Error', 'No se pudo reenviar el código. Información de contacto no encontrada.');
@@ -280,23 +441,30 @@ const Recuperacion2Screen = ({ navigation, route }) => {
 
     setLoading(true);
     try {
-      const API_URL = 'https://riveraproject-production-933e.up.railway.app/api/recovery/requestCode';
+      const requestURL = `${API_BASE_URL}/api/auth/requestCode`;
       
       const payload = {};
-      if (via === 'email' && email) {
-        payload.email = email;
-        payload.via = 'email';
-      } else if (via === 'sms' && phone) {
-        payload.phone = phone;
+      if (isRegistrationMode) {
+        // En modo registro, siempre por SMS
+        payload.phone = registrationData.phoneNormalized || phone;
         payload.via = 'sms';
       } else {
-        payload.email = email;
-        payload.via = 'email';
+        // En modo recuperación, según el método original
+        if (via === 'email' && email) {
+          payload.email = email;
+          payload.via = 'email';
+        } else if (via === 'sms' && phone) {
+          payload.phone = phone;
+          payload.via = 'sms';
+        } else {
+          payload.email = email;
+          payload.via = 'email';
+        }
       }
       
       console.log('📤 Reenviando código:', payload);
       
-      const response = await fetch(API_URL, {
+      const response = await fetch(requestURL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -306,7 +474,7 @@ const Recuperacion2Screen = ({ navigation, route }) => {
       });
 
       const responseText = await response.text();
-      console.log('📄 Respuesta reenvío:', responseText);
+      console.log('📄 Respuesta reenvío:', responseText.substring(0, 200));
       
       if (responseText.includes('<html>') || responseText.includes('<!DOCTYPE')) {
         throw new Error('El servidor devolvió HTML. La API no está funcionando correctamente.');
@@ -319,46 +487,21 @@ const Recuperacion2Screen = ({ navigation, route }) => {
         throw new Error('Respuesta inválida del servidor');
       }
 
-      if (response.ok) {
-        // CORREGIDO: Buscar y actualizar el token de recuperación
-        const possibleTokenFields = [
-          'recoveryToken', 'token', 'reset_token', 'resetToken', 
-          'access_token', 'accessToken', 'verification_token',
-          'verificationToken', 'temp_token', 'tempToken'
-        ];
-        
-        let newToken = null;
-        
-        for (const field of possibleTokenFields) {
-          if (data[field] && typeof data[field] === 'string' && data[field].length > 10) {
-            newToken = data[field];
-            console.log(`🔑 Nuevo token encontrado en '${field}'`);
-            break;
-          }
-        }
-        
-        if (data.data && typeof data.data === 'object') {
-          for (const field of possibleTokenFields) {
-            if (data.data[field] && typeof data.data[field] === 'string' && data.data[field].length > 10) {
-              newToken = data.data[field];
-              console.log(`🔑 Nuevo token encontrado en data.${field}`);
-              break;
-            }
-          }
-        }
+      if (response.ok && data.success) {
+        // Buscar y actualizar el token
+        const newToken = data.recoveryToken || data.token;
         
         if (newToken) {
           setRecoveryToken(newToken);
           console.log('✅ Token de recuperación actualizado');
-        } else {
-          console.warn('⚠️ No se recibió nuevo token en el reenvío, manteniendo el actual');
         }
         
         setTimeLeft(120);
         setOtpValues(['', '', '', '', '']);
         inputRefs.current[0]?.focus();
         
-        Alert.alert('Código Reenviado', `Se ha enviado un nuevo código a tu ${via === 'sms' ? 'teléfono' : 'email'}.`);
+        const method = isRegistrationMode ? 'SMS' : (via === 'sms' ? 'teléfono' : 'email');
+        Alert.alert('Código Reenviado', `Se ha enviado un nuevo código a tu ${method}.`);
       } else {
         Alert.alert('Error', data.message || 'No se pudo reenviar el código');
       }
@@ -384,12 +527,15 @@ const Recuperacion2Screen = ({ navigation, route }) => {
         </View>
 
         <Text style={styles.title}>
-          Código de verificación
+          {isRegistrationMode ? 'Verifica tu teléfono' : 'Código de verificación'}
         </Text>
 
         <Text style={styles.subtitle}>
           Ingresa el código OTP enviado a • <Text style={styles.emailText}>
-            {via === 'sms' ? `***${(phone || '').slice(-4)}` : email || 'tu email'}
+            {isRegistrationMode 
+              ? `***${(phone || '').slice(-4)}` 
+              : (via === 'sms' ? `***${(phone || '').slice(-4)}` : email || 'tu email')
+            }
           </Text>
         </Text>
 
@@ -420,7 +566,9 @@ const Recuperacion2Screen = ({ navigation, route }) => {
         {loading && (
           <View style={styles.loadingContainer}>
             <ActivityIndicator color="#10b981" size="small" />
-            <Text style={styles.loadingText}>Verificando código...</Text>
+            <Text style={styles.loadingText}>
+              {isRegistrationMode ? 'Creando tu cuenta...' : 'Verificando código...'}
+            </Text>
           </View>
         )}
 
@@ -440,11 +588,11 @@ const Recuperacion2Screen = ({ navigation, route }) => {
           </Text>
         </View>
 
-        {/* Información de debug mejorada */}
+        {/* Información de debug */}
         {__DEV__ && (
           <View style={styles.debugContainer}>
             <Text style={styles.debugText}>
-              Vía: {via} | Token: {recoveryToken ? '✅ Válido' : '❌ No válido'}
+              Modo: {isRegistrationMode ? '🆕 REGISTRO' : '🔑 RECUPERACIÓN'} | Token: {recoveryToken ? '✅' : '❌'}
             </Text>
             {!recoveryToken && (
               <Text style={styles.debugTextError}>
@@ -475,7 +623,7 @@ const Recuperacion2Screen = ({ navigation, route }) => {
             styles.nextButton,
             (!isComplete || loading) && styles.navButtonDisabled
           ]}>
-            {loading ? 'Verificando...' : 'Verificar'}
+            {loading ? 'Verificando...' : (isRegistrationMode ? 'Crear cuenta' : 'Verificar')}
           </Text>
         </TouchableOpacity>
       </View>
