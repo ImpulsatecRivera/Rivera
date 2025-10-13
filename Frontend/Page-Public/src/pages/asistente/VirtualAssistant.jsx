@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { MessageCircle, Send, X, Truck, Package, Clock, MapPin, Phone, Mail, User, Minimize2 } from 'lucide-react';
+import { MessageCircle, X, Truck, Phone, Mail, User, Minimize2, MapPin } from 'lucide-react';
 
 const VirtualAssistant = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -18,7 +18,6 @@ const VirtualAssistant = () => {
       ]
     }
   ]);
-  const [inputMessage, setInputMessage] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef(null);
 
@@ -66,19 +65,19 @@ const VirtualAssistant = () => {
         address: "San Jacinto, El Salvador"
       }
     },
-    "transporte nacional": {
+    "🚛 transporte nacional": {
       text: "Nuestro servicio de Transporte Nacional incluye:\n\n• Cobertura completa en El Salvador\n• Flota moderna equipada con GPS\n• Seguro integral para todas las cargas\n• Seguimiento en tiempo real 24/7\n• Personal capacitado y certificado\n• Diferentes tipos de vehículos según la carga",
       options: ["Zonas de cobertura", "Más servicios"]
     },
-    "logística integral": {
+    "📦 logística integral": {
       text: "Nuestro servicio de Logística Integral incluye:\n\n• Almacenamiento seguro y climatizado\n• Gestión profesional de inventarios\n• Distribución personalizada según necesidades\n• Optimización de rutas y entregas\n• Control de calidad en cada proceso\n• Reportes detallados de movimientos",
       options: ["Horarios de atención", "Más servicios"]
     },
-    "entregas express": {
+    "⚡ entregas express": {
       text: "Nuestro servicio de Entregas Express - Para cuando el tiempo es crítico:\n\n• Entregas el mismo día en área metropolitana\n• Servicio urgente de 2-4 horas\n• Rastreo GPS en tiempo real\n• Confirmación inmediata de entrega\n• Disponible 24/7 para emergencias\n• Personal especializado en entregas rápidas",
       options: ["Horarios de atención", "Más servicios"]
     },
-    "distribución comercial": {
+    "🏪 distribución comercial": {
       text: "Nuestro servicio de Distribución Comercial especializada incluye:\n\n• Red de distribución a nivel nacional\n• Manejo especializado de inventarios comerciales\n• Entregas programadas según demanda\n• Reportes detallados y análisis de ventas\n• Soporte para empresas de todos los tamaños\n• Gestión de devoluciones y cambios",
       options: ["Zonas de cobertura", "Más servicios"]
     },
@@ -108,7 +107,6 @@ const VirtualAssistant = () => {
     };
 
     setMessages(prev => [...prev, newUserMessage]);
-    setInputMessage('');
     setIsTyping(true);
 
     // Simular respuesta del bot
@@ -196,7 +194,7 @@ const VirtualAssistant = () => {
 
     // Respuesta por defecto informativa
     return {
-      text: "Estoy aquí para brindarte informaciónes sobre Rivera Distribuidora y Transporte. ¿Sobre qué aspecto de nuestros servicios te gustaría conocer más?",
+      text: "Estoy aquí para brindarte informaciones sobre Rivera Distribuidora y Transporte. ¿Sobre qué aspecto de nuestros servicios te gustaría conocer más?",
       options: [
         "¿Qué servicios ofrecen?",
         "Horarios de atención",
@@ -266,7 +264,7 @@ const VirtualAssistant = () => {
         {!isMinimized && (
           <>
             {/* Messages Area */}
-            <div className="h-80 overflow-y-auto p-4 space-y-4">
+            <div className="h-[26rem] overflow-y-auto p-4 space-y-4">
               {messages.map((message) => (
                 <div key={message.id} className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
                   <div className={`flex items-start space-x-2 max-w-xs ${message.sender === 'user' ? 'flex-row-reverse space-x-reverse' : ''}`}>
@@ -342,31 +340,11 @@ const VirtualAssistant = () => {
               <div ref={messagesEndRef} />
             </div>
 
-            {/* Input Area */}
-            <div className="p-4 border-t">
-              <div className="flex space-x-2">
-                <input
-                  type="text"
-                  value={inputMessage}
-                  onChange={(e) => setInputMessage(e.target.value)}
-                  onKeyPress={(e) => {
-                    if (e.key === 'Enter' && !e.shiftKey) {
-                      e.preventDefault();
-                      handleSendMessage(inputMessage);
-                    }
-                  }}
-                  placeholder="Pregúntame sobre nuestros servicios..."
-                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#10b981] focus:border-transparent text-sm text-gray-800"
-                  disabled={isTyping}
-                />
-                <button
-                  onClick={() => handleSendMessage(inputMessage)}
-                  disabled={isTyping || !inputMessage.trim()}
-                  className="bg-[#10b981] text-white p-2 rounded-lg hover:bg-[#059669] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <Send className="w-4 h-4" />
-                </button>
-              </div>
+            {/* Info Area */}
+            <div className="p-4 border-t bg-gray-50">
+              <p className="text-xs text-gray-600 text-center">
+                💡 Selecciona una opción de las preguntas frecuentes
+              </p>
             </div>
           </>
         )}
