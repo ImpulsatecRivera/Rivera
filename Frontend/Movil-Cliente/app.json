@@ -51,7 +51,8 @@
           "cameraPermission": "Esta app necesita acceso a la cámara para tomar fotos de perfil."
         }
       ],
-      "expo-secure-store"
+      "expo-secure-store",
+      "expo-font"
     ],
     "extra": {
       "googleClientId": "1035488574954-2agjnnugu7d1lnhen68e6n06lvfdip3u.apps.googleusercontent.com",
