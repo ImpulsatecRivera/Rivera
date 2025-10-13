@@ -92,7 +92,6 @@ const useCotizaciones = () => {
     try {
       const response = await axios.get('https://riveraproject-production-933e.up.railway.app/api/cotizaciones');
       
-      // Acceder a los datos correctamente
       const cotizacionesData = response.data.data || response.data;
       
       if (!Array.isArray(cotizacionesData)) {
@@ -104,7 +103,6 @@ const useCotizaciones = () => {
         console.log('Cotización completa:', cotizacion);
         console.log('ClientId original:', cotizacion.clientId);
         
-        // Extraer información del cliente de manera más robusta
         let clienteData = {
           id: null,
           nombre: 'Cliente no encontrado',
@@ -116,35 +114,26 @@ const useCotizaciones = () => {
 
         if (cotizacion.clientId) {
           if (typeof cotizacion.clientId === 'object' && cotizacion.clientId !== null) {
-            // El cliente viene como objeto anidado en la cotización
             const clienteObj = cotizacion.clientId;
             console.log('Cliente como objeto:', clienteObj);
             
             const clienteId = clienteObj._id || clienteObj.id;
-            
-            // SOLUCIÓN: Buscar primero en el mapa de clientes usando el ID
             const clienteEnMapaPorId = clientesMap[clienteId];
             
             if (clienteEnMapaPorId) {
-              // Encontrado en el mapa, usar esa información completa
               console.log('Cliente encontrado en mapa por ID:', clienteEnMapaPorId);
               clienteData = clienteEnMapaPorId;
             } else {
-              // No encontrado en mapa, usar lo que viene en la cotización
               console.log('Cliente NO encontrado en mapa, usando datos básicos de cotización');
               
-              // Intentar extraer el nombre de diferentes campos posibles
               const firstName = clienteObj.firtsName || clienteObj.firstName || clienteObj.name || clienteObj.nombre || '';
               const lastName = clienteObj.lastName || clienteObj.apellido || '';
               const nombreCompleto = `${firstName} ${lastName}`.trim();
               
-              // Si no hay nombre completo, usar el email como fallback
               let nombreFinal = nombreCompleto;
               if (!nombreFinal) {
-                // Usar el email como nombre si no hay otra opción
                 const email = clienteObj.email || '';
                 if (email) {
-                  // Extraer la parte antes del @ como nombre
                   nombreFinal = email.split('@')[0] || 'Cliente sin nombre';
                 } else {
                   nombreFinal = `Cliente #${clienteId ? clienteId.slice(-6) : 'Unknown'}`;
@@ -163,7 +152,6 @@ const useCotizaciones = () => {
             
             console.log('Cliente procesado desde objeto:', clienteData);
           } else {
-            // El clientId es un string, buscar en el mapa de clientes
             const clienteId = cotizacion.clientId;
             console.log('Cliente como ID string:', clienteId);
             
@@ -195,7 +183,6 @@ const useCotizaciones = () => {
           quoteDescription: cotizacion.quoteDescription || 'Sin descripción',
           numeroDetizacion: cotizacion._id ? `#${cotizacion._id.slice(-6).toUpperCase()}` : '#000000',
           
-          // Información del cliente - CORREGIDO
           cliente: clienteData.nombre,
           clienteCompleto: clienteData,
           telefono: clienteData.telefono,
@@ -203,7 +190,6 @@ const useCotizaciones = () => {
           clienteFirstName: clienteData.firstName,
           clienteLastName: clienteData.lastName,
           
-          // Información de ruta
           origen: cotizacion.ruta?.origen?.nombre || 'Sin origen',
           destino: cotizacion.ruta?.destino?.nombre || 'Sin destino',
           rutaCompleta: cotizacion.ruta,
@@ -211,7 +197,6 @@ const useCotizaciones = () => {
           distanciaTotal: cotizacion.ruta?.distanciaTotal || 0,
           tiempoEstimado: cotizacion.ruta?.tiempoEstimado || 0,
           
-          // Información de carga
           carga: cotizacion.carga,
           peso: cotizacion.carga?.peso ? `${cotizacion.carga.peso.valor} ${cotizacion.carga.peso.unidad}` : 'Sin especificar',
           volumen: cotizacion.carga?.volumen ? `${cotizacion.carga.volumen.valor} ${cotizacion.carga.volumen.unidad}` : 'Sin especificar',
@@ -221,7 +206,6 @@ const useCotizaciones = () => {
             `${cotizacion.carga.valorDeclarado.monto} ${cotizacion.carga.valorDeclarado.moneda}` : 
             'No declarado',
           
-          // Fechas
           fecha: formatDate(cotizacion.createdAt),
           fechaCreacion: formatDate(cotizacion.createdAt),
           fechaEnvio: formatDate(cotizacion.fechaEnvio),
@@ -229,13 +213,11 @@ const useCotizaciones = () => {
           deliveryDate: formatDate(cotizacion.deliveryDate),
           fechaVencimiento: formatDate(cotizacion.validezCotizacion),
           
-          // Estado y tipo
           estado: mapearEstado(cotizacion.status),
           status: cotizacion.status,
           tipo: cotizacion.tipo || 'Sin especificar',
           truckType: cotizacion.truckType || 'Sin especificar',
           
-          // Costos
           monto: `$${cotizacion.price || 0}`,
           price: cotizacion.price || 0,
           costos: cotizacion.costos,
@@ -243,12 +225,10 @@ const useCotizaciones = () => {
           impuestos: cotizacion.costos ? `$${cotizacion.costos.impuestos}` : '$0.00',
           total: cotizacion.costos ? `$${cotizacion.costos.total}` : '$0.00',
           
-          // Información adicional
           paymentMethod: cotizacion.paymentMethod || 'Sin especificar',
           observaciones: cotizacion.observaciones || 'Sin observaciones',
           notasInternas: cotizacion.notasInternas || 'Sin notas',
           
-          // Horarios
           horarios: cotizacion.horarios,
           horarioPreferido: cotizacion.horarios?.horarioPreferido 
             ? `${cotizacion.horarios.horarioPreferido.inicio} - ${cotizacion.horarios.horarioPreferido.fin}`
@@ -256,7 +236,6 @@ const useCotizaciones = () => {
           fechaSalida: formatDate(cotizacion.horarios?.fechaSalida),
           fechaLlegadaEstimada: formatDate(cotizacion.horarios?.fechaLlegadaEstimada),
           
-          // Campos adicionales
           direccionOrigen: cotizacion.ruta?.origen?.nombre || 'Sin dirección',
           direccionDestino: cotizacion.ruta?.destino?.nombre || 'Sin dirección',
           tipoViaje: cotizacion.carga?.categoria || 'Sin especificar',
@@ -269,7 +248,6 @@ const useCotizaciones = () => {
           
           colorEstado: getColorEstado(mapearEstado(cotizacion.status)),
           
-          // Condiciones especiales
           condicionesEspeciales: cotizacion.carga?.condicionesEspeciales || {},
           esFragil: cotizacion.carga?.condicionesEspeciales?.esFragil || false,
           requiereRefrigeracion: cotizacion.carga?.condicionesEspeciales?.requiereRefrigeracion || false,
@@ -297,7 +275,7 @@ const useCotizaciones = () => {
     }
   };
 
-  // ✅ NUEVA FUNCIÓN: Actualizar cotización
+  // ✅ FUNCIÓN: Actualizar cotización
   const actualizarCotizacionAPI = async (id, datosActualizacion) => {
     try {
       setLoading(true);
@@ -307,12 +285,10 @@ const useCotizaciones = () => {
       
       const response = await axios.put(`https://riveraproject-production-933e.up.railway.app/api/cotizaciones/${id}`, datosActualizacion);
       
-      // Actualizar la cotización en el estado local
       setCotizaciones(prev => prev.map(cotizacion => {
         if ((cotizacion.id || cotizacion._id) === id) {
           const cotizacionActualizada = response.data.data;
           
-          // Re-formatear la cotización actualizada
           return {
             ...cotizacion,
             ...cotizacionActualizada,
@@ -332,7 +308,6 @@ const useCotizaciones = () => {
         return cotizacion;
       }));
       
-      // Si hay una cotización seleccionada y es la que se actualizó, actualizarla también
       if (cotizacionSeleccionada && (cotizacionSeleccionada.id || cotizacionSeleccionada._id) === id) {
         setCotizacionSeleccionada(prev => ({
           ...prev,
@@ -388,7 +363,56 @@ const useCotizaciones = () => {
     }
   };
 
-  // ✅ NUEVA FUNCIÓN: Actualizar estado de cotización con confirmación
+  // ✅ NUEVA FUNCIÓN: Actualizar estado SIN confirmación (versión silenciosa)
+  const actualizarEstadoCotizacionSilencioso = async (cotizacion, nuevoEstado, motivoRechazo = '') => {
+    try {
+      const datosActualizacion = { status: nuevoEstado };
+      
+      if (motivoRechazo) {
+        datosActualizacion.motivoRechazo = motivoRechazo;
+      }
+      
+      const ahora = new Date().toISOString();
+      switch (nuevoEstado) {
+        case 'enviada':
+          datosActualizacion.fechaEnvio = ahora;
+          datosActualizacion.enviadaPorAdmin = true;
+          break;
+        case 'aceptada':
+          datosActualizacion.fechaAceptacion = ahora;
+          break;
+        case 'rechazada':
+          datosActualizacion.fechaRechazo = ahora;
+          break;
+        case 'ejecutada':
+          datosActualizacion.fechaEjecucion = ahora;
+          break;
+        default:
+          break;
+      }
+      
+      console.log('🔄 Actualizando estado silenciosamente:', { 
+        id: cotizacion.id || cotizacion._id, 
+        nuevoEstado,
+        datosActualizacion 
+      });
+      
+      const resultado = await actualizarCotizacionAPI(
+        cotizacion.id || cotizacion._id, 
+        datosActualizacion
+      );
+      
+      return resultado;
+    } catch (error) {
+      console.error('❌ Error al actualizar estado silenciosamente:', error);
+      return { 
+        success: false, 
+        message: error.message || 'Error al actualizar el estado' 
+      };
+    }
+  };
+
+  // ✅ FUNCIÓN: Actualizar estado CON confirmación
   const actualizarEstadoCotizacion = (cotizacion, nuevoEstado, motivoRechazo = '') => {
     const estadosTexto = {
       'pendiente': 'Pendiente',
@@ -429,12 +453,7 @@ const useCotizaciones = () => {
           onConfirm: null
         });
         
-        const datosActualizacion = { status: nuevoEstado };
-        if (motivoRechazo) {
-          datosActualizacion.motivoRechazo = motivoRechazo;
-        }
-        
-        const resultado = await actualizarCotizacionAPI(cotizacion.id || cotizacion._id, datosActualizacion);
+        const resultado = await actualizarEstadoCotizacionSilencioso(cotizacion, nuevoEstado, motivoRechazo);
         
         closeSweetAlert();
         
@@ -459,7 +478,7 @@ const useCotizaciones = () => {
     });
   };
 
-  // ✅ NUEVA FUNCIÓN: Actualizar precio con confirmación
+  // ✅ FUNCIÓN: Actualizar precio con confirmación
   const actualizarPrecioCotizacion = (cotizacion, nuevoPrecio) => {
     if (!nuevoPrecio || nuevoPrecio <= 0) {
       showSweetAlert({
@@ -510,7 +529,7 @@ const useCotizaciones = () => {
     });
   };
 
-  // ✅ NUEVA FUNCIÓN: Actualizar costos con confirmación
+  // ✅ FUNCIÓN: Actualizar costos con confirmación
   const actualizarCostosCotizacion = (cotizacion, nuevosCostos) => {
     showSweetAlert({
       title: '¿Confirmar cambio de costos?',
@@ -716,12 +735,10 @@ const useCotizaciones = () => {
 
   // Filtrar cotizaciones
   const filteredCotizaciones = cotizaciones.filter(cotizacion => {
-    // SOLUCIÓN: Hacer que "Rechazadas" incluya tanto rechazadas como canceladas
     let cumpleFiltro;
     if (filtroEstado === 'Todos') {
       cumpleFiltro = true;
     } else if (filtroEstado === 'Rechazada') {
-      // Incluir tanto rechazadas como canceladas en el filtro "Rechazada"
       cumpleFiltro = cotizacion.estado === 'Rechazada' || cotizacion.estado === 'Cancelada';
     } else {
       cumpleFiltro = cotizacion.estado === filtroEstado;
@@ -807,7 +824,6 @@ const useCotizaciones = () => {
   };
 
   const getStats = () => {
-    // SOLUCIÓN: Contar rechazadas + canceladas juntas
     const rechazadasYCanceladas = cotizaciones.filter(c => c.estado === 'Rechazada' || c.estado === 'Cancelada').length;
     
     return {
@@ -815,7 +831,7 @@ const useCotizaciones = () => {
       filtered: filteredCotizaciones.length,
       aprobadas: cotizaciones.filter(c => c.estado === 'Aprobada').length,
       pendientes: cotizaciones.filter(c => c.estado === 'Pendiente').length,
-      rechazadas: rechazadasYCanceladas, // Incluye tanto rechazadas como canceladas
+      rechazadas: rechazadasYCanceladas,
       enviadas: cotizaciones.filter(c => c.estado === 'Enviada').length,
       ejecutadas: cotizaciones.filter(c => c.estado === 'Ejecutada').length,
       canceladas: cotizaciones.filter(c => c.estado === 'Cancelada').length,
@@ -860,9 +876,10 @@ const useCotizaciones = () => {
     eliminarCotizacionAPI,
     refreshCotizaciones,
     
-    // ✅ NUEVAS FUNCIONES DE ACTUALIZACIÓN
+    // ✅ FUNCIONES DE ACTUALIZACIÓN
     actualizarCotizacionAPI,
     actualizarEstadoCotizacion,
+    actualizarEstadoCotizacionSilencioso, // ✅ NUEVA - Versión sin confirmación
     actualizarPrecioCotizacion,
     actualizarCostosCotizacion,
     

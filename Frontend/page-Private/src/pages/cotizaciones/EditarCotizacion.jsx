@@ -1,20 +1,20 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ArrowLeft, Save, DollarSign } from 'lucide-react';
-import { useCotizaciones } from '../../components/Cotizaciones/hook/useCotizaciones'; // Ajusta la ruta según tu estructura
+import { useCotizaciones } from '../../components/Cotizaciones/hook/useCotizaciones';
 
 export default function EditarCotizacionForm({ cotizacionId, cotizacion: cotizacionProp, onVolver }) {
-  // Tu hook original
+  // Hook con la versión silenciosa
   const {
     cotizaciones,
     actualizarCotizacionAPI,
-    actualizarEstadoCotizacion,
+    actualizarEstadoCotizacionSilencioso, // ✅ Usar versión silenciosa
     loading: hookLoading,
     error,
     showSweetAlert,
     closeSweetAlert
   } = useCotizaciones();
 
-  // ✅ SOLUCIÓN: useRef para evitar múltiples cargas
+  // ✅ useRef para evitar múltiples cargas
   const yaCargoRef = useRef(false);
 
   // Estado simple y directo - SIN convertir a String
@@ -49,9 +49,8 @@ export default function EditarCotizacionForm({ cotizacionId, cotizacion: cotizac
     console.log('✅ Precios cargados:', nuevosPrecios);
   };
 
-  // ✅ CORREGIDO: Cargar datos iniciales CON useRef para evitar re-cargas
+  // ✅ Cargar datos iniciales CON useRef para evitar re-cargas
   useEffect(() => {
-    // Si ya cargamos una vez, no volver a cargar
     if (yaCargoRef.current) return;
     
     console.log('🔍 useEffect ejecutado:', { 
@@ -61,7 +60,6 @@ export default function EditarCotizacionForm({ cotizacionId, cotizacion: cotizac
       hookLoading
     });
 
-    // Si ya tenemos la cotización como prop, usarla directamente
     if (cotizacionProp) {
       console.log('📋 Usando cotización proporcionada como prop');
       cargarPrecios(cotizacionProp);
@@ -71,7 +69,6 @@ export default function EditarCotizacionForm({ cotizacionId, cotizacion: cotizac
       return;
     }
 
-    // Si tenemos ID y cotizaciones están cargadas, buscar por ID
     if (cotizacionId && cotizaciones.length > 0 && !hookLoading) {
       console.log('🔍 Buscando cotización por ID:', cotizacionId);
       
@@ -97,10 +94,7 @@ export default function EditarCotizacionForm({ cotizacionId, cotizacion: cotizac
 
   // Función mejorada para cambiar valores
   const cambiarPrecio = (campo, valor) => {
-    // Permitir solo números y punto decimal
     const valorLimpio = valor.replace(/[^\d.]/g, '');
-    
-    // Prevenir múltiples puntos decimales
     const partes = valorLimpio.split('.');
     const valorFinal = partes.length > 2 
       ? partes[0] + '.' + partes.slice(1).join('') 
@@ -236,23 +230,29 @@ export default function EditarCotizacionForm({ cotizacionId, cotizacion: cotizac
       );
       
       if (resultadoGuardar.success) {
-        // Paso 2: Cambiar estado a "enviada"
+        // Paso 2: Cambiar estado a "enviada" usando versión silenciosa
         const cotizacionActualizada = { ...datosOriginales, ...datosParaGuardar };
-        await actualizarEstadoCotizacion(cotizacionActualizada, 'enviada');
+        const resultadoEstado = await actualizarEstadoCotizacionSilencioso(
+          cotizacionActualizada, 
+          'enviada'
+        );
         
-        setMensaje('¡Cotización enviada al cliente!');
-        showSweetAlert({
-          title: '¡Cotización Enviada!',
-          text: `La cotización con precio $${datosParaGuardar.price.toFixed(2)} ha sido enviada al cliente. El cliente recibirá una notificación.`,
-          type: 'success',
-          onConfirm: () => {
-            closeSweetAlert();
-          }
-        });
-        
-        // Actualizar el estado local
-        setDatosOriginales(prev => ({ ...prev, status: 'enviada', ...datosParaGuardar }));
-        
+        if (resultadoEstado.success) {
+          setMensaje('¡Cotización enviada al cliente!');
+          showSweetAlert({
+            title: '¡Cotización Enviada!',
+            text: `La cotización con precio $${datosParaGuardar.price.toFixed(2)} ha sido enviada al cliente. El cliente recibirá una notificación.`,
+            type: 'success',
+            onConfirm: () => {
+              closeSweetAlert();
+            }
+          });
+          
+          // Actualizar el estado local
+          setDatosOriginales(prev => ({ ...prev, status: 'enviada', ...datosParaGuardar }));
+        } else {
+          throw new Error(resultadoEstado.message || 'Error al cambiar el estado');
+        }
       } else {
         throw new Error(resultadoGuardar.message || 'Error al guardar la cotización');
       }
@@ -262,7 +262,7 @@ export default function EditarCotizacionForm({ cotizacionId, cotizacion: cotizac
       setMensaje('Error al enviar');
       showSweetAlert({
         title: 'Error al Enviar',
-        text: 'No se pudo enviar la cotización al cliente. Inténtalo de nuevo.',
+        text: error.message || 'No se pudo enviar la cotización al cliente. Inténtalo de nuevo.',
         type: 'error',
         onConfirm: closeSweetAlert
       });
