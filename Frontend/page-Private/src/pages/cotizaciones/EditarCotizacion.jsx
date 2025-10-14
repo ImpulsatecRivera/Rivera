@@ -1,23 +1,19 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ArrowLeft, Save, DollarSign } from 'lucide-react';
 import { useCotizaciones } from '../../components/Cotizaciones/hook/useCotizaciones';
+import Swal from 'sweetalert2';
 
 export default function EditarCotizacionForm({ cotizacionId, cotizacion: cotizacionProp, onVolver }) {
-  // Hook con la versión silenciosa
   const {
     cotizaciones,
     actualizarCotizacionAPI,
-    actualizarEstadoCotizacionSilencioso, // ✅ Usar versión silenciosa
+    actualizarEstadoCotizacionSilencioso,
     loading: hookLoading,
-    error,
-    showSweetAlert,
-    closeSweetAlert
+    error
   } = useCotizaciones();
 
-  // ✅ useRef para evitar múltiples cargas
   const yaCargoRef = useRef(false);
 
-  // Estado simple y directo - SIN convertir a String
   const [precios, setPrecios] = useState({
     price: '',
     combustible: '',
@@ -32,10 +28,7 @@ export default function EditarCotizacionForm({ cotizacionId, cotizacion: cotizac
   const [guardando, setGuardando] = useState(false);
   const [mensaje, setMensaje] = useState('');
 
-  // Función para cargar precios desde una cotización
   const cargarPrecios = (cotizacion) => {
-    console.log('📝 Cargando precios desde cotización:', cotizacion);
-    
     const nuevosPrecios = {
       price: cotizacion.price?.toString() || '',
       combustible: cotizacion.costos?.combustible?.toString() || '',
@@ -46,22 +39,12 @@ export default function EditarCotizacionForm({ cotizacionId, cotizacion: cotizac
     };
     
     setPrecios(nuevosPrecios);
-    console.log('✅ Precios cargados:', nuevosPrecios);
   };
 
-  // ✅ Cargar datos iniciales CON useRef para evitar re-cargas
   useEffect(() => {
     if (yaCargoRef.current) return;
-    
-    console.log('🔍 useEffect ejecutado:', { 
-      cotizacionId, 
-      cotizacionProp: !!cotizacionProp,
-      cantidadCotizaciones: cotizaciones.length,
-      hookLoading
-    });
 
     if (cotizacionProp) {
-      console.log('📋 Usando cotización proporcionada como prop');
       cargarPrecios(cotizacionProp);
       setDatosOriginales(cotizacionProp);
       setLoading(false);
@@ -70,29 +53,22 @@ export default function EditarCotizacionForm({ cotizacionId, cotizacion: cotizac
     }
 
     if (cotizacionId && cotizaciones.length > 0 && !hookLoading) {
-      console.log('🔍 Buscando cotización por ID:', cotizacionId);
-      
       const cotizacion = cotizaciones.find(c => {
         const currentId = c.id || c._id;
-        console.log('🔍 Comparando:', currentId, 'con', cotizacionId);
         return currentId === cotizacionId;
       });
       
       if (cotizacion) {
-        console.log('✅ Cotización encontrada:', cotizacion);
         cargarPrecios(cotizacion);
         setDatosOriginales(cotizacion);
         setLoading(false);
         yaCargoRef.current = true;
       } else {
-        console.error('❌ No se encontró cotización con ID:', cotizacionId);
-        console.log('📋 IDs disponibles:', cotizaciones.map(c => c.id || c._id));
         setLoading(false);
       }
     }
   }, [cotizacionId, cotizacionProp, cotizaciones, hookLoading]);
 
-  // Función mejorada para cambiar valores
   const cambiarPrecio = (campo, valor) => {
     const valorLimpio = valor.replace(/[^\d.]/g, '');
     const partes = valorLimpio.split('.');
@@ -100,15 +76,12 @@ export default function EditarCotizacionForm({ cotizacionId, cotizacion: cotizac
       ? partes[0] + '.' + partes.slice(1).join('') 
       : valorLimpio;
     
-    console.log(`🔄 Cambiando ${campo} a: "${valorFinal}"`);
-    
     setPrecios(prev => ({
       ...prev,
       [campo]: valorFinal
     }));
   };
 
-  // Calcular totales
   const calcularTotales = () => {
     const nums = {
       combustible: parseFloat(precios.combustible) || 0,
@@ -124,14 +97,12 @@ export default function EditarCotizacionForm({ cotizacionId, cotizacion: cotizac
     return { subtotal, total };
   };
 
-  // Guardar como borrador (sin enviar al cliente)
   const guardarBorrador = async () => {
-    if (!datosOriginales || !datosOriginales.id && !datosOriginales._id) {
-      showSweetAlert({
+    if (!datosOriginales || (!datosOriginales.id && !datosOriginales._id)) {
+      Swal.fire({
         title: 'Error',
         text: 'No se puede guardar: datos de cotización no válidos',
-        type: 'error',
-        onConfirm: closeSweetAlert
+        icon: 'error'
       });
       return;
     }
@@ -156,8 +127,6 @@ export default function EditarCotizacionForm({ cotizacionId, cotizacion: cotizac
         }
       };
       
-      console.log('💾 Guardando borrador:', datosParaGuardar);
-      
       const resultado = await actualizarCotizacionAPI(
         datosOriginales.id || datosOriginales._id, 
         datosParaGuardar
@@ -165,39 +134,33 @@ export default function EditarCotizacionForm({ cotizacionId, cotizacion: cotizac
       
       if (resultado.success) {
         setMensaje('Borrador guardado');
-        showSweetAlert({
+        Swal.fire({
           title: 'Borrador Guardado',
-          text: 'Los precios se han guardado como borrador. Puedes continuar editando o enviar la cotización al cliente.',
-          type: 'success',
-          onConfirm: closeSweetAlert
+          text: 'Los precios se han guardado como borrador.',
+          icon: 'success'
         });
-        
         setTimeout(() => setMensaje(''), 3000);
       } else {
         setMensaje('Error al guardar');
-        showSweetAlert({
+        Swal.fire({
           title: 'Error',
           text: resultado.message || 'No se pudo guardar el borrador',
-          type: 'error',
-          onConfirm: closeSweetAlert
+          icon: 'error'
         });
       }
       
     } catch (error) {
-      console.error('Error guardando borrador:', error);
       setMensaje('Error al guardar');
-      showSweetAlert({
+      Swal.fire({
         title: 'Error',
         text: 'Ocurrió un error al guardar el borrador.',
-        type: 'error',
-        onConfirm: closeSweetAlert
+        icon: 'error'
       });
     } finally {
       setGuardando(false);
     }
   };
 
-  // Función auxiliar para procesar el envío
   const procesarEnvioCotizacion = async () => {
     setGuardando(true);
     setMensaje('Enviando cotización al cliente...');
@@ -221,16 +184,12 @@ export default function EditarCotizacionForm({ cotizacionId, cotizacion: cotizac
         enviadaPorAdmin: true
       };
       
-      console.log('📤 Enviando cotización:', datosParaGuardar);
-      
-      // Paso 1: Guardar los precios
       const resultadoGuardar = await actualizarCotizacionAPI(
         datosOriginales.id || datosOriginales._id, 
         datosParaGuardar
       );
       
       if (resultadoGuardar.success) {
-        // Paso 2: Cambiar estado a "enviada" usando versión silenciosa
         const cotizacionActualizada = { ...datosOriginales, ...datosParaGuardar };
         const resultadoEstado = await actualizarEstadoCotizacionSilencioso(
           cotizacionActualizada, 
@@ -239,16 +198,11 @@ export default function EditarCotizacionForm({ cotizacionId, cotizacion: cotizac
         
         if (resultadoEstado.success) {
           setMensaje('¡Cotización enviada al cliente!');
-          showSweetAlert({
+          Swal.fire({
             title: '¡Cotización Enviada!',
-            text: `La cotización con precio $${datosParaGuardar.price.toFixed(2)} ha sido enviada al cliente. El cliente recibirá una notificación.`,
-            type: 'success',
-            onConfirm: () => {
-              closeSweetAlert();
-            }
+            text: `La cotización con precio $${datosParaGuardar.price.toFixed(2)} ha sido enviada al cliente.`,
+            icon: 'success'
           });
-          
-          // Actualizar el estado local
           setDatosOriginales(prev => ({ ...prev, status: 'enviada', ...datosParaGuardar }));
         } else {
           throw new Error(resultadoEstado.message || 'Error al cambiar el estado');
@@ -258,57 +212,51 @@ export default function EditarCotizacionForm({ cotizacionId, cotizacion: cotizac
       }
       
     } catch (error) {
-      console.error('Error enviando cotización:', error);
       setMensaje('Error al enviar');
-      showSweetAlert({
+      Swal.fire({
         title: 'Error al Enviar',
-        text: error.message || 'No se pudo enviar la cotización al cliente. Inténtalo de nuevo.',
-        type: 'error',
-        onConfirm: closeSweetAlert
+        text: error.message || 'No se pudo enviar la cotización al cliente.',
+        icon: 'error'
       });
     } finally {
       setGuardando(false);
     }
   };
 
-  // Enviar cotización al cliente (guardar + cambiar estado)
   const enviarCotizacionAlCliente = async () => {
-    if (!datosOriginales || !datosOriginales.id && !datosOriginales._id) {
-      showSweetAlert({
+    if (!datosOriginales || (!datosOriginales.id && !datosOriginales._id)) {
+      Swal.fire({
         title: 'Error',
         text: 'No se puede enviar: datos de cotización no válidos',
-        type: 'error',
-        onConfirm: closeSweetAlert
+        icon: 'error'
       });
       return;
     }
 
-    // Validar que haya precios
     const precioTotal = parseFloat(precios.price) || 0;
     if (precioTotal <= 0) {
-      showSweetAlert({
+      Swal.fire({
         title: 'Precio requerido',
         text: 'Debes ingresar un precio principal antes de enviar la cotización al cliente.',
-        type: 'warning',
-        onConfirm: closeSweetAlert
+        icon: 'warning'
       });
       return;
     }
 
-    // Confirmar envío
-    showSweetAlert({
+    const result = await Swal.fire({
       title: '¿Enviar cotización al cliente?',
-      text: `Se enviará la cotización con un precio de $${precioTotal.toFixed(2)} al cliente. Esta acción notificará al cliente.`,
-      type: 'question',
+      text: `Se enviará la cotización con un precio de $${precioTotal.toFixed(2)} al cliente.`,
+      icon: 'question',
       showCancelButton: true,
       confirmButtonText: 'Sí, enviar',
       cancelButtonText: 'Cancelar',
-      onConfirm: async () => {
-        closeSweetAlert();
-        await procesarEnvioCotizacion();
-      },
-      onCancel: closeSweetAlert
+      confirmButtonColor: '#16a34a',
+      cancelButtonColor: '#6b7280'
     });
+
+    if (result.isConfirmed) {
+      await procesarEnvioCotizacion();
+    }
   };
 
   if (loading || hookLoading) {
@@ -361,7 +309,6 @@ export default function EditarCotizacionForm({ cotizacionId, cotizacion: cotizac
 
   return (
     <div className="min-h-screen bg-gray-800 p-6">
-      {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div 
           className="flex items-center gap-3 cursor-pointer hover:opacity-80 text-white"
@@ -381,7 +328,6 @@ export default function EditarCotizacionForm({ cotizacionId, cotizacion: cotizac
         )}
       </div>
 
-      {/* Contenido principal */}
       <div className="bg-white rounded-lg shadow-lg p-8 max-w-4xl mx-auto">
         <div className="flex items-center gap-4 mb-8">
           <DollarSign className="w-8 h-8 text-green-600" />
@@ -395,7 +341,6 @@ export default function EditarCotizacionForm({ cotizacionId, cotizacion: cotizac
           </div>
         </div>
 
-        {/* Información del cliente (solo lectura) */}
         <div className="mb-8 p-6 bg-gray-50 rounded-lg">
           <h2 className="text-lg font-semibold mb-4 text-gray-800">Información del Cliente</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
@@ -460,7 +405,6 @@ export default function EditarCotizacionForm({ cotizacionId, cotizacion: cotizac
           )}
         </div>
 
-        {/* Información del flujo */}
         <div className="mb-8 p-6 bg-blue-50 border border-blue-200 rounded-lg">
           <h3 className="text-lg font-semibold mb-4 text-gray-800 flex items-center gap-2">
             📋 Estado de la Cotización
@@ -497,7 +441,6 @@ export default function EditarCotizacionForm({ cotizacionId, cotizacion: cotizac
           </div>
         </div>
 
-        {/* Campos editables de precios */}
         <div className="mb-8">
           <h2 className="text-lg font-semibold mb-6 text-gray-800 flex items-center gap-2">
             <span className="text-green-600">💰</span>
@@ -505,7 +448,6 @@ export default function EditarCotizacionForm({ cotizacionId, cotizacion: cotizac
           </h2>
           
           <div className="space-y-6">
-            {/* Precio principal */}
             <div className="p-4 border-2 border-green-200 rounded-lg bg-green-50">
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 💲 Precio Principal *
@@ -528,7 +470,6 @@ export default function EditarCotizacionForm({ cotizacionId, cotizacion: cotizac
               </div>
             </div>
 
-            {/* Desglose de costos */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -603,7 +544,6 @@ export default function EditarCotizacionForm({ cotizacionId, cotizacion: cotizac
           </div>
         </div>
 
-        {/* Totales */}
         <div className="mb-8 p-6 bg-blue-50 border border-blue-200 rounded-lg">
           <h3 className="text-lg font-semibold mb-4 text-gray-800">📊 Resumen de Totales</h3>
           <div className="space-y-2">
@@ -618,9 +558,7 @@ export default function EditarCotizacionForm({ cotizacionId, cotizacion: cotizac
           </div>
         </div>
 
-        {/* Botones de acción */}
         <div className="flex gap-4 justify-end">
-          {/* Botón guardar borrador */}
           <button
             onClick={guardarBorrador}
             disabled={guardando}
@@ -630,8 +568,8 @@ export default function EditarCotizacionForm({ cotizacionId, cotizacion: cotizac
             {guardando ? 'Guardando...' : 'Guardar Borrador'}
           </button>
 
-          {/* Botón enviar al cliente */}
           <button
+            type="button"
             onClick={enviarCotizacionAlCliente}
             disabled={guardando || datosOriginales.status === 'enviada'}
             className="flex items-center gap-2 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium text-lg"
@@ -640,7 +578,6 @@ export default function EditarCotizacionForm({ cotizacionId, cotizacion: cotizac
           </button>
         </div>
 
-        {/* Información sobre los botones */}
         <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
           <div className="flex items-start gap-3">
             <div className="text-yellow-600 text-xl">💡</div>
