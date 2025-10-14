@@ -99,10 +99,6 @@ const useCotizaciones = () => {
       }
       
       const cotizacionesFormateadas = cotizacionesData.map((cotizacion) => {
-        console.log('=== PROCESANDO COTIZACIÓN ===');
-        console.log('Cotización completa:', cotizacion);
-        console.log('ClientId original:', cotizacion.clientId);
-        
         let clienteData = {
           id: null,
           nombre: 'Cliente no encontrado',
@@ -115,17 +111,12 @@ const useCotizaciones = () => {
         if (cotizacion.clientId) {
           if (typeof cotizacion.clientId === 'object' && cotizacion.clientId !== null) {
             const clienteObj = cotizacion.clientId;
-            console.log('Cliente como objeto:', clienteObj);
-            
             const clienteId = clienteObj._id || clienteObj.id;
             const clienteEnMapaPorId = clientesMap[clienteId];
             
             if (clienteEnMapaPorId) {
-              console.log('Cliente encontrado en mapa por ID:', clienteEnMapaPorId);
               clienteData = clienteEnMapaPorId;
             } else {
-              console.log('Cliente NO encontrado en mapa, usando datos básicos de cotización');
-              
               const firstName = clienteObj.firtsName || clienteObj.firstName || clienteObj.name || clienteObj.nombre || '';
               const lastName = clienteObj.lastName || clienteObj.apellido || '';
               const nombreCompleto = `${firstName} ${lastName}`.trim();
@@ -149,18 +140,12 @@ const useCotizaciones = () => {
                 telefono: clienteObj.phone || clienteObj.telefono || clienteObj.celular || 'Sin teléfono'
               };
             }
-            
-            console.log('Cliente procesado desde objeto:', clienteData);
           } else {
             const clienteId = cotizacion.clientId;
-            console.log('Cliente como ID string:', clienteId);
-            
             const clienteEncontrado = clientesMap[clienteId];
             if (clienteEncontrado) {
               clienteData = clienteEncontrado;
-              console.log('Cliente encontrado en mapa:', clienteData);
             } else {
-              console.log('Cliente no encontrado en mapa para ID:', clienteId);
               clienteData = {
                 id: clienteId,
                 nombre: `Cliente #${clienteId ? clienteId.slice(-6) : 'Unknown'}`,
@@ -172,9 +157,6 @@ const useCotizaciones = () => {
             }
           }
         }
-        
-        console.log('Cliente final asignado:', clienteData);
-        console.log('===========================');
         
         return {
           id: cotizacion._id,
@@ -257,16 +239,6 @@ const useCotizaciones = () => {
         };
       });
 
-      console.log('=== COTIZACIONES FINALES ===');
-      cotizacionesFormateadas.forEach((cot, index) => {
-        console.log(`Cotización ${index + 1}:`, {
-          id: cot.id,
-          quoteName: cot.quoteName,
-          cliente: cot.cliente,
-          clienteCompleto: cot.clienteCompleto
-        });
-      });
-
       setCotizaciones(cotizacionesFormateadas);
     } catch (error) {
       console.error('Error al cargar las cotizaciones:', error);
@@ -280,8 +252,6 @@ const useCotizaciones = () => {
     try {
       setLoading(true);
       setError(null);
-      
-      console.log('🔄 Actualizando cotización:', { id, datosActualizacion });
       
       const response = await axios.put(`https://riveraproject-production-933e.up.railway.app/api/cotizaciones/${id}`, datosActualizacion);
       
@@ -390,12 +360,6 @@ const useCotizaciones = () => {
         default:
           break;
       }
-      
-      console.log('🔄 Actualizando estado silenciosamente:', { 
-        id: cotizacion.id || cotizacion._id, 
-        nuevoEstado,
-        datosActualizacion 
-      });
       
       const resultado = await actualizarCotizacionAPI(
         cotizacion.id || cotizacion._id, 
