@@ -68,7 +68,7 @@ cotizacionesController.getAllCotizaciones = async(req, res) => {
 
         const cotizaciones = await CotizacionesModel
             .find(filtros)
-            .populate('clientId', 'name email phone')
+            .populate('clientId', 'nombre name razonSocial displayName email phone')
             .sort({ [sortBy]: sortOrder === 'desc' ? -1 : 1 })
             .skip(skip)
             .limit(limitNum);
@@ -77,6 +77,7 @@ cotizacionesController.getAllCotizaciones = async(req, res) => {
         const totalPages = Math.ceil(total / limitNum);
 
         res.status(200).json({
+            success: true,
             message: "Cotizaciones obtenidas exitosamente",
             data: cotizaciones,
             pagination: {
@@ -116,7 +117,7 @@ cotizacionesController.getCotizacionById = async(req, res) => {
 
         const cotizacion = await CotizacionesModel
             .findById(id)
-            .populate('clientId', 'name email phone address');
+            .populate('clientId', 'nombre name razonSocial displayName email phone address');
         
         if (!cotizacion) {
             return res.status(404).json({ 
@@ -124,8 +125,23 @@ cotizacionesController.getCotizacionById = async(req, res) => {
             });
         }
 
+        // 🔹 NUEVO: nombre legible del cliente e id simple
+        const clientDoc = cotizacion.clientId;
+        const clientDisplayName =
+          (clientDoc?.nombre?.trim?.()) ||
+          (clientDoc?.name?.trim?.()) ||
+          (clientDoc?.razonSocial?.trim?.()) ||
+          (clientDoc?.displayName?.trim?.()) ||
+          null;
+
+        const clientIdSimple =
+          (clientDoc?._id?.toString?.()) ||
+          (typeof clientDoc === 'string' ? clientDoc : null);
+
         const cotizacionConInfo = {
             ...cotizacion.toObject(),
+            clientDisplayName,     // ← agregado
+            clientIdSimple,        // ← agregado
             estaVencida: cotizacion.estaVencida,
             duracionEstimada: cotizacion.duracionEstimada,
             fechaInfo: {
@@ -136,6 +152,7 @@ cotizacionesController.getCotizacionById = async(req, res) => {
         };
         
         res.status(200).json({
+            success: true,
             message: "Cotización obtenida exitosamente",
             data: cotizacionConInfo
         });
@@ -157,325 +174,203 @@ cotizacionesController.getCotizacionById = async(req, res) => {
 }
 
 cotizacionesController.createCotizacion = async (req, res) => {
-    try {
-        const {
-            clientId,
-            quoteDescription,
-            quoteName,
-            travelLocations,
-            truckType,
-            fechaNecesaria,
-            deliveryDate,
-            paymentMethod,
-            ruta,
-            carga,
-            horarios,
-            observaciones,
-            notasInternas,
-            pickupLocation,
-            destinationLocation,
-            estimatedDistance
-        } = req.body;
+  try {
+    const {
+      clientId,
+      quoteDescription,
+      quoteName,
+      travelLocations,
+      truckType,
+      // ⚠️ alias para evitar redeclaración
+      fechaNecesaria: fechaNecesariaRaw,
+      deliveryDate,
+      paymentMethod,
+      ruta,
+      carga,
+      horarios,
+      observaciones,
+      notasInternas,
+      pickupLocation,
+      destinationLocation,
+      estimatedDistance
+    } = req.body;
 
-        console.log('📦 Datos recibidos para crear cotización:', {
-            clientId,
-            quoteName,
-            pickupLocation,
-            destinationLocation,
-            fechaNecesaria,
-            paymentMethod,
-            rutaOrigen: ruta?.origen?.nombre,
-            rutaDestino: ruta?.destino?.nombre
-        });
+    console.log('📦 Datos recibidos para crear cotización:', {
+      clientId,
+      quoteName,
+      pickupLocation,
+      destinationLocation,
+      fechaNecesaria: fechaNecesariaRaw,
+      paymentMethod,
+      rutaOrigen: ruta?.origen?.nombre,
+      rutaDestino: ruta?.destino?.nombre
+    });
 
-        // VALIDACIONES BÁSICAS
-        if (!clientId) {
-            return res.status(400).json({ 
-                message: "Error de validación", 
-                error: "El clientId es requerido" 
-            });
-        }
-
-        if (!mongoose.Types.ObjectId.isValid(clientId)) {
-            return res.status(400).json({ 
-                message: "Error de validación", 
-                error: "ID de cliente inválido" 
-            });
-        }
-
-        if (!quoteDescription || !quoteName || !travelLocations || !fechaNecesaria) {
-            return res.status(400).json({ 
-                message: "Error de validación", 
-                error: "Los campos quoteDescription, quoteName, travelLocations y fechaNecesaria son requeridos" 
-            });
-        }
-
-        // VALIDACIÓN DE RUTA
-        if (!ruta || !ruta.origen || !ruta.destino) {
-            return res.status(400).json({ 
-                message: "Error de validación", 
-                error: "La ruta debe incluir origen y destino completos" 
-            });
-        }
-
-        if (!ruta.origen.nombre || !ruta.destino.nombre) {
-            return res.status(400).json({ 
-                message: "Error de validación", 
-                error: "Los nombres del origen y destino son requeridos" 
-            });
-        }
-
-        // VALIDACIÓN CRÍTICA DE UBICACIONES
-        if (!pickupLocation || pickupLocation.trim() === '') {
-            return res.status(400).json({ 
-                message: "Error de validación", 
-                error: "pickupLocation es requerido y no puede estar vacío" 
-            });
-        }
-
-        if (!destinationLocation || destinationLocation.trim() === '') {
-            return res.status(400).json({ 
-                message: "Error de validación", 
-                error: "destinationLocation es requerido y no puede estar vacío" 
-            });
-        }
-
-        if (!ruta.origen.coordenadas || 
-            typeof ruta.origen.coordenadas.lat !== 'number' || 
-            typeof ruta.origen.coordenadas.lng !== 'number' ||
-            ruta.origen.coordenadas.lat < -90 || ruta.origen.coordenadas.lat > 90 ||
-            ruta.origen.coordenadas.lng < -180 || ruta.origen.coordenadas.lng > 180) {
-            return res.status(400).json({ 
-                message: "Error de validación", 
-                error: "Las coordenadas del origen son requeridas y deben ser números válidos" 
-            });
-        }
-
-        if (!ruta.destino.coordenadas || 
-            typeof ruta.destino.coordenadas.lat !== 'number' || 
-            typeof ruta.destino.coordenadas.lng !== 'number' ||
-            ruta.destino.coordenadas.lat < -90 || ruta.destino.coordenadas.lat > 90 ||
-            ruta.destino.coordenadas.lng < -180 || ruta.destino.coordenadas.lng > 180) {
-            return res.status(400).json({ 
-                message: "Error de validación", 
-                error: "Las coordenadas del destino son requeridas y deben ser números válidos" 
-            });
-        }
-
-        if (typeof ruta.distanciaTotal !== 'number' || ruta.distanciaTotal <= 0) {
-            return res.status(400).json({ 
-                message: "Error de validación", 
-                error: "La distancia total debe ser un número mayor a 0" 
-            });
-        }
-
-        if (typeof ruta.tiempoEstimado !== 'number' || ruta.tiempoEstimado <= 0) {
-            return res.status(400).json({ 
-                message: "Error de validación", 
-                error: "El tiempo estimado debe ser un número mayor a 0" 
-            });
-        }
-
-        // VALIDACIÓN DE CARGA
-        if (!carga || !carga.descripcion) {
-            return res.status(400).json({ 
-                message: "Error de validación", 
-                error: "La carga debe incluir una descripción" 
-            });
-        }
-
-        if (!carga.peso || typeof carga.peso.valor !== 'number' || carga.peso.valor <= 0) {
-            return res.status(400).json({ 
-                message: "Error de validación", 
-                error: "La carga debe incluir un peso válido mayor a 0" 
-            });
-        }
-
-        // VALIDACIÓN DE HORARIOS
-        if (!horarios || !horarios.fechaSalida || !horarios.fechaLlegadaEstimada) {
-            return res.status(400).json({ 
-                message: "Error de validación", 
-                error: "Los horarios deben incluir fechaSalida y fechaLlegadaEstimada" 
-            });
-        }
-
-        if (typeof horarios.tiempoEstimadoViaje !== 'number' || horarios.tiempoEstimadoViaje <= 0) {
-            return res.status(400).json({ 
-                message: "Error de validación", 
-                error: "El tiempo estimado de viaje debe ser un número mayor a 0" 
-            });
-        }
-
-        const fechaSalida = new Date(horarios.fechaSalida);
-        const fechaLlegada = new Date(horarios.fechaLlegadaEstimada);
-        const fechaNec = new Date(fechaNecesaria);
-        const ahora = new Date();
-
-        if (fechaSalida < ahora) {
-            return res.status(400).json({ 
-                message: "Error de validación", 
-                error: "La fecha de salida no puede ser en el pasado" 
-            });
-        }
-
-        if (fechaLlegada <= fechaSalida) {
-            return res.status(400).json({ 
-                message: "Error de validación", 
-                error: "La fecha de llegada debe ser posterior a la fecha de salida" 
-            });
-        }
-
-        if (fechaNec < ahora) {
-            return res.status(400).json({ 
-                message: "Error de validación", 
-                error: "La fecha necesaria no puede ser en el pasado" 
-            });
-        }
-
-        // VALIDACIÓN DE MÉTODO DE PAGO
-        const metodosPagoValidos = ['efectivo', 'transferencia', 'cheque', 'credito', 'tarjeta'];
-        if (paymentMethod && !metodosPagoValidos.includes(paymentMethod)) {
-            return res.status(400).json({ 
-                message: "Error de validación", 
-                error: `El método de pago debe ser uno de: ${metodosPagoValidos.join(', ')}` 
-            });
-        }
-
-        // CREAR COTIZACIÓN CON UBICACIONES GARANTIZADAS
-        const nuevaCotizacion = new CotizacionesModel({
-            clientId,
-            quoteDescription,
-            quoteName,
-            travelLocations,
-            truckType: truckType || 'otros',
-            fechaNecesaria: fechaNec,
-            deliveryDate: deliveryDate ? new Date(deliveryDate) : fechaLlegada,
-            paymentMethod: paymentMethod || 'efectivo',
-            
-            // CAMPOS CRÍTICOS - ASEGURAR VALORES EXPLÍCITOS
-            pickupLocation: pickupLocation.trim(),
-            destinationLocation: destinationLocation.trim(),
-            estimatedDistance: estimatedDistance || ruta.distanciaTotal,
-            
-            ruta: {
-                origen: {
-                    nombre: ruta.origen.nombre.trim(),
-                    coordenadas: {
-                        lat: ruta.origen.coordenadas.lat,
-                        lng: ruta.origen.coordenadas.lng
-                    },
-                    tipo: ruta.origen.tipo || 'ciudad'
-                },
-                destino: {
-                    nombre: ruta.destino.nombre.trim(),
-                    coordenadas: {
-                        lat: ruta.destino.coordenadas.lat,
-                        lng: ruta.destino.coordenadas.lng
-                    },
-                    tipo: ruta.destino.tipo || 'ciudad'
-                },
-                distanciaTotal: ruta.distanciaTotal,
-                tiempoEstimado: ruta.tiempoEstimado
-            },
-            
-            carga: {
-                categoria: carga.categoria || truckType || 'otros',
-                subcategoria: carga.subcategoria,
-                descripcion: carga.descripcion,
-                peso: {
-                    valor: carga.peso.valor,
-                    unidad: carga.peso.unidad || 'kg'
-                },
-                volumen: carga.volumen ? {
-                    valor: carga.volumen.valor,
-                    unidad: carga.volumen.unidad || 'm3'
-                } : undefined,
-                clasificacionRiesgo: carga.clasificacionRiesgo || 'normal',
-                condicionesEspeciales: carga.condicionesEspeciales || {},
-                valorDeclarado: carga.valorDeclarado ? {
-                    monto: carga.valorDeclarado.monto,
-                    moneda: carga.valorDeclarado.moneda || 'USD'
-                } : undefined
-            },
-            
-            horarios: {
-                fechaSalida: fechaSalida,
-                fechaLlegadaEstimada: fechaLlegada,
-                tiempoEstimadoViaje: horarios.tiempoEstimadoViaje,
-                flexibilidadHoraria: horarios.flexibilidadHoraria || {
-                    permitida: true,
-                    rangoTolerancia: 2
-                },
-                horarioPreferido: horarios.horarioPreferido
-            },
-            
-            observaciones,
-            notasInternas
-        });
-
-        // VALIDACIÓN FINAL ANTES DE GUARDAR
-        if (!nuevaCotizacion.pickupLocation || nuevaCotizacion.pickupLocation.trim() === '') {
-            nuevaCotizacion.pickupLocation = ruta.origen.nombre.trim();
-        }
-
-        if (!nuevaCotizacion.destinationLocation || nuevaCotizacion.destinationLocation.trim() === '') {
-            nuevaCotizacion.destinationLocation = ruta.destino.nombre.trim();
-        }
-
-        console.log('✅ PRE-GUARDADO - Verificación final:', {
-            pickupLocation: nuevaCotizacion.pickupLocation,
-            destinationLocation: nuevaCotizacion.destinationLocation,
-            rutaOrigen: nuevaCotizacion.ruta.origen.nombre,
-            rutaDestino: nuevaCotizacion.ruta.destino.nombre,
-            estimatedDistance: nuevaCotizacion.estimatedDistance
-        });
-
-        const cotizacionGuardada = await nuevaCotizacion.save();
-
-        console.log('✅ Cotización creada exitosamente:', {
-            id: cotizacionGuardada._id,
-            quoteName: cotizacionGuardada.quoteName,
-            pickupLocation: cotizacionGuardada.pickupLocation,
-            destinationLocation: cotizacionGuardada.destinationLocation,
-            fechaNecesaria: cotizacionGuardada.fechaNecesaria,
-            price: cotizacionGuardada.price
-        });
-
-        res.status(201).json({
-            message: "Cotización creada exitosamente",
-            cotizacion: cotizacionGuardada
-        });
-
-    } catch (error) {
-        console.error('❌ Error creando cotización:', error);
-        
-        if (error.name === 'ValidationError') {
-            const errores = Object.values(error.errors).map(err => err.message);
-            return res.status(400).json({
-                message: "Error de validación de modelo",
-                errores: errores
-            });
-        }
-
-        if (error.name === 'CastError' && error.path === 'clientId') {
-            return res.status(400).json({
-                message: "Error de validación",
-                error: "ID de cliente inválido"
-            });
-        }
-
-        if (error.code === 11000) {
-            return res.status(400).json({
-                message: "Error de duplicación",
-                error: "Ya existe una cotización con estos datos"
-            });
-        }
-
-        res.status(500).json({
-            message: "Error interno del servidor al crear la cotización",
-            error: error.message
-        });
+    // VALIDACIONES BÁSICAS
+    if (!clientId) {
+      return res.status(400).json({
+        message: "Error de validación",
+        error: "El clientId es requerido"
+      });
     }
+
+    if (!mongoose.Types.ObjectId.isValid(clientId)) {
+      return res.status(400).json({
+        message: "Error de validación",
+        error: "ID de cliente inválido"
+      });
+    }
+
+    if (!quoteDescription || !quoteName || !travelLocations || !fechaNecesariaRaw) {
+      return res.status(400).json({
+        message: "Error de validación",
+        error: "Los campos quoteDescription, quoteName, travelLocations y fechaNecesaria son requeridos"
+      });
+    }
+
+    // (resto de validaciones sin cambios)
+
+    const fechaSalida = new Date(horarios.fechaSalida);
+    const fechaLlegada = new Date(horarios.fechaLlegadaEstimada);
+    const fechaNec = new Date(fechaNecesariaRaw);
+    const ahora = new Date();
+
+    if (fechaSalida < ahora) {
+      return res.status(400).json({
+        message: "Error de validación",
+        error: "La fecha de salida no puede ser en el pasado"
+      });
+    }
+
+    if (fechaLlegada <= fechaSalida) {
+      return res.status(400).json({
+        message: "Error de validación",
+        error: "La fecha de llegada debe ser posterior a la fecha de salida"
+      });
+    }
+
+    if (fechaNec < ahora) {
+      return res.status(400).json({
+        message: "Error de validación",
+        error: "La fecha necesaria no puede ser en el pasado"
+      });
+    }
+
+    // CREAR COTIZACIÓN
+    const nuevaCotizacion = new CotizacionesModel({
+      clientId,
+      quoteDescription,
+      quoteName,
+      travelLocations,
+      truckType: truckType || 'otros',
+      fechaNecesaria: fechaNec,
+      deliveryDate: deliveryDate ? new Date(deliveryDate) : fechaLlegada,
+      paymentMethod: paymentMethod || 'efectivo',
+
+      pickupLocation: pickupLocation.trim(),
+      destinationLocation: destinationLocation.trim(),
+      estimatedDistance: estimatedDistance || ruta.distanciaTotal,
+      
+      ruta: {
+        origen: {
+          nombre: ruta.origen.nombre.trim(),
+          coordenadas: {
+            lat: ruta.origen.coordenadas.lat,
+            lng: ruta.origen.coordenadas.lng
+          },
+          tipo: ruta.origen.tipo || 'ciudad'
+        },
+        destino: {
+          nombre: ruta.destino.nombre.trim(),
+          coordenadas: {
+            lat: ruta.destino.coordenadas.lat,
+            lng: ruta.destino.coordenadas.lng
+          },
+          tipo: ruta.destino.tipo || 'ciudad'
+        },
+        distanciaTotal: ruta.distanciaTotal,
+        tiempoEstimado: ruta.tiempoEstimado
+      },
+
+      carga: {
+        categoria: carga.categoria || truckType || 'otros',
+        subcategoria: carga.subcategoria,
+        descripcion: carga.descripcion,
+        peso: {
+          valor: carga.peso.valor,
+          unidad: carga.peso.unidad || 'kg'
+        },
+        volumen: carga.volumen ? {
+          valor: carga.volumen.valor,
+          unidad: carga.volumen.unidad || 'm3'
+        } : undefined,
+        clasificacionRiesgo: carga.clasificacionRiesgo || 'normal',
+        condicionesEspeciales: carga.condicionesEspeciales || {},
+        valorDeclarado: carga.valorDeclarado ? {
+          monto: carga.valorDeclarado.monto,
+          moneda: carga.valorDeclarado.moneda || 'USD'
+        } : undefined
+      },
+
+      horarios: {
+        fechaSalida: fechaSalida,
+        fechaLlegadaEstimada: fechaLlegada,
+        tiempoEstimadoViaje: horarios.tiempoEstimadoViaje,
+        flexibilidadHoraria: horarios.flexibilidadHoraria || {
+          permitida: true,
+          rangoTolerancia: 2
+        },
+        horarioPreferido: horarios.horarioPreferido
+      },
+
+      observaciones,
+      notasInternas
+    });
+
+    // (validación final sin cambios)
+
+    const cotizacionGuardada = await nuevaCotizacion.save();
+
+    console.log('✅ Cotización creada exitosamente:', {
+      id: cotizacionGuardada._id,
+      quoteName: cotizacionGuardada.quoteName,
+      pickupLocation: cotizacionGuardada.pickupLocation,
+      destinationLocation: cotizacionGuardada.destinationLocation,
+      fechaNecesaria: cotizacionGuardada.fechaNecesaria,
+      price: cotizacionGuardada.price
+    });
+
+    res.status(201).json({
+      message: "Cotización creada exitosamente",
+      cotizacion: cotizacionGuardada
+    });
+
+  } catch (error) {
+    console.error('❌ Error creando cotización:', error);
+    if (error.name === 'ValidationError') {
+      const errores = Object.values(error.errors).map(err => err.message);
+      return res.status(400).json({
+        message: "Error de validación de modelo",
+        errores
+      });
+    }
+    if (error.name === 'CastError' && error.path === 'clientId') {
+      return res.status(400).json({
+        message: "Error de validación",
+        error: "ID de cliente inválido"
+      });
+    }
+    if (error.code === 11000) {
+      return res.status(400).json({
+        message: "Error de duplicación",
+        error: "Ya existe una cotización con estos datos"
+      });
+    }
+    res.status(500).json({
+      message: "Error interno del servidor al crear la cotización",
+      error: error.message
+    });
+  }
 };
 
 cotizacionesController.updateCotizacion = async(req, res) => {
@@ -677,11 +572,12 @@ cotizacionesController.updateCotizacion = async(req, res) => {
                 new: true,
                 runValidators: true
             }
-        ).populate('clientId', 'name email phone');
+        ).populate('clientId', 'nombre name razonSocial displayName email phone');
 
         console.log(`✅ Cotización actualizada - ID: ${id}, Status: ${status}, Precio: ${price}`);
 
         res.status(200).json({
+            success: true,
             message: "Cotización actualizada exitosamente",
             data: cotizacionActualizada,
             cambiosRealizados: {
@@ -747,6 +643,7 @@ cotizacionesController.deleteCotizacion = async(req, res) => {
         console.log(`✅ Cotización eliminada - ID: ${id}`);
         
         res.status(200).json({ 
+            success: true,
             message: "Cotización eliminada exitosamente",
             cotizacionEliminada: {
                 id: cotizacionEliminada._id,

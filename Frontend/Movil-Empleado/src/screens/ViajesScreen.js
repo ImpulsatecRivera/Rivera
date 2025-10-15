@@ -18,12 +18,14 @@ import { useAuth } from '../Context/authContext';
 import HistoryItem from '../components/HistoryItem';
 import senalImg from '../images/senal.png';
 
-// Helper para deduplicar por una clave única
+/* =========================
+   Utilidad para deduplicar
+   ========================= */
 const dedupeBy = (arr, getKey) => {
   const seen = new Set();
   return (arr || []).filter((x) => {
     const k = getKey(x);
-    if (!k) return true;          // si no hay id, lo dejamos pasar
+    if (!k) return true;
     if (seen.has(k)) return false;
     seen.add(k);
     return true;
@@ -65,9 +67,7 @@ const ViajesScreen = ({ navigation }) => {
         return;
       }
       const id = await obtenerMotoristaId();
-      if (id && id !== motoristaId) {
-        setMotoristaId(id);
-      }
+      if (id && id !== motoristaId) setMotoristaId(id);
     };
     setupMotoristaId();
   }, [isAuthenticated, obtenerMotoristaId]);
@@ -78,18 +78,15 @@ const ViajesScreen = ({ navigation }) => {
     loading,
     error,
     refrescarViajes,
-    totalTrips,   // lo dejamos por compat
-    estadisticas, // idem
+    totalTrips,   // compat
+    estadisticas, // compat
   } = useTrips(motoristaId, 'historial');
 
   // ✅ DEDUPE una vez y úsalo para todo (lista y estadísticas)
   const baseTrips = useMemo(
-    () => dedupeBy(trips, (x) => String(x._id || x.id || x.viajeId || x.codigo || '')),
+    () => dedupeBy(trips, (x) => String(x._fechaSalidaISO || x.id || x._id || x.viajeId || x.codigo || '')),
     [trips]
   );
-
-  // Totales siempre desde lo que se renderiza
-  const totalRender = useMemo(() => baseTrips.length, [baseTrips]);
 
   // --- Filtro en memoria con useMemo (sobre baseTrips)
   const viajesFiltrados = useMemo(() => {
@@ -129,26 +126,30 @@ const ViajesScreen = ({ navigation }) => {
     refrescarViajes();
   }, [refrescarViajes]);
 
-  const handleInfoPress = (item) => {
+  /* =========================
+     handleInfoPress (usa campos normalizados del hook)
+     ========================= */
+  const handleInfoPress = useCallback((item) => {
+    // Asegúrate de que HistoryItem llame onInfoPress(item) con el item completo
     navigation.navigate('InfoViaje', {
       trip: {
-        id: item.id || item._id,
+        id: item.id || item._id || item.viajeId || item.codigo,
         tipo: item.tipo,
-        cotizacion: item.cotizacion || item.cliente || 'Cliente no especificado',
-        camion: item.camion || 'N/A',
-        descripcion: item.descripcion || 'Sin descripción',
-        horaLlegada: item.horaLlegada || 'No especificada',
-        horaSalida: item.horaSalida || item.hora,
-        asistente: item.asistente || 'Por asignar',
+        cotizacion: item.cotizacion ?? 'Cliente no especificado',
+        camion: item.camion ?? 'N/A',
+        descripcion: item.descripcion ?? 'Sin descripción',
+        horaLlegada: item.horaLlegada ?? 'No especificada',
+        horaSalida: item.horaSalida ?? 'No especificada',
+        asistente: item.asistente ?? 'Por asignar',
         estado: item.estado,
         origen: item.origen,
         destino: item.destino,
         fecha: item.fecha,
         hora: item.hora,
-        ...item,
+        // No es necesario pasar ...item a menos que InfoViaje use más campos crudos
       },
     });
-  };
+  }, [navigation]);
 
   // --- Loading / estados iniciales
   if (profileLoading || (isAuthenticated && !motoristaId) || (motoristaId && loading)) {
@@ -387,6 +388,8 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   resetFilterText: { color: '#fff', fontSize: 14, fontWeight: '600' },
+  loadingText: { color: '#333', fontSize: 16, marginTop: 12 },
+  errorText: { color: '#c00', fontSize: 14, marginTop: 8 },
 });
 
 export default ViajesScreen;
