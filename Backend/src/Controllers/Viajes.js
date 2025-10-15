@@ -10,6 +10,39 @@ import MotoristaModel from "../Models/Motorista.js";
 
 const ViajesController = {};
 
+// === Helper para armar los campos que tu app muestra en detalle ===
+const _buildUI = (v) => {
+  const q = v?.quoteId || {};
+  const cli = q?.clientId || {};
+  const t = v?.truckId || {};
+  const d = v?.conductorId || {};
+
+  const brand = t.brand || t.marca;
+  const model = t.model || t.modelo;
+  const plate = t.licensePlate || t.placa;
+  const tname = t.name || t.nombre;
+
+  let camion = 'N/A';
+  if (brand || model) {
+    camion = `${brand || ''} ${model || ''}`.trim();
+    if (plate) camion += ` (${plate})`;
+  } else if (tname) {
+    camion = plate ? `${tname} (${plate})` : tname;
+  } else if (plate) {
+    camion = plate;
+  }
+
+  return {
+    cliente: cli.name || cli.nombre || 'Cliente no especificado',
+    descripcion: v.tripDescription || q.quoteDescription || 'Sin descripción',
+    camion,
+    asistente: d.name || d.nombre || 'Por asignar',
+    horaSalida: v.departureTime || null,
+    horaLlegada: v.arrivalTime || null,
+  };
+};
+
+
 // =====================================================
 // GET: Datos optimizados para el mapa
 // =====================================================
@@ -1695,19 +1728,24 @@ ViajesController.updateLocation = async (req, res) => {
 ViajesController.getTripDetails = async (req, res) => {
   try {
     const { viajeId } = req.params;
- 
+
     const viaje = await ViajesModel.findById(viajeId)
-      .populate('truckId', 'brand model licensePlate name marca modelo placa')
-      .populate('conductorId', 'name phone nombre telefono')
-      .populate('quoteId');
- 
+      .populate('truckId', 'brand model licensePlate name marca modelo placa nombre')
+      .populate('conductorId', 'name nombre phone telefono')
+      .populate({
+        path: 'quoteId',
+        select: 'quoteName quoteDescription price ruta horarios clientId',
+        populate: { path: 'clientId', select: 'name nombre' }
+      })
+      .lean();
+
     if (!viaje) {
-      return res.status(404).json({
-        success: false,
-        message: "Viaje no encontrado"
-      });
+      return res.status(404).json({ success: false, message: "Viaje no encontrado" });
     }
- 
+
+    // 👇 lo que tu app necesita
+    viaje.__ui = _buildUI(viaje);
+
     res.status(200).json({
       success: true,
       data: viaje,
@@ -1721,6 +1759,7 @@ ViajesController.getTripDetails = async (req, res) => {
     });
   }
 };
+
  
 // =====================================================
 // PATCH: Completar viaje manualmente
@@ -1851,15 +1890,24 @@ ViajesController.updateTripProgress = async (req, res) => {
 ViajesController.getAllViajes = async (req, res) => {
   try {
     const viajes = await ViajesModel.find()
-      .populate('truckId', 'brand model licensePlate name')
-      .populate('conductorId', 'name phone nombre telefono')
-      .sort({ departureTime: -1 });
-    res.status(200).json(viajes);
+      .populate('truckId', 'brand model licensePlate name marca modelo placa nombre')
+      .populate('conductorId', 'name nombre phone telefono')
+      .populate({
+        path: 'quoteId',
+        select: 'quoteName quoteDescription price ruta clientId',
+        populate: { path: 'clientId', select: 'name nombre' }
+      })
+      .sort({ departureTime: -1 })
+      .lean();
+
+    const data = viajes.map(v => ({ ...v, __ui: _buildUI(v) }));
+
+    res.status(200).json({ success: true, data });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    res.status(500).json({ success: false, message: error.message });
   }
 };
- 
+
 // =====================================================
 // MÉTODO CORREGIDO: getTripStats
 // =====================================================
@@ -3905,38 +3953,32 @@ ViajesController.getViajesByConductor = async (req, res) => {
     const { limite = 20 } = req.query;
 
     const viajes = await ViajesModel.find({ conductorId })
-      .populate('truckId', 'brand model licensePlate name')
-      .populate('quoteId', 'quoteName price ruta')
+      .populate('truckId', 'brand model licensePlate name marca modelo placa nombre')
+      .populate('conductorId', 'name nombre phone telefono')
+      .populate({
+        path: 'quoteId',
+        select: 'quoteName quoteDescription price ruta clientId',
+        populate: { path: 'clientId', select: 'name nombre' }
+      })
       .sort({ departureTime: -1 })
       .limit(parseInt(limite))
       .lean();
 
-    // Calcular estadísticas del conductor
+    const data = viajes.map(v => ({ ...v, __ui: _buildUI(v) }));
+
     const estadisticas = {
-      totalViajes: viajes.length,
-      completados: viajes.filter(v => v.estado?.actual === 'completado').length,
-      enCurso: viajes.filter(v => v.estado?.actual === 'en_curso').length,
-      retrasados: viajes.filter(v => v.estado?.actual === 'retrasado').length,
-      eficiencia: viajes.length > 0 ? 
-        Math.round((viajes.filter(v => v.estado?.actual === 'completado').length / viajes.length) * 100) : 0
+      totalViajes: data.length,
+      completados: data.filter(v => v.estado?.actual === 'completado').length,
+      enCurso: data.filter(v => v.estado?.actual === 'en_curso').length,
+      retrasados: data.filter(v => v.estado?.actual === 'retrasado').length,
+      eficiencia: data.length > 0
+        ? Math.round((data.filter(v => v.estado?.actual === 'completado').length / data.length) * 100)
+        : 0
     };
 
-    res.status(200).json({
-      success: true,
-      data: {
-        viajes,
-        estadisticas,
-        conductorId
-      },
-      message: `Viajes del conductor obtenidos: ${viajes.length} registros`
-    });
-
+    res.status(200).json({ success: true, data: { viajes: data, estadisticas, conductorId }, message: `Viajes del conductor obtenidos: ${data.length} registros` });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: "Error al obtener viajes del conductor",
-      error: error.message
-    });
+    res.status(500).json({ success: false, message: "Error al obtener viajes del conductor", error: error.message });
   }
 };
 
