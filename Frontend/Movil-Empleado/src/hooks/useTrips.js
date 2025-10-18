@@ -73,14 +73,30 @@ const obtenerColorEstado = (estado = '') => {
 };
 
 const normalizarEstado = (estadoIn) => {
-  let raw =
-    estadoIn && typeof estadoIn === 'object'
-      ? estadoIn.actual ?? estadoIn.nombre ?? estadoIn.name ?? estadoIn.status ?? ''
-      : estadoIn ?? '';
+  // Si es un objeto, extraer el valor actual
+  let raw = '';
+  if (estadoIn && typeof estadoIn === 'object') {
+    raw = estadoIn.actual ?? estadoIn.nombre ?? estadoIn.name ?? estadoIn.status ?? '';
+  } else {
+    raw = estadoIn ?? '';
+  }
+  
+  // Convertir a string y normalizar
   raw = String(raw || '').trim().toLowerCase();
-  if (['en curso', 'en_curso', 'en transito', 'en_transito'].includes(raw)) return 'en_transito';
-  if (raw === 'finalizado') return 'completado';
-  return raw || 'programado';
+  
+  // Mapear variantes al mismo estado
+  if (['en curso', 'en_curso', 'en transito', 'en_transito', 'iniciado'].includes(raw)) {
+    return 'en_curso';
+  }
+  if (raw === 'finalizado') {
+    return 'completado';
+  }
+  if (['programado', 'confirmado'].includes(raw)) {
+    return 'pendiente';
+  }
+  
+  // Retornar el estado normalizado o 'pendiente' por defecto
+  return raw || 'pendiente';
 };
 
 const pickFechaSalida = (raw) =>
@@ -324,10 +340,7 @@ const transformarViajeAPI = (raw) => {
 
     icon: obtenerIconoViaje(descripcion),
     color,
-    // asegurar string:
-    estado: typeof estado === 'object'
-      ? (estado.actual ?? estado.nombre ?? estado.status ?? 'programado')
-      : estado,
+    estado,
 
     origen,
     destino,

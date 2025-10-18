@@ -435,7 +435,7 @@ const handleCreateAccount = async () => {
                 </View>
                 <View style={styles.lottieContainer}>
                   <LottieView
-                    source={require('../assets/lottie/Man and Woman say Hi !.json')}
+                    source={require('../assets/lottie/orange boxes.json')}
                     autoPlay
                     loop={false}
                     style={styles.lottieAnimation}

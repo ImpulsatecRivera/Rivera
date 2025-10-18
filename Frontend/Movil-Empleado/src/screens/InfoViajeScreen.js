@@ -9,7 +9,6 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const { width: screenWidth } = Dimensions.get('window');
 const isLargeScreen = screenWidth > 414;
-/* 👇 cambia a true si quieres volver a ver el bloque de diagnóstico */
 const SHOW_DEBUG = false;
 
 /* ========= Helpers ========== */
@@ -21,7 +20,6 @@ const MEH = ['n/a','sin descripción','cliente no especificado','por asignar','�
 const isUseful = (s)=> typeof s==='string' && s.trim().length>0 && !MEH.includes(s.trim().toLowerCase());
 const pickUseful = (...vals)=> { for(const v of vals){ if(isUseful(v)) return String(v).trim(); } return null; };
 
-/* 🔸 Detecta “nombre” débil (correo/teléfono) para forzar fetch del cliente */
 const looksLikeWeakName = (s) => {
   if (!s) return true;
   const str = String(s).trim();
@@ -33,7 +31,6 @@ const looksLikeWeakName = (s) => {
   return false;
 };
 
-/* ✨ Derivar un nombre legible desde el email */
 const guessNameFromEmail = (email) => {
   if (!email || typeof email !== 'string') return null;
   const [local] = email.split('@');
@@ -45,14 +42,12 @@ const guessNameFromEmail = (email) => {
   return looksLikeWeakName(titled) ? null : titled;
 };
 
-/* ✅ Detectar si un objeto tiene campos de nombre reales */
 const hasNameFields = (o) => {
   if (!o || typeof o !== 'object') return false;
   const v = (x) => typeof x === 'string' && x.trim().length > 0;
   return v(o.name) || v(o.nombre) || v(o.firstName) || v(o.lastName) || v(o.razonSocial) || v(o.razon);
 };
 
-/* ✅ Leer nombres/correo profundamente sin importar el envoltorio */
 const unwrapOne = (c) => {
   if (!c) return null;
   if (Array.isArray(c)) return c.length ? unwrapOne(c[0]) : null;
@@ -62,18 +57,21 @@ const unwrapOne = (c) => {
   }
   return c;
 };
+
 const deepFirstName = (c) =>
   pickUseful(
     get(c,'firstName'), get(c,'firstname'),
     get(c,'cliente.firstName'), get(c,'client.firstName'), get(c,'customer.firstName'),
     get(c,'data.firstName'), get(c,'user.firstName'), get(c,'profile.firstName')
   );
+
 const deepLastName = (c) =>
   pickUseful(
     get(c,'lastName'), get(c,'lastname'),
     get(c,'cliente.lastName'), get(c,'client.lastName'), get(c,'customer.lastName'),
     get(c,'data.lastName'), get(c,'user.lastName'), get(c,'profile.lastName')
   );
+
 const deepDirectName = (c) =>
   pickUseful(
     get(c,'name'), get(c,'nombre'), get(c,'displayName'),
@@ -83,6 +81,7 @@ const deepDirectName = (c) =>
     get(c,'data.name'), get(c,'data.nombre'),
     get(c,'profile.name')
   );
+
 const deepEmail = (c) =>
   pickUseful(
     get(c,'email'),
@@ -96,6 +95,7 @@ const fmtTime = (v)=>{
   if(isNaN(d.getTime())) return 'No especificada';
   return d.toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit',hour12:true});
 };
+
 const estadoToColor = (estado)=>{
   const s=String(estado||'').toLowerCase();
   if(s.includes('en curso')||s.includes('en_curso')||s.includes('en transito'))return '#9C27B0';
@@ -105,10 +105,8 @@ const estadoToColor = (estado)=>{
   return '#757575';
 };
 
-/* 🔹 Helpers de cliente */
 const getQuoteClientName = (q) => {
   if (!q || typeof q !== 'object') return null;
-
   const direct =
     get(q,'clientId.name') || get(q,'clientId.nombre') ||
     q.clientName || q.clienteNombre ||
@@ -117,16 +115,13 @@ const getQuoteClientName = (q) => {
     q.clientDisplayName ||
     (isUseful(q.quoteName) && !looksLikeWeakName(q.quoteName) ? q.quoteName : null);
   if (isUseful(direct) && !looksLikeWeakName(direct)) return String(direct).trim();
-
   const cid = q.clientId;
   if (cid && typeof cid === 'object') {
     const nm = cid.name || cid.nombre || cid.razonSocial || cid.razon;
     if (isUseful(nm) && !looksLikeWeakName(nm)) return String(nm).trim();
-
     const email = cid.email;
     const derived = guessNameFromEmail(email);
     if (derived) return derived;
-
     const phone = cid.phone;
     const address = cid.address;
     if (isUseful(email)) return email;
@@ -136,39 +131,29 @@ const getQuoteClientName = (q) => {
   return null;
 };
 
-/* 🟢 PRIORIDAD a firstName + lastName cuando exista */
 const getClientDisplayName = (cRaw) => {
   const c = unwrapOne(cRaw);
   if (!c || typeof c !== 'object') return null;
-
   const fn = deepFirstName(c);
   const ln = deepLastName(c);
   const fullName = [fn, ln].filter(Boolean).join(' ').trim();
   if (isUseful(fullName) && !looksLikeWeakName(fullName)) return fullName;
-
   const direct = deepDirectName(c);
   if (direct && !looksLikeWeakName(direct)) return direct;
-
   if (isUseful(fn) && !looksLikeWeakName(fn)) return fn;
   if (isUseful(ln) && !looksLikeWeakName(ln)) return ln;
-
   const derived = guessNameFromEmail(deepEmail(c));
   if (derived) return derived;
-
   const email = deepEmail(c);
   if (isUseful(email)) return email;
-
   return null;
 };
 
-/* ✅ Detector ESTRICTO de clientId en la cotización */
 const getClientIdFromQuote = (q) => {
   if (!q || typeof q !== 'object') return null;
-
   const quoteOwnId =
     (q && (q._id && (q._id.$oid || q._id))) ||
     q.id || q.$oid || null;
-
   const rawCandidates = [
     q.clientId, q.clienteId, q.customerId, q.userId,
     get(q, 'clientId'), get(q, 'clienteId'), get(q, 'customerId'), get(q, 'userId'),
@@ -176,27 +161,22 @@ const getClientIdFromQuote = (q) => {
     get(q, 'cliente._id'), get(q, 'cliente.id'), get(q, 'cliente.$oid'),
     get(q, 'customer._id'), get(q, 'customer.id'), get(q, 'customer.$oid'),
   ].filter((v) => v !== undefined && v !== null);
-
   const hex24 = /^[0-9a-f]{24}$/i;
   for (const c of rawCandidates) {
     const idCandidate =
       typeof c === 'string' ? c.trim() :
       (c && (c.$oid || c._id || c.id)) || null;
-
     if (!idCandidate) continue;
     const clean = String(idCandidate).trim();
-
     if (quoteOwnId && clean === String(quoteOwnId)) continue;
     if (hex24.test(clean)) return clean;
   }
   return null;
 };
 
-/* Adaptador local sin red */
 const getTripUI = (tripOrRaw)=>{
   const t = tripOrRaw || {};
   const raw = t.raw || t;
-
   const scanStrings = (obj, keyRegex, maxDepth=4)=>{
     const out=[]; const seen=new WeakSet();
     const walk=(o,d)=>{
@@ -298,14 +278,12 @@ const getTripUI = (tripOrRaw)=>{
   };
 };
 
-/* ===== Base API / auth fetch ===== */
 const RAW_BASE = (process.env.EXPO_PUBLIC_API_URL || '').replace(/\/+$/, '');
 const CLEAN_BASE = RAW_BASE.replace(/\/api$/i, '');
 const API_BASE_URL = (CLEAN_BASE || 'https://riveraproject-production-933e.up.railway.app') + '/api';
 
 const resolveId = (v)=> typeof v==='string'&&v.trim()? v.trim() : (v && (v._id || v.$oid)) || null;
 
-// acepta {message,data} o {success,data} o el objeto directo
 const getPayload = (resp)=>{
   if (!resp || typeof resp !== 'object') return resp;
   if (Object.prototype.hasOwnProperty.call(resp, 'data')) return resp.data;
@@ -342,28 +320,295 @@ const tryFetchFirst = async (urls = [], token, signal) => {
   return null;
 };
 
-/* ========= Estilos ========== */
+/* ========= Estilos Modernos ========== */
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f8f9fa' },
+  container: { 
+    flex: 1, 
+    backgroundColor: '#F5F7FA' 
+  },
   content: {
     flexGrow: 1,
-    padding: 20,
+    padding: 16,
     paddingBottom: Platform.OS === 'ios' ? (isLargeScreen ? 180 : 120) : (isLargeScreen ? 160 : 100),
   },
-  formGroup: { marginBottom: 20 },
-  label: { fontSize: 16, color: '#000', marginBottom: 8, fontWeight: '500' },
-  inputContainer: { backgroundColor: '#f5f5f5', padding: 15, borderRadius: 8 },
-  inputText: { fontSize: 16, color: '#666' },
-  volverButton: { backgroundColor: '#4CAF50', padding: 15, borderRadius: 8, alignItems: 'center', marginTop: 10, marginBottom: 30 },
-  volverButtonText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
+  
+  // Estado del viaje - Card destacado
+  statusCard: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 20,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 3,
+      },
+    }),
+  },
+  statusBadge: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    marginBottom: 12,
+  },
+  statusText: {
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  tripTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#1A1A1A',
+    marginBottom: 4,
+  },
+  tripSubtitle: {
+    fontSize: 14,
+    color: '#666',
+    lineHeight: 20,
+  },
 
-  debugBox: { backgroundColor:'#fff', borderRadius:8, padding:12, marginBottom:16, borderWidth:1, borderColor:'#eee' },
-  debugTitle: { fontWeight:'700', marginBottom:6, color:'#333' },
-  debugLine: { fontSize:12, color:'#555', marginBottom:3 },
-  debugBtn: { alignSelf:'flex-start', backgroundColor:'#e0e0e0', paddingVertical:8, paddingHorizontal:12, borderRadius:6, marginTop:8 },
+  // Sección con título
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+    marginTop: 8,
+  },
+  sectionIcon: {
+    width: 24,
+    height: 24,
+    borderRadius: 6,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 10,
+  },
+  sectionTitle: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#666',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
+
+  // Cards de información
+  infoCard: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 4,
+      },
+      android: {
+        elevation: 2,
+      },
+    }),
+  },
+  infoRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 12,
+  },
+  infoIconContainer: {
+    width: 36,
+    height: 36,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  infoContent: {
+    flex: 1,
+  },
+  infoLabel: {
+    fontSize: 12,
+    color: '#888',
+    marginBottom: 4,
+    fontWeight: '500',
+  },
+  infoValue: {
+    fontSize: 15,
+    color: '#1A1A1A',
+    fontWeight: '500',
+    lineHeight: 20,
+  },
+  
+  // Timeline de ruta
+  routeCard: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 20,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 4,
+      },
+      android: {
+        elevation: 2,
+      },
+    }),
+  },
+  routePoint: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+  },
+  routeIconContainer: {
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  routeIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  routeLine: {
+    width: 2,
+    flex: 1,
+    backgroundColor: '#E0E0E0',
+    marginVertical: 4,
+  },
+  routeInfo: {
+    flex: 1,
+    paddingBottom: 16,
+  },
+  routeLabel: {
+    fontSize: 11,
+    color: '#888',
+    marginBottom: 4,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  routeLocation: {
+    fontSize: 15,
+    color: '#1A1A1A',
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  routeTime: {
+    fontSize: 13,
+    color: '#666',
+  },
+
+  // Botón
+  actionButton: {
+    backgroundColor: '#4CAF50',
+    paddingVertical: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginTop: 10,
+    marginBottom: 20,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#4CAF50',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 4,
+      },
+    }),
+  },
+  actionButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+  },
+
+  // Debug
+  debugBox: { 
+    backgroundColor:'#FFF3CD', 
+    borderRadius:12, 
+    padding:16, 
+    marginBottom:16, 
+    borderWidth:1, 
+    borderColor:'#FFE69C' 
+  },
+  debugTitle: { 
+    fontWeight:'700', 
+    marginBottom:8, 
+    color:'#856404',
+    fontSize: 14,
+  },
+  debugLine: { 
+    fontSize:12, 
+    color:'#856404', 
+    marginBottom:4,
+    lineHeight: 18,
+  },
+  debugBtn: { 
+    alignSelf:'flex-start', 
+    backgroundColor:'#FFE69C', 
+    paddingVertical:10, 
+    paddingHorizontal:16, 
+    borderRadius:8, 
+    marginTop:10 
+  },
+  debugBtnText: {
+    color: '#856404',
+    fontWeight: '600',
+    fontSize: 13,
+  },
+  
+  divider: {
+    height: 1,
+    backgroundColor: '#F0F0F0',
+    marginVertical: 12,
+  },
 });
 
-/* ========= Screen ========== */
+/* ========= Componentes de UI ========== */
+const Icon = ({ name, color = '#666', size = 20 }) => {
+  const icons = {
+    user: '👤',
+    truck: '🚛',
+    description: '📋',
+    clock: '🕐',
+    assistant: '👨‍🔧',
+    location: '📍',
+    route: '🗺️',
+  };
+  
+  return (
+    <Text style={{ fontSize: size }}>
+      {icons[name] || '•'}
+    </Text>
+  );
+};
+
+const InfoRow = ({ icon, label, value, iconBg = '#F0F4FF', iconColor = '#4A90E2' }) => (
+  <View style={styles.infoRow}>
+    <View style={[styles.infoIconContainer, { backgroundColor: iconBg }]}>
+      <Icon name={icon} color={iconColor} size={18} />
+    </View>
+    <View style={styles.infoContent}>
+      <Text style={styles.infoLabel}>{label}</Text>
+      <Text style={styles.infoValue}>{value}</Text>
+    </View>
+  </View>
+);
+
+/* ========= Screen Principal ========== */
 const InfoViajeScreen = ({ navigation, route }) => {
   const { trip } = route.params || {};
   const { token } = useAuth();
@@ -389,7 +634,6 @@ const InfoViajeScreen = ({ navigation, route }) => {
     selectedClientName:null,
   });
 
-  // Fallback: si viene sin refs, pedir el viaje completo por ID
   useEffect(() => {
     const controller = new AbortController();
     const needRefs = !resolveId(rawInitial.quoteId) && !resolveId(rawInitial.truckId) && !resolveId(rawInitial.conductorId);
@@ -415,12 +659,10 @@ const InfoViajeScreen = ({ navigation, route }) => {
     return () => controller.abort();
   }, [rawInitial, token]);
 
-  // Enriquecedor por IDs
   const enriquecer = useCallback(async ()=>{
     const controller = new AbortController();
     const next = {};
     try {
-      // Cliente
       const qId = resolveId(raw.quoteId);
       if ((ui.cliente === 'Cliente no especificado' || looksLikeWeakName(ui.cliente)) && qId) {
         const q = await tryFetchFirst(
@@ -513,7 +755,6 @@ const InfoViajeScreen = ({ navigation, route }) => {
         if (desc && !isUseful(ui.descripcion)) next.descripcion = desc;
       }
 
-      // Camión
       const tId = resolveId(raw.truckId);
       if (ui.camion === 'N/A' && tId) {
         const t = await tryFetchFirst(
@@ -537,7 +778,6 @@ const InfoViajeScreen = ({ navigation, route }) => {
         }
       }
 
-      // Conductor / Asistente
       const dId = resolveId(raw.conductorId);
       if ((ui.asistente === 'Por asignar' || !ui.asistente) && dId) {
         const d = await tryFetchFirst(
@@ -564,59 +804,171 @@ const InfoViajeScreen = ({ navigation, route }) => {
     return () => { typeof clean === 'function' && clean(); };
   }, [enriquecer]);
 
-  const FormField = ({ label, value, fallback }) => (
-    <View style={styles.formGroup}>
-      <Text style={styles.label}>{label}:</Text>
-      <View style={styles.inputContainer}>
-        <Text style={styles.inputText}>{textSafe(value, fallback)}</Text>
-      </View>
-    </View>
-  );
+  const estadoLabel = String(ui.estado || 'programado').toLowerCase();
+  const estadoDisplay = 
+    estadoLabel.includes('en curso') || estadoLabel.includes('en_curso') ? 'En Curso' :
+    estadoLabel.includes('completado') || estadoLabel.includes('finalizado') ? 'Completado' :
+    estadoLabel.includes('cancelado') ? 'Cancelado' :
+    estadoLabel.includes('pendiente') ? 'Pendiente' : 'Programado';
 
   return (
     <View style={styles.container}>
       <Header title="Información del viaje" showBack onBack={() => navigation.goBack()} />
 
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator bounces>
-        {/* 🧪 DEBUG (oculto por SHOW_DEBUG) */}
+      <ScrollView 
+        contentContainerStyle={styles.content} 
+        showsVerticalScrollIndicator={false}
+        bounces={true}
+      >
+        {/* Estado del viaje */}
+        <View style={styles.statusCard}>
+          <View style={[styles.statusBadge, { backgroundColor: ui.color }]}>
+            <Text style={styles.statusText}>{estadoDisplay}</Text>
+          </View>
+          <Text style={styles.tripTitle}>{ui.tipo}</Text>
+          {ui.descripcion && ui.descripcion !== 'Sin descripción' && (
+            <Text style={styles.tripSubtitle}>{ui.descripcion}</Text>
+          )}
+        </View>
+
+        {/* Información del cliente y camión */}
+        <View style={styles.sectionHeader}>
+          <View style={[styles.sectionIcon, { backgroundColor: '#E8F5E9' }]}>
+            <Icon name="route" size={14} color="#4CAF50" />
+          </View>
+          <Text style={styles.sectionTitle}>Detalles del servicio</Text>
+        </View>
+
+        <View style={styles.infoCard}>
+          <InfoRow 
+            icon="user" 
+            label="Cliente" 
+            value={textSafe(ui.cliente, 'Cliente no especificado')}
+            iconBg="#F0F4FF"
+            iconColor="#4A90E2"
+          />
+          <View style={styles.divider} />
+          <InfoRow 
+            icon="truck" 
+            label="Camión asignado" 
+            value={textSafe(ui.camion, 'N/A')}
+            iconBg="#FFF4E6"
+            iconColor="#FF9800"
+          />
+          <View style={styles.divider} />
+          <InfoRow 
+            icon="assistant" 
+            label="Conductor / Asistente" 
+            value={textSafe(ui.asistente, 'Por asignar')}
+            iconBg="#F3E5F5"
+            iconColor="#9C27B0"
+          />
+        </View>
+
+        {/* Ruta (si existe origen/destino) */}
+        {(ui.origen || ui.destino) && (
+          <>
+            <View style={styles.sectionHeader}>
+              <View style={[styles.sectionIcon, { backgroundColor: '#E3F2FD' }]}>
+                <Icon name="location" size={14} color="#2196F3" />
+              </View>
+              <Text style={styles.sectionTitle}>Ruta</Text>
+            </View>
+
+            <View style={styles.routeCard}>
+              {ui.origen && (
+                <View style={styles.routePoint}>
+                  <View style={styles.routeIconContainer}>
+                    <View style={[styles.routeIcon, { backgroundColor: '#4CAF50' }]}>
+                      <Text style={{ color: '#fff', fontSize: 16 }}>A</Text>
+                    </View>
+                    {ui.destino && <View style={styles.routeLine} />}
+                  </View>
+                  <View style={styles.routeInfo}>
+                    <Text style={styles.routeLabel}>Origen</Text>
+                    <Text style={styles.routeLocation}>{ui.origen}</Text>
+                    {ui.horaSalida && ui.horaSalida !== 'No especificada' && (
+                      <Text style={styles.routeTime}>🕐 {ui.horaSalida}</Text>
+                    )}
+                  </View>
+                </View>
+              )}
+
+              {ui.destino && (
+                <View style={styles.routePoint}>
+                  <View style={styles.routeIconContainer}>
+                    <View style={[styles.routeIcon, { backgroundColor: '#F44336' }]}>
+                      <Text style={{ color: '#fff', fontSize: 16 }}>B</Text>
+                    </View>
+                  </View>
+                  <View style={styles.routeInfo}>
+                    <Text style={styles.routeLabel}>Destino</Text>
+                    <Text style={styles.routeLocation}>{ui.destino}</Text>
+                    {ui.horaLlegada && ui.horaLlegada !== 'No especificada' && (
+                      <Text style={styles.routeTime}>🕐 {ui.horaLlegada}</Text>
+                    )}
+                  </View>
+                </View>
+              )}
+            </View>
+          </>
+        )}
+
+        {/* Horarios (si no hay origen/destino) */}
+        {!ui.origen && !ui.destino && (
+          <>
+            <View style={styles.sectionHeader}>
+              <View style={[styles.sectionIcon, { backgroundColor: '#FFF3E0' }]}>
+                <Icon name="clock" size={14} color="#FF9800" />
+              </View>
+              <Text style={styles.sectionTitle}>Horarios</Text>
+            </View>
+
+            <View style={styles.infoCard}>
+              <InfoRow 
+                icon="clock" 
+                label="Hora de salida" 
+                value={textSafe(ui.horaSalida, 'No especificada')}
+                iconBg="#E8F5E9"
+                iconColor="#4CAF50"
+              />
+              <View style={styles.divider} />
+              <InfoRow 
+                icon="clock" 
+                label="Hora de llegada" 
+                value={textSafe(ui.horaLlegada, 'No especificada')}
+                iconBg="#FFEBEE"
+                iconColor="#F44336"
+              />
+            </View>
+          </>
+        )}
+
+        {/* Debug */}
         {SHOW_DEBUG && (
           <View style={styles.debugBox}>
-            <Text style={styles.debugTitle}>Diagnóstico</Text>
-            <Text style={styles.debugLine}>quoteId: {textSafe(resolveId(raw.quoteId),'(no)')}</Text>
-            <Text style={styles.debugLine}>truckId: {textSafe(resolveId(raw.truckId),'(no)')}</Text>
-            <Text style={styles.debugLine}>conductorId: {textSafe(resolveId(raw.conductorId),'(no)')}</Text>
-            <Text style={styles.debugLine}>token: {textSafe(token ? '(sí)' : '(no)')}</Text>
-            <Text style={styles.debugLine}>fetch cotización: {textSafe(debug.quoteFetch ? 'OK' : '—')}</Text>
-            <Text style={styles.debugLine}>cotización keys: {textSafe(debug.quoteKeys,'(no)')}</Text>
-            <Text style={styles.debugLine}>cotización trae clientDisplayName: {textSafe(debug.quoteHasDisplayName,'(no)')}</Text>
-            <Text style={styles.debugLine}>tipo de clientId en cotización: {textSafe(debug.quoteClientIdType,'(no)')}</Text>
-            <Text style={styles.debugLine}>clientId (raw): {textSafe(debug.clientIdRaw,'(no)')}</Text>
-            <Text style={styles.debugLine}>clientId detectado: {textSafe(debug.clientIdDetected,'(no)')}</Text>
-            <Text style={styles.debugLine}>fetch cliente: {textSafe(debug.clientFetch ? 'OK' : '—')}</Text>
-            <Text style={styles.debugLine}>cliente elegido: {textSafe(debug.selectedClientName,'(no)')}</Text>
-            <Text style={styles.debugLine}>fetch camión: {textSafe(debug.truckFetch ? 'OK' : '—')}</Text>
-            <Text style={styles.debugLine}>fetch motorista: {textSafe(debug.driverFetch ? 'OK' : '—')}</Text>
+            <Text style={styles.debugTitle}>🔧 Panel de diagnóstico</Text>
+            <Text style={styles.debugLine}>• quoteId: {textSafe(resolveId(raw.quoteId),'(no)')}</Text>
+            <Text style={styles.debugLine}>• truckId: {textSafe(resolveId(raw.truckId),'(no)')}</Text>
+            <Text style={styles.debugLine}>• conductorId: {textSafe(resolveId(raw.conductorId),'(no)')}</Text>
+            <Text style={styles.debugLine}>• token: {textSafe(token ? '(sí)' : '(no)')}</Text>
+            <Text style={styles.debugLine}>• fetch cotización: {textSafe(debug.quoteFetch ? 'OK' : '—')}</Text>
+            <Text style={styles.debugLine}>• cotización keys: {textSafe(debug.quoteKeys,'(no)')}</Text>
+            <Text style={styles.debugLine}>• cliente elegido: {textSafe(debug.selectedClientName,'(no)')}</Text>
             <TouchableOpacity style={styles.debugBtn} onPress={enriquecer}>
-              <Text>Reintentar enriquecer</Text>
+              <Text style={styles.debugBtnText}>🔄 Reintentar</Text>
             </TouchableOpacity>
           </View>
         )}
 
-        <FormField label="Cotización de"   value={ui.cliente}     fallback="Cliente no especificado" />
-        <FormField label="Camión encargado" value={ui.camion}      fallback="N/A" />
-        <FormField label="Descripción"      value={ui.descripcion} fallback="Sin descripción" />
-        <FormField label="Hora de llegada"  value={ui.horaLlegada} fallback="No especificada" />
-        <FormField label="Hora de salida"   value={ui.horaSalida}  fallback="No especificada" />
-        <FormField label="Asistente"        value={ui.asistente}   fallback="Por asignar" />
-
         <TouchableOpacity
-          style={styles.volverButton}
+          style={styles.actionButton}
           onPress={() => navigation.goBack()}
           activeOpacity={0.85}
           accessibilityRole="button"
           accessibilityLabel="Volver a la lista de viajes"
         >
-          <Text style={styles.volverButtonText}>Volver</Text>
+          <Text style={styles.actionButtonText}>Volver a la lista</Text>
         </TouchableOpacity>
       </ScrollView>
     </View>

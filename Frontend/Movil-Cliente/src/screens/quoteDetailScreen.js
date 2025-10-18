@@ -18,7 +18,7 @@ import { Ionicons } from '@expo/vector-icons';
 import LottieView from 'lottie-react-native';
 
 // Import Lottie animations
-import DeliveryTruck from "../assets/lottie/Car _ Ignite Animation.json";
+import DeliveryTruck from "../assets/lottie/Paper plane.json";
 import CheckSuccess from "../assets/lottie/success tick.json";
 import ClockPending from "../assets/lottie/Waiting (1).json";
 import CancelError from "../assets/lottie/cancel animation.json";
@@ -58,6 +58,14 @@ const statusLottieConfig = {
     loop: false
   },
   completado: {
+    bg: '#D1FAE5',
+    text: '#065F46',
+    border: '#10B981',
+    icon: 'checkmark-circle-outline',
+    lottie: CheckSuccess,
+    loop: false
+  },
+  completada: {
     bg: '#D1FAE5',
     text: '#065F46',
     border: '#10B981',
@@ -457,12 +465,9 @@ const QuoteDetailsScreen = () => {
     };
 
     console.log('=== DATOS MAPEADOS ===');
+    console.log('status:', mappedData.status);
     console.log('pickupLocation:', mappedData.pickupLocation);
     console.log('destinationLocation:', mappedData.destinationLocation);
-    console.log('travelLocations:', mappedData.travelLocations);
-    console.log('distance:', mappedData.distance);
-    console.log('estimatedTime:', mappedData.estimatedTime);
-    console.log('carga:', mappedData.carga);
     console.log('=====================');
 
     return mappedData;
@@ -471,7 +476,7 @@ const QuoteDetailsScreen = () => {
   // Aplicar el mapeo robusto
   const mappedQuote = createRobustMapping(data);
 
-  // Función para aceptar cotización
+  // Función para aceptar cotización (ahora cambia a "completada")
   const handleAcceptQuote = async () => {
     try {
       const quoteId = mappedQuote.id;
@@ -497,7 +502,7 @@ const QuoteDetailsScreen = () => {
                 const response = await fetch(`https://riveraproject-production-933e.up.railway.app/api/cotizaciones/${quoteId}`, {
                   method: 'PUT',
                   headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ status: 'aceptada' })
+                  body: JSON.stringify({ status: 'aceptada' }) // ✅ Cambiado de 'aceptada' a 'completada'
                 });
 
                 if (response.ok) {
@@ -506,7 +511,7 @@ const QuoteDetailsScreen = () => {
 
                   Alert.alert(
                     "¡Éxito!",
-                    "La cotización ha sido aceptada correctamente",
+                    "La cotización ha sido aceptada y completada correctamente",
                     [{
                       text: "OK",
                       onPress: () => {
@@ -686,8 +691,10 @@ const QuoteDetailsScreen = () => {
   };
 
   const statusColors = getStatusColor(mappedQuote.status);
-  const shouldShowAcceptButton = mappedQuote.status === 'pendiente' && mappedQuote.price > 0;
-  const shouldShowRejectButton = mappedQuote.status === 'pendiente';
+  
+  // ✅ Mostrar botones para 'pendiente' y 'enviada'
+  const shouldShowAcceptButton = (mappedQuote.status === 'pendiente' || mappedQuote.status === 'enviada') && mappedQuote.price > 0;
+  const shouldShowRejectButton = mappedQuote.status === 'pendiente' || mappedQuote.status === 'enviada';
 
   return (
     <SafeAreaView style={styles.container}>
@@ -751,7 +758,8 @@ const QuoteDetailsScreen = () => {
           {mappedQuote.description !== mappedQuote.title && mappedQuote.description !== 'No especificado' && (
             <View style={styles.infoRow}>
               <Text style={styles.label}>Descripción</Text>
-              <Text style={styles.value}>{mappedQuote.description}</Text>
+             
+                <Text style={styles.value}>{mappedQuote.description}</Text>
             </View>
           )}
 
