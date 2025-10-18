@@ -13,7 +13,7 @@ import { useNavigation } from '@react-navigation/native';
 import LottieView from 'lottie-react-native';
 
 // Importa tus animaciones Lottie
-import DeliveryTruck from "../assets/lottie/Car _ Ignite Animation.json";
+import DeliveryTruck from "../assets/lottie/Paper plane.json";
 import CheckSuccess from "../assets/lottie/success tick.json";
 import ClockPending from "../assets/lottie/Waiting (1).json";
 import CancelError from "../assets/lottie/cancel animation.json";
@@ -29,6 +29,14 @@ const statusConfig = {
     label: 'Pendiente',
     lottie: ClockPending,
     gradient: ['#FEF3C7', '#FCD34D']
+  },
+  enviada: {
+    bg: '#DBEAFE',
+    borderColor: '#3B82F6',
+    color: '#1E40AF',
+    label: 'Enviada',
+    lottie: DeliveryTruck,
+    gradient: ['#DBEAFE', '#93C5FD']
   },
   'en ruta': {
     bg: '#DBEAFE',
@@ -46,14 +54,7 @@ const statusConfig = {
     lottie: CheckSuccess,
     gradient: ['#D1FAE5', '#6EE7B7']
   },
-  ejecutada: {
-    bg: '#D1FAE5',
-    borderColor: '#10B981',
-    color: '#047857',
-    label: 'Ejecutada',
-    lottie: CheckSuccess,
-    gradient: ['#D1FAE5', '#6EE7B7']
-  },
+  // ✅ CAMBIADO: ejecutada → aceptada
   aceptada: {
     bg: '#D1FAE5',
     borderColor: '#10B981',
@@ -129,6 +130,8 @@ const normalizeStatus = (status) => {
   if (statusStr.includes('cancel')) return 'cancelada';
   if (statusStr.includes('rechaz')) return 'rechazada';
   if (statusStr.includes('en_ruta') || statusStr.includes('en ruta')) return 'en ruta';
+  // ✅ AGREGADO: mapear ejecutada a aceptada
+  if (statusStr === 'ejecutada') return 'aceptada';
   
   return statusStr;
 };
@@ -304,7 +307,6 @@ export default function HistorialCard({ item, onPress, index = 0 }) {
           {
             borderColor: config.borderColor,
             shadowColor: config.borderColor,
-            // Asegurar que el borde sea más visible para canceladas
             borderWidth: isCancelled ? 3 : 3,
           }
         ]}
@@ -324,9 +326,9 @@ export default function HistorialCard({ item, onPress, index = 0 }) {
                   source={config.lottie}
                   autoPlay={true}
                   loop={
-                    normalizedStatus === 'en ruta' ? true : // En ruta siempre en loop
+                    normalizedStatus === 'en ruta' || normalizedStatus === 'enviada' ? true : // En ruta/Enviada siempre en loop
                     isCancelled ? true : // Canceladas/Rechazadas en loop
-                    false // Completadas, ejecutadas, pendientes solo una vez
+                    false // Aceptadas, completadas, pendientes solo una vez
                   }
                   style={styles.statusLottie}
                   resizeMode="contain"
@@ -334,8 +336,8 @@ export default function HistorialCard({ item, onPress, index = 0 }) {
               ) : (
                 <Text style={styles.fallbackIcon}>
                   {normalizedStatus === 'pendiente' ? '⏱️' : 
-                   normalizedStatus === 'en ruta' ? '🚛' :
-                   normalizedStatus === 'completado' || normalizedStatus === 'ejecutada' || normalizedStatus === 'aceptada' ? '✅' :
+                   normalizedStatus === 'en ruta' || normalizedStatus === 'enviada' ? '🚛' :
+                   normalizedStatus === 'completado' || normalizedStatus === 'aceptada' ? '✅' :
                    isCancelled ? '❌' : '📄'}
                 </Text>
               )}
@@ -444,7 +446,7 @@ export default function HistorialCard({ item, onPress, index = 0 }) {
             )}
 
             {/* Progreso visual para entregas en ruta */}
-            {normalizedStatus === 'en ruta' && (
+            {(normalizedStatus === 'en ruta' || normalizedStatus === 'enviada') && (
               <View style={styles.progressContainer}>
                 <Text style={styles.progressLabel}>Estado del envío</Text>
                 <View style={styles.progressBar}>
@@ -477,15 +479,13 @@ export default function HistorialCard({ item, onPress, index = 0 }) {
         )}
 
         {/* Indicador visual en la esquina para estados importantes */}
+        {/* ✅ CAMBIADO: ejecutada → aceptada */}
         {(normalizedStatus === 'completado' || 
-          normalizedStatus === 'ejecutada' || 
           normalizedStatus === 'aceptada' || 
           isCancelled) && (
           <View style={[styles.cornerIndicator, { backgroundColor: config.borderColor }]}>
             <Text style={styles.cornerIcon}>
-              {(normalizedStatus === 'completado' || 
-                normalizedStatus === 'ejecutada' || 
-                normalizedStatus === 'aceptada') ? '✓' : '✕'}
+              {(normalizedStatus === 'completado' || normalizedStatus === 'aceptada') ? '✓' : '✕'}
             </Text>
           </View>
         )}

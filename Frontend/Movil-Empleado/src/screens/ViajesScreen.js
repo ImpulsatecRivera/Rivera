@@ -8,12 +8,11 @@ import {
   RefreshControl,
   TouchableOpacity,
   FlatList,
-  ScrollView,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import LottieView from 'lottie-react-native';
 import { useTrips } from '../hooks/useTrips';
 import { useProfile } from '../hooks/useProfile';
-// ⚠️ Asegúrate de usar el mismo case que tu carpeta real
 import { useAuth } from '../Context/authContext';
 import HistoryItem from '../components/HistoryItem';
 import senalImg from '../images/senal.png';
@@ -37,7 +36,6 @@ const ViajesScreen = ({ navigation }) => {
   const { profile, loading: profileLoading } = useProfile();
 
   const [motoristaId, setMotoristaId] = useState(null);
-  const [filtroEstado, setFiltroEstado] = useState('todos');
 
   // --- Obtiene el ID del motorista desde: Context -> AsyncStorage -> Profile
   const obtenerMotoristaId = useCallback(async () => {
@@ -78,8 +76,8 @@ const ViajesScreen = ({ navigation }) => {
     loading,
     error,
     refrescarViajes,
-    totalTrips,   // compat
-    estadisticas, // compat
+    totalTrips,
+    estadisticas,
   } = useTrips(motoristaId, 'historial');
 
   // ✅ DEDUPE una vez y úsalo para todo (lista y estadísticas)
@@ -88,38 +86,26 @@ const ViajesScreen = ({ navigation }) => {
     [trips]
   );
 
-  // --- Filtro en memoria con useMemo (sobre baseTrips)
-  const viajesFiltrados = useMemo(() => {
-    const filtrados = baseTrips.filter((v) => {
-      const e = (v.estado || '').toLowerCase();
-      if (filtroEstado === 'todos') return true;
-      if (filtroEstado === 'programados')
-        return ['programado', 'pendiente', 'confirmado'].includes(e);
-      if (filtroEstado === 'completados')
-        return ['completado', 'finalizado'].includes(e);
-      if (filtroEstado === 'en_transito')
-        return ['en_transito', 'iniciado', 'en_curso'].includes(e);
-      if (filtroEstado === 'cancelados') return e === 'cancelado';
-      return e === filtroEstado;
-    });
-    return filtrados;
-  }, [baseTrips, filtroEstado]);
-
-  // Contadores SIEMPRE calculados sobre baseTrips (sin duplicados)
+  // Contadores para las estadísticas principales
   const counts = useMemo(() => {
-    const norm = (x) => (x || '').toLowerCase();
-    const programados = baseTrips.filter((v) =>
-      ['programado', 'pendiente', 'confirmado'].includes(norm(v.estado))
+    const pendientes = baseTrips.filter((v) => 
+      v.estado === 'pendiente'
     ).length;
-    const completados = baseTrips.filter((v) =>
-      ['completado', 'finalizado'].includes(norm(v.estado))
+    
+    const completados = baseTrips.filter((v) => 
+      v.estado === 'completado'
     ).length;
-    const enTransito = baseTrips.filter((v) =>
-      ['en_transito', 'iniciado', 'en_curso'].includes(norm(v.estado))
+    
+    const enCurso = baseTrips.filter((v) => 
+      v.estado === 'en_curso'
     ).length;
-    const cancelados = baseTrips.filter((v) => norm(v.estado) === 'cancelado').length;
 
-    return { programados, completados, enTransito, cancelados, total: baseTrips.length };
+    return { 
+      total: baseTrips.length,
+      pendientes,
+      completados,
+      enCurso
+    };
   }, [baseTrips]);
 
   const onRefresh = useCallback(() => {
@@ -130,7 +116,6 @@ const ViajesScreen = ({ navigation }) => {
      handleInfoPress (usa campos normalizados del hook)
      ========================= */
   const handleInfoPress = useCallback((item) => {
-    // Asegúrate de que HistoryItem llame onInfoPress(item) con el item completo
     navigation.navigate('InfoViaje', {
       trip: {
         id: item.id || item._id || item.viajeId || item.codigo,
@@ -146,7 +131,7 @@ const ViajesScreen = ({ navigation }) => {
         destino: item.destino,
         fecha: item.fecha,
         hora: item.hora,
-        // No es necesario pasar ...item a menos que InfoViaje use más campos crudos
+        raw: item,
       },
     });
   }, [navigation]);
@@ -180,7 +165,7 @@ const ViajesScreen = ({ navigation }) => {
   return (
     <View style={styles.container}>
       <FlatList
-        data={viajesFiltrados}
+        data={baseTrips}
         keyExtractor={(item, index) => {
           const id = item?.id ?? item?._id ?? item?.viajeId ?? item?.codigo;
           return id ? String(id) : `row-${index}`;
@@ -202,107 +187,28 @@ const ViajesScreen = ({ navigation }) => {
               <Image source={senalImg} style={styles.avatarImage} />
             </View>
 
-            {/* Estadísticas rápidas (siempre basadas en baseTrips) */}
-            <View style={styles.statsContainer}>
-              <View style={styles.statCard}>
-                <Text style={styles.statNumber}>{counts.total}</Text>
-                <Text style={styles.statLabel}>Total viajes</Text>
-              </View>
-              <View style={styles.statCard}>
-                <Text style={[styles.statNumber, { color: '#4CAF50' }]}>
-                  {counts.programados}
-                </Text>
-                <Text style={styles.statLabel}>Programados</Text>
-              </View>
-              <View style={styles.statCard}>
-                <Text style={[styles.statNumber, { color: '#2196F3' }]}>
-                  {counts.completados}
-                </Text>
-                <Text style={styles.statLabel}>Completados</Text>
-              </View>
-            </View>
-
-            {/* Filtros */}
-            <View style={styles.filterContainer}>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                {[
-                  { key: 'todos', label: 'Todos', count: counts.total },
-                  { key: 'programados', label: 'Programados', count: counts.programados },
-                  { key: 'completados', label: 'Completados', count: counts.completados },
-                  { key: 'en_transito', label: 'En tránsito', count: counts.enTransito },
-                  { key: 'cancelados', label: 'Cancelados', count: counts.cancelados },
-                ].map((f) => (
-                  <TouchableOpacity
-                    key={f.key}
-                    style={[
-                      styles.filterButton,
-                      filtroEstado === f.key && styles.filterButtonActive,
-                    ]}
-                    onPress={() => setFiltroEstado(f.key)}
-                  >
-                    <Text
-                      style={[
-                        styles.filterText,
-                        filtroEstado === f.key && styles.filterTextActive,
-                      ]}
-                    >
-                      {f.label} ({f.count})
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-            </View>
+            {/* Estadísticas rápidas */}
+            
 
             {/* Encabezado de sección lista */}
-            <Text style={styles.sectionTitle}>
-              {filtroEstado === 'todos'
-                ? 'Todos tus viajes'
-                : `Viajes ${
-                    filtroEstado === 'programados'
-                      ? 'programados'
-                      : filtroEstado === 'completados'
-                      ? 'completados'
-                      : filtroEstado === 'en_transito'
-                      ? 'en tránsito'
-                      : filtroEstado === 'cancelados'
-                      ? 'cancelados'
-                      : filtroEstado
-                  }`}
-            </Text>
+            <Text style={styles.sectionTitle}>Todos tus viajes</Text>
           </>
         }
         ListEmptyComponent={
           <View style={styles.noTripsContainer}>
-            <Text style={styles.noTripsIcon}>📋</Text>
+            <LottieView
+              source={require('../images/Speedy car.json')}
+              autoPlay
+              loop
+              style={styles.emptyAnimation}
+            />
+            
             <Text style={styles.noTripsText}>
-              {filtroEstado === 'todos'
-                ? 'No tienes viajes registrados'
-                : `No tienes viajes ${
-                    filtroEstado === 'programados'
-                      ? 'programados'
-                      : filtroEstado === 'completados'
-                      ? 'completados'
-                      : filtroEstado === 'en_transito'
-                      ? 'en tránsito'
-                      : filtroEstado === 'cancelados'
-                      ? 'cancelados'
-                      : filtroEstado
-                  }`}
+              No tienes viajes registrados
             </Text>
             <Text style={styles.noTripsSubtext}>
-              {filtroEstado === 'todos'
-                ? 'Cuando tengas viajes asignados, aparecerán aquí'
-                : 'Prueba con otro filtro para ver más viajes'}
+              Cuando tengas viajes asignados, aparecerán aquí
             </Text>
-
-            {filtroEstado !== 'todos' && (
-              <TouchableOpacity
-                style={styles.resetFilterButton}
-                onPress={() => setFiltroEstado('todos')}
-              >
-                <Text style={styles.resetFilterText}>Ver todos los viajes</Text>
-              </TouchableOpacity>
-            )}
           </View>
         }
         refreshControl={
@@ -351,19 +257,6 @@ const styles = StyleSheet.create({
   },
   statNumber: { fontSize: 24, fontWeight: 'bold', color: '#000' },
   statLabel: { fontSize: 12, color: '#666', marginTop: 5 },
-  filterContainer: { marginBottom: 20 },
-  filterButton: {
-    backgroundColor: '#fff',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    marginRight: 10,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-  },
-  filterButtonActive: { backgroundColor: '#4CAF50', borderColor: '#4CAF50' },
-  filterText: { fontSize: 14, color: '#666' },
-  filterTextActive: { color: '#fff', fontWeight: '600' },
   sectionTitle: { fontSize: 18, fontWeight: 'bold', color: '#000', marginBottom: 15 },
   noTripsContainer: {
     alignItems: 'center',
@@ -372,7 +265,11 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     marginVertical: 20,
   },
-  noTripsIcon: { fontSize: 48, marginBottom: 15 },
+  emptyAnimation: {
+    width: 200,
+    height: 200,
+    marginBottom: 15,
+  },
   noTripsText: {
     fontSize: 18,
     fontWeight: '600',
@@ -389,7 +286,7 @@ const styles = StyleSheet.create({
   },
   resetFilterText: { color: '#fff', fontSize: 14, fontWeight: '600' },
   loadingText: { color: '#333', fontSize: 16, marginTop: 12 },
-  errorText: { color: '#c00', fontSize: 14, marginTop: 8 },
+  errorText: { color: '#c00', fontSize: 14, marginTop: 8, textAlign: 'center' },
 });
 
 export default ViajesScreen;

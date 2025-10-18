@@ -50,19 +50,21 @@ const uploadToCloudinary = (buffer, clienteId) => {
   return new Promise((resolve, reject) => {
     const uploadStream = cloudinary.uploader.upload_stream(
       {
-        folder: 'profile_images',
+        folder: 'clientes_profiles',
         public_id: `cliente_${clienteId}_${Date.now()}`,
         transformation: [
-          { width: 400, height: 400, crop: 'fill', gravity: 'face' },
-          { quality: 'auto', fetch_format: 'auto' }
+          { width: 500, height: 500, crop: 'fill', quality: 'auto' }
         ],
+        allowed_formats: ['jpg', 'jpeg', 'png', 'webp', 'gif'],
         overwrite: true,
         invalidate: true
       },
       (error, result) => {
         if (error) {
+          console.error('Error en upload a Cloudinary:', error);
           reject(error);
         } else {
+          console.log('Upload exitoso a Cloudinary:', result.secure_url);
           resolve(result);
         }
       }
@@ -81,8 +83,10 @@ const deleteFromCloudinary = (publicId) => {
   return new Promise((resolve, reject) => {
     cloudinary.uploader.destroy(publicId, (error, result) => {
       if (error) {
+        console.error('Error eliminando de Cloudinary:', error);
         reject(error);
       } else {
+        console.log('Imagen eliminada de Cloudinary:', result);
         resolve(result);
       }
     });
@@ -90,21 +94,54 @@ const deleteFromCloudinary = (publicId) => {
 };
 
 /**
- * Función para extraer public_id de URL de Cloudinary
- * @param {string} url - URL de Cloudinary
- * @returns {string} - Public ID extraído
+ * Función mejorada para extraer public_id de profileImage
+ * @param {string|object} profileImage - URL de Cloudinary o objeto con url y public_id
+ * @returns {string|null} - Public ID extraído
  */
-const extractPublicId = (url) => {
-  if (!url || !url.includes('cloudinary.com')) return null;
-  
-  const urlParts = url.split('/');
-  const versionIndex = urlParts.findIndex(part => part.startsWith('v'));
-  if (versionIndex !== -1 && versionIndex < urlParts.length - 1) {
-    const pathAfterVersion = urlParts.slice(versionIndex + 1).join('/');
-    return pathAfterVersion.replace(/\.[^/.]+$/, ''); // Remover extensión
+const extractPublicId = (profileImage) => {
+  try {
+    if (!profileImage) return null;
+    
+    // CASO 1: Si es un objeto con public_id (formato del registro)
+    if (typeof profileImage === 'object' && profileImage.public_id) {
+      console.log('Extrayendo public_id desde objeto:', profileImage.public_id);
+      return profileImage.public_id;
+    }
+    
+    // CASO 2: Si es un objeto con url pero sin public_id
+    if (typeof profileImage === 'object' && profileImage.url) {
+      const url = profileImage.url;
+      if (!url.includes('cloudinary.com')) return null;
+      
+      const urlParts = url.split('/');
+      const versionIndex = urlParts.findIndex(part => part.startsWith('v'));
+      if (versionIndex !== -1 && versionIndex < urlParts.length - 1) {
+        const pathAfterVersion = urlParts.slice(versionIndex + 1).join('/');
+        const publicId = pathAfterVersion.replace(/\.[^/.]+$/, '');
+        console.log('Extrayendo public_id desde URL en objeto:', publicId);
+        return publicId;
+      }
+    }
+    
+    // CASO 3: Si es un string (URL directa)
+    if (typeof profileImage === 'string') {
+      if (!profileImage.includes('cloudinary.com')) return null;
+      
+      const urlParts = profileImage.split('/');
+      const versionIndex = urlParts.findIndex(part => part.startsWith('v'));
+      if (versionIndex !== -1 && versionIndex < urlParts.length - 1) {
+        const pathAfterVersion = urlParts.slice(versionIndex + 1).join('/');
+        const publicId = pathAfterVersion.replace(/\.[^/.]+$/, '');
+        console.log('Extrayendo public_id desde string URL:', publicId);
+        return publicId;
+      }
+    }
+    
+    return null;
+  } catch (error) {
+    console.error('Error extrayendo public_id:', error);
+    return null;
   }
-  
-  return null;
 };
 
 /**
@@ -456,13 +493,14 @@ clienteCon.getClienteById = async (req, res) => {
  * Actualizar cliente existente con soporte para imagen de perfil
  * PUT /clientes/:id
  */
-/**
- * Actualizar cliente existente con soporte para imagen de perfil
- * PUT /clientes/:id
- */
 clienteCon.PutClientes = async (req, res) => {
   try {
     const { id } = req.params;
+    
+    console.log('=== INICIO PUT CLIENTES ===');
+    console.log('ID:', id);
+    console.log('Tiene archivo:', !!req.file);
+    console.log('Content-Type:', req.headers['content-type']);
     
     // Validar que el ID sea válido
     if (!isValidObjectId(id)) {
@@ -483,33 +521,51 @@ clienteCon.PutClientes = async (req, res) => {
       });
     }
 
+    console.log('Cliente actual encontrado');
+    console.log('Imagen actual:', clienteActual.profileImage);
+
     // Preparar datos para actualización
     const datosActualizados = {};
 
     // CASO 1: Si hay archivo de imagen (multipart/form-data)
     if (req.file) {
       try {
-        console.log('Procesando imagen de perfil...');
+        console.log('📸 Procesando imagen de perfil...');
+        console.log('Archivo:', {
+          originalname: req.file.originalname,
+          mimetype: req.file.mimetype,
+          size: req.file.size
+        });
         
         // Si ya tiene una imagen, obtener el public_id para eliminarla después
         let imagenAnteriorPublicId = null;
         if (clienteActual.profileImage) {
           imagenAnteriorPublicId = extractPublicId(clienteActual.profileImage);
+          console.log('📌 Public ID de imagen anterior:', imagenAnteriorPublicId);
         }
 
         // Subir nueva imagen a Cloudinary
+        console.log('☁️ Subiendo a Cloudinary...');
         const cloudinaryResult = await uploadToCloudinary(req.file.buffer, id);
+        console.log('✅ Cloudinary result:', {
+          url: cloudinaryResult.secure_url,
+          public_id: cloudinaryResult.public_id
+        });
         
-        // Agregar URL de la nueva imagen a los datos a actualizar
-        datosActualizados.profileImage = cloudinaryResult.secure_url;
+        // ✅ GUARDAR COMO OBJETO (igual que en registro)
+        datosActualizados.profileImage = {
+          url: cloudinaryResult.secure_url,
+          public_id: cloudinaryResult.public_id
+        };
 
         // Eliminar imagen anterior de Cloudinary si existe
         if (imagenAnteriorPublicId) {
           try {
+            console.log('🗑️ Eliminando imagen anterior...');
             await deleteFromCloudinary(imagenAnteriorPublicId);
-            console.log('Imagen anterior eliminada de Cloudinary');
+            console.log('✅ Imagen anterior eliminada de Cloudinary');
           } catch (deleteError) {
-            console.warn('No se pudo eliminar la imagen anterior de Cloudinary:', deleteError.message);
+            console.warn('⚠️ No se pudo eliminar la imagen anterior:', deleteError.message);
           }
         }
 
@@ -523,6 +579,8 @@ clienteCon.PutClientes = async (req, res) => {
           { new: true, runValidators: true }
         ).select('-password');
 
+        console.log('✅ Cliente actualizado exitosamente');
+
         return res.status(200).json({
           success: true,
           message: "Imagen de perfil actualizada correctamente",
@@ -532,7 +590,8 @@ clienteCon.PutClientes = async (req, res) => {
               imagenActualizada: true,
               fechaActualizacion: datosActualizados.updatedAt.toISOString(),
               imagenInfo: {
-                nuevaUrl: datosActualizados.profileImage,
+                nuevaUrl: datosActualizados.profileImage.url,
+                publicId: datosActualizados.profileImage.public_id,
                 imagenAnteriorEliminada: !!imagenAnteriorPublicId,
                 tipoArchivo: req.file.mimetype,
                 tamaño: `${(req.file.size / 1024).toFixed(2)} KB`
@@ -542,7 +601,7 @@ clienteCon.PutClientes = async (req, res) => {
         });
 
       } catch (cloudinaryError) {
-        console.error('Error de Cloudinary:', cloudinaryError);
+        console.error('❌ Error de Cloudinary:', cloudinaryError);
         return res.status(500).json({
           success: false,
           message: "Error al subir imagen a Cloudinary",
@@ -553,7 +612,7 @@ clienteCon.PutClientes = async (req, res) => {
 
     // CASO 2: Si es JSON (application/json) - Actualizar datos de texto
     else if (req.headers['content-type'] && req.headers['content-type'].includes('application/json')) {
-      console.log('Procesando actualización de datos de texto...');
+      console.log('📝 Procesando actualización de datos de texto...');
       
       const {
         firstName,
@@ -666,6 +725,8 @@ clienteCon.PutClientes = async (req, res) => {
         { new: true, runValidators: true }
       ).select('-password');
 
+      console.log('✅ Datos de texto actualizados exitosamente');
+
       return res.status(200).json({
         success: true,
         message: "Cliente actualizado correctamente",
@@ -689,7 +750,7 @@ clienteCon.PutClientes = async (req, res) => {
     }
 
   } catch (error) {
-    console.error('Error en PutClientes:', error);
+    console.error('❌ Error en PutClientes:', error);
     
     // Manejar errores específicos de MongoDB
     if (error.code === 11000) {
@@ -763,8 +824,9 @@ clienteCon.deleteClientes = async (req, res) => {
       if (publicId) {
         try {
           await deleteFromCloudinary(publicId);
+          console.log('✅ Imagen eliminada de Cloudinary al borrar cliente');
         } catch (cloudinaryError) {
-          console.warn('No se pudo eliminar la imagen de Cloudinary:', cloudinaryError.message);
+          console.warn('⚠️ No se pudo eliminar la imagen de Cloudinary:', cloudinaryError.message);
         }
       }
     }
@@ -779,12 +841,12 @@ clienteCon.deleteClientes = async (req, res) => {
         clienteEliminado: {
           id: deletedCliente._id,
           nombre: `${deletedCliente.firstName} ${deletedCliente.lastName}`,
-          email: deletedCliente.email,
-          imagenEliminada: !!deletedCliente.profileImage
+          email: deletedCliente.email,imagenEliminada: !!deletedCliente.profileImage
         }
       }
     });
   } catch (error) {
+    console.error('❌ Error al eliminar cliente:', error);
     res.status(500).json({
       success: false,
       message: "Error interno del servidor al eliminar cliente",
@@ -992,6 +1054,7 @@ clienteCon.getUsuariosActivos = async (req, res) => {
     res.status(200).json(response);
 
   } catch (error) {
+    console.error('❌ Error al obtener usuarios activos:', error);
     res.status(500).json({ 
       success: false,
       message: "Error interno del servidor al calcular usuarios activos", 
@@ -1060,6 +1123,7 @@ clienteCon.getResumenUsuarios = async (req, res) => {
     });
 
   } catch (error) {
+    console.error('❌ Error al obtener resumen de usuarios:', error);
     res.status(500).json({ 
       success: false,
       message: "Error interno del servidor al obtener resumen de usuarios", 

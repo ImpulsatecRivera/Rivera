@@ -386,102 +386,131 @@ const ProfileScreen = () => {
   };
 
   // ✅ FUNCIÓN PRINCIPAL CORREGIDA: Subir imagen de perfil
-  const uploadProfileImage = async (imageUri, fileName) => {
+  // Busca la función uploadProfileImage y reemplázala por esta versión mejorada:
+
+const uploadProfileImage = async (imageUri, fileName) => {
+  try {
+    setUploadingImage(true);
+    
+    if (!user?.id && !user?._id) {
+      throw new Error('No se encontró el ID del usuario');
+    }
+
+    const userId = user.id || user._id;
+    const apiUrl = `https://riveraproject-production-933e.up.railway.app/api/clientes/${userId}`;
+    
+    // Crear FormData
+    const formData = new FormData();
+    
+    // ✅ IMPORTANTE: Verificar que el archivo existe y tiene el formato correcto
+    const fileExtension = imageUri.split('.').pop().toLowerCase();
+    const mimeType = fileExtension === 'png' ? 'image/png' : 'image/jpeg';
+    
+    // Agregar la imagen con el formato correcto
+    const imageObject = {
+      uri: Platform.OS === 'ios' ? imageUri.replace('file://', '') : imageUri,
+      type: mimeType,
+      name: fileName || `profile_${Date.now()}.${fileExtension}`,
+    };
+
+    formData.append('profileImage', imageObject);
+
+    console.log('📤 Subiendo imagen al servidor...');
+    console.log('URI:', imageUri);
+    console.log('Tipo:', mimeType);
+    console.log('Nombre:', imageObject.name);
+    
+    const response = await fetch(apiUrl, {
+      method: 'PUT',
+      headers: {
+        'Authorization': token ? `Bearer ${token}` : '',
+        // ❌ NO incluir Content-Type cuando usas FormData
+        // React Native lo agrega automáticamente con el boundary correcto
+      },
+      body: formData,
+    });
+
+    let data;
     try {
-      setUploadingImage(true);
+      const textResponse = await response.text();
+      console.log('📥 Respuesta del servidor (raw):', textResponse);
       
-      if (!user?.id && !user?._id) {
-        throw new Error('No se encontró el ID del usuario');
-      }
+      // Intentar parsear como JSON
+      data = JSON.parse(textResponse);
+    } catch (parseError) {
+      console.error('❌ Error parsing response:', parseError);
+      console.log('Respuesta recibida:', textResponse);
+      throw new Error('El servidor no devolvió una respuesta JSON válida');
+    }
 
-      const userId = user.id || user._id;
-      const apiUrl = `https://riveraproject-production-933e.up.railway.app/api/clientes/${userId}`;
+    console.log('✅ Datos parseados:', data);
+
+    if (response.ok && data.success) {
+      // Extraer la URL correctamente
+      const newImageUrl = getImageUrl(data.data.cliente.profileImage);
       
-      // Crear FormData
-      const formData = new FormData();
+      console.log('🖼️ Nueva URL de imagen:', newImageUrl);
       
-      // Agregar la imagen
-      const imageObject = {
-        uri: imageUri,
-        type: 'image/jpeg',
-        name: fileName || 'profile_image.jpg',
-      };
-
-      formData.append('profileImage', imageObject);
-
-      console.log('Subiendo imagen:', fileName);
-      console.log('URI de imagen:', imageUri);
+      // Actualizar el estado local
+      setUserInfo(prev => ({ 
+        ...prev, 
+        profileImage: newImageUrl 
+      }));
       
-      const response = await fetch(apiUrl, {
-        method: 'PUT',
-        headers: {
-          'Authorization': token ? `Bearer ${token}` : '',
-        },
-        body: formData,
-      });
+      setEditingUserInfo(prev => ({ 
+        ...prev, 
+        profileImage: newImageUrl 
+      }));
 
-      let data;
-      try {
-        data = await response.json();
-      } catch (parseError) {
-        console.error('Error parsing response:', parseError);
-        throw new Error('Error en la respuesta del servidor');
-      }
+      // Limpiar el error de carga de imagen
+      setImageLoadError(false);
 
-      console.log('Respuesta del servidor:', data);
+      // Mostrar mensaje de éxito
+      setSuccessVisible(true);
+      setTimeout(() => {
+        setSuccessVisible(false);
+      }, 3000);
 
-      if (response.ok && data.success) {
-        // ✅ Extraer la URL correctamente (puede venir como objeto o string)
-        const newImageUrl = getImageUrl(data.data.cliente.profileImage);
-        
-        console.log('Nueva URL de imagen extraída:', newImageUrl);
-        
-        setUserInfo(prev => ({ 
-          ...prev, 
-          profileImage: newImageUrl 
-        }));
-        
-        setEditingUserInfo(prev => ({ 
-          ...prev, 
-          profileImage: newImageUrl 
-        }));
-
-        // Mostrar mensaje de éxito
-        setSuccessVisible(true);
-        setTimeout(() => {
-          setSuccessVisible(false);
-        }, 3000);
-
-        // Recargar perfil después de un momento
-        setTimeout(() => {
-          fetchUserProfile(true);
-        }, 1000);
-        
-      } else {
-        throw new Error(data?.message || 'Error al subir la imagen');
-      }
+      // Recargar perfil
+      setTimeout(() => {
+        fetchUserProfile(true);
+      }, 1000);
       
-    } catch (error) {
-      console.error('Error al subir imagen:', error);
-      
-      let errorMessage = 'No se pudo subir la imagen';
-      if (error.message.includes('Network')) {
-        errorMessage = 'Sin conexión a internet';
-      } else if (error.message.includes('401')) {
-        errorMessage = 'Sesión expirada. Inicia sesión nuevamente';
-      } else if (error.message.includes('Archivo demasiado grande')) {
-        errorMessage = 'La imagen es demasiado grande. Máximo 5MB';
-      } else if (error.message.includes('Tipo de archivo inválido')) {
-        errorMessage = 'Solo se permiten imágenes (JPG, PNG, GIF)';
-      } else {
-        errorMessage = error.message || 'Error desconocido';
-      }
-      
-      Alert.alert('Error al subir imagen', errorMessage, [
+    } else {
+      // El servidor respondió pero con error
+      console.error('❌ Error del servidor:', data);
+      throw new Error(data?.message || data?.error || 'Error al subir la imagen');
+    }
+    
+  } catch (error) {
+    console.error('❌ Error completo al subir imagen:', error);
+    
+    let errorMessage = 'No se pudo subir la imagen';
+    
+    if (error.message.includes('Network') || error.message.includes('Failed to fetch')) {
+      errorMessage = 'Sin conexión a internet. Verifica tu conexión y vuelve a intentar';
+    } else if (error.message.includes('401') || error.message.includes('Unauthorized')) {
+      errorMessage = 'Sesión expirada. Inicia sesión nuevamente';
+    } else if (error.message.includes('413') || error.message.includes('demasiado grande')) {
+      errorMessage = 'La imagen es demasiado grande. Máximo 5MB';
+    } else if (error.message.includes('415') || error.message.includes('Tipo de archivo')) {
+      errorMessage = 'Solo se permiten imágenes (JPG, PNG, GIF)';
+    } else if (error.message.includes('Cloudinary')) {
+      errorMessage = 'Error al procesar la imagen en el servidor. Intenta con otra imagen';
+    } else if (error.message.includes('JSON')) {
+      errorMessage = 'Error de comunicación con el servidor. Intenta nuevamente';
+    } else {
+      errorMessage = error.message || 'Error desconocido al subir la imagen';
+    }
+    
+    Alert.alert(
+      '❌ Error al subir imagen', 
+      errorMessage,
+      [
         {
           text: 'OK',
           onPress: () => {
-            if (error.message.includes('401')) {
+            if (error.message.includes('401') || error.message.includes('Unauthorized')) {
               logout();
               navigation.reset({
                 index: 0,
@@ -490,11 +519,12 @@ const ProfileScreen = () => {
             }
           }
         }
-      ]);
-    } finally {
-      setUploadingImage(false);
-    }
-  };
+      ]
+    );
+  } finally {
+    setUploadingImage(false);
+  }
+};
 
   // ✅ COMPONENTE MEJORADO: Avatar con manejo correcto de URL
   const ProfileAvatar = () => {
