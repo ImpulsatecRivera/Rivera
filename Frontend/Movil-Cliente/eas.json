@@ -8,7 +8,8 @@
       "developmentClient": true,
       "distribution": "internal",
       "android": {
-        "image": "ubuntu-22.04-jdk-17-ndk-r26b"
+        "image": "ubuntu-22.04-jdk-17-ndk-r26b",
+        "buildType": "apk"
       }
     },
     "preview": {
@@ -22,7 +23,7 @@
       "autoIncrement": true,
       "android": {
         "image": "ubuntu-22.04-jdk-17-ndk-r26b",
-        "buildType": "aab"
+        "buildType": "app-bundle"
       }
     }
   },
