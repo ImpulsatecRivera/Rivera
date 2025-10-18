@@ -55,10 +55,7 @@
       "expo-font"
     ],
     "extra": {
-      "googleClientId": "1035488574954-2agjnnugu7d1lnhen68e6n06lvfdip3u.apps.googleusercontent.com",
-      "eas": {
-        "projectId": "64705ef9-03bf-489b-b3c2-243e6966e69f"
-      }
+      "googleClientId": "1035488574954-2agjnnugu7d1lnhen68e6n06lvfdip3u.apps.googleusercontent.com"
     },
     "owner": "kenik_capibara"
   }
