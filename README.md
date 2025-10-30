@@ -5,7 +5,6 @@
 Kendrick Daniel López Carrillos + 20200165 (Coordinador)
 Rodolfo Antonio Perez Hernández + 20230300 (SubCoordinador)
 Ángel Ernesto Hernández Sosa + 20210086 (Secretario)
-Oscar Sebastian Rauda Palacios + 20220631 (Tesorero)
 Diego José Rodriguez Pocasangre + 20230602 (Vocal)
 
 
