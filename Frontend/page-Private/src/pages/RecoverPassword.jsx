@@ -7,6 +7,9 @@ import ilustracion from "../images/recover.png";
 import Title from "../components/RecoverPassword/Title";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
+import { config } from "../config";
+
+const API_URL = config.api.API_URL;
 
 const RecoverPassword = () => {
   const navigate = useNavigate();
@@ -106,7 +109,7 @@ const RecoverPassword = () => {
 
     
     try {
-      const endpoint = "https://riveraproject-production-933e.up.railway.app/api/recovery/requestCode";
+      const endpoint = `${API_URL}/recovery/requestCode`;
 
       let requestPayload;
       
@@ -164,7 +167,7 @@ const RecoverPassword = () => {
           phone: selectedMethod === "sms" ? normalizePhone(contactInfo) : null,
           maskedInfo: maskContactInfo(selectedMethod, contactInfo),
           flow: "reset",
-          verificationEndpoint: "/api/recovery/verifyCode",
+          verificationEndpoint: "/recovery/verifyCode",
           recoveryToken: recoveryToken  // ✅ AÑADIR EL TOKEN AQUÍ
         }
       });

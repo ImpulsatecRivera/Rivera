@@ -2,6 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { User, Mail, Phone, MapPin, Lock, CreditCard, Cake, Car } from 'lucide-react';
 import Swal from 'sweetalert2';
 
+import { config } from '../../config';
+
+const API_URL = config.api.API_URL;
+
 // Componentes de formularios específicos
 import HeaderNavigation from '../../components/FormsMotoristas/FormHeaderNavigation';
 import FormHeroSection from '../../components/FormsMotoristas/FormHeroSecction';
@@ -305,7 +309,7 @@ const AgregarMotorista = () => {
         formDataToSend.append('img', formData.img);
       }
 
-      const response = await fetch('https://riveraproject-production-933e.up.railway.app/api/motoristas', {
+      const response = await fetch(`${API_URL}/motoristas`, {
         method: 'POST',
         body: formDataToSend,
       });

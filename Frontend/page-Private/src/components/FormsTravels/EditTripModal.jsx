@@ -1,7 +1,10 @@
 // FormsTravels/EditTripModal.jsx - VERSIÓN COMPLETAMENTE CORREGIDA
 import React, { useState, useEffect } from 'react';
+import { config } from '../../config';
 import { ArrowLeft, Truck, User, Calendar, Clock, AlertCircle, X, Edit } from 'lucide-react';
 import Swal from 'sweetalert2';
+
+const API_URL = config.api.API_URL;
 
 // 🎉 FUNCIÓN PARA MOSTRAR ALERTA DE ÉXITO
 const showUpdateSuccessAlert = (onConfirm) => {
@@ -89,8 +92,8 @@ const EditTripModal = ({
 
       // Cargar solo camiones y conductores
       const [camionesData, conductoresData] = await Promise.allSettled([
-        cargarDatos('https://riveraproject-production-933e.up.railway.app/api/camiones', 'Camiones'),
-        cargarDatos('https://riveraproject-production-933e.up.railway.app/api/motoristas', 'Motoristas')
+        cargarDatos(`${API_URL}/camiones`, 'Camiones'),
+        cargarDatos(`${API_URL}/motoristas`, 'Motoristas')
       ]);
 
       // Procesar camiones

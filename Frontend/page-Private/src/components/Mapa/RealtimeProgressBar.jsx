@@ -2,22 +2,25 @@
 // VERSIÓN COMPATIBLE CON TU BACKEND EXISTENTE - SIN CAMBIOS AL BACKEND
 
 import React, { useState, useEffect, useCallback } from 'react';
+import { config } from '../../config';
 import { 
   MapPin, Clock, CheckCircle, Circle, Navigation, Truck, Plus, 
   Play, AlertTriangle, Users, Fuel, MessageSquare, Loader,
   XCircle, PauseCircle, RotateCcw, Info, Wifi, WifiOff
 } from 'lucide-react';
 
+const API_URL = config.api.API_URL;
+
 const RealtimeProgressBar = ({ 
   viajeId,
   onStatusChange,
   apiConfig = {
-    baseUrl: process.env.REACT_APP_API_URL || 'https://riveraproject-production-933e.up.railway.app',
+    baseUrl: process.env.REACT_APP_API_URL || `${API_URL}`,
     endpoints: {
-      getTripDetails: '/api/viajes/:id',
-      updateProgress: '/api/viajes/:id/progress',
-      completeTrip: '/api/viajes/:id/complete',
-      getMapData: '/api/viajes/map-data'
+      getTripDetails: '/viajes/:id',
+      updateProgress: '/viajes/:id/progress',
+      completeTrip: '/viajes/:id/complete',
+      getMapData: '/viajes/map-data'
     }
   },
   enablePolling = true,

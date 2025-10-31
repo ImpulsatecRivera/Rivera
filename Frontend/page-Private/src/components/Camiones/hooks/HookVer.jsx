@@ -1,4 +1,7 @@
 import { useState, useEffect } from 'react';
+import { config } from '../../../config';
+
+const API_URL = config.api.API_URL;
 
 // Función auxiliar para fetch con timeout usando AbortController
 const fetchWithTimeout = (url, options = {}, timeout = 10000) => {
@@ -22,7 +25,7 @@ export const useTruckDetail = (truckId) => {
       console.log('=== OBTENIENDO LISTA DE MOTORISTAS ===');
       
       const response = await fetchWithTimeout(
-        `https://riveraproject-production-933e.up.railway.app/api/motoristas`,
+        `${API_URL}/motoristas`,
         {
           method: 'GET',
           headers: {
@@ -86,7 +89,7 @@ export const useTruckDetail = (truckId) => {
       
       // NUEVO: Usar el endpoint que incluye estadísticas
       const response = await fetchWithTimeout(
-        `https://riveraproject-production-933e.up.railway.app/api/camiones/${truckId}/stats`,
+        `${API_URL}/camiones/${truckId}/stats`,
         {
           method: 'GET',
           headers: {

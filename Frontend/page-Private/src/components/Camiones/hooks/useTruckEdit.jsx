@@ -1,4 +1,6 @@
 import { useState, useCallback } from 'react';
+import { config } from '../../../../config';
+const API_URL = config.api.API_URL;
 
 const useTruckEdit = (fetchOptions, onUpdateSuccess) => {
   // Estados del modal de edición
@@ -67,9 +69,9 @@ const useTruckEdit = (fetchOptions, onUpdateSuccess) => {
 
       // Cargar datos del camión y listas en paralelo
       const [truckResponse, proveedoresResponse, motoristasResponse] = await Promise.all([
-        fetch(`https://riveraproject-production-933e.up.railway.app/api/camiones/${truck.id}`, fetchOptions),
-        fetch('https://riveraproject-production-933e.up.railway.app/api/proveedores', fetchOptions),
-        fetch('https://riveraproject-production-933e.up.railway.app/api/motoristas', fetchOptions)
+        fetch(`${API_URL}/camiones/${truck.id}`, fetchOptions),
+        fetch(`${API_URL}/proveedores`, fetchOptions),
+        fetch(`${API_URL}/motoristas`, fetchOptions)
       ]);
 
       // Verificar respuestas
@@ -237,7 +239,7 @@ const useTruckEdit = (fetchOptions, onUpdateSuccess) => {
           console.log(pair[0] + ': ' + pair[1]);
         }
 
-        response = await fetch(`https://riveraproject-production-933e.up.railway.app/api/camiones/${selectedTruck.id}`, {
+        response = await fetch(`${API_URL}/camiones/${selectedTruck.id}`, {
           method: 'PUT',
           credentials: 'include',
           body: formDataToSend
@@ -272,7 +274,7 @@ const useTruckEdit = (fetchOptions, onUpdateSuccess) => {
 
         console.log('=== DATOS JSON A ENVIAR ===', updateData);
 
-        response = await fetch(`https://riveraproject-production-933e.up.railway.app/api/camiones/${selectedTruck.id}`, {
+        response = await fetch(`${API_URL}/camiones/${selectedTruck.id}`, {
           method: 'PUT',
           ...fetchOptions,
           body: JSON.stringify(updateData)

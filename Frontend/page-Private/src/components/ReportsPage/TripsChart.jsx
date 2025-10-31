@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { config } from "../../config";
 import {
   BarChart,
   Bar,
@@ -9,6 +10,8 @@ import {
   LineChart,
   Line
 } from "recharts";
+
+const API_URL = config.api.API_URL;
 
 const TripsChart = () => {
   const [tripData, setTripData] = useState([]);
@@ -34,7 +37,7 @@ const TripsChart = () => {
       console.log(`📊 Obteniendo estadísticas de viajes - Período: ${periodo}`);
       
       // 🔧 USAR TU ENDPOINT REAL
-      const response = await fetch(`https://riveraproject-production-933e.up.railway.app/api/viajes/trip-stats?periodo=${periodo}`);
+      const response = await fetch(`${API_URL}/viajes/trip-stats?periodo=${periodo}`);
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);

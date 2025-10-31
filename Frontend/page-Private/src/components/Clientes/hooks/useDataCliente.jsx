@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
+import { config } from '../../../config';
 import axios from 'axios';
+const API_URL = config.api.API_URL;
 
 const useDataCliente = () => {
   // Estados principales
@@ -26,7 +28,7 @@ const useDataCliente = () => {
       
       console.log('🚀 Iniciando petición a la API de clientes...');
       
-      const response = await axios.get('https://riveraproject-production-933e.up.railway.app/api/clientes');
+      const response = await axios.get(`${API_URL}/clientes`);
       
       console.log('📡 Status de la respuesta:', response.status);
       console.log('📋 Datos recibidos completos:', response.data);
@@ -114,7 +116,7 @@ const useDataCliente = () => {
   const addClient = async (clientData) => {
     try {
       console.log('➕ Agregando nuevo cliente:', clientData);
-      const response = await axios.post('https://riveraproject-production-933e.up.railway.app/api/clientes', clientData);
+      const response = await axios.post(`${API_URL}/clientes`, clientData);
       
       const newClient = response.data.data || response.data;
       const normalizedClient = {
@@ -144,7 +146,7 @@ const useDataCliente = () => {
   const updateClient = async (clientId, updateData) => {
     try {
       console.log(`📝 Actualizando cliente ${clientId}:`, updateData);
-      const response = await axios.put(`https://riveraproject-production-933e.up.railway.app/api/clientes/${clientId}`, updateData);
+      const response = await axios.put(`${API_URL}/clientes/${clientId}`, updateData);
       
       const updatedClientData = response.data.cliente || response.data.data || { ...selectedClient, ...updateData };
       const updatedClient = {
@@ -184,7 +186,7 @@ const useDataCliente = () => {
   const deleteClient = async (clientId) => {
     try {
       console.log(`🗑️ Eliminando cliente ${clientId}`);
-      await axios.delete(`https://riveraproject-production-933e.up.railway.app/api/clientes/${clientId}`);
+      await axios.delete(`${API_URL}/clientes/${clientId}`);
       setClients(prev => Array.isArray(prev) ? prev.filter(client => client._id !== clientId) : []);
       
       // Limpiar selección si se elimina el cliente seleccionado

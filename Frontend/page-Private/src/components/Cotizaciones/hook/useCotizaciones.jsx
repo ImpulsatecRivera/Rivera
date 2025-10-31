@@ -1,6 +1,9 @@
 // hooks/useCotizaciones.js
 import { useState, useEffect } from 'react';
+import { config } from '../../../config.jsx';
 import axios from 'axios';
+
+const API_URL = config.api.API_URL;
 
 const useCotizaciones = () => {
   // Estados principales
@@ -47,7 +50,7 @@ const useCotizaciones = () => {
   // Función para cargar clientes
   const fetchClientesSync = async () => {
     try {
-      const response = await axios.get('https://riveraproject-production-933e.up.railway.app/api/clientes');
+      const response = await axios.get(`${API_URL}/clientes`);
       
       const clientesArray = Array.isArray(response.data) ? response.data : 
                            response.data.clientes ? response.data.clientes :
@@ -90,7 +93,7 @@ const useCotizaciones = () => {
   // Función para cargar cotizaciones
   const fetchCotizacionesConClientes = async (clientesMap) => {
     try {
-      const response = await axios.get('https://riveraproject-production-933e.up.railway.app/api/cotizaciones');
+      const response = await axios.get(`${API_URL}/cotizaciones`);
       
       const cotizacionesData = response.data.data || response.data;
       
@@ -253,7 +256,7 @@ const useCotizaciones = () => {
       setLoading(true);
       setError(null);
       
-      const response = await axios.put(`https://riveraproject-production-933e.up.railway.app/api/cotizaciones/${id}`, datosActualizacion);
+      const response = await axios.put(`${API_URL}/cotizaciones/${id}`, datosActualizacion);
       
       setCotizaciones(prev => prev.map(cotizacion => {
         if ((cotizacion.id || cotizacion._id) === id) {
@@ -540,7 +543,7 @@ const useCotizaciones = () => {
       setLoading(true);
       setError(null);
       
-      const response = await axios.delete(`https://riveraproject-production-933e.up.railway.app/api/cotizaciones/${id}`);
+      const response = await axios.delete(`${API_URL}/cotizaciones/${id}`);
       
       setCotizaciones(prev => prev.filter(c => (c.id || c._id) !== id));
       

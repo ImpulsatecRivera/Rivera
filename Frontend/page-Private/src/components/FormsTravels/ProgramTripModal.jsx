@@ -1,7 +1,10 @@
 // FormsTravels/ProgramTripModal.jsx - CON AUTO-ASIGNACIÓN DE MOTORISTA POR CAMIÓN
 import React, { useState, useEffect } from 'react';
+import { config } from '../../config';
 import { ArrowLeft, MapPin, Truck, User, Package, Calendar, Clock, DollarSign, AlertCircle, CloudRain, Car, Navigation } from 'lucide-react';
 import Swal from 'sweetalert2';
+
+const API_URL = config.api.API_URL;
 
 // 🎉 FUNCIÓN PARA MOSTRAR ALERTA DE ÉXITO
 export const showSuccessAlert = (onConfirm) => {
@@ -123,9 +126,9 @@ const ProgramTripModal = ({
 
       // Cargar todos los recursos en paralelo
       const [camionesData, conductoresData, cotizacionesData] = await Promise.allSettled([
-        cargarDatos('https://riveraproject-production-933e.up.railway.app/api/camiones', 'Camiones'),
-        cargarDatos('https://riveraproject-production-933e.up.railway.app/api/motoristas', 'Motoristas'),
-        cargarDatos('https://riveraproject-production-933e.up.railway.app/api/cotizaciones', 'Cotizaciones')
+        cargarDatos(`${API_URL}/camiones`, 'Camiones'),
+        cargarDatos(`${API_URL}/motoristas`, 'Motoristas'),
+        cargarDatos(`${API_URL}/cotizaciones`, 'Cotizaciones')
       ]);
 
       // Procesar camiones

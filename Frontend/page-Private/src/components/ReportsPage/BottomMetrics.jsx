@@ -1,5 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { Users, Truck, Clock, Package, TrendingUp, ArrowUp } from "lucide-react";
+import { config } from "../../config";
+
+const API_URL = config.api.API_URL;
 
 const MetricCard = ({ icon: Icon, title, value, trend, trendValue, color = "green", loading = false }) => {
   const colorClasses = {
@@ -114,7 +117,7 @@ const BottomMetrics = () => {
       
       console.log('📊 Obteniendo usuarios activos...');
       
-      const response = await fetch('https://riveraproject-production-933e.up.railway.app/api/clientes/resumen-usuarios');
+      const response = await fetch(`${API_URL}/clientes/resumen-usuarios`);
       
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -155,7 +158,7 @@ const BottomMetrics = () => {
       
       console.log('🚛 Obteniendo cargas entregadas...');
       
-      const response = await fetch('https://riveraproject-production-933e.up.railway.app/api/viajes/completed');
+      const response = await fetch(`${API_URL}/viajes/completed`);
       
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -225,7 +228,7 @@ const BottomMetrics = () => {
       
       console.log('⏰ Obteniendo tiempo promedio de viaje...');
       
-      const response = await fetch('https://riveraproject-production-933e.up.railway.app/api/viajes/tiempo-promedio');
+      const response = await fetch(`${API_URL}/viajes/tiempo-promedio`);
       
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -267,7 +270,7 @@ const BottomMetrics = () => {
       
       console.log('📦 Obteniendo capacidades de carga...');
       
-      const response = await fetch('https://riveraproject-production-933e.up.railway.app/api/viajes/capacidad-carga');
+      const response = await fetch(`${API_URL}/viajes/capacidad-carga`);
       
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);

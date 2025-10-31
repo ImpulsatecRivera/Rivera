@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Users, Truck, Clock } from 'lucide-react';
+import { config } from "../../config";
+
+const API_URL = config.api.API_URL;
 
 const MainMetrics = () => {
   // 📊 Estados para las métricas dinámicas
@@ -26,7 +29,7 @@ const MainMetrics = () => {
     try {
       setUsuariosActivos(prev => ({ ...prev, loading: true, error: null }));
       
-      const response = await fetch('https://riveraproject-production-933e.up.railway.app/api/clientes/resumen-usuarios');
+      const response = await fetch(`${API_URL}/clientes/resumen-usuarios`);
       
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -59,7 +62,7 @@ const MainMetrics = () => {
     try {
       setCargasEntregadas(prev => ({ ...prev, loading: true, error: null }));
       
-      const response = await fetch('https://riveraproject-production-933e.up.railway.app/api/viajes/completed');
+      const response = await fetch(`${API_URL}/viajes/completed`);
       
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -105,7 +108,7 @@ const MainMetrics = () => {
     try {
       setTiempoPromedio(prev => ({ ...prev, loading: true, error: null }));
       
-      const response = await fetch('https://riveraproject-production-933e.up.railway.app/api/viajes/tiempo-promedio');
+      const response = await fetch(`${API_URL}/viajes/tiempo-promedio`);
       
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);

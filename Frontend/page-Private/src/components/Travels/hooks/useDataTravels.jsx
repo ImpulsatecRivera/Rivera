@@ -1,6 +1,9 @@
 // hooks/Travels/useTravels.js - VERSIÓN CORREGIDA PARA ELIMINAR Y ACTUALIZAR
 import { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
+import { config } from '../../../config';
+
+const API_URL = config.api.API_URL;
 
 export const useTravels = () => {
   // ⚠️ MANTENER EL ORDEN EXACTO ORIGINAL - NO CAMBIAR NADA AQUÍ
@@ -120,7 +123,7 @@ export const useTravels = () => {
       
       // 🎯 USAR EL MISMO ENDPOINT QUE RIVERA TRANSPORT MAP con cache-busting
       const cacheBuster = new Date().getTime();
-      const response = await axios.get(`https://riveraproject-production-933e.up.railway.app/api/viajes/map-data?t=${cacheBuster}`, {
+      const response = await axios.get(`${API_URL}/viajes/map-data?t=${cacheBuster}`, {
         headers: {
           'Content-Type': 'application/json',
           'Cache-Control': 'no-cache',
@@ -271,7 +274,7 @@ export const useTravels = () => {
       
       console.log("📤 Datos enviados a la API:", dataToSend);
       
-      const response = await axios.post('https://riveraproject-production-933e.up.railway.app/api/viajes', dataToSend, {
+      const response = await axios.post(`${API_URL}/viajes`, dataToSend, {
         headers: {
           'Content-Type': 'application/json'
         },
@@ -312,7 +315,7 @@ export const useTravels = () => {
       }
       
       // ✅ USAR ENDPOINT CORRECTO CON PARÁMETRO :viajeId
-      const url = `https://riveraproject-production-933e.up.railway.app/api/viajes/${travelId}`;
+      const url = `${API_URL}/viajes/${travelId}`;
       console.log("🌐 URL completa:", url);
       
       const response = await axios.put(url, updateData, {
@@ -377,7 +380,7 @@ export const useTravels = () => {
       try {
         console.log(`🔄 Intentando DELETE /api/viajes/${travelId} (parámetro :viajeId)`);
         
-        const url = `https://riveraproject-production-933e.up.railway.app/api/viajes/${travelId}`;
+        const url = `${API_URL}/viajes/${travelId}`;
         response = await axios.delete(url, {
           headers: {
             'Content-Type': 'application/json'
@@ -395,7 +398,7 @@ export const useTravels = () => {
         try {
           console.log(`🔄 Fallback: Intentando PATCH /api/viajes/${travelId}/cancel...`);
           
-          const url = `https://riveraproject-production-933e.up.railway.app/api/viajes/${travelId}/cancel`;
+          const url = `${API_URL}/viajes/${travelId}/cancel`;
           response = await axios.patch(url, {
             motivo: 'eliminado_por_usuario',
             observaciones: 'Viaje cancelado desde la interfaz (fallback de eliminación)'

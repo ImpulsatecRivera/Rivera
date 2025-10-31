@@ -1,7 +1,10 @@
 // useMotoristaManagement.js
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { config } from '../../../../config';
 import axios from 'axios';
+
+const API_URL = config.api.API_URL;
 
 const useMotoristaManagement = () => {
   // Estados principales
@@ -35,7 +38,7 @@ const useMotoristaManagement = () => {
       setLoading(true);
       setError(null);
       
-      const response = await axios.get('https://riveraproject-production-933e.up.railway.app/api/motoristas');
+      const response = await axios.get(`${API_URL}/motoristas`);
       
       if (response.data && Array.isArray(response.data)) {
         setMotoristas(response.data);
@@ -156,7 +159,7 @@ const useMotoristaManagement = () => {
     if (!selectedMotorista) return;
 
     try {
-      await axios.delete(`https://riveraproject-production-933e.up.railway.app/api/motoristas/${selectedMotorista._id || selectedMotorista.id}`);
+      await axios.delete(`${API_URL}/motoristas/${selectedMotorista._id || selectedMotorista.id}`);
       
       // Actualizar lista local
       setMotoristas(prevMotoristas => 
@@ -217,7 +220,7 @@ const useMotoristaManagement = () => {
         
         // Usar fetch para FormData (mejor compatibilidad que axios)
         const fetchResponse = await fetch(
-          `https://riveraproject-production-933e.up.railway.app/api/motoristas/${selectedMotorista._id || selectedMotorista.id}`,
+          `${API_URL}/motoristas/${selectedMotorista._id || selectedMotorista.id}`,
           {
             method: 'PUT',
             body: submitData,
@@ -269,7 +272,7 @@ const useMotoristaManagement = () => {
         console.log('Datos a enviar (sin imagen):', updateData);
 
         response = await axios.put(
-          `https://riveraproject-production-933e.up.railway.app/api/motoristas/${selectedMotorista._id || selectedMotorista.id}`,
+          `${API_URL}/motoristas/${selectedMotorista._id || selectedMotorista.id}`,
           updateData,
           {
             headers: {

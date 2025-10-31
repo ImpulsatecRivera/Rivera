@@ -1,9 +1,11 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import axios from "axios";
 import { toast } from "react-toastify";
+import { config } from "../config";
+const API_URL = config.api.API_URL;
 
 const api = axios.create({
-baseURL: import.meta.env.VITE_API_BASE_URL || "https://riveraproject-production-933e.up.railway.app",  withCredentials: true,
+baseURL: import.meta.env.VITE_API_BASE_URL || `${API_URL}`,  withCredentials: true,
 });
 
 const AuthContext = createContext();
@@ -49,7 +51,7 @@ export const AuthProvider = ({ children }) => {
   // ===================== Login =====================
   const login = async (email, password) => {
     try {
-      const { data } = await api.post("/api/login", { email, password });
+      const { data } = await api.post("/login", { email, password });
       if (data?.user) {
         // ✅ Guardar en storage para persistencia
         saveToStorage(data.user, data.userType || data.user.userType);
@@ -87,7 +89,7 @@ export const AuthProvider = ({ children }) => {
       console.log("🚪 Iniciando logout...");
       
       // 1. Llamar al backend para limpiar cookies httpOnly
-      const response = await api.post("/api/logout", {}, {
+      const response = await api.post("/logout", {}, {
         validateStatus: (status) => status < 500 // No fallar en 4xx
       });
       
@@ -109,7 +111,7 @@ export const AuthProvider = ({ children }) => {
         // Si estás en desarrollo, puedes hacer una verificación adicional
         if (process.env.NODE_ENV === "development") {
           // Intentar hacer una petición autenticada para verificar que el logout funcionó
-          api.get("/api/login/check-auth", { timeout: 3000 })
+          api.get("/login/check-auth", { timeout: 3000 })
             .then((res) => {
               if (res.data?.user) {
                 console.warn("⚠️ Usuario aún autenticado después del logout");
@@ -132,7 +134,7 @@ export const AuthProvider = ({ children }) => {
     setLoading(true);
     
     try {
-      const { data } = await api.get("/api/login/check-auth", { 
+      const { data } = await api.get("/login/check-auth", { 
         timeout: 10000,
         validateStatus: (status) => status < 500 // No lanzar error en 401
       });
@@ -174,7 +176,7 @@ export const AuthProvider = ({ children }) => {
   // ===================== Sync manual =====================
   const syncWithServer = async () => {
     try {
-      const { data } = await api.get("/api/login/check-auth", { 
+      const { data } = await api.get("/login/check-auth", { 
         timeout: 5000,
         validateStatus: (status) => status < 500
       });

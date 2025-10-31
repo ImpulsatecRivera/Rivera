@@ -8,8 +8,10 @@ import {
   Legend,
   ResponsiveContainer,
 } from "recharts";
+import { config } from "../../config";
 import axios from "axios";
 
+const API_URL = config.api.API_URL;
 const options = [
   { label: "Diario", value: "dia" },
   { label: "Semanal", value: "semana" },
@@ -32,7 +34,7 @@ const ActivityChart = () => {
       console.log(`📊 Obteniendo estadísticas para período: ${tipo}`);
       
       const res = await axios.get(
-        `https://riveraproject-production-933e.up.railway.app/api/viajes/trip-stats?periodo=${tipo}`,
+        `${API_URL}/viajes/trip-stats?periodo=${tipo}`,
         {
           timeout: 10000, // 10 segundos de timeout
           headers: {

@@ -5,6 +5,9 @@ import axios from "axios";
 import illustration from "../images/verification-box.png";
 import Title from "../components/RecoverPassword/Title";
 import Button from "../components/Login/Button";
+import { config } from "../config";
+
+const API_URL = config.api.API_URL;
 
 const VerificationInput = () => {
   const [code, setCode] = useState(["", "", "", "", ""]);
@@ -125,8 +128,8 @@ const VerificationInput = () => {
     try {
       const endpoint =
         flow === "quickLogin"
-          ? "https://riveraproject-production-933e.up.railway.app/api/recovery/loginCode"
-          : "https://riveraproject-production-933e.up.railway.app/api/recovery/verifyCode";
+          ? `${API_URL}/recovery/loginCode`
+          : `${API_URL}/recovery/verifyCode`;
 
       // ✅ Preparar payload correcto según el flujo
       let requestPayload;
@@ -245,7 +248,7 @@ const VerificationInput = () => {
       console.log("📤 Reenviando código:", resendPayload);
 
       const response = await axios.post(
-        "https://riveraproject-production-933e.up.railway.app/api/recovery/requestCode",
+        `${API_URL}/recovery/requestCode`,
         resendPayload,
         { 
           withCredentials: true, 

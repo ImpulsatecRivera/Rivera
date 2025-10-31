@@ -1,6 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { config } from "../../../config";
 import axios from "axios";
+
+const API_URL = config.api.API_URL;
 
 const useDataEmpleado = () => {
   // Estados principales
@@ -32,7 +35,7 @@ const useDataEmpleado = () => {
       
       console.log('🚀 Iniciando petición a la API de empleados...');
       
-      const response = await axios.get('https://riveraproject-production-933e.up.railway.app/api/empleados');
+      const response = await axios.get(`${API_URL}/empleados`);
       
       console.log('📡 Status de la respuesta:', response.status);
       console.log('📋 Datos recibidos completos:', response.data);
@@ -156,7 +159,7 @@ const useDataEmpleado = () => {
     setShowConfirmDelete(false);
     try {
       console.log(`🗑️ Eliminando empleado ${selectedEmpleados._id}`);
-      await axios.delete(`https://riveraproject-production-933e.up.railway.app/api/empleados/${selectedEmpleados._id}`);
+      await axios.delete(`${API_URL}/empleados/${selectedEmpleados._id}`);
       
       // Asegurar que empleados es un array antes de filtrar
       setEmpleados(prevEmpleados => 
@@ -215,11 +218,11 @@ const useDataEmpleado = () => {
     
     try {
       // Log detallado de lo que se está enviando
-      console.log('📤 Enviando actualización a:', `https://riveraproject-production-933e.up.railway.app/api/empleados/${selectedEmpleados._id}`);
+      console.log('📤 Enviando actualización a:', `${API_URL}/empleados/${selectedEmpleados._id}`);
 
       // Realizar la actualización
       const response = await axios.put(
-        `https://riveraproject-production-933e.up.railway.app/api/empleados/${selectedEmpleados._id}`, 
+        `${API_URL}/empleados/${selectedEmpleados._id}`, 
         formData,
         {
           headers: {

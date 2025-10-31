@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { User, Mail, Phone, MapPin, Lock, CreditCard, UserPlus } from 'lucide-react';
+import { config } from '../../config';
 import axios from 'axios';
+
+const API_URL = config.api.API_URL;
 
 // Importar componentes UI
 import PageHeader from '../../components/UIEmpleados/PageHeader';
@@ -136,10 +139,10 @@ const AgregarEmpleado = () => {
       console.log('Incluye imagen:', !!formData.img);
 
       console.log('=== ENVIANDO PETICIÓN ===');
-      console.log('URL:', 'https://riveraproject-production-933e.up.railway.app/api/empleados');
+      console.log('URL:', `${API_URL}/empleados`);
 
       // Enviar petición
-      const response = await axios.post('https://riveraproject-production-933e.up.railway.app/api/empleados', formDataToSend, {
+      const response = await axios.post(`${API_URL}/empleados`, formDataToSend, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
