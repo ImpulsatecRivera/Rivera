@@ -1,6 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { config } from '../../../config';
 import axios from "axios";
+
+const API_URL = config.api.API_URL;
 
 const useDataProveedores = () => {
   // Estados principales
@@ -26,7 +29,7 @@ const useDataProveedores = () => {
     const fetchProveedores = async () => {
       try {
         setLoading(true);
-        const response = await axios.get('https://riveraproject-production-933e.up.railway.app/api/proveedores');
+        const response = await axios.get(`${API_URL}/proveedores`);
         setProveedores(response.data);
         setError(null);
       } catch (error) {
@@ -74,7 +77,7 @@ const useDataProveedores = () => {
   const confirmDelete = async () => {
     setShowConfirmDelete(false);
     try {
-      await axios.delete(`https://riveraproject-production-933e.up.railway.app/api/proveedores/${selectedProveedor._id}`);
+      await axios.delete(`${API_URL}/proveedores/${selectedProveedor._id}`);
       setProveedores(proveedores.filter(prov => prov._id !== selectedProveedor._id));
       console.log("Proveedor eliminado:", selectedProveedor);
       setShowDetailView(false);
@@ -118,7 +121,7 @@ const useDataProveedores = () => {
       }
 
       const response = await axios.put(
-        `https://riveraproject-production-933e.up.railway.app/api/proveedores/${selectedProveedor._id}`, 
+        `${API_URL}/proveedores/${selectedProveedor._id}`, 
         updatedData
       );
       
@@ -172,7 +175,7 @@ const useDataProveedores = () => {
   const refreshProveedores = async () => {
     try {
       setLoading(true);
-      const response = await axios.get('https://riveraproject-production-933e.up.railway.app/api/proveedores');
+      const response = await axios.get(`${API_URL}/proveedores`);
       setProveedores(response.data);
       setError(null);
     } catch (error) {

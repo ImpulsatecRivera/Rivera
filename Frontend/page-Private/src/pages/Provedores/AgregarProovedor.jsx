@@ -1,6 +1,9 @@
 import React, { useState } from 'react';
 import { Building, Mail, Phone, Package } from 'lucide-react';
 import Swal from 'sweetalert2';
+import { config } from '../../config';
+
+const API_URL = config.api.API_URL;
 
 // Componentes UI genéricos para Proveedores
 import LoadingState from '../../components/UIProveedores/LoadingStateAgregar';
@@ -210,7 +213,7 @@ const AgregarProveedor = () => {
 
       console.log('Enviando datos:', dataToSend);
 
-      const response = await fetch('https://riveraproject-production-933e.up.railway.app/api/proveedores', {
+      const response = await fetch(`${API_URL}/proveedores`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -1,5 +1,9 @@
 // Versión mejorada del hook con mejor debugging y actualización de estado
 import { useState, useEffect } from 'react';
+import { config } from '../../../config';
+
+const API_URL = config.api.API_URL;
+
 
 const useTrucksData = () => {
   const [trucks, setTrucks] = useState([]);
@@ -47,7 +51,7 @@ const useTrucksData = () => {
       
       console.log('🚚 Iniciando petición a la API...');
       
-      const response = await fetch('https://riveraproject-production-933e.up.railway.app/api/camiones', fetchOptions);
+      const response = await fetch(`${API_URL}/camiones`, fetchOptions);
       
       console.log('📡 Status de la respuesta:', response.status);
       console.log('📡 Response OK:', response.ok);
@@ -111,7 +115,7 @@ const useTrucksData = () => {
     try {
       console.log(`🗑️ Eliminando camión con ID: ${truckId}`);
       
-      const response = await fetch(`https://riveraproject-production-933e.up.railway.app/api/camiones/${truckId}`, {
+      const response = await fetch(`${API_URL}camiones/${truckId}`, {
         method: 'DELETE',
         ...fetchOptions,
       });

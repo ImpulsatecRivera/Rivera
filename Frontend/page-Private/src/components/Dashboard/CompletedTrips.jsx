@@ -1,6 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { Bus, Home, UtensilsCrossed, Play, Truck, Package, AlertCircle, RefreshCw } from 'lucide-react';
+import { config } from "../../config";
 import axios from 'axios';
+
+const API_URL = config.api.API_URL;
 
 const iconMap = {
   transporte: Bus,
@@ -29,7 +32,7 @@ const CompletedTrips = () => {
     
     try {
       // 🔧 RUTA CORRECTA: /completed
-      const res = await axios.get('https://riveraproject-production-933e.up.railway.app/api/viajes/completed');
+      const res = await axios.get(`${API_URL}/viajes/completed`);
       
       console.log('✅ Viajes completados recibidos:', res.data);
       

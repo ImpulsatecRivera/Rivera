@@ -6,6 +6,9 @@ import Button from "../components/Login/Button";
 import Title from "../components/RecoverPassword/Title";
 import resetImage from "../images/reset-password.png";
 
+import { config } from "../config";
+const API_URL = config.api.API_URL; 
+
 const ResetPassword = () => {
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -104,7 +107,7 @@ const ResetPassword = () => {
       console.log("Enviando nueva contraseña...");
 
       // ✅ CRÍTICO: Incluir el verifiedToken en el payload
-      const response = await axios.post("https://riveraproject-production-933e.up.railway.app/api/recovery/newPassword", {
+      const response = await axios.post(`${API_URL}/recovery/newPassword`, {
         newPassword: newPassword,
         verifiedToken: verifiedToken  // ✅ ENVIAR EL TOKEN EN EL BODY
       }, {

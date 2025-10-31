@@ -1,4 +1,7 @@
 import React, { useEffect, useState } from 'react';
+import { config } from "../../config";
+
+const API_URL = config.api.API_URL;
 
 // Componente individual mejorado
 const CategoryItem = ({ image, name, progress, gradientClass, count, riskLevel, pesoPromedio, ejemplos }) => (
@@ -276,7 +279,7 @@ const FunctionalGroups = () => {
       setError(null);
       
       // 🔧 RUTA CORRECTA: carga-distribution
-      const res = await fetch('https://riveraproject-production-933e.up.railway.app/api/viajes/carga-distribution');
+      const res = await fetch(`${API_URL}/viajes/carga-distribution`);
       
       if (!res.ok) {
         throw new Error(`HTTP error! status: ${res.status}`);

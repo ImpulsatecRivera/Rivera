@@ -3,6 +3,10 @@ import { Truck, TrendingUp, Plus, Minus, Clock, MapPin, Users, Calendar, Monitor
 import RealtimeProgressBar from '../components/Mapa/RealtimeProgressBar';
 import TripMonitoringDashboard from '../components/Mapa/TripMonitoringDashboard';
 
+import { config } from '../config';
+
+const API_URL = config.api.API_URL;
+
 // COMPONENTE PRINCIPAL - RIVERA TRANSPORT MAP - COMPATIBLE CON BACKEND REAL
 const RiveraTransportMapDemo = () => {
   const [zoomLevel, setZoomLevel] = useState(8);
@@ -16,8 +20,6 @@ const RiveraTransportMapDemo = () => {
   const mapRef = useRef(null);
   const mapInstanceRef = useRef(null);
 
-  // URL fija de tu backend
-  const API_BASE_URL = 'https://riveraproject-production-933e.up.railway.app';
 
   // Mapear estados del backend al frontend
   const mapBackendStatus = (status) => {
@@ -84,9 +86,9 @@ const RiveraTransportMapDemo = () => {
       setLoading(true);
       setError(null);
       
-      console.log('🌐 Fetching data from:', `${API_BASE_URL}/api/viajes/map-data`);
+      console.log('🌐 Fetching data from:', `${API_URL}/viajes/map-data`);
       
-      const response = await fetch(`${API_BASE_URL}/api/viajes/map-data`, {
+      const response = await fetch(`${API_URL}/viajes/map-data`, {
         method: 'GET',
         headers: { 
           'Content-Type': 'application/json',

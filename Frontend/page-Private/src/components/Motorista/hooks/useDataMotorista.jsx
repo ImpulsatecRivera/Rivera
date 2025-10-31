@@ -1,6 +1,9 @@
 import { useState, useEffect } from 'react';
+import { config } from '../../../../config';
 import { useNavigate } from 'react-router-dom';
 import axios from "axios";
+
+const API_URL = config.api.API_URL;
 
 const useDataMotorista = () => {
   // Estados principales
@@ -28,7 +31,7 @@ const useDataMotorista = () => {
         setLoading(true);
         console.log('Iniciando petición a la API de motoristas...');
         
-        const response = await fetch('https://riveraproject-production-933e.up.railway.app/api/motoristas', {
+        const response = await fetch(`${API_URL}/motoristas`, {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
@@ -117,7 +120,7 @@ const useDataMotorista = () => {
     setShowConfirmDelete(false);
     try {
       console.log('Eliminando motorista con ID:', selectedMotorista._id);
-      await axios.delete(`https://riveraproject-production-933e.up.railway.app/api/motoristas/${selectedMotorista._id}`);
+      await axios.delete(`${API_URL}/motoristas/${selectedMotorista._id}`);
       setMotoristas(motoristas.filter(mot => mot._id !== selectedMotorista._id));
       console.log("Motorista eliminado exitosamente");
       setShowDetailView(false);
@@ -174,7 +177,7 @@ const useDataMotorista = () => {
         console.log('FormData creado, enviando...');
         
         // Enviar con fetch (axios tiene problemas con FormData a veces)
-        const response = await fetch(`https://riveraproject-production-933e.up.railway.app/api/motoristas/${selectedMotorista._id}`, {
+        const response = await fetch(`${API_URL}/motoristas/${selectedMotorista._id}`, {
           method: 'PUT',
           body: submitData,
           // No agregar Content-Type, el navegador lo maneja automáticamente para FormData
@@ -235,7 +238,7 @@ const useDataMotorista = () => {
         }
 
         const response = await axios.put(
-          `https://riveraproject-production-933e.up.railway.app/api/motoristas/${selectedMotorista._id}`, 
+          `${API_URL}/motoristas/${selectedMotorista._id}`, 
           updateData,
           {
             headers: {
@@ -313,7 +316,7 @@ const useDataMotorista = () => {
   const handleRefresh = async () => {
     setLoading(true);
     try {
-      const response = await fetch('https://riveraproject-production-933e.up.railway.app/api/motoristas', {
+      const response = await fetch(`${API_URL}/motoristas`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',

@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { ChevronDown, X, Check, Truck } from 'lucide-react';
+import { config } from '../../config';
 import { useParams, useNavigate } from 'react-router-dom';
+
+const API_URL = config.api.API_URL;
 
 export default function EditarCamion() {
   const { id } = useParams();
@@ -38,19 +41,19 @@ export default function EditarCamion() {
         setLoading(true);
 
         // Todas las peticiones incluyen cookies
-        const truckResponse = await fetch(`https://riveraproject-production-933e.up.railway.app/api/camiones/${id}`, {
+        const truckResponse = await fetch(`${API_URL}/camiones/${id}`, {
           method: 'GET',
           ...fetchOptions
         });
         const truckData = await truckResponse.json();
 
-        const proveedoresResponse = await fetch('https://riveraproject-production-933e.up.railway.app/api/proveedores', {
+        const proveedoresResponse = await fetch(`${API_URL}/proveedores`, {
           method: 'GET',
           ...fetchOptions
         });
         const proveedoresData = await proveedoresResponse.json();
 
-        const motoristasResponse = await fetch('https://riveraproject-production-933e.up.railway.app/api/motoristas', {
+        const motoristasResponse = await fetch(`${API_URL}/motoristas`, {
           method: 'GET',
           ...fetchOptions
         });
@@ -105,7 +108,7 @@ export default function EditarCamion() {
         age: formData.año
       };
 
-      const response = await fetch(`https://riveraproject-production-933e.up.railway.app/api/camiones/${id}`, {
+      const response = await fetch(`${API_URL}/camiones/${id}`, {
         method: 'PUT',
         ...fetchOptions,
         body: JSON.stringify(updateData)

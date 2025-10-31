@@ -1,4 +1,7 @@
 import React, { useEffect, useState } from 'react';
+import { config } from '../../config';
+
+const API_URL = config.api.API_URL;
 
 const colors = ['#EF4444', '#3B82F6', '#F97316', '#8B5CF6', '#5F8EAD'];
 
@@ -16,7 +19,7 @@ const LoadMetrics = () => {
       console.log('📊 Obteniendo distribución de cargas...');
       
       // 🔧 RUTA CORRECTA: carga-distribution
-      const response = await fetch('https://riveraproject-production-933e.up.railway.app/api/viajes/carga-distribution');
+      const response = await fetch(`${API_URL}/viajes/carga-distribution`);
       
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);

@@ -1,10 +1,12 @@
 // src/hooks/useTruckForm.js
 import { useForm } from "react-hook-form";
 import { useEffect, useState } from "react";
+import { config } from '../../../../config';
+const API_URL = config.api.API_URL;
 
-const API_URL_MOTORISTAS = "https://riveraproject-production-933e.up.railway.app/api/motoristas";
-const API_URL_PROVEEDORES = "https://riveraproject-production-933e.up.railway.app/api/proveedores"; 
-const API_URL_CAMIONES = "https://riveraproject-production-933e.up.railway.app/api/camiones";
+const API_URL_MOTORISTAS = `${API_URL}/motoristas`;
+const API_URL_PROVEEDORES = `${API_URL}/proveedores`; 
+const API_URL_CAMIONES = `${API_URL}/camiones`;
 
 export const useTruckForm = (onSuccess) => {
   const [motoristasDisponibles, setMotoristasDisponibles] = useState([]);

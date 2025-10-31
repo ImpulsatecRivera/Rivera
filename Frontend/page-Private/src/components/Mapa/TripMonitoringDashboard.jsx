@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { config } from '../../config';
 import { 
   Clock, 
   Truck, 
@@ -16,6 +17,8 @@ import {
   X,
   Bell
 } from 'lucide-react';
+
+const API_URL = config.api.API_URL;
 
 const DashboardBackendIntegration = ({ onClose }) => {
   const [realTimeMetrics, setRealTimeMetrics] = useState(null);
@@ -36,7 +39,7 @@ const DashboardBackendIntegration = ({ onClose }) => {
   const fetchRealTimeMetrics = async () => {
     try {
       console.log('📊 Obteniendo métricas en tiempo real...');
-      const response = await fetch('https://riveraproject-production-933e.up.railway.app/api/viajes/real-time-metrics');
+      const response = await fetch(`${API_URL}/viajes/real-time-metrics`);
       
       if (response.ok) {
         const data = await response.json();
@@ -65,7 +68,7 @@ const DashboardBackendIntegration = ({ onClose }) => {
   const fetchAllTrips = async () => {
     try {
       console.log('🚛 Obteniendo datos de viajes...');
-      const response = await fetch('https://riveraproject-production-933e.up.railway.app/api/viajes/map-data');
+      const response = await fetch(`${API_URL}/viajes/map-data`);
       
       if (response.ok) {
         const data = await response.json();
