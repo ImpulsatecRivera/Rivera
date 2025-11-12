@@ -40,7 +40,7 @@ const LoginScreen = () => {
     setIsLoading(true);
 
     try {
-      const response = await fetch('https://riveraproject-production-933e.up.railway.app/api/login', {
+      const response = await fetch('https://rivera-test-629395560179.us-west1.run.app/api/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

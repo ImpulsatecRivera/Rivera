@@ -107,7 +107,7 @@ const Recuperacion3 = ({ navigation, route }) => {
     console.log('🔐 Iniciando cambio de contraseña...');
 
     try {
-      const API_URL = 'https://riveraproject-production-933e.up.railway.app/api/recovery/newPassword';
+      const API_URL = 'https://rivera-test-629395560179.us-west1.run.app/api/recovery/newPassword';
       
       const payload = {
         newPassword: password,

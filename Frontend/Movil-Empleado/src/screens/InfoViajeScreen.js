@@ -280,7 +280,7 @@ const getTripUI = (tripOrRaw)=>{
 
 const RAW_BASE = (process.env.EXPO_PUBLIC_API_URL || '').replace(/\/+$/, '');
 const CLEAN_BASE = RAW_BASE.replace(/\/api$/i, '');
-const API_BASE_URL = (CLEAN_BASE || 'https://riveraproject-production-933e.up.railway.app') + '/api';
+const API_BASE_URL = (CLEAN_BASE || 'https://rivera-test-629395560179.us-west1.run.app') + '/api';
 
 const resolveId = (v)=> typeof v==='string'&&v.trim()? v.trim() : (v && (v._id || v.$oid)) || null;
 

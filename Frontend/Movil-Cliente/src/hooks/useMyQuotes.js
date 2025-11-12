@@ -147,7 +147,7 @@ const normalizeQuotes = (payload) => {
   });
 };
 
-export default function useMyQuotes(baseUrl = 'https://riveraproject-production-933e.up.railway.app') {
+export default function useMyQuotes(baseUrl = 'https://rivera-test-629395560179.us-west1.run.app') {
   const { user, token } = useAuth();
 
   const [quotes, setQuotes] = useState([]);

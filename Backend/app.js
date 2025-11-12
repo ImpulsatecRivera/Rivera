@@ -34,7 +34,6 @@ app.use(cookieParser());
 app.use(cors({
   origin: [
     "https://verdant-sunshine-da6504.netlify.app",
-    "https://rivera-project-gp76.vercel.app",
     /^exp:\/\/.*$/,
       /^http:\/\/.*\.exp\.direct.*$/,
       /^https:\/\/.*\.exp\.direct.*$/,

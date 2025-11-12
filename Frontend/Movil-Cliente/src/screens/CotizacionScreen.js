@@ -585,7 +585,7 @@ const IntegratedTruckRequestScreen = () => {
     try {
       const clientId = await getClientId();
       const token = await AsyncStorage.getItem('clientToken');
-      const baseUrl = 'https://riveraproject-production-933e.up.railway.app';
+      const baseUrl = 'https://rivera-test-629395560179.us-west1.run.app';
       
       if (!clientId) {
         throw new Error('No hay datos de autenticación');
@@ -827,7 +827,7 @@ const IntegratedTruckRequestScreen = () => {
         version: '1.0'
       };
 
-      const baseUrl = 'https://riveraproject-production-933e.up.railway.app';
+      const baseUrl = 'https://rivera-test-629395560179.us-west1.run.app';
       const token = await AsyncStorage.getItem('clientToken');
 
       const response = await createQuote({

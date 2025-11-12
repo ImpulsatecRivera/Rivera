@@ -18,7 +18,7 @@ import LottieView from 'lottie-react-native';
 import { useAuth } from '../context/authContext';
 import * as ImagePicker from 'expo-image-picker';
 
-const API_BASE_URL = 'https://riveraproject-production-933e.up.railway.app';
+const API_BASE_URL = 'https://rivera-test-629395560179.us-west1.run.app';
 
 const RegistrarseCliente2 = ({ navigation, route }) => {
   const { email, password } = route.params || {};

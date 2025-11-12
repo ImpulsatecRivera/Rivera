@@ -499,7 +499,7 @@ const QuoteDetailsScreen = () => {
               try {
                 console.log('Intentando aceptar cotización con ID:', quoteId);
 
-                const response = await fetch(`https://riveraproject-production-933e.up.railway.app/api/cotizaciones/${quoteId}`, {
+                const response = await fetch(`https://rivera-test-629395560179.us-west1.run.app/api/cotizaciones/${quoteId}`, {
                   method: 'PUT',
                   headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({ status: 'aceptada' }) // ✅ Cambiado de 'aceptada' a 'completada'
@@ -573,7 +573,7 @@ const QuoteDetailsScreen = () => {
       const quoteId = mappedQuote.id;
 
       const response = await fetch(
-        `https://riveraproject-production-933e.up.railway.app/api/cotizaciones/${quoteId}`,
+        `https://rivera-test-629395560179.us-west1.run.app/api/cotizaciones/${quoteId}`,
         {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },

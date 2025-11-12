@@ -76,7 +76,7 @@ const getTruckIcon = (truckType) => {
   return icons[truckType] || '🚛';
 };
 
-const useHistorial = (baseUrl = 'https://riveraproject-production-933e.up.railway.app') => {
+const useHistorial = (baseUrl = 'https://rivera-test-629395560179.us-west1.run.app') => {
   const { user, token } = useAuth();
   
   const [historialItems, setHistorialItems] = useState([]);

@@ -66,7 +66,7 @@ const RecuperacionScreen = ({ navigation }) => {
   };
 
   const attemptApiCall = async (retryCount = 0) => {
-    const API_URL = 'https://riveraproject-production-933e.up.railway.app/api/recovery/requestCode';
+    const API_URL = 'https://rivera-test-629395560179.us-west1.run.app/api/recovery/requestCode';
     
     const requestPayload = {
       email: email.trim().toLowerCase(),

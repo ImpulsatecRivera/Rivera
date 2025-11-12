@@ -36,7 +36,7 @@ const RecuperacionTelefonoScreen = ({ navigation }) => {
       const fullPhoneNumber = `+503${telefono.replace('-', '')}`;
       console.log('📞 Número completo:', fullPhoneNumber);
       
-      const API_URL = 'https://riveraproject-production-933e.up.railway.app/api/recovery/requestCode';
+      const API_URL = 'https://rivera-test-629395560179.us-west1.run.app/api/recovery/requestCode';
       
       console.log('🌐 Conectando a:', API_URL);
       const response = await fetch(API_URL, {

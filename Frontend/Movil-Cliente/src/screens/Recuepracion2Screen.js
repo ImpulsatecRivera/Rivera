@@ -16,7 +16,7 @@ import Icon from 'react-native-vector-icons/MaterialIcons';
 import LottieView from 'lottie-react-native';
 import { useAuth } from '../context/authContext';
 
-const API_BASE_URL = 'https://riveraproject-production-933e.up.railway.app';
+const API_BASE_URL = 'https://rivera-test-629395560179.us-west1.run.app';
 
 const Recuperacion2Screen = ({ navigation, route }) => {
   const { register } = useAuth();
