@@ -1,0 +1,9 @@
+[build]
+  base = "Frontend/page-Private"
+  publish = "dist"
+  command = "npm ci && npm run build"
+  ignore = "git diff --quiet $CACHED_COMMIT_REF $COMMIT_REF -- ."
+
+[build.environment]
+  NODE_VERSION = "18"
+  NPM_FLAGS = "--legacy-peer-deps"
