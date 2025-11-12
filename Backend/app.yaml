@@ -1,5 +1,0 @@
-runtime: nodejs20
-entrypoint: npm start
-
-env: standard
-instance_class: F1  # F1 es la más barata, ideal para pruebas

@@ -1,0 +1,38 @@
+steps:
+  # Paso 1: Construir la imagen Docker desde la carpeta Backend
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '-t'
+      - 'gcr.io/$PROJECT_ID/rivera-backend:$COMMIT_SHA'
+      - '-t'
+      - 'gcr.io/$PROJECT_ID/rivera-backend:latest'
+      - './Backend'
+    
+  # Paso 2: Subir la imagen a Container Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'push'
+      - 'gcr.io/$PROJECT_ID/rivera-backend:$COMMIT_SHA'
+    
+  # Paso 3: Desplegar en Cloud Run
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: gcloud
+    args:
+      - 'run'
+      - 'deploy'
+      - 'rivera-backend'
+      - '--image'
+      - 'gcr.io/$PROJECT_ID/rivera-backend:$COMMIT_SHA'
+      - '--region'
+      - 'us-west1'
+      - '--platform'
+      - 'managed'
+      - '--allow-unauthenticated'
+
+images:
+  - 'gcr.io/$PROJECT_ID/rivera-backend:$COMMIT_SHA'
+  - 'gcr.io/$PROJECT_ID/rivera-backend:latest'
+
+options:
+  logging: CLOUD_LOGGING_ONLY

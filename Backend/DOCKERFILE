@@ -1,0 +1,21 @@
+# Usa Node.js 20 (versión LTS)
+FROM node:20-slim
+
+# Establece el directorio de trabajo
+WORKDIR /app
+
+# Copia los archivos de dependencias
+COPY package*.json ./
+
+# Instala las dependencias de producción
+RUN npm ci --only=production
+
+# Copia todo el código fuente del backend
+COPY . .
+
+# Cloud Run asigna el puerto dinámicamente vía variable de entorno PORT
+# Por defecto exponemos 8080
+EXPOSE 4000
+
+# Inicia la aplicación
+CMD ["node", "index.js"]
