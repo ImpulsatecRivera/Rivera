@@ -1,11 +1,7 @@
 // src/hooks/useTruckForm.js
 import { useForm } from "react-hook-form";
 import { useEffect, useState } from "react";
-<<<<<<< HEAD
-import { config } from '../../../config';
-=======
 import { config } from '../../../config.jsx';
->>>>>>> eede28b6613a755e7880b94d36612cc5369efedb
 const API_URL = config.api.API_URL;
 
 const API_URL_MOTORISTAS = `${API_URL}/motoristas`;

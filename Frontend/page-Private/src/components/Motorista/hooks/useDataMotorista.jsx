@@ -1,9 +1,5 @@
 import { useState, useEffect } from 'react';
-<<<<<<< HEAD
 import { config } from '../../../config';
-=======
-import { config } from '../../../config.jsx';
->>>>>>> eede28b6613a755e7880b94d36612cc5369efedb
 import { useNavigate } from 'react-router-dom';
 import axios from "axios";
 
