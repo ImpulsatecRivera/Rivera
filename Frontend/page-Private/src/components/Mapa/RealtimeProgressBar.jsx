@@ -15,7 +15,7 @@ const RealtimeProgressBar = ({
   viajeId,
   onStatusChange,
   apiConfig = {
-    baseUrl: process.env.REACT_APP_API_URL || `${API_URL}`,
+    baseUrl: API_URL || `${API_URL}`,
     endpoints: {
       getTripDetails: '/viajes/:id',
       updateProgress: '/viajes/:id/progress',

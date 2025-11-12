@@ -518,7 +518,7 @@ const RiveraTransportMapDemo = () => {
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
             <p className="text-gray-600">Conectando con Rivera Transport...</p>
-            <p className="text-xs text-gray-500 mt-2">🌐 {API_BASE_URL}</p>
+            <p className="text-xs text-gray-500 mt-2">🌐 {API_URL}</p>
           </div>
         </div>
       </div>
