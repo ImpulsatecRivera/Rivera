@@ -33,7 +33,7 @@ app.use(express.json());
 app.use(cookieParser());
 app.use(cors({
   origin: [
-    "https://rivera-project-dun.vercel.app",
+    "https://verdant-sunshine-da6504.netlify.app",
     "https://rivera-project-gp76.vercel.app",
     /^exp:\/\/.*$/,
       /^http:\/\/.*\.exp\.direct.*$/,
