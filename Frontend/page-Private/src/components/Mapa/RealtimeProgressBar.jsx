@@ -15,12 +15,12 @@ const RealtimeProgressBar = ({
   viajeId,
   onStatusChange,
   apiConfig = {
-    baseUrl: process.env.REACT_APP_API_URL || `${API_URL}`,
+    baseUrl: process.env.REACT_APP_API_URL || `http://localhost:4000`,
     endpoints: {
-      getTripDetails: '/viajes/:id',
-      updateProgress: '/viajes/:id/progress',
-      completeTrip: '/viajes/:id/complete',
-      getMapData: '/viajes/map-data'
+      getTripDetails: '/api/viajes/:id',
+      updateProgress: '/api/viajes/:id/progress',
+      completeTrip: '/api/viajes/:id/complete',
+      getMapData: '/api/viajes/map-data'
     }
   },
   enablePolling = true,

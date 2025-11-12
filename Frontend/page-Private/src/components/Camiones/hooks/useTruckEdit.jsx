@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { config } from '../../../../config';
+import { config } from '../../../config';
 const API_URL = config.api.API_URL;
 
 const useTruckEdit = (fetchOptions, onUpdateSuccess) => {

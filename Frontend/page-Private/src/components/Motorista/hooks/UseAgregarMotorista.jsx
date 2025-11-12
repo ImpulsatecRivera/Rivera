@@ -1,7 +1,7 @@
 // useMotoristaManagement.js
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { config } from '../../../../config';
+import { config } from '../../../config';
 import axios from 'axios';
 
 const API_URL = config.api.API_URL;
