@@ -1,7 +1,7 @@
 import { Routes, Route, useLocation, Outlet } from "react-router-dom";
 import { useState, useEffect } from "react";
 import Lottie from 'lottie-react';
-import animationData from './assets/lotties/404 not found.json'; // Ajusta la ru
+import animationData from './assets/lotties/404 not found.json';
 
 // Rutas privadas
 import PrivateRoute from "./components/PrivateRoutes/PrivateRoute";
@@ -84,6 +84,16 @@ function App() {
       <Route path="/verification-input" element={<VerificationInput />} />
       <Route path="/reset-password" element={<ResetPassword />} />
 
+      {/* ===================== RUTA PRIVADA SIN SIDEBAR ===================== */}
+      <Route
+        path="/SeleccionarProceso"
+        element={
+          <PrivateRoute>
+            <Seleccionar />
+          </PrivateRoute>
+        }
+      />
+
       {/* ===================== RUTAS PRIVADAS + LAYOUT CON SIDEBAR ===================== */}
       <Route
         element={
@@ -104,7 +114,6 @@ function App() {
 
         {/* Clientes */}
         <Route path="/clientes" element={<ClientManagementInterface />} />
-        <Route path="/SeleccionarProceso" element={<Seleccionar />} />
 
         {/* Empleados */}
         <Route path="/empleados" element={<Employee />} />
@@ -134,25 +143,25 @@ function App() {
       </Route>
 
       {/* ===================== 404 FUERA DEL LAYOUT (SIN MENÚ) ===================== */}
-     <Route
-  path="*"
-  element={
-    <div className="flex items-center justify-center h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
-      <div className="w-full flex items-center justify-center">
-        <Lottie
-          animationData={animationData}
-          style={{ 
-            width: '100%',
-            maxWidth: '800px', // Controla el tamaño máximo
-            height: 'auto' // Mantiene proporciones
-          }}
-          loop={true}
-          autoplay={true}
-        />
-      </div>
-    </div>
-  }
-/>
+      <Route
+        path="*"
+        element={
+          <div className="flex items-center justify-center h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+            <div className="w-full flex items-center justify-center">
+              <Lottie
+                animationData={animationData}
+                style={{ 
+                  width: '100%',
+                  maxWidth: '800px',
+                  height: 'auto'
+                }}
+                loop={true}
+                autoplay={true}
+              />
+            </div>
+          </div>
+        }
+      />
     </Routes>
   );
 }
