@@ -1,599 +1,114 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { ArrowLeft, Save, DollarSign } from 'lucide-react';
-import { useCotizaciones } from '../../components/Cotizaciones/hook/useCotizaciones';
-import Swal from 'sweetalert2';
+import React from 'react';
+import { useNavigate } from 'react-router-dom';
+import Lottie from 'lottie-react';
 
-export default function EditarCotizacionForm({ cotizacionId, cotizacion: cotizacionProp, onVolver }) {
-  const {
-    cotizaciones,
-    actualizarCotizacionAPI,
-    actualizarEstadoCotizacionSilencioso,
-    loading: hookLoading,
-    error
-  } = useCotizaciones();
+import characterImage from '../../images/Avatar.png';
+import gearsIcon from '../../images/procesos.png';
+import peopleIcon from '../../images/usuarios.png';
 
-  const yaCargoRef = useRef(false);
+const Seleccionar = () => {
+  const navigate = useNavigate();
 
-  const [precios, setPrecios] = useState({
-    price: '',
-    combustible: '',
-    peajes: '',
-    conductor: '',
-    otros: '',
-    impuestos: ''
-  });
-
-  const [datosOriginales, setDatosOriginales] = useState({});
-  const [loading, setLoading] = useState(true);
-  const [guardando, setGuardando] = useState(false);
-  const [mensaje, setMensaje] = useState('');
-
-  const cargarPrecios = (cotizacion) => {
-    const nuevosPrecios = {
-      price: cotizacion.price?.toString() || '',
-      combustible: cotizacion.costos?.combustible?.toString() || '',
-      peajes: cotizacion.costos?.peajes?.toString() || '',
-      conductor: cotizacion.costos?.conductor?.toString() || '',
-      otros: cotizacion.costos?.otros?.toString() || '',
-      impuestos: cotizacion.costos?.impuestos?.toString() || ''
-    };
-    
-    setPrecios(nuevosPrecios);
-  };
-
-  useEffect(() => {
-    if (yaCargoRef.current) return;
-
-    if (cotizacionProp) {
-      cargarPrecios(cotizacionProp);
-      setDatosOriginales(cotizacionProp);
-      setLoading(false);
-      yaCargoRef.current = true;
-      return;
-    }
-
-    if (cotizacionId && cotizaciones.length > 0 && !hookLoading) {
-      const cotizacion = cotizaciones.find(c => {
-        const currentId = c.id || c._id;
-        return currentId === cotizacionId;
-      });
-      
-      if (cotizacion) {
-        cargarPrecios(cotizacion);
-        setDatosOriginales(cotizacion);
-        setLoading(false);
-        yaCargoRef.current = true;
-      } else {
-        setLoading(false);
-      }
-    }
-  }, [cotizacionId, cotizacionProp, cotizaciones, hookLoading]);
-
-  const cambiarPrecio = (campo, valor) => {
-    const valorLimpio = valor.replace(/[^\d.]/g, '');
-    const partes = valorLimpio.split('.');
-    const valorFinal = partes.length > 2 
-      ? partes[0] + '.' + partes.slice(1).join('') 
-      : valorLimpio;
-    
-    setPrecios(prev => ({
-      ...prev,
-      [campo]: valorFinal
-    }));
-  };
-
-  const calcularTotales = () => {
-    const nums = {
-      combustible: parseFloat(precios.combustible) || 0,
-      peajes: parseFloat(precios.peajes) || 0,
-      conductor: parseFloat(precios.conductor) || 0,
-      otros: parseFloat(precios.otros) || 0,
-      impuestos: parseFloat(precios.impuestos) || 0
-    };
-    
-    const subtotal = nums.combustible + nums.peajes + nums.conductor + nums.otros;
-    const total = subtotal + nums.impuestos;
-    
-    return { subtotal, total };
-  };
-
-  const guardarBorrador = async () => {
-    if (!datosOriginales || (!datosOriginales.id && !datosOriginales._id)) {
-      Swal.fire({
-        title: 'Error',
-        text: 'No se puede guardar: datos de cotización no válidos',
-        icon: 'error'
-      });
-      return;
-    }
-
-    setGuardando(true);
-    setMensaje('Guardando borrador...');
-    
-    try {
-      const { subtotal, total } = calcularTotales();
-      
-      const datosParaGuardar = {
-        price: parseFloat(precios.price) || 0,
-        costos: {
-          combustible: parseFloat(precios.combustible) || 0,
-          peajes: parseFloat(precios.peajes) || 0,
-          conductor: parseFloat(precios.conductor) || 0,
-          otros: parseFloat(precios.otros) || 0,
-          impuestos: parseFloat(precios.impuestos) || 0,
-          subtotal: subtotal,
-          total: total,
-          moneda: datosOriginales.costos?.moneda || 'USD'
-        }
-      };
-      
-      const resultado = await actualizarCotizacionAPI(
-        datosOriginales.id || datosOriginales._id, 
-        datosParaGuardar
-      );
-      
-      if (resultado.success) {
-        setMensaje('Borrador guardado');
-        Swal.fire({
-          title: 'Borrador Guardado',
-          text: 'Los precios se han guardado como borrador.',
-          icon: 'success'
-        });
-        setTimeout(() => setMensaje(''), 3000);
-      } else {
-        setMensaje('Error al guardar');
-        Swal.fire({
-          title: 'Error',
-          text: resultado.message || 'No se pudo guardar el borrador',
-          icon: 'error'
-        });
-      }
-      
-    } catch (error) {
-      setMensaje('Error al guardar');
-      Swal.fire({
-        title: 'Error',
-        text: 'Ocurrió un error al guardar el borrador.',
-        icon: 'error'
-      });
-    } finally {
-      setGuardando(false);
-    }
-  };
-
-  const procesarEnvioCotizacion = async () => {
-    setGuardando(true);
-    setMensaje('Enviando cotización al cliente...');
-    
-    try {
-      const { subtotal, total } = calcularTotales();
-      
-      const datosParaGuardar = {
-        price: parseFloat(precios.price) || 0,
-        costos: {
-          combustible: parseFloat(precios.combustible) || 0,
-          peajes: parseFloat(precios.peajes) || 0,
-          conductor: parseFloat(precios.conductor) || 0,
-          otros: parseFloat(precios.otros) || 0,
-          impuestos: parseFloat(precios.impuestos) || 0,
-          subtotal: subtotal,
-          total: total,
-          moneda: datosOriginales.costos?.moneda || 'USD'
-        },
-        fechaEnvio: new Date().toISOString(),
-        enviadaPorAdmin: true
-      };
-      
-      const resultadoGuardar = await actualizarCotizacionAPI(
-        datosOriginales.id || datosOriginales._id, 
-        datosParaGuardar
-      );
-      
-      if (resultadoGuardar.success) {
-        const cotizacionActualizada = { ...datosOriginales, ...datosParaGuardar };
-        const resultadoEstado = await actualizarEstadoCotizacionSilencioso(
-          cotizacionActualizada, 
-          'enviada'
-        );
-        
-        if (resultadoEstado.success) {
-          setMensaje('¡Cotización enviada al cliente!');
-          Swal.fire({
-            title: '¡Cotización Enviada!',
-            text: `La cotización con precio $${datosParaGuardar.price.toFixed(2)} ha sido enviada al cliente.`,
-            icon: 'success'
-          });
-          setDatosOriginales(prev => ({ ...prev, status: 'enviada', ...datosParaGuardar }));
-        } else {
-          throw new Error(resultadoEstado.message || 'Error al cambiar el estado');
-        }
-      } else {
-        throw new Error(resultadoGuardar.message || 'Error al guardar la cotización');
-      }
-      
-    } catch (error) {
-      setMensaje('Error al enviar');
-      Swal.fire({
-        title: 'Error al Enviar',
-        text: error.message || 'No se pudo enviar la cotización al cliente.',
-        icon: 'error'
-      });
-    } finally {
-      setGuardando(false);
-    }
-  };
-
-  const enviarCotizacionAlCliente = async () => {
-    if (!datosOriginales || (!datosOriginales.id && !datosOriginales._id)) {
-      Swal.fire({
-        title: 'Error',
-        text: 'No se puede enviar: datos de cotización no válidos',
-        icon: 'error'
-      });
-      return;
-    }
-
-    const precioTotal = parseFloat(precios.price) || 0;
-    if (precioTotal <= 0) {
-      Swal.fire({
-        title: 'Precio requerido',
-        text: 'Debes ingresar un precio principal antes de enviar la cotización al cliente.',
-        icon: 'warning'
-      });
-      return;
-    }
-
-    const result = await Swal.fire({
-      title: '¿Enviar cotización al cliente?',
-      text: `Se enviará la cotización con un precio de $${precioTotal.toFixed(2)} al cliente.`,
-      icon: 'question',
-      showCancelButton: true,
-      confirmButtonText: 'Sí, enviar',
-      cancelButtonText: 'Cancelar',
-      confirmButtonColor: '#16a34a',
-      cancelButtonColor: '#6b7280'
-    });
-
-    if (result.isConfirmed) {
-      await procesarEnvioCotizacion();
-    }
-  };
-
-  if (loading || hookLoading) {
-    return (
-      <div className="min-h-screen bg-gray-800 p-6 flex items-center justify-center">
-        <div className="text-white text-center">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-white mx-auto mb-4"></div>
-          <p>{hookLoading ? 'Cargando cotizaciones...' : 'Buscando cotización...'}</p>
-          {cotizacionId && <p className="text-sm text-gray-400 mt-2">ID: {cotizacionId}</p>}
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="min-h-screen bg-gray-800 p-6 flex items-center justify-center">
-        <div className="text-white text-center">
-          <div className="text-red-400 text-xl mb-4">⚠️ Error</div>
-          <p className="mb-4">{error}</p>
-          <button 
-            onClick={onVolver}
-            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-          >
-            Volver
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  if (!datosOriginales || Object.keys(datosOriginales).length === 0) {
-    return (
-      <div className="min-h-screen bg-gray-800 p-6 flex items-center justify-center">
-        <div className="text-white text-center">
-          <div className="text-yellow-400 text-xl mb-4">⚠️</div>
-          <p className="mb-4">No se encontraron datos de la cotización</p>
-          <button 
-            onClick={onVolver}
-            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-          >
-            Volver
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  const { subtotal, total } = calcularTotales();
+  // Tu animación Lottie
+  const animationData = {"nm":"Comp 1","ddd":0,"h":300,"w":500,"meta":{"g":"@lottiefiles/toolkit-js 0.33.2"},"layers":[{"ty":4,"nm":"Shape Layer 4","sr":1,"st":0,"op":2731,"ip":0,"hd":false,"ddd":0,"bm":0,"hasMask":false,"ao":0,"ks":{"a":{"a":0,"k":[0,0,0],"ix":1},"s":{"a":0,"k":[119.05,71.43,100],"ix":6},"sk":{"a":0,"k":0},"p":{"a":0,"k":[251.26,145.41,0],"ix":2},"r":{"a":0,"k":180,"ix":10},"sa":{"a":0,"k":0},"o":{"a":0,"k":100,"ix":11}},"ef":[],"shapes":[{"ty":"gr","bm":0,"hd":false,"mn":"ADBE Vector Group","nm":"Rectangle 1","ix":1,"cix":2,"np":4,"it":[{"ty":"rc","bm":0,"hd":false,"mn":"ADBE Vector Shape - Rect","nm":"Rectangle Path 1","d":1,"p":{"a":0,"k":[0,0],"ix":3},"r":{"a":0,"k":24,"ix":4},"s":{"a":0,"k":[392.874,392.874],"ix":2}},{"ty":"tm","bm":0,"hd":false,"mn":"ADBE Vector Filter - Trim","nm":"Trim Paths 1","ix":2,"e":{"a":1,"k":[{"o":{"x":0.333,"y":0},"i":{"x":0.667,"y":1},"s":[0],"t":0},{"s":[100],"t":60}],"ix":2},"o":{"a":0,"k":0,"ix":3},"s":{"a":1,"k":[{"o":{"x":0.333,"y":0},"i":{"x":0.667,"y":1},"s":[0],"t":0},{"o":{"x":0.333,"y":0},"i":{"x":0.667,"y":1},"s":[73],"t":30},{"s":[100],"t":60}],"ix":1},"m":1},{"ty":"st","bm":0,"hd":false,"mn":"ADBE Vector Graphic - Stroke","nm":"Stroke 1","lc":2,"lj":2,"ml":1,"o":{"a":0,"k":100,"ix":4},"w":{"a":0,"k":14,"ix":5},"c":{"a":0,"k":[1,0.3843,0],"ix":3}},{"ty":"tr","a":{"a":0,"k":[0,0],"ix":1},"s":{"a":0,"k":[100,100],"ix":3},"sk":{"a":0,"k":0,"ix":4},"p":{"a":0,"k":[1.059,-6.429],"ix":2},"r":{"a":0,"k":0,"ix":6},"sa":{"a":0,"k":0,"ix":5},"o":{"a":0,"k":100,"ix":7}}]}],"ind":1},{"ty":4,"nm":"Shape Layer 1","sr":1,"st":0,"op":2731,"ip":0,"hd":false,"ddd":0,"bm":0,"hasMask":false,"ao":0,"ks":{"a":{"a":0,"k":[0,0,0],"ix":1},"s":{"a":0,"k":[119.05,71.43,100],"ix":6},"sk":{"a":0,"k":0},"p":{"a":0,"k":[248.74,154.59,0],"ix":2},"r":{"a":0,"k":0,"ix":10},"sa":{"a":0,"k":0},"o":{"a":0,"k":100,"ix":11}},"ef":[],"shapes":[{"ty":"gr","bm":0,"hd":false,"mn":"ADBE Vector Group","nm":"Rectangle 1","ix":1,"cix":2,"np":3,"it":[{"ty":"rc","bm":0,"hd":false,"mn":"ADBE Vector Shape - Rect","nm":"Rectangle Path 1","d":1,"p":{"a":0,"k":[0,0],"ix":3},"r":{"a":0,"k":24,"ix":4},"s":{"a":0,"k":[392.874,392.874],"ix":2}},{"ty":"st","bm":0,"hd":false,"mn":"ADBE Vector Graphic - Stroke","nm":"Stroke 1","lc":1,"lj":1,"ml":4,"o":{"a":0,"k":100,"ix":4},"w":{"a":0,"k":5,"ix":5},"c":{"a":0,"k":[1,1,1],"ix":3}},{"ty":"tr","a":{"a":0,"k":[0,0],"ix":1},"s":{"a":0,"k":[100,100],"ix":3},"sk":{"a":0,"k":0,"ix":4},"p":{"a":0,"k":[1.059,-6.429],"ix":2},"r":{"a":0,"k":0,"ix":6},"sa":{"a":0,"k":0,"ix":5},"o":{"a":0,"k":100,"ix":7}}]}],"ind":2}],"v":"5.9.0","fr":30,"op":61,"ip":0,"assets":[]};
 
   return (
-    <div className="min-h-screen bg-gray-800 p-6">
-      <div className="flex items-center justify-between mb-8">
-        <div 
-          className="flex items-center gap-3 cursor-pointer hover:opacity-80 text-white"
-          onClick={onVolver}
-        >
-          <ArrowLeft className="w-5 h-5" />
-          <span className="text-lg font-medium">Cotizar Solicitud del Cliente</span>
+    <div className="relative min-h-screen bg-gray-900 py-12 px-4 overflow-hidden">
+      {/* Lottie Background - Multiple instances for full coverage */}
+      <div className="absolute inset-0 pointer-events-none opacity-10">
+        {/* Grid de animaciones para cubrir toda la pantalla */}
+        <div className="grid grid-cols-3 grid-rows-3 w-full h-full">
+          {[...Array(9)].map((_, index) => (
+            <div key={index} className="w-full h-full">
+              <Lottie
+                animationData={animationData}
+                loop={true}
+                autoplay={true}
+                style={{
+                  width: '100%',
+                  height: '100%'
+                }}
+              />
+            </div>
+          ))}
         </div>
-        
-        {mensaje && (
-          <div className={`px-4 py-2 rounded text-white ${
-            mensaje.includes('Error') ? 'bg-red-500' : 
-            mensaje.includes('exitosamente') || mensaje.includes('enviada') ? 'bg-green-500' : 'bg-blue-500'
-          }`}>
-            {mensaje}
-          </div>
-        )}
       </div>
 
-      <div className="bg-white rounded-lg shadow-lg p-8 max-w-4xl mx-auto">
-        <div className="flex items-center gap-4 mb-8">
-          <DollarSign className="w-8 h-8 text-green-600" />
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">
-              Cotizar Solicitud del Cliente
-            </h1>
-            <p className="text-gray-600">
-              Agrega precios y envía la cotización: {datosOriginales.numeroDetizacion || 'N/A'}
-            </p>
+      {/* Content Container - Positioned Relatively */}
+      <div className="relative z-10 max-w-6xl mx-auto">
+        {/* Header */}
+        <div className="text-center mb-16">
+          <h1 className="text-2xl md:text-3xl font-normal text-white mb-6">
+            Hola fitin que deseas realizar este dia
+          </h1>
+          <div className="flex justify-center">
+            <img src={characterImage} alt="Character" className="w-32 h-auto" />
           </div>
         </div>
 
-        <div className="mb-8 p-6 bg-gray-50 rounded-lg">
-          <h2 className="text-lg font-semibold mb-4 text-gray-800">Información del Cliente</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-            <div>
-              <span className="font-medium text-gray-600">Cliente:</span>
-              <span className="ml-2">
-                {datosOriginales.clienteFirstName} {datosOriginales.clienteLastName}
-                {!datosOriginales.clienteFirstName && datosOriginales.cliente}
-              </span>
-            </div>
-            <div>
-              <span className="font-medium text-gray-600">Email:</span>
-              <span className="ml-2">{datosOriginales.email || 'No especificado'}</span>
-            </div>
-            <div>
-              <span className="font-medium text-gray-600">Teléfono:</span>
-              <span className="ml-2">{datosOriginales.telefono || 'No especificado'}</span>
-            </div>
-            <div>
-              <span className="font-medium text-gray-600">Estado:</span>
-              <span className={`ml-2 px-3 py-1 rounded-full text-xs font-medium ${
-                datosOriginales.status === 'pendiente' ? 'bg-orange-100 text-orange-800' :
-                datosOriginales.status === 'enviada' ? 'bg-blue-100 text-blue-800' :
-                datosOriginales.status === 'aceptada' ? 'bg-green-100 text-green-800' :
-                datosOriginales.status === 'rechazada' ? 'bg-red-100 text-red-800' :
-                datosOriginales.status === 'ejecutada' ? 'bg-purple-100 text-purple-800' :
-                'bg-gray-100 text-gray-800'
-              }`}>
-                {datosOriginales.status === 'pendiente' ? '⏳ Pendiente de cotizar' :
-                 datosOriginales.status === 'enviada' ? '📤 Enviada al cliente' :
-                 datosOriginales.status === 'aceptada' ? '✅ Aceptada por cliente' :
-                 datosOriginales.status === 'rechazada' ? '❌ Rechazada por cliente' :
-                 datosOriginales.status === 'ejecutada' ? '🚛 En ejecución' :
-                 datosOriginales.status || 'Desconocido'}
-              </span>
-            </div>
-            <div>
-              <span className="font-medium text-gray-600">Origen:</span>
-              <span className="ml-2">{datosOriginales.origen || datosOriginales.lugarOrigen || 'No especificado'}</span>
-            </div>
-            <div>
-              <span className="font-medium text-gray-600">Destino:</span>
-              <span className="ml-2">{datosOriginales.destino || datosOriginales.lugarDestino || 'No especificado'}</span>
-            </div>
-            <div>
-              <span className="font-medium text-gray-600">Tipo de camión:</span>
-              <span className="ml-2">{datosOriginales.truckType || datosOriginales.tipoVehiculo || 'No especificado'}</span>
-            </div>
-            <div>
-              <span className="font-medium text-gray-600">Método de pago:</span>
-              <span className="ml-2">{datosOriginales.paymentMethod || datosOriginales.metodoPago || 'No especificado'}</span>
-            </div>
-          </div>
-          
-          {datosOriginales.quoteDescription && (
-            <div className="mt-4">
-              <span className="font-medium text-gray-600">Descripción:</span>
-              <p className="mt-1 text-gray-700 bg-white p-3 rounded border">
-                {datosOriginales.quoteDescription || datosOriginales.descripcion}
+        {/* Cards Container */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+          {/* Card Procesos Internos */}
+          <div className="bg-white/95 backdrop-blur-sm rounded-2xl p-8 shadow-xl hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 hover:bg-white">
+            <div className="flex flex-col items-center">
+              {/* Icon */}
+              <div className="w-20 h-20 bg-blue-50 rounded-full flex items-center justify-center mb-6">
+                <img src={gearsIcon} alt="Gears" className="w-12 h-12" />
+              </div>
+              
+              {/* Title */}
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">
+                Procesos internos
+              </h2>
+              
+              {/* Description */}
+              <p className="text-sm text-gray-600 text-center mb-8 leading-relaxed">
+                Gestiona y optimiza tus flujos de trabajo internos, automatiza tareas y
+                mejora la eficiencia operativa
               </p>
-            </div>
-          )}
-        </div>
-
-        <div className="mb-8 p-6 bg-blue-50 border border-blue-200 rounded-lg">
-          <h3 className="text-lg font-semibold mb-4 text-gray-800 flex items-center gap-2">
-            📋 Estado de la Cotización
-          </h3>
-          <div className="space-y-3">
-            {datosOriginales.status === 'pendiente' && (
-              <div className="flex items-center gap-3 text-orange-700">
-                <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
-                <span>Solicitud recibida del cliente - Esperando que agregues precios</span>
-              </div>
-            )}
-            {datosOriginales.status === 'enviada' && (
-              <div className="flex items-center gap-3 text-blue-700">
-                <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-                <span>Cotización enviada al cliente - Esperando respuesta</span>
-              </div>
-            )}
-            {datosOriginales.status === 'aceptada' && (
-              <div className="flex items-center gap-3 text-green-700">
-                <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                <span>✅ Cliente aceptó la cotización - Lista para ejecutar</span>
-              </div>
-            )}
-            {datosOriginales.status === 'rechazada' && (
-              <div className="flex items-center gap-3 text-red-700">
-                <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-                <span>❌ Cliente rechazó la cotización</span>
-              </div>
-            )}
-            
-            <div className="mt-4 p-3 bg-white rounded border text-sm text-gray-600">
-              💡 <strong>Flujo:</strong> Cliente envía solicitud → Tú agregas precios → Envías cotización → Cliente acepta/rechaza
+              
+              {/* Button */}
+              <button 
+                onClick={() => navigate('/dashboard')}
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-6 rounded-lg transition-colors duration-200 shadow-lg hover:shadow-xl"
+              >
+                Ingresar
+              </button>
             </div>
           </div>
-        </div>
 
-        <div className="mb-8">
-          <h2 className="text-lg font-semibold mb-6 text-gray-800 flex items-center gap-2">
-            <span className="text-green-600">💰</span>
-            Precios y Costos (Editables)
-          </h2>
-          
-          <div className="space-y-6">
-            <div className="p-4 border-2 border-green-200 rounded-lg bg-green-50">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                💲 Precio Principal *
-              </label>
-              <input
-                type="text"
-                inputMode="decimal"
-                value={precios.price}
-                onChange={(e) => cambiarPrecio('price', e.target.value)}
-                placeholder="Ingresa el precio principal (requerido para enviar)"
-                className={`w-full px-4 py-3 border rounded-md text-lg font-medium focus:ring-2 focus:ring-green-500 focus:border-green-500 ${
-                  !precios.price || parseFloat(precios.price) <= 0 ? 'border-red-300 bg-red-50' : 'border-gray-300 bg-white'
-                }`}
-              />
-              <div className="flex justify-between items-center mt-1">
-                <p className="text-xs text-gray-500">Valor actual: ${parseFloat(precios.price) || 0}</p>
-                {(!precios.price || parseFloat(precios.price) <= 0) && (
-                  <p className="text-xs text-red-600">⚠️ Precio requerido para enviar</p>
-                )}
+          {/* Card Procesos Externos */}
+          <div className="bg-white/95 backdrop-blur-sm rounded-2xl p-8 shadow-xl hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 hover:bg-white">
+            <div className="flex flex-col items-center">
+              {/* Icon */}
+              <div className="w-20 h-20 bg-purple-50 rounded-full flex items-center justify-center mb-6">
+                <img src={peopleIcon} alt="People" className="w-12 h-12" />
               </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  ⛽ Combustible
-                </label>
-                <input
-                  type="text"
-                  inputMode="decimal"
-                  value={precios.combustible}
-                  onChange={(e) => cambiarPrecio('combustible', e.target.value)}
-                  placeholder="0"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  🛣️ Peajes
-                </label>
-                <input
-                  type="text"
-                  inputMode="decimal"
-                  value={precios.peajes}
-                  onChange={(e) => cambiarPrecio('peajes', e.target.value)}
-                  placeholder="0"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  👨‍💼 Conductor
-                </label>
-                <input
-                  type="text"
-                  inputMode="decimal"
-                  value={precios.conductor}
-                  onChange={(e) => cambiarPrecio('conductor', e.target.value)}
-                  placeholder="0"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  📋 Otros Gastos
-                </label>
-                <input
-                  type="text"
-                  inputMode="decimal"
-                  value={precios.otros}
-                  onChange={(e) => cambiarPrecio('otros', e.target.value)}
-                  placeholder="0"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                />
-              </div>
-
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  🏛️ Impuestos
-                </label>
-                <input
-                  type="text"
-                  inputMode="decimal"
-                  value={precios.impuestos}
-                  onChange={(e) => cambiarPrecio('impuestos', e.target.value)}
-                  placeholder="0"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="mb-8 p-6 bg-blue-50 border border-blue-200 rounded-lg">
-          <h3 className="text-lg font-semibold mb-4 text-gray-800">📊 Resumen de Totales</h3>
-          <div className="space-y-2">
-            <div className="flex justify-between">
-              <span className="text-gray-600">Subtotal (sin impuestos):</span>
-              <span className="font-medium">${subtotal.toFixed(2)}</span>
-            </div>
-            <div className="flex justify-between text-lg font-semibold text-blue-600 border-t pt-2">
-              <span>Total Final:</span>
-              <span>${total.toFixed(2)}</span>
-            </div>
-          </div>
-        </div>
-
-        <div className="flex gap-4 justify-end">
-          <button
-            onClick={guardarBorrador}
-            disabled={guardando}
-            className="flex items-center gap-2 px-6 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
-          >
-            <Save className="w-4 h-4" />
-            {guardando ? 'Guardando...' : 'Guardar Borrador'}
-          </button>
-
-          <button
-            type="button"
-            onClick={enviarCotizacionAlCliente}
-            disabled={guardando || datosOriginales.status === 'enviada'}
-            className="flex items-center gap-2 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium text-lg"
-          >
-            📤 {guardando ? 'Enviando...' : 'Enviar Cotización al Cliente'}
-          </button>
-        </div>
-
-        <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-          <div className="flex items-start gap-3">
-            <div className="text-yellow-600 text-xl">💡</div>
-            <div className="text-sm text-yellow-800">
-              <p className="font-medium mb-2">Diferencia entre botones:</p>
-              <ul className="space-y-1">
-                <li>• <strong>Guardar Borrador:</strong> Solo guarda los precios, no notifica al cliente</li>
-                <li>• <strong>Enviar Cotización:</strong> Guarda los precios Y envía la cotización al cliente</li>
-              </ul>
-              {datosOriginales.status === 'enviada' && (
-                <p className="mt-2 text-blue-700 font-medium">✅ Esta cotización ya fue enviada al cliente</p>
-              )}
+              
+              {/* Title */}
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">
+                Procesos externos
+              </h2>
+              
+              {/* Description */}
+              <p className="text-sm text-gray-600 text-center mb-8 leading-relaxed">
+                Colabora con tu equipo y stakeholders externos, coordina proyectos y mantén
+                comunicación efectiva
+              </p>
+              
+              {/* Button */}
+              <button 
+                onClick={() => navigate('/clientes')}
+                className="w-full bg-purple-600 hover:bg-purple-700 text-white font-medium py-3 px-6 rounded-lg transition-colors duration-200 shadow-lg hover:shadow-xl"
+              >
+                Ingresar
+              </button>
             </div>
           </div>
         </div>
       </div>
     </div>
   );
-}
+};
+
+export default Seleccionar;
