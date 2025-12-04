@@ -57,6 +57,7 @@ const Seleccionar = () => {
               
               {/* Button */}
               <button 
+              onClick={() => navigate('/home')}
                 className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-6 rounded-lg transition-colors duration-200 shadow-lg hover:shadow-xl"
               >
                 Ingresar

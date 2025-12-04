@@ -31,9 +31,11 @@ import AddProveedorForm from "./pages/Provedores/AgregarProovedor";
 import CotizacionesComponent from "./pages/cotizaciones/Cotizaciones";
 import CotizacionForm from "./pages/cotizaciones/EditarCotizacion";
 import Seleccionar from "./pages/ProcesosElegir/Seleccionar"
+import dashboards from "./pages/Dashbord2/dashbords"
 
 // UI
 import SidebarNav from "./components/Nav/Nav";
+import SideNav from "./components/dashbordNav/sideNav";
 import PantallaCarga from "./components/SplashScreen/PantallaCarga";
 
 function App() {
@@ -93,6 +95,25 @@ function App() {
           </PrivateRoute>
         }
       />
+
+       {/* ===================== RUTAS PRIVADAS + LAYOUT CON SIDEBAR ===================== */}
+        <Route
+        element={
+          <PrivateRoute>
+            {/* Layout protegido (sin archivo extra) */}
+            <div className="flex h-screen overflow-hidden">
+              <SideNav />
+              <div className="flex-1 min-h-screen overflow-y-auto">
+                <Outlet />
+              </div>
+            </div>
+          </PrivateRoute>
+        }
+      >
+       <Route path="/home" element={<dashboards />} />
+
+      </Route>
+
 
       {/* ===================== RUTAS PRIVADAS + LAYOUT CON SIDEBAR ===================== */}
       <Route
