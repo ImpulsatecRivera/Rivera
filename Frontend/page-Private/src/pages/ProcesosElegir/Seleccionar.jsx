@@ -11,8 +11,8 @@ const Seleccionar = () => {
 
   return (
     <div className="relative min-h-screen py-12 px-4 overflow-hidden">
-      {/* Spline 3D Background */}
-      <div className="absolute inset-0 z-0">
+      {/* Spline 3D Background - Interactivo */}
+      <div className="absolute inset-0 z-0 pointer-events-auto">
         <Spline
           scene="https://prod.spline.design/ZK5t9FNLWV1UHl5N/scene.splinecode"
           style={{ width: '100%', height: '100%' }}
@@ -20,10 +20,10 @@ const Seleccionar = () => {
       </div>
 
       {/* Overlay para mejorar legibilidad */}
-      <div className="absolute inset-0 z-0 bg-gradient-to-b from-gray-900/40 via-gray-900/30 to-gray-900/40"></div>
+      <div className="absolute inset-0 z-0 bg-gradient-to-b from-gray-900/40 via-gray-900/30 to-gray-900/40 pointer-events-none"></div>
 
       {/* Content */}
-      <div className="relative z-10 max-w-6xl mx-auto">
+      <div className="relative z-10 max-w-6xl mx-auto pointer-events-auto">
         {/* Header */}
         <div className="text-center mb-16">
           <h1 className="text-2xl md:text-3xl font-normal text-white mb-6 drop-shadow-lg">
@@ -57,7 +57,6 @@ const Seleccionar = () => {
               
               {/* Button */}
               <button 
-                onClick={() => navigate('/dashboard')}
                 className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-6 rounded-lg transition-colors duration-200 shadow-lg hover:shadow-xl"
               >
                 Ingresar
@@ -86,7 +85,7 @@ const Seleccionar = () => {
               
               {/* Button */}
               <button 
-                onClick={() => navigate('/clientes')}
+                onClick={() => navigate('/dashboard')}
                 className="w-full bg-purple-600 hover:bg-purple-700 text-white font-medium py-3 px-6 rounded-lg transition-colors duration-200 shadow-lg hover:shadow-xl"
               >
                 Ingresar
