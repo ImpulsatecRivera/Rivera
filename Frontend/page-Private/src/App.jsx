@@ -30,7 +30,7 @@ import ProviderManagementInterface from "./pages/Provedores/Prooveedores";
 import AddProveedorForm from "./pages/Provedores/AgregarProovedor";
 import CotizacionesComponent from "./pages/cotizaciones/Cotizaciones";
 import CotizacionForm from "./pages/cotizaciones/EditarCotizacion";
-import Seleccionar from "./pages/ProcesosElegir/SeleccionProcesos"
+import Seleccionar from "./pages/ProcesosElegir/Seleccionar"
 
 // UI
 import SidebarNav from "./components/Nav/Nav";
