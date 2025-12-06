@@ -31,7 +31,7 @@ import AddProveedorForm from "./pages/Provedores/AgregarProovedor";
 import CotizacionesComponent from "./pages/cotizaciones/Cotizaciones";
 import CotizacionForm from "./pages/cotizaciones/EditarCotizacion";
 import Seleccionar from "./pages/ProcesosElegir/Seleccionar"
-import dashboards from "./pages/Dashbord2/dashbords"
+import Dashboards from "./pages/Dashbord2/dashbords"
 
 // UI
 import SidebarNav from "./components/Nav/Nav";
@@ -110,7 +110,7 @@ function App() {
           </PrivateRoute>
         }
       >
-       <Route path="/home" element={<dashboards />} />
+       <Route path="/home" element={<Dashboards/>} />
 
       </Route>
 
