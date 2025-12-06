@@ -34,6 +34,7 @@ app.use(cookieParser());
 app.use(cors({
   origin: [
     "https://verdant-sunshine-da6504.netlify.app",
+    "http://localhost:5173",
     /^exp:\/\/.*$/,
       /^http:\/\/.*\.exp\.direct.*$/,
       /^https:\/\/.*\.exp\.direct.*$/,
