@@ -1,17 +1,35 @@
-import React, { useState } from 'react';
-import { Home, Clock, BarChart3, ShoppingBag, FileText, Users } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Home, Clock, BarChart3, Wrench, FileText, Users } from 'lucide-react';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 const SidebarNav = () => {
-  const [activeItem, setActiveItem] = useState('reports');
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [activeItem, setActiveItem] = useState('home');
 
   const navItems = [
     { id: 'home', route: '/home', icon: Home },
-    { id: 'time', icon: Clock },
-    { id: 'reports', icon: BarChart3 },
-    { id: 'products', icon: ShoppingBag },
-    { id: 'documents', icon: FileText },
-    { id: 'users', icon: Users }
+    { id: 'time', route: '/time', icon: Clock },
+    { id: 'reports', route: '/reports', icon: BarChart3 },
+    { id: 'maintenance', route: '/mantenimientos', icon: Wrench },
+    { id: 'documents', route: '/documents', icon: FileText },
+    { id: 'users', route: '/users', icon: Users }
   ];
+
+  // Actualizar el item activo basado en la ruta actual
+  useEffect(() => {
+    const currentItem = navItems.find(item => item.route === location.pathname);
+    if (currentItem) {
+      setActiveItem(currentItem.id);
+    }
+  }, [location.pathname]);
+
+  const handleNavigation = (item) => {
+    if (item.route) {
+      setActiveItem(item.id);
+      navigate(item.route);
+    }
+  };
 
   return (
     <div className="h-screen bg-white flex">
@@ -67,14 +85,14 @@ const SidebarNav = () => {
         <div className="relative z-10 flex flex-col items-center h-full py-12">
           {/* Navigation Items */}
           <nav className="flex flex-col gap-10 mt-4">
-            {navItems.map((item, index) => {
+            {navItems.map((item) => {
               const Icon = item.icon;
               const isActive = activeItem === item.id;
               
               return (
                 <button
                   key={item.id}
-                  onClick={() => setActiveItem(item.id)}
+                  onClick={() => handleNavigation(item)}
                   className={`
                     w-11 h-11 rounded-xl flex items-center justify-center
                     transition-all duration-300 relative
@@ -83,6 +101,7 @@ const SidebarNav = () => {
                       : 'hover:bg-white hover:bg-opacity-15'
                     }
                   `}
+                  title={item.id}
                 >
                   <Icon 
                     size={24} 
