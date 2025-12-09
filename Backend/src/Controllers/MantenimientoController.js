@@ -20,10 +20,24 @@ mantenimientoCon.getMantenimineto = async(req, res) => {
             });
         }
         
+        // Formatear cada mantenimiento para incluir mes y año
+        const mantenimientosFormateados = manto.map(m => ({
+            _id: m._id,
+            fecha_mantenimiento: m.fecha_mantenimiento,
+            mes: m.mes,
+            ano: m.ano,
+            tipo_de_mantenimiento: m.tipo_de_mantenimiento,
+            descripcion: m.descripcion,
+            detalles: m.detalles,
+            ciculatioCard: m.ciculatioCard,
+            createdAt: m.createdAt,
+            updatedAt: m.updatedAt
+        }));
+        
         return res.status(200).json({
             message: "Lista de mantenimiento de camiones",
-            count: manto.length,
-            data: manto
+            count: mantenimientosFormateados.length,
+            data: mantenimientosFormateados
         });
     } catch (error) {
         res.status(500).json({
@@ -68,7 +82,7 @@ mantenimientoCon.obtenerMantoId = async(req, res) => {
             return res.status(400).json({
                 success: false,
                 message: "Número de identificación del mantenimiento inválido"
-            });
+            });         
         }
 
         const manto = await MantenimientoCamiones.findById(id)

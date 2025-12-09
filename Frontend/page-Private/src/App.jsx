@@ -32,6 +32,7 @@ import CotizacionesComponent from "./pages/cotizaciones/Cotizaciones";
 import CotizacionForm from "./pages/cotizaciones/EditarCotizacion";
 import Seleccionar from "./pages/ProcesosElegir/Seleccionar"
 import Dashboards from "./pages/Dashbord2/dashbords"
+import MantenimientosTable from "./pages/MantenimientosCamiones/PantallaPrincipalMantos"
 
 // UI
 import SidebarNav from "./components/Nav/Nav";
@@ -111,7 +112,7 @@ function App() {
         }
       >
        <Route path="/home" element={<Dashboards/>} />
-
+        <Route path="/mantenimientos" element={<MantenimientosTable/>} />
       </Route>
 
 
