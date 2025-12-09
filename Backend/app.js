@@ -15,6 +15,8 @@ import motoristasRoutes from "./src/Routes/motoristaRoutes.js";
 import proveedoresRoutes from "./src/Routes/proveedoresRoutes.js";
 import autoUpdateRoutes from "./src/Routes/autoUpdateRoutes.js";
 import callRoutes from "./src/Routes/callRoutes.js"
+import MantoRouter from "./src/Routes/MantenimientoRoutes.js"
+import Reportesroutes from "./src/Routes/ReportesRoutes.js"
 import swaggerUi from "swagger-ui-express";
 import fs from "fs";
 import path from "path";
@@ -80,5 +82,7 @@ app.use("/api/motoristas", motoristasRoutes);
 app.use("/api/proveedores", proveedoresRoutes);
 app.use("/api/auto-update", autoUpdateRoutes);
 app.use("/api/call",callRoutes);
+app.use("/api/mantenimientos",MantoRouter)
+app.use("/api/reporte",Reportesroutes)
 
 export default app;
