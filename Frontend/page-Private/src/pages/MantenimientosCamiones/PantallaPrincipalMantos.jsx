@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Search, ChevronLeft, ChevronRight, Loader2, Download, Edit, Trash2 } from "lucide-react";
+import { Search, ChevronLeft, ChevronRight, Loader2, Download, Edit, Trash2, Plus } from "lucide-react";
+import { useNavigate } from 'react-router-dom';
 import { config } from '../../config';
 import MantenimientoDetailModal from "./VerDetalleManto"
 
 const MantenimientosTable = () => {
+  const navigate = useNavigate();
   const [currentPage, setCurrentPage] = useState(1);
   const [sortBy, setSortBy] = useState('newest');
   const [mantenimientos, setMantenimientos] = useState([]);
@@ -150,38 +152,54 @@ const MantenimientosTable = () => {
         </div>
 
         {/* Search and Sort Bar */}
-        <div className="bg-white rounded-2xl shadow-md mb-6 p-5 flex items-center justify-between border border-gray-100">
-          <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
-            <input
-              type="text"
-              placeholder="Buscar por descripción, tipo o placa..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-gray-700"
-            />
-          </div>
+        <div className="bg-white rounded-2xl shadow-md mb-6 p-5 border border-gray-100">
+          <div className="flex items-center justify-between gap-4 flex-wrap">
+            {/* Search Input */}
+            <div className="relative flex-1 min-w-[300px]">
+              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+              <input
+                type="text"
+                placeholder="Buscar por descripción, tipo o placa..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-gray-700"
+              />
+            </div>
 
-          <div className="flex items-center gap-3">
-            <span className="text-gray-600 text-sm font-medium">Ordenar por:</span>
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
-              className="border border-gray-200 rounded-xl px-4 py-3 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white text-gray-700 cursor-pointer"
-            >
-              <option value="newest">Más reciente</option>
-              <option value="oldest">Más antiguo</option>
-            </select>
-          </div>
-          <div className="flex justify-end mb-3">
-            <button
-              onClick={() => window.open(`${config.api.API_URL}/reporte/todos`, "_blank")}
-              className="px-4 py-2 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-all font-semibold shadow-sm"
-            >
-              📄 Descargar todos los reportes
-            </button>
-          </div>
+            {/* Actions Group */}
+            <div className="flex items-center gap-3 flex-wrap">
+              {/* Sort Dropdown */}
+              <div className="flex items-center gap-2">
+                <span className="text-gray-600 text-sm font-medium whitespace-nowrap">Ordenar por:</span>
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
+                  className="border border-gray-200 rounded-xl px-4 py-3 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white text-gray-700 cursor-pointer"
+                >
+                  <option value="newest">Más reciente</option>
+                  <option value="oldest">Más antiguo</option>
+                </select>
+              </div>
 
+              {/* Download Report Button */}
+              <button
+                onClick={() => window.open(`${config.api.API_URL}/reporte/todos`, "_blank")}
+                className="flex items-center gap-2 px-4 py-3 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 transition-all font-semibold shadow-sm"
+              >
+                <Download size={18} />
+                Descargar Reportes
+              </button>
+
+              {/* Add Maintenance Button */}
+              <button
+                onClick={() => navigate('/mantenimientos/agregar-mantenimiento')}
+                className="flex items-center gap-2 px-5 py-3 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-all font-semibold shadow-lg hover:shadow-xl transform hover:scale-105 duration-200"
+              >
+                <Plus size={20} strokeWidth={2.5} />
+                Agregar Mantenimiento
+              </button>
+            </div>
+          </div>
         </div>
 
         {/* Table */}
@@ -263,12 +281,13 @@ const MantenimientosTable = () => {
         </button>
 
         {/* Editar */}
-        <button
-          onClick={() => alert("Abrir modal de edición")}
-          className="p-2 rounded-lg bg-yellow-50 hover:bg-yellow-100 text-yellow-600 transition"
-        >
-          <Edit size={18} />
-        </button>
+       <button
+  onClick={() => navigate(`/mantenimientos/editar/${mant._id}`)}
+  className="p-2 rounded-lg bg-yellow-50 hover:bg-yellow-100 text-yellow-600 transition"
+>
+  <Edit size={18} />
+</button>
+
 
         {/* Eliminar */}
         <button
