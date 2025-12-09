@@ -15,6 +15,7 @@ import motoristasRoutes from "./src/Routes/motoristaRoutes.js";
 import proveedoresRoutes from "./src/Routes/proveedoresRoutes.js";
 import autoUpdateRoutes from "./src/Routes/autoUpdateRoutes.js";
 import callRoutes from "./src/Routes/callRoutes.js"
+import cajachicaRoutes from "./src/Routes/cajaChicaRoutes.js";
 import swaggerUi from "swagger-ui-express";
 import fs from "fs";
 import path from "path";
@@ -78,6 +79,8 @@ app.use("/api/camiones", camionesRoutes);
 app.use("/api/empleados", empleadoRoutes);
 app.use("/api/motoristas", motoristasRoutes);
 app.use("/api/proveedores", proveedoresRoutes);
+app.use("/api/caja-chica", cajachicaRoutes);
+
 app.use("/api/auto-update", autoUpdateRoutes);
 app.use("/api/call",callRoutes);
 
