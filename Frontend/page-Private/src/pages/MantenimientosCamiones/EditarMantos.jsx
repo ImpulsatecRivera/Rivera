@@ -1,17 +1,19 @@
 import React, { useEffect, useState } from "react";
-import axios from "axios";
+import { useParams, useNavigate } from "react-router-dom";
+import { config } from '../../config'; // Ajusta la ruta según tu estructura
 import {
   Box,
   TextField,
   Typography,
   Button,
-  Divider,
-  IconButton
+  IconButton,
+  Paper
 } from "@mui/material";
+import { Add, Delete, Close, ArrowBack } from "@mui/icons-material";
 
-import { Add, Delete } from "@mui/icons-material";
-
-export default function EditMantenimiento({ id, onClose }) {
+export default function EditMantenimiento({ onClose }) {
+  const { id } = useParams(); // Obtener el ID de la URL
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [manto, setManto] = useState({
     fecha_mantenimiento: "",
@@ -22,22 +24,63 @@ export default function EditMantenimiento({ id, onClose }) {
 
   // Obtener datos
   useEffect(() => {
-    axios.get(`/api/mantenimientos/${id}`).then((res) => {
-      setManto(res.data.data);
-      setLoading(false);
-    });
-  }, [id]);
+    const url = `${config.api.API_URL}/mantenimientos/${id}`;
+    console.log('🔍 Intentando cargar desde URL:', url);
+    console.log('🔍 ID recibido:', id);
+    
+    fetch(url)
+      .then((response) => {
+        console.log('✅ Respuesta del servidor:', response);
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        return response.json();
+      })
+      .then((result) => {
+        console.log('📦 Resultado completo:', result);
+        
+        // Intentar diferentes estructuras de respuesta
+        const data = result.data || result;
+        
+        if (!data || typeof data !== 'object') {
+          console.error('❌ No se encontraron datos válidos en la respuesta');
+          alert('No se pudieron cargar los datos del mantenimiento');
+          setLoading(false);
+          return;
+        }
+
+        console.log('✅ Datos extraídos correctamente:', data);
+        
+        setManto({
+          fecha_mantenimiento: data.fecha_mantenimiento || "",
+          tipo_de_mantenimiento: data.tipo_de_mantenimiento || "",
+          descripcion: data.descripcion || "",
+          detalles: Array.isArray(data.detalles) ? data.detalles : []
+        });
+        setLoading(false);
+      })
+      .catch((error) => {
+        console.error('❌ Error al cargar mantenimiento:', error);
+        console.error('❌ URL intentada:', url);
+        alert(`Error al cargar los datos del mantenimiento.\n${error.message}`);
+        setLoading(false);
+      });
+  }, [id, navigate]);
 
   // Agregar detalle
   const addDetalle = () => {
+    const detallesActuales = manto?.detalles || [];
     setManto({
       ...manto,
-      detalles: [...manto.detalles, { concepto: "", cantidad: 1, precioUnitario: 0 }]
+      detalles: [...detallesActuales, { concepto: "", cantidad: 1, precioUnitario: 0 }]
     });
   };
 
   // Cambiar valor detalle
   const changeDetalle = (index, field, value) => {
+    if (!manto?.detalles) return;
     const nuevos = [...manto.detalles];
     nuevos[index][field] = value;
     setManto({ ...manto, detalles: nuevos });
@@ -45,149 +88,389 @@ export default function EditMantenimiento({ id, onClose }) {
 
   // Eliminar detalle
   const removeDetalle = (index) => {
+    if (!manto?.detalles) return;
     const nuevos = manto.detalles.filter((_, i) => i !== index);
     setManto({ ...manto, detalles: nuevos });
+  };
+
+  // Calcular costo total
+  const calcularTotal = () => {
+    if (!manto?.detalles || !Array.isArray(manto.detalles)) return 0;
+    return manto.detalles.reduce((acc, d) => {
+      return acc + (Number(d.cantidad) || 0) * (Number(d.precioUnitario) || 0);
+    }, 0);
   };
 
   // Guardar cambios
   const submitUpdate = async () => {
     try {
-      await axios.put(`/api/mantenimientos/${id}`, manto);
-      alert("Mantenimiento actualizado!");
-      onClose && onClose();
-    } catch {
-      alert("Error al actualizar");
+      // Preparar los detalles con subtotales calculados
+      const detallesConSubtotal = (manto?.detalles || []).map(detalle => ({
+        concepto: detalle.concepto,
+        cantidad: Number(detalle.cantidad) || 1,
+        precioUnitario: Number(detalle.precioUnitario) || 0,
+        subTotal: (Number(detalle.cantidad) || 1) * (Number(detalle.precioUnitario) || 0)
+      }));
+
+      const payload = {
+        fecha_mantenimiento: manto.fecha_mantenimiento,
+        tipo_de_mantenimiento: manto.tipo_de_mantenimiento,
+        descripcion: manto.descripcion,
+        detalles: detallesConSubtotal
+      };
+
+      const response = await fetch(`${config.api.API_URL}/mantenimientos/${id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload)
+      });
+
+      const result = await response.json();
+      
+      if (response.ok && result.success) {
+        alert("✅ Mantenimiento actualizado exitosamente!");
+        navigate('/mantenimientos'); // Volver a la lista de mantenimientos
+      } else {
+        throw new Error(result.message || 'Error al actualizar');
+      }
+    } catch (error) {
+      console.error('Error al actualizar:', error);
+      
+      if (error.message) {
+        alert(`❌ Error: ${error.message}`);
+      } else {
+        alert("❌ Error al actualizar el mantenimiento");
+      }
     }
   };
 
-  if (loading) return <div>Cargando...</div>;
+  if (loading) {
+    return (
+      <Box sx={{ 
+        display: 'flex', 
+        flexDirection: 'column',
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        minHeight: '400px',
+        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+      }}>
+        <Typography sx={{ color: '#666', fontSize: '16px', mb: 2 }}>Cargando mantenimiento...</Typography>
+        <Typography sx={{ color: '#999', fontSize: '14px' }}>ID: {id}</Typography>
+      </Box>
+    );
+  }
 
   return (
     <Box
       sx={{
         maxWidth: 900,
-        margin: "25px auto",
-        padding: "30px",
-        borderRadius: "20px",
-        backdropFilter: "blur(12px)",
-        boxShadow: "0px 0px 30px rgba(0,0,0,0.25)",
-        background: "rgba(25,25,25,0.60)",
-        color: "#fff"
+        margin: "0 auto",
+        padding: "32px",
+        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
       }}
     >
-      <Typography variant="h4" sx={{ mb: 2 }}>
-        Editar Mantenimiento
-      </Typography>
+      {/* Header */}
+      <Box sx={{ 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: 'center',
+        mb: 4
+      }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          <IconButton 
+            onClick={() => navigate('/mantenimientos')} 
+            sx={{ 
+              color: '#666',
+              '&:hover': { backgroundColor: '#f3f4f6' }
+            }}
+          >
+            <ArrowBack />
+          </IconButton>
+          <Typography sx={{ 
+            fontSize: '24px',
+            fontWeight: 600,
+            color: '#1a1a1a',
+            letterSpacing: '-0.5px'
+          }}>
+            Editar Mantenimiento
+          </Typography>
+        </Box>
+      </Box>
 
-      <Divider sx={{ borderColor: "#777", mb: 3 }} />
+      {/* Formulario Principal */}
+      <Paper sx={{ 
+        p: 3, 
+        mb: 3,
+        borderRadius: '12px',
+        border: '1px solid #e5e7eb',
+        boxShadow: 'none'
+      }}>
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+          {/* Fecha */}
+          <Box>
+            <Typography sx={{ 
+              fontSize: '14px',
+              fontWeight: 500,
+              color: '#374151',
+              mb: 1
+            }}>
+              Fecha de Mantenimiento
+            </Typography>
+            <TextField
+              fullWidth
+              type="date"
+              value={manto?.fecha_mantenimiento ? new Date(manto.fecha_mantenimiento).toISOString().substring(0,10) : ""}
+              onChange={(e) => setManto({ ...manto, fecha_mantenimiento: e.target.value })}
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: '8px',
+                  backgroundColor: '#f9fafb',
+                  fontSize: '14px',
+                  '& fieldset': { borderColor: '#e5e7eb' },
+                  '&:hover fieldset': { borderColor: '#d1d5db' },
+                  '&.Mui-focused fieldset': { borderColor: '#6366f1', borderWidth: '2px' }
+                }
+              }}
+            />
+          </Box>
 
-      {/* Fecha */}
-      <TextField
-        fullWidth
-        label="Fecha de Mantenimiento"
-        type="date"
-value={manto?.fecha_mantenimiento ? new Date(manto.fecha_mantenimiento).toISOString().substring(0,10) : ""}
-        onChange={(e) => setManto({ ...manto, fecha_mantenimiento: e.target.value })}
-        sx={{ mb: 3 }}
-        InputLabelProps={{ style: { color: "#ddd" } }}
-        InputProps={{ style: { color: "#fff" } }}
-      />
+          {/* Tipo */}
+          <Box>
+            <Typography sx={{ 
+              fontSize: '14px',
+              fontWeight: 500,
+              color: '#374151',
+              mb: 1
+            }}>
+              Tipo de Mantenimiento
+            </Typography>
+            <TextField
+              fullWidth
+              placeholder="Ej: Correctivo, Preventivo, Rines"
+              value={manto?.tipo_de_mantenimiento || ""}
+              onChange={(e) => setManto({ ...manto, tipo_de_mantenimiento: e.target.value })}
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: '8px',
+                  backgroundColor: '#f9fafb',
+                  fontSize: '14px',
+                  '& fieldset': { borderColor: '#e5e7eb' },
+                  '&:hover fieldset': { borderColor: '#d1d5db' },
+                  '&.Mui-focused fieldset': { borderColor: '#6366f1', borderWidth: '2px' }
+                }
+              }}
+            />
+          </Box>
 
-      {/* Tipo */}
-      <TextField
-        fullWidth
-        label="Tipo de Mantenimiento"
-value={manto?.tipo_de_mantenimiento || ""}
-        onChange={(e) => setManto({ ...manto, tipo_de_mantenimiento: e.target.value })}
-        sx={{ mb: 3 }}
-        InputLabelProps={{ style: { color: "#ddd" } }}
-        InputProps={{ style: { color: "#fff" } }}
-      />
+          {/* Descripción */}
+          <Box>
+            <Typography sx={{ 
+              fontSize: '14px',
+              fontWeight: 500,
+              color: '#374151',
+              mb: 1
+            }}>
+              Descripción
+            </Typography>
+            <TextField
+              fullWidth
+              multiline
+              rows={3}
+              placeholder="Describe los detalles del mantenimiento..."
+              value={manto?.descripcion || ""}
+              onChange={(e) => setManto({ ...manto, descripcion: e.target.value })}
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: '8px',
+                  backgroundColor: '#f9fafb',
+                  fontSize: '14px',
+                  '& fieldset': { borderColor: '#e5e7eb' },
+                  '&:hover fieldset': { borderColor: '#d1d5db' },
+                  '&.Mui-focused fieldset': { borderColor: '#6366f1', borderWidth: '2px' }
+                }
+              }}
+            />
+          </Box>
+        </Box>
+      </Paper>
 
-      {/* Descripcion */}
-      <TextField
-        fullWidth
-        label="Descripción"
-        multiline
-        rows={3}
-value={manto?.descripcion || ""}
-        onChange={(e) => setManto({ ...manto, descripcion: e.target.value })}
-        sx={{ mb: 3 }}
-        InputLabelProps={{ style: { color: "#ddd" } }}
-        InputProps={{ style: { color: "#fff" } }}
-      />
+      {/* Sección de Detalles */}
+      <Paper sx={{ 
+        p: 3,
+        borderRadius: '12px',
+        border: '1px solid #e5e7eb',
+        boxShadow: 'none'
+      }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+          <Typography sx={{ 
+            fontSize: '18px',
+            fontWeight: 600,
+            color: '#1a1a1a'
+          }}>
+            Detalles del mantenimiento
+          </Typography>
+          <Button
+            startIcon={<Add />}
+            onClick={addDetalle}
+            sx={{
+              textTransform: 'none',
+              fontSize: '14px',
+              fontWeight: 500,
+              color: '#6366f1',
+              borderColor: '#6366f1',
+              borderRadius: '8px',
+              '&:hover': {
+                backgroundColor: '#eef2ff',
+                borderColor: '#6366f1'
+              }
+            }}
+            variant="outlined"
+          >
+            Agregar detalle
+          </Button>
+        </Box>
 
-      <Divider sx={{ borderColor: "#777", mb: 2 }} />
+        {/* Lista de Detalles */}
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          {(manto?.detalles ?? []).map((d, i) => (
+            <Box
+              key={i}
+              sx={{
+                display: 'grid',
+                gridTemplateColumns: '2fr 100px 120px 40px',
+                gap: 2,
+                alignItems: 'start',
+                p: 2,
+                backgroundColor: '#f9fafb',
+                borderRadius: '8px',
+                border: '1px solid #e5e7eb'
+              }}
+            >
+              <TextField
+                placeholder="Concepto"
+                value={d?.concepto || ""}
+                onChange={(e) => changeDetalle(i, "concepto", e.target.value)}
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: '6px',
+                    backgroundColor: '#fff',
+                    fontSize: '14px',
+                    '& fieldset': { borderColor: '#e5e7eb' },
+                    '&:hover fieldset': { borderColor: '#d1d5db' },
+                    '&.Mui-focused fieldset': { borderColor: '#6366f1', borderWidth: '2px' }
+                  }
+                }}
+              />
+              <TextField
+                placeholder="Cant."
+                type="number"
+                value={d?.cantidad || 1}
+                onChange={(e) => changeDetalle(i, "cantidad", e.target.value)}
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: '6px',
+                    backgroundColor: '#fff',
+                    fontSize: '14px',
+                    '& fieldset': { borderColor: '#e5e7eb' },
+                    '&:hover fieldset': { borderColor: '#d1d5db' },
+                    '&.Mui-focused fieldset': { borderColor: '#6366f1', borderWidth: '2px' }
+                  }
+                }}
+              />
+              <TextField
+                placeholder="Precio"
+                type="number"
+                value={d?.precioUnitario || 0}
+                onChange={(e) => changeDetalle(i, "precioUnitario", e.target.value)}
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: '6px',
+                    backgroundColor: '#fff',
+                    fontSize: '14px',
+                    '& fieldset': { borderColor: '#e5e7eb' },
+                    '&:hover fieldset': { borderColor: '#d1d5db' },
+                    '&.Mui-focused fieldset': { borderColor: '#6366f1', borderWidth: '2px' }
+                  }
+                }}
+              />
+              <IconButton 
+                onClick={() => removeDetalle(i)}
+                sx={{ 
+                  color: '#ef4444',
+                  '&:hover': { backgroundColor: '#fee2e2' }
+                }}
+              >
+                <Delete />
+              </IconButton>
+            </Box>
+          ))}
+        </Box>
 
-      {/* DETALLES */}
-      <Typography variant="h6" sx={{ mb: 2 }}>Detalles del mantenimiento</Typography>
+        {/* Total */}
+        {manto?.detalles && manto.detalles.length > 0 && (
+          <Box sx={{ 
+            display: 'flex', 
+            justifyContent: 'flex-end', 
+            mt: 3,
+            pt: 3,
+            borderTop: '1px solid #e5e7eb'
+          }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <Typography sx={{ fontSize: '16px', fontWeight: 500, color: '#6b7280' }}>
+                Total:
+              </Typography>
+              <Typography sx={{ fontSize: '24px', fontWeight: 700, color: '#1a1a1a' }}>
+                ${calcularTotal().toFixed(2)}
+              </Typography>
+            </Box>
+          </Box>
+        )}
+      </Paper>
 
-      {(manto?.detalles ?? []).map((d, i) => (
-  <Box
-    key={i}
-    sx={{
-      display: "grid",
-      gridTemplateColumns: "1fr 100px 140px 40px",
-      gap: 2,
-      mb: 2,
-      alignItems: "center"
-    }}
-  >
-    <TextField
-      label="Concepto"
-      value={d?.concepto || ""}
-      onChange={(e) => changeDetalle(i, "concepto", e.target.value)}
-      InputLabelProps={{ style: { color: "#ccc" } }}
-      InputProps={{ style: { color: "#fff" } }}
-    />
-    <TextField
-      label="Cantidad"
-      type="number"
-      value={d?.cantidad || 1}
-      onChange={(e) => changeDetalle(i, "cantidad", e.target.value)}
-      InputLabelProps={{ style: { color: "#ccc" } }}
-      InputProps={{ style: { color: "#fff" } }}
-    />
-    <TextField
-      label="Precio Unit."
-      type="number"
-      value={d?.precioUnitario || 0}
-      onChange={(e) => changeDetalle(i, "precioUnitario", e.target.value)}
-      InputLabelProps={{ style: { color: "#ccc" } }}
-      InputProps={{ style: { color: "#fff" } }}
-    />
-
-    <IconButton color="error" onClick={() => removeDetalle(i)}>
-      <Delete />
-    </IconButton>
-  </Box>
-))}
-
-
-      <Button
-        variant="outlined"
-        startIcon={<Add />}
-        onClick={addDetalle}
-        sx={{ mt: 1, mb: 3, borderColor: "#999", color: "#fff" }}
-      >
-        Agregar detalle
-      </Button>
-
-      <Divider sx={{ borderColor: "#777", mb: 3 }} />
-
-      <Button
-        fullWidth
-        variant="contained"
-        sx={{
-          background: "linear-gradient(45deg, #0077ff, #009dff)",
-          fontSize: "18px",
-          padding: "10px",
-          borderRadius: "12px"
-        }}
-        onClick={submitUpdate}
-      >
-        Guardar cambios
-      </Button>
+      {/* Botones de Acción */}
+      <Box sx={{ mt: 4, display: 'flex', gap: 2 }}>
+        <Button
+          fullWidth
+          onClick={() => navigate('/mantenimientos')}
+          sx={{
+            textTransform: 'none',
+            fontSize: '16px',
+            fontWeight: 500,
+            py: 1.5,
+            borderRadius: '8px',
+            color: '#6b7280',
+            border: '1px solid #e5e7eb',
+            '&:hover': {
+              backgroundColor: '#f9fafb',
+              borderColor: '#d1d5db'
+            }
+          }}
+        >
+          Cancelar
+        </Button>
+        <Button
+          fullWidth
+          variant="contained"
+          onClick={submitUpdate}
+          sx={{
+            textTransform: 'none',
+            fontSize: '16px',
+            fontWeight: 600,
+            py: 1.5,
+            borderRadius: '8px',
+            backgroundColor: '#6366f1',
+            boxShadow: 'none',
+            '&:hover': {
+              backgroundColor: '#4f46e5',
+              boxShadow: '0 4px 6px -1px rgba(99, 102, 241, 0.3)'
+            }
+          }}
+        >
+          Guardar cambios
+        </Button>
+      </Box>
     </Box>
   );
 }
