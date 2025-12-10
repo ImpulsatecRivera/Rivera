@@ -33,6 +33,8 @@ import CotizacionForm from "./pages/cotizaciones/EditarCotizacion";
 import Seleccionar from "./pages/ProcesosElegir/Seleccionar"
 import Dashboards from "./pages/Dashbord2/dashbords"
 import MantenimientosTable from "./pages/MantenimientosCamiones/PantallaPrincipalMantos"
+import CreateMantenimientoPage from "./pages/MantenimientosCamiones/AgregarNuevoManto"
+import EditMantenimiento from "./pages/MantenimientosCamiones/EditarMantos"
 
 // UI
 import SidebarNav from "./components/Nav/Nav";
@@ -52,6 +54,8 @@ function App() {
     "/camiones/editarCamion/:id",
     "/cotizaciones/CotizacionForm",
     "/viajes/maps",
+    "/mantenimientos/agregar-mantenimiento",
+    "/mantenimientos/editar/:id"
   ];
 
   useEffect(() => {
@@ -113,6 +117,9 @@ function App() {
       >
        <Route path="/home" element={<Dashboards/>} />
         <Route path="/mantenimientos" element={<MantenimientosTable/>} />
+        <Route path="/mantenimientos/agregar-mantenimiento" element={<CreateMantenimientoPage/>} />
+        <Route path="/mantenimientos/editar/:id" element={<EditMantenimiento/>} />
+
       </Route>
 
 

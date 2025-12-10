@@ -134,13 +134,13 @@ mantenimientoCon.obtenerMantoId = async(req, res) => {
             descripcion: manto.descripcion,
             
             // Detalles de costos
-            detalles: manto.detalles.map(detalle => ({
-                concepto: detalle.concepto,
-                cantidad: detalle.cantidad,
-                precioUnitario: detalle.precioUnitario,
-                subtotal: detalle.subTotal,
-                subtotalFormateado: `$${detalle.subTotal.toFixed(2)}`
-            })),
+           detalles: manto.detalles.map(detalle => ({
+    concepto: detalle.concepto,
+    cantidad: detalle.cantidad,
+    precioUnitario: detalle.precioUnitario,
+    subTotal: detalle.subTotal,  // ← Cambiar a camelCase
+    subtotalFormateado: `$${detalle.subTotal.toFixed(2)}`
+})),
             
             // Resumen financiero
             resumen: {
