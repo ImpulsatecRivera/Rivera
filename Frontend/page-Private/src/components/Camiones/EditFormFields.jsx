@@ -1,5 +1,5 @@
 import React from 'react';
-import { ChevronDown, Building, User, Truck, Calendar, FileText, CreditCard } from 'lucide-react';
+import { ChevronDown, Building, User, Truck, Calendar, FileText, CreditCard, AlertCircle } from 'lucide-react';
 
 const EditFormFields = ({
   formData,
@@ -31,6 +31,43 @@ const EditFormFields = ({
       </span>
     );
   };
+
+  // Estados disponibles con sus colores
+  const estadosDisponibles = [
+    { 
+      value: 'DISPONIBLE', 
+      label: 'Disponible', 
+      color: 'bg-green-100 text-green-700 border-green-300',
+      dotColor: 'bg-green-500',
+      icon: '✓'
+    },
+    { 
+      value: 'EN RUTA', 
+      label: 'En Ruta', 
+      color: 'bg-blue-100 text-blue-700 border-blue-300',
+      dotColor: 'bg-blue-500',
+      icon: '→'
+    },
+    { 
+      value: 'MANTENIMIENTO', 
+      label: 'Mantenimiento', 
+      color: 'bg-yellow-100 text-yellow-700 border-yellow-300',
+      dotColor: 'bg-yellow-500',
+      icon: '⚙'
+    },
+    { 
+      value: 'NO DISPONIBLE', 
+      label: 'No disponible', 
+      color: 'bg-red-100 text-red-700 border-red-300',
+      dotColor: 'bg-red-500',
+      icon: '✕'
+    }
+  ];
+
+  // Obtener el estado seleccionado
+  const estadoSeleccionado = estadosDisponibles.find(
+    e => e.value === formData.estado || e.value.toLowerCase().replace(/\s+/g, '_') === formData.estado?.toLowerCase()
+  ) || estadosDisponibles[0];
 
   return (
     <div className="grid grid-cols-2 gap-6">
@@ -165,6 +202,33 @@ const EditFormFields = ({
         </span>
       </div>
 
+      {/* NUEVO: Estado del camión */}
+      <div>
+        <label className={labelClassName}>
+          <AlertCircle className="w-4 h-4 text-[#5F8EAD]" />
+          <span>Estado del camión *</span>
+        </label>
+        <div className="relative">
+          <select
+            value={formData.estado || 'DISPONIBLE'}
+            onChange={(e) => handleChange('estado', e.target.value)}
+            className={`${inputClassName} appearance-none pr-10 font-medium cursor-pointer`}
+            disabled={disabled}
+          >
+            {estadosDisponibles.map((estado) => (
+              <option key={estado.value} value={estado.value}>
+                {estado.label}
+              </option>
+            ))}
+          </select>
+          <ChevronDown className="absolute right-4 top-4 h-5 w-5 text-gray-400 pointer-events-none" />
+        </div>
+        
+        <span className="text-xs text-gray-500 mt-1 block">
+          Indica el estado operativo actual del vehículo
+        </span>
+      </div>
+
       {/* Proveedor */}
       <div>
         <label className={labelClassName}>
@@ -244,7 +308,7 @@ const EditFormFields = ({
       </div>
 
       {/* Información adicional */}
-      <div className="col-span-2 mt-4 p-4 bg-gray-50 rounded-xl border border-gray-200">
+      <div className="col-span-2 mt-4 p-4 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border border-blue-100">
         <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center">
           <FileText className="w-4 h-4 mr-2 text-[#5F8EAD]" />
           Información del formulario
@@ -255,6 +319,7 @@ const EditFormFields = ({
             <ul className="space-y-1">
               <li>• Nombre del camión</li>
               <li>• Placa del vehículo</li>
+              <li>• Estado del camión</li>
             </ul>
           </div>
           <div>
@@ -263,10 +328,28 @@ const EditFormFields = ({
               <li>• La placa se convierte automáticamente a mayúsculas</li>
               <li>• El año debe estar entre 1900 y 2030</li>
               <li>• Los campos tienen límite de caracteres</li>
+              <li>• El estado determina la disponibilidad del vehículo</li>
             </ul>
           </div>
         </div>
       </div>
+
+      <style jsx>{`
+        @keyframes fadeIn {
+          from {
+            opacity: 0;
+            transform: translateY(-5px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        
+        .animate-fadeIn {
+          animation: fadeIn 0.3s ease-out;
+        }
+      `}</style>
 
     </div>
   );
