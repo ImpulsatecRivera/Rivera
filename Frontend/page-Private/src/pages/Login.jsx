@@ -25,7 +25,7 @@ const Login = () => {
   // ... (todo tu código de lógica permanece igual)
   useEffect(() => {
     if (isLoggedIn) {
-      navigate("/dashboard");
+      navigate("/SeleccionarProceso");
     }
   }, [isLoggedIn, navigate]);
 
