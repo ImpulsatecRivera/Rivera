@@ -1,7 +1,4 @@
-
-
-
-import { Schema,model } from "mongoose";
+import { Schema, model } from "mongoose";
 
 const manteniminetoSChema = new Schema({
     ciculatioCard:{
@@ -9,61 +6,65 @@ const manteniminetoSChema = new Schema({
         ref: 'Camiones',
         required: true
     },
+    estado:{
+        type: String,
+        required: true,
+        default: 'pendiente'  // ← NUEVA LÍNEA
+    },
     fecha_mantenimiento:{
-        type:Date,
-        required:true,
+        type: Date,
+        required: true,
         default: Date.now
     },
     mes:{
-        type:Number,
-        required:true
+        type: Number,
+        required: true
     },
     ano:{
-        type:Number,
-        required:true
+        type: Number,
+        required: true
     },
     tipo_de_mantenimiento:{
-        type:String,
+        type: String,
         enum:[
              'preventivo', 
              'correctivo', 
-             'llantas',           // Para "2 LLANTAS"
-             'rines',             // Para "2 RINES"
-             'furgo',             // Para "FURGON"
-             'madera_furgo',      // Para "MADERA DE FURGON"
-             'torno',             // Para "TORNO"
-             'bomba',             // Para "BOMBA"
-             'reparacion_turbo',  // Para "REPARACION DEL TURBO"
+             'llantas',
+             'rines',
+             'furgo',
+             'madera_furgo',
+             'torno',
+             'bomba',
+             'reparacion_turbo',
              'otros'
         ],
-        required:true
+        required: true
     },
     descripcion:{
-        type:String,
-        required:true
+        type: String,
+        required: true
     },
     detalles:[{
         concepto:{
-            type:String,
-            required:true
-
+            type: String,
+            required: true
         },
         cantidad:{
-            type:Number,
-            required:true,
-            default:1
+            type: Number,
+            required: true,
+            default: 1
         },
         precioUnitario:{
-            type:Number,
-            required:true,
-            min:0
+            type: Number,
+            required: true,
+            min: 0
         },
         subTotal:{
-            type:Number,
-            required:true,
-            min:0
+            type: Number,
+            required: true,
+            min: 0
         }
     }]
-})
+});
 
-export default model ("MantenimientoCamiones" , manteniminetoSChema);
+export default model("MantenimientoCamiones", manteniminetoSChema);

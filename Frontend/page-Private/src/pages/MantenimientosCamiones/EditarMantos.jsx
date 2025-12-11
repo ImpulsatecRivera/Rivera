@@ -1,73 +1,78 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { config } from '../../config'; // Ajusta la ruta según tu estructura
+import { config } from '../../config';
 import {
   Box,
   TextField,
   Typography,
   Button,
   IconButton,
-  Paper
+  Paper,
+  MenuItem,
+  Select,
+  FormControl,
+  InputLabel
 } from "@mui/material";
-import { Add, Delete, Close, ArrowBack } from "@mui/icons-material";
+import { Add, Delete, ArrowBack } from "@mui/icons-material";
 
 export default function EditMantenimiento({ onClose }) {
-  const { id } = useParams(); // Obtener el ID de la URL
+  const { id } = useParams();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [manto, setManto] = useState({
     fecha_mantenimiento: "",
     tipo_de_mantenimiento: "",
     descripcion: "",
+    estado: "pendiente", // ← NUEVO campo de estado
     detalles: []
   });
+
+  // Opciones de estado
+  const estadosDisponibles = [
+    { value: 'pendiente', label: 'Pendiente', color: '#eab308' },
+    { value: 'en_proceso', label: 'En Proceso', color: '#3b82f6' },
+    { value: 'completado', label: 'Completado', color: '#10b981' },
+    { value: 'cancelado', label: 'Cancelado', color: '#ef4444' }
+  ];
 
   // Obtener datos
   useEffect(() => {
     const url = `${config.api.API_URL}/mantenimientos/${id}`;
     console.log('🔍 Intentando cargar desde URL:', url);
-    console.log('🔍 ID recibido:', id);
     
     fetch(url)
       .then((response) => {
-        console.log('✅ Respuesta del servidor:', response);
-        
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
-        
         return response.json();
       })
       .then((result) => {
-        console.log('📦 Resultado completo:', result);
-        
-        // Intentar diferentes estructuras de respuesta
         const data = result.data || result;
         
         if (!data || typeof data !== 'object') {
-          console.error('❌ No se encontraron datos válidos en la respuesta');
           alert('No se pudieron cargar los datos del mantenimiento');
           setLoading(false);
           return;
         }
 
-        console.log('✅ Datos extraídos correctamente:', data);
+        console.log('✅ Datos cargados:', data);
         
         setManto({
           fecha_mantenimiento: data.fecha_mantenimiento || "",
-          tipo_de_mantenimiento: data.tipo_de_mantenimiento || "",
+          tipo_de_mantenimiento: data.tipo_de_mantenimiento || data.tipoMantenimiento || "",
           descripcion: data.descripcion || "",
+          estado: data.estado || "pendiente", // ← CARGAR estado
           detalles: Array.isArray(data.detalles) ? data.detalles : []
         });
         setLoading(false);
       })
       .catch((error) => {
         console.error('❌ Error al cargar mantenimiento:', error);
-        console.error('❌ URL intentada:', url);
         alert(`Error al cargar los datos del mantenimiento.\n${error.message}`);
         setLoading(false);
       });
-  }, [id, navigate]);
+  }, [id]);
 
   // Agregar detalle
   const addDetalle = () => {
@@ -104,7 +109,6 @@ export default function EditMantenimiento({ onClose }) {
   // Guardar cambios
   const submitUpdate = async () => {
     try {
-      // Preparar los detalles con subtotales calculados
       const detallesConSubtotal = (manto?.detalles || []).map(detalle => ({
         concepto: detalle.concepto,
         cantidad: Number(detalle.cantidad) || 1,
@@ -116,8 +120,11 @@ export default function EditMantenimiento({ onClose }) {
         fecha_mantenimiento: manto.fecha_mantenimiento,
         tipo_de_mantenimiento: manto.tipo_de_mantenimiento,
         descripcion: manto.descripcion,
+        estado: manto.estado, // ← ENVIAR estado
         detalles: detallesConSubtotal
       };
+
+      console.log('📤 Enviando payload:', payload);
 
       const response = await fetch(`${config.api.API_URL}/mantenimientos/${id}`, {
         method: 'PUT',
@@ -131,18 +138,19 @@ export default function EditMantenimiento({ onClose }) {
       
       if (response.ok && result.success) {
         alert("✅ Mantenimiento actualizado exitosamente!");
-        navigate('/mantenimientos'); // Volver a la lista de mantenimientos
+        
+        // Mensaje adicional si se completó el mantenimiento
+        if (manto.estado === 'completado') {
+          alert("🚛 El camión ha sido actualizado a estado DISPONIBLE");
+        }
+        
+        navigate('/mantenimientos');
       } else {
         throw new Error(result.message || 'Error al actualizar');
       }
     } catch (error) {
       console.error('Error al actualizar:', error);
-      
-      if (error.message) {
-        alert(`❌ Error: ${error.message}`);
-      } else {
-        alert("❌ Error al actualizar el mantenimiento");
-      }
+      alert(`❌ Error: ${error.message || 'Error al actualizar el mantenimiento'}`);
     }
   };
 
@@ -262,6 +270,58 @@ export default function EditMantenimiento({ onClose }) {
                 }
               }}
             />
+          </Box>
+
+          {/* ESTADO DEL MANTENIMIENTO - NUEVO */}
+          <Box>
+            <Typography sx={{ 
+              fontSize: '14px',
+              fontWeight: 500,
+              color: '#374151',
+              mb: 1
+            }}>
+              🚦 Estado del Mantenimiento
+            </Typography>
+            <FormControl fullWidth>
+              <Select
+                value={manto?.estado || "pendiente"}
+                onChange={(e) => setManto({ ...manto, estado: e.target.value })}
+                sx={{
+                  borderRadius: '8px',
+                  backgroundColor: '#f9fafb',
+                  fontSize: '14px',
+                  '& fieldset': { borderColor: '#e5e7eb' },
+                  '&:hover fieldset': { borderColor: '#d1d5db' },
+                  '&.Mui-focused fieldset': { borderColor: '#6366f1', borderWidth: '2px' }
+                }}
+              >
+                {estadosDisponibles.map((estado) => (
+                  <MenuItem key={estado.value} value={estado.value}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Box
+                        sx={{
+                          width: 12,
+                          height: 12,
+                          borderRadius: '50%',
+                          backgroundColor: estado.color
+                        }}
+                      />
+                      <Typography sx={{ fontSize: '14px' }}>{estado.label}</Typography>
+                    </Box>
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            {manto?.estado === 'completado' && (
+              <Typography sx={{ 
+                fontSize: '12px', 
+                color: '#10b981', 
+                mt: 1,
+                fontWeight: 500 
+              }}>
+                ✓ Al guardar, el camión se actualizará automáticamente a DISPONIBLE
+              </Typography>
+            )}
           </Box>
 
           {/* Descripción */}
