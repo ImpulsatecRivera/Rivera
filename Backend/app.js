@@ -18,6 +18,7 @@ import callRoutes from "./src/Routes/callRoutes.js"
 import MantoRouter from "./src/Routes/MantenimientoRoutes.js"
 import Reportesroutes from "./src/Routes/ReportesRoutes.js"
 import ResumenRoutes from "./src/Routes/ResumenDieselRoutes.js"
+import ResumenDieselReporte from "./src/Routes/ResumenReportesRoutes.js"
 import swaggerUi from "swagger-ui-express";
 import fs from "fs";
 import path from "path";
@@ -86,5 +87,6 @@ app.use("/api/call",callRoutes);
 app.use("/api/mantenimientos",MantoRouter)
 app.use("/api/reporte",Reportesroutes)
 app.use("/api/resumen",ResumenRoutes)
+app.use("/api/resumenReporte",ResumenDieselReporte)
 
 export default app;
