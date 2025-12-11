@@ -5,6 +5,7 @@ import mongoose, { isValidObjectId } from 'mongoose'; // Cambiar a import, no re
 const mantenimientoCon = {};
 
 //# obtener lista de mantenimientos de camiones
+//# obtener lista de mantenimientos de camiones
 mantenimientoCon.getMantenimineto = async(req, res) => {
     try {
         const manto = await MantenimientoCamiones.find()
@@ -20,7 +21,7 @@ mantenimientoCon.getMantenimineto = async(req, res) => {
             });
         }
         
-        // Formatear cada mantenimiento para incluir mes y año
+        // Formatear cada mantenimiento para incluir mes, año y ESTADO
         const mantenimientosFormateados = manto.map(m => ({
             _id: m._id,
             fecha_mantenimiento: m.fecha_mantenimiento,
@@ -29,6 +30,7 @@ mantenimientoCon.getMantenimineto = async(req, res) => {
             tipo_de_mantenimiento: m.tipo_de_mantenimiento,
             descripcion: m.descripcion,
             detalles: m.detalles,
+            estado: m.estado,  
             ciculatioCard: m.ciculatioCard,
             createdAt: m.createdAt,
             updatedAt: m.updatedAt
@@ -178,7 +180,8 @@ mantenimientoCon.postMantenimiento = async(req, res) => {
             fecha_mantenimiento,
             tipo_de_mantenimiento,
             descripcion,
-            detalles
+            detalles,
+            estado
         } = req.body;
 
         const camionExist = await camiones.findById(ciculatioCard);
@@ -214,7 +217,8 @@ mantenimientoCon.postMantenimiento = async(req, res) => {
             tipo_de_mantenimiento,
             descripcion,
             detalles: detalleCalculados,
-            costoTotal
+            costoTotal,
+            estado
         });
 
         await nuevoMantenimiento.save();
@@ -246,6 +250,7 @@ mantenimientoCon.postMantenimiento = async(req, res) => {
 
 //#Metodo actualizar la info del manto
 //# Método actualizar la info del mantenimiento
+//# Método actualizar la info del mantenimiento
 mantenimientoCon.ActualizarMantenimiento = async (req, res) => {
     try {
         const { id } = req.params;
@@ -271,7 +276,8 @@ mantenimientoCon.ActualizarMantenimiento = async (req, res) => {
             fecha_mantenimiento,
             tipo_de_mantenimiento,
             descripcion,
-            detalles
+            detalles,
+            estado  // ← NUEVO: Recibir el estado
         } = req.body;
 
         // Actualizar fecha y calcular mes/año si se proporciona nueva fecha
@@ -290,6 +296,28 @@ mantenimientoCon.ActualizarMantenimiento = async (req, res) => {
         // Actualizar descripción si se proporciona
         if(descripcion) {
             mantoExisting.descripcion = descripcion;
+        }
+
+        // ← NUEVO: Actualizar estado del mantenimiento
+        if(estado) {
+            const estadoAnterior = mantoExisting.estado;
+            mantoExisting.estado = estado;
+
+            // Si el estado cambia a "completado", actualizar el camión a "DISPONIBLE"
+            if(estado === 'completado' && estadoAnterior !== 'completado') {
+                try {
+                    const camionId = mantoExisting.ciculatioCard;
+                    await camiones.findByIdAndUpdate(
+                        camionId,
+                        { state: 'DISPONIBLE' },
+                        { new: true }
+                    );
+                    console.log(`Camión ${camionId} actualizado a DISPONIBLE`);
+                } catch (camionError) {
+                    console.error('Error al actualizar estado del camión:', camionError);
+                    // No fallar la actualización del mantenimiento si falla la del camión
+                }
+            }
         }
 
         // Actualizar detalles y recalcular costo total si se proporcionan

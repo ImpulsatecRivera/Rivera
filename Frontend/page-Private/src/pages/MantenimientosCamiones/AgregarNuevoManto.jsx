@@ -15,6 +15,7 @@ const CreateMantenimientoPage = () => {
     tipo_de_mantenimiento: '',
     descripcion: '',
     ciculatioCard: '',
+    estado: 'pendiente', // Estado por defecto
     detalles: [
       { concepto: '', cantidad: 1, precioUnitario: 0 }
     ]
@@ -144,6 +145,7 @@ const CreateMantenimientoPage = () => {
         tipo_de_mantenimiento: formData.tipo_de_mantenimiento,
         descripcion: formData.descripcion,
         ciculatioCard: formData.ciculatioCard,
+        estado: 'pendiente', // Estado por defecto: pendiente
         detalles: formData.detalles.map(d => ({
           concepto: d.concepto,
           cantidad: d.cantidad,
@@ -151,6 +153,8 @@ const CreateMantenimientoPage = () => {
           subTotal: calcularSubtotal(d.cantidad, d.precioUnitario)
         }))
       };
+
+      console.log('Datos enviados al backend:', dataToSend); // Para debugging
 
       const response = await fetch(`${config.api.API_URL}/mantenimientos`, {
         method: 'POST',
@@ -165,6 +169,7 @@ const CreateMantenimientoPage = () => {
       }
 
       const result = await response.json();
+      console.log('Mantenimiento creado:', result);
       
       // Navegar de vuelta a la lista
       navigate('/mantenimientos');
@@ -201,6 +206,9 @@ const CreateMantenimientoPage = () => {
               <p className="text-gray-600">
                 Registra un nuevo mantenimiento para tu flota
               </p>
+              <span className="inline-block mt-2 px-3 py-1 bg-yellow-100 text-yellow-800 text-xs font-semibold rounded-full">
+                Estado: Pendiente
+              </span>
             </div>
           </div>
         </div>
