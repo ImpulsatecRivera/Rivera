@@ -726,6 +726,454 @@ ReportesRoutes.generarPDFTodosMantenimientos = async (req, res) => {
         });
     }
 };
+// 3. PDF REPORTE MENSUAL SIMPLE - Solo placas y montos de un mes
+ReportesRoutes.generarPDFMensualSimple = async (req, res) => {
+    let browser;
+    try {
+        const { mes, ano } = req.params;
+        const mesNum = parseInt(mes);
+        const anoNum = parseInt(ano);
 
-// 3. PDF REPORTE MENSUAL
+        if (mesNum < 1 || mesNum > 12) {
+            return res.status(400).json({
+                success: false,
+                message: 'Mes inválido. Debe estar entre 1 y 12'
+            });
+        }
+
+        // Buscar mantenimientos del mes
+        const mantenimientos = await MantenimientoCamiones.find({
+            mes: mesNum,
+            ano: anoNum
+        })
+            .populate('ciculatioCard', 'licensePlate')
+            .sort({ 'ciculatioCard.licensePlate': 1 });
+
+        if (!mantenimientos || mantenimientos.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: `No hay mantenimientos para ${obtenerNombreMes(mesNum)} ${anoNum}`
+            });
+        }
+
+        // Agrupar por placa y sumar totales
+        const porPlaca = {};
+        mantenimientos.forEach(m => {
+            const placa = m.ciculatioCard.licensePlate;
+            const total = m.detalles.reduce((s, d) => s + d.subTotal, 0);
+            
+            if (!porPlaca[placa]) {
+                porPlaca[placa] = 0;
+            }
+            porPlaca[placa] += total;
+        });
+
+        // Convertir a array y ordenar
+        const datosTabla = Object.entries(porPlaca)
+            .sort((a, b) => a[0].localeCompare(b[0]))
+            .map(([placa, monto]) => ({ placa, monto }));
+
+        const totalGeneral = datosTabla.reduce((sum, item) => sum + item.monto, 0);
+
+        const htmlContent = `
+        <!DOCTYPE html>
+        <html lang="es">
+        <head>
+            <meta charset="UTF-8">
+            <style>
+                * {
+                    margin: 0;
+                    padding: 0;
+                    box-sizing: border-box;
+                }
+                body {
+                    font-family: Arial, sans-serif;
+                    padding: 40px;
+                    color: #000;
+                    background: #fff;
+                }
+                .header {
+                    text-align: center;
+                    margin-bottom: 30px;
+                    padding-bottom: 20px;
+                    border-bottom: 3px solid #000;
+                }
+                .header h1 {
+                    font-size: 24px;
+                    font-weight: bold;
+                    text-transform: uppercase;
+                    margin-bottom: 5px;
+                }
+                .header .period {
+                    font-size: 20px;
+                    font-weight: bold;
+                    margin-top: 10px;
+                }
+                table {
+                    width: 100%;
+                    max-width: 600px;
+                    margin: 0 auto;
+                    border-collapse: collapse;
+                    border: 2px solid #000;
+                }
+                th, td {
+                    border: 1px solid #000;
+                    padding: 12px;
+                    text-align: center;
+                }
+                th {
+                    background: #d3d3d3;
+                    font-weight: bold;
+                    font-size: 16px;
+                    text-transform: uppercase;
+                }
+                td {
+                    font-size: 15px;
+                }
+                .col-numero {
+                    width: 15%;
+                }
+                .col-placa {
+                    width: 45%;
+                    font-weight: bold;
+                }
+                .col-monto {
+                    width: 40%;
+                    text-align: right;
+                }
+                .total-row {
+                    font-weight: bold;
+                    font-size: 16px;
+                    background: #e8e8e8;
+                }
+                .total-row td {
+                    padding: 15px 12px;
+                }
+            </style>
+        </head>
+        <body>
+            <div class="header">
+                <h1>MANTENIMIENTO POR CAMION MES</h1>
+                <div class="period">${obtenerNombreMes(mesNum).toUpperCase()} ${anoNum}</div>
+            </div>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th class="col-numero">#</th>
+                        <th class="col-placa">PLACA</th>
+                        <th class="col-monto">MONTO</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${datosTabla.map((item, index) => `
+                        <tr>
+                            <td class="col-numero">${index + 1}</td>
+                            <td class="col-placa">${item.placa}</td>
+                            <td class="col-monto">$ ${item.monto.toFixed(2)}</td>
+                        </tr>
+                    `).join('')}
+                    <tr class="total-row">
+                        <td colspan="2">TOTAL</td>
+                        <td class="col-monto">$ ${totalGeneral.toFixed(2)}</td>
+                    </tr>
+                </tbody>
+            </table>
+        </body>
+        </html>
+        `;
+
+        browser = await puppeteer.launch({
+            headless: 'new',
+            args: ['--no-sandbox', '--disable-setuid-sandbox']
+        });
+
+        const page = await browser.newPage();
+        await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
+
+        const pdfBuffer = await page.pdf({
+            format: 'A4',
+            printBackground: true,
+            margin: { top: '20px', right: '20px', bottom: '20px', left: '20px' }
+        });
+
+        await browser.close();
+
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename=mantenimiento-${obtenerNombreMes(mesNum)}-${anoNum}.pdf`);
+        res.send(pdfBuffer);
+
+    } catch (error) {
+        if (browser) await browser.close();
+        console.error('Error al generar PDF mensual simple:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error al generar el PDF',
+            error: error.message
+        });
+    }
+};
+
+// 4. PDF REPORTE MÚLTIPLES MESES - Elegir varios meses
+ReportesRoutes.generarPDFMultiplesMeses = async (req, res) => {
+    let browser;
+    try {
+        // Recibir array de meses en el body: { meses: [1, 3, 5], ano: 2025 }
+        const { meses, ano } = req.body;
+
+        if (!Array.isArray(meses) || meses.length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'Debe proporcionar un array de meses'
+            });
+        }
+
+        const anoNum = parseInt(ano);
+
+        // Validar meses
+        const mesesValidos = meses.filter(m => m >= 1 && m <= 12);
+        if (mesesValidos.length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'No hay meses válidos en la lista'
+            });
+        }
+
+        // Buscar mantenimientos de todos los meses seleccionados
+        const mantenimientos = await MantenimientoCamiones.find({
+            mes: { $in: mesesValidos },
+            ano: anoNum
+        })
+            .populate('ciculatioCard', 'licensePlate')
+            .sort({ mes: 1, 'ciculatioCard.licensePlate': 1 });
+
+        if (!mantenimientos || mantenimientos.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'No hay mantenimientos para los meses seleccionados'
+            });
+        }
+
+        // Agrupar por mes
+        const porMes = {};
+        mesesValidos.forEach(m => {
+            porMes[m] = {};
+        });
+
+        mantenimientos.forEach(m => {
+            const mes = m.mes;
+            const placa = m.ciculatioCard.licensePlate;
+            const total = m.detalles.reduce((s, d) => s + d.subTotal, 0);
+            
+            if (!porMes[mes][placa]) {
+                porMes[mes][placa] = 0;
+            }
+            porMes[mes][placa] += total;
+        });
+
+        // Generar HTML para cada mes
+        const mesesHTML = mesesValidos.map(mesNum => {
+            const datos = porMes[mesNum];
+            const datosTabla = Object.entries(datos)
+                .sort((a, b) => a[0].localeCompare(b[0]))
+                .map(([placa, monto]) => ({ placa, monto }));
+
+            const totalMes = datosTabla.reduce((sum, item) => sum + item.monto, 0);
+
+            return `
+                <div class="mes-section">
+                    <div class="mes-header">
+                        <h2>${obtenerNombreMes(mesNum).toUpperCase()} ${anoNum}</h2>
+                    </div>
+
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="col-numero">#</th>
+                                <th class="col-placa">PLACA</th>
+                                <th class="col-monto">MONTO</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${datosTabla.length > 0 ? datosTabla.map((item, index) => `
+                                <tr>
+                                    <td class="col-numero">${index + 1}</td>
+                                    <td class="col-placa">${item.placa}</td>
+                                    <td class="col-monto">$ ${item.monto.toFixed(2)}</td>
+                                </tr>
+                            `).join('') : '<tr><td colspan="3">Sin registros</td></tr>'}
+                            ${datosTabla.length > 0 ? `
+                            <tr class="total-row">
+                                <td colspan="2">TOTAL</td>
+                                <td class="col-monto">$ ${totalMes.toFixed(2)}</td>
+                            </tr>
+                            ` : ''}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+        }).join('');
+
+        const totalGeneral = mantenimientos.reduce((sum, m) => {
+            return sum + m.detalles.reduce((s, d) => s + d.subTotal, 0);
+        }, 0);
+
+        const htmlContent = `
+        <!DOCTYPE html>
+        <html lang="es">
+        <head>
+            <meta charset="UTF-8">
+            <style>
+                * {
+                    margin: 0;
+                    padding: 0;
+                    box-sizing: border-box;
+                }
+                body {
+                    font-family: Arial, sans-serif;
+                    padding: 30px;
+                    color: #000;
+                    background: #fff;
+                }
+                .main-header {
+                    text-align: center;
+                    margin-bottom: 40px;
+                    padding-bottom: 20px;
+                    border-bottom: 3px solid #000;
+                }
+                .main-header h1 {
+                    font-size: 26px;
+                    font-weight: bold;
+                    text-transform: uppercase;
+                    margin-bottom: 10px;
+                }
+                .main-header .subtitle {
+                    font-size: 16px;
+                    margin-top: 10px;
+                }
+                .mes-section {
+                    margin-bottom: 50px;
+                    page-break-inside: avoid;
+                }
+                .mes-header {
+                    text-align: center;
+                    margin-bottom: 20px;
+                    padding: 15px;
+                    background: #f0f0f0;
+                    border: 2px solid #000;
+                }
+                .mes-header h2 {
+                    font-size: 20px;
+                    font-weight: bold;
+                }
+                table {
+                    width: 100%;
+                    max-width: 600px;
+                    margin: 0 auto;
+                    border-collapse: collapse;
+                    border: 2px solid #000;
+                }
+                th, td {
+                    border: 1px solid #000;
+                    padding: 12px;
+                    text-align: center;
+                }
+                th {
+                    background: #d3d3d3;
+                    font-weight: bold;
+                    font-size: 16px;
+                    text-transform: uppercase;
+                }
+                td {
+                    font-size: 15px;
+                }
+                .col-numero {
+                    width: 15%;
+                }
+                .col-placa {
+                    width: 45%;
+                    font-weight: bold;
+                }
+                .col-monto {
+                    width: 40%;
+                    text-align: right;
+                }
+                .total-row {
+                    font-weight: bold;
+                    font-size: 16px;
+                    background: #e8e8e8;
+                }
+                .total-row td {
+                    padding: 15px 12px;
+                }
+                .resumen-final {
+                    margin-top: 40px;
+                    padding: 25px;
+                    background: #f5f5f5;
+                    border: 3px solid #000;
+                    text-align: center;
+                    page-break-inside: avoid;
+                }
+                .resumen-final h3 {
+                    font-size: 20px;
+                    margin-bottom: 15px;
+                    text-transform: uppercase;
+                }
+                .resumen-final .total-final {
+                    font-size: 28px;
+                    font-weight: bold;
+                    margin-top: 10px;
+                }
+            </style>
+        </head>
+        <body>
+            <div class="main-header">
+                <h1>REPORTE DE MANTENIMIENTO</h1>
+                <div class="subtitle">Período: ${mesesValidos.map(m => obtenerNombreMes(m)).join(', ')} ${anoNum}</div>
+            </div>
+
+            ${mesesHTML}
+
+            <div class="resumen-final">
+                <h3>TOTAL GENERAL</h3>
+                <div>Meses incluidos: ${mesesValidos.length}</div>
+                <div>Mantenimientos: ${mantenimientos.length}</div>
+                <div class="total-final">$ ${totalGeneral.toFixed(2)}</div>
+            </div>
+        </body>
+        </html>
+        `;
+
+        browser = await puppeteer.launch({
+            headless: 'new',
+            args: ['--no-sandbox', '--disable-setuid-sandbox']
+        });
+
+        const page = await browser.newPage();
+        await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
+
+        const pdfBuffer = await page.pdf({
+            format: 'A4',
+            printBackground: true,
+            margin: { top: '20px', right: '20px', bottom: '20px', left: '20px' }
+        });
+
+        await browser.close();
+
+        const nombresMeses = mesesValidos.map(m => obtenerNombreMes(m)).join('-');
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename=mantenimiento-${nombresMeses}-${anoNum}.pdf`);
+        res.send(pdfBuffer);
+
+    } catch (error) {
+        if (browser) await browser.close();
+        console.error('Error al generar PDF múltiples meses:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error al generar el PDF',
+            error: error.message
+        });
+    }
+};
+
 export default ReportesRoutes
