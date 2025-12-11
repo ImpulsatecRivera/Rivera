@@ -30,7 +30,7 @@ mantenimientoCon.getMantenimineto = async(req, res) => {
             tipo_de_mantenimiento: m.tipo_de_mantenimiento,
             descripcion: m.descripcion,
             detalles: m.detalles,
-            estado: m.estado,  // ← AGREGAR ESTA LÍNEA
+            estado: m.estado,  
             ciculatioCard: m.ciculatioCard,
             createdAt: m.createdAt,
             updatedAt: m.updatedAt

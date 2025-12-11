@@ -3,6 +3,7 @@ import { Search, ChevronLeft, ChevronRight, Loader2, Download, Edit, Trash2, Plu
 import { useNavigate } from 'react-router-dom';
 import { config } from '../../config';
 import MantenimientoDetailModal from "./VerDetalleManto";
+import ReportesModal from "./ReportesModal";
 import Swal from 'sweetalert2';
 
 const MantenimientosTable = () => {
@@ -15,6 +16,7 @@ const MantenimientosTable = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedMantenimientoId, setSelectedMantenimientoId] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isReportesModalOpen, setIsReportesModalOpen] = useState(false);
 
   const itemsPerPage = 8;
 
@@ -207,12 +209,18 @@ const MantenimientosTable = () => {
                 </select>
               </div>
 
-              <button onClick={() => window.open(`${config.api.API_URL}/reporte/todos`, "_blank")} className="flex items-center gap-2 px-4 py-3 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 font-semibold">
+              <button 
+                onClick={() => setIsReportesModalOpen(true)}
+                className="flex items-center gap-2 px-4 py-3 bg-gradient-to-r from-indigo-600 to-indigo-700 text-white rounded-xl hover:from-indigo-700 hover:to-indigo-800 font-semibold shadow-lg transition-all"
+              >
                 <Download size={18} />
-                Descargar Reportes
+                Generar Reportes
               </button>
 
-              <button onClick={() => navigate('/mantenimientos/agregar-mantenimiento')} className="flex items-center gap-2 px-5 py-3 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 font-semibold shadow-lg">
+              <button 
+                onClick={() => navigate('/mantenimientos/agregar-mantenimiento')} 
+                className="flex items-center gap-2 px-5 py-3 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 font-semibold shadow-lg"
+              >
                 <Plus size={20} />
                 Agregar Mantenimiento
               </button>
@@ -239,7 +247,11 @@ const MantenimientosTable = () => {
                 {currentMantenimientos.map((mant) => {
                   const estadoStyle = getEstadoStyle(mant.estado);
                   return (
-                    <tr key={mant._id} onClick={() => { setSelectedMantenimientoId(mant._id); setIsModalOpen(true); }} className="border-b border-gray-100 hover:bg-gray-50 cursor-pointer">
+                    <tr 
+                      key={mant._id} 
+                      onClick={() => { setSelectedMantenimientoId(mant._id); setIsModalOpen(true); }} 
+                      className="border-b border-gray-100 hover:bg-gray-50 cursor-pointer transition-colors"
+                    >
                       <td className="py-5 px-6 text-gray-900 font-semibold">{formatearFecha(mant.fecha_mantenimiento)}</td>
                       <td className="py-5 px-6 text-gray-600">{mant.ciculatioCard?.licensePlate || 'N/A'}</td>
                       <td className="py-5 px-6">
@@ -259,10 +271,9 @@ const MantenimientosTable = () => {
                       <td className="py-5 px-6 text-right font-bold text-gray-900">{formatearMoneda(calcularTotal(mant.detalles))}</td>
                       <td className="py-5 px-6" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center justify-center gap-2">
-
                           <button
                             onClick={() => window.open(`${config.api.API_URL}/reporte/individual/${mant._id}`, "_blank")}
-                            className="p-2 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-600"
+                            className="p-2 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-600 transition-colors"
                             title="Descargar PDF"
                           >
                             <Download size={18} />
@@ -271,7 +282,7 @@ const MantenimientosTable = () => {
                           {mant.estado !== 'completado' && (
                             <button
                               onClick={() => navigate(`/mantenimientos/editar/${mant._id}`)}
-                              className="p-2 rounded-lg bg-yellow-50 hover:bg-yellow-100 text-yellow-600"
+                              className="p-2 rounded-lg bg-yellow-50 hover:bg-yellow-100 text-yellow-600 transition-colors"
                               title="Editar"
                             >
                               <Edit size={18} />
@@ -280,14 +291,12 @@ const MantenimientosTable = () => {
 
                           <button
                             onClick={() => handleDelete(mant)}
-                            className="p-2 rounded-lg bg-red-50 hover:bg-red-100 text-red-600"
+                            className="p-2 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 transition-colors"
                             title="Eliminar"
                           >
                             <Trash2 size={18} />
                           </button>
-
                         </div>
-
                       </td>
                     </tr>
                   );
@@ -301,21 +310,42 @@ const MantenimientosTable = () => {
               Mostrando {startIndex + 1} a {Math.min(endIndex, sortedMantenimientos.length)} de {sortedMantenimientos.length} registros
             </p>
             <div className="flex items-center gap-2">
-              <button onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))} disabled={currentPage === 1} className="p-2.5 rounded-lg border border-gray-300 hover:bg-white disabled:opacity-50">
+              <button 
+                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))} 
+                disabled={currentPage === 1} 
+                className="p-2.5 rounded-lg border border-gray-300 hover:bg-white disabled:opacity-50 transition-colors"
+              >
                 <ChevronLeft size={18} />
               </button>
               {[...Array(Math.min(5, totalPages))].map((_, idx) => (
-                <button key={idx + 1} onClick={() => setCurrentPage(idx + 1)} className={`px-4 py-2 rounded-lg font-semibold ${currentPage === idx + 1 ? 'bg-indigo-600 text-white' : 'text-gray-700 hover:bg-gray-100'}`}>
+                <button 
+                  key={idx + 1} 
+                  onClick={() => setCurrentPage(idx + 1)} 
+                  className={`px-4 py-2 rounded-lg font-semibold transition-colors ${
+                    currentPage === idx + 1 
+                      ? 'bg-indigo-600 text-white' 
+                      : 'text-gray-700 hover:bg-gray-100'
+                  }`}
+                >
                   {idx + 1}
                 </button>
               ))}
               {totalPages > 5 && (
                 <>
                   <span className="px-2 text-gray-400">...</span>
-                  <button onClick={() => setCurrentPage(totalPages)} className="px-4 py-2 rounded-lg text-gray-700 hover:bg-gray-100">{totalPages}</button>
+                  <button 
+                    onClick={() => setCurrentPage(totalPages)} 
+                    className="px-4 py-2 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors"
+                  >
+                    {totalPages}
+                  </button>
                 </>
               )}
-              <button onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))} disabled={currentPage === totalPages} className="p-2.5 rounded-lg border border-gray-300 hover:bg-white disabled:opacity-50">
+              <button 
+                onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))} 
+                disabled={currentPage === totalPages} 
+                className="p-2.5 rounded-lg border border-gray-300 hover:bg-white disabled:opacity-50 transition-colors"
+              >
                 <ChevronRight size={18} />
               </button>
             </div>
@@ -323,7 +353,19 @@ const MantenimientosTable = () => {
         </div>
       </div>
 
-      <MantenimientoDetailModal mantenimientoId={selectedMantenimientoId} isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
+      {/* Modal de Reportes */}
+      <ReportesModal 
+        isOpen={isReportesModalOpen}
+        onClose={() => setIsReportesModalOpen(false)}
+        apiUrl={config.api.API_URL}
+      />
+
+      {/* Modal de Detalle */}
+      <MantenimientoDetailModal 
+        mantenimientoId={selectedMantenimientoId} 
+        isOpen={isModalOpen} 
+        onClose={() => setIsModalOpen(false)} 
+      />
     </div>
   );
 };
