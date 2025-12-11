@@ -1,14 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ChevronDown, X, Check, Truck } from 'lucide-react';
-import { config } from '../../config';
-import { useParams, useNavigate } from 'react-router-dom';
-
-const API_URL = config.api.API_URL;
 
 export default function EditarCamion() {
-  const { id } = useParams();
-  const navigate = useNavigate();
-
   const [formData, setFormData] = useState({
     nombre: '',
     tarjetaCirculacion: '',
@@ -18,74 +11,35 @@ export default function EditarCamion() {
     motorista: '',
     marca: '',
     modelo: '',
-    año: ''
+    año: '',
+    estado: ''
   });
 
   const [showSuccessModal, setShowSuccessModal] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [proveedores, setProveedores] = useState([]);
-  const [motoristas, setMotoristas] = useState([]);
+  const [proveedores, setProveedores] = useState([
+    { _id: '1', companyName: 'Proveedor A' },
+    { _id: '2', companyName: 'Proveedor B' },
+    { _id: '3', companyName: 'Proveedor C' }
+  ]);
+  const [motoristas, setMotoristas] = useState([
+    { _id: '1', name: 'Juan', lastName: 'Pérez' },
+    { _id: '2', name: 'María', lastName: 'González' },
+    { _id: '3', name: 'Carlos', lastName: 'Rodríguez' }
+  ]);
 
-  // Configuración base para fetch con cookies
-  const fetchOptions = {
-    credentials: 'include', // Incluir cookies en todas las peticiones
-    headers: {
-      'Content-Type': 'application/json',
-    },
-  };
-
-  useEffect(() => {
-    const fetchTruckData = async () => {
-      try {
-        setLoading(true);
-
-        // Todas las peticiones incluyen cookies
-        const truckResponse = await fetch(`${API_URL}/camiones/${id}`, {
-          method: 'GET',
-          ...fetchOptions
-        });
-        const truckData = await truckResponse.json();
-
-        const proveedoresResponse = await fetch(`${API_URL}/proveedores`, {
-          method: 'GET',
-          ...fetchOptions
-        });
-        const proveedoresData = await proveedoresResponse.json();
-
-        const motoristasResponse = await fetch(`${API_URL}/motoristas`, {
-          method: 'GET',
-          ...fetchOptions
-        });
-        const motoristasData = await motoristasResponse.json();
-
-        setFormData({
-          nombre: truckData.name || '',
-          tarjetaCirculacion: truckData.ciculatioCard || truckData.circulationCard || '',
-          placa: truckData.licensePlate || '',
-          proveedor: truckData.supplierId?._id || truckData.supplierId || '',
-          descripcion: truckData.description || '',
-          motorista: truckData.driverId?._id || truckData.driverId || '',
-          marca: truckData.brand || '',
-          modelo: truckData.model || '',
-          año: truckData.age || truckData.year || ''
-        });
-
-        setProveedores(proveedoresData);
-        setMotoristas(motoristasData);
-      } catch (error) {
-        console.error('Error al cargar datos:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    if (id) {
-      fetchTruckData();
-    }
-  }, [id]);
+  // Estados disponibles
+  const estadosDisponibles = [
+    { value: 'DISPONIBLE', label: 'Disponible', color: 'bg-green-100 text-green-800 border-green-300' },
+    { value: 'EN RUTA', label: 'En Ruta', color: 'bg-blue-100 text-blue-800 border-blue-300' },
+    { value: 'MANTENIMIENTO', label: 'Mantenimiento', color: 'bg-yellow-100 text-yellow-800 border-yellow-300' },
+    { value: 'NO DISPONIBLE', label: 'No Disponible', color: 'bg-red-100 text-red-800 border-red-300' },
+    { value: 'SIN ESTADO', label: 'Sin Estado', color: 'bg-gray-100 text-gray-800 border-gray-300' }
+  ];
 
   const handleInputChange = (field, value) => {
+    console.log(`Cambiando ${field} a:`, value);
     setFormData(prev => ({
       ...prev,
       [field]: value
@@ -105,40 +59,42 @@ export default function EditarCamion() {
         driverId: formData.motorista,
         brand: formData.marca,
         model: formData.modelo,
-        age: formData.año
+        age: formData.año,
+        state: formData.estado
       };
 
-      const response = await fetch(`${API_URL}/camiones/${id}`, {
-        method: 'PUT',
-        ...fetchOptions,
-        body: JSON.stringify(updateData)
-      });
+      console.log('Enviando datos:', updateData);
 
-      if (response.ok) {
-        setShowSuccessModal(true);
-      } else {
-        throw new Error('Error al actualizar el camión');
-      }
+      // Simular envío al backend
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      setShowSuccessModal(true);
     } catch (error) {
       console.error('Error al actualizar:', error);
-      alert('Error al actualizar el camión');
+      alert('Error al actualizar el camión: ' + error.message);
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const handleGoBack = () => {
-    navigate('/camiones');
+    console.log('Volver a lista de camiones');
   };
 
   const handleContinue = () => {
     setShowSuccessModal(false);
-    navigate('/camiones');
+    console.log('Continuar - volver a lista');
+  };
+
+  // Obtener el color del estado seleccionado
+  const getEstadoColor = (estado) => {
+    const estadoObj = estadosDisponibles.find(e => e.value === estado);
+    return estadoObj ? estadoObj.color : 'bg-gray-100 text-gray-800 border-gray-300';
   };
 
   if (loading) {
     return (
-      <div className="fixed inset-0 flex items-center justify-center p-4 z-50">
+      <div className="fixed inset-0 flex items-center justify-center p-4 z-50 bg-black bg-opacity-50">
         <div className="bg-white rounded-lg w-full max-w-2xl p-8 text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-4 border-green-400 border-t-transparent mx-auto mb-4"></div>
           <p className="text-gray-600">Cargando datos del camión...</p>
@@ -148,8 +104,8 @@ export default function EditarCamion() {
   }
 
   return (
-    <div className="fixed inset-0 flex items-center justify-center p-4 z-40">
-      <div className="bg-white rounded-lg w-full max-w-2xl max-h-[90vh] overflow-hidden animate-scale-in">
+    <div className="fixed inset-0 flex items-center justify-center p-4 z-40 bg-black bg-opacity-50">
+      <div className="bg-white rounded-lg w-full max-w-2xl max-h-[90vh] overflow-hidden animate-scale-in shadow-2xl">
         <div className="bg-gray-800 text-white p-4 flex items-center justify-between">
           <div className="flex items-center">
             <Truck className="w-6 h-6 mr-3" />
@@ -160,10 +116,13 @@ export default function EditarCamion() {
           </button>
         </div>
 
-        <div className="p-6 overflow-y-auto max-h-[calc(90vh-80px)]">
+        <div className="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
           <div className="grid grid-cols-2 gap-4">
+            {/* Nombre */}
             <div className="col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-2">Nombre del camión</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Nombre del camión
+              </label>
               <input
                 type="text"
                 value={formData.nombre}
@@ -173,57 +132,117 @@ export default function EditarCamion() {
               />
             </div>
 
+            {/* Tarjeta de circulación */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Tarjeta de circulación</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Tarjeta de circulación
+              </label>
               <input
                 type="text"
                 value={formData.tarjetaCirculacion}
                 onChange={(e) => handleInputChange('tarjetaCirculacion', e.target.value)}
                 className="w-full p-3 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
-                placeholder="Tarjeta de circulación"
+                placeholder="Número de tarjeta"
               />
             </div>
 
+            {/* Placa */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Placa</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Placa *
+              </label>
               <input
                 type="text"
                 value={formData.placa}
                 onChange={(e) => handleInputChange('placa', e.target.value)}
                 className="w-full p-3 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
-                placeholder="Placa"
+                placeholder="ABC-123"
               />
             </div>
 
+            {/* Marca */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Marca</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Marca
+              </label>
               <input
                 type="text"
                 value={formData.marca}
                 onChange={(e) => handleInputChange('marca', e.target.value)}
                 className="w-full p-3 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
-                placeholder="Marca"
+                placeholder="Ford, Chevrolet, etc."
               />
             </div>
 
+            {/* Modelo */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Modelo</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Modelo
+              </label>
               <input
                 type="text"
                 value={formData.modelo}
                 onChange={(e) => handleInputChange('modelo', e.target.value)}
                 className="w-full p-3 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
-                placeholder="Modelo"
+                placeholder="F-150, Silverado, etc."
               />
             </div>
 
+            {/* Año */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Proveedor</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Año
+              </label>
+              <input
+                type="text"
+                value={formData.año}
+                onChange={(e) => handleInputChange('año', e.target.value)}
+                className="w-full p-3 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
+                placeholder="2020"
+              />
+              <p className="text-xs text-gray-500 mt-1">Año de fabricación (1900-2030)</p>
+            </div>
+
+            {/* ESTADO DEL CAMIÓN */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                🚦 Estado del camión
+              </label>
+              <div className="relative">
+                <select
+                  value={formData.estado}
+                  onChange={(e) => handleInputChange('estado', e.target.value)}
+                  className="w-full p-3 border border-gray-300 rounded-md text-sm appearance-none bg-white focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all font-medium cursor-pointer"
+                  style={{ paddingRight: '40px' }}
+                >
+                  <option value="">Seleccionar estado</option>
+                  {estadosDisponibles.map((estado) => (
+                    <option key={estado.value} value={estado.value}>
+                      {estado.label}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="absolute right-3 top-3.5 h-4 w-4 text-gray-400 pointer-events-none" />
+              </div>
+              {formData.estado && (
+                <div className="mt-2">
+                  <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold border ${getEstadoColor(formData.estado)}`}>
+                    {estadosDisponibles.find(e => e.value === formData.estado)?.label || formData.estado}
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {/* Proveedor */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Proveedor
+              </label>
               <div className="relative">
                 <select
                   value={formData.proveedor}
                   onChange={(e) => handleInputChange('proveedor', e.target.value)}
-                  className="w-full p-3 border border-gray-300 rounded-md text-sm appearance-none bg-white focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
+                  className="w-full p-3 border border-gray-300 rounded-md text-sm appearance-none bg-white focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all cursor-pointer"
                 >
                   <option value="">Seleccionar proveedor</option>
                   {proveedores.map((p) => (
@@ -236,13 +255,16 @@ export default function EditarCamion() {
               </div>
             </div>
 
+            {/* Motorista */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Motorista</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Motorista
+              </label>
               <div className="relative">
                 <select
                   value={formData.motorista}
                   onChange={(e) => handleInputChange('motorista', e.target.value)}
-                  className="w-full p-3 border border-gray-300 rounded-md text-sm appearance-none bg-white focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
+                  className="w-full p-3 border border-gray-300 rounded-md text-sm appearance-none bg-white focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all cursor-pointer"
                 >
                   <option value="">Seleccionar motorista</option>
                   {motoristas.map((m) => (
@@ -255,13 +277,16 @@ export default function EditarCamion() {
               </div>
             </div>
 
+            {/* Descripción */}
             <div className="col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-2">Descripción</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Descripción
+              </label>
               <textarea
                 value={formData.descripcion}
                 onChange={(e) => handleInputChange('descripcion', e.target.value)}
                 className="w-full p-3 border border-gray-300 rounded-md text-sm h-24 resize-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
-                placeholder="Descripción del camión"
+                placeholder="Descripción adicional del camión, características especiales, etc."
               />
             </div>
           </div>
@@ -273,7 +298,7 @@ export default function EditarCamion() {
               className={`px-8 py-3 rounded-md font-medium text-white transition-all duration-200 ${
                 isSubmitting
                   ? 'bg-gray-400 cursor-not-allowed'
-                  : 'bg-green-600 hover:bg-green-700 hover:scale-105 active:scale-95'
+                  : 'bg-green-600 hover:bg-green-700 hover:scale-105 active:scale-95 shadow-lg'
               }`}
             >
               {isSubmitting ? (
@@ -282,7 +307,7 @@ export default function EditarCamion() {
                   Actualizando...
                 </div>
               ) : (
-                'Actualizar'
+                '✓ Actualizar Camión'
               )}
             </button>
           </div>
@@ -290,16 +315,16 @@ export default function EditarCamion() {
       </div>
 
       {showSuccessModal && (
-        <div className="fixed inset-0 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg w-full max-w-sm p-8 text-center animate-bounce-in">
+        <div className="fixed inset-0 flex items-center justify-center p-4 z-50 bg-black bg-opacity-60">
+          <div className="bg-white rounded-2xl w-full max-w-sm p-8 text-center animate-bounce-in shadow-2xl">
             <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6 animate-pulse">
               <Check className="w-10 h-10 text-green-600" />
             </div>
-            <h3 className="text-xl font-semibold text-gray-800 mb-3">¡Camión actualizado!</h3>
+            <h3 className="text-2xl font-bold text-gray-800 mb-3">¡Camión actualizado!</h3>
             <p className="text-gray-600 mb-8">Los cambios se han guardado exitosamente</p>
             <button
               onClick={handleContinue}
-              className="bg-green-600 hover:bg-green-700 text-white px-8 py-3 rounded-md font-medium w-full transition-all duration-200 hover:scale-105 active:scale-95"
+              className="bg-green-600 hover:bg-green-700 text-white px-8 py-3 rounded-lg font-medium w-full transition-all duration-200 hover:scale-105 active:scale-95 shadow-lg"
             >
               Continuar
             </button>

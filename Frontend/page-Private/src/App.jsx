@@ -1,7 +1,7 @@
 import { Routes, Route, useLocation, Outlet } from "react-router-dom";
 import { useState, useEffect } from "react";
 import Lottie from 'lottie-react';
-import animationData from './assets/lotties/404 not found.json'; // Ajusta la ru
+import animationData from './assets/lotties/404 not found.json';
 
 // Rutas privadas
 import PrivateRoute from "./components/PrivateRoutes/PrivateRoute";
@@ -30,9 +30,15 @@ import ProviderManagementInterface from "./pages/Provedores/Prooveedores";
 import AddProveedorForm from "./pages/Provedores/AgregarProovedor";
 import CotizacionesComponent from "./pages/cotizaciones/Cotizaciones";
 import CotizacionForm from "./pages/cotizaciones/EditarCotizacion";
+import Seleccionar from "./pages/ProcesosElegir/Seleccionar"
+import Dashboards from "./pages/Dashbord2/dashbords"
+import MantenimientosTable from "./pages/MantenimientosCamiones/PantallaPrincipalMantos"
+import CreateMantenimientoPage from "./pages/MantenimientosCamiones/AgregarNuevoManto"
+import EditMantenimiento from "./pages/MantenimientosCamiones/EditarMantos"
 
 // UI
 import SidebarNav from "./components/Nav/Nav";
+import SideNav from "./components/dashbordNav/sideNav";
 import PantallaCarga from "./components/SplashScreen/PantallaCarga";
 
 function App() {
@@ -48,6 +54,8 @@ function App() {
     "/camiones/editarCamion/:id",
     "/cotizaciones/CotizacionForm",
     "/viajes/maps",
+    "/mantenimientos/agregar-mantenimiento",
+    "/mantenimientos/editar/:id"
   ];
 
   useEffect(() => {
@@ -82,6 +90,38 @@ function App() {
       <Route path="/recuperar" element={<RecoverPassword />} />
       <Route path="/verification-input" element={<VerificationInput />} />
       <Route path="/reset-password" element={<ResetPassword />} />
+
+      {/* ===================== RUTA PRIVADA SIN SIDEBAR ===================== */}
+      <Route
+        path="/SeleccionarProceso"
+        element={
+          <PrivateRoute>
+            <Seleccionar />
+          </PrivateRoute>
+        }
+      />
+
+       {/* ===================== RUTAS PRIVADAS + LAYOUT CON SIDEBAR ===================== */}
+        <Route
+        element={
+          <PrivateRoute>
+            {/* Layout protegido (sin archivo extra) */}
+            <div className="flex h-screen overflow-hidden">
+              <SideNav />
+              <div className="flex-1 min-h-screen overflow-y-auto">
+                <Outlet />
+              </div>
+            </div>
+          </PrivateRoute>
+        }
+      >
+       <Route path="/home" element={<Dashboards/>} />
+        <Route path="/mantenimientos" element={<MantenimientosTable/>} />
+        <Route path="/mantenimientos/agregar-mantenimiento" element={<CreateMantenimientoPage/>} />
+        <Route path="/mantenimientos/editar/:id" element={<EditMantenimiento/>} />
+
+      </Route>
+
 
       {/* ===================== RUTAS PRIVADAS + LAYOUT CON SIDEBAR ===================== */}
       <Route
@@ -132,25 +172,25 @@ function App() {
       </Route>
 
       {/* ===================== 404 FUERA DEL LAYOUT (SIN MENÚ) ===================== */}
-     <Route
-  path="*"
-  element={
-    <div className="flex items-center justify-center h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
-      <div className="w-full flex items-center justify-center">
-        <Lottie
-          animationData={animationData}
-          style={{ 
-            width: '100%',
-            maxWidth: '800px', // Controla el tamaño máximo
-            height: 'auto' // Mantiene proporciones
-          }}
-          loop={true}
-          autoplay={true}
-        />
-      </div>
-    </div>
-  }
-/>
+      <Route
+        path="*"
+        element={
+          <div className="flex items-center justify-center h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+            <div className="w-full flex items-center justify-center">
+              <Lottie
+                animationData={animationData}
+                style={{ 
+                  width: '100%',
+                  maxWidth: '800px',
+                  height: 'auto'
+                }}
+                loop={true}
+                autoplay={true}
+              />
+            </div>
+          </div>
+        }
+      />
     </Routes>
   );
 }

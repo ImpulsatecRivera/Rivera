@@ -55,7 +55,7 @@ const validateGasolineLevel = (level) => {
  * @returns {boolean} - true si es válido
  */
 const validateTruckState = (state) => {
-  const validStates = ['DISPONIBLE', 'EN RUTA', 'MANTENIMIENTO', 'FUERA DE SERVICIO'];
+  const validStates = ['DISPONIBLE', 'EN RUTA', 'MANTENIMIENTO', 'NO DISPONIBLE'];
   return validStates.includes(state?.toUpperCase());
 };
 
@@ -438,7 +438,7 @@ camionesController.post = async (req, res) => {
     if (state && !validateTruckState(state)) {
       return res.status(400).json({
         message: "Estado de camión inválido",
-        error: "Estados válidos: DISPONIBLE, EN RUTA, MANTENIMIENTO, FUERA DE SERVICIO"
+        error: "Estados válidos: DISPONIBLE, EN RUTA, MANTENIMIENTO, NO DISPONIBLE"
       });
     }
 
@@ -599,7 +599,7 @@ camionesController.put = async (req, res) => {
     if (state && !validateTruckState(state)) {
       return res.status(400).json({
         message: "Estado de camión inválido",
-        error: "Estados válidos: DISPONIBLE, EN RUTA, MANTENIMIENTO, FUERA DE SERVICIO"
+        error: "Estados válidos: DISPONIBLE, EN RUTA, MANTENIMIENTO, NO DISPONIBLE"
       });
     }
 
