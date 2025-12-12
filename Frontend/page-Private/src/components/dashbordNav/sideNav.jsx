@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Home, Clock, BarChart3, Wrench, FileText, Users } from 'lucide-react';
+import { Home, Clock, BarChart3, Wrench, FileText, Users, Fuel } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 
 const SidebarNav = () => {
@@ -7,15 +7,16 @@ const SidebarNav = () => {
   const location = useLocation();
   const [activeItem, setActiveItem] = useState('home');
 
-  const navItems = [
-    { id: 'home', route: '/home', icon: Home },
-    { id: 'time', route: '/time', icon: Clock },
-    { id: 'reports', route: '/reports', icon: BarChart3 },
-    { id: 'maintenance', route: '/mantenimientos', icon: Wrench },
-    { id: 'documents', route: '/documents', icon: FileText },
-    { id: 'users', route: '/users', icon: Users }
-  ];
+ const navItems = [
+  { id: 'home', route: '/home', icon: Home },
+  { id: 'time', route: '/time', icon: Clock },
+  { id: 'reports', route: '/reports', icon: BarChart3 },
+  { id: 'maintenance', route: '/mantenimientos', icon: Wrench },
+  { id: 'diesel', route: '/diesel', icon: Fuel }, 
+  { id: 'documents', route: '/documents', icon: FileText },
+  { id: 'users', route: '/users', icon: Users },
 
+];
   // Actualizar el item activo basado en la ruta actual
   useEffect(() => {
     const currentItem = navItems.find(item => item.route === location.pathname);
