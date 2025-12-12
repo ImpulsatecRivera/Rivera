@@ -59,6 +59,10 @@ const motoristaSchema = new Schema({
     img: {
         type: String,      // URL de la foto del motorista (generalmente desde Cloudinary)
         required: true     // Campo obligatorio para identificación visual y seguridad
+    },
+    salario:{
+        type:String,
+        required:true
     }
 }, {
     // Opciones del esquema
