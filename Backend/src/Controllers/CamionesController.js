@@ -413,12 +413,12 @@ camionesController.post = async (req, res) => {
       description,
       supplierId,
       driverId,
+      salario, // <-- NUEVO CAMPO
     } = req.body;
 
-    // Validar campos requeridos
     const requiredFields = ['name', 'brand', 'model', 'licensePlate'];
     const validation = validateRequiredFields(req.body, requiredFields);
-    
+
     if (!validation.isValid) {
       return res.status(400).json({
         message: "Faltan campos requeridos",
@@ -426,7 +426,15 @@ camionesController.post = async (req, res) => {
       });
     }
 
-    // Validar nivel de gasolina si se proporciona
+    // === VALIDACIÓN DE SALARIO ===
+    const SALARIO_MINIMO_ES = 365; // salario mínimo El Salvador
+    if (salario && Number(salario) < SALARIO_MINIMO_ES) {
+      return res.status(400).json({
+        message: "Salario inválido",
+        error: `El salario no puede ser menor al salario mínimo de $${SALARIO_MINIMO_ES}`
+      });
+    }
+
     if (gasolineLevel && !validateGasolineLevel(gasolineLevel)) {
       return res.status(400).json({
         message: "Nivel de gasolina inválido",
@@ -434,7 +442,6 @@ camionesController.post = async (req, res) => {
       });
     }
 
-    // Validar estado si se proporciona
     if (state && !validateTruckState(state)) {
       return res.status(400).json({
         message: "Estado de camión inválido",
@@ -442,7 +449,6 @@ camionesController.post = async (req, res) => {
       });
     }
 
-    // Validar placa de circulación
     if (!validateLicensePlate(licensePlate)) {
       return res.status(400).json({
         message: "Placa de circulación inválida",
@@ -450,7 +456,6 @@ camionesController.post = async (req, res) => {
       });
     }
 
-    // Validar edad si se proporciona
     const currentYear = new Date().getFullYear();
     if (age && (age < 1990 || age > currentYear)) {
       return res.status(400).json({
@@ -459,7 +464,6 @@ camionesController.post = async (req, res) => {
       });
     }
 
-    // Validar IDs de proveedor y conductor si se proporcionan
     if (supplierId && !isValidObjectId(supplierId)) {
       return res.status(400).json({
         message: "ID de proveedor inválido",
@@ -474,11 +478,10 @@ camionesController.post = async (req, res) => {
       });
     }
 
-    // Verificar que no exista otro camión con la misma placa
-    const existingTruck = await camionesMod.findOne({ 
-      licensePlate: licensePlate.toUpperCase() 
+    const existingTruck = await camionesMod.findOne({
+      licensePlate: licensePlate.toUpperCase()
     });
-    
+
     if (existingTruck) {
       return res.status(409).json({
         message: "Placa de circulación duplicada",
@@ -486,7 +489,6 @@ camionesController.post = async (req, res) => {
       });
     }
 
-    // Manejar subida de imagen a Cloudinary
     let imgUrl = "";
     if (req.file) {
       try {
@@ -507,7 +509,6 @@ camionesController.post = async (req, res) => {
       }
     }
 
-    // Crear nuevo camión
     const newCamion = new camionesMod({
       name: name.trim(),
       brand: brand.trim(),
@@ -520,34 +521,36 @@ camionesController.post = async (req, res) => {
       description: description?.trim(),
       supplierId,
       driverId,
+      salario: salario ? Number(salario) : undefined, // <-- GUARDARLO
       img: imgUrl,
     });
 
     await newCamion.save();
 
-    res.status(201).json({ 
+    res.status(201).json({
       message: "Camión agregado correctamente",
       data: {
         id: newCamion._id,
         name: newCamion.name,
-        licensePlate: newCamion.licensePlate
+        licensePlate: newCamion.licensePlate,
+        salario: newCamion.salario,
       }
     });
   } catch (error) {
-    // Manejar errores específicos de MongoDB
     if (error.code === 11000) {
       return res.status(409).json({
         message: "Datos duplicados",
         error: "Ya existe un camión con esos datos"
       });
     }
-    
-    res.status(500).json({ 
-      message: "Error interno del servidor al agregar camión", 
-      error: error.message 
+
+    res.status(500).json({
+      message: "Error interno del servidor al agregar camión",
+      error: error.message
     });
   }
 };
+
 
 /**
  * Actualizar un camión existente
@@ -556,8 +559,8 @@ camionesController.post = async (req, res) => {
 camionesController.put = async (req, res) => {
   try {
     const { id } = req.params;
-    
-    // Validar que el ID sea válido
+
+    // Validar ID
     if (!isValidObjectId(id)) {
       return res.status(400).json({
         message: "ID de camión inválido",
@@ -565,7 +568,7 @@ camionesController.put = async (req, res) => {
       });
     }
 
-    // Verificar que el camión existe
+    // Verificar existencia del camión
     const existingCamion = await camionesMod.findById(id);
     if (!existingCamion) {
       return res.status(404).json({
@@ -586,9 +589,20 @@ camionesController.put = async (req, res) => {
       description,
       supplierId,
       driverId,
+      salario, // <-- NUEVO CAMPO
     } = req.body;
 
-    // Validar campos si se proporcionan
+    // === VALIDACIÓN DE SALARIO ===
+    const SALARIO_MINIMO_ES = 365;
+
+    if (salario !== undefined && Number(salario) < SALARIO_MINIMO_ES) {
+      return res.status(400).json({
+        message: "Salario inválido",
+        error: `El salario no puede ser menor al salario mínimo de $${SALARIO_MINIMO_ES}`
+      });
+    }
+
+    // Validaciones restantes
     if (gasolineLevel && !validateGasolineLevel(gasolineLevel)) {
       return res.status(400).json({
         message: "Nivel de gasolina inválido",
@@ -610,7 +624,6 @@ camionesController.put = async (req, res) => {
       });
     }
 
-    // Validar edad si se proporciona
     const currentYear = new Date().getFullYear();
     if (age && (age < 1990 || age > currentYear)) {
       return res.status(400).json({
@@ -619,7 +632,6 @@ camionesController.put = async (req, res) => {
       });
     }
 
-    // Validar IDs si se proporcionan
     if (supplierId && !isValidObjectId(supplierId)) {
       return res.status(400).json({
         message: "ID de proveedor inválido",
@@ -634,13 +646,13 @@ camionesController.put = async (req, res) => {
       });
     }
 
-    // Verificar unicidad de placa si se está actualizando
+    // Verificar placa duplicada si se intenta cambiar
     if (licensePlate && licensePlate !== existingCamion.licensePlate) {
-      const duplicatePlate = await camionesMod.findOne({ 
+      const duplicatePlate = await camionesMod.findOne({
         licensePlate: licensePlate.toUpperCase(),
         _id: { $ne: id }
       });
-      
+
       if (duplicatePlate) {
         return res.status(409).json({
           message: "Placa de circulación duplicada",
@@ -649,7 +661,7 @@ camionesController.put = async (req, res) => {
       }
     }
 
-    // Manejar subida de imagen a Cloudinary
+    // Subida de imagen a Cloudinary
     let imgUrl = "";
     if (req.file) {
       try {
@@ -670,9 +682,9 @@ camionesController.put = async (req, res) => {
       }
     }
 
-    // Preparar datos para actualización (solo campos proporcionados)
+    // Preparar actualización dinámica
     const updatedTruck = {};
-    
+
     if (name) updatedTruck.name = name.trim();
     if (brand) updatedTruck.brand = brand.trim();
     if (model) updatedTruck.model = model.trim();
@@ -686,36 +698,41 @@ camionesController.put = async (req, res) => {
     if (driverId !== undefined) updatedTruck.driverId = driverId;
     if (imgUrl) updatedTruck.img = imgUrl;
 
-    // Actualizar camión
+    // NUEVO CAMPO:
+    if (salario !== undefined) updatedTruck.salario = Number(salario);
+
     const updatedCamion = await camionesMod.findByIdAndUpdate(
-      id, 
-      updatedTruck, 
+      id,
+      updatedTruck,
       { new: true, runValidators: true }
     );
 
-    res.status(200).json({ 
+    res.status(200).json({
       message: "Camión actualizado correctamente",
       data: {
         id: updatedCamion._id,
         name: updatedCamion.name,
-        licensePlate: updatedCamion.licensePlate
+        licensePlate: updatedCamion.licensePlate,
+        salario: updatedCamion.salario
       }
     });
+
   } catch (error) {
-    // Manejar errores específicos de MongoDB
+
     if (error.code === 11000) {
       return res.status(409).json({
         message: "Datos duplicados",
         error: "Ya existe un camión con esos datos"
       });
     }
-    
-    res.status(500).json({ 
-      message: "Error interno del servidor al actualizar camión", 
-      error: error.message 
+
+    res.status(500).json({
+      message: "Error interno del servidor al actualizar camión",
+      error: error.message
     });
   }
 };
+
 
 /**
  * Eliminar un camión

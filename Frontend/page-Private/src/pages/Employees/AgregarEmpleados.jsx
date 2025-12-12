@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { User, Mail, Phone, MapPin, Lock, CreditCard, UserPlus } from 'lucide-react';
+import { User, Mail, Phone, MapPin, Lock, CreditCard, UserPlus, DollarSign } from 'lucide-react';
 import { config } from '../../config';
 import axios from 'axios';
 
@@ -33,6 +33,7 @@ const AgregarEmpleado = () => {
     password: '',
     phone: '',
     address: '',
+    salario: '',
     img: null
   });
 
@@ -77,6 +78,26 @@ const AgregarEmpleado = () => {
     }
   };
 
+  // Manejo especial para el campo de salario
+  const handleSalaryChange = (e) => {
+    const value = e.target.value;
+    // Permitir solo números y punto decimal
+    if (value === '' || /^\d*\.?\d*$/.test(value)) {
+      setFormData(prev => ({
+        ...prev,
+        salario: value
+      }));
+
+      // Limpiar error si existe
+      if (errors.salario) {
+        setErrors(prev => ({
+          ...prev,
+          salario: ''
+        }));
+      }
+    }
+  };
+
   // Manejo de imagen
   const onImageChange = (e) => {
     handleImageChange(e, setFormData);
@@ -93,6 +114,12 @@ const AgregarEmpleado = () => {
 
     // Validar formulario
     const formErrors = validateEmployeeForm(formData);
+    
+    // Validación adicional para salario
+    if (!formData.salary || formData.salary === '' || parseFloat(formData.salary) <= 0) {
+      formErrors.salary = 'El salario es requerido y debe ser mayor a 0';
+    }
+
     console.log('Errores de validación:', formErrors);
     setErrors(formErrors);
 
@@ -107,7 +134,8 @@ const AgregarEmpleado = () => {
           birthDate: 'Fecha de nacimiento',
           password: 'Contraseña',
           phone: 'Teléfono',
-          address: 'Dirección'
+          address: 'Dirección',
+          salary: 'Salario'
         };
         return fieldNames[field] || field;
       });
@@ -130,6 +158,15 @@ const AgregarEmpleado = () => {
       formDataToSend.append('password', formData.password);
       formDataToSend.append('phone', formData.phone.trim());
       formDataToSend.append('address', formData.address.trim());
+      
+      // Convertir y validar salario
+      const salarioValue = parseFloat(formData.salario);
+      if (!isNaN(salarioValue) && salarioValue > 0) {
+        formDataToSend.append('salario', salarioValue);
+        console.log('✅ Salario agregado:', salarioValue);
+      } else {
+        console.error('❌ Salario inválido:', formData.salario);
+      }
 
       if (formData.img) {
         formDataToSend.append('img', formData.img);
@@ -137,6 +174,14 @@ const AgregarEmpleado = () => {
 
       console.log('=== DATOS A ENVIAR ===');
       console.log('Incluye imagen:', !!formData.img);
+      console.log('Salario original:', formData.salario);
+      console.log('Salario parseado:', salarioValue);
+      
+      // Mostrar todos los campos del FormData
+      console.log('=== CONTENIDO DEL FORMDATA ===');
+      for (let pair of formDataToSend.entries()) {
+        console.log(pair[0] + ':', pair[1]);
+      }
 
       console.log('=== ENVIANDO PETICIÓN ===');
       console.log('URL:', `${API_URL}/empleados`);
@@ -169,6 +214,7 @@ const AgregarEmpleado = () => {
           password: '',
           phone: '',
           address: '',
+          salario: '',
           img: null
         });
         setImagePreview(null);
@@ -178,7 +224,9 @@ const AgregarEmpleado = () => {
     } catch (error) {
       console.error('=== ERROR CAPTURADO ===');
       console.error('Error completo:', error);
-      console.log('Error response:', error.response);
+      console.error('Error response:', error.response);
+      console.error('Error response data:', error.response?.data);
+      console.error('Error response status:', error.response?.status);
 
       let errorMsg = 'Error desconocido';
       let errorTitle = '❌ Error al agregar empleado';
@@ -186,15 +234,22 @@ const AgregarEmpleado = () => {
       if (error.response) {
         const statusCode = error.response.status;
         const errorMessage = error.response.data?.message || error.response.data?.error || 'Error del servidor';
+        const errorDetails = error.response.data?.details || error.response.data?.errors || null;
 
         console.log('Status Code:', statusCode);
         console.log('Error Message:', errorMessage);
+        console.log('Error Details:', errorDetails);
         console.log('Full Response Data:', error.response.data);
 
         switch (statusCode) {
           case 400:
             errorTitle = '❌ Error de validación';
-            errorMsg = errorMessage;
+            if (errorDetails) {
+              // Si hay detalles específicos de validación
+              errorMsg = `${errorMessage}\n\nDetalles:\n${JSON.stringify(errorDetails, null, 2)}`;
+            } else {
+              errorMsg = errorMessage;
+            }
             break;
           case 401:
             errorTitle = '🔒 No autorizado';
@@ -371,6 +426,22 @@ const AgregarEmpleado = () => {
                   label="Teléfono"
                   required
                   error={errors.phone}
+                />
+
+                {/* Salario */}
+                <FormInput
+                  id="salario"
+                  name="salario"
+                  type="number"
+                  value={formData.salario}
+                  onChange={handleSalaryChange}
+                  placeholder="0.00"
+                  step="0.01"
+                  min="0"
+                  icon={DollarSign}
+                  label="Salario"
+                  required
+                  error={errors.salario}
                 />
 
                 {/* Dirección */}

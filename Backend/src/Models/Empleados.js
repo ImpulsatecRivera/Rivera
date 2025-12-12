@@ -58,6 +58,10 @@ const empleadoSchema = new Schema({
     img: {
         type: String,      // URL de la foto del empleado (generalmente desde Cloudinary)
         required: true     // Campo obligatorio para identificación visual en el sistema
+    },
+    salario:{
+        type:Number,
+        required:true
     }
 }, {
     // Opciones del esquema
