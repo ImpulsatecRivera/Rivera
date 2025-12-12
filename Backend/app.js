@@ -19,6 +19,7 @@ import MantoRouter from "./src/Routes/MantenimientoRoutes.js"
 import Reportesroutes from "./src/Routes/ReportesRoutes.js"
 import ResumenRoutes from "./src/Routes/ResumenDieselRoutes.js"
 import ResumenDieselReporte from "./src/Routes/ResumenReportesRoutes.js"
+import cajachicaRoutes from "./src/Routes/cajaChicaRoutes.js";
 import swaggerUi from "swagger-ui-express";
 import fs from "fs";
 import path from "path";
@@ -82,6 +83,8 @@ app.use("/api/camiones", camionesRoutes);
 app.use("/api/empleados", empleadoRoutes);
 app.use("/api/motoristas", motoristasRoutes);
 app.use("/api/proveedores", proveedoresRoutes);
+app.use("/api/caja-chica", cajachicaRoutes);
+
 app.use("/api/auto-update", autoUpdateRoutes);
 app.use("/api/call",callRoutes);
 app.use("/api/mantenimientos",MantoRouter)
