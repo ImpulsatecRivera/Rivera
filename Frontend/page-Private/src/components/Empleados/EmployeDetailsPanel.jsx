@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, MoreHorizontal, User, Phone, Mail, Calendar, MapPin } from 'lucide-react';
+import { ArrowLeft, MoreHorizontal, User, Phone, Mail, Calendar, MapPin, DollarSign } from 'lucide-react';
 import Lottie from 'lottie-react';
 // Importa tu animación Sandy Loading
 import sandyLoadingAnimation from '../../assets/lotties/Sandy Loading.json';
@@ -20,6 +20,17 @@ const EmployeeDetailPanel = ({
 
     return () => clearTimeout(timer);
   }, [selectedEmpleados]); // Se ejecuta cada vez que cambia selectedEmpleados
+
+  // Función para formatear el salario
+  const formatSalary = (salario) => {
+    if (!salario && salario !== 0) return 'No especificado';
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }).format(salario);
+  };
 
   if (isLoading) {
     return (
@@ -324,6 +335,33 @@ const EmployeeDetailPanel = ({
                 <div className="text-sm text-gray-600 bg-white p-3 rounded-lg border flex items-center">
                   <MapPin className="w-4 h-4 mr-2" style={{color: '#5D9646'}} />
                   {selectedEmpleados.address}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Información Financiera */}
+          <div className="bg-gradient-to-r from-emerald-50 to-emerald-100 rounded-xl p-6 border border-emerald-200">
+            <div className="flex items-center space-x-3 mb-4">
+              <div className="p-2 rounded-lg" style={{backgroundColor: '#10b981'}}>
+                <DollarSign className="w-5 h-5 text-white" />
+              </div>
+              <span className="font-semibold text-gray-900">Información Financiera</span>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <div className="text-sm font-medium text-gray-700 mb-1">Salario</div>
+                <div className="text-lg font-bold text-emerald-700 bg-white p-4 rounded-lg border border-emerald-200 flex items-center justify-between shadow-sm">
+                  <div className="flex items-center">
+                    <DollarSign className="w-5 h-5 mr-2" style={{color: '#10b981'}} />
+                    <span>{formatSalary(selectedEmpleados.salario)}</span>
+                  </div>
+                  {selectedEmpleados.salario && selectedEmpleados.salario > 0 && (
+                    <span className="text-xs bg-emerald-100 text-emerald-700 px-3 py-1 rounded-full font-medium">
+                      Mensual
+                    </span>
+                  )}
                 </div>
               </div>
             </div>

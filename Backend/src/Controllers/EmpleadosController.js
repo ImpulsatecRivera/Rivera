@@ -99,6 +99,48 @@ const validatePassword = (password) => {
 };
 
 /**
+ * Función para validar salario
+ * @param {number} salario - Salario a validar
+ * @returns {object} - {isValid: boolean, message: string}
+ */
+const validateSalario = (salario) => {
+    // Convertir a número si viene como string
+    const salarioNum = Number(salario);
+    
+    if (isNaN(salarioNum)) {
+        return {
+            isValid: false,
+            message: "El salario debe ser un número válido"
+        };
+    }
+    
+    if (salarioNum < 0) {
+        return {
+            isValid: false,
+            message: "El salario no puede ser negativo"
+        };
+    }
+    
+    // Salario mínimo en El Salvador (2024) es aproximadamente $365
+    if (salarioNum < 365) {
+        return {
+            isValid: false,
+            message: "El salario no puede ser menor al salario mínimo ($365)"
+        };
+    }
+    
+    // Límite razonable superior (opcional)
+    if (salarioNum > 100000) {
+        return {
+            isValid: false,
+            message: "El salario no puede exceder los $100,000"
+        };
+    }
+    
+    return { isValid: true, message: "" };
+};
+
+/**
  * Función para validar campos requeridos
  * @param {object} data - Datos a validar
  * @param {array} requiredFields - Campos requeridos
@@ -254,10 +296,10 @@ empleadosCon.get = async (req, res) => {
  */
 empleadosCon.post = async (req, res) => {
     try {
-        const { name, lastName, dui, birthDate, password, phone, address } = req.body;
+        const { name, lastName, dui, birthDate, password, phone, address, salario, rol } = req.body;
 
         // Validar campos requeridos
-        const requiredFields = ['name', 'lastName', 'dui', 'birthDate', 'password', 'phone', 'address'];
+        const requiredFields = ['name', 'lastName', 'dui', 'birthDate', 'password', 'phone', 'address', 'salario', 'rol'];
         const validation = validateRequiredFields(req.body, requiredFields);
         
         if (!validation.isValid) {
@@ -266,6 +308,16 @@ empleadosCon.post = async (req, res) => {
                 message: "Faltan campos requeridos",
                 error: `Los siguientes campos son obligatorios: ${validation.missingFields.join(', ')}`,
                 missingFields: validation.missingFields
+            });
+        }
+
+        // Validar rol
+        const rolesPermitidos = ['Operativo', 'Supervisor'];
+        if (!rolesPermitidos.includes(rol)) {
+            return res.status(400).json({
+                success: false,
+                message: "Rol inválido",
+                error: `El rol debe ser uno de los siguientes: ${rolesPermitidos.join(', ')}`
             });
         }
 
@@ -303,6 +355,16 @@ empleadosCon.post = async (req, res) => {
                 success: false,
                 message: "Contraseña inválida",
                 error: passwordValidation.message
+            });
+        }
+
+        // Validar salario
+        const salarioValidation = validateSalario(salario);
+        if (!salarioValidation.isValid) {
+            return res.status(400).json({
+                success: false,
+                message: "Salario inválido",
+                error: salarioValidation.message
             });
         }
 
@@ -408,6 +470,8 @@ empleadosCon.post = async (req, res) => {
             password: hashedPassword,
             phone: formatPhone(phone),
             address: address.trim(),
+            salario: Number(salario),
+            rol: rol,
             img: imgUrl
         });
 
@@ -426,6 +490,8 @@ empleadosCon.post = async (req, res) => {
                     birthDate: empleadoGuardado.birthDate,
                     phone: empleadoGuardado.phone,
                     address: empleadoGuardado.address,
+                    salario: empleadoGuardado.salario,
+                    rol: empleadoGuardado.rol,
                     img: empleadoGuardado.img
                 }
             }
@@ -490,7 +556,7 @@ empleadosCon.put = async (req, res) => {
             });
         }
 
-        const { name, lastName, dui, birthDate, password, phone, address } = req.body;
+        const { name, lastName, dui, birthDate, password, phone, address, salario, rol } = req.body;
 
         // Validaciones específicas por campo si se proporcionan
         if (name && (name.trim().length < 2 || name.trim().length > 50)) {
@@ -544,12 +610,35 @@ empleadosCon.put = async (req, res) => {
             }
         }
 
+        if (salario !== undefined) {
+            const salarioValidation = validateSalario(salario);
+            if (!salarioValidation.isValid) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Salario inválido",
+                    error: salarioValidation.message
+                });
+            }
+        }
+
         if (address && (address.trim().length < 10 || address.trim().length > 200)) {
             return res.status(400).json({
                 success: false,
                 message: "Dirección inválida",
                 error: "La dirección debe tener entre 10 y 200 caracteres"
             });
+        }
+
+        // Validar rol si se proporciona
+        if (rol) {
+            const rolesPermitidos = ['Operativo', 'Supervisor'];
+            if (!rolesPermitidos.includes(rol)) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Rol inválido",
+                    error: `El rol debe ser uno de los siguientes: ${rolesPermitidos.join(', ')}`
+                });
+            }
         }
 
         // Verificar duplicados si se están actualizando DUI
@@ -579,6 +668,8 @@ empleadosCon.put = async (req, res) => {
         if (birthDate) datosActualizados.birthDate = new Date(birthDate);
         if (phone) datosActualizados.phone = formatPhone(phone);
         if (address !== undefined) datosActualizados.address = address.trim();
+        if (salario !== undefined) datosActualizados.salario = Number(salario);
+        if (rol) datosActualizados.rol = rol;
 
         // Generar nuevo email si se proporcionan nombre o apellido
         if (name || lastName) {
