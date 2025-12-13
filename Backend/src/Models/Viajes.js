@@ -1,9 +1,9 @@
 //  Backend/src/Models/Viajes.js
 // ESQUEMA ADAPTADO - Agregando configuración flexible a tu estructura existente
- 
+
 import mongoose from 'mongoose';
 const { Schema, model } = mongoose;
- 
+
 const viajeSchema = new Schema({
   // 🔗 REFERENCIAS A OTRAS COLECCIONES (mantener como está)
   quoteId: {
@@ -11,32 +11,32 @@ const viajeSchema = new Schema({
     ref: 'Cotizaciones',
     required: true
   },
- 
+
   truckId: {
     type: Schema.Types.ObjectId,
     ref: 'Camiones',
     required: true
   },
- 
+
   conductorId: {
     type: Schema.Types.ObjectId,
     ref: 'Motorista',
     required: true
   },
- 
+
   // 📝 DESCRIPCIÓN DEL VIAJE (mantener)
   tripDescription: {
     type: String,
     required: true,
     trim: true
   },
- 
+
   // ⏰ HORARIOS PRINCIPALES (mantener)
   departureTime: {
     type: Date,
     required: true
   },
- 
+
   arrivalTime: {
     type: Date,
     required: true
@@ -49,45 +49,45 @@ const viajeSchema = new Schema({
       type: Boolean,
       default: true
     },
-    
+
     // Control de auto-completado
     autoCompletado: {
       type: Boolean,
       default: true
     },
-    
+
     // Estrategia de cálculo de progreso
     estrategiaProgreso: {
       type: String,
       enum: ['automatico', 'manual', 'hibrido'],
       default: 'hibrido'
     },
-    
+
     // Requerir confirmación manual
     requiereConfirmacionManual: {
       type: Boolean,
       default: false
     },
-    
+
     // Confirmación recibida
     confirmacionRecibida: {
       type: Boolean,
       default: false
     },
-    
+
     // Ignorar detección de retrasos
     ignoreDelayDetection: {
       type: Boolean,
       default: false
     },
-    
+
     // Override manual
     manualOverride: {
       accion: String,
       fecha: Date,
       razon: String
     },
-    
+
     // Override temporal
     temporaryOverride: {
       accion: String,
@@ -95,7 +95,7 @@ const viajeSchema = new Schema({
       expira: Date,
       valorAnterior: mongoose.Schema.Types.Mixed
     },
-    
+
     // Metadatos
     ultimaConfiguracion: {
       type: Date,
@@ -106,7 +106,7 @@ const viajeSchema = new Schema({
       default: 'sistema'
     }
   },
- 
+
   // ⏰ TIEMPOS REALES (mantener como está)
   tiemposReales: {
     ultimaActualizacion: {
@@ -117,13 +117,13 @@ const viajeSchema = new Schema({
     llegadaReal: Date,
     tiempoRealViaje: Number // en minutos
   },
- 
+
   // 📊 ESTADO DEL VIAJE (EXTENDER estados existentes)
   estado: {
     actual: {
       type: String,
       enum: [
-        'pendiente', 'en_curso', 'completado', 'cancelado', 'retrasado', 
+        'pendiente', 'en_curso', 'completado', 'cancelado', 'retrasado',
         // 🆕 Nuevos estados agregados
         'programado', 'listo', 'pausado'
       ],
@@ -161,7 +161,7 @@ const viajeSchema = new Schema({
       configuracion: mongoose.Schema.Types.Mixed
     }]
   },
- 
+
   // 📍 TRACKING (EXTENDER tracking existente)
   tracking: {
     ubicacionActual: {
@@ -176,7 +176,7 @@ const viajeSchema = new Schema({
         min: 0
       }
     },
-   
+
     progreso: {
       porcentaje: {
         type: Number,
@@ -199,7 +199,7 @@ const viajeSchema = new Schema({
         default: 'hibrido'
       }
     },
-   
+
     // 🆕 Punto actual en ruta agregado
     puntoActualRuta: {
       indice: Number,
@@ -219,7 +219,7 @@ const viajeSchema = new Schema({
       horaEstimada: Date,
       horaReal: Date,
       completado: Boolean,
-      
+
       // 🆕 Campos agregados para compatibilidad con sistema flexible
       tipo: String,
       progreso: Number,
@@ -240,7 +240,7 @@ const viajeSchema = new Schema({
       }
     }]
   },
- 
+
   // 💰 COSTOS REALES (mantener como está)
   costosReales: {
     combustible: {
@@ -264,7 +264,7 @@ const viajeSchema = new Schema({
       default: 0
     }
   },
- 
+
   // 🚨 ALERTAS (EXTENDER alertas existentes)
   alertas: [{
     _id: {
@@ -293,7 +293,7 @@ const viajeSchema = new Schema({
     configuracion: mongoose.Schema.Types.Mixed,
     rutaInfo: mongoose.Schema.Types.Mixed
   }],
- 
+
   // 🌡 CONDICIONES DEL VIAJE (mantener como está)
   condiciones: {
     clima: String,
@@ -324,18 +324,18 @@ const viajeSchema = new Schema({
       motivo: String
     }
   }
- 
+
 }, {
   timestamps: true,
   versionKey: '__v',
   collection: "Viajes"
 });
- 
+
 // 🔄 MIDDLEWARE PRE-SAVE MEJORADO
-viajeSchema.pre('save', async function(next) {
+viajeSchema.pre('save', async function (next) {
   const ahora = new Date();
   const config = this.configuracion || {};
- 
+
   // 🔄 AUTO-COMPLETAR DATOS DESDE LA COTIZACIÓN (mantener tu lógica)
   if (this.isNew && this.quoteId) {
     try {
@@ -344,11 +344,11 @@ viajeSchema.pre('save', async function(next) {
         if (!this.tripDescription && cotizacion.quoteDescription) {
           this.tripDescription = cotizacion.quoteDescription;
         }
-       
+
         if (!this.departureTime && cotizacion.horarios && cotizacion.horarios.fechaSalida) {
           this.departureTime = cotizacion.horarios.fechaSalida;
         }
-        
+
         if (!this.arrivalTime && cotizacion.horarios && cotizacion.horarios.fechaLlegadaEstimada) {
           this.arrivalTime = cotizacion.horarios.fechaLlegadaEstimada;
         }
@@ -372,38 +372,38 @@ viajeSchema.pre('save', async function(next) {
   }
 
   // Limpiar overrides temporales expirados
-  if (config.temporaryOverride && 
-      config.temporaryOverride.expira && 
-      ahora > config.temporaryOverride.expira) {
+  if (config.temporaryOverride &&
+    config.temporaryOverride.expira &&
+    ahora > config.temporaryOverride.expira) {
     this.configuracion.temporaryOverride = undefined;
   }
 
   // Limpiar flags expirados
-  if (this.flags && this.flags.skipAutoProcessing && 
-      this.flags.expira && ahora > this.flags.expira) {
+  if (this.flags && this.flags.skipAutoProcessing &&
+    this.flags.expira && ahora > this.flags.expira) {
     this.flags.skipAutoProcessing = false;
     this.flags.expira = undefined;
   }
- 
+
   // 💰 AUTO-CALCULAR COSTO TOTAL (mantener tu lógica)
   this.costosReales.total = (this.costosReales.combustible || 0) +
-                            (this.costosReales.peajes || 0) +
-                            (this.costosReales.conductor || 0) +
-                            (this.costosReales.otros || 0);
- 
+    (this.costosReales.peajes || 0) +
+    (this.costosReales.conductor || 0) +
+    (this.costosReales.otros || 0);
+
   // 🔄 LÓGICA DE AUTO-ACTUALIZACIÓN MEJORADA CON CONFIGURACIÓN
   if (this.estado.autoActualizar && !this.flags?.skipAutoProcessing) {
-    
+
     // Auto-iniciar viajes CON VALIDACIÓN DE CONFIGURACIÓN
-    if (this.estado.actual === 'pendiente' && 
-        this.departureTime <= ahora &&
-        config.autoInicio !== false &&
-        !config.requiereConfirmacionManual) {
-      
+    if (this.estado.actual === 'pendiente' &&
+      this.departureTime <= ahora &&
+      config.autoInicio !== false &&
+      !config.requiereConfirmacionManual) {
+
       this.estado.actual = 'en_curso';
       this.estado.fechaCambio = ahora;
       this.tiemposReales.salidaReal = this.tiemposReales.salidaReal || ahora;
-     
+
       this.estado.historial.push({
         estadoAnterior: 'pendiente',
         estadoNuevo: 'en_curso',
@@ -414,25 +414,25 @@ viajeSchema.pre('save', async function(next) {
         configuracion: config
       });
     }
-   
+
     // Auto-completar viajes CON VALIDACIÓN DE CONFIGURACIÓN
     if (this.estado.actual === 'en_curso' &&
-        this.arrivalTime <= ahora &&
-        this.tracking.progreso.porcentaje >= 95 &&
-        config.autoCompletado !== false) {
-     
+      this.arrivalTime <= ahora &&
+      this.tracking.progreso.porcentaje >= 95 &&
+      config.autoCompletado !== false) {
+
       this.estado.actual = 'completado';
       this.estado.fechaCambio = ahora;
       this.tiemposReales.llegadaReal = ahora;
       this.tracking.progreso.porcentaje = 100;
-     
+
       // Calcular tiempo real del viaje
       if (this.tiemposReales.salidaReal) {
         this.tiemposReales.tiempoRealViaje = Math.floor(
           (ahora - this.tiemposReales.salidaReal) / (1000 * 60)
         );
       }
-     
+
       this.estado.historial.push({
         estadoAnterior: 'en_curso',
         estadoNuevo: 'completado',
@@ -444,37 +444,37 @@ viajeSchema.pre('save', async function(next) {
       });
     }
   }
- 
+
   this.tiemposReales.ultimaActualizacion = ahora;
   next();
 });
- 
+
 // 📊 MÉTODOS VIRTUALES (mantener los existentes)
-viajeSchema.virtual('duracionProgramada').get(function() {
+viajeSchema.virtual('duracionProgramada').get(function () {
   if (!this.arrivalTime || !this.departureTime) return 0;
   return Math.floor((this.arrivalTime - this.departureTime) / (1000 * 60));
 });
- 
-viajeSchema.virtual('duracionReal').get(function() {
+
+viajeSchema.virtual('duracionReal').get(function () {
   if (!this.tiemposReales.llegadaReal || !this.tiemposReales.salidaReal) return 0;
   return Math.floor((this.tiemposReales.llegadaReal - this.tiemposReales.salidaReal) / (1000 * 60));
 });
 
 // 🆕 NUEVOS MÉTODOS VIRTUALES
-viajeSchema.virtual('tiempoTranscurridoMinutos').get(function() {
+viajeSchema.virtual('tiempoTranscurridoMinutos').get(function () {
   const inicio = this.tiemposReales?.salidaReal || this.departureTime;
   return Math.floor((new Date() - inicio) / (1000 * 60));
 });
 
-viajeSchema.virtual('tiempoRestanteMinutos').get(function() {
+viajeSchema.virtual('tiempoRestanteMinutos').get(function () {
   return Math.floor((this.arrivalTime - new Date()) / (1000 * 60));
 });
 
 // 🆕 MÉTODOS DE INSTANCIA PARA CONFIGURACIÓN
-viajeSchema.methods.puedeIniciarseAutomaticamente = function() {
+viajeSchema.methods.puedeIniciarseAutomaticamente = function () {
   const config = this.configuracion || {};
   const now = new Date();
-  
+
   return (
     this.estado.actual === 'pendiente' &&
     this.departureTime <= now &&
@@ -484,9 +484,9 @@ viajeSchema.methods.puedeIniciarseAutomaticamente = function() {
   );
 };
 
-viajeSchema.methods.puedeCompletarseAutomaticamente = function() {
+viajeSchema.methods.puedeCompletarseAutomaticamente = function () {
   const config = this.configuracion || {};
-  
+
   return (
     ['en_curso', 'retrasado'].includes(this.estado.actual) &&
     config.autoCompletado !== false &&
@@ -494,27 +494,27 @@ viajeSchema.methods.puedeCompletarseAutomaticamente = function() {
   );
 };
 
-viajeSchema.methods.getEstrategiaProgreso = function() {
+viajeSchema.methods.getEstrategiaProgreso = function () {
   return this.configuracion?.estrategiaProgreso || 'hibrido';
 };
 
-viajeSchema.methods.tieneOverrideActivo = function() {
+viajeSchema.methods.tieneOverrideActivo = function () {
   const config = this.configuracion || {};
   const now = new Date();
-  
+
   if (config.manualOverride) {
     return { tipo: 'manual', data: config.manualOverride };
   }
-  
-  if (config.temporaryOverride && 
-      config.temporaryOverride.expira && 
-      now < config.temporaryOverride.expira) {
+
+  if (config.temporaryOverride &&
+    config.temporaryOverride.expira &&
+    now < config.temporaryOverride.expira) {
     return { tipo: 'temporal', data: config.temporaryOverride };
   }
-  
+
   return null;
 };
- 
+
 // 🔍 ÍNDICES OPTIMIZADOS (mantener los existentes + nuevos)
 viajeSchema.index({ 'estado.actual': 1 });
 viajeSchema.index({ departureTime: 1 });
@@ -525,9 +525,9 @@ viajeSchema.index({ conductorId: 1 });
 viajeSchema.index({ 'configuracion.autoInicio': 1, 'estado.actual': 1 });
 viajeSchema.index({ 'configuracion.estrategiaProgreso': 1 });
 viajeSchema.index({ 'flags.skipAutoProcessing': 1, 'flags.expira': 1 });
- 
+
 // 📱 MÉTODO ESTÁTICO MEJORADO (mantener tu método + extensiones)
-viajeSchema.statics.getViajeCompleto = async function(viajeId) {
+viajeSchema.statics.getViajeCompleto = async function (viajeId) {
   return this.aggregate([
     {
       $match: { "_id": new mongoose.Types.ObjectId(viajeId) }
@@ -557,30 +557,30 @@ viajeSchema.statics.getViajeCompleto = async function(viajeId) {
 };
 
 // 🆕 NUEVOS MÉTODOS ESTÁTICOS
-viajeSchema.statics.findViajesParaAutoProcesamiento = function() {
+viajeSchema.statics.findViajesParaAutoProcesamiento = function () {
   return this.find({
     'estado.autoActualizar': true,
-    'estado.actual': { 
+    'estado.actual': {
       $in: ['programado', 'pendiente', 'en_curso', 'retrasado', 'pausado']
     },
     'flags.skipAutoProcessing': { $ne: true }
   });
 };
 
-viajeSchema.statics.getEstadisticasConfiguracion = async function() {
+viajeSchema.statics.getEstadisticasConfiguracion = async function () {
   return this.aggregate([
     {
       $group: {
         _id: null,
         totalViajes: { $sum: 1 },
-        conAutoInicio: { 
-          $sum: { 
-            $cond: [{ $ne: ['$configuracion.autoInicio', false] }, 1, 0] 
+        conAutoInicio: {
+          $sum: {
+            $cond: [{ $ne: ['$configuracion.autoInicio', false] }, 1, 0]
           }
         },
-        conAutoCompletado: { 
-          $sum: { 
-            $cond: [{ $ne: ['$configuracion.autoCompletado', false] }, 1, 0] 
+        conAutoCompletado: {
+          $sum: {
+            $cond: [{ $ne: ['$configuracion.autoCompletado', false] }, 1, 0]
           }
         },
         estrategiaAutomatico: {
@@ -596,10 +596,12 @@ viajeSchema.statics.getEstadisticasConfiguracion = async function() {
         estrategiaHibrido: {
           $sum: {
             $cond: [
-              { $or: [
-                { $eq: ['$configuracion.estrategiaProgreso', 'hibrido'] },
-                { $eq: ['$configuracion.estrategiaProgreso', null] }
-              ]}, 
+              {
+                $or: [
+                  { $eq: ['$configuracion.estrategiaProgreso', 'hibrido'] },
+                  { $eq: ['$configuracion.estrategiaProgreso', null] }
+                ]
+              },
               1, 0
             ]
           }
@@ -612,5 +614,5 @@ viajeSchema.statics.getEstadisticasConfiguracion = async function() {
 // Asegurar que los virtuals se incluyan en JSON
 viajeSchema.set('toJSON', { virtuals: true });
 viajeSchema.set('toObject', { virtuals: true });
- 
+
 export default model("Viajes", viajeSchema);
