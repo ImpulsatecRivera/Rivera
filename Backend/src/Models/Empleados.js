@@ -62,6 +62,14 @@ const empleadoSchema = new Schema({
     salario:{
         type:Number,
         required:true
+    },
+    rol:{
+         type: String,
+        enum:[
+             'Operativo', 
+             'SUpervisor'
+        ],
+        required: true
     }
 }, {
     // Opciones del esquema
