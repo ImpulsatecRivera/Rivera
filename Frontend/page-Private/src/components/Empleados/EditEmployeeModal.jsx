@@ -8,6 +8,7 @@ const EditEmployeeModal = ({ isOpen, onClose, onSave, employee, uploading }) => 
     phone: '',
     address: '',
     password: '',
+    salario: '',
     img: null,
     email: ''
   });
@@ -37,6 +38,7 @@ const EditEmployeeModal = ({ isOpen, onClose, onSave, employee, uploading }) => 
         phone: employee.phone || '',
         address: employee.address || '',
         password: '', // La contraseña siempre empieza vacía por seguridad
+        salario: employee.salario || '',
         img: null,    // Para nuevas imágenes
         email: employee.email || ''
       });
@@ -49,6 +51,7 @@ const EditEmployeeModal = ({ isOpen, onClose, onSave, employee, uploading }) => 
         lastName: employee.lastName || '',
         phone: employee.phone || '',
         address: employee.address || '',
+        salario: employee.salario || '',
         email: employee.email || ''
       });
     }
@@ -66,13 +69,14 @@ const EditEmployeeModal = ({ isOpen, onClose, onSave, employee, uploading }) => 
         phone: employee.phone || '',
         address: employee.address || '',
         password: '',
+        salario: employee.salario || '',
         img: null,
         email: employee.email || ''
       });
       
       setImagePreview(employee.img || null);
     }
-  }, [employee, isOpen, uploading]); // Incluir uploading para evitar conflictos
+  }, [employee, isOpen, uploading]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -94,6 +98,18 @@ const EditEmployeeModal = ({ isOpen, onClose, onSave, employee, uploading }) => 
       
       return newFormData;
     });
+  };
+
+  // Manejo especial para el campo de salario
+  const handleSalaryChange = (e) => {
+    const value = e.target.value;
+    // Permitir solo números y punto decimal
+    if (value === '' || /^\d*\.?\d*$/.test(value)) {
+      setFormData(prev => ({
+        ...prev,
+        salario: value
+      }));
+    }
   };
 
   const handleImageChange = (e) => {
@@ -157,6 +173,10 @@ const EditEmployeeModal = ({ isOpen, onClose, onSave, employee, uploading }) => 
     if (formData.password && formData.password.trim()) {
       formDataToSend.append('password', formData.password.trim());
       console.log('✅ Agregando contraseña: [OCULTA]');
+    }
+    if (formData.salario && formData.salario !== '') {
+      formDataToSend.append('salario', parseFloat(formData.salario));
+      console.log('✅ Agregando salario:', parseFloat(formData.salario));
     }
     if (formData.email && formData.email.trim()) {
       formDataToSend.append('email', formData.email.trim());
@@ -390,15 +410,30 @@ const EditEmployeeModal = ({ isOpen, onClose, onSave, employee, uploading }) => 
               </div>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">DUI</label>
-              <input
-                type="text"
-                value={employee ? employee.dui : ''}
-                disabled
-                className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg bg-gray-100 text-gray-600 cursor-not-allowed text-base"
-                placeholder="22223366-6"
-              />
+            <div className="grid grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">DUI</label>
+                <input
+                  type="text"
+                  value={employee ? employee.dui : ''}
+                  disabled
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg bg-gray-100 text-gray-600 cursor-not-allowed text-base"
+                  placeholder="22223366-6"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Salario ($)</label>
+                <input
+                  type="number"
+                  name="salario"
+                  value={formData.salario}
+                  onChange={handleSalaryChange}
+                  step="0.01"
+                  min="0"
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 text-base text-gray-900 bg-white"
+                  placeholder={employee?.salario || "0.00"}
+                />
+              </div>
             </div>
 
             <div>
