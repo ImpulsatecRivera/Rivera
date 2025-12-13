@@ -65,19 +65,128 @@ cajaChicaController.getCurrentBalance = async (req, res) => {
     }
 };
 
-// CONTROLADOR PARA OPERACIONES UNIFICADAS DE CAJA CHICA (INGRESOS Y EGRESOS)
+// =====================================================
+// NUEVO: CONTROLADOR PARA INGRESOS (CON PASSWORD)
+// =====================================================
+cajaChicaController.registrarIngreso = async (req, res) => {
+    try {
+        // Extraer datos de la operación del cuerpo de la petición
+        const { amount, reason, password } = req.body;
+
+        // VALIDAR PASSWORD
+        if (!password) {
+            return res.status(401).json({
+                message: 'Se requiere contraseña para registrar ingresos'
+            });
+        }
+
+        if (password !== config.CAJA_CHICA.passwordReintegro) {
+            return res.status(401).json({
+                message: 'Contraseña incorrecta'
+            });
+        }
+
+        // VALIDAR CAMPOS REQUERIDOS
+        if (!amount || !reason) {
+            return res.status(400).json({
+                message: 'Todos los campos son requeridos: amount, reason, password'
+            });
+        }
+
+        // VALIDAR QUE LA CANTIDAD SEA POSITIVA
+        if (amount <= 0) {
+            return res.status(400).json({
+                message: 'La cantidad debe ser mayor a 0'
+            });
+        }
+
+        // OBTENER EL BALANCE ACTUAL DE CAJA CHICA
+        const lastMovement = await CajaChica.findOne()
+            .sort({ date: -1, createdAt: -1 })
+            .select('currentBalance');
+
+        const previousBalance = lastMovement ? lastMovement.currentBalance : 0;
+        
+        // CALCULAR BALANCE DESPUÉS DEL INGRESO
+        const currentBalance = previousBalance + amount;
+
+        // VALIDAR QUE NO SOBREPASE EL MÁXIMO PERMITIDO
+        // Importar el modelo de configuración
+        const CajaChicaConfig = (await import('../Models/CajaChicaConfig.js')).default;
+        const configuracion = await CajaChicaConfig.obtenerConfiguracion();
+        
+        if (configuracion && configuracion.maximoPermitido) {
+            if (currentBalance > configuracion.maximoPermitido) {
+                return res.status(400).json({
+                    message: `El ingreso excede el máximo permitido. Balance actual: $${previousBalance.toFixed(2)}, Ingreso solicitado: $${amount.toFixed(2)}, Balance resultante: $${currentBalance.toFixed(2)}, Máximo permitido: $${configuracion.maximoPermitido.toFixed(2)}`,
+                    data: {
+                        balanceActual: previousBalance,
+                        montoIngreso: amount,
+                        balanceResultante: currentBalance,
+                        maximoPermitido: configuracion.maximoPermitido,
+                        excedente: currentBalance - configuracion.maximoPermitido
+                    }
+                });
+            }
+        }
+
+        // Manejar subida de voucher (si se envía archivo)
+        let voucherUrl = undefined;
+        if (req.file) {
+            try {
+                const uploadOptions = {
+                    folder: "vouchers",
+                    resource_type: "auto"
+                };
+                const result = await cloudinary.uploader.upload(req.file.path, uploadOptions);
+                voucherUrl = result.secure_url;
+            } catch (uploadError) {
+                return res.status(400).json({
+                    message: "Error al subir el voucher",
+                    error: uploadError.message
+                });
+            }
+        }
+
+        // CREAR NUEVO MOVIMIENTO DE CAJA CHICA
+        const newMovement = new CajaChica({
+            date: new Date(),
+            employeeId: 'admin',  // Los ingresos siempre son del admin
+            amount,
+            reason,
+            type: 'income',
+            previousBalance,
+            currentBalance,
+            voucher: voucherUrl
+        });
+
+        // Guardar el movimiento en la base de datos
+        await newMovement.save();
+
+        res.json({
+            message: 'Ingreso registrado exitosamente',
+            movement: newMovement
+        });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+// =====================================================
+// ACTUALIZADO: CONTROLADOR SOLO PARA EGRESOS (SIN PASSWORD)
+// =====================================================
 cajaChicaController.cashOperation = async (req, res) => {
     try {
         // Extraer datos de la operación del cuerpo de la petición
-        const { operationType, amount, reason, employeeId } = req.body;
+        const { amount, reason, employeeId } = req.body;
         // Obtener información del usuario autenticado (puede no existir)
         const userType = req.user?.userType;
         const user = req.user?.user;
 
         // VALIDAR CAMPOS REQUERIDOS
-        if (!operationType || !amount || !reason) {
+        if (!amount || !reason) {
             return res.status(400).json({
-                message: 'Todos los campos son requeridos: operationType, amount, reason'
+                message: 'Todos los campos son requeridos: amount, reason'
             });
         }
 
@@ -95,76 +204,58 @@ cajaChicaController.cashOperation = async (req, res) => {
             });
         }
 
+        // VALIDAR QUE SE HAYA SUBIDO EL VOUCHER (OBLIGATORIO PARA EGRESOS)
+        if (!req.file) {
+            return res.status(400).json({
+                message: 'El voucher es obligatorio para registrar egresos'
+            });
+        }
+
         // OBTENER EL BALANCE ACTUAL DE CAJA CHICA
         const lastMovement = await CajaChica.findOne()
             .sort({ date: -1, createdAt: -1 })
             .select('currentBalance');
 
         const previousBalance = lastMovement ? lastMovement.currentBalance : 0;
-        let currentBalance;
-        let type;
-        let message = '';
 
-        // SWITCH PARA MANEJAR DIFERENTES TIPOS DE OPERACIONES
-        switch (operationType) {
-            case 'ingreso':
-                // OPERACIÓN DE INGRESO: sumar al balance
-                currentBalance = previousBalance + amount;
-                type = 'income';
-                message = 'Ingreso registrado exitosamente';
-                break;
-
-            case 'egreso':
-                // VERIFICAR SI HAY FONDOS SUFICIENTES PARA EL EGRESO
-                if (previousBalance < amount) {
-                    return res.status(400).json({
-                        message: `Fondos insuficientes. Balance actual: ${previousBalance}, Cantidad solicitada: ${amount}`
-                    });
-                }
-
-                // OPERACIÓN DE EGRESO: restar del balance
-                currentBalance = previousBalance - amount;
-                type = 'expense';
-                message = 'Egreso registrado exitosamente';
-                break;
-
-            default:
-                // TIPO DE OPERACIÓN NO VÁLIDO
-                return res.status(400).json({
-                    message: 'Tipo de operación no válido. Use: ingreso, egreso'
-                });
+        // VERIFICAR SI HAY FONDOS SUFICIENTES PARA EL EGRESO
+        if (previousBalance < amount) {
+            return res.status(400).json({
+                message: `Fondos insuficientes. Balance actual: ${previousBalance}, Cantidad solicitada: ${amount}`
+            });
         }
 
-        // Manejar subida de voucher (si se envía archivo)
-        let voucherUrl = undefined;
-        if (req.file) {
-            try {
-                // resource_type: 'auto' permite imágenes y PDFs (Cloudinary detecta tipo)
-                const uploadOptions = {
-                    folder: "vouchers",
-                    resource_type: "auto"
-                };
-                const result = await cloudinary.uploader.upload(req.file.path, uploadOptions);
-                voucherUrl = result.secure_url;
-            } catch (uploadError) {
-                return res.status(400).json({
-                    message: "Error al subir el voucher",
-                    error: uploadError.message
-                });
-            }
+        // OPERACIÓN DE EGRESO: restar del balance
+        const currentBalance = previousBalance - amount;
+
+        // Subir voucher (SIEMPRE presente porque es obligatorio)
+        let voucherUrl;
+        try {
+            // resource_type: 'auto' permite imágenes y PDFs (Cloudinary detecta tipo)
+            const uploadOptions = {
+                folder: "vouchers",
+                resource_type: "auto"
+            };
+            const result = await cloudinary.uploader.upload(req.file.path, uploadOptions);
+            voucherUrl = result.secure_url;
+        } catch (uploadError) {
+            return res.status(400).json({
+                message: "Error al subir el voucher",
+                error: uploadError.message
+            });
         }
 
         // CREAR NUEVO MOVIMIENTO DE CAJA CHICA
         const newMovement = new CajaChica({
-            date: new Date(),           // Siempre usar la fecha del sistema
+            date: new Date(),
             // Determinar employeeId según el tipo de usuario
             employeeId: userType === 'admin' ? 'admin' : (employeeId || user),
             amount,
             reason,
-            type,                       // 'income' o 'expense'
-            previousBalance,            // Balance antes de la operación
-            currentBalance,             // Balance después de la operación
-            voucher: voucherUrl
+            type: 'expense',  // Siempre es egreso
+            previousBalance,
+            currentBalance,
+            voucher: voucherUrl  // Siempre presente en egresos
         });
 
         // Guardar el movimiento en la base de datos
@@ -183,7 +274,7 @@ cajaChicaController.cashOperation = async (req, res) => {
         }
 
         res.json({
-            message,
+            message: 'Egreso registrado exitosamente',
             movement: newMovement
         });
     } catch (error) {

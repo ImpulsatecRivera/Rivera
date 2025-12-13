@@ -20,6 +20,8 @@ import Reportesroutes from "./src/Routes/ReportesRoutes.js"
 import ResumenRoutes from "./src/Routes/ResumenDieselRoutes.js"
 import ResumenDieselReporte from "./src/Routes/ResumenReportesRoutes.js"
 import cajachicaRoutes from "./src/Routes/cajaChicaRoutes.js";
+import reportesCajaChicaRoutes from "./src/Routes/ReportesCajaChicaRoutes.js";
+import CajaChicaConfigRoutes from "./src/Routes/CajaChicaConfigRoutes.js";
 import swaggerUi from "swagger-ui-express";
 import fs from "fs";
 import path from "path";
@@ -83,7 +85,8 @@ app.use("/api/camiones", camionesRoutes);
 app.use("/api/empleados", empleadoRoutes);
 app.use("/api/motoristas", motoristasRoutes);
 app.use("/api/proveedores", proveedoresRoutes);
-app.use("/api/caja-chica", cajachicaRoutes);
+app.use("/api/cajaChica", cajachicaRoutes);
+app.use("/api/cajaChicaConfig", CajaChicaConfigRoutes);
 
 app.use("/api/auto-update", autoUpdateRoutes);
 app.use("/api/call",callRoutes);
@@ -91,5 +94,6 @@ app.use("/api/mantenimientos",MantoRouter)
 app.use("/api/reporte",Reportesroutes)
 app.use("/api/resumen",ResumenRoutes)
 app.use("/api/resumenReporte",ResumenDieselReporte)
+app.use("/api/reportesCajaChica", reportesCajaChicaRoutes);
 
 export default app;
