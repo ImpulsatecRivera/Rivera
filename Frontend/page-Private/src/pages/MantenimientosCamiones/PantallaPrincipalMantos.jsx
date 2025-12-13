@@ -279,8 +279,7 @@ const MantenimientosTable = () => {
                             <Download size={18} />
                           </button>
 
-                          {mant.estado !== 'completado' && (
-                            <button
+{mant.estado !== 'completado' && mant.estado !== 'cancelado' && (                            <button
                               onClick={() => navigate(`/mantenimientos/editar/${mant._id}`)}
                               className="p-2 rounded-lg bg-yellow-50 hover:bg-yellow-100 text-yellow-600 transition-colors"
                               title="Editar"
