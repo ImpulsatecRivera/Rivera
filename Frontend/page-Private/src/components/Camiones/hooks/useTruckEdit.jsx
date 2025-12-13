@@ -13,7 +13,7 @@ const useTruckEdit = (fetchOptions, onUpdateSuccess) => {
   const [proveedores, setProveedores] = useState([]);
   const [motoristas, setMotoristas] = useState([]);
   
-  // Estados del formulario
+  // Estados del formulario - ACTUALIZADO con estado
   const [formData, setFormData] = useState({
     nombre: '',
     tarjetaCirculacion: '',
@@ -24,6 +24,7 @@ const useTruckEdit = (fetchOptions, onUpdateSuccess) => {
     marca: '',
     modelo: '',
     año: '',
+    estado: 'DISPONIBLE', // NUEVO CAMPO
     imagen: null
   });
   
@@ -32,7 +33,31 @@ const useTruckEdit = (fetchOptions, onUpdateSuccess) => {
   const [currentImage, setCurrentImage] = useState(null);
   const [imageError, setImageError] = useState(null);
 
-  // Función para resetear el formulario
+  // Función para normalizar el estado desde la API
+  const normalizeState = useCallback((state) => {
+    if (!state) return 'DISPONIBLE';
+    
+    // Convertir a mayúsculas y normalizar
+    const normalized = state.toUpperCase();
+    
+    // Mapear variaciones al formato estándar
+    const stateMap = {
+      'DISPONIBLE': 'DISPONIBLE',
+      'EN RUTA': 'EN RUTA',
+      'EN_RUTA': 'EN RUTA',
+      'MANTENIMIENTO': 'MANTENIMIENTO',
+      'FUERA DE SERVICIO': 'FUERA DE SERVICIO',
+      'FUERA_DE_SERVICIO': 'FUERA DE SERVICIO',
+      'NO DISPONIBLE': 'FUERA DE SERVICIO',
+      'NO_DISPONIBLE': 'FUERA DE SERVICIO',
+      'SIN ESTADO': 'DISPONIBLE',
+      'SIN_ESTADO': 'DISPONIBLE'
+    };
+    
+    return stateMap[normalized] || 'DISPONIBLE';
+  }, []);
+
+  // Función para resetear el formulario - ACTUALIZADO con estado
   const resetForm = useCallback(() => {
     setFormData({
       nombre: '',
@@ -44,6 +69,7 @@ const useTruckEdit = (fetchOptions, onUpdateSuccess) => {
       marca: '',
       modelo: '',
       año: '',
+      estado: 'DISPONIBLE', // NUEVO CAMPO
       imagen: null
     });
     setImagePreview(null);
@@ -51,7 +77,7 @@ const useTruckEdit = (fetchOptions, onUpdateSuccess) => {
     setImageError(null);
   }, []);
 
-  // Función para abrir modal de edición
+  // Función para abrir modal de edición - ACTUALIZADO con estado
   const openEditModal = useCallback(async (truck) => {
     if (!truck?.id) {
       console.error('No se puede editar: ID del camión no válido');
@@ -92,7 +118,7 @@ const useTruckEdit = (fetchOptions, onUpdateSuccess) => {
 
       console.log('Datos del camión cargados:', truckData);
 
-      // Establecer datos del formulario
+      // Establecer datos del formulario - ACTUALIZADO con estado
       setFormData({
         nombre: truckData.name || '',
         tarjetaCirculacion: truckData.ciculatioCard || truckData.circulationCard || '',
@@ -103,12 +129,24 @@ const useTruckEdit = (fetchOptions, onUpdateSuccess) => {
         marca: truckData.brand || '',
         modelo: truckData.model || '',
         año: truckData.age || '',
+        estado: normalizeState(truckData.state || truckData.estado), // NUEVO CAMPO con normalización
         imagen: null
       });
 
-      // Establecer imagen actual
-      setCurrentImage(truckData.img || null);
-      setImagePreview(null);
+      // Establecer imagen actual desde la URL del servidor
+      const imageUrl = truckData.img || truckData.image || null;
+      console.log('URL de imagen del camión:', imageUrl);
+      
+      if (imageUrl) {
+        // Si la imagen es una URL completa del servidor, usarla directamente
+        setCurrentImage(imageUrl);
+        setImagePreview(null);
+        console.log('✅ Imagen cargada desde servidor:', imageUrl);
+      } else {
+        setCurrentImage(null);
+        setImagePreview(null);
+        console.log('⚠️ No hay imagen para este camión');
+      }
 
       // Establecer listas
       setProveedores(Array.isArray(proveedoresData) ? proveedoresData : []);
@@ -122,7 +160,7 @@ const useTruckEdit = (fetchOptions, onUpdateSuccess) => {
     } finally {
       setEditLoading(false);
     }
-  }, [fetchOptions, resetForm]);
+  }, [fetchOptions, resetForm, normalizeState]);
 
   // Función para cerrar modal de edición
   const closeEditModal = useCallback(() => {
@@ -188,7 +226,7 @@ const useTruckEdit = (fetchOptions, onUpdateSuccess) => {
     return value || null;
   };
 
-  // Función para enviar formulario de edición
+  // Función para enviar formulario de edición - ACTUALIZADO con estado
   const submitEdit = useCallback(async () => {
     if (!selectedTruck?.id) {
       return { success: false, error: 'No hay camión seleccionado para editar' };
@@ -212,6 +250,7 @@ const useTruckEdit = (fetchOptions, onUpdateSuccess) => {
         formDataToSend.append('name', sanitizeValue(formData.nombre) || '');
         formDataToSend.append('ciculatioCard', sanitizeValue(formData.tarjetaCirculacion) || '');
         formDataToSend.append('licensePlate', sanitizeValue(formData.placa) || '');
+        formDataToSend.append('state', formData.estado || 'DISPONIBLE'); // NUEVO CAMPO
         
         // Para campos opcionales, solo agregar si tienen valor
         const supplierId = sanitizeValue(formData.proveedor);
@@ -253,7 +292,8 @@ const useTruckEdit = (fetchOptions, onUpdateSuccess) => {
           licensePlate: sanitizeValue(formData.placa) || '',
           brand: sanitizeValue(formData.marca) || '',
           model: sanitizeValue(formData.modelo) || '',
-          age: sanitizeValue(formData.año) || ''
+          age: sanitizeValue(formData.año) || '',
+          state: formData.estado || 'DISPONIBLE' // NUEVO CAMPO
         };
 
         // Solo agregar campos opcionales si tienen valor
@@ -292,7 +332,7 @@ const useTruckEdit = (fetchOptions, onUpdateSuccess) => {
         const updatedTruckData = responseData.data || responseData;
         console.log('=== DATOS ACTUALIZADOS EXTRAÍDOS ===', updatedTruckData);
         
-        // Crear objeto camión actualizado manteniendo la estructura original
+        // Crear objeto camión actualizado manteniendo la estructura original - ACTUALIZADO con estado
         const updatedTruck = {
           ...selectedTruck,
           ...updatedTruckData,
@@ -307,6 +347,7 @@ const useTruckEdit = (fetchOptions, onUpdateSuccess) => {
           licensePlate: updatedTruckData.licensePlate || formData.placa,
           ciculatioCard: updatedTruckData.ciculatioCard || formData.tarjetaCirculacion,
           description: updatedTruckData.description || formData.descripcion,
+          state: updatedTruckData.state || formData.estado, // NUEVO CAMPO
           supplierId: updatedTruckData.supplierId || (formData.proveedor || null),
           driverId: updatedTruckData.driverId || (formData.motorista || null),
           img: updatedTruckData.img || imagePreview || currentImage
@@ -342,7 +383,7 @@ const useTruckEdit = (fetchOptions, onUpdateSuccess) => {
     }
   }, [selectedTruck, formData, imagePreview, currentImage, fetchOptions, onUpdateSuccess, closeEditModal]);
 
-  // Función para validar formulario
+  // Función para validar formulario - ACTUALIZADO con estado
   const validateForm = useCallback(() => {
     const errors = {};
     
@@ -350,6 +391,7 @@ const useTruckEdit = (fetchOptions, onUpdateSuccess) => {
     if (!formData.placa.trim()) errors.placa = 'La placa es obligatoria';
     if (!formData.marca.trim()) errors.marca = 'La marca es obligatoria';
     if (!formData.modelo.trim()) errors.modelo = 'El modelo es obligatorio';
+    if (!formData.estado) errors.estado = 'El estado es obligatorio';
     
     return {
       isValid: Object.keys(errors).length === 0,
@@ -357,7 +399,7 @@ const useTruckEdit = (fetchOptions, onUpdateSuccess) => {
     };
   }, [formData]);
 
-  // Estados derivados útiles
+  // Estados derivados útiles - ACTUALIZADO con estado
   const hasChanges = selectedTruck && (
     formData.nombre !== (selectedTruck.name || '') ||
     formData.placa !== (selectedTruck.licensePlate || '') ||
@@ -365,6 +407,7 @@ const useTruckEdit = (fetchOptions, onUpdateSuccess) => {
     formData.modelo !== (selectedTruck.model || '') ||
     formData.año !== (selectedTruck.age || '') ||
     formData.descripcion !== (selectedTruck.description || '') ||
+    normalizeState(formData.estado) !== normalizeState(selectedTruck.state || selectedTruck.estado) || // NUEVO CAMPO
     !!formData.imagen
   );
 
@@ -395,6 +438,7 @@ const useTruckEdit = (fetchOptions, onUpdateSuccess) => {
     handleImageChange,
     resetForm,
     validateForm,
+    normalizeState,
     
     // Estados derivados
     hasChanges,
