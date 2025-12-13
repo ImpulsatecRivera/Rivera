@@ -296,10 +296,10 @@ empleadosCon.get = async (req, res) => {
  */
 empleadosCon.post = async (req, res) => {
     try {
-        const { name, lastName, dui, birthDate, password, phone, address, salario } = req.body;
+        const { name, lastName, dui, birthDate, password, phone, address, salario, rol } = req.body;
 
         // Validar campos requeridos
-        const requiredFields = ['name', 'lastName', 'dui', 'birthDate', 'password', 'phone', 'address', 'salario'];
+        const requiredFields = ['name', 'lastName', 'dui', 'birthDate', 'password', 'phone', 'address', 'salario', 'rol'];
         const validation = validateRequiredFields(req.body, requiredFields);
         
         if (!validation.isValid) {
@@ -308,6 +308,16 @@ empleadosCon.post = async (req, res) => {
                 message: "Faltan campos requeridos",
                 error: `Los siguientes campos son obligatorios: ${validation.missingFields.join(', ')}`,
                 missingFields: validation.missingFields
+            });
+        }
+
+        // Validar rol
+        const rolesPermitidos = ['Operativo', 'Supervisor'];
+        if (!rolesPermitidos.includes(rol)) {
+            return res.status(400).json({
+                success: false,
+                message: "Rol inválido",
+                error: `El rol debe ser uno de los siguientes: ${rolesPermitidos.join(', ')}`
             });
         }
 
@@ -461,6 +471,7 @@ empleadosCon.post = async (req, res) => {
             phone: formatPhone(phone),
             address: address.trim(),
             salario: Number(salario),
+            rol: rol,
             img: imgUrl
         });
 
@@ -480,6 +491,7 @@ empleadosCon.post = async (req, res) => {
                     phone: empleadoGuardado.phone,
                     address: empleadoGuardado.address,
                     salario: empleadoGuardado.salario,
+                    rol: empleadoGuardado.rol,
                     img: empleadoGuardado.img
                 }
             }
@@ -544,7 +556,7 @@ empleadosCon.put = async (req, res) => {
             });
         }
 
-        const { name, lastName, dui, birthDate, password, phone, address, salario } = req.body;
+        const { name, lastName, dui, birthDate, password, phone, address, salario, rol } = req.body;
 
         // Validaciones específicas por campo si se proporcionan
         if (name && (name.trim().length < 2 || name.trim().length > 50)) {
@@ -617,6 +629,18 @@ empleadosCon.put = async (req, res) => {
             });
         }
 
+        // Validar rol si se proporciona
+        if (rol) {
+            const rolesPermitidos = ['Operativo', 'Supervisor'];
+            if (!rolesPermitidos.includes(rol)) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Rol inválido",
+                    error: `El rol debe ser uno de los siguientes: ${rolesPermitidos.join(', ')}`
+                });
+            }
+        }
+
         // Verificar duplicados si se están actualizando DUI
         if (dui) {
             const duiFormateado = formatDUI(dui);
@@ -645,6 +669,7 @@ empleadosCon.put = async (req, res) => {
         if (phone) datosActualizados.phone = formatPhone(phone);
         if (address !== undefined) datosActualizados.address = address.trim();
         if (salario !== undefined) datosActualizados.salario = Number(salario);
+        if (rol) datosActualizados.rol = rol;
 
         // Generar nuevo email si se proporcionan nombre o apellido
         if (name || lastName) {
