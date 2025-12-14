@@ -1,82 +1,49 @@
 import { Schema, model } from "mongoose";
 
-const viajesSchema = new Schema({
-  // ID único del cliente (se genera automáticamente)
-  clienteId: {
+/*
+  MODELO REFACTORIZADO: ViajesPorClientes
+  
+  Este modelo ahora se enfoca EXCLUSIVAMENTE en:
+  - Generar reportes mensuales agregados
+  - Facturación mensual por cliente
+  - Consolidación de datos para análisis
+  
+  Los viajes individuales se registran en el modelo "Viajes"
+  Este modelo se puede generar/actualizar automáticamente desde "Viajes"
+*/
+
+const viajesClienteSchema = new Schema({
+  // ID único del reporte (por cliente-mes)
+  reporteId: {
     type: String,
     required: true,
     trim: true,
     uppercase: true,
     unique: true
-    // Ej: "CLI001", "CLI002"
+    // Ej: "REP001", "REP002"
   },
   
-  // Nombre del cliente
+  // ========================================
+  // DATOS DEL CLIENTE
+  // ========================================
+  
+  clienteId: {
+  type: Schema.Types.ObjectId,
+  ref: "Clientes",
+  required: false  // ← O simplemente elimina la línea "required"
+},
+  
   clienteNombre: {
     type: String,
     required: true,
     trim: true,
     uppercase: true
-    // Ej: "DIANA", "DR. GOMEZ", "SRA. ROXANA"
   },
   
-  // Array de rutas del cliente
-  rutas: [{
-    // Origen y destino de la ruta
-    origen: {
-      type: String,
-      required: true,
-      trim: true,
-      uppercase: true
-      // Ej: "DIANA", "TAPASCO", "DR. GOMEZ"
-    },
-    destino: {
-      type: String,
-      required: true,
-      trim: true,
-      uppercase: true
-      // Ej: "SARAM", "TAPASCO", "EL TRANSITO"
-    },
-    // Nombre completo de la ruta (generado automáticamente)
-    rutaCompleta: {
-      type: String,
-      uppercase: true
-      // Ej: "DIANA/SARAM", "TAPASCO/SARAM"
-    },
-    // Datos de viajes en esta ruta
-    cantidadViajes: {
-      type: Number,
-      required: true,
-      min: 0,
-      default: 0
-    },
-    montoPorViaje: {
-      type: Number,
-      required: true,
-      min: 0
-    },
-    montoTotal: {
-      type: Number,
-      min: 0
-    },
-    activa: {
-      type: Boolean,
-      default: true
-    }
-  }],
+  // ========================================
+  // PERIODO DEL REPORTE
+  // ========================================
   
-  // Totales del cliente (calculados automáticamente)
-  totalViajes: {
-    type: Number,
-    default: 0
-  },
-  
-  montoTotalGeneral: {
-    type: Number,
-    default: 0
-  },
-  
-  // Periodo del reporte
   mes: {
     type: Number,
     min: 1,
@@ -89,33 +56,164 @@ const viajesSchema = new Schema({
     required: true
   },
   
-  // Info de contacto (opcional)
+  periodoTexto: {
+    type: String
+    // Ej: "ENERO 2025"
+  },
+  
+  // ========================================
+  // RESUMEN DE RUTAS DEL MES
+  // ========================================
+  
+  rutas: [{
+    // Origen y destino
+    origen: {
+      ubicacionId: {
+        type: Schema.Types.ObjectId,
+        ref: "Ubicaciones"
+      },
+      texto: {
+        type: String,
+        required: true,
+        uppercase: true
+      }
+    },
+    
+    destino: {
+      ubicacionId: {
+        type: Schema.Types.ObjectId,
+        ref: "Ubicaciones"
+      },
+      texto: {
+        type: String,
+        required: true,
+        uppercase: true
+      }
+    },
+    
+    rutaCompleta: {
+      type: String,
+      uppercase: true
+    },
+    
+    // Consolidado del mes
+    cantidadViajes: {
+      type: Number,
+      required: true,
+      min: 0,
+      default: 0
+    },
+    
+    montoPorViaje: {
+      type: Number,
+      required: true,
+      min: 0
+    },
+    
+    montoTotal: {
+      type: Number,
+      min: 0
+    },
+    
+    // Referencias a los viajes individuales
+    viajesIds: [{
+      type: Schema.Types.ObjectId,
+      ref: "Viajes"
+    }],
+    
+    // Fechas
+    primerViaje: Date,
+    ultimoViaje: Date
+  }],
+  
+  // ========================================
+  // TOTALES DEL CLIENTE EN EL MES
+  // ========================================
+  
+  totalViajes: {
+    type: Number,
+    default: 0
+  },
+  
+  montoTotalGeneral: {
+    type: Number,
+    default: 0
+  },
+  
+  // ========================================
+  // DETALLES DE PAGO
+  // ========================================
+  
+  estadoPago: {
+    type: String,
+    enum: ["PENDIENTE", "PAGADO_PARCIAL", "PAGADO_TOTAL"],
+    default: "PENDIENTE"
+  },
+  
+  montoPagado: {
+    type: Number,
+    default: 0
+  },
+  
+  saldoPendiente: {
+    type: Number,
+    default: 0
+  },
+  
+  pagos: [{
+    fecha: Date,
+    monto: Number,
+    metodoPago: String,
+    referencia: String,
+    notas: String
+  }],
+  
+  // ========================================
+  // INFO ADICIONAL
+  // ========================================
+  
   telefono: String,
   email: String,
   
-  // Estado general
   estado: {
     type: String,
-    enum: ["ACTIVO", "INACTIVO"],
+    enum: ["ACTIVO", "INACTIVO", "CERRADO"],
     default: "ACTIVO"
   },
   
-  notas: String
+  notas: String,
+  
+  // Fecha de generación del reporte
+  fechaGeneracion: {
+    type: Date,
+    default: Date.now
+  }
   
 }, { 
-  timestamps: true
+  timestamps: true 
 });
 
-// Middleware para calcular montoTotal de cada ruta y totales generales
-viajesSchema.pre('save', function(next) {
+// ========================================
+// MIDDLEWARES
+// ========================================
+
+// Calcular totales antes de guardar
+viajesClienteSchema.pre('save', function(next) {
   let totalViajes = 0;
   let montoTotalGeneral = 0;
   
-  // Recorrer cada ruta y calcular sus totales
+  // Calcular periodo texto
+  const meses = [
+    "ENERO", "FEBRERO", "MARZO", "ABRIL", "MAYO", "JUNIO",
+    "JULIO", "AGOSTO", "SEPTIEMBRE", "OCTUBRE", "NOVIEMBRE", "DICIEMBRE"
+  ];
+  this.periodoTexto = `${meses[this.mes - 1]} ${this.año}`;
+  
+  // Calcular totales por ruta
   this.rutas.forEach(ruta => {
-    // Generar nombre completo de la ruta
-    if (ruta.origen && ruta.destino) {
-      ruta.rutaCompleta = `${ruta.origen}/${ruta.destino}`;
+    // Generar rutaCompleta
+    if (ruta.origen.texto && ruta.destino.texto) {
+      ruta.rutaCompleta = `${ruta.origen.texto}/${ruta.destino.texto}`;
     }
     
     // Calcular monto total de la ruta
@@ -123,162 +221,194 @@ viajesSchema.pre('save', function(next) {
       ruta.montoTotal = ruta.cantidadViajes * ruta.montoPorViaje;
     }
     
-    // Sumar a los totales generales
-    if (ruta.activa) {
-      totalViajes += ruta.cantidadViajes || 0;
-      montoTotalGeneral += ruta.montoTotal || 0;
-    }
+    // Sumar a totales generales
+    totalViajes += ruta.cantidadViajes || 0;
+    montoTotalGeneral += ruta.montoTotal || 0;
   });
   
   this.totalViajes = totalViajes;
   this.montoTotalGeneral = montoTotalGeneral;
   
+  // Calcular saldo pendiente
+  this.saldoPendiente = this.montoTotalGeneral - (this.montoPagado || 0);
+  
+  // Determinar estado de pago
+  if (this.montoPagado === 0) {
+    this.estadoPago = "PENDIENTE";
+  } else if (this.montoPagado >= this.montoTotalGeneral) {
+    this.estadoPago = "PAGADO_TOTAL";
+  } else {
+    this.estadoPago = "PAGADO_PARCIAL";
+  }
+  
   next();
 });
 
-// Índice compuesto único para evitar duplicados por mes/año
-viajesSchema.index({ clienteId: 1, mes: 1, año: 1 }, { unique: true });
-viajesSchema.index({ clienteNombre: 1 });
+// ========================================
+// ÍNDICES
+// ========================================
 
-// Método para agregar una nueva ruta
-viajesSchema.methods.agregarRuta = function(origen, destino, cantidadViajes, montoPorViaje, tipoServicio = "OTRO") {
-  this.rutas.push({
-    origen,
-    destino,
-    cantidadViajes,
-    montoPorViaje,
-    tipoServicio
+viajesClienteSchema.index({ reporteId: 1 });
+viajesClienteSchema.index({ clienteId: 1, mes: 1, año: 1 }, { unique: true });
+viajesClienteSchema.index({ clienteNombre: 1 });
+viajesClienteSchema.index({ mes: 1, año: 1 });
+viajesClienteSchema.index({ estadoPago: 1 });
+
+// ========================================
+// MÉTODOS ESTÁTICOS
+// ========================================
+
+// Generar reporteId automático
+viajesClienteSchema.statics.generarReporteId = async function() {
+  const ultimoReporte = await this.findOne()
+    .sort({ reporteId: -1 })
+    .select('reporteId');
+  
+  if (!ultimoReporte) {
+    return "REP001";
+  }
+  
+  const numero = parseInt(ultimoReporte.reporteId.replace('REP', '')) + 1;
+  return `REP${String(numero).padStart(3, '0')}`;
+};
+
+// Generar reporte desde viajes individuales
+viajesClienteSchema.statics.generarDesdeViajes = async function(clienteId, mes, año) {
+  const Viajes = model('Viajes');
+  
+  // Obtener primer y último día del mes
+  const primerDia = new Date(año, mes - 1, 1);
+  const ultimoDia = new Date(año, mes, 0, 23, 59, 59);
+  
+  // Buscar todos los viajes del cliente en ese mes
+  const viajes = await Viajes.find({
+    clienteId: clienteId,
+    fecha: { $gte: primerDia, $lte: ultimoDia },
+    estado: "COMPLETADO"
+  }).sort({ fecha: 1 });
+  
+  if (viajes.length === 0) {
+    throw new Error('No hay viajes para este cliente en el periodo especificado');
+  }
+  
+  // Agrupar viajes por ruta
+  const rutasMap = new Map();
+  
+  viajes.forEach(viaje => {
+    const rutaKey = viaje.rutaCompleta;
+    
+    if (!rutasMap.has(rutaKey)) {
+      rutasMap.set(rutaKey, {
+        origen: viaje.origen,
+        destino: viaje.destino,
+        rutaCompleta: viaje.rutaCompleta,
+        cantidadViajes: 0,
+        montoPorViaje: viaje.monto,
+        viajesIds: [],
+        primerViaje: viaje.fecha,
+        ultimoViaje: viaje.fecha
+      });
+    }
+    
+    const ruta = rutasMap.get(rutaKey);
+    ruta.cantidadViajes++;
+    ruta.viajesIds.push(viaje._id);
+    ruta.ultimoViaje = viaje.fecha;
   });
-  return this.save();
-};
-
-// Método para actualizar una ruta específica
-viajesSchema.methods.actualizarRuta = function(rutaCompleta, datosNuevos) {
-  const ruta = this.rutas.find(r => r.rutaCompleta === rutaCompleta);
-  if (ruta) {
-    Object.assign(ruta, datosNuevos);
-    return this.save();
-  }
-  throw new Error('Ruta no encontrada');
-};
-
-// Método para eliminar una ruta (desactivarla)
-viajesSchema.methods.eliminarRuta = function(rutaCompleta) {
-  const ruta = this.rutas.find(r => r.rutaCompleta === rutaCompleta);
-  if (ruta) {
-    ruta.activa = false;
-    return this.save();
-  }
-  throw new Error('Ruta no encontrada');
-};
-
-// Método estático: Generar clienteId automático
-viajesSchema.statics.generarClienteId = async function() {
-  const ultimoCliente = await this.findOne()
-    .sort({ clienteId: -1 })
-    .select('clienteId');
   
-  if (!ultimoCliente) {
-    return "CLI001";
+  // Convertir Map a Array
+  const rutas = Array.from(rutasMap.values());
+  
+  // Buscar si ya existe el reporte
+  let reporte = await this.findOne({ clienteId, mes, año });
+  
+  if (reporte) {
+    // Actualizar reporte existente
+    reporte.rutas = rutas;
+    reporte.fechaGeneracion = new Date();
+    await reporte.save();
+    return reporte;
   }
   
-  const numero = parseInt(ultimoCliente.clienteId.replace('CLI', '')) + 1;
-  return `CLI${String(numero).padStart(3, '0')}`;
+  // Crear nuevo reporte
+  const reporteId = await this.generarReporteId();
+  
+  reporte = await this.create({
+    reporteId,
+    clienteId,
+    clienteNombre: viajes[0].clienteNombre,
+    mes,
+    año,
+    rutas
+  });
+  
+  return reporte;
 };
 
-// Método estático: Obtener reporte completo del mes
-viajesSchema.statics.obtenerReporteMensual = async function(mes, año) {
-  const clientes = await this.find({
+// Obtener reporte mensual completo (todos los clientes)
+viajesClienteSchema.statics.obtenerReporteMensual = async function(mes, año) {
+  const reportes = await this.find({
     mes: mes,
     año: año,
     estado: "ACTIVO"
-  }).sort({ clienteNombre: 1 });
+  })
+  .populate('clienteId')
+  .sort({ clienteNombre: 1 });
   
-  const granTotal = clientes.reduce((acc, cliente) => ({
-    totalViajes: acc.totalViajes + cliente.totalViajes,
-    totalMonto: acc.totalMonto + cliente.montoTotalGeneral
-  }), { totalViajes: 0, totalMonto: 0 });
+  const granTotal = reportes.reduce((acc, reporte) => ({
+    totalViajes: acc.totalViajes + reporte.totalViajes,
+    totalMonto: acc.totalMonto + reporte.montoTotalGeneral,
+    totalPagado: acc.totalPagado + (reporte.montoPagado || 0),
+    totalPendiente: acc.totalPendiente + (reporte.saldoPendiente || 0)
+  }), { 
+    totalViajes: 0, 
+    totalMonto: 0,
+    totalPagado: 0,
+    totalPendiente: 0
+  });
   
   return {
     mes,
     año,
-    clientes: clientes.map(c => ({
-      clienteId: c.clienteId,
-      clienteNombre: c.clienteNombre,
-      rutas: c.rutas.filter(r => r.activa),
-      totalViajes: c.totalViajes,
-      montoTotal: c.montoTotalGeneral
-    })),
+    reportes,
     granTotal
   };
 };
 
-// Método estático: Buscar cliente por nombre o ID
-viajesSchema.statics.buscarCliente = async function(criterio, mes, año) {
-  return await this.findOne({
-    $or: [
-      { clienteId: criterio.toUpperCase() },
-      { clienteNombre: criterio.toUpperCase() }
-    ],
-    mes: mes,
-    año: año
-  });
+// Obtener reportes con saldo pendiente
+viajesClienteSchema.statics.obtenerConSaldoPendiente = async function() {
+  return await this.find({
+    estadoPago: { $in: ["PENDIENTE", "PAGADO_PARCIAL"] },
+    estado: "ACTIVO"
+  })
+  .populate('clienteId')
+  .sort({ saldoPendiente: -1 });
 };
 
-export default model("ViajesxCliente", viajesSchema);
+// ========================================
+// MÉTODOS DE INSTANCIA
+// ========================================
 
-/* 
-EJEMPLO DE USO:
+// Registrar pago
+viajesClienteSchema.methods.registrarPago = async function(monto, metodoPago, referencia, notas) {
+  this.pagos.push({
+    fecha: new Date(),
+    monto,
+    metodoPago,
+    referencia,
+    notas
+  });
+  
+  this.montoPagado = (this.montoPagado || 0) + monto;
+  
+  return await this.save();
+};
 
-// 1. Crear cliente DIANA con múltiples rutas
-const clienteId = await ViajesxCliente.generarClienteId();
+// Cerrar reporte (finalizar facturación del mes)
+viajesClienteSchema.methods.cerrarReporte = async function() {
+  this.estado = "CERRADO";
+  return await this.save();
+};
 
-const diana = await ViajesxCliente.create({
-  clienteId: clienteId,
-  clienteNombre: "DIANA",
-  mes: 1,
-  año: 2025,
-  rutas: [
-    {
-      origen: "DIANA",
-      destino: "SARAM",
-      cantidadViajes: 92,
-      montoPorViaje: 105.00
-    },
-    {
-      origen: "DIANA",
-      destino: "TAPASCO",
-      cantidadViajes: 64,
-      montoPorViaje: 97.00
-    },
-    {
-      origen: "TAPASCO",
-      destino: "SARAM",
-      cantidadViajes: 27,
-      montoPorViaje: 97.00
-    }
-  ]
-});
+export default model("ViajesPorClientes", viajesClienteSchema);
 
-// 2. Agregar una nueva ruta a DIANA
-await diana.agregarRuta("DIANA", "COMALAPA", 15, 90.00);
-
-// 3. Actualizar una ruta existente
-await diana.actualizarRuta("DIANA/SARAM", { cantidadViajes: 95 });
-
-// 4. Obtener reporte del mes
-const reporte = await ViajesxCliente.obtenerReporteMensual(1, 2025);
-
-// Resultado de diana:
-{
-  clienteId: "CLI001",
-  clienteNombre: "DIANA",
-  rutas: [
-    { rutaCompleta: "DIANA/SARAM", cantidadViajes: 92, montoPorViaje: 105, montoTotal: 9660 },
-    { rutaCompleta: "DIANA/TAPASCO", cantidadViajes: 64, montoPorViaje: 97, montoTotal: 6208 },
-    { rutaCompleta: "TAPASCO/SARAM", cantidadViajes: 27, montoPorViaje: 97, montoTotal: 2619 }
-  ],
-  totalViajes: 183,
-  montoTotalGeneral: 18487
-}
-*/
