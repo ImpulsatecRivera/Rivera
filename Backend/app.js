@@ -22,6 +22,8 @@ import ResumenDieselReporte from "./src/Routes/ResumenReportesRoutes.js"
 import cajachicaRoutes from "./src/Routes/cajaChicaRoutes.js";
 import reportesCajaChicaRoutes from "./src/Routes/ReportesCajaChicaRoutes.js";
 import CajaChicaConfigRoutes from "./src/Routes/CajaChicaConfigRoutes.js";
+import PlanillaQuincenalRoutes from "./src/Routes/PlanillaQuincenalRoutes.js";
+import ReportesPlanillaQuincenalRoutes from "./src/Routes/ReportesPlanillaQuincenalRoutes.js";
 import swaggerUi from "swagger-ui-express";
 import fs from "fs";
 import path from "path";
@@ -87,6 +89,7 @@ app.use("/api/motoristas", motoristasRoutes);
 app.use("/api/proveedores", proveedoresRoutes);
 app.use("/api/cajaChica", cajachicaRoutes);
 app.use("/api/cajaChicaConfig", CajaChicaConfigRoutes);
+app.use("/api/planillas/quincenal", PlanillaQuincenalRoutes);
 
 app.use("/api/auto-update", autoUpdateRoutes);
 app.use("/api/call",callRoutes);
@@ -95,5 +98,6 @@ app.use("/api/reporte",Reportesroutes)
 app.use("/api/resumen",ResumenRoutes)
 app.use("/api/resumenReporte",ResumenDieselReporte)
 app.use("/api/reportesCajaChica", reportesCajaChicaRoutes);
+app.use("/api/reportes/planilla/quincenal", ReportesPlanillaQuincenalRoutes);
 
 export default app;
