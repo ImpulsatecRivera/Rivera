@@ -1,0 +1,477 @@
+/**
+ * Controlador para generar reportes PDF de planillas quincenales
+ * Estilo similar a ReportesCajaChicaController
+ */
+
+import puppeteer from 'puppeteer';
+import PlanillaQuincenal from '../Models/PlanillaQuincenal.js';
+import { isValidObjectId } from 'mongoose';
+
+const ReportesPlanillasController = {};
+
+/**
+ * Función auxiliar para obtener nombre del mes
+ */
+const obtenerNombreMes = (mes) => {
+    const meses = [
+        'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+        'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+    ];
+    return meses[mes - 1] || 'Mes inválido';
+};
+
+/**
+ * Formatear fecha a string legible
+ */
+const formatearFecha = (fecha) => {
+    const date = new Date(fecha);
+    return date.toLocaleDateString('es-ES', { 
+        day: '2-digit', 
+        month: '2-digit', 
+        year: 'numeric' 
+    });
+};
+
+/**
+ * Generar PDF de una planilla quincenal específica
+ * GET /api/reportes/planilla/quincenal/:id
+ */
+ReportesPlanillasController.generarPDFQuincenal = async (req, res) => {
+    let browser;
+    try {
+        const { id } = req.params;
+
+        if (!isValidObjectId(id)) {
+            return res.status(400).json({
+                success: false,
+                message: "ID de planilla inválido"
+            });
+        }
+
+        const planilla = await PlanillaQuincenal.findById(id);
+
+        if (!planilla) {
+            return res.status(404).json({
+                success: false,
+                message: 'Planilla no encontrada'
+            });
+        }
+
+        const htmlContent = `
+        <!DOCTYPE html>
+        <html lang="es">
+        <head>
+            <meta charset="UTF-8">
+            <style>
+                * {
+                    margin: 0;
+                    padding: 0;
+                    box-sizing: border-box;
+                }
+                body {
+                    font-family: Arial, sans-serif;
+                    padding: 20px;
+                    color: #000;
+                    background: #fff;
+                }
+                .header {
+                    text-align: center;
+                    margin-bottom: 20px;
+                    padding-bottom: 15px;
+                    border-bottom: 2px solid #000;
+                }
+                .header h1 {
+                    font-size: 16px;
+                    font-weight: bold;
+                    text-transform: uppercase;
+                    margin-bottom: 5px;
+                }
+                .header .subtitle {
+                    font-size: 12px;
+                    color: #333;
+                }
+                .info-section {
+                    margin-bottom: 15px;
+                    padding: 10px;
+                    background: #f5f5f5;
+                    border: 1px solid #000;
+                    font-size: 11px;
+                }
+                table {
+                    width: 100%;
+                    border-collapse: collapse;
+                    margin-bottom: 15px;
+                    font-size: 8px;
+                }
+                th {
+                    background: #000;
+                    color: white;
+                    padding: 6px 3px;
+                    text-align: center;
+                    font-weight: bold;
+                    border: 1px solid #000;
+                }
+                td {
+                    padding: 4px 3px;
+                    border: 1px solid #000;
+                    text-align: center;
+                }
+                .text-left { text-align: left; }
+                .text-right { text-align: right; }
+                .employee-name {
+                    font-weight: bold;
+                    font-size: 7px;
+                }
+                .section-header {
+                    background: #666;
+                    color: white;
+                    font-weight: bold;
+                }
+                .totals-row {
+                    background: #e0e0e0;
+                    font-weight: bold;
+                }
+                .footer {
+                    margin-top: 20px;
+                    text-align: center;
+                    font-size: 9px;
+                    color: #666;
+                    border-top: 1px solid #000;
+                    padding-top: 10px;
+                }
+            </style>
+        </head>
+        <body>
+            <div class="header">
+                <h1>PLANILLA DE NÓMINA DE SALARIOS</h1>
+                <div class="subtitle">${planilla.descripcion}</div>
+                <div class="subtitle">Del ${formatearFecha(planilla.fechaInicio)} al ${formatearFecha(planilla.fechaFin)}</div>
+            </div>
+
+            <div class="info-section">
+                <strong>Quincena:</strong> ${planilla.quincena === 1 ? 'Primera' : 'Segunda'} - ${obtenerNombreMes(planilla.mes)} ${planilla.año}<br>
+                <strong>Estado:</strong> ${planilla.estado.toUpperCase()}<br>
+                <strong>Total Empleados:</strong> ${planilla.empleados.length}
+            </div>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th rowspan="2" style="width: 3%;">#</th>
+                        <th rowspan="2" style="width: 15%;">NÓMINA DE LOS EMPLEADOS</th>
+                        <th rowspan="2" style="width: 7%;">SALARIO QUINCENAL</th>
+                        <th rowspan="2" style="width: 6%;">VIÁTICOS</th>
+                        <th rowspan="2" style="width: 7%;">TRABAJO SÁBADO Y DOMINGO</th>
+                        <th rowspan="2" style="width: 7%;">TOTAL SALARIO MAS VIÁTICOS</th>
+                        <th colspan="3" class="section-header">DESCUENTOS DE LEY</th>
+                        <th colspan="4" class="section-header">OTROS DESCUENTOS</th>
+                        <th rowspan="2" style="width: 7%;"><strong>TOTAL DE DESCUENTOS</strong></th>
+                        <th rowspan="2" style="width: 8%;"><strong>TOTAL A PAGAR</strong></th>
+                    </tr>
+                    <tr>
+                        <th style="width: 5%;">ISSS 3%</th>
+                        <th style="width: 5%;">AFP 7.25%</th>
+                        <th style="width: 5%;">RENTA</th>
+                        <th style="width: 5%;">ANTICIPOS</th>
+                        <th style="width: 5%;">PTMOS</th>
+                        <th style="width: 5%;">CAMISAS</th>
+                        <th style="width: 5%;">OTROS DESCUENTOS</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${planilla.empleados.map((emp, index) => `
+                        <tr>
+                            <td>${index + 1}</td>
+                            <td class="text-left employee-name">${emp.nombreCompleto}</td>
+                            <td class="text-right">$ ${emp.salarioQuincenal.toFixed(2)}</td>
+                            <td class="text-right">${emp.viaticos > 0 ? '$ ' + emp.viaticos.toFixed(2) : '-'}</td>
+                            <td class="text-right">${emp.trabajoSabadoDomingo > 0 ? '$ ' + emp.trabajoSabadoDomingo.toFixed(2) : '-'}</td>
+                            <td class="text-right"><strong>$ ${emp.totalSalarioMasViaticos.toFixed(2)}</strong></td>
+                            <td class="text-right">$ ${emp.descuentosLey.isss.monto.toFixed(2)}</td>
+                            <td class="text-right">$ ${emp.descuentosLey.afp.monto.toFixed(2)}</td>
+                            <td class="text-right">${emp.descuentosLey.renta?.monto > 0 ? '$ ' + emp.descuentosLey.renta.monto.toFixed(2) : '-'}</td>
+                            <td class="text-right">${emp.otrosDescuentos.anticipos > 0 ? '$ ' + emp.otrosDescuentos.anticipos.toFixed(2) : '-'}</td>
+                            <td class="text-right">${emp.otrosDescuentos.prestamos > 0 ? '$ ' + emp.otrosDescuentos.prestamos.toFixed(2) : '-'}</td>
+                            <td class="text-right">${emp.otrosDescuentos.camisas > 0 ? '$ ' + emp.otrosDescuentos.camisas.toFixed(2) : '-'}</td>
+                            <td class="text-right">${emp.otrosDescuentos.otros > 0 ? '$ ' + emp.otrosDescuentos.otros.toFixed(2) : '-'}</td>
+                            <td class="text-right"><strong>$ ${emp.totalDescuentos.toFixed(2)}</strong></td>
+                            <td class="text-right"><strong>$ ${emp.totalAPagar.toFixed(2)}</strong></td>
+                        </tr>
+                    `).join('')}
+                    <tr class="totals-row">
+                        <td colspan="2"><strong>TOTAL DE PLANILLA</strong></td>
+                        <td class="text-right"><strong>$ ${planilla.totales.totalSalariosQuincenales.toFixed(2)}</strong></td>
+                        <td class="text-right"><strong>$ ${planilla.totales.totalViaticos.toFixed(2)}</strong></td>
+                        <td class="text-right"><strong>$ ${planilla.totales.totalTrabajoExtra.toFixed(2)}</strong></td>
+                        <td class="text-right"><strong>$ ${planilla.totales.totalSalarioMasViaticos.toFixed(2)}</strong></td>
+                        <td class="text-right"><strong>$ ${planilla.totales.totalISSS.toFixed(2)}</strong></td>
+                        <td class="text-right"><strong>$ ${planilla.totales.totalAFP.toFixed(2)}</strong></td>
+                        <td class="text-right"><strong>$ ${planilla.totales.totalRenta.toFixed(2)}</strong></td>
+                        <td class="text-right"><strong>$ ${planilla.totales.totalAnticipos.toFixed(2)}</strong></td>
+                        <td class="text-right"><strong>$ ${planilla.totales.totalPrestamos.toFixed(2)}</strong></td>
+                        <td class="text-right"><strong>$ ${planilla.totales.totalCamisas.toFixed(2)}</strong></td>
+                        <td class="text-right"><strong>$ ${planilla.totales.totalOtrosDescuentos.toFixed(2)}</strong></td>
+                        <td class="text-right"><strong>$ ${planilla.totales.totalDescuentos.toFixed(2)}</strong></td>
+                        <td class="text-right"><strong>$ ${planilla.totales.totalAPagar.toFixed(2)}</strong></td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="footer">
+                <p>Documento generado el ${new Date().toLocaleDateString('es-ES')} a las ${new Date().toLocaleTimeString('es-ES')}</p>
+                <p>Sistema de Gestión Rivera © ${new Date().getFullYear()}</p>
+            </div>
+        </body>
+        </html>
+        `;
+
+        browser = await puppeteer.launch({
+            headless: 'new',
+            args: ['--no-sandbox', '--disable-setuid-sandbox']
+        });
+
+        const page = await browser.newPage();
+        await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
+
+        const pdfBuffer = await page.pdf({
+            format: 'A4',
+            landscape: true,
+            printBackground: true,
+            margin: { top: '15px', right: '15px', bottom: '15px', left: '15px' }
+        });
+
+        await browser.close();
+
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename=planilla-quincenal-${planilla.quincena}-${planilla.mes}-${planilla.año}.pdf`);
+        res.setHeader('Content-Length', pdfBuffer.length);
+
+        res.send(pdfBuffer);
+
+    } catch (error) {
+        if (browser) await browser.close();
+        console.error('Error al generar PDF planilla quincenal:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error al generar el PDF',
+            error: error.message
+        });
+    }
+};
+
+/**
+ * Generar reporte mensual consolidado de planillas quincenales
+ * GET /api/reportes/planilla/mensual/:mes/:año
+ */
+ReportesPlanillasController.generarPDFMensual = async (req, res) => {
+    let browser;
+    try {
+        const { mes, año } = req.params;
+        const mesNum = parseInt(mes);
+        const añoNum = parseInt(año);
+
+        if (mesNum < 1 || mesNum > 12) {
+            return res.status(400).json({
+                success: false,
+                message: 'Mes inválido. Debe estar entre 1 y 12'
+            });
+        }
+
+        // Buscar todas las planillas quincenales del mes
+        const planillas = await PlanillaQuincenal.find({
+            año: añoNum,
+            mes: mesNum
+        }).sort({ quincena: 1 });
+
+        if (planillas.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: `No hay planillas para ${obtenerNombreMes(mesNum)} ${añoNum}`
+            });
+        }
+
+        // Calcular totales consolidados
+        const totalGeneral = planillas.reduce((sum, p) => sum + p.totales.totalAPagar, 0);
+        const totalSalarios = planillas.reduce((sum, p) => sum + p.totales.totalSalariosQuincenales, 0);
+        const totalDescuentos = planillas.reduce((sum, p) => sum + p.totales.totalDescuentos, 0);
+
+        const htmlContent = `
+        <!DOCTYPE html>
+        <html lang="es">
+        <head>
+            <meta charset="UTF-8">
+            <style>
+                * {
+                    margin: 0;
+                    padding: 0;
+                    box-sizing: border-box;
+                }
+                body {
+                    font-family: Arial, sans-serif;
+                    padding: 30px;
+                    color: #000;
+                    background: #fff;
+                }
+                .header {
+                    text-align: center;
+                    margin-bottom: 25px;
+                    padding-bottom: 15px;
+                    border-bottom: 3px solid #000;
+                }
+                .header h1 {
+                    font-size: 20px;
+                    font-weight: bold;
+                    margin-bottom: 10px;
+                }
+                .section {
+                    margin: 30px 0;
+                }
+                .section h2 {
+                    font-size: 16px;
+                    background: #000;
+                    color: white;
+                    padding: 10px;
+                    margin-bottom: 15px;
+                }
+                table {
+                    width: 100%;
+                    border-collapse: collapse;
+                    margin-bottom: 15px;
+                    font-size: 12px;
+                }
+                th {
+                    background: #666;
+                    color: white;
+                    padding: 8px;
+                    text-align: left;
+                    border: 1px solid #000;
+                }
+                td {
+                    padding: 8px;
+                    border: 1px solid #000;
+                }
+                .text-right { text-align: right; }
+                .text-center { text-align: center; }
+                .summary {
+                    margin-top: 30px;
+                    padding: 20px;
+                    background: #f5f5f5;
+                    border: 2px solid #000;
+                }
+                .summary-row {
+                    display: flex;
+                    justify-content: space-between;
+                    padding: 8px 0;
+                    font-size: 14px;
+                }
+                .summary-row.total {
+                    font-size: 18px;
+                    font-weight: bold;
+                    border-top: 2px solid #000;
+                    margin-top: 15px;
+                    padding-top: 15px;
+                }
+                .footer {
+                    margin-top: 40px;
+                    text-align: center;
+                    font-size: 10px;
+                    color: #666;
+                    border-top: 1px solid #000;
+                    padding-top: 10px;
+                }
+            </style>
+        </head>
+        <body>
+            <div class="header">
+                <h1>REPORTE MENSUAL DE PLANILLAS QUINCENALES</h1>
+                <div>${obtenerNombreMes(mesNum)} ${añoNum}</div>
+            </div>
+
+            ${planillas.map(p => `
+            <div class="section">
+                <h2>📋 ${p.quincena === 1 ? 'PRIMERA' : 'SEGUNDA'} QUINCENA</h2>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Descripción</th>
+                            <th class="text-center">Empleados</th>
+                            <th class="text-center">Estado</th>
+                            <th class="text-right">Total Salarios</th>
+                            <th class="text-right">Total Descuentos</th>
+                            <th class="text-right">Total a Pagar</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>${p.descripcion}</td>
+                            <td class="text-center">${p.empleados.length}</td>
+                            <td class="text-center">${p.estado.toUpperCase()}</td>
+                            <td class="text-right">$ ${p.totales.totalSalarioMasViaticos.toFixed(2)}</td>
+                            <td class="text-right">$ ${p.totales.totalDescuentos.toFixed(2)}</td>
+                            <td class="text-right"><strong>$ ${p.totales.totalAPagar.toFixed(2)}</strong></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            `).join('')}
+
+            <div class="summary">
+                <h3 style="margin-bottom: 15px;">💰 RESUMEN GENERAL DEL MES</h3>
+                <div class="summary-row">
+                    <span>Total Planillas Quincenales:</span>
+                    <span><strong>${planillas.length}</strong></span>
+                </div>
+                <div class="summary-row">
+                    <span>Total Salarios Pagados:</span>
+                    <span>$ ${totalSalarios.toFixed(2)}</span>
+                </div>
+                <div class="summary-row">
+                    <span>Total Descuentos:</span>
+                    <span>$ ${totalDescuentos.toFixed(2)}</span>
+                </div>
+                <div class="summary-row total">
+                    <span>INVERSIÓN TOTAL EN PLANILLAS:</span>
+                    <span>$ ${totalGeneral.toFixed(2)}</span>
+                </div>
+            </div>
+
+            <div class="footer">
+                <p>Documento generado el ${new Date().toLocaleDateString('es-ES')} a las ${new Date().toLocaleTimeString('es-ES')}</p>
+                <p>Sistema de Gestión Rivera © ${new Date().getFullYear()}</p>
+            </div>
+        </body>
+        </html>
+        `;
+
+        browser = await puppeteer.launch({
+            headless: 'new',
+            args: ['--no-sandbox', '--disable-setuid-sandbox']
+        });
+
+        const page = await browser.newPage();
+        await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
+
+        const pdfBuffer = await page.pdf({
+            format: 'A4',
+            printBackground: true,
+            margin: { top: '20px', right: '20px', bottom: '20px', left: '20px' }
+        });
+
+        await browser.close();
+
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename=reporte-planillas-${obtenerNombreMes(mesNum)}-${añoNum}.pdf`);
+        res.send(pdfBuffer);
+
+    } catch (error) {
+        if (browser) await browser.close();
+        console.error('Error al generar PDF mensual:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error al generar el PDF',
+            error: error.message
+        });
+    }
+};
+
+export default ReportesPlanillasController;
