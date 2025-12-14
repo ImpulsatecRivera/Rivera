@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Home, Clock, BarChart3, Wrench, FileText, Users } from 'lucide-react';
+import { Home, Clock, BarChart3, Wrench, FileText, Vault } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 
 const SidebarNav = () => {
@@ -13,7 +13,7 @@ const SidebarNav = () => {
     { id: 'reports', route: '/reports', icon: BarChart3 },
     { id: 'maintenance', route: '/mantenimientos', icon: Wrench },
     { id: 'documents', route: '/documents', icon: FileText },
-    { id: 'users', route: '/users', icon: Users }
+    { id: 'CajaChica', route: '/CajaChica', icon: Vault }
   ];
 
   // Actualizar el item activo basado en la ruta actual
