@@ -33,6 +33,16 @@ const descuentosLeySchema = new Schema({
         monto: {
             type: Number,
             default: 0
+        },
+        tramo: {
+            type: Number,
+            default: 1, // Tramo I, II, III o IV
+            min: 1,
+            max: 4
+        },
+        porcentaje: {
+            type: Number,
+            default: 0 // 0%, 10%, 20% o 30% según el tramo
         }
     }
 }, { _id: false });
@@ -212,12 +222,31 @@ const planillaQuincenalSchema = new Schema({
     },
     // Estado de la planilla
     estado: {
-        type: String,
-        enum: ['borrador', 'pendiente', 'pagada', 'cerrada'],
+        type: String, 
+        enum: ['borrador', 'pendiente', 'aprobada', 'pagada', 'cerrada'],
         default: 'borrador'
+    },
+    // Metadatos
+    creadoPor: {
+        type: Schema.Types.ObjectId,
+        ref: 'Empleado'
+    },
+    aprobadoPor: {
+        type: Schema.Types.ObjectId,
+        ref: 'Empleado'
     },
     fechaAprobacion: {
         type: Date
+    },
+    fechaPago: {
+        type: Date
+    },
+    fechaCierre: {
+        type: Date
+    },
+
+    notas: {
+        type: String
     }
 }, {
     timestamps: true,

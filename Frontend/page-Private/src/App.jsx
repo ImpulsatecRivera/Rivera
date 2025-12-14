@@ -35,6 +35,7 @@ import Dashboards from "./pages/Dashbord2/dashbords"
 import MantenimientosTable from "./pages/MantenimientosCamiones/PantallaPrincipalMantos"
 import CreateMantenimientoPage from "./pages/MantenimientosCamiones/AgregarNuevoManto"
 import EditMantenimiento from "./pages/MantenimientosCamiones/EditarMantos"
+import CajaChica from "./pages/CajaChica/CajaChica"
 
 // UI
 import SidebarNav from "./components/Nav/Nav";
@@ -119,6 +120,7 @@ function App() {
         <Route path="/mantenimientos" element={<MantenimientosTable/>} />
         <Route path="/mantenimientos/agregar-mantenimiento" element={<CreateMantenimientoPage/>} />
         <Route path="/mantenimientos/editar/:id" element={<EditMantenimiento/>} />
+        <Route path="/CajaChica" element={<CajaChica/>} />
 
       </Route>
 
