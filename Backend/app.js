@@ -19,14 +19,13 @@ import MantoRouter from "./src/Routes/MantenimientoRoutes.js"
 import Reportesroutes from "./src/Routes/ReportesRoutes.js"
 import ResumenRoutes from "./src/Routes/ResumenDieselRoutes.js"
 import ResumenDieselReporte from "./src/Routes/ResumenReportesRoutes.js"
-<<<<<<< HEAD
 import ViajesxClientesRoutes from "./src/Routes/ViajesxClientesRoutes.js"
 import RepoprteViajexCliente from "./src/Routes/ReportexClienteRoutes.js"
-=======
 import cajachicaRoutes from "./src/Routes/cajaChicaRoutes.js";
 import reportesCajaChicaRoutes from "./src/Routes/ReportesCajaChicaRoutes.js";
 import CajaChicaConfigRoutes from "./src/Routes/CajaChicaConfigRoutes.js";
->>>>>>> master
+import ViajesInternos from "./src/Routes/ViajesInternosRoutes.js"
+import RutasRoutes from "./src/Routes/RutasRoutes.js"
 import swaggerUi from "swagger-ui-express";
 import fs from "fs";
 import path from "path";
@@ -99,11 +98,10 @@ app.use("/api/mantenimientos",MantoRouter)
 app.use("/api/reporte",Reportesroutes)
 app.use("/api/resumen",ResumenRoutes)
 app.use("/api/resumenReporte",ResumenDieselReporte)
-<<<<<<< HEAD
 app.use("/api/ViajesxClientes",ViajesxClientesRoutes)
 app.use("/api/reporteviaje",RepoprteViajexCliente)
-=======
 app.use("/api/reportesCajaChica", reportesCajaChicaRoutes);
->>>>>>> master
+app.use("/api/viajesinternos",ViajesInternos)
+app.use("/api/rutas",RutasRoutes)
 
 export default app;
