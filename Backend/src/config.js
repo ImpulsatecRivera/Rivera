@@ -22,6 +22,9 @@ export const config = {
         emailAdmin: process.env.ADMIN_EMAIL,
         password: process.env.ADMIN_PASSWORD
     },
+    CAJA_CHICA: {
+        passwordReintegro: process.env.CAJA_CHICA_PASSWORD_REINTEGRO
+    },
     email:{
         user: process.env.USER_EMAIL,
         pass: process.env.USER_PASS
@@ -33,8 +36,7 @@ export const config = {
     TWILIO_ACCOUNT_SID: process.env.TWILIO_ACCOUNT_SID,
     TWILIO_AUTH_TOKEN: process.env.TWILIO_AUTH_TOKEN,
     TWILIO_PHONE_NUMBER: process.env.TWILIO_PHONE_NUMBER,
-  }
-
+}
 
 console.log('🔧 [CONFIG] Variables de entorno cargadas:');
 console.log('TWILIO_ACCOUNT_SID:', config.TWILIO_ACCOUNT_SID ? '✅' : '❌');
@@ -42,3 +44,4 @@ console.log('TWILIO_AUTH_TOKEN:', config.TWILIO_AUTH_TOKEN ? '✅' : '❌');
 console.log('TWILIO_PHONE_NUMBER:', config.TWILIO_PHONE_NUMBER ? '✅' : '❌');
 console.log('GOOGLE_CLIENT_ID:', config.GOOGLE.CLIENT_ID ? '✅' : '❌');
 console.log('GOOGLE_CLIENT_SECRET:', config.GOOGLE.CLIENT_SECRET ? '✅' : '❌');
+console.log('CAJA_CHICA_PASSWORD:', config.CAJA_CHICA.passwordReintegro ? '✅' : '❌');

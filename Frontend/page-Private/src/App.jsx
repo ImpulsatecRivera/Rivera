@@ -30,11 +30,15 @@ import ProviderManagementInterface from "./pages/Provedores/Prooveedores";
 import AddProveedorForm from "./pages/Provedores/AgregarProovedor";
 import CotizacionesComponent from "./pages/cotizaciones/Cotizaciones";
 import CotizacionForm from "./pages/cotizaciones/EditarCotizacion";
+
 import Seleccionar from "./pages/ProcesosElegir/Seleccionar";
 import Dashboards from "./pages/Dashbord2/dashbords";
+
 import MantenimientosTable from "./pages/MantenimientosCamiones/PantallaPrincipalMantos";
 import CreateMantenimientoPage from "./pages/MantenimientosCamiones/AgregarNuevoManto";
 import EditMantenimiento from "./pages/MantenimientosCamiones/EditarMantos";
+
+import CajaChica from "./pages/CajaChica/CajaChica";
 
 // ✅ Diesel
 import PantallaPrincipalDiesel from "./pages/Diesel/PantallaPrincipalDiesel";
@@ -49,22 +53,21 @@ function App() {
   const location = useLocation();
   const [isRouteLoading, setIsRouteLoading] = useState(false);
 
- const splashRoutes = [
-  "/empleados/agregarEmployee",
-  "/motoristas/agregarMotorista",
-  "/camiones/aggCamion",
-  "/proveedores/agregarProveedor",
-  "/camiones/editarCamion/:id",
-  "/cotizaciones/CotizacionForm",
-  "/viajes/maps",
-  "/mantenimientos/agregar-mantenimiento",
-  "/mantenimientos/editar/:id",
+  const splashRoutes = [
+    "/empleados/agregarEmployee",
+    "/motoristas/agregarMotorista",
+    "/camiones/aggCamion",
+    "/proveedores/agregarProveedor",
+    "/camiones/editarCamion/:id",
+    "/cotizaciones/CotizacionForm",
+    "/viajes/maps",
+    "/mantenimientos/agregar-mantenimiento",
+    "/mantenimientos/editar/:id",
 
-  // ✅ AÑADIR:
-  "/diesel/agregar",
-  "/diesel/editar/:id",
-];
-
+    // ✅ Diesel
+    "/diesel/agregar",
+    "/diesel/editar/:id",
+  ];
 
   useEffect(() => {
     const shouldShowSplash = splashRoutes.some((route) => {
@@ -119,10 +122,16 @@ function App() {
       >
         {/* Dashboard */}
         <Route path="/home" element={<Dashboards />} />
+
+        {/* (Opcional) rutas legacy si aún las usas */}
         <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/reports" element={<ReportsPage />} />
         <Route path="/informes" element={<ReportsPage />} />
 
-        {/* 🔥 DIESEL (YA EN EL MENÚ CORRECTO) */}
+        {/* Caja Chica */}
+        <Route path="/CajaChica" element={<CajaChica />} />
+
+        {/* 🔥 DIESEL */}
         <Route path="/diesel" element={<PantallaPrincipalDiesel />} />
         <Route path="/diesel/agregar" element={<AgregarDiesel />} />
         <Route path="/diesel/editar/:id" element={<EditDiesel />} />
@@ -167,12 +176,7 @@ function App() {
         path="*"
         element={
           <div className="flex items-center justify-center h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
-            <Lottie
-              animationData={animationData}
-              style={{ maxWidth: 800 }}
-              loop
-              autoplay
-            />
+            <Lottie animationData={animationData} style={{ maxWidth: 800 }} loop autoplay />
           </div>
         }
       />
