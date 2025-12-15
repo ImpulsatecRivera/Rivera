@@ -11,6 +11,11 @@ const AgregarDiesel = () => {
 
   const [camiones, setCamiones] = useState([]);
 
+  const ESTADOS = {
+    PENDIENTE: "Pendiente",
+    COMPLETADO: "Completado",
+  };
+
   // ✅ Guardamos EL ID del camión en CicurlationCard
   const [formData, setFormData] = useState({
     fecha: "",
@@ -18,7 +23,17 @@ const AgregarDiesel = () => {
     Galones: "",
     precioGalon: "",
     Total: "",
+    estado: ESTADOS.PENDIENTE, // ✅ por defecto
   });
+
+  // ✅ Fecha de hoy en formato YYYY-MM-DD (LOCAL)
+  const getTodayISO = () => {
+    const d = new Date();
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const dd = String(d.getDate()).padStart(2, "0");
+    return `${yyyy}-${mm}-${dd}`;
+  };
 
   useEffect(() => {
     fetchCamiones();
@@ -56,6 +71,18 @@ const AgregarDiesel = () => {
   const handleInputChange = (e) => {
     const { name, value } = e.target;
 
+    // ✅ FECHA: solo permitir pasado o hoy
+    if (name === "fecha") {
+      const today = getTodayISO();
+      if (value && value > today) {
+        setError("No se permiten fechas futuras. Solo fechas pasadas o el día de hoy.");
+        return;
+      }
+      if (error) setError(null);
+      setFormData((prev) => ({ ...prev, [name]: value }));
+      return;
+    }
+
     // permitir strings en inputs numéricos para que el usuario pueda borrar
     if (["Galones", "precioGalon", "Total"].includes(name)) {
       setFormData((prev) => ({ ...prev, [name]: value }));
@@ -66,8 +93,8 @@ const AgregarDiesel = () => {
   };
 
   const handleSubmit = async () => {
-    // Validaciones
     if (!formData.fecha) return setError("La fecha es requerida");
+    if (formData.fecha > getTodayISO()) return setError("La fecha no puede ser a futuro (solo hoy o fechas pasadas).");
     if (!formData.CicurlationCard) return setError("Debe seleccionar un camión");
     if (toNumber(formData.Galones) <= 0) return setError("Los galones deben ser mayores que 0");
     if (totalCalculado <= 0) return setError("El total debe ser mayor que 0 (o ingresa el precio por galón)");
@@ -76,15 +103,15 @@ const AgregarDiesel = () => {
       setLoading(true);
       setError(null);
 
-      // ✅ Backend espera Galones/Total/CicurlationCard (con mayúsculas)
+      // ✅ Backend espera Galones/Total/CicurlationCard
+      // ✅ estado por defecto: Pendiente
       const payload = {
         fecha: formData.fecha,
         Galones: toNumber(formData.Galones),
         Total: totalCalculado,
-        CicurlationCard: formData.CicurlationCard, // ✅ _id del camión
+        CicurlationCard: formData.CicurlationCard,
+        estado: ESTADOS.PENDIENTE, // ✅ SIEMPRE pendiente al crear
       };
-
-      console.log("📤 POST =>", `${config.api.API_URL}/resumen`, payload);
 
       const response = await fetch(`${config.api.API_URL}/resumen`, {
         method: "POST",
@@ -95,7 +122,6 @@ const AgregarDiesel = () => {
       const result = await response.json().catch(() => ({}));
 
       if (!response.ok) {
-        console.log("❌ Backend respondió:", result);
         throw new Error(result?.message || "Error al crear el registro de diésel");
       }
 
@@ -127,6 +153,11 @@ const AgregarDiesel = () => {
             <div>
               <h1 className="text-4xl font-bold text-gray-900 mb-1">Nuevo Registro de Diésel</h1>
               <p className="text-gray-600">Registra una carga de combustible para tu flota</p>
+
+              {/* ✅ Muestra el estado, pero no se edita */}
+              <span className="inline-flex mt-2 items-center px-3 py-1 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-800">
+                Estado: {ESTADOS.PENDIENTE}
+              </span>
             </div>
           </div>
         </div>
@@ -156,11 +187,11 @@ const AgregarDiesel = () => {
                   name="fecha"
                   value={formData.fecha}
                   onChange={handleInputChange}
+                  max={getTodayISO()}
                   className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 />
               </div>
 
-              {/* ✅ value es camion._id */}
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">Camión / Placa *</label>
                 <select
@@ -193,7 +224,7 @@ const AgregarDiesel = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Precio por Galón (opcional)</label>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Precio por Galón</label>
                 <input
                   type="number"
                   name="precioGalon"
