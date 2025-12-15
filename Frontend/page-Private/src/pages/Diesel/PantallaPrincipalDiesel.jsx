@@ -9,20 +9,19 @@ import {
   Trash2,
   Plus,
 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom"; // ✅ useLocation
 import Swal from "sweetalert2";
 import { config } from "../../config";
 
-// ✅ Modales
 import DieselDetailModal from "./DieselDetailModal";
 import ReportesDieselModal from "./ReportesDieselModal";
 
-// Endpoints correctos según tu backend:
 const DIESEL_ENDPOINT = `${config.api.API_URL}/resumen`;
 const DIESEL_REPORTE_ENDPOINT = `${config.api.API_URL}/resumenReporte`;
 
 const PantallaPrincipalDiesel = () => {
   const navigate = useNavigate();
+  const location = useLocation(); // ✅
 
   const [currentPage, setCurrentPage] = useState(1);
   const [sortBy, setSortBy] = useState("newest");
@@ -32,21 +31,27 @@ const PantallaPrincipalDiesel = () => {
 
   const [searchTerm, setSearchTerm] = useState("");
 
-  // ✅ Estados del modal detalle
+  const ESTADOS = {
+    TODOS: "Todos",
+    PENDIENTE: "Pendiente",
+    COMPLETADO: "Completado",
+  };
+  const [estadoFiltro, setEstadoFiltro] = useState(ESTADOS.TODOS);
+
   const [selectedDieselId, setSelectedDieselId] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // ✅ Estados del modal reportes
   const [isReportesModalOpen, setIsReportesModalOpen] = useState(false);
 
   const itemsPerPage = 8;
 
-  // ===== Helpers para soportar distintos nombres de campos =====
   const pickFecha = (row) => row?.fecha || row?.date || row?.createdAt || row?.fecha_diesel;
 
-  const pickGalones = (row) => row?.Galones ?? row?.galones ?? row?.gallons ?? row?.cantidad_galones ?? 0;
+  const pickGalones = (row) =>
+    row?.Galones ?? row?.galones ?? row?.gallons ?? row?.cantidad_galones ?? 0;
 
-  const pickTotal = (row) => row?.Total ?? row?.total ?? row?.monto ?? row?.amount ?? row?.costo_total ?? 0;
+  const pickTotal = (row) =>
+    row?.Total ?? row?.total ?? row?.monto ?? row?.amount ?? row?.costo_total ?? 0;
 
   const pickPlaca = (row) =>
     row?.CicurlationCard?.licensePlate ||
@@ -58,66 +63,51 @@ const PantallaPrincipalDiesel = () => {
     row?.truck?.licensePlate ||
     "N/A";
 
-  // ✅ (1) FECHA SIN DESFASE (ARREGLA EL 12 -> 11)
+  // ✅ importante: leer estado del backend
+  const pickEstado = (row) => row?.estado || row?.Estado || row?.status || row?.Status || "Pendiente";
+
+  const normalize = (v) => String(v || "").trim().toLowerCase();
+
+  const canonEstado = (row) => {
+    const e = normalize(pickEstado(row));
+    if (["completado", "completo", "completed", "done", "finalizado"].includes(e)) return ESTADOS.COMPLETADO;
+    return ESTADOS.PENDIENTE;
+  };
+
   const parseLocalDate = (fecha) => {
     if (!fecha) return null;
-
-    // soporta "YYYY-MM-DD" o "YYYY-MM-DDTHH:mm:ss..."
     const base = String(fecha).split("T")[0];
     const parts = base.split("-");
     if (parts.length !== 3) return null;
-
     const [y, m, d] = parts.map((x) => Number(x));
     if (!y || !m || !d) return null;
-
-    // 👇 fecha en HORA LOCAL (no UTC)
     return new Date(y, m - 1, d);
   };
 
   const formatearFecha = (fecha) => {
     if (!fecha) return "N/A";
-
     const date = parseLocalDate(fecha);
     if (!date || Number.isNaN(date.getTime())) return String(fecha);
-
-    return date.toLocaleDateString("es-ES", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-    });
+    return date.toLocaleDateString("es-ES", { year: "numeric", month: "short", day: "numeric" });
   };
 
   const formatearMoneda = (cantidad) => {
     const n = Number(cantidad || 0);
-    return new Intl.NumberFormat("es-US", {
-      style: "currency",
-      currency: "USD",
-    }).format(n);
+    return new Intl.NumberFormat("es-US", { style: "currency", currency: "USD" }).format(n);
   };
 
   const formatearNumero = (n) => {
     const num = Number(n || 0);
-    return new Intl.NumberFormat("es-ES", {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }).format(num);
+    return new Intl.NumberFormat("es-ES", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(num);
   };
 
-  // ===== Fetch =====
-  useEffect(() => {
-    fetchDiesel();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
+  // ✅ FETCH
   const fetchDiesel = async () => {
     try {
       setLoading(true);
-
       const res = await fetch(DIESEL_ENDPOINT);
       const json = await res.json().catch(() => ({}));
-
       if (!res.ok) throw new Error(json?.message || "Error al cargar los registros de diésel");
-
       const rows = json.data || (Array.isArray(json) ? json : []);
       setDiesel(rows);
       setError(null);
@@ -127,6 +117,12 @@ const PantallaPrincipalDiesel = () => {
       setLoading(false);
     }
   };
+
+  // ✅ Refresca al entrar y cada vez que vuelves a esta ruta
+  useEffect(() => {
+    fetchDiesel();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.key]);
 
   const handleDelete = async (row) => {
     const result = await Swal.fire({
@@ -154,16 +150,9 @@ const PantallaPrincipalDiesel = () => {
 
       const res = await fetch(`${DIESEL_ENDPOINT}/${id}`, { method: "DELETE" });
       const data = await res.json().catch(() => ({}));
-
       if (!res.ok) throw new Error(data?.message || "Error al eliminar");
 
-      await Swal.fire({
-        title: "¡Eliminado!",
-        text: "Registro eliminado exitosamente",
-        icon: "success",
-        timer: 2000,
-      });
-
+      await Swal.fire({ title: "¡Eliminado!", text: "Registro eliminado exitosamente", icon: "success", timer: 2000 });
       fetchDiesel();
     } catch (e) {
       Swal.fire({ title: "Error", text: e.message, icon: "error" });
@@ -176,19 +165,31 @@ const PantallaPrincipalDiesel = () => {
     setIsModalOpen(true);
   };
 
-  // ===== Filtro + orden =====
+  const stats = useMemo(() => {
+    const pendientes = diesel.filter((r) => canonEstado(r) === ESTADOS.PENDIENTE);
+    const completados = diesel.filter((r) => canonEstado(r) === ESTADOS.COMPLETADO);
+    return {
+      pendientesCount: pendientes.length,
+      completadosCount: completados.length,
+      totalPend: pendientes.reduce((acc, r) => acc + Number(pickTotal(r) || 0), 0),
+      totalComp: completados.reduce((acc, r) => acc + Number(pickTotal(r) || 0), 0),
+    };
+  }, [diesel]);
+
   const filtered = useMemo(() => {
     const s = searchTerm.trim().toLowerCase();
-    if (!s) return diesel;
 
     return diesel.filter((row) => {
+      const estadoOk = estadoFiltro === ESTADOS.TODOS || canonEstado(row) === estadoFiltro;
+      if (!estadoOk) return false;
+
+      if (!s) return true;
       const placa = String(pickPlaca(row)).toLowerCase();
       const fechaTxt = String(formatearFecha(pickFecha(row))).toLowerCase();
       return placa.includes(s) || fechaTxt.includes(s);
     });
-  }, [diesel, searchTerm]);
+  }, [diesel, searchTerm, estadoFiltro]);
 
-  // ✅ (2) ORDEN SIN DESFASE (usa parseLocalDate)
   const sorted = useMemo(() => {
     const arr = [...filtered];
     arr.sort((a, b) => {
@@ -201,15 +202,12 @@ const PantallaPrincipalDiesel = () => {
     return arr;
   }, [filtered, sortBy]);
 
-  // ===== Paginación =====
   const totalPages = Math.ceil(sorted.length / itemsPerPage) || 1;
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
   const currentRows = sorted.slice(startIndex, endIndex);
 
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchTerm, sortBy]);
+  useEffect(() => setCurrentPage(1), [searchTerm, sortBy, estadoFiltro]);
 
   if (loading) {
     return (
@@ -238,21 +236,61 @@ const PantallaPrincipalDiesel = () => {
 
   const totalGeneral = sorted.reduce((acc, row) => acc + Number(pickTotal(row) || 0), 0);
 
+  const estadoBadge = (estado) => {
+    const e = normalize(estado);
+    if (e === "completado") return "bg-green-50 text-green-700 border border-green-200";
+    return "bg-yellow-50 text-yellow-800 border border-yellow-200";
+  };
+
   return (
     <div className="min-h-screen bg-white p-8">
       <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="mb-8">
+        <div className="mb-6">
           <h1 className="text-4xl font-bold text-gray-900 mb-2">Diésel</h1>
+
           <div className="flex items-center justify-between flex-wrap gap-2">
             <p className="text-indigo-600 text-base font-semibold">Total: {diesel.length} registros</p>
             <p className="text-gray-700 font-semibold">
               Total general (filtrado): <span className="text-gray-900">{formatearMoneda(totalGeneral)}</span>
             </p>
           </div>
+
+          <div className="mt-4 flex items-center gap-3 flex-wrap">
+            <button
+              onClick={() => setEstadoFiltro(ESTADOS.TODOS)}
+              className={`px-4 py-2 rounded-xl font-semibold border transition-colors ${
+                estadoFiltro === ESTADOS.TODOS
+                  ? "bg-indigo-600 text-white border-indigo-600"
+                  : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50"
+              }`}
+            >
+              Todos ({diesel.length})
+            </button>
+
+            <button
+              onClick={() => setEstadoFiltro(ESTADOS.PENDIENTE)}
+              className={`px-4 py-2 rounded-xl font-semibold border transition-colors ${
+                estadoFiltro === ESTADOS.PENDIENTE
+                  ? "bg-indigo-600 text-white border-indigo-600"
+                  : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50"
+              }`}
+            >
+              Pendiente ({stats.pendientesCount}) · {formatearMoneda(stats.totalPend)}
+            </button>
+
+            <button
+              onClick={() => setEstadoFiltro(ESTADOS.COMPLETADO)}
+              className={`px-4 py-2 rounded-xl font-semibold border transition-colors ${
+                estadoFiltro === ESTADOS.COMPLETADO
+                  ? "bg-indigo-600 text-white border-indigo-600"
+                  : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50"
+              }`}
+            >
+              Completado ({stats.completadosCount}) · {formatearMoneda(stats.totalComp)}
+            </button>
+          </div>
         </div>
 
-        {/* Filtros */}
         <div className="bg-white rounded-2xl shadow-md mb-6 p-5 border border-gray-100">
           <div className="flex items-center justify-between gap-4 flex-wrap">
             <div className="relative flex-1 min-w-[300px]">
@@ -298,7 +336,6 @@ const PantallaPrincipalDiesel = () => {
           </div>
         </div>
 
-        {/* Tabla */}
         <div className="bg-white rounded-2xl shadow-md overflow-hidden border border-gray-100">
           <div className="overflow-x-auto">
             <table className="w-full">
@@ -307,6 +344,7 @@ const PantallaPrincipalDiesel = () => {
                   <th className="text-left py-5 px-6 text-gray-500 font-semibold text-sm">#</th>
                   <th className="text-left py-5 px-6 text-gray-500 font-semibold text-sm">Fecha</th>
                   <th className="text-left py-5 px-6 text-gray-500 font-semibold text-sm">Placa</th>
+                  <th className="text-left py-5 px-6 text-gray-500 font-semibold text-sm">Estado</th>
                   <th className="text-right py-5 px-6 text-gray-500 font-semibold text-sm">Galones</th>
                   <th className="text-right py-5 px-6 text-gray-500 font-semibold text-sm">Total</th>
                   <th className="text-center py-5 px-6 text-gray-500 font-semibold text-sm">Acciones</th>
@@ -320,6 +358,8 @@ const PantallaPrincipalDiesel = () => {
                   const placa = pickPlaca(row);
                   const galones = pickGalones(row);
                   const total = pickTotal(row);
+                  const estado = canonEstado(row);
+                  const isCompletado = estado === ESTADOS.COMPLETADO; // ✅
 
                   return (
                     <tr
@@ -330,6 +370,13 @@ const PantallaPrincipalDiesel = () => {
                       <td className="py-5 px-6 text-gray-700 font-semibold">{startIndex + idx + 1}</td>
                       <td className="py-5 px-6 text-gray-900 font-semibold">{formatearFecha(fecha)}</td>
                       <td className="py-5 px-6 text-gray-600">{placa}</td>
+
+                      <td className="py-5 px-6">
+                        <span className={`inline-flex px-3 py-1 rounded-full text-xs font-semibold ${estadoBadge(estado)}`}>
+                          {estado}
+                        </span>
+                      </td>
+
                       <td className="py-5 px-6 text-right text-gray-900 font-semibold">{formatearNumero(galones)}</td>
                       <td className="py-5 px-6 text-right font-bold text-gray-900">{formatearMoneda(total)}</td>
 
@@ -343,13 +390,16 @@ const PantallaPrincipalDiesel = () => {
                             <Download size={18} />
                           </button>
 
-                          <button
-                            onClick={() => navigate(`/diesel/editar/${id}`)}
-                            className="p-2 rounded-lg bg-yellow-50 hover:bg-yellow-100 text-yellow-600 transition-colors"
-                            title="Editar"
-                          >
-                            <Edit size={18} />
-                          </button>
+                          {/* ✅ Ocultar Editar si está completado */}
+                          {!isCompletado && (
+                            <button
+                              onClick={() => navigate(`/diesel/editar/${id}`)}
+                              className="p-2 rounded-lg bg-yellow-50 hover:bg-yellow-100 text-yellow-600 transition-colors"
+                              title="Editar"
+                            >
+                              <Edit size={18} />
+                            </button>
+                          )}
 
                           <button
                             onClick={() => handleDelete(row)}
@@ -366,7 +416,7 @@ const PantallaPrincipalDiesel = () => {
 
                 {currentRows.length === 0 && (
                   <tr>
-                    <td colSpan={6} className="py-10 text-center text-gray-500">
+                    <td colSpan={7} className="py-10 text-center text-gray-500">
                       No hay registros para mostrar.
                     </td>
                   </tr>
@@ -375,11 +425,9 @@ const PantallaPrincipalDiesel = () => {
             </table>
           </div>
 
-          {/* Footer paginación */}
           <div className="flex items-center justify-between px-6 py-5 border-t border-gray-200 bg-gray-50">
             <p className="text-sm text-gray-600 font-medium">
-              Mostrando {sorted.length === 0 ? 0 : startIndex + 1} a {Math.min(endIndex, sorted.length)} de{" "}
-              {sorted.length} registros
+              Mostrando {sorted.length === 0 ? 0 : startIndex + 1} a {Math.min(endIndex, sorted.length)} de {sorted.length} registros
             </p>
 
             <div className="flex items-center gap-2">
@@ -430,10 +478,13 @@ const PantallaPrincipalDiesel = () => {
         </div>
       </div>
 
-      {/* ✅ Modal Detalle Diesel */}
-      <DieselDetailModal dieselId={selectedDieselId} isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
+      <DieselDetailModal
+        dieselId={selectedDieselId}
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        // ✅ si en tu modal cambias estado, llama a fetchDiesel() desde allí cuando actualice
+      />
 
-      {/* ✅ Modal Reportes Diesel */}
       <ReportesDieselModal
         isOpen={isReportesModalOpen}
         onClose={() => setIsReportesModalOpen(false)}

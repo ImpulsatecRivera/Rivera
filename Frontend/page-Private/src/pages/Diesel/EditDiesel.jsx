@@ -6,25 +6,26 @@ import { config } from "../../config";
 const DIESEL_ENDPOINT = `${config.api.API_URL}/resumen`;
 const CAMIONES_ENDPOINT = `${config.api.API_URL}/camiones`;
 
+const ESTADOS = {
+  PENDIENTE: "Pendiente",
+  COMPLETADO: "Completado",
+};
+
 // ✅ FECHA SIN DESFASE (para input type="date")
 const toISODate = (dateLike) => {
   if (!dateLike) return "";
 
-  // Si viene como string ISO "2025-12-12T00:00:00.000Z" -> "2025-12-12"
   if (typeof dateLike === "string") {
     const s = dateLike.trim();
     if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10);
-    // Si viniera como "12/12/2025" u otro formato raro:
     const d = new Date(s);
     if (Number.isNaN(d.getTime())) return "";
-    // Construir YYYY-MM-DD en LOCAL (sin toISOString)
     const y = d.getFullYear();
     const m = String(d.getMonth() + 1).padStart(2, "0");
     const day = String(d.getDate()).padStart(2, "0");
     return `${y}-${m}-${day}`;
   }
 
-  // Si viene como Date
   const d = new Date(dateLike);
   if (Number.isNaN(d.getTime())) return "";
   const y = d.getFullYear();
@@ -49,12 +50,28 @@ export default function EditDiesel() {
 
   const [camiones, setCamiones] = useState([]);
 
+  // ✅ si ya está COMPLETADO en BD, bloqueamos edición
+  const [isLocked, setIsLocked] = useState(false);
+
   const [formData, setFormData] = useState({
     fecha: "",
     CicurlationCard: "",
     Galones: "",
     Total: "",
+    estado: ESTADOS.PENDIENTE,
   });
+
+  // ✅ Fecha de hoy (local) para bloquear futuras
+  const getTodayISO = () => {
+    const d = new Date();
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const dd = String(d.getDate()).padStart(2, "0");
+    return `${yyyy}-${mm}-${dd}`;
+  };
+
+  const normalizeEstado = (v) => String(v || "").trim().toLowerCase();
+  const canonEstado = (v) => (normalizeEstado(v) === "completado" ? ESTADOS.COMPLETADO : ESTADOS.PENDIENTE);
 
   useEffect(() => {
     const run = async () => {
@@ -74,8 +91,6 @@ export default function EditDiesel() {
         if (!res.ok) throw new Error(json?.message || "Error al cargar diésel");
 
         const rows = json.data || (Array.isArray(json) ? json : []);
-
-        // ✅ comparar como String para evitar mismatch
         const found = rows.find((r) => String(r?._id || r?.id) === String(id));
         if (!found) throw new Error("No se encontró el registro de diésel");
 
@@ -86,12 +101,18 @@ export default function EditDiesel() {
           found.CicurlationCard ||
           "";
 
+        const estadoBD = canonEstado(found.estado || found.Estado || found.status);
+
         setFormData({
-          fecha: toISODate(fecha), // ✅ sin desfase
+          fecha: toISODate(fecha),
           CicurlationCard: cic,
           Galones: String(found.Galones ?? found.galones ?? 0),
           Total: String(found.Total ?? found.total ?? 0),
+          estado: estadoBD,
         });
+
+        // ✅ si viene completado desde BD -> bloquear todo
+        setIsLocked(estadoBD === ESTADOS.COMPLETADO);
       } catch (e) {
         console.error(e);
         setError(e.message || "Error al cargar");
@@ -116,23 +137,44 @@ export default function EditDiesel() {
   };
 
   const handleChange = (e) => {
+    if (isLocked) return; // ⛔ no permitir cambios si está completado
+
     const { name, value } = e.target;
+
+    // ✅ validar fecha no futura
+    if (name === "fecha") {
+      const today = getTodayISO();
+      if (value && value > today) {
+        setError("No se permiten fechas futuras. Solo fechas pasadas o el día de hoy.");
+        return;
+      }
+      if (error) setError(null);
+    }
+
     setFormData((p) => ({ ...p, [name]: value }));
   };
 
   const handleSubmit = async () => {
     try {
+      if (isLocked) {
+        throw new Error("Este registro ya está completado y no se puede editar.");
+      }
+
       setSaving(true);
       setError(null);
 
       if (!formData.fecha) throw new Error("La fecha es requerida");
+      if (formData.fecha > getTodayISO()) throw new Error("La fecha no puede ser a futuro.");
+      if (!formData.CicurlationCard) throw new Error("Debe seleccionar un camión");
       if (toNumber(formData.Galones) <= 0) throw new Error("Los galones deben ser mayores que 0");
       if (toNumber(formData.Total) <= 0) throw new Error("El total debe ser mayor que 0");
 
       const payload = {
-        fecha: formData.fecha, // "YYYY-MM-DD"
+        fecha: formData.fecha,
         Galones: toNumber(formData.Galones),
         Total: toNumber(formData.Total),
+        CicurlationCard: formData.CicurlationCard, // ✅ para que también pueda guardar cambio de camión
+        estado: formData.estado, // ✅ guardar estado
       };
 
       const res = await fetch(`${DIESEL_ENDPOINT}/${id}`, {
@@ -183,6 +225,12 @@ export default function EditDiesel() {
             <div>
               <h1 className="text-3xl font-bold text-gray-900 mb-1">Editar Diésel</h1>
               <p className="text-gray-600">Actualiza los datos del registro</p>
+
+              {isLocked && (
+                <p className="mt-2 text-sm font-semibold text-green-700 bg-green-50 border border-green-200 inline-block px-3 py-1 rounded-xl">
+                  ✅ Este registro está COMPLETADO y ya no se puede editar.
+                </p>
+              )}
             </div>
           </div>
         </div>
@@ -206,7 +254,11 @@ export default function EditDiesel() {
                 name="fecha"
                 value={formData.fecha}
                 onChange={handleChange}
-                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                max={getTodayISO()}
+                disabled={isLocked}
+                className={`w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
+                  isLocked ? "bg-gray-100 cursor-not-allowed" : ""
+                }`}
               />
             </div>
 
@@ -216,7 +268,10 @@ export default function EditDiesel() {
                 name="CicurlationCard"
                 value={formData.CicurlationCard}
                 onChange={handleChange}
-                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                disabled={isLocked}
+                className={`w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
+                  isLocked ? "bg-gray-100 cursor-not-allowed" : ""
+                }`}
               >
                 <option value="">Seleccionar camión...</option>
                 {camiones.map((c) => (
@@ -225,10 +280,29 @@ export default function EditDiesel() {
                   </option>
                 ))}
               </select>
+            </div>
 
-              <p className="text-xs text-gray-500 mt-2">
-                *Si quieres que el cambio de camión se guarde, hay que agregarlo en el controller PutDiesel.
-              </p>
+            {/* ✅ APARTADO ESTADO (como tu ejemplo de mantenimiento) */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">Estado del registro</label>
+              <select
+                name="estado"
+                value={formData.estado}
+                onChange={handleChange}
+                disabled={isLocked}
+                className={`w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
+                  isLocked ? "bg-gray-100 cursor-not-allowed" : ""
+                }`}
+              >
+                <option value={ESTADOS.PENDIENTE}>🟡 Pendiente</option>
+                <option value={ESTADOS.COMPLETADO}>🟢 Completado</option>
+              </select>
+
+              {!isLocked && formData.estado === ESTADOS.COMPLETADO && (
+                <p className="text-xs text-gray-500 mt-2">
+                  Al guardar como <b>Completado</b>, ya no podrás editar este registro después.
+                </p>
+              )}
             </div>
 
             <div>
@@ -240,7 +314,10 @@ export default function EditDiesel() {
                 onChange={handleChange}
                 min="0"
                 step="0.01"
-                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                disabled={isLocked}
+                className={`w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
+                  isLocked ? "bg-gray-100 cursor-not-allowed" : ""
+                }`}
               />
             </div>
 
@@ -253,8 +330,12 @@ export default function EditDiesel() {
                 onChange={handleChange}
                 min="0"
                 step="0.01"
-                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                disabled={isLocked}
+                className={`w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
+                  isLocked ? "bg-gray-100 cursor-not-allowed" : ""
+                }`}
               />
+
               <p className="text-xs text-gray-500 mt-2">
                 Precio aproximado por galón: <b>{formatearMoneda(precioPorGalon)}</b>
               </p>
@@ -270,7 +351,7 @@ export default function EditDiesel() {
 
               <button
                 onClick={handleSubmit}
-                disabled={saving}
+                disabled={saving || isLocked}
                 className="flex-1 px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl font-semibold hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 {saving ? (
