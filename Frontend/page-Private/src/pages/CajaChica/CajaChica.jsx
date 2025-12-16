@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { TrendingUp, TrendingDown, ShoppingCart, Send, Wrench, Download, Search, Filter, Calendar, Edit, Trash2, AlertCircle, FileText, Loader2 } from 'lucide-react';
 import { config } from '../../config';
 import Swal from 'sweetalert2';
+import './CajaChica.css';
 
 export default function CajaChicaModern() {
   const [balance, setBalance] = useState(0);
@@ -59,9 +60,9 @@ export default function CajaChicaModern() {
   // =====================================================
   const obtenerMovimientos = async () => {
     try {
-      const response = await fetch(`${config.api.API_URL}/caja-chica`);
+      const response = await fetch(`${config.api.API_URL}/cajaChica`);
       const data = await response.json();
-      
+
       if (response.ok) {
         setTransactions(data);
         calcularEstadisticas(data);
@@ -76,9 +77,9 @@ export default function CajaChicaModern() {
   // =====================================================
   const obtenerBalance = async () => {
     try {
-      const response = await fetch(`${config.api.API_URL}/caja-chica/balance`);
+      const response = await fetch(`${config.api.API_URL}/cajaChica/balance`);
       const data = await response.json();
-      
+
       if (response.ok) {
         setBalance(data.currentBalance);
       }
@@ -92,9 +93,9 @@ export default function CajaChicaModern() {
   // =====================================================
   const obtenerConfiguracion = async () => {
     try {
-      const response = await fetch(`${config.api.API_URL}/caja-chica-config`);
+      const response = await fetch(`${config.api.API_URL}/cajaChicaConfig`);
       const data = await response.json();
-      
+
       if (response.ok && data.success) {
         setConfiguracion(data.data);
       }
@@ -108,9 +109,9 @@ export default function CajaChicaModern() {
   // =====================================================
   const verificarReintegro = async () => {
     try {
-      const response = await fetch(`${config.api.API_URL}/caja-chica-config/verificar-reintegro`);
+      const response = await fetch(`${config.api.API_URL}/cajaChicaConfig/verificar-reintegro`);
       const data = await response.json();
-      
+
       if (response.ok && data.success) {
         setEstadoReintegro(data.data);
       }
@@ -139,7 +140,7 @@ export default function CajaChicaModern() {
 
     if (result.isConfirmed) {
       try {
-        const response = await fetch(`${config.api.API_URL}/caja-chica-config/registrar-reintegro`, {
+        const response = await fetch(`${config.api.API_URL}/cajaChicaConfig/registrar-reintegro`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
@@ -170,7 +171,7 @@ export default function CajaChicaModern() {
   };
 
   // =====================================================
-  // REGISTRAR INGRESO (CON PASSWORD)
+  // REGISTRAR INGRESO (CON PASSWORD MODAL)
   // =====================================================
   const registrarIngreso = async (e) => {
     e.preventDefault();
@@ -184,17 +185,74 @@ export default function CajaChicaModern() {
       return;
     }
 
+    // MODAL DE CONTRASEÑA PERSONALIZADO
+    const result = await Swal.fire({
+      html: `
+        <div class="password-modal-custom">
+          <div class="modal-header-custom">
+            <div class="shield-icon">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                <path d="M9 12l2 2 4-4"/>
+              </svg>
+            </div>
+            <h3 class="modal-title">Autorización Requerida</h3>
+            <p class="modal-subtitle">Ingresa tu contraseña para continuar</p>
+          </div>
+          
+          <div class="modal-info">
+            <div class="info-row">
+              <span class="info-label">Monto a registrar:</span>
+              <span class="info-amount">$${formData.amount}</span>
+            </div>
+            <div class="info-concept">
+              <span class="concept-label">Concepto:</span> ${formData.reason}
+            </div>
+          </div>
+        </div>
+      `,
+      input: 'password',
+      inputPlaceholder: 'Ingresa tu contraseña',
+      inputAttributes: {
+        autocapitalize: 'off',
+        autocorrect: 'off'
+      },
+      showCancelButton: true,
+      confirmButtonText: 'Confirmar',
+      cancelButtonText: 'Cancelar',
+      confirmButtonColor: '#6366f1',
+      cancelButtonColor: '#64748b',
+      customClass: {
+        popup: 'password-popup-custom',
+        input: 'password-input-custom',
+        confirmButton: 'confirm-btn-custom',
+        cancelButton: 'cancel-btn-custom'
+      },
+      preConfirm: (password) => {
+        if (!password) {
+          Swal.showValidationMessage('Por favor ingresa tu contraseña');
+        }
+        return password;
+      }
+    });
+
+    if (!result.isConfirmed) {
+      return;
+    }
+
+    const password = result.value;
+
     try {
       const formDataToSend = new FormData();
       formDataToSend.append('amount', formData.amount);
       formDataToSend.append('reason', formData.reason);
-      formDataToSend.append('password', formData.password);
-      
+      formDataToSend.append('password', password);
+
       if (voucher) {
         formDataToSend.append('voucher', voucher);
       }
 
-      const response = await fetch(`${config.api.API_URL}/caja-chica/ingreso`, {
+      const response = await fetch(`${config.api.API_URL}/cajaChica/ingreso`, {
         method: 'POST',
         body: formDataToSend
       });
@@ -248,12 +306,11 @@ export default function CajaChicaModern() {
 
     try {
       const formDataToSend = new FormData();
-      formDataToSend.append('operationType', 'egreso');
       formDataToSend.append('amount', formData.amount);
       formDataToSend.append('reason', formData.reason);
       formDataToSend.append('voucher', voucher);
 
-      const response = await fetch(`${config.api.API_URL}/caja-chica/egreso`, {
+      const response = await fetch(`${config.api.API_URL}/cajaChica/egreso`, {
         method: 'POST',
         body: formDataToSend
       });
@@ -297,7 +354,7 @@ export default function CajaChicaModern() {
 
     if (result.isConfirmed) {
       try {
-        const response = await fetch(`${config.api.API_URL}/caja-chica/${id}`, {
+        const response = await fetch(`${config.api.API_URL}/cajaChica/${id}`, {
           method: 'DELETE'
         });
 
@@ -325,7 +382,7 @@ export default function CajaChicaModern() {
   // =====================================================
   const generarReportePDF = async (tipo) => {
     let url = '';
-    
+
     switch (tipo) {
       case 'todos':
         url = `${config.api.API_URL}/reportesCajaChica/todos`;
@@ -353,7 +410,7 @@ export default function CajaChicaModern() {
     const ingresos = movimientos
       .filter(m => m.type === 'income')
       .reduce((sum, m) => sum + m.amount, 0);
-    
+
     const gastos = movimientos
       .filter(m => m.type === 'expense')
       .reduce((sum, m) => sum + m.amount, 0);
@@ -373,6 +430,9 @@ export default function CajaChicaModern() {
       password: ''
     });
     setVoucher(null);
+    // Limpiar el input file
+    const fileInput = document.getElementById('voucher');
+    if (fileInput) fileInput.value = '';
   };
 
   const formatearFecha = (fecha) => {
@@ -421,21 +481,21 @@ export default function CajaChicaModern() {
             <p className="text-slate-500 mt-1">Gestiona tus transacciones diarias</p>
           </div>
           <div className="flex gap-3">
-            <button 
+            <button
               onClick={() => generarReportePDF('diario')}
               className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2.5 rounded-xl font-medium hover:bg-blue-700 transition-colors"
             >
               <FileText size={18} />
               Diario
             </button>
-            <button 
+            <button
               onClick={() => generarReportePDF('mensual')}
               className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2.5 rounded-xl font-medium hover:bg-indigo-700 transition-colors"
             >
               <FileText size={18} />
               Mensual
             </button>
-            <button 
+            <button
               onClick={() => generarReportePDF('todos')}
               className="flex items-center gap-2 bg-gradient-to-r from-emerald-600 to-teal-600 text-white px-6 py-3 rounded-xl font-medium hover:shadow-lg hover:scale-105 transition-all duration-200"
             >
@@ -516,28 +576,33 @@ export default function CajaChicaModern() {
           <h3 className="text-lg font-semibold text-slate-800 mb-4">Registrar Transacción</h3>
           <form onSubmit={formData.operationType === 'ingreso' ? registrarIngreso : registrarEgreso}>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <input 
-                type="number" 
+              <input
+                type="number"
                 step="0.01"
                 placeholder="0.00"
                 value={formData.amount}
-                onChange={(e) => setFormData({...formData, amount: e.target.value})}
+                onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
                 className="px-4 py-3 border-2 border-slate-200 rounded-xl focus:border-indigo-500 focus:outline-none transition-colors"
                 required
               />
-              <select 
+              <select
                 value={formData.operationType}
-                onChange={(e) => setFormData({...formData, operationType: e.target.value})}
-                className="px-4 py-3 border-2 border-slate-200 rounded-xl focus:border-indigo-500 focus:outline-none transition-colors appearance-none bg-white"
+                onChange={(e) => {
+                  setFormData({ ...formData, operationType: e.target.value });
+                  setVoucher(null);
+                  const fileInput = document.getElementById('voucher');
+                  if (fileInput) fileInput.value = '';
+                }}
+                className="px-4 py-3 border-2 border-slate-200 rounded-xl focus:border-indigo-500 focus:outline-none transition-colors"
               >
-                <option value="ingreso">Ingreso</option>
                 <option value="egreso">Gasto</option>
+                <option value="ingreso">Ingreso</option>
               </select>
-              <input 
-                type="text" 
+              <input
+                type="text"
                 placeholder="Descripción"
                 value={formData.reason}
-                onChange={(e) => setFormData({...formData, reason: e.target.value})}
+                onChange={(e) => setFormData({ ...formData, reason: e.target.value })}
                 className="px-4 py-3 border-2 border-slate-200 rounded-xl focus:border-indigo-500 focus:outline-none transition-colors"
                 required
               />
@@ -549,34 +614,21 @@ export default function CajaChicaModern() {
                   onChange={(e) => setVoucher(e.target.files[0])}
                   className="hidden"
                 />
-                <label 
+                <label
                   htmlFor="voucher"
-                  className="flex items-center justify-center gap-2 bg-gradient-to-r from-emerald-600 to-teal-600 text-white px-6 py-3 rounded-xl font-medium hover:shadow-lg hover:scale-105 transition-all duration-200 cursor-pointer"
+                  className="flex items-center justify-center gap-2 bg-slate-100 text-slate-700 px-6 py-3 rounded-xl font-medium hover:bg-slate-200 transition-all duration-200 cursor-pointer border-2 border-slate-200"
                 >
                   <FileText size={18} />
                   {voucher ? voucher.name.substring(0, 15) + '...' : 'Comprobante'}
                 </label>
               </div>
             </div>
-            
-            {formData.operationType === 'ingreso' && (
-              <div className="mt-4">
-                <input
-                  type="password"
-                  placeholder="Contraseña (requerida para ingresos)"
-                  value={formData.password}
-                  onChange={(e) => setFormData({...formData, password: e.target.value})}
-                  className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:border-indigo-500 focus:outline-none transition-colors"
-                  required
-                />
-              </div>
-            )}
 
-            <button 
+            <button
               type="submit"
-              className="w-full mt-4 bg-slate-800 text-white py-3 rounded-xl font-medium hover:bg-slate-900 transition-colors"
+              className="w-full mt-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-3 rounded-xl font-medium hover:shadow-lg hover:scale-[1.02] transition-all duration-200"
             >
-              Realizar Operación
+              {formData.operationType === 'ingreso' ? '💰 Registrar Ingreso' : '📤 Registrar Egreso'}
             </button>
           </form>
         </div>
@@ -597,11 +649,10 @@ export default function CajaChicaModern() {
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab)}
-                  className={`px-4 py-2 rounded-lg font-medium transition-all ${
-                    activeTab === tab 
-                      ? 'bg-slate-800 text-white' 
+                  className={`px-4 py-2 rounded-lg font-medium transition-all ${activeTab === tab
+                      ? 'bg-slate-800 text-white'
                       : 'text-slate-600 hover:bg-slate-100'
-                  }`}
+                    }`}
                 >
                   {tab === 'all' ? 'Todas' : tab === 'income' ? 'Ingresos' : 'Gastos'}
                 </button>
@@ -632,20 +683,18 @@ export default function CajaChicaModern() {
                       <span className="font-medium text-slate-800">{tx.reason}</span>
                     </td>
                     <td className="px-6 py-4">
-                      <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                        tx.type === 'income' 
-                          ? 'bg-emerald-100 text-emerald-700' 
+                      <span className={`px-3 py-1 rounded-full text-sm font-medium ${tx.type === 'income'
+                          ? 'bg-emerald-100 text-emerald-700'
                           : 'bg-rose-100 text-rose-700'
-                      }`}>
+                        }`}>
                         {tx.type === 'income' ? 'Ingreso' : 'Egreso'}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-slate-600 text-sm">
                       {tx.employeeId?.name || 'Admin'}
                     </td>
-                    <td className={`px-6 py-4 text-right font-semibold ${
-                      tx.type === 'income' ? 'text-emerald-600' : 'text-rose-600'
-                    }`}>
+                    <td className={`px-6 py-4 text-right font-semibold ${tx.type === 'income' ? 'text-emerald-600' : 'text-rose-600'
+                      }`}>
                       {tx.type === 'income' ? '+' : '-'}{formatearMoneda(tx.amount)}
                     </td>
                     <td className="px-6 py-4 text-right text-slate-600 font-mono text-sm">
@@ -653,7 +702,6 @@ export default function CajaChicaModern() {
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center justify-center gap-2">
-                        {/* Botón Descargar PDF Individual */}
                         {tx.voucher && (
                           <button
                             onClick={() => window.open(tx.voucher, '_blank')}
@@ -663,8 +711,6 @@ export default function CajaChicaModern() {
                             <Download size={18} />
                           </button>
                         )}
-
-                        {/* Botón Eliminar */}
                         <button
                           onClick={() => handleDelete(tx._id)}
                           className="p-2 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 transition-colors"
