@@ -35,6 +35,13 @@ import RutasRoutes from "./src/Routes/RutasRoutes.js";
 import PlanillaQuincenalRoutes from "./src/Routes/PlanillaQuincenalRoutes.js";
 import ReportesPlanillaQuincenalRoutes from "./src/Routes/ReportesPlanillaQuincenalRoutes.js";
 
+import ViajesInternos from "./src/Routes/ViajesInternosRoutes.js";
+import RutasRoutes from "./src/Routes/RutasRoutes.js";
+
+import PlanillaQuincenalRoutes from "./src/Routes/PlanillaQuincenalRoutes.js";
+import ReportesPlanillaQuincenalRoutes from "./src/Routes/ReportesPlanillaQuincenalRoutes.js";
+
+
 import swaggerUi from "swagger-ui-express";
 import fs from "fs";
 import path from "path";
@@ -120,6 +127,7 @@ app.use("/api/reportesCajaChica", reportesCajaChicaRoutes);
 app.use("/api/viajesinternos",ViajesInternos)
 app.use("/api/rutas",RutasRoutes)
 app.use("/api/reporteviaje",RepoprteViajexCliente)
+
 app.use("/api/reportes/planilla/quincenal", ReportesPlanillaQuincenalRoutes);
 
 app.use("/api/auto-update", autoUpdateRoutes);
