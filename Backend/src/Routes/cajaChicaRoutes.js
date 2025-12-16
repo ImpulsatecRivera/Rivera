@@ -7,42 +7,21 @@ const router = express.Router();
 const upload = multer({ dest: "public/" });
 
 // =====================================================
-// OBTENER TODOS LOS MOVIMIENTOS
+// RUTAS SIN AUTENTICACIÓN JWT
+// (El admin usa password del .env, no JWT)
 // =====================================================
-// GET /api/caja-chica
+
+// OBTENER TODOS LOS MOVIMIENTOS
 router.get("/", cajaChicaController.getAllMovements);
 
-// =====================================================
 // OBTENER BALANCE ACTUAL
-// =====================================================
-// GET /api/caja-chica/balance
 router.get('/balance', cajaChicaController.getCurrentBalance);
 
-// =====================================================
-// REGISTRAR INGRESO (CON PASSWORD) 🔐
-// =====================================================
-// POST /api/caja-chica/ingreso
-// Body: {
-//   amount: 100,
-//   reason: "Descripción del ingreso",
-//   password: "contraseña-del-env"
-// }
-// Opcional: voucher (archivo)
-// Solo admin puede hacer ingresos
+// REGISTRAR INGRESO (CON PASSWORD del .env)
 router.post("/ingreso", upload.single("voucher"), cajaChicaController.registrarIngreso);
 
-// =====================================================
-// REGISTRAR EGRESO (SIN PASSWORD) ✅
-// =====================================================
-// POST /api/caja-chica/egreso
-// Body: {
-//   amount: 50,
-//   reason: "Descripción del gasto",
-//   employeeId: "id-del-empleado" (si no es admin),
-//   voucher: archivo (OBLIGATORIO - imagen o PDF)
-// }
-// IMPORTANTE: El voucher es OBLIGATORIO para egresos
-// Cualquier usuario autorizado puede hacer egresos
+// REGISTRAR EGRESO (sin password, solo comprobante obligatorio)
 router.post("/egreso", upload.single("voucher"), cajaChicaController.cashOperation);
+
 
 export default router;
