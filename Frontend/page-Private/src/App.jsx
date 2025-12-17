@@ -44,6 +44,11 @@ import PantallaPrincipalDiesel from "./pages/Diesel/PantallaPrincipalDiesel";
 import AgregarDiesel from "./pages/Diesel/AgregarDiesel";
 import EditDiesel from "./pages/Diesel/EditDiesel";
 
+// ✅ Viajes internos
+import PantallaPrincipalViajesInternos from "./pages/viajesInternos/PantallaPrincipalViajesInternos";
+import AgregarViajeInterno from "./pages/viajesInternos/AgregarViajeInterno";
+import EditarViajeInterno from "./pages/viajesInternos/EditarViajeInterno"; // ✅ NUEVO
+
 // UI
 import SideNav from "./components/dashbordNav/sideNav";
 import PantallaCarga from "./components/SplashScreen/PantallaCarga";
@@ -64,6 +69,9 @@ function App() {
     "/mantenimientos/editar/:id",
     "/diesel/agregar",
     "/diesel/editar/:id",
+
+    // ✅ Viajes Internos (opcional splash al editar)
+    "/viajesInternos/editar/:id",
   ];
 
   useEffect(() => {
@@ -134,6 +142,11 @@ function App() {
         <Route path="/diesel" element={<PantallaPrincipalDiesel />} />
         <Route path="/diesel/agregar" element={<AgregarDiesel />} />
         <Route path="/diesel/editar/:id" element={<EditDiesel />} />
+
+        {/* ✅ Viajes Internos */}
+        <Route path="/viajesInternos" element={<PantallaPrincipalViajesInternos />} />
+        <Route path="/viajesInternos/agregar" element={<AgregarViajeInterno />} />
+        <Route path="/viajesInternos/editar/:id" element={<EditarViajeInterno />} /> {/* ✅ NUEVO */}
 
         {/* Mantenimientos */}
         <Route path="/mantenimientos" element={<MantenimientosTable />} />

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Home, Clock, BarChart3, Wrench, FileText, Users, Fuel, Vault } from 'lucide-react';
+import { Home, Clock, BarChart3, Wrench, Users, Fuel, Vault, Route } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 
 const SidebarNav = () => {
@@ -14,6 +14,8 @@ const SidebarNav = () => {
     { id: 'maintenance', route: '/mantenimientos', icon: Wrench },
     { id: 'diesel', route: '/diesel', icon: Fuel },
     { id: 'documents', route: '/documents', icon: FileText },
+    { id: 'viajesInternos', route: '/viajesInternos', icon: Route },
+    { id: 'users', route: '/users', icon: Users },
     { id: 'CajaChica', route: '/CajaChica', icon: Vault },
    
 
