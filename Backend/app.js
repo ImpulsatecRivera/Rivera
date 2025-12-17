@@ -109,7 +109,6 @@ app.use("/api/reportesCajaChica", reportesCajaChicaRoutes);
 app.use("/api/viajesinternos",ViajesInternos)
 app.use("/api/rutas",RutasRoutes)
 app.use("/api/reporteviaje",RepoprteViajexCliente)
-app.use("/api/reportesCajaChica", reportesCajaChicaRoutes);
 app.use("/api/reportes/planilla/quincenal", ReportesPlanillaQuincenalRoutes);
 
 export default app;
