@@ -1,27 +1,39 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { X, FileText, Download, User, AlertCircle, CheckCircle } from "lucide-react";
+import {
+  X,
+  FileText,
+  Download,
+  User,
+  ChevronDown,
+  AlertCircle,
+  CheckCircle,
+} from "lucide-react";
 
 const normalize = (v) => String(v ?? "").trim().toLowerCase();
 
-const parseLocalDate = (fecha) => {
-  if (!fecha) return null;
-  const base = String(fecha).split("T")[0];
+const parseDateSafe = (v) => {
+  const d = new Date(v);
+  if (!Number.isNaN(d.getTime())) return d;
+
+  const base = String(v ?? "").split("T")[0];
   const parts = base.split("-");
   if (parts.length !== 3) return null;
-  const [y, m, d] = parts.map((x) => Number(x));
-  if (!y || !m || !d) return null;
-  return new Date(y, m - 1, d);
-};
+  const [y, m, dd] = parts.map((x) => Number(x));
+  if (!y || !m || !dd) return null;
 
-const formatearFecha = (fecha) => {
-  const d = parseLocalDate(fecha);
-  if (!d || Number.isNaN(d.getTime())) return fecha ? String(fecha) : "N/A";
-  return d.toLocaleDateString("es-ES", { year: "numeric", month: "short", day: "numeric" });
+  const d2 = new Date(y, m - 1, dd);
+  return Number.isNaN(d2.getTime()) ? null : d2;
 };
 
 const formatearMoneda = (cantidad) => {
   const n = Number(cantidad || 0);
   return new Intl.NumberFormat("es-US", { style: "currency", currency: "USD" }).format(n);
+};
+
+const formatearFecha = (fecha) => {
+  const d = parseDateSafe(fecha);
+  if (!d) return fecha ? String(fecha) : "N/A";
+  return d.toLocaleDateString("es-ES", { year: "numeric", month: "short", day: "numeric" });
 };
 
 function buildClientesFromViajes(viajes = []) {
@@ -41,9 +53,7 @@ function buildClientesFromViajes(viajes = []) {
     if (!nombre) return;
 
     const key = String(id || `${nombre}|${telefono}`);
-    if (!map.has(key)) {
-      map.set(key, { id: key, nombre, telefono });
-    }
+    if (!map.has(key)) map.set(key, { id: key, nombre, telefono });
   });
 
   return Array.from(map.values());
@@ -54,7 +64,7 @@ function openPrintReport({ title, rows }) {
 
   const byEstado = new Map();
   (rows || []).forEach((r) => {
-    const est = String(r?.estado || "Pendiente");
+    const est = String(r?.estado || "PENDIENTE");
     byEstado.set(est, (byEstado.get(est) || 0) + 1);
   });
 
@@ -68,7 +78,7 @@ function openPrintReport({ title, rows }) {
       const cliente = r?.clienteNombre || r?.cliente?.nombre || r?.clienteId?.nombre || "N/A";
       const origen = r?.origen?.texto || "N/A";
       const destino = r?.destino?.texto || "N/A";
-      const estado = r?.estado || "Pendiente";
+      const estado = r?.estado || "PENDIENTE";
       const monto = formatearMoneda(r?.monto || 0);
 
       return `
@@ -147,56 +157,52 @@ function openPrintReport({ title, rows }) {
   return true;
 }
 
-async function tryOpenPdfFromEndpoints(endpoints = []) {
-  for (const url of endpoints) {
+async function fetchViajesFallback(apiUrl) {
+  const res = await fetch(`${apiUrl}/viajesinternos`, { credentials: "include" });
+  const json = await res.json().catch(() => ({}));
+  const rows = json?.data || (Array.isArray(json) ? json : []);
+  return Array.isArray(rows) ? rows : [];
+}
+
+async function tryOpenPdf(urls = []) {
+  for (const url of urls) {
     try {
       const res = await fetch(url, {
         method: "GET",
         credentials: "include",
         headers: { Accept: "application/pdf" },
       });
-
-      // Si responde OK y parece PDF, abrimos la URL directa en nueva pestaña
       const ct = (res.headers.get("content-type") || "").toLowerCase();
       if (res.ok && (ct.includes("application/pdf") || ct.includes("application/octet-stream"))) {
         window.open(url, "_blank", "noopener,noreferrer");
         return { ok: true, used: url };
       }
-
-      // Si devuelve JSON con data, lo usamos como fallback de datos
-      if (res.ok && ct.includes("application/json")) {
-        const json = await res.json().catch(() => ({}));
-        const rows = json?.data || (Array.isArray(json) ? json : []);
-        if (Array.isArray(rows) && rows.length >= 0) {
-          return { ok: false, jsonRows: rows, used: url };
-        }
+      if (res.status === 404) {
+        const j = await res.json().catch(() => ({}));
+        return { ok: false, notFound: true, message: j?.message || "Sin datos" };
       }
-    } catch (_) {
-      // seguimos probando
+    } catch {
+      // seguimos
     }
   }
-
   return { ok: false };
 }
 
 export default function ReportesViajesInternosModal({ isOpen, onClose, apiUrl, viajes = [] }) {
-  const [tipo, setTipo] = useState("general"); // general | cliente
+  const [tipoReporte, setTipoReporte] = useState("todos"); // todos | cliente
   const [clienteId, setClienteId] = useState("");
 
   const [clientes, setClientes] = useState([]);
   const [loadingClientes, setLoadingClientes] = useState(false);
 
   const [generando, setGenerando] = useState(false);
-
   const [showAlert, setShowAlert] = useState(false);
   const [alertData, setAlertData] = useState({ type: "", title: "", message: "", details: [] });
-
-  const VIAJES_ENDPOINT = `${apiUrl}/viajesinternos`;
-  const CLIENTES_ENDPOINT = `${apiUrl}/clientes`;
 
   const clientesOptions = useMemo(() => {
     const base = clientes.length ? clientes : buildClientesFromViajes(viajes);
     const uniq = new Map();
+
     base.forEach((c) => {
       const id = String(c?.id || c?._id || "");
       const nombre = String(c?.nombre || c?.clienteNombre || "").trim();
@@ -205,6 +211,7 @@ export default function ReportesViajesInternosModal({ isOpen, onClose, apiUrl, v
       const key = id || `${nombre}|${telefono}`;
       if (!uniq.has(key)) uniq.set(key, { id: key, nombre, telefono, label: telefono ? `${nombre} - ${telefono}` : nombre });
     });
+
     return Array.from(uniq.values()).sort((a, b) => a.nombre.localeCompare(b.nombre));
   }, [clientes, viajes]);
 
@@ -216,12 +223,10 @@ export default function ReportesViajesInternosModal({ isOpen, onClose, apiUrl, v
   const loadClientes = async () => {
     setLoadingClientes(true);
     try {
-      // 1) Armamos desde viajes actuales (por si /clientes falla)
       const fromViajes = buildClientesFromViajes(viajes);
       setClientes(fromViajes);
 
-      // 2) Intentamos /clientes (si existe)
-      const res = await fetch(CLIENTES_ENDPOINT, { credentials: "include" });
+      const res = await fetch(`${apiUrl}/clientes`, { credentials: "include" });
       if (res.ok) {
         const json = await res.json().catch(() => ({}));
         const rows = json?.data || (Array.isArray(json) ? json : []);
@@ -231,18 +236,19 @@ export default function ReportesViajesInternosModal({ isOpen, onClose, apiUrl, v
             nombre: c?.clienteNombre || c?.nombre || c?.name || "",
             telefono: c?.clienteTelefono || c?.telefono || c?.phone || "",
           }));
-          // merge
+
           const merged = new Map();
           [...fromViajes, ...mapped].forEach((c) => {
             const key = String(c?.id || `${c.nombre}|${c.telefono}`);
             if (!c?.nombre) return;
             if (!merged.has(key)) merged.set(key, c);
           });
+
           setClientes(Array.from(merged.values()));
         }
       }
-    } catch (_) {
-      // si falla, nos quedamos con el fallback
+    } catch {
+      // fallback
     } finally {
       setLoadingClientes(false);
     }
@@ -256,102 +262,121 @@ export default function ReportesViajesInternosModal({ isOpen, onClose, apiUrl, v
 
   const isButtonDisabled = () => {
     if (generando) return true;
-    if (tipo === "cliente" && !clienteId) return true;
+    if (tipoReporte === "cliente" && !clienteId) return true;
     return false;
   };
 
-  const getRowsForFallback = async () => {
+  const getAllRows = async () => {
     if (Array.isArray(viajes) && viajes.length) return viajes;
-    const res = await fetch(VIAJES_ENDPOINT, { credentials: "include" });
-    const json = await res.json().catch(() => ({}));
-    const rows = json?.data || (Array.isArray(json) ? json : []);
-    return Array.isArray(rows) ? rows : [];
+    return await fetchViajesFallback(apiUrl);
   };
 
-  const generar = async () => {
+  const filtrarPorCliente = (rows, selected) => {
+    const selN = normalize(selected?.nombre);
+    const selT = normalize(selected?.telefono);
+
+    return (rows || []).filter((v) => {
+      const n = normalize(v?.clienteNombre || v?.cliente?.nombre || v?.clienteId?.nombre || "");
+      const t = normalize(v?.clienteTelefono || v?.cliente?.telefono || v?.clienteId?.telefono || "");
+      if (selT) return n === selN && t === selT;
+      return n === selN;
+    });
+  };
+
+  const generarReporte = async () => {
     setGenerando(true);
     try {
-      // ⚠️ OJO: NO usamos /api/reporte (eso es mantenimientos)
-
-      if (tipo === "general") {
-        const candidates = [
-          // si ya tienes endpoints específicos en backend, ponlos aquí primero:
-          `${apiUrl}/viajesinternos/reportes/todos`,
+      // === TODOS ===
+      if (tipoReporte === "todos") {
+        const pdfCandidates = [
           `${apiUrl}/viajesinternos/reporte/todos`,
-          `${apiUrl}/reporteviaje/todos`,
-          `${apiUrl}/reporteviaje/todos-viajesinternos`,
+          `${apiUrl}/viajesinternos/reportes/todos`,
         ];
 
-        const r = await tryOpenPdfFromEndpoints(candidates);
+        const r = await tryOpenPdf(pdfCandidates);
         if (r.ok) {
-          showCustomAlert("success", "¡Reporte generado!", "Se abrió el PDF del reporte general.");
+          setTimeout(() => {
+            setGenerando(false);
+            showCustomAlert("success", "¡Reporte generado!", "El reporte consolidado se abrió en una nueva pestaña.");
+          }, 700);
           return;
         }
 
-        // Fallback (si no existe endpoint PDF): reporte imprimible
-        const rows = r.jsonRows ?? (await getRowsForFallback());
-        const opened = openPrintReport({ title: "Reporte - Viajes Internos (General)", rows });
+        const rows = await getAllRows();
+        const opened = openPrintReport({ title: "Reporte - Viajes Internos (Consolidado)", rows });
         if (!opened) {
+          setGenerando(false);
           showCustomAlert("error", "Popup bloqueado", "Tu navegador bloqueó la ventana. Habilita popups e intenta de nuevo.");
           return;
         }
-        showCustomAlert("success", "Reporte listo", "Se abrió un reporte imprimible (puedes Guardar como PDF).");
+
+        setTimeout(() => {
+          setGenerando(false);
+          showCustomAlert("success", "Reporte listo", "Se abrió un reporte imprimible (puedes Guardar como PDF).");
+        }, 700);
         return;
       }
 
-      // Por Cliente
+      // === CLIENTE ===
       const selected = clientesOptions.find((c) => String(c.id) === String(clienteId));
       if (!selected) {
+        setGenerando(false);
         showCustomAlert("warning", "Cliente no seleccionado", "Selecciona un cliente válido.");
         return;
       }
 
       const cid = encodeURIComponent(String(selected.id));
-      const candidates = [
-        `${apiUrl}/viajesinternos/reportes/cliente/${cid}`,
+      const pdfCandidates = [
         `${apiUrl}/viajesinternos/reporte/cliente/${cid}`,
-        `${apiUrl}/reporteviaje/cliente/${cid}`,
-        `${apiUrl}/reporteviaje/${cid}`,
-        `${apiUrl}/ViajesxClientes/${cid}`,
-        `${apiUrl}/ViajesxClientes?clienteId=${cid}`,
+        `${apiUrl}/viajesinternos/reportes/cliente/${cid}`,
       ];
 
-      const r = await tryOpenPdfFromEndpoints(candidates);
+      const r = await tryOpenPdf(pdfCandidates);
       if (r.ok) {
-        showCustomAlert("success", "¡Reporte generado!", `Se abrió el PDF del cliente: ${selected.nombre}`);
+        setTimeout(() => {
+          setGenerando(false);
+          showCustomAlert("success", "¡Reporte generado!", `El reporte del cliente se abrió: ${selected.nombre}`);
+        }, 700);
         return;
       }
 
-      // Fallback con data (json) o filtrando viajes internos
-      let rows = r.jsonRows;
-      if (!rows) {
-        const all = await getRowsForFallback();
-        rows = all.filter((v) => {
-          const n = normalize(v?.clienteNombre || v?.cliente?.nombre || v?.clienteId?.nombre || "");
-          const t = normalize(v?.clienteTelefono || v?.cliente?.telefono || v?.clienteId?.telefono || "");
-          const selN = normalize(selected.nombre);
-          const selT = normalize(selected.telefono);
+      const all = await getAllRows();
+      const rows = filtrarPorCliente(all, selected);
 
-          // match por nombre (y si hay teléfono, lo usamos como extra)
-          if (selT) return n === selN && t === selT;
-          return n === selN;
-        });
+      if (!rows.length) {
+        setGenerando(false);
+        showCustomAlert(
+          "info",
+          "Sin datos disponibles",
+          `No hay viajes internos para el cliente: ${selected.nombre}.`,
+          ["Intenta con otro cliente", "O revisa nombres/teléfonos guardados"]
+        );
+        return;
       }
 
       const opened = openPrintReport({
         title: `Reporte - Viajes Internos (Cliente: ${selected.nombre})`,
-        rows: Array.isArray(rows) ? rows : [],
+        rows,
       });
 
       if (!opened) {
+        setGenerando(false);
         showCustomAlert("error", "Popup bloqueado", "Tu navegador bloqueó la ventana. Habilita popups e intenta de nuevo.");
         return;
       }
-      showCustomAlert("success", "Reporte listo", "Se evidentó un reporte imprimible (puedes Guardar como PDF).");
-    } catch (e) {
-      showCustomAlert("error", "Error", e.message || "No se pudo generar el reporte");
-    } finally {
+
+      setTimeout(() => {
+        setGenerando(false);
+        showCustomAlert("success", "Reporte listo", "Se abrió un reporte imprimible (puedes Guardar como PDF).");
+      }, 700);
+    } catch (error) {
       setGenerando(false);
+      showCustomAlert(
+        "error",
+        "Error al generar reporte",
+        "Ocurrió un problema al procesar tu solicitud. Por favor intenta nuevamente.",
+        ["Verifica tu conexión a internet", "Si el problema persiste, contacta al administrador"]
+      );
     }
   };
 
@@ -360,7 +385,7 @@ export default function ReportesViajesInternosModal({ isOpen, onClose, apiUrl, v
   return (
     <>
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-        <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full overflow-hidden">
+        <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden">
           {/* Header */}
           <div className="bg-gradient-to-r from-indigo-600 to-indigo-700 px-6 py-5 flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -368,73 +393,103 @@ export default function ReportesViajesInternosModal({ isOpen, onClose, apiUrl, v
                 <FileText className="text-white" size={22} />
               </div>
               <div>
-                <h2 className="text-xl font-bold text-white">Reportes - Viajes Internos</h2>
-                <p className="text-indigo-100 text-sm">Selecciona el tipo de reporte</p>
+                <h2 className="text-xl font-bold text-white">Generar Reportes</h2>
+                <p className="text-indigo-100 text-sm">Viajes Internos</p>
               </div>
             </div>
-            <button
-              onClick={onClose}
-              className="text-white hover:bg-white hover:bg-opacity-20 p-2 rounded-lg transition-colors"
-            >
+            <button onClick={onClose} className="text-white hover:bg-white hover:bg-opacity-20 p-2 rounded-lg transition-colors">
               <X size={24} />
             </button>
           </div>
 
-          <div className="p-6">
+          <div className="p-6 overflow-y-auto max-h-[calc(90vh-180px)]">
             {/* Tipo */}
-            <div className="mb-4">
+            <div className="mb-6">
               <label className="block text-sm font-semibold text-gray-700 mb-3">Tipo de Reporte</label>
+
+              {/* ✅ SOLO 2 OPCIONES */}
               <div className="grid grid-cols-2 gap-3">
                 <button
-                  onClick={() => setTipo("general")}
+                  onClick={() => setTipoReporte("todos")}
                   className={`p-4 rounded-xl border-2 transition-all ${
-                    tipo === "general"
+                    tipoReporte === "todos"
                       ? "border-indigo-600 bg-indigo-50 text-indigo-700"
                       : "border-gray-200 hover:border-gray-300 text-gray-700"
                   }`}
                 >
                   <FileText className="mx-auto mb-2" size={24} />
-                  <div className="text-sm font-semibold">General</div>
-                  <div className="text-xs text-gray-500 mt-1">Todos los viajes</div>
+                  <div className="text-sm font-semibold">Todos</div>
+                  <div className="text-xs text-gray-500 mt-1">Consolidado</div>
                 </button>
 
                 <button
-                  onClick={() => setTipo("cliente")}
+                  onClick={() => setTipoReporte("cliente")}
                   className={`p-4 rounded-xl border-2 transition-all ${
-                    tipo === "cliente"
+                    tipoReporte === "cliente"
                       ? "border-indigo-600 bg-indigo-50 text-indigo-700"
                       : "border-gray-200 hover:border-gray-300 text-gray-700"
                   }`}
                 >
                   <User className="mx-auto mb-2" size={24} />
-                  <div className="text-sm font-semibold">Por Cliente</div>
+                  <div className="text-sm font-semibold">Cliente</div>
                   <div className="text-xs text-gray-500 mt-1">Filtrado</div>
                 </button>
               </div>
             </div>
 
-            {tipo === "cliente" && (
-              <div className="mt-4">
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Cliente</label>
-                <select
-                  value={clienteId}
-                  onChange={(e) => setClienteId(e.target.value)}
-                  disabled={loadingClientes}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white"
-                >
-                  <option value="">
-                    {loadingClientes ? "Cargando clientes..." : "Seleccionar cliente..."}
-                  </option>
-                  {clientesOptions.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.label}
-                    </option>
-                  ))}
-                </select>
+            {tipoReporte === "todos" && (
+              <div className="bg-indigo-50 rounded-xl p-5 border border-indigo-100">
+                <div className="flex items-start gap-3">
+                  <FileText className="text-indigo-600 mt-1" size={20} />
+                  <div>
+                    <h3 className="font-semibold text-indigo-900 mb-1">Reporte Consolidado</h3>
+                    <p className="text-sm text-indigo-700">
+                      Se generará un reporte con todos los viajes internos registrados.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
 
-                <p className="text-xs text-gray-500 mt-2">
-                  *Si tu backend no devuelve clientes, se arma la lista desde los viajes internos guardados.
-                </p>
+            {tipoReporte === "cliente" && (
+              <div className="space-y-4">
+                <div className="bg-indigo-50 rounded-xl p-5 border border-indigo-100 mb-4">
+                  <div className="flex items-start gap-3">
+                    <User className="text-indigo-600 mt-1" size={20} />
+                    <div>
+                      <h3 className="font-semibold text-indigo-900 mb-1">Reporte por Cliente</h3>
+                      <p className="text-sm text-indigo-700">
+                        Genera un reporte filtrado por cliente (si no hay PDF, abre versión imprimible).
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Cliente</label>
+                  <div className="relative">
+                    <select
+                      value={clienteId}
+                      onChange={(e) => setClienteId(e.target.value)}
+                      disabled={loadingClientes}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 appearance-none bg-white"
+                    >
+                      <option value="">
+                        {loadingClientes ? "Cargando clientes..." : "Seleccionar cliente..."}
+                      </option>
+                      {clientesOptions.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.label}
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={20} />
+                  </div>
+
+                  <p className="text-xs text-gray-500 mt-2">
+                    *Si /clientes falla, la lista se arma desde los viajes internos guardados.
+                  </p>
+                </div>
               </div>
             )}
           </div>
@@ -449,9 +504,9 @@ export default function ReportesViajesInternosModal({ isOpen, onClose, apiUrl, v
             </button>
 
             <button
-              onClick={generar}
+              onClick={generarReporte}
               disabled={isButtonDisabled()}
-              className="flex items-center gap-2 px-6 py-2.5 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 font-semibold shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+              className="flex items-center gap-2 px-6 py-2.5 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 font-semibold shadow-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-indigo-600 transition-all"
             >
               {generando ? (
                 <>
@@ -469,10 +524,10 @@ export default function ReportesViajesInternosModal({ isOpen, onClose, apiUrl, v
         </div>
       </div>
 
-      {/* Alert */}
+      {/* Custom Alert */}
       {showAlert && (
-        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-[60] p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden">
+        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-[60] p-4 animate-fadeIn">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden animate-slideUp">
             <div
               className={`px-6 py-8 ${
                 alertData.type === "success"
@@ -560,6 +615,16 @@ export default function ReportesViajesInternosModal({ isOpen, onClose, apiUrl, v
           </div>
         </div>
       )}
+
+      <style>{`
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes slideUp {
+          from { opacity: 0; transform: translateY(20px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fadeIn { animation: fadeIn 0.2s ease-out; }
+        .animate-slideUp { animation: slideUp 0.3s ease-out; }
+      `}</style>
     </>
   );
 }

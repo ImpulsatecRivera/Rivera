@@ -1,159 +1,145 @@
-import { Schema, model } from "mongoose";
+import mongoose from "mongoose";
 
-const viajesSchema = new Schema(
+const { Schema } = mongoose;
+
+const OrigenDestinoSchema = new Schema(
   {
-    // ID único del viaje
-    viajeId: {
-      type: String,
-      required: true,
-      trim: true,
-      uppercase: true,
-      unique: true,
-    },
+    texto: { type: String, required: true, trim: true, uppercase: true },
+    esRecurrente: { type: Boolean, default: false },
+    ubicacionId: { type: Schema.Types.ObjectId, ref: "Ubicaciones", default: null },
+  },
+  { _id: false }
+);
 
-    // ======================
-    // DATOS DEL CLIENTE
-    // ======================
-    clienteId: {
-      type: Schema.Types.ObjectId,
-      ref: "Clientes",
-      default: null,
-    },
+const ConductorSchema = new Schema(
+  {
+    nombre: { type: String, default: "", trim: true },
+    vehiculo: { type: String, default: "", trim: true },
+  },
+  { _id: false }
+);
 
-    clienteNombre: {
-      type: String,
-      required: true,
-      trim: true,
-      uppercase: true,
-    },
+const ViajeInternoSchema = new Schema(
+  {
+    viajeId: { type: String, unique: true, index: true, trim: true },
 
-    clienteTelefono: { type: String, default: "" },
+    clienteId: { type: Schema.Types.ObjectId, ref: "Clientes", default: null },
+    clienteNombre: { type: String, required: true, trim: true, uppercase: true },
+    clienteTelefono: { type: String, default: "", trim: true },
 
-    // ======================
-    // ORIGEN / DESTINO
-    // ======================
-    origen: {
-      ubicacionId: { type: Schema.Types.ObjectId, ref: "Ubicaciones", default: null },
-      texto: { type: String, required: true, trim: true, uppercase: true },
-      esRecurrente: { type: Boolean, default: false },
-    },
-
-    destino: {
-      ubicacionId: { type: Schema.Types.ObjectId, ref: "Ubicaciones", default: null },
-      texto: { type: String, required: true, trim: true, uppercase: true },
-      esRecurrente: { type: Boolean, default: false },
-    },
+    origen: { type: OrigenDestinoSchema, required: true },
+    destino: { type: OrigenDestinoSchema, required: true },
 
     rutaCompleta: { type: String, uppercase: true, default: "" },
 
-    // ======================
-    // DATOS DEL VIAJE
-    // ======================
     monto: { type: Number, required: true, min: 0 },
-
-    fecha: { type: Date, required: true, default: Date.now },
-
-    hora: { type: String, default: "" },
+    fecha: { type: Date, default: Date.now },
+    hora: { type: String, default: "", trim: true },
 
     tipoServicio: {
       type: String,
-      enum: ["REGULAR", "ESCOLAR", "ESPECIAL", "EMERGENCIA", "OTRO"],
+      enum: ["REGULAR", "ESCOLAR", "ESPECIAL", "EMERGENCIA", "OTRO", ""],
       default: "REGULAR",
     },
 
     duracion: { type: Number, default: null },
     distancia: { type: Number, default: null },
 
-    // ✅ Permitimos ambas variantes por compatibilidad ("EN_RUTA" vs "EN RUTA")
+    // ✅ compatibilidad: EN_RUTA y EN RUTA + EXTRA
     estado: {
       type: String,
       enum: ["PENDIENTE", "EN_RUTA", "EN RUTA", "COMPLETADO", "CANCELADO", "EXTRA"],
       default: "PENDIENTE",
+      index: true,
     },
 
     metodoPago: {
       type: String,
-      enum: ["EFECTIVO", "TRANSFERENCIA", "TARJETA", "CREDITO"],
+      enum: ["EFECTIVO", "TRANSFERENCIA", "TARJETA", "CREDITO", ""],
       default: "EFECTIVO",
     },
 
-    pagado: { type: Boolean, default: false },
+    pagado: { type: Boolean, default: false, index: true },
     fechaPago: { type: Date, default: null },
 
-    // ======================
-    // ADICIONAL
-    // ======================
     pasajeros: { type: Number, default: 1, min: 1 },
 
     notas: { type: String, default: "" },
     referencias: { type: String, default: "" },
 
-    conductor: {
-      nombre: { type: String, default: "" },
-      vehiculo: { type: String, default: "" },
-    },
+    conductor: { type: ConductorSchema, default: () => ({}) },
+
+    motivoCancelacion: { type: String, default: "" },
   },
-  { timestamps: true }
+  {
+    timestamps: true,
+    // ✅ CLAVE: usar la colección real donde están los datos
+    collection: "viajesinternos",
+  }
 );
 
 // ==============================
-// Statics / Methods (para controllers)
+// Static methods (los usa el controller)
 // ==============================
-viajesSchema.statics.generarViajeId = async function () {
-  // VIA00001, VIA00002...
-  const last = await this.findOne({ viajeId: { $regex: /^VIA\d+$/ } })
-    .sort({ viajeId: -1 })
-    .select("viajeId")
-    .lean();
+ViajeInternoSchema.statics.generarViajeId = async function () {
+  const last = await this.findOne({}, { viajeId: 1 }).sort({ createdAt: -1 }).lean();
 
-  const lastNum = last?.viajeId ? parseInt(String(last.viajeId).replace("VIA", ""), 10) : 0;
-  const nextNum = Number.isFinite(lastNum) ? lastNum + 1 : 1;
-
-  return `VIA${String(nextNum).padStart(5, "0")}`;
+  const lastNum = last?.viajeId?.match(/\d+$/)?.[0];
+  const next = (parseInt(lastNum || "0", 10) + 1).toString().padStart(6, "0");
+  return `VI-${next}`;
 };
 
-viajesSchema.statics.obtenerPorCliente = function (clienteId, inicio = null, fin = null) {
-  const q = { clienteId };
+ViajeInternoSchema.statics.obtenerPorCliente = function (clienteId, inicio = null, fin = null) {
+  const filtros = { clienteId };
   if (inicio || fin) {
-    q.fecha = {};
-    if (inicio) q.fecha.$gte = inicio;
-    if (fin) q.fecha.$lte = fin;
+    filtros.fecha = {};
+    if (inicio) filtros.fecha.$gte = inicio;
+    if (fin) filtros.fecha.$lte = fin;
   }
-  return this.find(q).sort({ fecha: -1 });
+  return this.find(filtros).sort({ fecha: -1 });
 };
 
-viajesSchema.statics.obtenerPorFecha = function (inicio, fin) {
+ViajeInternoSchema.statics.obtenerPorFecha = function (inicio, fin) {
   return this.find({ fecha: { $gte: inicio, $lte: fin } }).sort({ fecha: -1 });
 };
 
-viajesSchema.statics.obtenerPendientesPago = function () {
-  return this.find({ pagado: false, estado: { $ne: "CANCELADO" } }).sort({ fecha: -1 });
-};
-
-viajesSchema.statics.obtenerReportePeriodo = function (inicio, fin) {
-  return this.aggregate([
+ViajeInternoSchema.statics.obtenerReportePeriodo = async function (inicio, fin) {
+  const data = await this.aggregate([
     { $match: { fecha: { $gte: inicio, $lte: fin } } },
     {
       $group: {
-        _id: "$clienteNombre",
-        cantidadViajes: { $sum: 1 },
+        _id: null,
+        totalViajes: { $sum: 1 },
         totalMonto: { $sum: "$monto" },
       },
     },
-    { $sort: { totalMonto: -1 } },
   ]);
+  return data[0] || { totalViajes: 0, totalMonto: 0 };
 };
 
-viajesSchema.methods.marcarComoPagado = async function () {
+ViajeInternoSchema.statics.obtenerPendientesPago = function () {
+  return this.find({ pagado: false, estado: { $ne: "CANCELADO" } }).sort({ fecha: -1 });
+};
+
+// ==============================
+// Instance methods
+// ==============================
+ViajeInternoSchema.methods.marcarComoPagado = async function () {
   this.pagado = true;
   this.fechaPago = new Date();
   return this.save();
 };
 
-viajesSchema.methods.cancelar = async function (motivo = "") {
+ViajeInternoSchema.methods.cancelar = async function (motivo = "") {
   this.estado = "CANCELADO";
-  if (motivo) this.notas = `${this.notas ? this.notas + " | " : ""}${motivo}`;
+  this.motivoCancelacion = motivo;
   return this.save();
 };
 
-export default model("ViajesProInterno", viajesSchema);
+// ✅ Export con colección forzada también aquí
+const ModelName = "ViajeInterno";
+const Viajes =
+  mongoose.models[ModelName] ||
+  mongoose.model(ModelName, ViajeInternoSchema, "viajesinternos");
+
+export default Viajes;
