@@ -1,35 +1,22 @@
 import React, { useState } from 'react';
-import { X, Calendar, Clock, ChevronRight, CheckCircle } from 'lucide-react';
+import { X, Calendar, Clock, CheckCircle } from 'lucide-react';
 
 export default function ModalAgregarPlanilla({ isOpen, onClose, onCrear }) {
   const [tipoSeleccionado, setTipoSeleccionado] = useState(null);
 
+  // SOLO DOS TIPOS: QUINCENAL Y SEMANAL (SIN DESCRIPCIONES NI DETALLES)
   const tiposPlanilla = [
     {
       id: 'quincenal',
       nombre: 'Planilla Quincenal',
-      descripcion: 'Pago cada 15 días (dos veces al mes)',
       icon: Calendar,
-      color: 'blue',
-      detalles: [
-        'Primera quincena: 1-15 del mes',
-        'Segunda quincena: 16-último día',
-        'Dos pagos por mes',
-        'Ideal para salarios mensuales'
-      ]
+      color: 'blue'
     },
     {
       id: 'semanal',
       nombre: 'Planilla Semanal',
-      descripcion: 'Pago cada 7 días (cuatro veces al mes)',
       icon: Clock,
-      color: 'purple',
-      detalles: [
-        'Pago cada semana',
-        'Cuatro pagos por mes aproximadamente',
-        'Mayor liquidez para empleados',
-        'Ideal para trabajos por hora'
-      ]
+      color: 'purple'
     }
   ];
 
@@ -53,7 +40,7 @@ export default function ModalAgregarPlanilla({ isOpen, onClose, onCrear }) {
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+      <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-slate-200 bg-gradient-to-r from-indigo-50 to-purple-50">
           <div>
@@ -69,79 +56,64 @@ export default function ModalAgregarPlanilla({ isOpen, onClose, onCrear }) {
         </div>
 
         {/* Body */}
-        <div className="p-6 space-y-4">
-          {tiposPlanilla.map((tipo) => {
-            const Icon = tipo.icon;
-            const isSelected = tipoSeleccionado === tipo.id;
-            
-            const colorClasses = {
-              blue: {
-                bg: 'from-blue-500 to-cyan-500',
-                light: 'bg-blue-50',
-                border: 'border-blue-500',
-                text: 'text-blue-600',
-                hover: 'hover:border-blue-400'
-              },
-              purple: {
-                bg: 'from-purple-500 to-pink-500',
-                light: 'bg-purple-50',
-                border: 'border-purple-500',
-                text: 'text-purple-600',
-                hover: 'hover:border-purple-400'
-              }
-            };
+        <div className="p-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {tiposPlanilla.map((tipo) => {
+              const Icon = tipo.icon;
+              const isSelected = tipoSeleccionado === tipo.id;
+              
+              const colorClasses = {
+                blue: {
+                  bg: 'from-blue-500 to-cyan-500',
+                  light: 'bg-blue-50',
+                  border: 'border-blue-500',
+                  hover: 'hover:border-blue-400'
+                },
+                purple: {
+                  bg: 'from-purple-500 to-pink-500',
+                  light: 'bg-purple-50',
+                  border: 'border-purple-500',
+                  hover: 'hover:border-purple-400'
+                }
+              };
 
-            const colors = colorClasses[tipo.color];
+              const colors = colorClasses[tipo.color];
 
-            return (
-              <button
-                key={tipo.id}
-                onClick={() => handleSeleccionar(tipo.id)}
-                className={`w-full text-left rounded-2xl border-3 transition-all duration-200 ${
-                  isSelected
-                    ? `${colors.border} bg-gradient-to-br ${colors.light} shadow-lg scale-[1.02]`
-                    : `border-slate-200 hover:border-slate-300 ${colors.hover}`
-                }`}
-              >
-                <div className="p-6">
-                  <div className="flex items-start gap-4">
-                    {/* Icon */}
-                    <div className={`p-4 rounded-xl bg-gradient-to-br ${colors.bg} shadow-lg flex-shrink-0`}>
-                      <Icon className="text-white" size={32} />
-                    </div>
-
-                    {/* Content */}
-                    <div className="flex-1">
-                      <div className="flex items-center justify-between mb-2">
-                        <h3 className="text-xl font-bold text-slate-900">{tipo.nombre}</h3>
-                        {isSelected && (
-                          <div className={`p-1.5 rounded-full ${colors.light}`}>
-                            <CheckCircle className={colors.text} size={24} />
-                          </div>
-                        )}
-                      </div>
-                      <p className="text-slate-600 mb-4">{tipo.descripcion}</p>
-
-                      {/* Detalles */}
-                      <div className="space-y-2">
-                        {tipo.detalles.map((detalle, index) => (
-                          <div key={index} className="flex items-start gap-2">
-                            <ChevronRight className={`${colors.text} flex-shrink-0 mt-0.5`} size={16} />
-                            <span className="text-sm text-slate-700">{detalle}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
+              return (
+                <button
+                  key={tipo.id}
+                  onClick={() => handleSeleccionar(tipo.id)}
+                  className={`relative p-8 rounded-2xl border-2 transition-all duration-200 ${
+                    isSelected
+                      ? `${colors.border} ${colors.light} shadow-lg scale-105`
+                      : `border-slate-200 hover:border-slate-300 ${colors.hover}`
+                  }`}
+                >
+                  {/* Icon */}
+                  <div className={`p-4 rounded-xl bg-gradient-to-br ${colors.bg} shadow-lg mx-auto w-fit mb-4`}>
+                    <Icon className="text-white" size={40} />
                   </div>
-                </div>
 
-                {/* Selected indicator bottom bar */}
-                {isSelected && (
-                  <div className={`h-2 rounded-b-2xl bg-gradient-to-r ${colors.bg}`}></div>
-                )}
-              </button>
-            );
-          })}
+                  {/* Nombre */}
+                  <h3 className="text-xl font-bold text-slate-900 text-center">
+                    {tipo.nombre}
+                  </h3>
+
+                  {/* Checkmark cuando está seleccionado */}
+                  {isSelected && (
+                    <div className="absolute top-4 right-4">
+                      <CheckCircle className="text-green-600" size={28} />
+                    </div>
+                  )}
+
+                  {/* Barra inferior cuando está seleccionado */}
+                  {isSelected && (
+                    <div className={`absolute bottom-0 left-0 right-0 h-2 rounded-b-2xl bg-gradient-to-r ${colors.bg}`}></div>
+                  )}
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         {/* Footer */}
