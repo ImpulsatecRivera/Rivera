@@ -1,182 +1,429 @@
-import React, { useState } from 'react';
-import { X, Calendar, Clock, ChevronRight, CheckCircle } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { 
+  Plus, Search, FileText, Calendar, Clock, Download, 
+  Eye, Trash2, Edit, AlertCircle, CheckCircle, XCircle, ClipboardList
+} from 'lucide-react';
+import { config } from '../../config';
+import Swal from 'sweetalert2';
+import ModalAgregarPlanilla from "./ModalAgregarPlanilla";
 
-export default function ModalAgregarPlanilla({ isOpen, onClose, onCrear }) {
-  const [tipoSeleccionado, setTipoSeleccionado] = useState(null);
+export default function Planillas() {
+  const [planillas, setPlanillas] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [showModalAgregar, setShowModalAgregar] = useState(false);
 
-  const tiposPlanilla = [
+  // Datos de ejemplo - reemplazar con datos reales de la API
+  const planillasEjemplo = [
     {
-      id: 'quincenal',
-      nombre: 'Planilla Quincenal',
-      descripcion: 'Pago cada 15 días (dos veces al mes)',
-      icon: Calendar,
-      color: 'blue',
-      detalles: [
-        'Primera quincena: 1-15 del mes',
-        'Segunda quincena: 16-último día',
-        'Dos pagos por mes',
-        'Ideal para salarios mensuales'
-      ]
+      id: 1,
+      numero: 1,
+      fechaInicio: '2020-01-01',
+      fechaFin: '2020-01-31',
+      estado: 'cerrado',
+      tipo: 'quincenal',
+      totalEmpleados: 45,
+      totalPagado: 12500.00
     },
     {
-      id: 'semanal',
-      nombre: 'Planilla Semanal',
-      descripcion: 'Pago cada 7 días (cuatro veces al mes)',
-      icon: Clock,
-      color: 'purple',
-      detalles: [
-        'Pago cada semana',
-        'Cuatro pagos por mes aproximadamente',
-        'Mayor liquidez para empleados',
-        'Ideal para trabajos por hora'
-      ]
+      id: 2,
+      numero: 2,
+      fechaInicio: '2020-02-01',
+      fechaFin: '2020-02-29',
+      estado: 'cerrado',
+      tipo: 'quincenal',
+      totalEmpleados: 45,
+      totalPagado: 12500.00
+    },
+    {
+      id: 3,
+      numero: 3,
+      fechaInicio: '2020-03-01',
+      fechaFin: '2020-03-31',
+      estado: 'cerrado',
+      tipo: 'semanal',
+      totalEmpleados: 45,
+      totalPagado: 12500.00
+    },
+    {
+      id: 4,
+      numero: 4,
+      fechaInicio: '2020-04-01',
+      fechaFin: '2020-04-30',
+      estado: 'cerrado',
+      tipo: 'quincenal',
+      totalEmpleados: 45,
+      totalPagado: 12500.00
+    },
+    {
+      id: 5,
+      numero: 5,
+      fechaInicio: '2020-05-01',
+      fechaFin: '2020-05-31',
+      estado: 'cerrado',
+      tipo: 'semanal',
+      totalEmpleados: 45,
+      totalPagado: 12500.00
+    },
+    {
+      id: 6,
+      numero: 6,
+      fechaInicio: '2020-06-01',
+      fechaFin: '2020-06-30',
+      estado: 'cerrado',
+      tipo: 'quincenal',
+      totalEmpleados: 45,
+      totalPagado: 12500.00
+    },
+    {
+      id: 7,
+      numero: 7,
+      fechaInicio: '2020-07-01',
+      fechaFin: '2020-07-31',
+      estado: 'cerrado',
+      tipo: 'quincenal',
+      totalEmpleados: 45,
+      totalPagado: 12500.00
+    },
+    {
+      id: 8,
+      numero: 8,
+      fechaInicio: '2020-08-01',
+      fechaFin: '2020-08-31',
+      estado: 'activo',
+      tipo: 'semanal',
+      totalEmpleados: 45,
+      totalPagado: 0
     }
   ];
 
-  const handleSeleccionar = (tipo) => {
-    setTipoSeleccionado(tipo);
-  };
+  useEffect(() => {
+    cargarPlanillas();
+  }, []);
 
-  const handleConfirmar = () => {
-    if (tipoSeleccionado) {
-      onCrear(tipoSeleccionado);
-      setTipoSeleccionado(null);
+  const cargarPlanillas = async () => {
+    setLoading(true);
+    try {
+      setTimeout(() => {
+        setPlanillas(planillasEjemplo);
+        setLoading(false);
+      }, 500);
+    } catch (error) {
+      console.error('Error cargando planillas:', error);
+      setLoading(false);
     }
   };
 
-  const handleCerrar = () => {
-    setTipoSeleccionado(null);
-    onClose();
+  const formatearFecha = (fecha) => {
+    return new Date(fecha).toLocaleDateString('es-ES', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric'
+    });
   };
 
-  if (!isOpen) return null;
+  const formatearMoneda = (cantidad) => {
+    return new Intl.NumberFormat('es-US', {
+      style: 'currency',
+      currency: 'USD'
+    }).format(cantidad);
+  };
 
-  return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
-        {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-slate-200 bg-gradient-to-r from-indigo-50 to-purple-50">
-          <div>
-            <h2 className="text-2xl font-bold text-slate-900">Agregar Nueva Planilla</h2>
-            <p className="text-sm text-slate-600 mt-1">Selecciona el tipo de planilla que deseas crear</p>
-          </div>
-          <button
-            onClick={handleCerrar}
-            className="p-2 hover:bg-white/50 rounded-lg transition-colors"
-          >
-            <X size={24} className="text-slate-600" />
-          </button>
-        </div>
+  const getEstadoConfig = (estado) => {
+    const configs = {
+      'activo': {
+        label: 'Activo',
+        bg: 'bg-green-100',
+        text: 'text-green-700',
+        border: 'border-green-200',
+        icon: CheckCircle
+      },
+      'cerrado': {
+        label: 'Cerrado',
+        bg: 'bg-red-100',
+        text: 'text-red-700',
+        border: 'border-red-200',
+        icon: XCircle
+      },
+      'pendiente': {
+        label: 'Pendiente',
+        bg: 'bg-yellow-100',
+        text: 'text-yellow-700',
+        border: 'border-yellow-200',
+        icon: AlertCircle
+      }
+    };
+    return configs[estado] || configs['pendiente'];
+  };
 
-        {/* Body */}
-        <div className="p-6 space-y-4">
-          {tiposPlanilla.map((tipo) => {
-            const Icon = tipo.icon;
-            const isSelected = tipoSeleccionado === tipo.id;
-            
-            const colorClasses = {
-              blue: {
-                bg: 'from-blue-500 to-cyan-500',
-                light: 'bg-blue-50',
-                border: 'border-blue-500',
-                text: 'text-blue-600',
-                hover: 'hover:border-blue-400'
-              },
-              purple: {
-                bg: 'from-purple-500 to-pink-500',
-                light: 'bg-purple-50',
-                border: 'border-purple-500',
-                text: 'text-purple-600',
-                hover: 'hover:border-purple-400'
-              }
-            };
+  const getTipoConfig = (tipo) => {
+    const configs = {
+      'quincenal': {
+        label: 'Quincenal',
+        bg: 'bg-blue-50',
+        text: 'text-blue-700',
+        icon: Calendar
+      },
+      'semanal': {
+        label: 'Semanal',
+        bg: 'bg-purple-50',
+        text: 'text-purple-700',
+        icon: Clock
+      }
+    };
+    return configs[tipo] || configs['quincenal'];
+  };
 
-            const colors = colorClasses[tipo.color];
+  const handleGenerarPlanilla = () => {
+    setShowModalAgregar(true);
+  };
 
-            return (
-              <button
-                key={tipo.id}
-                onClick={() => handleSeleccionar(tipo.id)}
-                className={`w-full text-left rounded-2xl border-3 transition-all duration-200 ${
-                  isSelected
-                    ? `${colors.border} bg-gradient-to-br ${colors.light} shadow-lg scale-[1.02]`
-                    : `border-slate-200 hover:border-slate-300 ${colors.hover}`
-                }`}
-              >
-                <div className="p-6">
-                  <div className="flex items-start gap-4">
-                    {/* Icon */}
-                    <div className={`p-4 rounded-xl bg-gradient-to-br ${colors.bg} shadow-lg flex-shrink-0`}>
-                      <Icon className="text-white" size={32} />
-                    </div>
+  const handleVerPlanilla = (planilla) => {
+    console.log('Ver planilla:', planilla);
+  };
 
-                    {/* Content */}
-                    <div className="flex-1">
-                      <div className="flex items-center justify-between mb-2">
-                        <h3 className="text-xl font-bold text-slate-900">{tipo.nombre}</h3>
-                        {isSelected && (
-                          <div className={`p-1.5 rounded-full ${colors.light}`}>
-                            <CheckCircle className={colors.text} size={24} />
-                          </div>
-                        )}
-                      </div>
-                      <p className="text-slate-600 mb-4">{tipo.descripcion}</p>
+  const handleEliminar = async (planilla) => {
+    const result = await Swal.fire({
+      title: '¿Eliminar planilla?',
+      text: `Planilla #${planilla.numero} - ${formatearFecha(planilla.fechaInicio)}`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#ef4444',
+      confirmButtonText: 'Sí, eliminar',
+      cancelButtonText: 'Cancelar'
+    });
 
-                      {/* Detalles */}
-                      <div className="space-y-2">
-                        {tipo.detalles.map((detalle, index) => (
-                          <div key={index} className="flex items-start gap-2">
-                            <ChevronRight className={`${colors.text} flex-shrink-0 mt-0.5`} size={16} />
-                            <span className="text-sm text-slate-700">{detalle}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                </div>
+    if (result.isConfirmed) {
+      try {
+        await Swal.fire({
+          title: '¡Eliminada!',
+          text: 'La planilla ha sido eliminada',
+          icon: 'success',
+          timer: 2000
+        });
+        cargarPlanillas();
+      } catch (error) {
+        Swal.fire({
+          title: 'Error',
+          text: 'No se pudo eliminar la planilla',
+          icon: 'error'
+        });
+      }
+    }
+  };
 
-                {/* Selected indicator bottom bar */}
-                {isSelected && (
-                  <div className={`h-2 rounded-b-2xl bg-gradient-to-r ${colors.bg}`}></div>
-                )}
-              </button>
-            );
-          })}
-        </div>
+  const planillasFiltradas = planillas.filter(p => {
+    const searchLower = searchTerm.toLowerCase();
+    return (
+      p.numero.toString().includes(searchLower) ||
+      formatearFecha(p.fechaInicio).toLowerCase().includes(searchLower) ||
+      formatearFecha(p.fechaFin).toLowerCase().includes(searchLower) ||
+      p.tipo.toLowerCase().includes(searchLower) ||
+      p.estado.toLowerCase().includes(searchLower)
+    );
+  });
 
-        {/* Footer */}
-        <div className="flex items-center justify-between gap-4 p-6 bg-slate-50 border-t border-slate-200 rounded-b-2xl">
-          <div className="text-sm text-slate-600">
-            {tipoSeleccionado ? (
-              <span className="font-medium text-indigo-600">
-                ✓ {tiposPlanilla.find(t => t.id === tipoSeleccionado)?.nombre} seleccionada
-              </span>
-            ) : (
-              <span>Selecciona un tipo de planilla para continuar</span>
-            )}
-          </div>
-
-          <div className="flex items-center gap-3">
-            <button
-              onClick={handleCerrar}
-              className="px-6 py-2.5 bg-white border-2 border-slate-200 text-slate-700 rounded-xl hover:bg-slate-50 hover:border-slate-300 transition-colors font-medium"
-            >
-              Cancelar
-            </button>
-            <button
-              onClick={handleConfirmar}
-              disabled={!tipoSeleccionado}
-              className={`px-6 py-2.5 rounded-xl font-semibold transition-all shadow-lg ${
-                tipoSeleccionado
-                  ? 'bg-gradient-to-r from-indigo-600 to-indigo-700 text-white hover:from-indigo-700 hover:to-indigo-800 hover:shadow-xl'
-                  : 'bg-slate-200 text-slate-400 cursor-not-allowed'
-              }`}
-            >
-              Continuar
-            </button>
-          </div>
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600 font-semibold text-lg">Cargando planillas...</p>
         </div>
       </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-white p-8">
+      <div className="max-w-7xl mx-auto space-y-6">
+        
+        {/* Header */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+          <div>
+            <h1 className="text-4xl font-bold text-gray-900 mb-2">Planillas</h1>
+            <p className="text-indigo-600 text-base font-semibold">
+              Total: {planillas.length} planillas registradas
+            </p>
+          </div>
+        </div>
+
+        {/* Tarjeta de resumen */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+          <div className="bg-white rounded-xl p-6 border-2 border-gray-100 shadow-sm hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between mb-4">
+              <div className="p-3 bg-indigo-100 rounded-xl">
+                <FileText className="text-indigo-600" size={24} />
+              </div>
+            </div>
+            <p className="text-gray-600 text-sm font-medium mb-2">Total Planillas</p>
+            <h3 className="text-3xl font-bold text-gray-900">{planillas.length}</h3>
+          </div>
+
+          <div className="bg-white rounded-xl p-6 border-2 border-gray-100 shadow-sm hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between mb-4">
+              <div className="p-3 bg-green-100 rounded-xl">
+                <CheckCircle className="text-green-600" size={24} />
+              </div>
+            </div>
+            <p className="text-gray-600 text-sm font-medium mb-2">Planillas Activas</p>
+            <h3 className="text-3xl font-bold text-gray-900">
+              {planillas.filter(p => p.estado === 'activo').length}
+            </h3>
+          </div>
+
+          <div className="bg-white rounded-xl p-6 border-2 border-gray-100 shadow-sm hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between mb-4">
+              <div className="p-3 bg-red-100 rounded-xl">
+                <XCircle className="text-red-600" size={24} />
+              </div>
+            </div>
+            <p className="text-gray-600 text-sm font-medium mb-2">Planillas Cerradas</p>
+            <h3 className="text-3xl font-bold text-gray-900">
+              {planillas.filter(p => p.estado === 'cerrado').length}
+            </h3>
+          </div>
+        </div>
+
+        {/* Controles de búsqueda y botón agregar */}
+        <div className="bg-white rounded-xl p-5 border-2 border-gray-100 shadow-sm mb-6">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="relative flex-1 max-w-md">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+              <input
+                type="text"
+                placeholder="Buscar planillas..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:outline-none transition-colors"
+              />
+            </div>
+
+            {/* Icono de agregar planilla con tooltip */}
+            <div className="flex items-center gap-3">
+              <span className="text-gray-700 font-medium">Agregar Planilla</span>
+              <button
+                onClick={handleGenerarPlanilla}
+                className="p-3 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 shadow-lg hover:shadow-xl transition-all hover:scale-110"
+                title="Agregar Planilla"
+              >
+                <ClipboardList size={24} />
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Tabla de planillas */}
+        <div className="bg-white rounded-xl border-2 border-gray-100 shadow-sm overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gray-50 border-b-2 border-gray-100">
+                <tr>
+                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">#</th>
+                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Fecha Inicio</th>
+                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Fecha Final</th>
+                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Tipo</th>
+                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Estado</th>
+                  <th className="px-6 py-4 text-right text-xs font-bold text-gray-600 uppercase tracking-wider">Total Pagado</th>
+                  <th className="px-6 py-4 text-center text-xs font-bold text-gray-600 uppercase tracking-wider">Acciones</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {planillasFiltradas.length === 0 ? (
+                  <tr>
+                    <td colSpan="7" className="px-6 py-12 text-center">
+                      <FileText className="mx-auto text-gray-300 mb-3" size={48} />
+                      <p className="text-gray-500 font-medium">No hay planillas registradas</p>
+                      <p className="text-gray-400 text-sm mt-1">Comienza agregando una nueva planilla</p>
+                    </td>
+                  </tr>
+                ) : (
+                  planillasFiltradas.map((planilla) => {
+                    const estadoConfig = getEstadoConfig(planilla.estado);
+                    const tipoConfig = getTipoConfig(planilla.tipo);
+                    const EstadoIcon = estadoConfig.icon;
+                    const TipoIcon = tipoConfig.icon;
+
+                    return (
+                      <tr 
+                        key={planilla.id} 
+                        className="hover:bg-gray-50 transition-colors"
+                      >
+                        <td className="px-6 py-4">
+                          <span className="font-bold text-gray-900 text-lg">
+                            {planilla.numero}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-gray-600 font-medium">
+                          {formatearFecha(planilla.fechaInicio)}
+                        </td>
+                        <td className="px-6 py-4 text-gray-600 font-medium">
+                          {formatearFecha(planilla.fechaFin)}
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold ${tipoConfig.bg} ${tipoConfig.text}`}>
+                            <TipoIcon size={14} />
+                            {tipoConfig.label}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold border-2 ${estadoConfig.bg} ${estadoConfig.text} ${estadoConfig.border}`}>
+                            <EstadoIcon size={14} />
+                            {estadoConfig.label}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-right font-bold text-gray-900">
+                          {formatearMoneda(planilla.totalPagado)}
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex items-center justify-center gap-2">
+                            <button
+                              onClick={() => handleVerPlanilla(planilla)}
+                              className="p-2 rounded-lg bg-cyan-50 hover:bg-cyan-100 text-cyan-600 transition-colors"
+                              title="Ver Planilla"
+                            >
+                              <Eye size={18} />
+                            </button>
+
+                            <button
+                              onClick={() => console.log('Generar PDF')}
+                              className="p-2 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-600 transition-colors"
+                              title="Generar Planilla"
+                            >
+                              <Download size={18} />
+                            </button>
+
+                            {planilla.estado === 'activo' && (
+                              <button
+                                onClick={() => handleEliminar(planilla)}
+                                className="p-2 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 transition-colors"
+                                title="Eliminar"
+                              >
+                                <Trash2 size={18} />
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+
+      {/* Modal Agregar Planilla */}
+      <ModalAgregarPlanilla
+        isOpen={showModalAgregar}
+        onClose={() => setShowModalAgregar(false)}
+        onCrear={(tipo) => {
+          console.log('Crear planilla tipo:', tipo);
+          setShowModalAgregar(false);
+        }}
+      />
     </div>
   );
 }
