@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { TrendingUp, TrendingDown, ShoppingCart, Send, Wrench, Download, Search, Filter, Calendar, Edit, Trash2, AlertCircle, FileText, Loader2 } from 'lucide-react';
+import { TrendingDown, Download, Search, FileText, Loader2, Plus, Settings } from 'lucide-react';
 import { config } from '../../config';
 import Swal from 'sweetalert2';
+import './CajaChica.css';
+import ReportesCajaChicaModal from './ModalReportesCajaChica';
+
 
 export default function CajaChicaModern() {
   const [balance, setBalance] = useState(0);
@@ -10,29 +13,32 @@ export default function CajaChicaModern() {
   const [loading, setLoading] = useState(true);
   const [configuracion, setConfiguracion] = useState(null);
   const [estadoReintegro, setEstadoReintegro] = useState(null);
+  const [showConfigModal, setShowConfigModal] = useState(false);
+  const [showIngresoModal, setShowIngresoModal] = useState(false);
+  const [tempMaximo, setTempMaximo] = useState(1000);
+  const [tempMinimo, setTempMinimo] = useState(100);
+  const [montoIngreso, setMontoIngreso] = useState('');
+  const [descripcionIngreso, setDescripcionIngreso] = useState('');
+  const [showReportesModal, setShowReportesModal] = useState(false);
 
-  // Estados para el formulario
+
   const [formData, setFormData] = useState({
     amount: '',
     operationType: 'egreso',
-    reason: '',
-    password: ''
+    reason: ''
   });
   const [voucher, setVoucher] = useState(null);
 
-  // Estados para estadísticas calculadas
   const [stats, setStats] = useState({
     totalIngresos: 0,
     totalGastos: 0,
     totalTransacciones: 0
   });
 
-  // Cargar datos iniciales
   useEffect(() => {
     cargarDatos();
   }, []);
 
-  // Función principal para cargar todos los datos
   const cargarDatos = async () => {
     try {
       setLoading(true);
@@ -54,14 +60,38 @@ export default function CajaChicaModern() {
     }
   };
 
-  // =====================================================
-  // OBTENER TODOS LOS MOVIMIENTOS
-  // =====================================================
+  const getAuthHeaders = () => {
+    const token = localStorage.getItem('token');
+    return {
+      'Authorization': `Bearer ${token}`
+    };
+  };
+
+  const handleAuthError = (response) => {
+    if (response.status === 401) {
+      Swal.fire({
+        title: 'Sesión expirada',
+        text: 'Tu sesión ha expirado. Por favor inicia sesión nuevamente.',
+        icon: 'warning',
+        confirmButtonText: 'Ir al login'
+      }).then(() => {
+        localStorage.removeItem('authToken');
+        window.location.href = '/login';
+      });
+      return true;
+    }
+    return false;
+  };
+
   const obtenerMovimientos = async () => {
     try {
-      const response = await fetch(`${config.api.API_URL}/caja-chica`);
-      const data = await response.json();
+      const response = await fetch(`${config.api.API_URL}/cajaChica`, {
+        headers: getAuthHeaders()
+      });
       
+      if (handleAuthError(response)) return;
+      
+      const data = await response.json();
       if (response.ok) {
         setTransactions(data);
         calcularEstadisticas(data);
@@ -71,14 +101,15 @@ export default function CajaChicaModern() {
     }
   };
 
-  // =====================================================
-  // OBTENER BALANCE ACTUAL
-  // =====================================================
   const obtenerBalance = async () => {
     try {
-      const response = await fetch(`${config.api.API_URL}/caja-chica/balance`);
-      const data = await response.json();
+      const response = await fetch(`${config.api.API_URL}/cajaChica/balance`, {
+        headers: getAuthHeaders()
+      });
       
+      if (handleAuthError(response)) return;
+      
+      const data = await response.json();
       if (response.ok) {
         setBalance(data.currentBalance);
       }
@@ -87,30 +118,34 @@ export default function CajaChicaModern() {
     }
   };
 
-  // =====================================================
-  // OBTENER CONFIGURACIÓN
-  // =====================================================
   const obtenerConfiguracion = async () => {
     try {
-      const response = await fetch(`${config.api.API_URL}/caja-chica-config`);
-      const data = await response.json();
+      const response = await fetch(`${config.api.API_URL}/cajaChicaConfig`, {
+        headers: getAuthHeaders()
+      });
       
+      if (handleAuthError(response)) return;
+      
+      const data = await response.json();
       if (response.ok && data.success) {
         setConfiguracion(data.data);
+        setTempMaximo(data.data.maximoPermitido);
+        setTempMinimo(data.data.minimoReintegro);
       }
     } catch (error) {
       console.error('Error obteniendo configuración:', error);
     }
   };
 
-  // =====================================================
-  // VERIFICAR SI NECESITA REINTEGRO
-  // =====================================================
   const verificarReintegro = async () => {
     try {
-      const response = await fetch(`${config.api.API_URL}/caja-chica-config/verificar-reintegro`);
-      const data = await response.json();
+      const response = await fetch(`${config.api.API_URL}/cajaChicaConfig/verificar-reintegro`, {
+        headers: getAuthHeaders()
+      });
       
+      if (handleAuthError(response)) return;
+      
+      const data = await response.json();
       if (response.ok && data.success) {
         setEstadoReintegro(data.data);
       }
@@ -119,16 +154,251 @@ export default function CajaChicaModern() {
     }
   };
 
-  // =====================================================
-  // REGISTRAR REINTEGRO AUTOMÁTICO
-  // =====================================================
+  const descargarReporteIndividual = async (transaccionId) => {
+    try {
+      const token = localStorage.getItem('authToken');
+      const response = await fetch(`${config.api.API_URL}/reportesCajaChica/individual/${transaccionId}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.status === 401) {
+        Swal.fire({
+          title: 'No autorizado',
+          text: 'No tienes permisos para descargar este reporte',
+          icon: 'error'
+        });
+        return;
+      }
+
+      if (!response.ok) {
+        throw new Error('Error al descargar el reporte');
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `reporte_individual_${transaccionId}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+
+      Swal.fire({
+        title: 'Descarga exitosa',
+        text: 'El reporte se ha descargado correctamente',
+        icon: 'success',
+        timer: 2000
+      });
+    } catch (error) {
+      console.error('Error descargando reporte:', error);
+      Swal.fire({
+        title: 'Error',
+        text: 'No se pudo descargar el reporte',
+        icon: 'error'
+      });
+    }
+  };
+
+  const guardarConfiguracion = async () => {
+    const { value: codigoSeguridad } = await Swal.fire({
+      title: '🔒 Código de Seguridad',
+      text: 'Ingresa el código de seguridad de Caja Chica',
+      input: 'password',
+      inputPlaceholder: 'Ingresa tu código',
+      inputAttributes: {
+        autocapitalize: 'off',
+        autocorrect: 'off'
+      },
+      showCancelButton: true,
+      confirmButtonText: 'Confirmar',
+      cancelButtonText: 'Cancelar',
+      confirmButtonColor: '#6366f1',
+      cancelButtonColor: '#64748b',
+      inputValidator: (value) => {
+        if (!value) {
+          return 'Debes ingresar el código de seguridad';
+        }
+      }
+    });
+
+    if (!codigoSeguridad) {
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('authToken');
+      
+      if (!token) {
+        Swal.fire({ 
+          title: 'Error', 
+          text: 'No se encontró token de autenticación. Por favor inicia sesión nuevamente.', 
+          icon: 'error' 
+        });
+        return;
+      }
+
+      const response = await fetch(`${config.api.API_URL}/cajaChicaConfig`, {
+        method: 'PUT',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          maximoPermitido: tempMaximo,
+          minimoReintegro: tempMinimo,
+          password: codigoSeguridad
+        })
+      });
+      
+      const data = await response.json();
+      
+      if (response.status === 401) {
+        Swal.fire({ 
+          title: 'No autorizado', 
+          text: data.message || 'No tienes permisos para actualizar la configuración o el código de seguridad es incorrecto.', 
+          icon: 'error' 
+        });
+        return;
+      }
+      
+      if (response.ok && data.success) {
+        setConfiguracion({ maximoPermitido: tempMaximo, minimoReintegro: tempMinimo });
+        setShowConfigModal(false);
+        await Swal.fire({
+          title: '¡Configuración Guardada!',
+          text: 'Los límites se han actualizado correctamente',
+          icon: 'success',
+          timer: 2000
+        });
+        await cargarDatos();
+      } else {
+        throw new Error(data.message || 'Error al guardar configuración');
+      }
+    } catch (error) {
+      console.error('Error completo:', error);
+      Swal.fire({ 
+        title: 'Error', 
+        text: error.message || 'Error al guardar la configuración', 
+        icon: 'error' 
+      });
+    }
+  };
+
+  const registrarIngreso = async () => {
+    if (!montoIngreso || !descripcionIngreso) {
+      Swal.fire({
+        title: 'Campos incompletos',
+        text: 'Por favor completa todos los campos',
+        icon: 'warning'
+      });
+      return;
+    }
+
+    const { value: password } = await Swal.fire({
+      title: '🔒 Código de Seguridad',
+      text: 'Ingresa el código de seguridad de Caja Chica',
+      input: 'password',
+      inputPlaceholder: 'Ingresa tu código',
+      inputAttributes: {
+        autocapitalize: 'off',
+        autocorrect: 'off'
+      },
+      showCancelButton: true,
+      confirmButtonText: 'Confirmar',
+      cancelButtonText: 'Cancelar',
+      confirmButtonColor: '#10b981',
+      cancelButtonColor: '#64748b',
+      inputValidator: (value) => {
+        if (!value) {
+          return 'Debes ingresar el código de seguridad';
+        }
+      }
+    });
+
+    if (!password) {
+      return;
+    }
+
+    try {
+      const formDataToSend = new FormData();
+      formDataToSend.append('amount', montoIngreso);
+      formDataToSend.append('reason', descripcionIngreso);
+      formDataToSend.append('password', password);
+
+      const token = localStorage.getItem('authToken');
+      const response = await fetch(`${config.api.API_URL}/cajaChica/ingreso`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
+        body: formDataToSend
+      });
+      const data = await response.json();
+      
+      if (response.status === 401) {
+        Swal.fire({ 
+          title: 'Código Incorrecto', 
+          text: data.message || 'El código de seguridad es incorrecto.', 
+          icon: 'error' 
+        });
+        return;
+      }
+      
+      if (response.ok) {
+        await Swal.fire({
+          title: '¡Ingreso Registrado!',
+          text: data.message,
+          icon: 'success',
+          timer: 2000
+        });
+        setShowIngresoModal(false);
+        setMontoIngreso('');
+        setDescripcionIngreso('');
+        await cargarDatos();
+      } else {
+        throw new Error(data.message || 'Error al registrar ingreso');
+      }
+    } catch (error) {
+      Swal.fire({ title: 'Error', text: error.message, icon: 'error' });
+    }
+  };
+
   const registrarReintegro = async () => {
+    const { value: password } = await Swal.fire({
+      title: '🔒 Código de Seguridad',
+      text: 'Ingresa el código de seguridad de Caja Chica',
+      input: 'password',
+      inputPlaceholder: 'Ingresa tu código',
+      inputAttributes: {
+        autocapitalize: 'off',
+        autocorrect: 'off'
+      },
+      showCancelButton: true,
+      confirmButtonText: 'Continuar',
+      cancelButtonText: 'Cancelar',
+      confirmButtonColor: '#10b981',
+      cancelButtonColor: '#64748b',
+      inputValidator: (value) => {
+        if (!value) {
+          return 'Debes ingresar el código de seguridad';
+        }
+      }
+    });
+
+    if (!password) {
+      return;
+    }
+
     const result = await Swal.fire({
       title: '¿Registrar Reintegro?',
       html: `
-        <p>Se registrará un ingreso de <strong>$${estadoReintegro?.reintegroNecesario?.toFixed(2)}</strong></p>
-        <p>Balance actual: $${balance.toFixed(2)}</p>
-        <p>Balance después: $${configuracion?.maximoPermitido?.toFixed(2)}</p>
+        <p>Se registrará un ingreso de <strong>${estadoReintegro?.reintegroNecesario?.toFixed(2)}</strong></p>
+        <p>Balance actual: ${balance.toFixed(2)}</p>
+        <p>Balance después: ${configuracion?.maximoPermitido?.toFixed(2)}</p>
       `,
       icon: 'question',
       showCancelButton: true,
@@ -139,15 +409,25 @@ export default function CajaChicaModern() {
 
     if (result.isConfirmed) {
       try {
-        const response = await fetch(`${config.api.API_URL}/caja-chica-config/registrar-reintegro`, {
+        const response = await fetch(`${config.api.API_URL}/cajaChicaConfig/registrar-reintegro`, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          }
+          headers: { 
+            'Content-Type': 'application/json',
+            ...getAuthHeaders()
+          },
+          body: JSON.stringify({ password })
         });
-
         const data = await response.json();
-
+        
+        if (response.status === 401) {
+          Swal.fire({ 
+            title: 'Código Incorrecto', 
+            text: data.message || 'El código de seguridad es incorrecto.', 
+            icon: 'error' 
+          });
+          return;
+        }
+        
         if (response.ok && data.success) {
           await Swal.fire({
             title: '¡Reintegro Registrado!',
@@ -160,74 +440,12 @@ export default function CajaChicaModern() {
           throw new Error(data.message || 'Error al registrar reintegro');
         }
       } catch (error) {
-        Swal.fire({
-          title: 'Error',
-          text: error.message,
-          icon: 'error'
-        });
+        Swal.fire({ title: 'Error', text: error.message, icon: 'error' });
       }
     }
   };
 
-  // =====================================================
-  // REGISTRAR INGRESO (CON PASSWORD)
-  // =====================================================
-  const registrarIngreso = async (e) => {
-    e.preventDefault();
-
-    if (!formData.amount || !formData.reason) {
-      Swal.fire({
-        title: 'Campos incompletos',
-        text: 'Por favor completa todos los campos',
-        icon: 'warning'
-      });
-      return;
-    }
-
-    try {
-      const formDataToSend = new FormData();
-      formDataToSend.append('amount', formData.amount);
-      formDataToSend.append('reason', formData.reason);
-      formDataToSend.append('password', formData.password);
-      
-      if (voucher) {
-        formDataToSend.append('voucher', voucher);
-      }
-
-      const response = await fetch(`${config.api.API_URL}/caja-chica/ingreso`, {
-        method: 'POST',
-        body: formDataToSend
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        await Swal.fire({
-          title: '¡Ingreso Registrado!',
-          text: data.message,
-          icon: 'success',
-          timer: 2000
-        });
-        limpiarFormulario();
-        await cargarDatos();
-      } else {
-        throw new Error(data.message || 'Error al registrar ingreso');
-      }
-    } catch (error) {
-      Swal.fire({
-        title: 'Error',
-        text: error.message,
-        icon: 'error'
-      });
-    }
-  };
-
-  // =====================================================
-  // REGISTRAR EGRESO (SIN PASSWORD)
-  // =====================================================
-  const registrarEgreso = async (e) => {
-    e.preventDefault();
-
+  const registrarEgreso = async () => {
     if (!formData.amount || !formData.reason) {
       Swal.fire({
         title: 'Campos incompletos',
@@ -248,18 +466,19 @@ export default function CajaChicaModern() {
 
     try {
       const formDataToSend = new FormData();
-      formDataToSend.append('operationType', 'egreso');
       formDataToSend.append('amount', formData.amount);
       formDataToSend.append('reason', formData.reason);
       formDataToSend.append('voucher', voucher);
 
-      const response = await fetch(`${config.api.API_URL}/caja-chica/egreso`, {
+      const token = localStorage.getItem('authToken');
+      const response = await fetch(`${config.api.API_URL}/cajaChica/egreso`, {
         method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
         body: formDataToSend
       });
-
       const data = await response.json();
-
       if (response.ok) {
         await Swal.fire({
           title: '¡Egreso Registrado!',
@@ -273,126 +492,33 @@ export default function CajaChicaModern() {
         throw new Error(data.message || 'Error al registrar egreso');
       }
     } catch (error) {
-      Swal.fire({
-        title: 'Error',
-        text: error.message,
-        icon: 'error'
-      });
+      Swal.fire({ title: 'Error', text: error.message, icon: 'error' });
     }
   };
 
-  // =====================================================
-  // ELIMINAR MOVIMIENTO
-  // =====================================================
-  const handleDelete = async (id) => {
-    const result = await Swal.fire({
-      title: '¿Eliminar movimiento?',
-      text: 'Esta acción no se puede deshacer',
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonColor: '#ef4444',
-      confirmButtonText: 'Sí, eliminar',
-      cancelButtonText: 'Cancelar'
-    });
-
-    if (result.isConfirmed) {
-      try {
-        const response = await fetch(`${config.api.API_URL}/caja-chica/${id}`, {
-          method: 'DELETE'
-        });
-
-        if (response.ok) {
-          await Swal.fire({
-            title: '¡Eliminado!',
-            text: 'Movimiento eliminado exitosamente',
-            icon: 'success',
-            timer: 2000
-          });
-          await cargarDatos();
-        }
-      } catch (error) {
-        Swal.fire({
-          title: 'Error',
-          text: 'Error al eliminar el movimiento',
-          icon: 'error'
-        });
-      }
-    }
-  };
-
-  // =====================================================
-  // GENERAR REPORTES PDF
-  // =====================================================
-  const generarReportePDF = async (tipo) => {
-    let url = '';
-    
-    switch (tipo) {
-      case 'todos':
-        url = `${config.api.API_URL}/reportesCajaChica/todos`;
-        break;
-      case 'mensual':
-        const mes = new Date().getMonth() + 1;
-        const ano = new Date().getFullYear();
-        url = `${config.api.API_URL}/reportesCajaChica/mensual-simple/${mes}/${ano}`;
-        break;
-      case 'diario':
-        const hoy = new Date().toISOString().split('T')[0];
-        url = `${config.api.API_URL}/reportesCajaChica/diario/${hoy}`;
-        break;
-      default:
-        return;
-    }
-
-    window.open(url, '_blank');
-  };
-
-  // =====================================================
-  // FUNCIONES AUXILIARES
-  // =====================================================
   const calcularEstadisticas = (movimientos) => {
-    const ingresos = movimientos
-      .filter(m => m.type === 'income')
-      .reduce((sum, m) => sum + m.amount, 0);
-    
-    const gastos = movimientos
-      .filter(m => m.type === 'expense')
-      .reduce((sum, m) => sum + m.amount, 0);
-
-    setStats({
-      totalIngresos: ingresos,
-      totalGastos: gastos,
-      totalTransacciones: movimientos.length
-    });
+    const ingresos = movimientos.filter(m => m.type === 'income').reduce((sum, m) => sum + m.amount, 0);
+    const gastos = movimientos.filter(m => m.type === 'expense').reduce((sum, m) => sum + m.amount, 0);
+    setStats({ totalIngresos: ingresos, totalGastos: gastos, totalTransacciones: movimientos.length });
   };
 
   const limpiarFormulario = () => {
-    setFormData({
-      amount: '',
-      operationType: 'egreso',
-      reason: '',
-      password: ''
-    });
+    setFormData({ amount: '', operationType: 'egreso', reason: '' });
     setVoucher(null);
+    const fileInput = document.getElementById('voucher');
+    if (fileInput) fileInput.value = '';
   };
 
   const formatearFecha = (fecha) => {
     return new Date(fecha).toLocaleDateString('es-ES', {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
+      day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
     });
   };
 
   const formatearMoneda = (cantidad) => {
-    return new Intl.NumberFormat('es-US', {
-      style: 'currency',
-      currency: 'USD'
-    }).format(cantidad);
+    return new Intl.NumberFormat('es-US', { style: 'currency', currency: 'USD' }).format(cantidad);
   };
 
-  // Filtrar transacciones según el tab activo
   const filteredTransactions = transactions.filter(tx => {
     if (activeTab === 'all') return true;
     if (activeTab === 'income') return tx.type === 'income';
@@ -414,61 +540,21 @@ export default function CajaChicaModern() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-4 md:p-8">
       <div className="max-w-7xl mx-auto space-y-6">
-        {/* Header */}
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold text-slate-800">Caja Chica</h1>
             <p className="text-slate-500 mt-1">Gestiona tus transacciones diarias</p>
           </div>
-          <div className="flex gap-3">
-            <button 
-              onClick={() => generarReportePDF('diario')}
-              className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2.5 rounded-xl font-medium hover:bg-blue-700 transition-colors"
-            >
-              <FileText size={18} />
-              Diario
-            </button>
-            <button 
-              onClick={() => generarReportePDF('mensual')}
-              className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2.5 rounded-xl font-medium hover:bg-indigo-700 transition-colors"
-            >
-              <FileText size={18} />
-              Mensual
-            </button>
-            <button 
-              onClick={() => generarReportePDF('todos')}
-              className="flex items-center gap-2 bg-gradient-to-r from-emerald-600 to-teal-600 text-white px-6 py-3 rounded-xl font-medium hover:shadow-lg hover:scale-105 transition-all duration-200"
-            >
-              <Download size={20} />
-              Exportar Todo
-            </button>
-          </div>
+          <button
+            onClick={() => setShowConfigModal(true)}
+            className="flex items-center gap-2 bg-slate-700 text-white px-4 py-2.5 rounded-xl font-medium hover:bg-slate-800 transition-colors"
+          >
+            <Settings size={18} />
+            Configurar
+          </button>
         </div>
 
-        {/* Alerta de Reintegro */}
-        {estadoReintegro?.necesitaReintegro && (
-          <div className="bg-amber-50 border-l-4 border-amber-500 p-4 rounded-lg">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <AlertCircle className="text-amber-600" size={24} />
-                <div>
-                  <p className="font-semibold text-amber-900">Se requiere reintegro</p>
-                  <p className="text-sm text-amber-700">{estadoReintegro.mensaje}</p>
-                </div>
-              </div>
-              <button
-                onClick={registrarReintegro}
-                className="bg-amber-600 text-white px-4 py-2 rounded-lg hover:bg-amber-700 transition-colors font-medium"
-              >
-                Registrar Reintegro
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          {/* Main Balance Card */}
           <div className="md:col-span-2 bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600 rounded-2xl p-6 text-white shadow-xl relative overflow-hidden">
             <div className="absolute top-0 right-0 w-64 h-64 bg-white opacity-5 rounded-full -mr-32 -mt-32"></div>
             <div className="absolute bottom-0 left-0 w-48 h-48 bg-white opacity-5 rounded-full -ml-24 -mb-24"></div>
@@ -487,59 +573,76 @@ export default function CajaChicaModern() {
             </div>
           </div>
 
-          {/* Mini Stats */}
-          <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-200 hover:shadow-md transition-shadow">
+          <div 
+            onClick={() => setShowIngresoModal(true)}
+            className="bg-white rounded-2xl p-6 shadow-sm border border-slate-200 hover:shadow-lg hover:scale-105 transition-all cursor-pointer"
+          >
             <div className="flex items-center justify-between mb-3">
               <p className="text-slate-600 text-sm font-medium">Total Ingresos</p>
-              <TrendingUp className="text-emerald-500" size={18} />
+              <div className="bg-emerald-100 p-2 rounded-lg">
+                <Plus className="text-emerald-600" size={18} />
+              </div>
             </div>
             <h3 className="text-2xl font-bold text-slate-800 mb-2">{formatearMoneda(stats.totalIngresos)}</h3>
-            <p className="text-sm font-medium text-emerald-600">
-              Acumulado
-            </p>
+            <p className="text-sm font-medium text-emerald-600">Click para agregar</p>
           </div>
 
-          <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-200 hover:shadow-md transition-shadow">
+          <div
+            onClick={() => {
+              if (estadoReintegro?.necesitaReintegro) {
+                registrarReintegro();
+              } else {
+                Swal.fire({
+                  title: 'Sin reintegro',
+                  text: 'No es necesario realizar un reintegro en este momento',
+                  icon: 'info'
+                });
+              }
+            }}
+            className={`bg-white rounded-2xl p-6 shadow-sm border transition-all cursor-pointer ${
+              estadoReintegro?.necesitaReintegro
+                ? 'border-amber-300 hover:shadow-lg hover:scale-105'
+                : 'border-slate-200 hover:shadow-md'
+            }`}
+          >
             <div className="flex items-center justify-between mb-3">
               <p className="text-slate-600 text-sm font-medium">Total Gastos</p>
-              <TrendingDown className="text-rose-500" size={18} />
+              <TrendingDown
+                className={estadoReintegro?.necesitaReintegro ? 'text-amber-600' : 'text-rose-500'}
+                size={18}
+              />
             </div>
-            <h3 className="text-2xl font-bold text-slate-800 mb-2">{formatearMoneda(stats.totalGastos)}</h3>
-            <p className="text-sm font-medium text-rose-600">
-              Acumulado
+
+            <h3 className="text-2xl font-bold text-slate-800 mb-2">
+              {formatearMoneda(stats.totalGastos)}
+            </h3>
+
+            <p className={`text-sm font-medium ${
+              estadoReintegro?.necesitaReintegro ? 'text-amber-600' : 'text-rose-600'
+            }`}>
+              {estadoReintegro?.necesitaReintegro ? 'Click para reintegrar' : 'Acumulado'}
             </p>
           </div>
         </div>
 
-        {/* Control Form */}
         <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-200">
           <h3 className="text-lg font-semibold text-slate-800 mb-4">Registrar Transacción</h3>
-          <form onSubmit={formData.operationType === 'ingreso' ? registrarIngreso : registrarEgreso}>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <input 
-                type="number" 
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <input
+                type="number"
                 step="0.01"
                 placeholder="0.00"
                 value={formData.amount}
-                onChange={(e) => setFormData({...formData, amount: e.target.value})}
+                onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
                 className="px-4 py-3 border-2 border-slate-200 rounded-xl focus:border-indigo-500 focus:outline-none transition-colors"
-                required
               />
-              <select 
-                value={formData.operationType}
-                onChange={(e) => setFormData({...formData, operationType: e.target.value})}
-                className="px-4 py-3 border-2 border-slate-200 rounded-xl focus:border-indigo-500 focus:outline-none transition-colors appearance-none bg-white"
-              >
-                <option value="ingreso">Ingreso</option>
-                <option value="egreso">Gasto</option>
-              </select>
-              <input 
-                type="text" 
+              <input
+                type="text"
                 placeholder="Descripción"
                 value={formData.reason}
-                onChange={(e) => setFormData({...formData, reason: e.target.value})}
+                onChange={(e) => setFormData({ ...formData, reason: e.target.value })}
                 className="px-4 py-3 border-2 border-slate-200 rounded-xl focus:border-indigo-500 focus:outline-none transition-colors"
-                required
               />
               <div className="relative">
                 <input
@@ -549,128 +652,112 @@ export default function CajaChicaModern() {
                   onChange={(e) => setVoucher(e.target.files[0])}
                   className="hidden"
                 />
-                <label 
+                <label
                   htmlFor="voucher"
-                  className="flex items-center justify-center gap-2 bg-gradient-to-r from-emerald-600 to-teal-600 text-white px-6 py-3 rounded-xl font-medium hover:shadow-lg hover:scale-105 transition-all duration-200 cursor-pointer"
+                  className="flex items-center justify-center gap-2 bg-slate-100 text-slate-700 px-6 py-3 rounded-xl font-medium hover:bg-slate-200 transition-all duration-200 cursor-pointer border-2 border-slate-200"
                 >
                   <FileText size={18} />
                   {voucher ? voucher.name.substring(0, 15) + '...' : 'Comprobante'}
                 </label>
               </div>
             </div>
-            
-            {formData.operationType === 'ingreso' && (
-              <div className="mt-4">
-                <input
-                  type="password"
-                  placeholder="Contraseña (requerida para ingresos)"
-                  value={formData.password}
-                  onChange={(e) => setFormData({...formData, password: e.target.value})}
-                  className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:border-indigo-500 focus:outline-none transition-colors"
-                  required
-                />
-              </div>
-            )}
-
-            <button 
-              type="submit"
-              className="w-full mt-4 bg-slate-800 text-white py-3 rounded-xl font-medium hover:bg-slate-900 transition-colors"
+            <button
+              onClick={registrarEgreso}
+              className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-3 rounded-xl font-medium hover:shadow-lg hover:scale-[1.02] transition-all duration-200"
             >
-              Realizar Operación
+              📤 Registrar Egreso
             </button>
-          </form>
+          </div>
         </div>
 
-        {/* Transactions Table */}
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
           <div className="p-6 border-b border-slate-200">
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-              <div>
-                <h3 className="text-lg font-semibold text-slate-800">Últimas Transacciones</h3>
-                <p className="text-sm text-slate-500 mt-1">Historial completo de movimientos</p>
-              </div>
-            </div>
+  <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+    <div>
+      <h3 className="text-lg font-semibold text-slate-800">
+        Últimas Transacciones
+      </h3>
+      <p className="text-sm text-slate-500 mt-1">
+        Historial completo de movimientos
+      </p>
+    </div>
 
-            {/* Tabs */}
-            <div className="flex gap-2 mt-4">
-              {['all', 'income', 'expense'].map((tab) => (
-                <button
-                  key={tab}
-                  onClick={() => setActiveTab(tab)}
-                  className={`px-4 py-2 rounded-lg font-medium transition-all ${
-                    activeTab === tab 
-                      ? 'bg-slate-800 text-white' 
-                      : 'text-slate-600 hover:bg-slate-100'
-                  }`}
-                >
-                  {tab === 'all' ? 'Todas' : tab === 'income' ? 'Ingresos' : 'Gastos'}
-                </button>
-              ))}
-            </div>
-          </div>
+    {/* BOTÓN GENERAR REPORTES */}
+    <button
+      onClick={() => setShowReportesModal(true)}
+      className="flex items-center gap-2 bg-emerald-600 text-white px-4 py-2.5 rounded-xl font-medium hover:bg-emerald-700 transition-all"
+    >
+      <FileText size={18} />
+      Generar Reportes
+    </button>
+  </div>
+
+  {/* FILTROS */}
+  <div className="flex gap-2 mt-4">
+    {['all', 'income', 'expense'].map((tab) => (
+      <button
+        key={tab}
+        onClick={() => setActiveTab(tab)}
+        className={`px-4 py-2 rounded-lg font-medium transition-all ${
+          activeTab === tab
+            ? 'bg-slate-800 text-white'
+            : 'text-slate-600 hover:bg-slate-100'
+        }`}
+      >
+        {tab === 'all' ? 'Todas' : tab === 'income' ? 'Ingresos' : 'Gastos'}
+      </button>
+    ))}
+  </div>
+</div>
+
 
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead className="bg-slate-50 border-b border-slate-200">
                 <tr>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Fecha</th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Descripción</th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Tipo</th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Usuario</th>
-                  <th className="px-6 py-4 text-right text-xs font-semibold text-slate-600 uppercase tracking-wider">Monto</th>
-                  <th className="px-6 py-4 text-right text-xs font-semibold text-slate-600 uppercase tracking-wider">Balance</th>
-                  <th className="px-6 py-4 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">Acciones</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase">Fecha</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase">Descripción</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase">Tipo</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase">Usuario</th>
+                  <th className="px-6 py-4 text-right text-xs font-semibold text-slate-600 uppercase">Monto</th>
+                  <th className="px-6 py-4 text-right text-xs font-semibold text-slate-600 uppercase">Balance</th>
+                  <th className="px-6 py-4 text-center text-xs font-semibold text-slate-600 uppercase">Acciones</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200">
                 {filteredTransactions.map((tx) => (
                   <tr key={tx._id} className="hover:bg-slate-50 transition-colors">
-                    <td className="px-6 py-4 text-slate-600 text-sm">
-                      {formatearFecha(tx.date)}
-                    </td>
+                    <td className="px-6 py-4 text-slate-600 text-sm">{formatearFecha(tx.date)}</td>
+                    <td className="px-6 py-4"><span className="font-medium text-slate-800">{tx.reason}</span></td>
                     <td className="px-6 py-4">
-                      <span className="font-medium text-slate-800">{tx.reason}</span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                        tx.type === 'income' 
-                          ? 'bg-emerald-100 text-emerald-700' 
-                          : 'bg-rose-100 text-rose-700'
-                      }`}>
+                      <span className={`px-3 py-1 rounded-full text-sm font-medium ${tx.type === 'income' ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
                         {tx.type === 'income' ? 'Ingreso' : 'Egreso'}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-slate-600 text-sm">
-                      {tx.employeeId?.name || 'Admin'}
-                    </td>
-                    <td className={`px-6 py-4 text-right font-semibold ${
-                      tx.type === 'income' ? 'text-emerald-600' : 'text-rose-600'
-                    }`}>
+                    <td className="px-6 py-4 text-slate-600 text-sm">{tx.employeeId?.name || 'Admin'}</td>
+                    <td className={`px-6 py-4 text-right font-semibold ${tx.type === 'income' ? 'text-emerald-600' : 'text-rose-600'}`}>
                       {tx.type === 'income' ? '+' : '-'}{formatearMoneda(tx.amount)}
                     </td>
-                    <td className="px-6 py-4 text-right text-slate-600 font-mono text-sm">
-                      {formatearMoneda(tx.currentBalance)}
-                    </td>
+                    <td className="px-6 py-4 text-right text-slate-600 font-mono text-sm">{formatearMoneda(tx.currentBalance)}</td>
                     <td className="px-6 py-4">
                       <div className="flex items-center justify-center gap-2">
-                        {/* Botón Descargar PDF Individual */}
-                        {tx.voucher && (
+                        {tx.voucher ? (
                           <button
                             onClick={() => window.open(tx.voucher, '_blank')}
-                            className="p-2 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-600 transition-colors"
-                            title="Ver Comprobante"
+                            title="Ver comprobante"
+                            className="p-2 rounded-lg bg-slate-100 hover:bg-indigo-100 text-indigo-600 transition-all hover:scale-110"
                           >
-                            <Download size={18} />
+                            <Search size={18} />
                           </button>
+                        ) : (
+                          <span className="text-xs text-slate-400 italic">Sin comprobante</span>
                         )}
-
-                        {/* Botón Eliminar */}
                         <button
-                          onClick={() => handleDelete(tx._id)}
-                          className="p-2 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 transition-colors"
-                          title="Eliminar"
+                          onClick={() => descargarReporteIndividual(tx._id)}
+                          title="Descargar reporte individual"
+                          className="p-2 rounded-lg bg-emerald-100 hover:bg-emerald-200 text-emerald-700 transition-all hover:scale-110"
                         >
-                          <Trash2 size={18} />
+                          <Download size={18} />
                         </button>
                       </div>
                     </td>
@@ -680,7 +767,111 @@ export default function CajaChicaModern() {
             </table>
           </div>
         </div>
+
+        {showConfigModal && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl">
+              <h2 className="text-2xl font-bold text-slate-800 mb-6">⚙️ Configuración de Caja Chica</h2>
+              <div className="space-y-6">
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-3">
+                    Máximo Permitido: ${tempMaximo.toFixed(2)}
+                  </label>
+                  <input
+                    type="range" min="100" max="10000" step="50"
+                    value={tempMaximo}
+                    onChange={(e) => setTempMaximo(Number(e.target.value))}
+                    className="w-full h-3 bg-indigo-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
+                  />
+                  <div className="flex justify-between text-xs text-slate-500 mt-1">
+                    <span>$100</span><span>$10,000</span>
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-3">
+                    Mínimo para Reintegro: ${tempMinimo.toFixed(2)}
+                  </label>
+                  <input
+                    type="range" min="10" max="1000" step="10"
+                    value={tempMinimo}
+                    onChange={(e) => setTempMinimo(Number(e.target.value))}
+                    className="w-full h-3 bg-amber-200 rounded-lg appearance-none cursor-pointer accent-amber-600"
+                  />
+                  <div className="flex justify-between text-xs text-slate-500 mt-1">
+                    <span>$10</span><span>$1,000</span>
+                  </div>
+                </div>
+              </div>
+              <div className="flex gap-3 mt-8">
+                <button
+                  onClick={() => setShowConfigModal(false)}
+                  className="flex-1 px-4 py-3 border-2 border-slate-300 text-slate-700 rounded-xl font-medium hover:bg-slate-50 transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={guardarConfiguracion}
+                  className="flex-1 px-4 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl font-medium hover:shadow-lg transition-all"
+                >
+                  Guardar
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {showIngresoModal && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl">
+              <h2 className="text-2xl font-bold text-slate-800 mb-6">💰 Registrar Ingreso</h2>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-2">Monto</label>
+                  <input
+                    type="number" step="0.01" placeholder="0.00"
+                    value={montoIngreso}
+                    onChange={(e) => setMontoIngreso(e.target.value)}
+                    className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:border-emerald-500 focus:outline-none transition-colors"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-2">Descripción</label>
+                  <input
+                    type="text" placeholder="Concepto del ingreso"
+                    value={descripcionIngreso}
+                    onChange={(e) => setDescripcionIngreso(e.target.value)}
+                    className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:border-emerald-500 focus:outline-none transition-colors"
+                  />
+                </div>
+              </div>
+              <div className="flex gap-3 mt-6">
+                <button
+                  onClick={() => {
+                    setShowIngresoModal(false);
+                    setMontoIngreso('');
+                    setDescripcionIngreso('');
+                  }}
+                  className="flex-1 px-4 py-3 border-2 border-slate-300 text-slate-700 rounded-xl font-medium hover:bg-slate-50 transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={registrarIngreso}
+                  className="flex-1 px-4 py-3 bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-xl font-medium hover:shadow-lg transition-all"
+                >
+                  Registrar
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
+
+<ReportesCajaChicaModal
+  isOpen={showReportesModal}
+  onClose={() => setShowReportesModal(false)}
+  apiUrl={config.api.API_URL}
+/>
     </div>
   );
 }
