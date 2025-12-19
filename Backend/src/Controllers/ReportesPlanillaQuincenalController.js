@@ -174,7 +174,6 @@ ReportesPlanillasController.generarPDFQuincenal = async (req, res) => {
                         <th style="width: 5%;">RENTA</th>
                         <th style="width: 5%;">ANTICIPOS</th>
                         <th style="width: 5%;">PTMOS</th>
-                        <th style="width: 5%;">CAMISAS</th>
                         <th style="width: 5%;">OTROS DESCUENTOS</th>
                     </tr>
                 </thead>
@@ -192,7 +191,6 @@ ReportesPlanillasController.generarPDFQuincenal = async (req, res) => {
                             <td class="text-right">${emp.descuentosLey.renta?.monto > 0 ? '$ ' + emp.descuentosLey.renta.monto.toFixed(2) : '-'}</td>
                             <td class="text-right">${emp.otrosDescuentos.anticipos > 0 ? '$ ' + emp.otrosDescuentos.anticipos.toFixed(2) : '-'}</td>
                             <td class="text-right">${emp.otrosDescuentos.prestamos > 0 ? '$ ' + emp.otrosDescuentos.prestamos.toFixed(2) : '-'}</td>
-                            <td class="text-right">${emp.otrosDescuentos.camisas > 0 ? '$ ' + emp.otrosDescuentos.camisas.toFixed(2) : '-'}</td>
                             <td class="text-right">${emp.otrosDescuentos.otros > 0 ? '$ ' + emp.otrosDescuentos.otros.toFixed(2) : '-'}</td>
                             <td class="text-right"><strong>$ ${emp.totalDescuentos.toFixed(2)}</strong></td>
                             <td class="text-right"><strong>$ ${emp.totalAPagar.toFixed(2)}</strong></td>
@@ -209,7 +207,6 @@ ReportesPlanillasController.generarPDFQuincenal = async (req, res) => {
                         <td class="text-right"><strong>$ ${planilla.totales.totalRenta.toFixed(2)}</strong></td>
                         <td class="text-right"><strong>$ ${planilla.totales.totalAnticipos.toFixed(2)}</strong></td>
                         <td class="text-right"><strong>$ ${planilla.totales.totalPrestamos.toFixed(2)}</strong></td>
-                        <td class="text-right"><strong>$ ${planilla.totales.totalCamisas.toFixed(2)}</strong></td>
                         <td class="text-right"><strong>$ ${planilla.totales.totalOtrosDescuentos.toFixed(2)}</strong></td>
                         <td class="text-right"><strong>$ ${planilla.totales.totalDescuentos.toFixed(2)}</strong></td>
                         <td class="text-right"><strong>$ ${planilla.totales.totalAPagar.toFixed(2)}</strong></td>
