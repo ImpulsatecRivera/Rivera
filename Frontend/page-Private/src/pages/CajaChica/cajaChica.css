@@ -1,0 +1,193 @@
+/* ========================================
+   ESTILOS PARA MODAL DE CONTRASEÑA
+   ======================================== */
+
+/* Modal Container */
+.password-modal-custom {
+  text-align: left;
+}
+
+/* Header del Modal con Gradiente */
+.modal-header-custom {
+  background: linear-gradient(135deg, #6366f1 0%, #a855f7 50%, #ec4899 100%);
+  padding: 2rem;
+  border-radius: 1rem 1rem 0 0;
+  margin: -1.25rem -1.25rem 1.5rem -1.25rem;
+  color: white;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Efectos de fondo decorativos */
+.modal-header-custom::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  right: -20%;
+  width: 200px;
+  height: 200px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 50%;
+}
+
+.modal-header-custom::after {
+  content: '';
+  position: absolute;
+  bottom: -30%;
+  left: -10%;
+  width: 150px;
+  height: 150px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 50%;
+}
+
+/* Icono de Escudo */
+.shield-icon {
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(10px);
+  width: 56px;
+  height: 56px;
+  border-radius: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1rem;
+  position: relative;
+  z-index: 10;
+}
+
+/* Títulos del Modal */
+.modal-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin: 0 0 0.25rem 0;
+  position: relative;
+  z-index: 10;
+}
+
+.modal-subtitle {
+  font-size: 0.875rem;
+  opacity: 0.9;
+  margin: 0;
+  position: relative;
+  z-index: 10;
+}
+
+/* Información del Monto */
+.modal-info {
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  border: 1px solid #e2e8f0;
+  border-radius: 0.75rem;
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+.info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.info-label {
+  font-size: 0.875rem;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.info-amount {
+  font-size: 1.5rem;
+  font-weight: 700;
+  background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.info-concept {
+  font-size: 0.875rem;
+  color: #64748b;
+  padding-top: 0.5rem;
+  border-top: 1px solid #e2e8f0;
+}
+
+.concept-label {
+  font-weight: 600;
+  color: #475569;
+}
+
+/* Input de Contraseña */
+.password-input-custom {
+  border: 2px solid #e2e8f0 !important;
+  border-radius: 0.75rem !important;
+  padding: 0.875rem 1rem !important;
+  font-size: 1rem !important;
+  transition: all 0.3s ease !important;
+  background: #f8fafc !important;
+}
+
+.password-input-custom:focus {
+  border-color: #6366f1 !important;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1) !important;
+  background: white !important;
+}
+
+/* Popup Container */
+.password-popup-custom {
+  border-radius: 1.5rem !important;
+  padding: 0 !important;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25) !important;
+}
+
+/* Botones */
+.confirm-btn-custom, .cancel-btn-custom {
+  border-radius: 0.75rem !important;
+  padding: 0.875rem 1.5rem !important;
+  font-weight: 600 !important;
+  transition: all 0.2s ease !important;
+}
+
+.confirm-btn-custom {
+  background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%) !important;
+  border: none !important;
+}
+
+.confirm-btn-custom:hover {
+  transform: scale(1.02) !important;
+  box-shadow: 0 10px 25px rgba(99, 102, 241, 0.3) !important;
+}
+
+.cancel-btn-custom:hover {
+  background-color: #475569 !important;
+}
+
+/* Animaciones */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.password-modal-custom {
+  animation: fadeInUp 0.3s ease-out;
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+  .modal-header-custom {
+    padding: 1.5rem;
+  }
+  
+  .modal-title {
+    font-size: 1.25rem;
+  }
+  
+  .info-amount {
+    font-size: 1.25rem;
+  }
+}
