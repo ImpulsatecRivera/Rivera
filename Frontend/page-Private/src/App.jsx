@@ -36,6 +36,10 @@ import MantenimientosTable from "./pages/MantenimientosCamiones/PantallaPrincipa
 import CreateMantenimientoPage from "./pages/MantenimientosCamiones/AgregarNuevoManto"
 import EditMantenimiento from "./pages/MantenimientosCamiones/EditarMantos"
 import CajaChica from "./pages/CajaChica/CajaChica"
+import Planilla from "./pages/Planilla/Planilla";
+
+
+
 
 // UI
 import SidebarNav from "./components/Nav/Nav";
@@ -121,6 +125,9 @@ function App() {
         <Route path="/mantenimientos/agregar-mantenimiento" element={<CreateMantenimientoPage/>} />
         <Route path="/mantenimientos/editar/:id" element={<EditMantenimiento/>} />
         <Route path="/CajaChica" element={<CajaChica/>} />
+        <Route path="/planilla" element={<Planilla/>} />
+       
+
 
       </Route>
 
