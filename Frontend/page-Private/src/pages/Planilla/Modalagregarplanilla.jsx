@@ -1,22 +1,26 @@
 import React, { useState } from 'react';
 import { X, Calendar, Clock, CheckCircle } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
-export default function ModalAgregarPlanilla({ isOpen, onClose, onCrear }) {
+export default function ModalAgregarPlanilla({ isOpen, onClose }) {
+  const navigate = useNavigate();
   const [tipoSeleccionado, setTipoSeleccionado] = useState(null);
 
-  // SOLO DOS TIPOS: QUINCENAL Y SEMANAL (SIN DESCRIPCIONES NI DETALLES)
+  // SOLO DOS TIPOS: QUINCENAL Y SEMANAL
   const tiposPlanilla = [
     {
       id: 'quincenal',
       nombre: 'Planilla Quincenal',
       icon: Calendar,
-      color: 'blue'
+      color: 'blue',
+      ruta: '/planilla/quincenal'
     },
     {
       id: 'semanal',
       nombre: 'Planilla Semanal',
       icon: Clock,
-      color: 'purple'
+      color: 'purple',
+      ruta: '/planilla/semanal'
     }
   ];
 
@@ -26,8 +30,12 @@ export default function ModalAgregarPlanilla({ isOpen, onClose, onCrear }) {
 
   const handleConfirmar = () => {
     if (tipoSeleccionado) {
-      onCrear(tipoSeleccionado);
-      setTipoSeleccionado(null);
+      const tipoEncontrado = tiposPlanilla.find(t => t.id === tipoSeleccionado);
+      if (tipoEncontrado) {
+        navigate(tipoEncontrado.ruta);
+        setTipoSeleccionado(null);
+        onClose();
+      }
     }
   };
 
