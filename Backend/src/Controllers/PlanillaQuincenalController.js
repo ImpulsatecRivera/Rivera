@@ -116,7 +116,6 @@ const calcularTotalesEmpleado = (empleado) => {
     const totalOtrosDescuentos =
         (empleado.otrosDescuentos?.anticipos || 0) +
         (empleado.otrosDescuentos?.prestamos || 0) +
-        (empleado.otrosDescuentos?.camisas || 0) +
         (empleado.otrosDescuentos?.otros || 0);
 
     const totalDescuentos = totalDescuentosLey + totalOtrosDescuentos;
@@ -143,7 +142,6 @@ const calcularTotalesGenerales = (empleados) => {
         totalRenta: 0,
         totalAnticipos: 0,
         totalPrestamos: 0,
-        totalCamisas: 0,
         totalOtrosDescuentos: 0,
         totalDescuentos: 0,
         totalAPagar: 0
@@ -159,7 +157,6 @@ const calcularTotalesGenerales = (empleados) => {
         totales.totalRenta += emp.descuentosLey?.renta?.monto || 0;
         totales.totalAnticipos += emp.otrosDescuentos?.anticipos || 0;
         totales.totalPrestamos += emp.otrosDescuentos?.prestamos || 0;
-        totales.totalCamisas += emp.otrosDescuentos?.camisas || 0;
         totales.totalOtrosDescuentos += emp.otrosDescuentos?.otros || 0;
         totales.totalDescuentos += emp.totalDescuentos || 0;
         totales.totalAPagar += emp.totalAPagar || 0;
@@ -191,7 +188,6 @@ const calcularTotalesGenerales = (empleados) => {
  *       otrosDescuentos: {
  *         anticipos: 50,
  *         prestamos: 0,
- *         camisas: 0,
  *         otros: 0
  *       }
  *     }
@@ -279,7 +275,6 @@ PlanillaQuincenalController.crear = async (req, res) => {
                     otrosDescuentos: emp.otrosDescuentos || {
                         anticipos: 0,
                         prestamos: 0,
-                        camisas: 0,
                         otros: 0
                     }
                 };
@@ -481,7 +476,6 @@ PlanillaQuincenalController.actualizarEmpleado = async (req, res) => {
             planilla.empleados[empleadoIndex].otrosDescuentos = {
                 anticipos: otrosDescuentos.anticipos || 0,
                 prestamos: otrosDescuentos.prestamos || 0,
-                camisas: otrosDescuentos.camisas || 0,
                 otros: otrosDescuentos.otros || 0
             };
         }
@@ -589,7 +583,6 @@ PlanillaQuincenalController.agregarEmpleado = async (req, res) => {
             otrosDescuentos: otrosDescuentos || {
                 anticipos: 0,
                 prestamos: 0,
-                camisas: 0,
                 otros: 0
             }
         };
