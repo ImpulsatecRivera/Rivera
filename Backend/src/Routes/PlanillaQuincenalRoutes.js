@@ -36,7 +36,6 @@ const router = express.Router();
  *       "otrosDescuentos": {
  *         "anticipos": 50,
  *         "prestamos": 0,
- *         "camisas": 0,
  *         "otros": 0
  *       }
  *     }
@@ -109,7 +108,6 @@ router.get('/empleado/:empleadoId', PlanillaQuincenalController.obtenerPorEmplea
  *   "otrosDescuentos": {
  *     "anticipos": 60,
  *     "prestamos": 25,
- *     "camisas": 0,
  *     "otros": 0
  *   }
  * }
@@ -137,7 +135,7 @@ router.put('/:id/empleado/:empleadoId', PlanillaQuincenalController.actualizarEm
  *   "otrosDescuentos": {
  *     "anticipos": 100,
  *     "prestamos": 0,
- *     "camisas": 0,
+
  *     "otros": 0
  *   }
  * }
