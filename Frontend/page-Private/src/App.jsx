@@ -37,6 +37,7 @@ import CreateMantenimientoPage from "./pages/MantenimientosCamiones/AgregarNuevo
 import EditMantenimiento from "./pages/MantenimientosCamiones/EditarMantos"
 import CajaChica from "./pages/CajaChica/CajaChica"
 import Planilla from "./pages/Planilla/Planilla";
+import PlanillaQuincenal from "./pages/Planilla/PlanillaQuincenal";
 
 
 
@@ -126,7 +127,7 @@ function App() {
         <Route path="/mantenimientos/editar/:id" element={<EditMantenimiento/>} />
         <Route path="/CajaChica" element={<CajaChica/>} />
         <Route path="/planilla" element={<Planilla/>} />
-       
+        <Route path="/planilla/quincenal" element={<PlanillaQuincenal/>} />
 
 
       </Route>
