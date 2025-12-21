@@ -21,7 +21,7 @@ const router = express.Router();
  * - Tabla completa con todos los empleados
  * - Columnas: Nombre, Salario Quincenal, Viáticos, Trabajo Sábado/Domingo,
  *   Total Salario+Viáticos, ISSS 3%, AFP 7.25%, Renta, Anticipos, PTMOS,
- *   Camisas, Otros Descuentos, Total Descuentos, Total a Pagar
+ *   Otros Descuentos, Total Descuentos, Total a Pagar
  * - Fila de totales al final
  * - Footer con fecha de generación
  * 

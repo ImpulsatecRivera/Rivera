@@ -20,7 +20,8 @@ export default function CajaChicaModern() {
   const [montoIngreso, setMontoIngreso] = useState('');
   const [descripcionIngreso, setDescripcionIngreso] = useState('');
   const [showReportesModal, setShowReportesModal] = useState(false);
-
+  const [showComprobanteModal, setShowComprobanteModal] = useState(false);
+  const [transaccionSeleccionada, setTransaccionSeleccionada] = useState(null);
 
   const [formData, setFormData] = useState({
     amount: '',
@@ -177,6 +178,9 @@ export default function CajaChicaModern() {
         throw new Error('Error al descargar el reporte');
       }
 
+      console.log('STATUS:', response.status);
+console.log('CONTENT-TYPE:', response.headers.get('content-type'));
+
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -202,6 +206,131 @@ export default function CajaChicaModern() {
       });
     }
   };
+
+  // 🆕 FUNCIÓN PARA GENERAR VALE - VERSIÓN CORREGIDA
+const generarVale = async (transaccion) => {
+  const { value: formValues } = await Swal.fire({
+    title: '📄 Generar Vale',
+    input: 'text',
+    inputLabel: 'Nombre del beneficiario',
+    inputPlaceholder: 'Ingresa el nombre completo',
+    showCancelButton: true,
+    confirmButtonText: 'Generar',
+    cancelButtonText: 'Cancelar',
+    confirmButtonColor: '#6366f1',
+    cancelButtonColor: '#64748b',
+    inputValidator: (value) => {
+      if (!value) {
+        return 'Debes ingresar el nombre del beneficiario';
+      }
+    }
+  });
+
+  if (!formValues) return;
+
+  Swal.fire({
+    title: 'Generando vale...',
+    text: 'Por favor espera',
+    allowOutsideClick: false,
+    didOpen: () => Swal.showLoading()
+  });
+
+  try {
+    const token = localStorage.getItem('authToken');
+
+    const response = await fetch(
+      `${config.api.API_URL}/cajaChica/${transaccion._id}/generar-vale`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          nombreBeneficiario: formValues,
+          cantidadLetras: 'PENDIENTE'
+        })
+      }
+    );
+
+    // ✅ VERIFICAR EL CONTENT-TYPE DE LA RESPUESTA
+    const contentType = response.headers.get('content-type');
+    console.log('📋 Content-Type recibido:', contentType);
+    console.log('📊 Status:', response.status);
+    
+    if (!response.ok) {
+      // Si hay error, intentar leer el mensaje
+      let errorMessage = 'Error al generar el vale';
+      
+      if (contentType && contentType.includes('application/json')) {
+        const errorData = await response.json();
+        errorMessage = errorData.message || errorMessage;
+      } else {
+        // Si el backend devuelve HTML de error
+        const errorText = await response.text();
+        console.error('❌ Error HTML recibido:', errorText.substring(0, 300));
+        errorMessage = 'Error en el servidor. Verifica la consola para más detalles.';
+      }
+      
+      throw new Error(errorMessage);
+    }
+
+    // ✅ SI LA RESPUESTA ES EXITOSA
+    if (contentType && contentType.includes('application/json')) {
+      // Backend devuelve JSON con URL del vale
+      const data = await response.json();
+      console.log('✅ Datos recibidos:', data);
+      
+      if (data.success && data.voucher) {
+        // Abrir el PDF desde Cloudinary
+        window.open(data.voucher, '_blank', 'noopener,noreferrer');
+
+        Swal.fire({
+          title: '¡Vale generado!',
+          text: 'El vale se ha generado correctamente',
+          icon: 'success',
+          timer: 2500,
+          showConfirmButton: false
+        });
+
+        // Recargar datos para actualizar la UI
+        await cargarDatos();
+      } else {
+        throw new Error(data.message || 'La respuesta del servidor no contiene el vale');
+      }
+    } else if (contentType && contentType.includes('application/pdf')) {
+      // Backend devuelve directamente el PDF
+      console.log('📄 PDF recibido directamente');
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      window.open(url, '_blank');
+      
+      Swal.fire({
+        title: '¡Vale generado!',
+        text: 'El vale se ha abierto en una nueva pestaña',
+        icon: 'success',
+        timer: 2500,
+        showConfirmButton: false
+      });
+
+      await cargarDatos();
+    } else {
+      // Content-type inesperado
+      const responseText = await response.text();
+      console.error('⚠️ Respuesta inesperada:', responseText.substring(0, 300));
+      throw new Error('Formato de respuesta inesperado del servidor');
+    }
+
+  } catch (error) {
+    console.error('💥 Error completo generando vale:', error);
+    Swal.fire({
+      title: 'Error',
+      text: error.message || 'No se pudo generar el vale',
+      icon: 'error',
+      confirmButtonText: 'OK'
+    });
+  }
+};
 
   const guardarConfiguracion = async () => {
     const { value: codigoSeguridad } = await Swal.fire({
@@ -455,20 +584,14 @@ export default function CajaChicaModern() {
       return;
     }
 
-    if (!voucher) {
-      Swal.fire({
-        title: 'Comprobante requerido',
-        text: 'El comprobante es obligatorio para egresos',
-        icon: 'warning'
-      });
-      return;
-    }
-
     try {
       const formDataToSend = new FormData();
       formDataToSend.append('amount', formData.amount);
       formDataToSend.append('reason', formData.reason);
-      formDataToSend.append('voucher', voucher);
+
+      if (voucher) {
+        formDataToSend.append('voucher', voucher);
+      }
 
       const token = localStorage.getItem('authToken');
       const response = await fetch(`${config.api.API_URL}/cajaChica/egreso`, {
@@ -478,7 +601,9 @@ export default function CajaChicaModern() {
         },
         body: formDataToSend
       });
+
       const data = await response.json();
+
       if (response.ok) {
         await Swal.fire({
           title: '¡Egreso Registrado!',
@@ -536,6 +661,20 @@ export default function CajaChicaModern() {
       </div>
     );
   }
+const abrirArchivo = (url) => {
+  if (!url || typeof url !== 'string') {
+    Swal.fire({
+      title: 'Archivo no disponible',
+      text: 'No existe un archivo válido para mostrar',
+      icon: 'warning'
+    });
+    return;
+  }
+
+  window.open(url, '_blank', 'noopener,noreferrer');
+};
+
+
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-4 md:p-8">
@@ -672,44 +811,41 @@ export default function CajaChicaModern() {
 
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
           <div className="p-6 border-b border-slate-200">
-  <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-    <div>
-      <h3 className="text-lg font-semibold text-slate-800">
-        Últimas Transacciones
-      </h3>
-      <p className="text-sm text-slate-500 mt-1">
-        Historial completo de movimientos
-      </p>
-    </div>
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+              <div>
+                <h3 className="text-lg font-semibold text-slate-800">
+                  Últimas Transacciones
+                </h3>
+                <p className="text-sm text-slate-500 mt-1">
+                  Historial completo de movimientos
+                </p>
+              </div>
 
-    {/* BOTÓN GENERAR REPORTES */}
-    <button
-      onClick={() => setShowReportesModal(true)}
-      className="flex items-center gap-2 bg-emerald-600 text-white px-4 py-2.5 rounded-xl font-medium hover:bg-emerald-700 transition-all"
-    >
-      <FileText size={18} />
-      Generar Reportes
-    </button>
-  </div>
+              <button
+                onClick={() => setShowReportesModal(true)}
+                className="flex items-center gap-2 bg-emerald-600 text-white px-4 py-2.5 rounded-xl font-medium hover:bg-emerald-700 transition-all"
+              >
+                <FileText size={18} />
+                Generar Reportes
+              </button>
+            </div>
 
-  {/* FILTROS */}
-  <div className="flex gap-2 mt-4">
-    {['all', 'income', 'expense'].map((tab) => (
-      <button
-        key={tab}
-        onClick={() => setActiveTab(tab)}
-        className={`px-4 py-2 rounded-lg font-medium transition-all ${
-          activeTab === tab
-            ? 'bg-slate-800 text-white'
-            : 'text-slate-600 hover:bg-slate-100'
-        }`}
-      >
-        {tab === 'all' ? 'Todas' : tab === 'income' ? 'Ingresos' : 'Gastos'}
-      </button>
-    ))}
-  </div>
-</div>
-
+            <div className="flex gap-2 mt-4">
+              {['all', 'income', 'expense'].map((tab) => (
+                <button
+                  key={tab}
+                  onClick={() => setActiveTab(tab)}
+                  className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                    activeTab === tab
+                      ? 'bg-slate-800 text-white'
+                      : 'text-slate-600 hover:bg-slate-100'
+                  }`}
+                >
+                  {tab === 'all' ? 'Todas' : tab === 'income' ? 'Ingresos' : 'Gastos'}
+                </button>
+              ))}
+            </div>
+          </div>
 
           <div className="overflow-x-auto">
             <table className="w-full">
@@ -743,7 +879,8 @@ export default function CajaChicaModern() {
                       <div className="flex items-center justify-center gap-2">
                         {tx.voucher ? (
                           <button
-                            onClick={() => window.open(tx.voucher, '_blank')}
+                           onClick={() => abrirArchivo(tx.voucher)}
+
                             title="Ver comprobante"
                             className="p-2 rounded-lg bg-slate-100 hover:bg-indigo-100 text-indigo-600 transition-all hover:scale-110"
                           >
@@ -752,6 +889,25 @@ export default function CajaChicaModern() {
                         ) : (
                           <span className="text-xs text-slate-400 italic">Sin comprobante</span>
                         )}
+                        
+                        {tx.type === 'expense' && (
+  <button
+    onClick={() => generarVale(tx)}
+    title={tx.vale ? "Vale generado - Regenerar" : "Generar vale"}
+    className={`p-2 rounded-lg transition-all hover:scale-110 relative ${
+      tx.vale
+        ? 'bg-green-100 hover:bg-green-200 text-green-700'
+        : 'bg-amber-100 hover:bg-amber-200 text-amber-700'
+    }`}
+  >
+    <FileText size={18} />
+    {tx.vale && (
+      <span className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-white"></span>
+    )}
+  </button>
+)}
+
+                        
                         <button
                           onClick={() => descargarReporteIndividual(tx._id)}
                           title="Descargar reporte individual"
@@ -867,11 +1023,13 @@ export default function CajaChicaModern() {
         )}
       </div>
 
-<ReportesCajaChicaModal
-  isOpen={showReportesModal}
-  onClose={() => setShowReportesModal(false)}
-  apiUrl={config.api.API_URL}
-/>
+      <ReportesCajaChicaModal
+        isOpen={showReportesModal}
+        onClose={() => setShowReportesModal(false)}
+        apiUrl={config.api.API_URL}
+      />
+      
+     
     </div>
   );
 }

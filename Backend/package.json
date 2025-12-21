@@ -28,6 +28,7 @@
     "node-cron": "^4.2.1",
     "nodemailer": "^7.0.3",
     "puppeteer": "^24.32.1",
+    "streamifier": "^0.1.1",
     "swagger-ui-express": "^5.0.1",
     "twilio": "^5.7.3"
   }
