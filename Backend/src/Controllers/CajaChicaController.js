@@ -3,6 +3,10 @@ import CajaChica from '../Models/CajaChica.js';
 import { v2 as cloudinary } from "cloudinary";
 import { config } from "../config.js";
 import fs from 'fs/promises';
+import puppeteer from 'puppeteer';
+import streamifier from 'streamifier';
+
+
 
 const cajaChicaController = {};
 
@@ -192,7 +196,7 @@ cajaChicaController.cashOperation = async (req, res) => {
     console.log('   User:', req.user || 'No autenticado');
 
     const { amount, reason, employeeId } = req.body;
-    
+
     // Convertir amount a número
     const monto = parseFloat(amount);
 
@@ -224,21 +228,16 @@ cajaChicaController.cashOperation = async (req, res) => {
     }
 
     // VOUCHER ES OBLIGATORIO PARA EGRESOS
-    if (!req.file) {
-      console.log('❌ Falta el comprobante');
-      return res.status(400).json({
-        message: "El comprobante es obligatorio para egresos"
-      });
-    }
+
 
     // Determinar el empleado
     // Si no hay req.user, asumimos que es admin (sistema sin JWT)
     let finalEmployeeId = 'admin';
-    
+
     if (req.user) {
       // Si HAY autenticación JWT
       const userType = req.user.userType;
-      
+
       if (userType === 'admin') {
         // Admin puede especificar employeeId o usar 'admin'
         finalEmployeeId = employeeId || 'admin';
@@ -285,30 +284,31 @@ cajaChicaController.cashOperation = async (req, res) => {
     console.log('💰 Nuevo balance:', currentBalance);
 
     // Subir voucher (OBLIGATORIO)
-    let voucherUrl;
-    try {
-      console.log('📎 Subiendo comprobante a Cloudinary...');
-      const result = await cloudinary.uploader.upload(req.file.path, {
-        folder: "vouchers",
-        resource_type: "auto"
-      });
-      voucherUrl = result.secure_url;
-      console.log('✅ Comprobante subido:', voucherUrl);
-      
-      // Eliminar archivo temporal
-      await fs.unlink(req.file.path);
-    } catch (err) {
-      console.error('❌ Error subiendo comprobante:', err);
-      // Intentar eliminar archivo temporal
+    // Subir voucher (OPCIONAL)
+    // Subir voucher (OPCIONAL)
+let voucherUrl = null;
+
+if (req.file) {
+  try {
+    const result = await cloudinary.uploader.upload(req.file.path, {
+      folder: "vouchers",
+      resource_type: "auto"
+    });
+    voucherUrl = result.secure_url;
+
+    await fs.unlink(req.file.path);
+  } catch (err) {
+    console.warn('⚠️ Error subiendo comprobante:', err.message);
+
+    if (req.file?.path) {
       try {
         await fs.unlink(req.file.path);
       } catch {}
-      
-      return res.status(400).json({
-        message: "Error al subir el comprobante",
-        error: err.message
-      });
     }
+  }
+}
+
+
 
     // Crear movimiento
     const movement = new CajaChica({
@@ -327,7 +327,7 @@ cajaChicaController.cashOperation = async (req, res) => {
 
     // Intentar popular si no es admin
     if (movement.employeeId !== 'admin' &&
-        /^[0-9a-fA-F]{24}$/.test(movement.employeeId.toString())) {
+      /^[0-9a-fA-F]{24}$/.test(movement.employeeId.toString())) {
       try {
         await movement.populate('employeeId', 'name email');
         console.log('✅ EmployeeId populado');
@@ -346,9 +346,9 @@ cajaChicaController.cashOperation = async (req, res) => {
   } catch (error) {
     console.error('❌❌❌ Error en cashOperation:', error);
     console.error('Stack:', error.stack);
-    res.status(500).json({ 
+    res.status(500).json({
       message: "Error interno del servidor",
-      error: error.message 
+      error: error.message
     });
   }
 };
@@ -361,7 +361,7 @@ cajaChicaController.deleteMovement = async (req, res) => {
     const { id } = req.params;
 
     const movement = await CajaChica.findById(id);
-    
+
     if (!movement) {
       return res.status(404).json({
         message: "Movimiento no encontrado"
@@ -379,5 +379,236 @@ cajaChicaController.deleteMovement = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
+// =====================================================
+// SUBIR/ACTUALIZAR VOUCHER DE UN MOVIMIENTO EXISTENTE
+// =====================================================
+cajaChicaController.uploadVoucher = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    console.log('📎 UPLOAD VOUCHER - Iniciando...');
+    console.log('   Movement ID:', id);
+    console.log('   File:', req.file ? 'Presente' : 'Ausente');
+
+    // Validar que se envió un archivo
+    if (!req.file) {
+      console.log('❌ No se proporcionó archivo');
+      return res.status(400).json({
+        message: "Se requiere un archivo de comprobante"
+      });
+    }
+
+    // Buscar el movimiento
+    const movement = await CajaChica.findById(id);
+
+    if (!movement) {
+      console.log('❌ Movimiento no encontrado');
+      
+      // Eliminar archivo temporal si el movimiento no existe
+      if (req.file?.path) {
+        try {
+          await fs.unlink(req.file.path);
+        } catch (err) {
+          console.warn('⚠️ Error eliminando archivo temporal:', err.message);
+        }
+      }
+
+      return res.status(404).json({
+        message: "Movimiento no encontrado"
+      });
+    }
+
+    console.log('✅ Movimiento encontrado');
+
+    // Si ya existe un voucher, eliminar el anterior de Cloudinary (opcional)
+    if (movement.voucher) {
+      try {
+        // Extraer public_id del URL de Cloudinary
+        const urlParts = movement.voucher.split('/');
+        const fileName = urlParts[urlParts.length - 1];
+        const publicId = `vouchers/${fileName.split('.')[0]}`;
+        
+        await cloudinary.uploader.destroy(publicId);
+        console.log('🗑️ Voucher anterior eliminado de Cloudinary');
+      } catch (err) {
+        console.warn('⚠️ Error eliminando voucher anterior:', err.message);
+      }
+    }
+
+    // Subir nuevo voucher a Cloudinary
+    let voucherUrl = null;
+    try {
+      console.log('📤 Subiendo nuevo voucher...');
+      const result = await cloudinary.uploader.upload(req.file.path, {
+        folder: "vouchers",
+        resource_type: "auto"
+      });
+      voucherUrl = result.secure_url;
+      console.log('✅ Voucher subido exitosamente');
+    } catch (err) {
+      console.error('❌ Error subiendo a Cloudinary:', err.message);
+      
+      // Eliminar archivo temporal
+      if (req.file?.path) {
+        try {
+          await fs.unlink(req.file.path);
+        } catch {}
+      }
+
+      return res.status(500).json({
+        message: "Error al subir el comprobante a la nube",
+        error: err.message
+      });
+    }
+
+    // Eliminar archivo temporal del servidor
+    try {
+      await fs.unlink(req.file.path);
+      console.log('🗑️ Archivo temporal eliminado');
+    } catch (err) {
+      console.warn('⚠️ Error eliminando archivo temporal:', err.message);
+    }
+
+    // Actualizar el movimiento con el nuevo voucher
+    movement.voucher = voucherUrl;
+    await movement.save();
+
+    console.log('✅✅✅ Voucher actualizado exitosamente');
+
+    // Popular employeeId si es necesario
+    if (movement.employeeId !== 'admin' &&
+      /^[0-9a-fA-F]{24}$/.test(movement.employeeId.toString())) {
+      try {
+        await movement.populate('employeeId', 'name email');
+      } catch (err) {
+        console.warn('⚠️ No se pudo popular employeeId');
+      }
+    }
+
+    res.json({
+      message: "Comprobante subido exitosamente",
+      movement
+    });
+
+  } catch (error) {
+    console.error('❌❌❌ Error en uploadVoucher:', error);
+    console.error('Stack:', error.stack);
+
+    // Limpiar archivo temporal en caso de error
+    if (req.file?.path) {
+      try {
+        await fs.unlink(req.file.path);
+      } catch {}
+    }
+
+    res.status(500).json({
+      message: "Error interno del servidor",
+      error: error.message
+    });
+  }
+};
+
+// Agregar al final de cajaChicaController
+
+
+cajaChicaController.generarVale = async (req, res) => {
+  let browser;
+
+  try {
+    const { id } = req.params;
+    const { nombreBeneficiario, cantidadLetras } = req.body;
+
+    if (!id || !nombreBeneficiario || !cantidadLetras) {
+      return res.status(400).json({
+        message: "Datos incompletos"
+      });
+    }
+
+    const movement = await CajaChica.findById(id);
+    if (!movement) {
+      return res.status(404).json({ message: "Movimiento no encontrado" });
+    }
+
+    /* ===============================
+       GENERAR NÚMERO DE VALE
+    =============================== */
+    const year = new Date().getFullYear();
+
+    const ultimoVale = await CajaChica.findOne({
+      vale: { $regex: `^CC-${year}-` }
+    }).sort({ vale: -1 });
+
+    let correlativo = 1;
+    if (ultimoVale?.vale) {
+      correlativo = parseInt(ultimoVale.vale.split('-')[2]) + 1;
+    }
+
+    const numeroVale = `CC-${year}-${correlativo.toString().padStart(3, '0')}`;
+
+    /* ===============================
+       GENERAR PDF
+    =============================== */
+    browser = await puppeteer.launch({
+      headless: 'new',
+      args: ['--no-sandbox', '--disable-setuid-sandbox']
+    });
+
+    const page = await browser.newPage();
+    await page.setContent(/* TU HTML COMPLETO */ { waitUntil: 'networkidle0' });
+
+    const pdfBuffer = await page.pdf({
+      format: 'Letter',
+      printBackground: true
+    });
+
+    await browser.close();
+
+    /* ===============================
+       SUBIR PDF A CLOUDINARY
+    =============================== */
+    const uploadResult = await new Promise((resolve, reject) => {
+      const stream = cloudinary.uploader.upload_stream(
+        {
+          folder: 'caja_chica/vales',
+          resource_type: 'raw',
+          public_id: `vale_${numeroVale}`,
+          format: 'pdf'
+        },
+        (error, result) => {
+          if (error) reject(error);
+          else resolve(result);
+        }
+      );
+
+      streamifier.createReadStream(pdfBuffer).pipe(stream);
+    });
+
+    /* ===============================
+       GUARDAR EN DB
+    =============================== */
+  movement.voucher = movement.voucher; // comprobante original
+movement.ticket = uploadResult.secure_url; // PDF del vale
+movement.vale = numeroVale;
+                // 🔢 Número de vale
+    await movement.save();
+
+    /* ===============================
+       RESPONDER PDF
+    =============================== */
+  res.json({
+  message: 'Vale generado correctamente',
+  vale: numeroVale,
+  voucher: uploadResult.secure_url
+});
+
+
+  } catch (error) {
+    if (browser) await browser.close();
+    console.error(error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
 
 export default cajaChicaController;

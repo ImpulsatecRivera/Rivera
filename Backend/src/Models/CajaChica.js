@@ -23,13 +23,19 @@ const cajaChicaSchema = new Schema({
     },
     type: {
         type: String,
-        enum: ["income", "expense"],
-        required: true
+        enum: ["income", "expense"]
     },
     voucher: {
         type: String,
-        required: false
-    }
+        required: false,
+        
+    },
+     ticket: {
+        type:String
+     },
+        vale: {
+            type:String
+        }
     ,
     previousBalance: {
         type: Number,

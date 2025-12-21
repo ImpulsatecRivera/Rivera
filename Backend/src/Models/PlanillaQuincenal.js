@@ -59,10 +59,6 @@ const otrosDescuentosSchema = new Schema({
         type: Number,
         default: 0
     },
-    camisas: {
-        type: Number,
-        default: 0
-    },
     otros: {
         type: Number,
         default: 0
@@ -199,10 +195,6 @@ const planillaQuincenalSchema = new Schema({
             default: 0
         },
         totalPrestamos: {
-            type: Number,
-            default: 0
-        },
-        totalCamisas: {
             type: Number,
             default: 0
         },
