@@ -127,38 +127,42 @@ const obtenerSalarioValido = (empleadoData, nombreCompleto, tipoEmpleado) => {
         throw new Error(`El salario de ${nombreCompleto} debe ser mayor a 0. Salario actual: ${salarioMensual}`);
     }
 
-    // Debug opcional (útil para troubleshooting)
-    console.log('💰 Salario procesado:', {
-        empleado: nombreCompleto,
-        tipo: tipoEmpleado,
-        salarioOriginal: empleadoData.salario || empleadoData.salary,
-        salarioMensual: salarioMensual,
-        salarioQuincenal: redondearDinero(salarioMensual / 2)
-    });
-
     return salarioMensual;
 };
 
 /**
- * Calcular totales de un empleado
+ * ✅ CORREGIDO: Calcular totales de un empleado
+ * Ahora descuentos de ley se calculan sobre el salario total
  */
 const calcularTotalesEmpleado = (empleado) => {
+    // 1. Calcular salario total (base + extras)
     const totalSalarioMasViaticos =
         (empleado.salarioQuincenal || 0) +
         (empleado.viaticos || 0) +
         (empleado.trabajoSabadoDomingo || 0);
 
-    const totalDescuentosLey =
-        (empleado.descuentosLey?.isss?.monto || 0) +
-        (empleado.descuentosLey?.afp?.monto || 0) +
-        (empleado.descuentosLey?.renta?.monto || 0);
+    // 2. RECALCULAR descuentos de ley sobre el SALARIO TOTAL
+    const descuentosLeyActualizados = calcularDescuentosLey(totalSalarioMasViaticos);
+    
+    // Actualizar descuentos de ley en el objeto empleado
+    empleado.descuentosLey = descuentosLeyActualizados;
 
+    // 3. Calcular total de descuentos de ley
+    const totalDescuentosLey =
+        descuentosLeyActualizados.isss.monto +
+        descuentosLeyActualizados.afp.monto +
+        descuentosLeyActualizados.renta.monto;
+
+    // 4. Calcular otros descuentos (SIN CAMISAS)
     const totalOtrosDescuentos =
         (empleado.otrosDescuentos?.anticipos || 0) +
         (empleado.otrosDescuentos?.prestamos || 0) +
         (empleado.otrosDescuentos?.otros || 0);
 
+    // 5. Total de descuentos
     const totalDescuentos = totalDescuentosLey + totalOtrosDescuentos;
+
+    // 6. Total a pagar
     const totalAPagar = totalSalarioMasViaticos - totalDescuentos;
 
     return {
@@ -169,35 +173,41 @@ const calcularTotalesEmpleado = (empleado) => {
 };
 
 /**
- * Calcular totales generales de la planilla
+ * Calcular totales generales de la planilla (SIN CAMISAS)
  */
 const calcularTotalesGenerales = (empleados) => {
+    console.log('🔥 INICIANDO calcularTotalesGenerales');
+    console.log('📦 Empleados recibidos:', empleados.length);
+    
     const totales = {
         totalSalariosQuincenales: 0,
         totalViaticos: 0,
         totalTrabajoSabadoDomingo: 0,
-        totalSalarioMasViaticos: 0,
+        totalSalariosMasViaticos: 0,
         totalISSS: 0,
         totalAFP: 0,
         totalRenta: 0,
         totalAnticipos: 0,
         totalPrestamos: 0,
-        totalOtrosDescuentos: 0,
+        totalOtros: 0,
         totalDescuentos: 0,
         totalAPagar: 0
     };
 
     empleados.forEach(emp => {
+        console.log('👤 Procesando empleado:', emp.nombreCompleto);
+        console.log('   - Trabajo Sáb/Dom:', emp.trabajoSabadoDomingo);
+        
         totales.totalSalariosQuincenales += emp.salarioQuincenal || 0;
         totales.totalViaticos += emp.viaticos || 0;
         totales.totalTrabajoSabadoDomingo += emp.trabajoSabadoDomingo || 0;
-        totales.totalSalarioMasViaticos += emp.totalSalarioMasViaticos || 0;
+        totales.totalSalariosMasViaticos += emp.totalSalarioMasViaticos || 0;
         totales.totalISSS += emp.descuentosLey?.isss?.monto || 0;
         totales.totalAFP += emp.descuentosLey?.afp?.monto || 0;
         totales.totalRenta += emp.descuentosLey?.renta?.monto || 0;
         totales.totalAnticipos += emp.otrosDescuentos?.anticipos || 0;
         totales.totalPrestamos += emp.otrosDescuentos?.prestamos || 0;
-        totales.totalOtrosDescuentos += emp.otrosDescuentos?.otros || 0;
+        totales.totalOtros += emp.otrosDescuentos?.otros || 0;
         totales.totalDescuentos += emp.totalDescuentos || 0;
         totales.totalAPagar += emp.totalAPagar || 0;
     });
@@ -207,9 +217,11 @@ const calcularTotalesGenerales = (empleados) => {
         totales[key] = redondearDinero(totales[key]);
     });
 
+    console.log('✅ TOTALES CALCULADOS (BACKEND):', totales);
+    console.log('   🎯 totalTrabajoSabadoDomingo:', totales.totalTrabajoSabadoDomingo);
+
     return totales;
 };
-
 /**
  * Crear una nueva planilla quincenal
  * POST /api/planillas/quincenal
@@ -277,12 +289,8 @@ PlanillaQuincenalController.crear = async (req, res) => {
 
                 const nombreCompleto = `${empleadoData.name} ${empleadoData.lastName || ''}`.trim();
 
-                // ✅ ACTUALIZADO: Obtener salario válido (maneja String y Number)
                 const salarioMensual = obtenerSalarioValido(empleadoData, nombreCompleto, tipoEmpleado);
                 const salarioQuincenal = redondearDinero(salarioMensual / 2);
-
-                // Calcular descuentos de ley automáticamente
-                const descuentosLey = calcularDescuentosLey(salarioQuincenal);
 
                 const empleadoPlanilla = {
                     empleadoId: emp.empleadoId,
@@ -291,7 +299,7 @@ PlanillaQuincenalController.crear = async (req, res) => {
                     salarioQuincenal,
                     viaticos: emp.viaticos || 0,
                     trabajoSabadoDomingo: emp.trabajoSabadoDomingo || 0,
-                    descuentosLey,
+                    descuentosLey: {},
                     otrosDescuentos: emp.otrosDescuentos || {
                         anticipos: 0,
                         prestamos: 0,
@@ -439,7 +447,7 @@ PlanillaQuincenalController.obtenerPorId = async (req, res) => {
 };
 
 /**
- * Actualizar datos de un empleado en la planilla
+ * Actualizar datos de un empleado en la planilla (SIN CAMISAS)
  * PUT /api/planillas/quincenal/:id/empleado/:empleadoId
  */
 PlanillaQuincenalController.actualizarEmpleado = async (req, res) => {
@@ -524,7 +532,7 @@ PlanillaQuincenalController.actualizarEmpleado = async (req, res) => {
 };
 
 /**
- * Agregar un nuevo empleado a la planilla
+ * Agregar un nuevo empleado a la planilla (SIN CAMISAS)
  * POST /api/planillas/quincenal/:id/empleado
  */
 PlanillaQuincenalController.agregarEmpleado = async (req, res) => {
@@ -586,10 +594,8 @@ PlanillaQuincenalController.agregarEmpleado = async (req, res) => {
 
         const nombreCompleto = `${empleadoData.name} ${empleadoData.lastName || ''}`.trim();
 
-        // ✅ ACTUALIZADO: Obtener salario válido (maneja String y Number)
         const salarioMensual = obtenerSalarioValido(empleadoData, nombreCompleto, tipoEmpleado);
         const salarioQuincenal = redondearDinero(salarioMensual / 2);
-        const descuentosLey = calcularDescuentosLey(salarioQuincenal);
 
         const nuevoEmpleado = {
             empleadoId,
@@ -598,7 +604,7 @@ PlanillaQuincenalController.agregarEmpleado = async (req, res) => {
             salarioQuincenal,
             viaticos: viaticos || 0,
             trabajoSabadoDomingo: trabajoSabadoDomingo || 0,
-            descuentosLey,
+            descuentosLey: {},
             otrosDescuentos: otrosDescuentos || {
                 anticipos: 0,
                 prestamos: 0,
@@ -606,6 +612,7 @@ PlanillaQuincenalController.agregarEmpleado = async (req, res) => {
             }
         };
 
+        // Calcular totales
         const totales = calcularTotalesEmpleado(nuevoEmpleado);
         nuevoEmpleado.totalSalarioMasViaticos = totales.totalSalarioMasViaticos;
         nuevoEmpleado.totalDescuentos = totales.totalDescuentos;
