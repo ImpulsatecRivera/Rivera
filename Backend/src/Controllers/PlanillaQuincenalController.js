@@ -1,6 +1,7 @@
 /**
  * Controlador para Planillas Quincenales
  * Calcula ISSS 3%, AFP 7.25% y Renta según tabla de El Salvador
+ * ✅ ACTUALIZADO: Maneja salarios como String o Number (compatibilidad Motoristas)
  */
 
 import PlanillaQuincenal from "../Models/PlanillaQuincenal.js";
@@ -100,6 +101,45 @@ const calcularDescuentosLey = (salarioBase) => {
 };
 
 /**
+ * ✅ NUEVA FUNCIÓN: Obtener y validar salario (maneja String y Number)
+ */
+const obtenerSalarioValido = (empleadoData, nombreCompleto, tipoEmpleado) => {
+    // Obtener salario (puede venir como Number o String)
+    let salarioMensual = empleadoData.salary || empleadoData.salario || 0;
+
+    // 🔧 CRÍTICO: Convertir string a número si es necesario (caso Motoristas)
+    if (typeof salarioMensual === 'string') {
+        salarioMensual = parseFloat(salarioMensual.replace(/[^0-9.-]/g, '')); // Limpiar caracteres no numéricos
+        
+        // Validar que la conversión fue exitosa
+        if (isNaN(salarioMensual)) {
+            console.error('❌ Error: El salario no es válido:', {
+                empleado: nombreCompleto,
+                tipo: tipoEmpleado,
+                salarioOriginal: empleadoData.salario || empleadoData.salary
+            });
+            throw new Error(`El salario de ${nombreCompleto} no es un número válido`);
+        }
+    }
+
+    // Validar que el salario sea mayor a 0
+    if (!salarioMensual || salarioMensual <= 0) {
+        throw new Error(`El salario de ${nombreCompleto} debe ser mayor a 0. Salario actual: ${salarioMensual}`);
+    }
+
+    // Debug opcional (útil para troubleshooting)
+    console.log('💰 Salario procesado:', {
+        empleado: nombreCompleto,
+        tipo: tipoEmpleado,
+        salarioOriginal: empleadoData.salario || empleadoData.salary,
+        salarioMensual: salarioMensual,
+        salarioQuincenal: redondearDinero(salarioMensual / 2)
+    });
+
+    return salarioMensual;
+};
+
+/**
  * Calcular totales de un empleado
  */
 const calcularTotalesEmpleado = (empleado) => {
@@ -135,7 +175,7 @@ const calcularTotalesGenerales = (empleados) => {
     const totales = {
         totalSalariosQuincenales: 0,
         totalViaticos: 0,
-        totalTrabajoExtra: 0,
+        totalTrabajoSabadoDomingo: 0,
         totalSalarioMasViaticos: 0,
         totalISSS: 0,
         totalAFP: 0,
@@ -150,7 +190,7 @@ const calcularTotalesGenerales = (empleados) => {
     empleados.forEach(emp => {
         totales.totalSalariosQuincenales += emp.salarioQuincenal || 0;
         totales.totalViaticos += emp.viaticos || 0;
-        totales.totalTrabajoExtra += emp.trabajoSabadoDomingo || 0;
+        totales.totalTrabajoSabadoDomingo += emp.trabajoSabadoDomingo || 0;
         totales.totalSalarioMasViaticos += emp.totalSalarioMasViaticos || 0;
         totales.totalISSS += emp.descuentosLey?.isss?.monto || 0;
         totales.totalAFP += emp.descuentosLey?.afp?.monto || 0;
@@ -173,26 +213,6 @@ const calcularTotalesGenerales = (empleados) => {
 /**
  * Crear una nueva planilla quincenal
  * POST /api/planillas/quincenal
- * 
- * Body esperado:
- * {
- *   año: 2025,
- *   mes: 12,
- *   quincena: 1,
- *   empleados: [
- *     {
- *       empleadoId: "...",
- *       tipoEmpleado: "Empleado" o "Motorista",
- *       viaticos: 65.80,
- *       trabajoSabadoDomingo: 0,
- *       otrosDescuentos: {
- *         anticipos: 50,
- *         prestamos: 0,
- *         otros: 0
- *       }
- *     }
- *   ]
- * }
  */
 PlanillaQuincenalController.crear = async (req, res) => {
     try {
@@ -257,8 +277,8 @@ PlanillaQuincenalController.crear = async (req, res) => {
 
                 const nombreCompleto = `${empleadoData.name} ${empleadoData.lastName || ''}`.trim();
 
-                // Obtener salario mensual y calcular quincenal (mitad del salario)
-                const salarioMensual = empleadoData.salary || empleadoData.salario || 0;
+                // ✅ ACTUALIZADO: Obtener salario válido (maneja String y Number)
+                const salarioMensual = obtenerSalarioValido(empleadoData, nombreCompleto, tipoEmpleado);
                 const salarioQuincenal = redondearDinero(salarioMensual / 2);
 
                 // Calcular descuentos de ley automáticamente
@@ -266,7 +286,7 @@ PlanillaQuincenalController.crear = async (req, res) => {
 
                 const empleadoPlanilla = {
                     empleadoId: emp.empleadoId,
-                    tipoEmpleado, // Detectado automáticamente
+                    tipoEmpleado,
                     nombreCompleto,
                     salarioQuincenal,
                     viaticos: emp.viaticos || 0,
@@ -296,7 +316,7 @@ PlanillaQuincenalController.crear = async (req, res) => {
         const fechaInicio = new Date(año, mes - 1, quincena === 1 ? 1 : 16);
         const fechaFin = quincena === 1
             ? new Date(año, mes - 1, 15)
-            : new Date(año, mes, 0); // Último día del mes
+            : new Date(año, mes, 0);
 
         // Crear la planilla
         const nuevaPlanilla = new PlanillaQuincenal({
@@ -421,9 +441,6 @@ PlanillaQuincenalController.obtenerPorId = async (req, res) => {
 /**
  * Actualizar datos de un empleado en la planilla
  * PUT /api/planillas/quincenal/:id/empleado/:empleadoId
- * 
- * Solo se pueden actualizar: viaticos, trabajoSabadoDomingo, otrosDescuentos
- * El salario quincenal, ISSS, AFP y Renta se calculan automáticamente
  */
 PlanillaQuincenalController.actualizarEmpleado = async (req, res) => {
     try {
@@ -568,13 +585,15 @@ PlanillaQuincenalController.agregarEmpleado = async (req, res) => {
         }
 
         const nombreCompleto = `${empleadoData.name} ${empleadoData.lastName || ''}`.trim();
-        const salarioMensual = empleadoData.salary || empleadoData.salario || 0;
+
+        // ✅ ACTUALIZADO: Obtener salario válido (maneja String y Number)
+        const salarioMensual = obtenerSalarioValido(empleadoData, nombreCompleto, tipoEmpleado);
         const salarioQuincenal = redondearDinero(salarioMensual / 2);
         const descuentosLey = calcularDescuentosLey(salarioQuincenal);
 
         const nuevoEmpleado = {
             empleadoId,
-            tipoEmpleado, // Detectado automáticamente
+            tipoEmpleado,
             nombreCompleto,
             salarioQuincenal,
             viaticos: viaticos || 0,
@@ -678,14 +697,6 @@ PlanillaQuincenalController.eliminarEmpleado = async (req, res) => {
 /**
  * Cambiar estado de la planilla
  * PATCH /api/planillas/quincenal/:id/estado
- * 
- * Reglas de transición de estados:
- * - borrador -> pendiente, cerrada
- * - pendiente -> borrador, pagada, cerrada
- * - pagada -> cerrada (NO puede regresar a pendiente o borrador)
- * - cerrada -> NO puede cambiar (estado final)
- * 
- * Si el estado es 'pagada', se requiere fechaPago en el body
  */
 PlanillaQuincenalController.cambiarEstado = async (req, res) => {
     try {
@@ -737,7 +748,7 @@ PlanillaQuincenalController.cambiarEstado = async (req, res) => {
 
         const now = new Date();
 
-        // Si el nuevo estado es 'pagada', requerir fechaPago (no futura)
+        // Si el nuevo estado es 'pagada', requerir fechaPago
         if (estado === 'pagada') {
             if (!fechaPago) {
                 return res.status(400).json({
@@ -746,7 +757,6 @@ PlanillaQuincenalController.cambiarEstado = async (req, res) => {
                 });
             }
 
-            // Validar que fechaPago sea una fecha válida
             const fechaPagoDate = new Date(fechaPago);
             if (isNaN(fechaPagoDate.getTime())) {
                 return res.status(400).json({
@@ -755,7 +765,6 @@ PlanillaQuincenalController.cambiarEstado = async (req, res) => {
                 });
             }
 
-            // No aceptar fechas futuras
             if (fechaPagoDate > now) {
                 return res.status(400).json({
                     success: false,
@@ -766,7 +775,7 @@ PlanillaQuincenalController.cambiarEstado = async (req, res) => {
             planilla.fechaPago = fechaPagoDate;
         }
 
-        // Si el nuevo estado es 'aprobada', guardar fechaAprobacion (si viene validar y no futura, si no viene usar ahora)
+        // Si el nuevo estado es 'aprobada', guardar fechaAprobacion
         if (estado === 'aprobada') {
             if (fechaAprobacion) {
                 const fechaAprobDate = new Date(fechaAprobacion);
@@ -790,7 +799,7 @@ PlanillaQuincenalController.cambiarEstado = async (req, res) => {
             }
         }
 
-        // Si el nuevo estado es 'cerrada', requerir fechaCierre y validar que no sea futura
+        // Si el nuevo estado es 'cerrada', requerir fechaCierre
         if (estado === 'cerrada') {
             if (!fechaCierre) {
                 return res.status(400).json({

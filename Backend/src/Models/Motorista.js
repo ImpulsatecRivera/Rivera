@@ -46,6 +46,10 @@ const motoristaSchema = new Schema({
         type: String,      // Dirección física completa del motorista
         required: true     // Campo obligatorio para registros legales y contacto
     },
+     PlanillaTipo:{
+        type:String,
+        required:true    
+    },
     
     // Documentación específica para conductores
     circulationCard: {
@@ -61,7 +65,7 @@ const motoristaSchema = new Schema({
         required: true     // Campo obligatorio para identificación visual y seguridad
     },
     salario:{
-        type:String,
+        type:Number,
         required:true
     }
 }, {
