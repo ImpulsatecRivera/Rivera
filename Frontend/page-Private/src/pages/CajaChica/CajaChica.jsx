@@ -178,9 +178,6 @@ export default function CajaChicaModern() {
         throw new Error('Error al descargar el reporte');
       }
 
-      console.log('STATUS:', response.status);
-console.log('CONTENT-TYPE:', response.headers.get('content-type'));
-
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -207,130 +204,107 @@ console.log('CONTENT-TYPE:', response.headers.get('content-type'));
     }
   };
 
-  // 🆕 FUNCIÓN PARA GENERAR VALE - VERSIÓN CORREGIDA
-const generarVale = async (transaccion) => {
-  const { value: formValues } = await Swal.fire({
-    title: '📄 Generar Vale',
-    input: 'text',
-    inputLabel: 'Nombre del beneficiario',
-    inputPlaceholder: 'Ingresa el nombre completo',
-    showCancelButton: true,
-    confirmButtonText: 'Generar',
-    cancelButtonText: 'Cancelar',
-    confirmButtonColor: '#6366f1',
-    cancelButtonColor: '#64748b',
-    inputValidator: (value) => {
-      if (!value) {
-        return 'Debes ingresar el nombre del beneficiario';
+  // 🆕 FUNCIÓN PARA GENERAR VALE - VERSIÓN FINAL CORREGIDA
+  const generarVale = async (transaccion) => {
+    const { value: formValues } = await Swal.fire({
+      title: '📄 Generar Vale',
+      input: 'text',
+      inputLabel: 'Nombre del beneficiario',
+      inputPlaceholder: 'Ingresa el nombre completo',
+      showCancelButton: true,
+      confirmButtonText: 'Generar',
+      cancelButtonText: 'Cancelar',
+      confirmButtonColor: '#6366f1',
+      cancelButtonColor: '#64748b',
+      inputValidator: (value) => {
+        if (!value) {
+          return 'Debes ingresar el nombre del beneficiario';
+        }
       }
-    }
-  });
+    });
 
-  if (!formValues) return;
+    if (!formValues) return;
 
-  Swal.fire({
-    title: 'Generando vale...',
-    text: 'Por favor espera',
-    allowOutsideClick: false,
-    didOpen: () => Swal.showLoading()
-  });
+    Swal.fire({
+      title: 'Generando vale...',
+      text: 'Por favor espera',
+      allowOutsideClick: false,
+      didOpen: () => Swal.showLoading()
+    });
 
-  try {
-    const token = localStorage.getItem('authToken');
+    try {
+      const token = localStorage.getItem('authToken');
 
-    const response = await fetch(
-      `${config.api.API_URL}/cajaChica/${transaccion._id}/generar-vale`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          nombreBeneficiario: formValues,
-          cantidadLetras: 'PENDIENTE'
-        })
-      }
-    );
+      const response = await fetch(
+        `${config.api.API_URL}/cajaChica/${transaccion._id}/generar-vale`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            nombreBeneficiario: formValues,
+            cantidadLetras: 'PENDIENTE'
+          })
+        }
+      );
 
-    // ✅ VERIFICAR EL CONTENT-TYPE DE LA RESPUESTA
-    const contentType = response.headers.get('content-type');
-    console.log('📋 Content-Type recibido:', contentType);
-    console.log('📊 Status:', response.status);
-    
-    if (!response.ok) {
-      // Si hay error, intentar leer el mensaje
-      let errorMessage = 'Error al generar el vale';
+      const contentType = response.headers.get('content-type');
+      console.log('📋 Content-Type:', contentType);
+      console.log('📊 Status:', response.status);
       
-      if (contentType && contentType.includes('application/json')) {
-        const errorData = await response.json();
-        errorMessage = errorData.message || errorMessage;
-      } else {
-        // Si el backend devuelve HTML de error
-        const errorText = await response.text();
-        console.error('❌ Error HTML recibido:', errorText.substring(0, 300));
-        errorMessage = 'Error en el servidor. Verifica la consola para más detalles.';
+      if (!response.ok) {
+        let errorMessage = 'Error al generar el vale';
+        
+        if (contentType && contentType.includes('application/json')) {
+          const errorData = await response.json();
+          errorMessage = errorData.message || errorMessage;
+        } else {
+          const errorText = await response.text();
+          console.error('❌ Error:', errorText.substring(0, 300));
+          errorMessage = 'Error en el servidor. Verifica la consola.';
+        }
+        
+        throw new Error(errorMessage);
       }
-      
-      throw new Error(errorMessage);
-    }
 
-    // ✅ SI LA RESPUESTA ES EXITOSA
-    if (contentType && contentType.includes('application/json')) {
-      // Backend devuelve JSON con URL del vale
+      // ✅ TU BACKEND DEVUELVE: { message, vale, voucher }
       const data = await response.json();
-      console.log('✅ Datos recibidos:', data);
+      console.log('✅ Respuesta del backend:', data);
       
-      if (data.success && data.voucher) {
-        // Abrir el PDF desde Cloudinary
+      // Verificar que tenga el voucher (URL del PDF)
+      if (data.voucher) {
+        // Abrir el PDF del vale
         window.open(data.voucher, '_blank', 'noopener,noreferrer');
 
         Swal.fire({
           title: '¡Vale generado!',
-          text: 'El vale se ha generado correctamente',
+          html: `
+            <p><strong>Número de vale:</strong> ${data.vale || 'N/A'}</p>
+            <p class="text-sm text-gray-500 mt-2">${data.message}</p>
+          `,
           icon: 'success',
-          timer: 2500,
+          timer: 3000,
           showConfirmButton: false
         });
 
         // Recargar datos para actualizar la UI
         await cargarDatos();
       } else {
-        throw new Error(data.message || 'La respuesta del servidor no contiene el vale');
+        throw new Error('La respuesta no contiene la URL del vale');
       }
-    } else if (contentType && contentType.includes('application/pdf')) {
-      // Backend devuelve directamente el PDF
-      console.log('📄 PDF recibido directamente');
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      window.open(url, '_blank');
-      
+
+    } catch (error) {
+      console.error('💥 Error generando vale:', error);
       Swal.fire({
-        title: '¡Vale generado!',
-        text: 'El vale se ha abierto en una nueva pestaña',
-        icon: 'success',
-        timer: 2500,
-        showConfirmButton: false
+        title: 'Error',
+        text: error.message || 'No se pudo generar el vale',
+        icon: 'error',
+        confirmButtonText: 'OK'
       });
-
-      await cargarDatos();
-    } else {
-      // Content-type inesperado
-      const responseText = await response.text();
-      console.error('⚠️ Respuesta inesperada:', responseText.substring(0, 300));
-      throw new Error('Formato de respuesta inesperado del servidor');
     }
-
-  } catch (error) {
-    console.error('💥 Error completo generando vale:', error);
-    Swal.fire({
-      title: 'Error',
-      text: error.message || 'No se pudo generar el vale',
-      icon: 'error',
-      confirmButtonText: 'OK'
-    });
-  }
-};
+  };
 
   const guardarConfiguracion = async () => {
     const { value: codigoSeguridad } = await Swal.fire({
@@ -661,20 +635,19 @@ const generarVale = async (transaccion) => {
       </div>
     );
   }
-const abrirArchivo = (url) => {
-  if (!url || typeof url !== 'string') {
-    Swal.fire({
-      title: 'Archivo no disponible',
-      text: 'No existe un archivo válido para mostrar',
-      icon: 'warning'
-    });
-    return;
-  }
 
-  window.open(url, '_blank', 'noopener,noreferrer');
-};
+  const abrirArchivo = (url) => {
+    if (!url || typeof url !== 'string') {
+      Swal.fire({
+        title: 'Archivo no disponible',
+        text: 'No existe un archivo válido para mostrar',
+        icon: 'warning'
+      });
+      return;
+    }
 
-
+    window.open(url, '_blank', 'noopener,noreferrer');
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-4 md:p-8">
@@ -879,8 +852,7 @@ const abrirArchivo = (url) => {
                       <div className="flex items-center justify-center gap-2">
                         {tx.voucher ? (
                           <button
-                           onClick={() => abrirArchivo(tx.voucher)}
-
+                            onClick={() => abrirArchivo(tx.voucher)}
                             title="Ver comprobante"
                             className="p-2 rounded-lg bg-slate-100 hover:bg-indigo-100 text-indigo-600 transition-all hover:scale-110"
                           >
@@ -891,22 +863,21 @@ const abrirArchivo = (url) => {
                         )}
                         
                         {tx.type === 'expense' && (
-  <button
-    onClick={() => generarVale(tx)}
-    title={tx.vale ? "Vale generado - Regenerar" : "Generar vale"}
-    className={`p-2 rounded-lg transition-all hover:scale-110 relative ${
-      tx.vale
-        ? 'bg-green-100 hover:bg-green-200 text-green-700'
-        : 'bg-amber-100 hover:bg-amber-200 text-amber-700'
-    }`}
-  >
-    <FileText size={18} />
-    {tx.vale && (
-      <span className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-white"></span>
-    )}
-  </button>
-)}
-
+                          <button
+                            onClick={() => generarVale(tx)}
+                            title={tx.vale ? "Vale generado - Regenerar" : "Generar vale"}
+                            className={`p-2 rounded-lg transition-all hover:scale-110 relative ${
+                              tx.vale
+                                ? 'bg-green-100 hover:bg-green-200 text-green-700'
+                                : 'bg-amber-100 hover:bg-amber-200 text-amber-700'
+                            }`}
+                          >
+                            <FileText size={18} />
+                            {tx.vale && (
+                              <span className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-white"></span>
+                            )}
+                          </button>
+                        )}
                         
                         <button
                           onClick={() => descargarReporteIndividual(tx._id)}
@@ -1028,8 +999,6 @@ const abrirArchivo = (url) => {
         onClose={() => setShowReportesModal(false)}
         apiUrl={config.api.API_URL}
       />
-      
-     
     </div>
   );
 }
