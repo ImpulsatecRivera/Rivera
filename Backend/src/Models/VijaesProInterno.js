@@ -122,7 +122,7 @@ const viajesSchema = new Schema({
   // Estado del viaje
   estado: {
     type: String,
-    enum: ["PENDIENTE", "COMPLETADO", "CANCELADO"],
+    enum: ["PENDIENTE", "COMPLETADO", "CANCELADO","EXTRA"],
     default: "COMPLETADO"
   },
   

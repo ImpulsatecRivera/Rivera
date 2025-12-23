@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Plus, Save, X, DollarSign, User, Calendar, FileText, Download,
-  CheckCircle, Trash2, Edit2, Lock, Unlock, Search, Filter, ChevronDown
+  CheckCircle, Trash2, Edit2, Lock, Unlock, Search, Filter, ChevronDown,
+  Clock, AlertCircle
 } from 'lucide-react';
 import { config } from '../../config';
 import Swal from 'sweetalert2';
@@ -13,9 +14,11 @@ export default function PlanillaQuincenal() {
   const [motoristas, setMotoristas] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [showModalAgregar, setShowModalAgregar] = useState(false);
+  const [showModalEditar, setShowModalEditar] = useState(false);
   const [empleadoSeleccionado, setEmpleadoSeleccionado] = useState(null);
+  const [empleadoEditando, setEmpleadoEditando] = useState(null);
 
-  // Datos del formulario para nuevo empleado
+  // Datos del formulario para nuevo empleado o edición
   const [formEmpleado, setFormEmpleado] = useState({
     viaticos: 0,
     trabajoSabadoDomingo: 0,
@@ -23,6 +26,7 @@ export default function PlanillaQuincenal() {
     prestamos: 0,
     camisas: 0,
     otros: 0
+    // ❌ descuentosLey NO es necesario - se calcula automáticamente en el backend
   });
 
   // Información de la planilla - se calculará dinámicamente
@@ -71,14 +75,33 @@ export default function PlanillaQuincenal() {
       // Cargar empleados
       const resEmpleados = await fetch(`${config.api.API_URL}/empleados`);
       const dataEmpleados = await resEmpleados.json();
-      setEmpleados(dataEmpleados || []);
+      console.log('📥 Respuesta Empleados:', dataEmpleados);
+      
+      // Empleados vienen en: data.empleados (estructura anidada)
+      let empleadosArray = [];
+      if (dataEmpleados?.data?.empleados) {
+        empleadosArray = dataEmpleados.data.empleados;
+      } else if (Array.isArray(dataEmpleados)) {
+        empleadosArray = dataEmpleados;
+      }
+      
+      console.log('✅ Empleados extraídos:', empleadosArray.length, empleadosArray);
+      setEmpleados(empleadosArray);
 
       // Cargar motoristas
       const resMotoristas = await fetch(`${config.api.API_URL}/motoristas`);
       const dataMotoristas = await resMotoristas.json();
-      setMotoristas(dataMotoristas || []);
+      console.log('📥 Respuesta Motoristas:', dataMotoristas);
+      
+      // Motoristas vienen directamente como array
+      const motoristasArray = Array.isArray(dataMotoristas) ? dataMotoristas : [];
+      
+      console.log('✅ Motoristas extraídos:', motoristasArray.length, motoristasArray);
+      setMotoristas(motoristasArray);
     } catch (error) {
-      console.error('Error cargando personal:', error);
+      console.error('❌ Error cargando personal:', error);
+      setEmpleados([]);
+      setMotoristas([]);
     }
   };
 
@@ -122,8 +145,8 @@ export default function PlanillaQuincenal() {
           if (planillaData.success && planillaData.data) {
             const planillaExistente = planillaData.data;
 
-            // Si está disponible (borrador), retornarla
-            if (planillaExistente.estado !== 'cerrada' && planillaExistente.estado !== 'pagada') {
+            // Si está disponible (borrador o pendiente), retornarla
+            if (planillaExistente.estado === 'borrador' || planillaExistente.estado === 'pendiente') {
               return {
                 exito: true,
                 planilla: planillaExistente,
@@ -131,7 +154,7 @@ export default function PlanillaQuincenal() {
               };
             }
 
-            // Si está cerrada/pagada, calcular la siguiente
+            // Si está cerrada/pagada/aprobada, calcular la siguiente
             const siguiente = calcularProximaQuincena({ año, mes, quincena });
             año = siguiente.año;
             mes = siguiente.mes;
@@ -188,13 +211,15 @@ export default function PlanillaQuincenal() {
         if (planillaData.success && planillaData.data) {
           const planillaExistente = planillaData.data;
           
-          // ✅ VERIFICAR SI LA PLANILLA ESTÁ CERRADA O PAGADA
-          if (planillaExistente.estado === 'cerrada' || planillaExistente.estado === 'pagada') {
+          // VERIFICAR SI LA PLANILLA ESTÁ CERRADA, PAGADA O APROBADA
+          if (planillaExistente.estado === 'cerrada' || 
+              planillaExistente.estado === 'pagada' || 
+              planillaExistente.estado === 'aprobada') {
             // Mostrar modal SOLO UNA VEZ
             const result = await Swal.fire({
-              title: 'Planilla ya cerrada',
+              title: 'Planilla no disponible',
               html: `
-                <p>La planilla de <strong>${planillaExistente.descripcion}</strong> ya está <strong>${planillaExistente.estado}</strong>.</p>
+                <p>La planilla de <strong>${planillaExistente.descripcion}</strong> está <strong>${planillaExistente.estado}</strong>.</p>
                 <p>¿Deseas crear una nueva planilla?</p>
                 <p class="text-sm text-gray-500 mt-2">Se buscará automáticamente la próxima quincena disponible.</p>
               `,
@@ -203,7 +228,7 @@ export default function PlanillaQuincenal() {
               confirmButtonColor: '#4f46e5',
               cancelButtonColor: '#6b7280',
               confirmButtonText: 'Sí, crear nueva',
-              cancelButtonText: 'No, ver planilla cerrada'
+              cancelButtonText: 'No, ver planilla'
             });
 
             if (result.isConfirmed) {
@@ -265,7 +290,7 @@ export default function PlanillaQuincenal() {
               setPlanilla(planillaConEmpleados);
             }
           } else {
-            // Planilla está en borrador o activa, se puede editar
+            // Planilla está en borrador o pendiente, se puede editar
             const planillaConEmpleados = {
               ...planillaExistente,
               empleados: Array.isArray(planillaExistente.empleados) 
@@ -346,6 +371,7 @@ export default function PlanillaQuincenal() {
             empleadoId: empleadoSeleccionado._id,
             viaticos: parseFloat(formEmpleado.viaticos) || 0,
             trabajoSabadoDomingo: parseFloat(formEmpleado.trabajoSabadoDomingo) || 0,
+            // ❌ NO enviar descuentosLey - el backend los calcula automáticamente
             otrosDescuentos: {
               anticipos: parseFloat(formEmpleado.anticipos) || 0,
               prestamos: parseFloat(formEmpleado.prestamos) || 0,
@@ -385,6 +411,201 @@ export default function PlanillaQuincenal() {
     }
   };
 
+  const editarEmpleadoDePlanilla = async () => {
+    if (!empleadoEditando) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'Atención',
+        text: 'No hay empleado seleccionado para editar'
+      });
+      return;
+    }
+
+    if (!planilla || !planilla._id) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: 'No hay una planilla activa. Recarga la página.'
+      });
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        `${config.api.API_URL}/planillas/quincenal/${planilla._id}/empleado/${empleadoEditando._id}`,
+        {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            viaticos: parseFloat(formEmpleado.viaticos) || 0,
+            trabajoSabadoDomingo: parseFloat(formEmpleado.trabajoSabadoDomingo) || 0,
+            // ❌ NO enviar descuentosLey - el backend los calcula automáticamente
+            otrosDescuentos: {
+              anticipos: parseFloat(formEmpleado.anticipos) || 0,
+              prestamos: parseFloat(formEmpleado.prestamos) || 0,
+              camisas: parseFloat(formEmpleado.camisas) || 0,
+              otros: parseFloat(formEmpleado.otros) || 0
+            }
+          })
+        }
+      );
+
+      const data = await response.json();
+      if (data.success && data.data) {
+        const planillaActualizada = {
+          ...data.data,
+          empleados: Array.isArray(data.data.empleados) ? data.data.empleados : []
+        };
+        setPlanilla(planillaActualizada);
+        setShowModalEditar(false);
+        setEmpleadoEditando(null);
+        limpiarFormulario();
+        Swal.fire({
+          icon: 'success',
+          title: '¡Actualizado!',
+          text: 'Empleado actualizado correctamente',
+          timer: 2000,
+          showConfirmButton: false
+        });
+      } else {
+        throw new Error(data.message || 'Error al actualizar empleado');
+      }
+    } catch (error) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: error.message
+      });
+    }
+  };
+
+  const eliminarEmpleadoDePlanilla = async (empleadoId) => {
+    if (!planilla || !planilla._id) return;
+
+    const result = await Swal.fire({
+      title: '¿Estás seguro?',
+      text: 'Se eliminará este empleado de la planilla',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#ef4444',
+      cancelButtonColor: '#6b7280',
+      confirmButtonText: 'Sí, eliminar',
+      cancelButtonText: 'Cancelar'
+    });
+
+    if (!result.isConfirmed) return;
+
+    try {
+      const response = await fetch(
+        `${config.api.API_URL}/planillas/quincenal/${planilla._id}/empleado/${empleadoId}`,
+        {
+          method: 'DELETE'
+        }
+      );
+
+      const data = await response.json();
+      if (data.success && data.data) {
+        const planillaActualizada = {
+          ...data.data,
+          empleados: Array.isArray(data.data.empleados) ? data.data.empleados : []
+        };
+        setPlanilla(planillaActualizada);
+        Swal.fire({
+          icon: 'success',
+          title: '¡Eliminado!',
+          text: 'Empleado eliminado de la planilla',
+          timer: 2000,
+          showConfirmButton: false
+        });
+      } else {
+        throw new Error(data.message || 'Error al eliminar empleado');
+      }
+    } catch (error) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: error.message
+      });
+    }
+  };
+
+  const cambiarEstadoPlanilla = async (nuevoEstado) => {
+    if (!planilla || !planilla._id) return;
+
+    const mensajes = {
+      pendiente: {
+        title: '¿Marcar como Pendiente?',
+        text: 'La planilla pasará a estado pendiente de aprobación',
+        confirmText: 'Sí, marcar como pendiente'
+      },
+      aprobada: {
+        title: '¿Aprobar Planilla?',
+        text: 'Una vez aprobada, no se podrá editar',
+        confirmText: 'Sí, aprobar'
+      },
+      pagada: {
+        title: '¿Marcar como Pagada?',
+        text: 'Confirma que la planilla ha sido pagada',
+        confirmText: 'Sí, marcar como pagada'
+      },
+      cerrada: {
+        title: '¿Cerrar Planilla?',
+        text: 'Una vez cerrada, la planilla quedará bloqueada permanentemente. No se podrá eliminar.',
+        confirmText: 'Sí, cerrar planilla'
+      }
+    };
+
+    const mensaje = mensajes[nuevoEstado];
+    
+    const result = await Swal.fire({
+      title: mensaje.title,
+      text: mensaje.text,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#4f46e5',
+      cancelButtonColor: '#6b7280',
+      confirmButtonText: mensaje.confirmText,
+      cancelButtonText: 'Cancelar'
+    });
+
+    if (!result.isConfirmed) return;
+
+    try {
+      const response = await fetch(
+        `${config.api.API_URL}/planillas/quincenal/${planilla._id}/estado`,
+        {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ estado: nuevoEstado })
+        }
+      );
+
+      const data = await response.json();
+      if (data.success && data.data) {
+        const planillaActualizada = {
+          ...data.data,
+          empleados: Array.isArray(data.data.empleados) ? data.data.empleados : []
+        };
+        setPlanilla(planillaActualizada);
+        Swal.fire({
+          icon: 'success',
+          title: '¡Estado actualizado!',
+          text: `Planilla marcada como ${nuevoEstado}`,
+          timer: 2000,
+          showConfirmButton: false
+        });
+      } else {
+        throw new Error(data.message || 'Error al cambiar estado');
+      }
+    } catch (error) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: error.message
+      });
+    }
+  };
+
   const limpiarFormulario = () => {
     setFormEmpleado({
       viaticos: 0,
@@ -393,6 +614,7 @@ export default function PlanillaQuincenal() {
       prestamos: 0,
       camisas: 0,
       otros: 0
+      // ❌ descuentosLey NO es necesario
     });
     setEmpleadoSeleccionado(null);
   };
@@ -413,14 +635,70 @@ export default function PlanillaQuincenal() {
     }).format(cantidad || 0);
   };
 
-  const todoElPersonal = [
-    ...(Array.isArray(empleados) ? empleados.map(e => ({ ...e, tipo: 'Empleado' })) : []),
-    ...(Array.isArray(motoristas) ? motoristas.map(m => ({ ...m, tipo: 'Motorista' })) : [])
-  ];
+  const getEstadoBadge = (estado) => {
+    const badges = {
+      borrador: { bg: 'bg-gray-100', text: 'text-gray-700', icon: <Edit2 size={14} /> },
+      pendiente: { bg: 'bg-yellow-100', text: 'text-yellow-700', icon: <Clock size={14} /> },
+      aprobada: { bg: 'bg-blue-100', text: 'text-blue-700', icon: <CheckCircle size={14} /> },
+      pagada: { bg: 'bg-green-100', text: 'text-green-700', icon: <DollarSign size={14} /> },
+      cerrada: { bg: 'bg-red-100', text: 'text-red-700', icon: <Lock size={14} /> }
+    };
 
-  const personalFiltrado = todoElPersonal.filter(p =>
-    `${p.name || ''} ${p.lastName || ''}`.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+    const badge = badges[estado] || badges.borrador;
+    
+    return (
+      <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full ${badge.bg} ${badge.text} font-semibold text-sm`}>
+        {badge.icon}
+        {estado ? estado.charAt(0).toUpperCase() + estado.slice(1) : 'Borrador'}
+      </div>
+    );
+  };
+
+  const todoElPersonal = React.useMemo(() => {
+    const empleadosMapeados = Array.isArray(empleados) 
+      ? empleados.map(e => ({ ...e, tipo: 'Empleado' })) 
+      : [];
+    
+    const motoristasMapeados = Array.isArray(motoristas) 
+      ? motoristas.map(m => ({ ...m, tipo: 'Motorista' })) 
+      : [];
+    
+    const personal = [...empleadosMapeados, ...motoristasMapeados];
+    
+    console.log('Todo el personal combinado:', {
+      totalEmpleados: empleadosMapeados.length,
+      totalMotoristas: motoristasMapeados.length,
+      totalGeneral: personal.length,
+      personal: personal
+    });
+    
+    return personal;
+  }, [empleados, motoristas]);
+
+  const personalFiltrado = React.useMemo(() => {
+    if (!searchTerm) return [];
+    
+    const filtrado = todoElPersonal.filter(p => {
+      const nombreCompleto = `${p.name || ''} ${p.lastName || ''}`.toLowerCase();
+      const busqueda = searchTerm.toLowerCase();
+      return nombreCompleto.includes(busqueda);
+    });
+    
+    console.log('Personal filtrado:', {
+      searchTerm,
+      resultados: filtrado.length,
+      filtrado
+    });
+    
+    return filtrado;
+  }, [todoElPersonal, searchTerm]);
+
+  // Determinar permisos según estado
+  const puedeEditar = planilla?.estado === 'borrador' || planilla?.estado === 'pendiente';
+  const puedeEliminar = planilla?.estado === 'borrador' || planilla?.estado === 'pendiente';
+  const soloLectura = planilla?.estado === 'aprobada' || 
+                      planilla?.estado === 'pagada' || 
+                      planilla?.estado === 'cerrada';
 
   if (loading) {
     return (
@@ -454,28 +732,19 @@ export default function PlanillaQuincenal() {
                 </div>
                 <div className="flex items-center gap-2">
                   <FileText size={16} />
-                  <span>Estado: 
-                    <span className={`font-bold ml-1 ${
-                      planilla?.estado === 'pagada' ? 'text-green-600' :
-                      planilla?.estado === 'cerrada' ? 'text-red-600' :
-                      'text-yellow-600'
-                    }`}>
-                      {planilla?.estado ? 
-                        planilla.estado.charAt(0).toUpperCase() + planilla.estado.slice(1) : 
-                        'Borrador'
-                      }
-                    </span>
-                  </span>
+                  <span>Estado: </span>
+                  {getEstadoBadge(planilla?.estado)}
                 </div>
               </div>
             </div>
 
             <div className="flex items-center gap-3">
+              {/* Botón Agregar Empleado */}
               <button
                 onClick={() => setShowModalAgregar(true)}
-                disabled={planilla?.estado === 'cerrada' || planilla?.estado === 'pagada'}
+                disabled={!puedeEditar}
                 className={`flex items-center gap-2 px-5 py-2.5 rounded-lg font-semibold shadow-md hover:shadow-lg transition-all ${
-                  planilla?.estado === 'cerrada' || planilla?.estado === 'pagada'
+                  !puedeEditar
                     ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                     : 'bg-indigo-600 text-white hover:bg-indigo-700'
                 }`}
@@ -483,18 +752,50 @@ export default function PlanillaQuincenal() {
                 <Plus size={20} />
                 Agregar Empleado
               </button>
-              <button 
-                disabled={planilla?.estado === 'cerrada' || planilla?.estado === 'pagada'}
-                className={`flex items-center gap-2 px-5 py-2.5 rounded-lg font-semibold shadow-md hover:shadow-lg transition-all ${
-                  planilla?.estado === 'cerrada' || planilla?.estado === 'pagada'
-                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                    : 'bg-green-600 text-white hover:bg-green-700'
-                }`}
-              >
-                <Save size={20} />
-                Guardar
-              </button>
-              {(planilla?.estado === 'cerrada' || planilla?.estado === 'pagada') && (
+
+              {/* Botones de cambio de estado */}
+              {planilla?.estado === 'borrador' && (
+                <button
+                  onClick={() => cambiarEstadoPlanilla('pendiente')}
+                  className="flex items-center gap-2 px-5 py-2.5 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 font-semibold shadow-md hover:shadow-lg transition-all"
+                >
+                  <Clock size={20} />
+                  Marcar Pendiente
+                </button>
+              )}
+
+              {planilla?.estado === 'pendiente' && (
+                <button
+                  onClick={() => cambiarEstadoPlanilla('aprobada')}
+                  className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold shadow-md hover:shadow-lg transition-all"
+                >
+                  <CheckCircle size={20} />
+                  Aprobar Planilla
+                </button>
+              )}
+
+              {planilla?.estado === 'aprobada' && (
+                <button
+                  onClick={() => cambiarEstadoPlanilla('pagada')}
+                  className="flex items-center gap-2 px-5 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold shadow-md hover:shadow-lg transition-all"
+                >
+                  <DollarSign size={20} />
+                  Marcar como Pagada
+                </button>
+              )}
+
+              {planilla?.estado === 'pagada' && (
+                <button
+                  onClick={() => cambiarEstadoPlanilla('cerrada')}
+                  className="flex items-center gap-2 px-5 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 font-semibold shadow-md hover:shadow-lg transition-all"
+                >
+                  <Lock size={20} />
+                  Cerrar Planilla
+                </button>
+              )}
+
+              {/* Botón Nueva Planilla (solo cuando está cerrada, pagada o aprobada) */}
+              {soloLectura && (
                 <button
                   onClick={async () => {
                     setLoading(true);
@@ -535,7 +836,7 @@ export default function PlanillaQuincenal() {
                     
                     setLoading(false);
                   }}
-                  className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold shadow-md hover:shadow-lg transition-all"
+                  className="flex items-center gap-2 px-5 py-2.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-semibold shadow-md hover:shadow-lg transition-all"
                 >
                   <Plus size={20} />
                   Nueva Planilla
@@ -543,6 +844,20 @@ export default function PlanillaQuincenal() {
               )}
             </div>
           </div>
+
+          {/* Banner de solo lectura */}
+          {soloLectura && (
+            <div className="mt-4 flex items-center gap-3 p-4 bg-amber-50 border-l-4 border-amber-500 rounded-lg">
+              <AlertCircle className="text-amber-600" size={24} />
+              <div>
+                <p className="font-semibold text-amber-900">Planilla en modo solo lectura</p>
+                <p className="text-sm text-amber-700">
+                  Esta planilla está <strong>{planilla?.estado}</strong> y no se puede modificar.
+                  {planilla?.estado !== 'cerrada' && ' Puedes crear una nueva planilla usando el botón "Nueva Planilla".'}
+                </p>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Tabla tipo Excel */}
@@ -554,7 +869,9 @@ export default function PlanillaQuincenal() {
                 <FileText size={24} />
                 <div>
                   <h2 className="font-bold text-lg">Hoja de Cálculo - Planilla</h2>
-                  <p className="text-xs text-indigo-100">Formato: Quincenal | Período: Diciembre 1-15, 2025</p>
+                  <p className="text-xs text-indigo-100">
+                    Formato: Quincenal | Período: {getMesNombre(planilla?.mes || infoPlanilla.mes)} {planilla?.año || infoPlanilla.año}
+                  </p>
                 </div>
               </div>
               <div className="text-right">
@@ -585,7 +902,7 @@ export default function PlanillaQuincenal() {
                   <th className="px-4 py-3 text-right text-xs font-bold text-gray-700 uppercase border-r border-gray-300 w-24">Otros</th>
                   <th className="px-4 py-3 text-right text-xs font-bold text-red-700 uppercase border-r border-red-300 bg-red-50 w-32">Total Desc.</th>
                   <th className="px-4 py-3 text-right text-xs font-bold text-green-700 uppercase bg-green-50 w-36">A Pagar</th>
-                  <th className="px-4 py-3 text-center text-xs font-bold text-gray-700 uppercase w-24">Acciones</th>
+                  <th className="px-4 py-3 text-center text-xs font-bold text-gray-700 uppercase w-28">Acciones</th>
                 </tr>
               </thead>
 
@@ -605,12 +922,14 @@ export default function PlanillaQuincenal() {
                           <p className="text-gray-500 text-sm mb-4">
                             Comienza agregando empleados a la planilla quincenal
                           </p>
-                          <button
-                            onClick={() => setShowModalAgregar(true)}
-                            className="px-6 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium"
-                          >
-                            Agregar Primer Empleado
-                          </button>
+                          {puedeEditar && (
+                            <button
+                              onClick={() => setShowModalAgregar(true)}
+                              className="px-6 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium"
+                            >
+                              Agregar Primer Empleado
+                            </button>
+                          )}
                         </div>
                       </div>
                     </td>
@@ -667,13 +986,42 @@ export default function PlanillaQuincenal() {
                       <td className="px-4 py-3 text-sm text-right font-mono font-bold text-green-700 bg-green-50">
                         {formatearMoneda(emp.totalAPagar)}
                       </td>
-                      <td className="px-4 py-3 text-center">
-                        <button
-                          className="p-2 text-red-600 hover:bg-red-50 rounded transition-colors"
-                          title="Eliminar"
-                        >
-                          <Trash2 size={16} />
-                        </button>
+                      <td className="px-4 py-3 text-center border-l border-gray-200">
+                        <div className="flex items-center justify-center gap-2">
+                          {puedeEditar && (
+                            <button
+                              onClick={() => {
+                                setEmpleadoEditando(emp);
+                                setFormEmpleado({
+                                  viaticos: emp.viaticos || 0,
+                                  trabajoSabadoDomingo: emp.trabajoSabadoDomingo || 0,
+                                  anticipos: emp.otrosDescuentos?.anticipos || 0,
+                                  prestamos: emp.otrosDescuentos?.prestamos || 0,
+                                  camisas: emp.otrosDescuentos?.camisas || 0,
+                                  otros: emp.otrosDescuentos?.otros || 0
+                                  // ❌ NO cargar descuentosLey - son solo lectura
+                                });
+                                setShowModalEditar(true);
+                              }}
+                              className="p-2 text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                              title="Editar"
+                            >
+                              <Edit2 size={16} />
+                            </button>
+                          )}
+                          {puedeEliminar && (
+                            <button
+                              onClick={() => eliminarEmpleadoDePlanilla(emp._id)}
+                              className="p-2 text-red-600 hover:bg-red-50 rounded transition-colors"
+                              title="Eliminar"
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          )}
+                          {soloLectura && (
+                            <span className="text-xs text-gray-400">-</span>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))
@@ -770,25 +1118,45 @@ export default function PlanillaQuincenal() {
                   />
                 </div>
 
+                {/* Panel de Debug - REMOVER EN PRODUCCIÓN */}
+                <div className="mt-2 p-3 bg-gray-50 rounded-lg text-xs">
+                  <p className="font-semibold text-gray-700">📊 Debug Info:</p>
+                  <p className="text-gray-600">Empleados cargados: {empleados.length}</p>
+                  <p className="text-gray-600">Motoristas cargados: {motoristas.length}</p>
+                  <p className="text-gray-600">Total disponible: {todoElPersonal.length}</p>
+                  {searchTerm && (
+                    <p className="text-gray-600">Resultados búsqueda: {personalFiltrado.length}</p>
+                  )}
+                </div>
+
                 {searchTerm && (
                   <div className="mt-3 max-h-60 overflow-y-auto border-2 border-gray-200 rounded-xl">
-                    {personalFiltrado.map((persona) => (
-                      <button
-                        key={persona._id}
-                        onClick={() => {
-                          setEmpleadoSeleccionado(persona);
-                          setSearchTerm('');
-                        }}
-                        className="w-full px-4 py-3 text-left hover:bg-indigo-50 transition-colors border-b border-gray-100 last:border-0"
-                      >
-                        <p className="font-semibold text-gray-900">
-                          {persona.name} {persona.lastName}
+                    {personalFiltrado.length > 0 ? (
+                      personalFiltrado.map((persona) => (
+                        <button
+                          key={persona._id}
+                          onClick={() => {
+                            setEmpleadoSeleccionado(persona);
+                            setSearchTerm('');
+                          }}
+                          className="w-full px-4 py-3 text-left hover:bg-indigo-50 transition-colors border-b border-gray-100 last:border-0"
+                        >
+                          <p className="font-semibold text-gray-900">
+                            {persona.name} {persona.lastName}
+                          </p>
+                          <p className="text-sm text-gray-600">
+                            {persona.tipo} • Salario: {formatearMoneda(persona.salario || persona.salary || 0)}
+                          </p>
+                        </button>
+                      ))
+                    ) : (
+                      <div className="px-4 py-8 text-center">
+                        <p className="text-gray-500">No se encontraron resultados para "{searchTerm}"</p>
+                        <p className="text-xs text-gray-400 mt-1">
+                          Total disponible: {todoElPersonal.length} personas ({empleados.length} empleados, {motoristas.length} motoristas)
                         </p>
-                        <p className="text-sm text-gray-600">
-                          {persona.tipo} • Salario: {formatearMoneda(persona.salary || persona.salario)}
-                        </p>
-                      </button>
-                    ))}
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -798,14 +1166,34 @@ export default function PlanillaQuincenal() {
                       Seleccionado: {empleadoSeleccionado.name} {empleadoSeleccionado.lastName}
                     </p>
                     <p className="text-sm text-indigo-700">
-                      {empleadoSeleccionado.tipo} • Salario Quincenal: {formatearMoneda((empleadoSeleccionado.salary || empleadoSeleccionado.salario) / 2)}
+                      {empleadoSeleccionado.tipo} • Salario Quincenal: {formatearMoneda((empleadoSeleccionado.salario || empleadoSeleccionado.salary || 0) / 2)}
                     </p>
                   </div>
                 )}
               </div>
 
               {/* Formulario de valores adicionales */}
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-3 gap-4">
+                {/* Nota informativa */}
+                <div className="col-span-3 p-4 bg-blue-50 border-l-4 border-blue-500 rounded-lg">
+                  <div className="flex items-start gap-3">
+                    <AlertCircle className="text-blue-600 flex-shrink-0 mt-0.5" size={20} />
+                    <div>
+                      <p className="text-sm font-semibold text-blue-900">Cálculo Automático</p>
+                      <p className="text-xs text-blue-700 mt-1">
+                        Los descuentos de ley (ISSS 3%, AFP 7.25%, Renta según tabla) se calculan automáticamente según el salario del empleado.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* INGRESOS ADICIONALES */}
+                <div className="col-span-3">
+                  <h3 className="text-lg font-bold text-gray-900 mb-3 pb-2 border-b-2 border-green-500">
+                    ✅ Ingresos Adicionales
+                  </h3>
+                </div>
+
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
                     Viáticos
@@ -817,7 +1205,7 @@ export default function PlanillaQuincenal() {
                       step="0.01"
                       value={formEmpleado.viaticos}
                       onChange={(e) => setFormEmpleado({ ...formEmpleado, viaticos: e.target.value })}
-                      className="w-full pl-10 pr-4 py-2.5 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:outline-none"
+                      className="w-full pl-10 pr-4 py-2.5 border-2 border-gray-200 rounded-xl focus:border-green-500 focus:outline-none"
                     />
                   </div>
                 </div>
@@ -833,9 +1221,16 @@ export default function PlanillaQuincenal() {
                       step="0.01"
                       value={formEmpleado.trabajoSabadoDomingo}
                       onChange={(e) => setFormEmpleado({ ...formEmpleado, trabajoSabadoDomingo: e.target.value })}
-                      className="w-full pl-10 pr-4 py-2.5 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:outline-none"
+                      className="w-full pl-10 pr-4 py-2.5 border-2 border-gray-200 rounded-xl focus:border-green-500 focus:outline-none"
                     />
                   </div>
+                </div>
+
+                {/* OTROS DESCUENTOS */}
+                <div className="col-span-3 mt-4">
+                  <h3 className="text-lg font-bold text-gray-900 mb-3 pb-2 border-b-2 border-orange-500">
+                    📋 Otros Descuentos
+                  </h3>
                 </div>
 
                 <div>
@@ -849,7 +1244,7 @@ export default function PlanillaQuincenal() {
                       step="0.01"
                       value={formEmpleado.anticipos}
                       onChange={(e) => setFormEmpleado({ ...formEmpleado, anticipos: e.target.value })}
-                      className="w-full pl-10 pr-4 py-2.5 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:outline-none"
+                      className="w-full pl-10 pr-4 py-2.5 border-2 border-gray-200 rounded-xl focus:border-orange-500 focus:outline-none"
                     />
                   </div>
                 </div>
@@ -865,7 +1260,7 @@ export default function PlanillaQuincenal() {
                       step="0.01"
                       value={formEmpleado.prestamos}
                       onChange={(e) => setFormEmpleado({ ...formEmpleado, prestamos: e.target.value })}
-                      className="w-full pl-10 pr-4 py-2.5 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:outline-none"
+                      className="w-full pl-10 pr-4 py-2.5 border-2 border-gray-200 rounded-xl focus:border-orange-500 focus:outline-none"
                     />
                   </div>
                 </div>
@@ -881,7 +1276,7 @@ export default function PlanillaQuincenal() {
                       step="0.01"
                       value={formEmpleado.camisas}
                       onChange={(e) => setFormEmpleado({ ...formEmpleado, camisas: e.target.value })}
-                      className="w-full pl-10 pr-4 py-2.5 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:outline-none"
+                      className="w-full pl-10 pr-4 py-2.5 border-2 border-gray-200 rounded-xl focus:border-orange-500 focus:outline-none"
                     />
                   </div>
                 </div>
@@ -897,7 +1292,7 @@ export default function PlanillaQuincenal() {
                       step="0.01"
                       value={formEmpleado.otros}
                       onChange={(e) => setFormEmpleado({ ...formEmpleado, otros: e.target.value })}
-                      className="w-full pl-10 pr-4 py-2.5 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:outline-none"
+                      className="w-full pl-10 pr-4 py-2.5 border-2 border-gray-200 rounded-xl focus:border-orange-500 focus:outline-none"
                     />
                   </div>
                 </div>
@@ -920,6 +1315,178 @@ export default function PlanillaQuincenal() {
                 className="px-6 py-2.5 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Agregar a Planilla
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Editar Empleado */}
+      {showModalEditar && empleadoEditando && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50">
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900">Editar Empleado</h2>
+                <p className="text-sm text-gray-600 mt-1">
+                  {empleadoEditando.nombreCompleto} - {empleadoEditando.tipoEmpleado}
+                </p>
+              </div>
+              <button
+                onClick={() => {
+                  setShowModalEditar(false);
+                  setEmpleadoEditando(null);
+                  limpiarFormulario();
+                }}
+                className="p-2 hover:bg-white rounded-lg transition-colors"
+              >
+                <X size={24} />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-6">
+              <div className="grid grid-cols-3 gap-4">
+                {/* Nota informativa */}
+                <div className="col-span-3 p-4 bg-blue-50 border-l-4 border-blue-500 rounded-lg">
+                  <div className="flex items-start gap-3">
+                    <AlertCircle className="text-blue-600 flex-shrink-0 mt-0.5" size={20} />
+                    <div>
+                      <p className="text-sm font-semibold text-blue-900">Cálculo Automático</p>
+                      <p className="text-xs text-blue-700 mt-1">
+                        Los descuentos de ley (ISSS, AFP, Renta) se recalculan automáticamente al guardar los cambios.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* INGRESOS ADICIONALES */}
+                <div className="col-span-3">
+                  <h3 className="text-lg font-bold text-gray-900 mb-3 pb-2 border-b-2 border-green-500">
+                    ✅ Ingresos Adicionales
+                  </h3>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Viáticos
+                  </label>
+                  <div className="relative">
+                    <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={formEmpleado.viaticos}
+                      onChange={(e) => setFormEmpleado({ ...formEmpleado, viaticos: e.target.value })}
+                      className="w-full pl-10 pr-4 py-2.5 border-2 border-gray-200 rounded-xl focus:border-green-500 focus:outline-none"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Trabajo Sábado/Domingo
+                  </label>
+                  <div className="relative">
+                    <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={formEmpleado.trabajoSabadoDomingo}
+                      onChange={(e) => setFormEmpleado({ ...formEmpleado, trabajoSabadoDomingo: e.target.value })}
+                      className="w-full pl-10 pr-4 py-2.5 border-2 border-gray-200 rounded-xl focus:border-green-500 focus:outline-none"
+                    />
+                  </div>
+                </div>
+
+                {/* OTROS DESCUENTOS */}
+                <div className="col-span-3 mt-4">
+                  <h3 className="text-lg font-bold text-gray-900 mb-3 pb-2 border-b-2 border-orange-500">
+                    📋 Otros Descuentos
+                  </h3>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Anticipos
+                  </label>
+                  <div className="relative">
+                    <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={formEmpleado.anticipos}
+                      onChange={(e) => setFormEmpleado({ ...formEmpleado, anticipos: e.target.value })}
+                      className="w-full pl-10 pr-4 py-2.5 border-2 border-gray-200 rounded-xl focus:border-orange-500 focus:outline-none"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Préstamos
+                  </label>
+                  <div className="relative">
+                    <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={formEmpleado.prestamos}
+                      onChange={(e) => setFormEmpleado({ ...formEmpleado, prestamos: e.target.value })}
+                      className="w-full pl-10 pr-4 py-2.5 border-2 border-gray-200 rounded-xl focus:border-orange-500 focus:outline-none"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Camisas
+                  </label>
+                  <div className="relative">
+                    <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={formEmpleado.camisas}
+                      onChange={(e) => setFormEmpleado({ ...formEmpleado, camisas: e.target.value })}
+                      className="w-full pl-10 pr-4 py-2.5 border-2 border-gray-200 rounded-xl focus:border-orange-500 focus:outline-none"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Otros Descuentos
+                  </label>
+                  <div className="relative">
+                    <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={formEmpleado.otros}
+                      onChange={(e) => setFormEmpleado({ ...formEmpleado, otros: e.target.value })}
+                      className="w-full pl-10 pr-4 py-2.5 border-2 border-gray-200 rounded-xl focus:border-orange-500 focus:outline-none"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-3 p-6 bg-gray-50 border-t border-gray-200">
+              <button
+                onClick={() => {
+                  setShowModalEditar(false);
+                  setEmpleadoEditando(null);
+                  limpiarFormulario();
+                }}
+                className="px-6 py-2.5 bg-white border-2 border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 font-medium"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={editarEmpleadoDePlanilla}
+                className="px-6 py-2.5 bg-blue-600 text-white rounded-xl hover:bg-blue-700 font-semibold"
+              >
+                Guardar Cambios
               </button>
             </div>
           </div>
