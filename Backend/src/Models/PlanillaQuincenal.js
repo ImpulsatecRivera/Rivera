@@ -48,7 +48,7 @@ const descuentosLeySchema = new Schema({
 }, { _id: false });
 
 /**
- * Sub-esquema para otros descuentos
+ * Sub-esquema para otros descuentos (SIN CAMISAS)
  */
 const otrosDescuentosSchema = new Schema({
     anticipos: {
@@ -168,11 +168,11 @@ const planillaQuincenalSchema = new Schema({
             type: Number,
             default: 0
         },
-        totalTrabajoExtra: {
+        totalTrabajoSabadoDomingo: {  // ✅ CORREGIDO (era totalTrabajoExtra)
             type: Number,
             default: 0
         },
-        totalSalarioMasViaticos: {
+        totalSalariosMasViaticos: {   // ✅ CORREGIDO - PLURAL (era singular)
             type: Number,
             default: 0
         },
@@ -198,7 +198,7 @@ const planillaQuincenalSchema = new Schema({
             type: Number,
             default: 0
         },
-        totalOtrosDescuentos: {
+        totalOtros: {                 // ✅ CORREGIDO (era totalOtrosDescuentos)
             type: Number,
             default: 0
         },
