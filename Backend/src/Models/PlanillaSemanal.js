@@ -33,7 +33,7 @@ const planillaSemanalSchema = new Schema({
     estado: {
         type: String,
         enum: ['pendiente', 'aprobada', 'pagada', 'cerrada'],
-        default: 'borrador'
+        default: 'pendiente'
     },
 
     // Empleados en esta planilla
