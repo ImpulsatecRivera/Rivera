@@ -1,109 +1,91 @@
-/**
- * Esquema de Mongoose para Planilla Semanal
- * Registra los pagos diarios (base + viáticos) para empleados y motoristas
- */
-
 import { Schema, model } from "mongoose";
 
-/**
- * Sub-esquema para registro diario de cada empleado
- */
-const registroDiarioSchema = new Schema({
-    fecha: {
-        type: Date,
-        required: true
-    },
-    base: {
-        type: Number,
-        default: 0
-    },
-    viaticos: {
-        type: Number,
-        default: 0
-    }
-}, { _id: false });
-
-/**
- * Sub-esquema para cada empleado/motorista en la planilla
- */
-const empleadoPlanillaSchema = new Schema({
-    // Referencia al empleado o motorista
-    empleadoId: {
-        type: Schema.Types.ObjectId,
-        refPath: 'empleados.tipoEmpleado', // Puede ser 'Empleado' o 'Motorista'
-        required: true
-    },
-    tipoEmpleado: {
-        type: String,
-        enum: ['Empleado', 'Motorista'],
-        required: true
-    },
-    // Nombre completo (desnormalizado para reportes)
-    nombreCompleto: {
-        type: String,
-        required: true
-    },
-    // Registros diarios de la semana
-    registrosDiarios: [registroDiarioSchema],
-    // Totales calculados
-    totalBase: {
-        type: Number,
-        default: 0
-    },
-    totalViaticos: {
-        type: Number,
-        default: 0
-    },
-    anticipos: {
-        type: Number,
-        default: 0
-    },
-    descuentos: {
-        type: Number,
-        default: 0
-    },
-    totalAPagar: {
-        type: Number,
-        default: 0
-    }
-}, { _id: false });
-
-/**
- * Esquema principal de Planilla Semanal
- */
 const planillaSemanalSchema = new Schema({
-    // Identificación de la semana
-    numeroSemana: {
-        type: Number,
-        required: true
-    },
-    año: {
-        type: Number,
-        required: true
-    },
-    mes: {
-        type: Number,
-        required: true,
-        min: 1,
-        max: 12
-    },
-    // Rango de fechas de la semana
+    // Información del período
     fechaInicio: {
         type: Date,
-        required: true
+        required: true,
+        validate: {
+            validator: function (v) {
+                return v.getDay() === 1; // Debe ser lunes
+            },
+            message: 'La fecha de inicio debe ser un lunes'
+        }
     },
     fechaFin: {
         type: Date,
-        required: true
+        required: true,
+        validate: {
+            validator: function (v) {
+                return v.getDay() === 6; // Debe ser sábado
+            },
+            message: 'La fecha de fin debe ser un sábado'
+        }
     },
-    // Descripción (ej: "Del 17 al 22 de noviembre 2025")
-    descripcion: {
-        type: String
+    diasHabiles: {
+        type: Number,
+        required: true,
+        min: 20,
+        max: 31
     },
-    // Lista de empleados en esta planilla
-    empleados: [empleadoPlanillaSchema],
-    // Totales generales
-    totales: {
+
+    // Estado de la planilla
+    estado: {
+        type: String,
+        enum: ['pendiente', 'aprobada', 'pagada', 'cerrada'],
+        default: 'borrador'
+    },
+
+    // Empleados en esta planilla
+    empleados: [{
+        // Referencia al empleado (puede ser Empleado o Motorista)
+        empleadoId: {
+            type: Schema.Types.ObjectId,
+            required: true
+        },
+        tipo: {
+            type: String,
+            enum: ['empleado', 'motorista'],
+            required: true
+        },
+
+        // Datos del empleado
+        nombreCompleto: {
+            type: String,
+            required: true
+        },
+        salarioSemanal: {
+            type: Number,
+            required: true
+        },
+
+        // Registro diario (lunes a sábado)
+        dias: [{
+            dia: {
+                type: String,
+                enum: ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado'],
+                required: true
+            },
+            fecha: {
+                type: Date,
+                required: true  // AGREGAR ESTO
+            },
+            base: {
+                type: Number,
+                default: 0
+            },
+            viaticos: {
+                type: Number,
+                default: 0
+            },
+            // CAMPO PARA MARCAR FALTA INJUSTIFICADA
+            faltaInjustificada: {
+                type: Boolean,
+                default: false
+            }
+        }],
+
+        // Totales calculados
         totalBase: {
             type: Number,
             default: 0
@@ -112,36 +94,25 @@ const planillaSemanalSchema = new Schema({
             type: Number,
             default: 0
         },
-        totalAnticipos: {
+
+        anticipos: {
             type: Number,
             default: 0
         },
-        totalDescuentos: {
+        // DESCUENTOS (incluye penalización por faltas)
+        descuentos: {
             type: Number,
             default: 0
         },
-        totalGeneral: {
+
+        totalPagar: {
             type: Number,
             default: 0
         }
-    },
-    // Estado de la planilla
-    estado: {
-        type: String,
-        enum: ['borrador', 'pendiente', 'pagada', 'cerrada'],
-        default: 'borrador'
-    },
-    fechaAprobacion: {
-        type: Date
-    }
+    }]
 }, {
     timestamps: true,
-    collection: "PlanillaSemanal"
+    collection: 'PlanillaSemanal'
 });
-
-// Índices para búsquedas eficientes
-planillaSemanalSchema.index({ año: 1, mes: 1, numeroSemana: 1 });
-planillaSemanalSchema.index({ fechaInicio: 1, fechaFin: 1 });
-planillaSemanalSchema.index({ 'empleados.empleadoId': 1 });
 
 export default model("PlanillaSemanal", planillaSemanalSchema);
