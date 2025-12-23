@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import {
   Plus, Save, X, DollarSign, User, Calendar, FileText, Download,
   CheckCircle, Trash2, Edit2, Lock, Unlock, Search, Filter, ChevronDown,
@@ -6,8 +7,11 @@ import {
 } from 'lucide-react';
 import { config } from '../../config';
 import Swal from 'sweetalert2';
-
+ 
 export default function PlanillaQuincenal() {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  
   const [planilla, setPlanilla] = useState(null);
   const [loading, setLoading] = useState(false);
   const [empleados, setEmpleados] = useState([]);
@@ -18,7 +22,6 @@ export default function PlanillaQuincenal() {
   const [empleadoSeleccionado, setEmpleadoSeleccionado] = useState(null);
   const [empleadoEditando, setEmpleadoEditando] = useState(null);
 
-  // Datos del formulario para nuevo empleado o edición
   const [formEmpleado, setFormEmpleado] = useState({
     viaticos: 0,
     trabajoSabadoDomingo: 0,
@@ -27,17 +30,14 @@ export default function PlanillaQuincenal() {
     otros: 0
   });
 
-  // Información de la planilla - se calculará dinámicamente
   const [infoPlanilla, setInfoPlanilla] = useState({
     año: 2025,
     mes: 12,
     quincena: 1
   });
 
-  // Función para calcular la próxima quincena disponible
   const calcularProximaQuincena = (planillaActual) => {
     if (!planillaActual) {
-      // Si no hay planilla, usar fecha actual
       const hoy = new Date();
       return {
         año: hoy.getFullYear(),
@@ -48,12 +48,10 @@ export default function PlanillaQuincenal() {
 
     let { año, mes, quincena } = planillaActual;
 
-    // Si es primera quincena, siguiente es segunda quincena del mismo mes
     if (quincena === 1) {
       return { año, mes, quincena: 2 };
     }
 
-    // Si es segunda quincena, siguiente es primera quincena del próximo mes
     mes++;
     if (mes > 12) {
       mes = 1;
@@ -65,17 +63,21 @@ export default function PlanillaQuincenal() {
 
   useEffect(() => {
     cargarEmpleadosYMotoristas();
-    crearPlanillaInicial();
-  }, []);
+    
+    // 🔥 Si hay ID en la URL, cargar esa planilla específica
+    if (id) {
+      cargarPlanillaExistente(id);
+    } else {
+      // 🔥 Si NO hay ID, cargar la ÚLTIMA planilla (sin importar estado)
+      cargarUltimaPlanilla();
+    }
+  }, [id]);
 
   const cargarEmpleadosYMotoristas = async () => {
     try {
-      // Cargar empleados
       const resEmpleados = await fetch(`${config.api.API_URL}/empleados`);
       const dataEmpleados = await resEmpleados.json();
-      console.log('📥 Respuesta Empleados:', dataEmpleados);
       
-      // Empleados vienen en: data.empleados (estructura anidada)
       let empleadosArray = [];
       if (dataEmpleados?.data?.empleados) {
         empleadosArray = dataEmpleados.data.empleados;
@@ -86,12 +88,8 @@ export default function PlanillaQuincenal() {
       console.log('✅ Empleados extraídos:', empleadosArray.length, empleadosArray);
       setEmpleados(empleadosArray);
 
-      // Cargar motoristas
       const resMotoristas = await fetch(`${config.api.API_URL}/motoristas`);
       const dataMotoristas = await resMotoristas.json();
-      console.log('📥 Respuesta Motoristas:', dataMotoristas);
-      
-      // Motoristas vienen directamente como array
       const motoristasArray = Array.isArray(dataMotoristas) ? dataMotoristas : [];
       
       console.log('✅ Motoristas extraídos:', motoristasArray.length, motoristasArray);
@@ -103,85 +101,101 @@ export default function PlanillaQuincenal() {
     }
   };
 
-  const buscarPrimeraQuincenaDisponible = async () => {
-    let { año, mes, quincena } = infoPlanilla;
-    let intentos = 0;
-    const maxIntentos = 24; // Buscar hasta 24 quincenas adelante (1 año)
-
-    while (intentos < maxIntentos) {
-      try {
-        // Intentar crear planilla
-        const response = await fetch(`${config.api.API_URL}/planillas/quincenal`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            año,
-            mes,
-            quincena,
-            empleados: []
-          })
+  // 🔥 FUNCIÓN: Cargar planilla específica por ID
+  const cargarPlanillaExistente = async (planillaId) => {
+    setLoading(true);
+    try {
+      const response = await fetch(
+        `${config.api.API_URL}/planillas/quincenal/${planillaId}`
+      );
+      const data = await response.json();
+      
+      if (data.success && data.data) {
+        const planillaConEmpleados = {
+          ...data.data,
+          empleados: Array.isArray(data.data.empleados) ? data.data.empleados : []
+        };
+        setPlanilla(planillaConEmpleados);
+        
+        setInfoPlanilla({
+          año: data.data.año,
+          mes: data.data.mes,
+          quincena: data.data.quincena
         });
-
-        const data = await response.json();
-
-        // Si se creó exitosamente, retornar
-        if (data.success && data.data) {
-          return {
-            exito: true,
-            planilla: data.data,
-            mensaje: `Planilla creada: ${data.data.descripcion}`
-          };
-        }
-
-        // Si ya existe, verificar su estado
-        if (response.status === 400 && data.data?.planillaId) {
-          const planillaResponse = await fetch(
-            `${config.api.API_URL}/planillas/quincenal/${data.data.planillaId}`
-          );
-          const planillaData = await planillaResponse.json();
-
-          if (planillaData.success && planillaData.data) {
-            const planillaExistente = planillaData.data;
-
-            // Si está disponible (borrador o pendiente), retornarla
-            if (planillaExistente.estado === 'borrador' || planillaExistente.estado === 'pendiente') {
-              return {
-                exito: true,
-                planilla: planillaExistente,
-                mensaje: `Planilla encontrada: ${planillaExistente.descripcion}`
-              };
-            }
-
-            // Si está cerrada/pagada/aprobada, calcular la siguiente
-            const siguiente = calcularProximaQuincena({ año, mes, quincena });
-            año = siguiente.año;
-            mes = siguiente.mes;
-            quincena = siguiente.quincena;
-          }
-        } else {
-          // Error inesperado, calcular siguiente
-          const siguiente = calcularProximaQuincena({ año, mes, quincena });
-          año = siguiente.año;
-          mes = siguiente.mes;
-          quincena = siguiente.quincena;
-        }
-
-        intentos++;
-      } catch (error) {
-        console.error('Error buscando quincena disponible:', error);
-        intentos++;
+        
+        console.log('✅ Planilla cargada por ID:', planillaConEmpleados);
+      } else {
+        throw new Error('Planilla no encontrada');
       }
+    } catch (error) {
+      console.error('Error cargando planilla:', error);
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: 'No se pudo cargar la planilla',
+        confirmButtonText: 'Volver'
+      }).then(() => {
+        navigate('/planillas');
+      });
+    } finally {
+      setLoading(false);
     }
-
-    // Si llegamos aquí, no encontramos ninguna disponible
-    return {
-      exito: false,
-      mensaje: 'No se encontró ninguna quincena disponible'
-    };
   };
 
-  const crearPlanillaInicial = async () => {
+  // 🔥 NUEVA FUNCIÓN: Cargar la última planilla creada
+  const cargarUltimaPlanilla = async () => {
     setLoading(true);
+    try {
+      const response = await fetch(`${config.api.API_URL}/planillas/quincenal`);
+      const data = await response.json();
+      
+      console.log('📥 Respuesta planillas:', data);
+      
+      if (data.success && Array.isArray(data.data) && data.data.length > 0) {
+        // Ordenar por año, mes, quincena (más reciente primero)
+        const planillasOrdenadas = [...data.data].sort((a, b) => {
+          if (a.año !== b.año) return b.año - a.año;
+          if (a.mes !== b.mes) return b.mes - a.mes;
+          return b.quincena - a.quincena;
+        });
+        
+        const ultimaPlanilla = planillasOrdenadas[0];
+        
+        console.log('📋 Cargando última planilla:', ultimaPlanilla);
+        
+        const planillaConEmpleados = {
+          ...ultimaPlanilla,
+          empleados: Array.isArray(ultimaPlanilla.empleados) 
+            ? ultimaPlanilla.empleados 
+            : []
+        };
+        
+        setPlanilla(planillaConEmpleados);
+        
+        setInfoPlanilla({
+          año: ultimaPlanilla.año,
+          mes: ultimaPlanilla.mes,
+          quincena: ultimaPlanilla.quincena
+        });
+      } else {
+        // Si no hay ninguna planilla, crear una nueva
+        console.log('⚠️ No hay planillas, creando nueva...');
+        await crearNuevaPlanilla();
+      }
+    } catch (error) {
+      console.error('Error cargando última planilla:', error);
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: 'No se pudo cargar la planilla'
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 🔥 FUNCIÓN PARA CREAR NUEVA PLANILLA
+  const crearNuevaPlanilla = async () => {
     try {
       const { año, mes, quincena } = infoPlanilla;
 
@@ -197,109 +211,8 @@ export default function PlanillaQuincenal() {
       });
 
       const data = await response.json();
-      
-      // Si la planilla ya existe (error 400)
-      if (response.status === 400 && data.data?.planillaId) {
-        // Buscar la planilla existente
-        const planillaResponse = await fetch(
-          `${config.api.API_URL}/planillas/quincenal/${data.data.planillaId}`
-        );
-        const planillaData = await planillaResponse.json();
-        
-        if (planillaData.success && planillaData.data) {
-          const planillaExistente = planillaData.data;
-          
-          // VERIFICAR SI LA PLANILLA ESTÁ CERRADA, PAGADA O APROBADA
-          if (planillaExistente.estado === 'cerrada' || 
-              planillaExistente.estado === 'pagada' || 
-              planillaExistente.estado === 'aprobada') {
-            // Mostrar modal SOLO UNA VEZ
-            const result = await Swal.fire({
-              title: 'Planilla no disponible',
-              html: `
-                <p>La planilla de <strong>${planillaExistente.descripcion}</strong> está <strong>${planillaExistente.estado}</strong>.</p>
-                <p>¿Deseas crear una nueva planilla?</p>
-                <p class="text-sm text-gray-500 mt-2">Se buscará automáticamente la próxima quincena disponible.</p>
-              `,
-              icon: 'info',
-              showCancelButton: true,
-              confirmButtonColor: '#4f46e5',
-              cancelButtonColor: '#6b7280',
-              confirmButtonText: 'Sí, crear nueva',
-              cancelButtonText: 'No, ver planilla'
-            });
 
-            if (result.isConfirmed) {
-              setLoading(true);
-              
-              // Calcular próxima quincena como punto de partida
-              const proximaQuincena = calcularProximaQuincena(planillaExistente);
-              setInfoPlanilla(proximaQuincena);
-              
-              // Buscar automáticamente la primera disponible
-              const resultado = await buscarPrimeraQuincenaDisponible();
-              
-              if (resultado.exito) {
-                const planillaConEmpleados = {
-                  ...resultado.planilla,
-                  empleados: Array.isArray(resultado.planilla.empleados) 
-                    ? resultado.planilla.empleados 
-                    : []
-                };
-                setPlanilla(planillaConEmpleados);
-                
-                // Actualizar infoPlanilla con la planilla encontrada
-                setInfoPlanilla({
-                  año: resultado.planilla.año,
-                  mes: resultado.planilla.mes,
-                  quincena: resultado.planilla.quincena
-                });
-                
-                Swal.fire({
-                  icon: 'success',
-                  title: '¡Planilla creada!',
-                  text: resultado.mensaje,
-                  timer: 2500,
-                  showConfirmButton: false
-                });
-              } else {
-                Swal.fire({
-                  icon: 'error',
-                  title: 'Error',
-                  text: resultado.mensaje
-                });
-                // Mostrar la planilla cerrada
-                const planillaConEmpleados = {
-                  ...planillaExistente,
-                  empleados: Array.isArray(planillaExistente.empleados) 
-                    ? planillaExistente.empleados 
-                    : []
-                };
-                setPlanilla(planillaConEmpleados);
-              }
-            } else {
-              // Mostrar la planilla cerrada (solo lectura)
-              const planillaConEmpleados = {
-                ...planillaExistente,
-                empleados: Array.isArray(planillaExistente.empleados) 
-                  ? planillaExistente.empleados 
-                  : []
-              };
-              setPlanilla(planillaConEmpleados);
-            }
-          } else {
-            // Planilla está en borrador o pendiente, se puede editar
-            const planillaConEmpleados = {
-              ...planillaExistente,
-              empleados: Array.isArray(planillaExistente.empleados) 
-                ? planillaExistente.empleados 
-                : []
-            };
-            setPlanilla(planillaConEmpleados);
-          }
-        }
-      } else if (data.success && data.data) {
-        // Planilla creada exitosamente
+      if (data.success && data.data) {
         const planillaData = {
           ...data.data,
           empleados: Array.isArray(data.data.empleados) ? data.data.empleados : []
@@ -313,31 +226,80 @@ export default function PlanillaQuincenal() {
           timer: 2000,
           showConfirmButton: false
         });
-      } else {
-        // Crear planilla vacía localmente
-        setPlanilla({
-          _id: null,
-          año,
-          mes,
-          quincena,
-          empleados: [],
-          totales: {}
-        });
       }
     } catch (error) {
       console.error('Error creando planilla:', error);
-      const { año, mes, quincena } = infoPlanilla;
-      setPlanilla({
-        _id: null,
-        año,
-        mes,
-        quincena,
-        empleados: [],
-        totales: {}
-      });
-    } finally {
-      setLoading(false);
     }
+  };
+
+  const buscarPrimeraQuincenaDisponible = async () => {
+    let { año, mes, quincena } = infoPlanilla;
+    let intentos = 0;
+    const maxIntentos = 24;
+
+    while (intentos < maxIntentos) {
+      try {
+        const response = await fetch(`${config.api.API_URL}/planillas/quincenal`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            año,
+            mes,
+            quincena,
+            empleados: []
+          })
+        });
+
+        const data = await response.json();
+
+        if (data.success && data.data) {
+          return {
+            exito: true,
+            planilla: data.data,
+            mensaje: `Planilla creada: ${data.data.descripcion}`
+          };
+        }
+
+        if (response.status === 400 && data.data?.planillaId) {
+          const planillaResponse = await fetch(
+            `${config.api.API_URL}/planillas/quincenal/${data.data.planillaId}`
+          );
+          const planillaData = await planillaResponse.json();
+
+          if (planillaData.success && planillaData.data) {
+            const planillaExistente = planillaData.data;
+
+            if (planillaExistente.estado === 'pendiente') {
+              return {
+                exito: true,
+                planilla: planillaExistente,
+                mensaje: `Planilla encontrada: ${planillaExistente.descripcion}`
+              };
+            }
+
+            const siguiente = calcularProximaQuincena({ año, mes, quincena });
+            año = siguiente.año;
+            mes = siguiente.mes;
+            quincena = siguiente.quincena;
+          }
+        } else {
+          const siguiente = calcularProximaQuincena({ año, mes, quincena });
+          año = siguiente.año;
+          mes = siguiente.mes;
+          quincena = siguiente.quincena;
+        }
+
+        intentos++;
+      } catch (error) {
+        console.error('Error buscando quincena disponible:', error);
+        intentos++;
+      }
+    }
+
+    return {
+      exito: false,
+      mensaje: 'No se encontró ninguna quincena disponible'
+    };
   };
 
   const agregarEmpleadoAPlanilla = async () => {
@@ -380,24 +342,15 @@ export default function PlanillaQuincenal() {
 
       const data = await response.json();
       
-      // 🐛 DEBUG: Ver respuesta completa del servidor
       console.log('📥 Respuesta del servidor:', data);
       
       if (data.success && data.data) {
-        // Asegurar que empleados sea un array
         const planillaActualizada = {
           ...data.data,
           empleados: Array.isArray(data.data.empleados) ? data.data.empleados : []
         };
         
-        // 🐛 DEBUG: Ver totales recibidos
-        // En agregarEmpleadoAPlanilla y editarEmpleadoDePlanilla
-console.log('📊 TOTALES RECIBIDOS:', planillaActualizada.totales);
-console.log('📋 TODOS LOS CAMPOS:', Object.keys(planillaActualizada.totales));  // ← AGREGAR ESTA LÍNEA
-console.log('   ├─ Total Trabajo Sáb/Dom:', planillaActualizada.totales?.totalTrabajoSabadoDomingo);
-console.log('   ├─ Total Otros:', planillaActualizada.totales?.totalOtros);
-console.log('   └─ Total Viáticos:', planillaActualizada.totales?.totalViaticos);
-
+        console.log('📊 TOTALES RECIBIDOS:', planillaActualizada.totales);
         
         setPlanilla(planillaActualizada);
         setShowModalAgregar(false);
@@ -462,7 +415,6 @@ console.log('   └─ Total Viáticos:', planillaActualizada.totales?.totalViat
 
       const data = await response.json();
       
-      // 🐛 DEBUG: Ver respuesta completa del servidor
       console.log('📥 Respuesta del servidor (EDITAR):', data);
       
       if (data.success && data.data) {
@@ -471,13 +423,7 @@ console.log('   └─ Total Viáticos:', planillaActualizada.totales?.totalViat
           empleados: Array.isArray(data.data.empleados) ? data.data.empleados : []
         };
         
-        // 🐛 DEBUG: Ver totales recibidos
-        // En agregarEmpleadoAPlanilla y editarEmpleadoDePlanilla
-console.log('📊 TOTALES RECIBIDOS:', planillaActualizada.totales);
-console.log('📋 TODOS LOS CAMPOS:', Object.keys(planillaActualizada.totales));  // ← AGREGAR ESTA LÍNEA
-console.log('   ├─ Total Trabajo Sáb/Dom:', planillaActualizada.totales?.totalTrabajoSabadoDomingo);
-console.log('   ├─ Total Otros:', planillaActualizada.totales?.totalOtros);
-console.log('   └─ Total Viáticos:', planillaActualizada.totales?.totalViaticos);
+        console.log('📊 TOTALES RECIBIDOS:', planillaActualizada.totales);
 
         setPlanilla(planillaActualizada);
         setShowModalEditar(false);
@@ -558,11 +504,6 @@ console.log('   └─ Total Viáticos:', planillaActualizada.totales?.totalViat
     if (!planilla || !planilla._id) return;
 
     const mensajes = {
-      pendiente: {
-        title: '¿Marcar como Pendiente?',
-        text: 'La planilla pasará a estado pendiente de aprobación',
-        confirmText: 'Sí, marcar como pendiente'
-      },
       aprobada: {
         title: '¿Aprobar Planilla?',
         text: 'Una vez aprobada, no se podrá editar',
@@ -660,19 +601,18 @@ console.log('   └─ Total Viáticos:', planillaActualizada.totales?.totalViat
 
   const getEstadoBadge = (estado) => {
     const badges = {
-      borrador: { bg: 'bg-gray-100', text: 'text-gray-700', icon: <Edit2 size={14} /> },
-      pendiente: { bg: 'bg-yellow-100', text: 'text-yellow-700', icon: <Clock size={14} /> },
-      aprobada: { bg: 'bg-blue-100', text: 'text-blue-700', icon: <CheckCircle size={14} /> },
-      pagada: { bg: 'bg-green-100', text: 'text-green-700', icon: <DollarSign size={14} /> },
-      cerrada: { bg: 'bg-red-100', text: 'text-red-700', icon: <Lock size={14} /> }
+      pendiente: { bg: 'bg-amber-100', text: 'text-amber-800', icon: <Clock size={14} />, border: 'border-amber-300' },
+      aprobada: { bg: 'bg-blue-100', text: 'text-blue-800', icon: <CheckCircle size={14} />, border: 'border-blue-300' },
+      pagada: { bg: 'bg-emerald-100', text: 'text-emerald-800', icon: <DollarSign size={14} />, border: 'border-emerald-300' },
+      cerrada: { bg: 'bg-red-100', text: 'text-red-800', icon: <Lock size={14} />, border: 'border-red-300' }
     };
 
-    const badge = badges[estado] || badges.borrador;
+    const badge = badges[estado] || badges.pendiente;
     
     return (
-      <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full ${badge.bg} ${badge.text} font-semibold text-sm`}>
+      <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border-2 ${badge.border} ${badge.bg} ${badge.text} font-bold text-sm shadow-sm`}>
         {badge.icon}
-        {estado ? estado.charAt(0).toUpperCase() + estado.slice(1) : 'Borrador'}
+        {estado ? estado.charAt(0).toUpperCase() + estado.slice(1) : 'Pendiente'}
       </div>
     );
   };
@@ -716,46 +656,53 @@ console.log('   └─ Total Viáticos:', planillaActualizada.totales?.totalViat
     return filtrado;
   }, [todoElPersonal, searchTerm]);
 
-  // Determinar permisos según estado
-  const puedeEditar = planilla?.estado === 'borrador' || planilla?.estado === 'pendiente';
-  const puedeEliminar = planilla?.estado === 'borrador' || planilla?.estado === 'pendiente';
+  const puedeEditar = planilla?.estado === 'pendiente';
+  const puedeEliminar = planilla?.estado === 'pendiente';
   const soloLectura = planilla?.estado === 'aprobada' || 
                       planilla?.estado === 'pagada' || 
                       planilla?.estado === 'cerrada';
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
         <div className="text-center">
-          <div className="w-16 h-16 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-600 font-semibold text-lg">Cargando planilla...</p>
+          <div className="w-20 h-20 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-700 font-bold text-xl">Cargando planilla...</p>
+          <p className="text-gray-500 text-sm mt-2">Por favor espera un momento</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-[1600px] mx-auto">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-indigo-50 p-6">
+      <div className="max-w-[1800px] mx-auto">
         
-        {/* Header */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+        {/* Header Mejorado */}
+        <div className="bg-white rounded-2xl shadow-lg border-2 border-gray-100 p-8 mb-8">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">
-                Planilla Quincenal
-              </h1>
-              <div className="flex items-center gap-4 text-sm text-gray-600">
-                <div className="flex items-center gap-2">
-                  <Calendar size={16} />
-                  <span className="font-semibold">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="p-3 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl shadow-lg">
+                  <FileText size={32} className="text-white" />
+                </div>
+                <div>
+                  <h1 className="text-4xl font-black text-gray-900 tracking-tight">
+                    Planilla Quincenal
+                  </h1>
+                  <p className="text-sm text-gray-500 mt-1">Sistema de Gestión de Nómina</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-6 text-sm">
+                <div className="flex items-center gap-2 px-4 py-2 bg-gray-50 rounded-lg border border-gray-200">
+                  <Calendar size={18} className="text-indigo-600" />
+                  <span className="font-bold text-gray-700">
                     {planilla?.descripcion || 
                      `${infoPlanilla.quincena === 1 ? 'Primera' : 'Segunda'} Quincena - ${getMesNombre(infoPlanilla.mes)} ${infoPlanilla.año}`}
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <FileText size={16} />
-                  <span>Estado: </span>
+                  <span className="text-gray-600 font-semibold">Estado:</span>
                   {getEstadoBadge(planilla?.estado)}
                 </div>
               </div>
@@ -765,34 +712,24 @@ console.log('   └─ Total Viáticos:', planillaActualizada.totales?.totalViat
               {/* Botón Agregar Empleado */}
               <button
                 onClick={() => setShowModalAgregar(true)}
-                disabled={!puedeEditar}
-                className={`flex items-center gap-2 px-5 py-2.5 rounded-lg font-semibold shadow-md hover:shadow-lg transition-all ${
-                  !puedeEditar
-                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                    : 'bg-indigo-600 text-white hover:bg-indigo-700'
+                disabled={planilla?.estado !== 'pendiente'}
+                className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold shadow-lg transition-all ${
+                  planilla?.estado !== 'pendiente'
+                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed opacity-50'
+                    : 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:from-indigo-700 hover:to-purple-700 hover:shadow-xl transform hover:scale-105'
                 }`}
               >
-                <Plus size={20} />
+                <Plus size={22} />
                 Agregar Empleado
               </button>
 
-              {/* Botones de cambio de estado */}
-              {planilla?.estado === 'borrador' && (
-                <button
-                  onClick={() => cambiarEstadoPlanilla('pendiente')}
-                  className="flex items-center gap-2 px-5 py-2.5 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 font-semibold shadow-md hover:shadow-lg transition-all"
-                >
-                  <Clock size={20} />
-                  Marcar Pendiente
-                </button>
-              )}
-
+              {/* Botón Aprobar */}
               {planilla?.estado === 'pendiente' && (
                 <button
                   onClick={() => cambiarEstadoPlanilla('aprobada')}
-                  className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold shadow-md hover:shadow-lg transition-all"
+                  className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl hover:from-blue-700 hover:to-blue-800 font-bold shadow-lg hover:shadow-xl transition-all transform hover:scale-105"
                 >
-                  <CheckCircle size={20} />
+                  <CheckCircle size={22} />
                   Aprobar Planilla
                 </button>
               )}
@@ -800,9 +737,9 @@ console.log('   └─ Total Viáticos:', planillaActualizada.totales?.totalViat
               {planilla?.estado === 'aprobada' && (
                 <button
                   onClick={() => cambiarEstadoPlanilla('pagada')}
-                  className="flex items-center gap-2 px-5 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold shadow-md hover:shadow-lg transition-all"
+                  className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-emerald-600 to-green-600 text-white rounded-xl hover:from-emerald-700 hover:to-green-700 font-bold shadow-lg hover:shadow-xl transition-all transform hover:scale-105"
                 >
-                  <DollarSign size={20} />
+                  <DollarSign size={22} />
                   Marcar como Pagada
                 </button>
               )}
@@ -810,15 +747,15 @@ console.log('   └─ Total Viáticos:', planillaActualizada.totales?.totalViat
               {planilla?.estado === 'pagada' && (
                 <button
                   onClick={() => cambiarEstadoPlanilla('cerrada')}
-                  className="flex items-center gap-2 px-5 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 font-semibold shadow-md hover:shadow-lg transition-all"
+                  className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-red-600 to-red-700 text-white rounded-xl hover:from-red-700 hover:to-red-800 font-bold shadow-lg hover:shadow-xl transition-all transform hover:scale-105"
                 >
-                  <Lock size={20} />
+                  <Lock size={22} />
                   Cerrar Planilla
                 </button>
               )}
 
-              {/* Botón Nueva Planilla (solo cuando está cerrada, pagada o aprobada) */}
-              {soloLectura && (
+              {/* Botón Nueva Planilla */}
+              {planilla?.estado !== 'pendiente' && (
                 <button
                   onClick={async () => {
                     setLoading(true);
@@ -859,9 +796,9 @@ console.log('   └─ Total Viáticos:', planillaActualizada.totales?.totalViat
                     
                     setLoading(false);
                   }}
-                  className="flex items-center gap-2 px-5 py-2.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-semibold shadow-md hover:shadow-lg transition-all"
+                  className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl hover:from-purple-700 hover:to-pink-700 font-bold shadow-lg hover:shadow-xl transition-all transform hover:scale-105"
                 >
-                  <Plus size={20} />
+                  <Plus size={22} />
                   Nueva Planilla
                 </button>
               )}
@@ -870,12 +807,14 @@ console.log('   └─ Total Viáticos:', planillaActualizada.totales?.totalViat
 
           {/* Banner de solo lectura */}
           {soloLectura && (
-            <div className="mt-4 flex items-center gap-3 p-4 bg-amber-50 border-l-4 border-amber-500 rounded-lg">
-              <AlertCircle className="text-amber-600" size={24} />
+            <div className="mt-6 flex items-center gap-4 p-5 bg-gradient-to-r from-amber-50 to-orange-50 border-l-4 border-amber-500 rounded-xl shadow-sm">
+              <div className="p-3 bg-amber-100 rounded-lg">
+                <AlertCircle className="text-amber-700" size={28} />
+              </div>
               <div>
-                <p className="font-semibold text-amber-900">Planilla en modo solo lectura</p>
-                <p className="text-sm text-amber-700">
-                  Esta planilla está <strong>{planilla?.estado}</strong> y no se puede modificar.
+                <p className="font-bold text-amber-900 text-lg">Planilla en modo solo lectura</p>
+                <p className="text-sm text-amber-800 mt-1">
+                  Esta planilla está <strong className="uppercase">{planilla?.estado}</strong> y no se puede modificar.
                   {planilla?.estado !== 'cerrada' && ' Puedes crear una nueva planilla usando el botón "Nueva Planilla".'}
                 </p>
               </div>
@@ -883,71 +822,71 @@ console.log('   └─ Total Viáticos:', planillaActualizada.totales?.totalViat
           )}
         </div>
 
-        {/* Tabla tipo Excel */}
-        <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
-          {/* Excel Header */}
-          <div className="bg-gradient-to-r from-indigo-600 to-indigo-700 px-6 py-4 border-b border-indigo-700">
+        {/* Tabla Mejorada */}
+        <div className="bg-white rounded-2xl shadow-xl border-2 border-gray-100 overflow-hidden">
+          {/* Header de la tabla */}
+          <div className="bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-700 px-8 py-6 border-b-4 border-indigo-800">
             <div className="flex items-center justify-between text-white">
-              <div className="flex items-center gap-3">
-                <FileText size={24} />
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-white/20 backdrop-blur-sm rounded-xl">
+                  <FileText size={28} />
+                </div>
                 <div>
-                  <h2 className="font-bold text-lg">Hoja de Cálculo - Planilla</h2>
-                  <p className="text-xs text-indigo-100">
+                  <h2 className="font-black text-2xl tracking-tight">Registro de Empleados</h2>
+                  <p className="text-xs text-indigo-100 mt-1 font-medium">
                     Formato: Quincenal | Período: {getMesNombre(planilla?.mes || infoPlanilla.mes)} {planilla?.año || infoPlanilla.año}
                   </p>
                 </div>
               </div>
-              <div className="text-right">
-                <p className="text-xs text-indigo-100">Total Empleados</p>
-                <p className="text-2xl font-bold">{planilla?.empleados?.length || 0}</p>
+              <div className="text-right bg-white/20 backdrop-blur-sm px-6 py-3 rounded-xl">
+                <p className="text-xs text-indigo-100 font-semibold">Total Empleados</p>
+                <p className="text-3xl font-black">{planilla?.empleados?.length || 0}</p>
               </div>
             </div>
           </div>
 
-          {/* Tabla Excel Style */}
+          {/* Tabla */}
           <div className="overflow-x-auto">
             <table className="w-full">
-              {/* Header de columnas estilo Excel */}
               <thead>
-                <tr className="bg-gray-100 border-b-2 border-gray-300">
-                  <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase border-r border-gray-300 w-8">#</th>
-                  <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase border-r border-gray-300 min-w-[200px]">Nombre Completo</th>
-                  <th className="px-4 py-3 text-right text-xs font-bold text-gray-700 uppercase border-r border-gray-300 w-32">Salario Quincenal</th>
-                  <th className="px-4 py-3 text-right text-xs font-bold text-gray-700 uppercase border-r border-gray-300 w-28">Viáticos</th>
-                  <th className="px-4 py-3 text-right text-xs font-bold text-gray-700 uppercase border-r border-gray-300 w-28">Sáb/Dom</th>
-                  <th className="px-4 py-3 text-right text-xs font-bold text-indigo-700 uppercase border-r border-indigo-300 bg-indigo-50 w-32">Total Salario</th>
-                  <th className="px-4 py-3 text-right text-xs font-bold text-gray-700 uppercase border-r border-gray-300 w-24">ISSS</th>
-                  <th className="px-4 py-3 text-right text-xs font-bold text-gray-700 uppercase border-r border-gray-300 w-24">AFP</th>
-                  <th className="px-4 py-3 text-right text-xs font-bold text-gray-700 uppercase border-r border-gray-300 w-24">Renta</th>
-                  <th className="px-4 py-3 text-right text-xs font-bold text-gray-700 uppercase border-r border-gray-300 w-28">Anticipos</th>
-                  <th className="px-4 py-3 text-right text-xs font-bold text-gray-700 uppercase border-r border-gray-300 w-28">Préstamos</th>
-                  <th className="px-4 py-3 text-right text-xs font-bold text-gray-700 uppercase border-r border-gray-300 w-24">Otros</th>
-                  <th className="px-4 py-3 text-right text-xs font-bold text-red-700 uppercase border-r border-red-300 bg-red-50 w-32">Total Desc.</th>
-                  <th className="px-4 py-3 text-right text-xs font-bold text-green-700 uppercase bg-green-50 w-36">A Pagar</th>
-                  <th className="px-4 py-3 text-center text-xs font-bold text-gray-700 uppercase w-28">Acciones</th>
+                <tr className="bg-gradient-to-r from-gray-100 to-gray-200 border-b-4 border-gray-300">
+                  <th className="px-5 py-4 text-left text-xs font-black text-gray-800 uppercase tracking-wider border-r-2 border-gray-300 w-12 bg-gray-200">#</th>
+                  <th className="px-5 py-4 text-left text-xs font-black text-gray-800 uppercase tracking-wider border-r-2 border-gray-300 min-w-[220px]">Nombre Completo</th>
+                  <th className="px-5 py-4 text-right text-xs font-black text-gray-800 uppercase tracking-wider border-r-2 border-gray-300 w-36">Salario Quincenal</th>
+                  <th className="px-5 py-4 text-right text-xs font-black text-gray-800 uppercase tracking-wider border-r-2 border-gray-300 w-32">Viáticos</th>
+                  <th className="px-5 py-4 text-right text-xs font-black text-gray-800 uppercase tracking-wider border-r-2 border-gray-300 w-32">Sáb/Dom</th>
+                  <th className="px-5 py-4 text-right text-xs font-black text-indigo-800 uppercase tracking-wider border-r-2 border-indigo-300 bg-indigo-100 w-36">Total Salario</th>
+                  <th className="px-5 py-4 text-right text-xs font-black text-gray-800 uppercase tracking-wider border-r-2 border-gray-300 w-28">ISSS</th>
+                  <th className="px-5 py-4 text-right text-xs font-black text-gray-800 uppercase tracking-wider border-r-2 border-gray-300 w-28">AFP</th>
+                  <th className="px-5 py-4 text-right text-xs font-black text-gray-800 uppercase tracking-wider border-r-2 border-gray-300 w-28">Renta</th>
+                  <th className="px-5 py-4 text-right text-xs font-black text-gray-800 uppercase tracking-wider border-r-2 border-gray-300 w-32">Anticipos</th>
+                  <th className="px-5 py-4 text-right text-xs font-black text-gray-800 uppercase tracking-wider border-r-2 border-gray-300 w-32">Préstamos</th>
+                  <th className="px-5 py-4 text-right text-xs font-black text-gray-800 uppercase tracking-wider border-r-2 border-gray-300 w-28">Otros</th>
+                  <th className="px-5 py-4 text-right text-xs font-black text-red-800 uppercase tracking-wider border-r-2 border-red-300 bg-red-100 w-36">Total Desc.</th>
+                  <th className="px-5 py-4 text-right text-xs font-black text-emerald-800 uppercase tracking-wider bg-emerald-100 w-40">A Pagar</th>
+                  <th className="px-5 py-4 text-center text-xs font-black text-gray-800 uppercase tracking-wider w-32">Acciones</th>
                 </tr>
               </thead>
 
-              {/* Body con datos */}
-              <tbody>
+              <tbody className="divide-y-2 divide-gray-200">
                 {!planilla || !Array.isArray(planilla.empleados) || planilla.empleados.length === 0 ? (
                   <tr>
-                    <td colSpan="16" className="px-6 py-16 text-center">
-                      <div className="flex flex-col items-center gap-4">
-                        <div className="p-6 bg-gray-100 rounded-full">
-                          <User className="text-gray-400" size={48} />
+                    <td colSpan="15" className="px-6 py-20 text-center">
+                      <div className="flex flex-col items-center gap-6">
+                        <div className="p-8 bg-gradient-to-br from-gray-100 to-gray-200 rounded-full shadow-lg">
+                          <User className="text-gray-400" size={64} />
                         </div>
                         <div>
-                          <p className="text-gray-600 font-semibold text-lg mb-2">
+                          <p className="text-gray-700 font-black text-2xl mb-2">
                             No hay empleados en esta planilla
                           </p>
-                          <p className="text-gray-500 text-sm mb-4">
+                          <p className="text-gray-500 text-base mb-6">
                             Comienza agregando empleados a la planilla quincenal
                           </p>
                           {puedeEditar && (
                             <button
                               onClick={() => setShowModalAgregar(true)}
-                              className="px-6 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium"
+                              className="px-8 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl hover:from-indigo-700 hover:to-purple-700 font-bold shadow-lg transform hover:scale-105 transition-all"
                             >
                               Agregar Primer Empleado
                             </button>
@@ -960,60 +899,58 @@ console.log('   └─ Total Viáticos:', planillaActualizada.totales?.totalViat
                   planilla.empleados.map((emp, index) => (
                     <tr
                       key={emp.empleadoId || index}
-                      className="border-b border-gray-200 hover:bg-blue-50 transition-colors"
+                      className="border-b-2 border-gray-100 hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 transition-all duration-200"
                     >
-                      <td className="px-4 py-3 text-sm font-semibold text-gray-700 border-r border-gray-200">
+                      <td className="px-5 py-4 text-sm font-black text-gray-700 border-r-2 border-gray-200 bg-gray-50">
                         {index + 1}
                       </td>
-                      <td className="px-4 py-3 text-sm font-medium text-gray-900 border-r border-gray-200">
+                      <td className="px-5 py-4 text-sm font-bold text-gray-900 border-r-2 border-gray-200">
                         {emp.nombreCompleto}
-                        <span className="ml-2 text-xs text-gray-500">({emp.tipoEmpleado})</span>
+                        <span className="ml-2 text-xs font-semibold px-2 py-1 bg-indigo-100 text-indigo-700 rounded-md border border-indigo-200">
+                          {emp.tipoEmpleado}
+                        </span>
                       </td>
-                      <td className="px-4 py-3 text-sm text-right font-mono text-gray-900 border-r border-gray-200">
+                      <td className="px-5 py-4 text-sm text-right font-mono font-bold text-gray-900 border-r-2 border-gray-200 bg-gray-50">
                         {formatearMoneda(emp.salarioQuincenal)}
                       </td>
-                      <td className="px-4 py-3 text-sm text-right font-mono text-gray-700 border-r border-gray-200">
+                      <td className="px-5 py-4 text-sm text-right font-mono font-semibold text-gray-700 border-r-2 border-gray-200">
                         {formatearMoneda(emp.viaticos)}
                       </td>
-                      <td className="px-4 py-3 text-sm text-right font-mono text-gray-700 border-r border-gray-200">
+                      <td className="px-5 py-4 text-sm text-right font-mono font-semibold text-gray-700 border-r-2 border-gray-200">
                         {formatearMoneda(emp.trabajoSabadoDomingo)}
                       </td>
-                      <td className="px-4 py-3 text-sm text-right font-mono font-bold text-indigo-700 border-r border-indigo-200 bg-indigo-50">
+                      <td className="px-5 py-4 text-sm text-right font-mono font-black text-indigo-900 border-r-2 border-indigo-300 bg-indigo-50">
                         {formatearMoneda(emp.totalSalarioMasViaticos)}
                       </td>
-                      <td className="px-4 py-3 text-sm text-right font-mono text-red-600 border-r border-gray-200">
+                      <td className="px-5 py-4 text-sm text-right font-mono font-semibold text-red-600 border-r-2 border-gray-200">
                         {formatearMoneda(emp.descuentosLey?.isss?.monto)}
                       </td>
-                      <td className="px-4 py-3 text-sm text-right font-mono text-red-600 border-r border-gray-200">
+                      <td className="px-5 py-4 text-sm text-right font-mono font-semibold text-red-600 border-r-2 border-gray-200">
                         {formatearMoneda(emp.descuentosLey?.afp?.monto)}
                       </td>
-                      <td className="px-4 py-3 text-sm text-right font-mono text-red-600 border-r border-gray-200">
+                      <td className="px-5 py-4 text-sm text-right font-mono font-semibold text-red-600 border-r-2 border-gray-200">
                         {formatearMoneda(emp.descuentosLey?.renta?.monto)}
                       </td>
-                      <td className="px-4 py-3 text-sm text-right font-mono text-orange-600 border-r border-gray-200">
+                      <td className="px-5 py-4 text-sm text-right font-mono font-semibold text-orange-600 border-r-2 border-gray-200">
                         {formatearMoneda(emp.otrosDescuentos?.anticipos)}
                       </td>
-                      <td className="px-4 py-3 text-sm text-right font-mono text-orange-600 border-r border-gray-200">
+                      <td className="px-5 py-4 text-sm text-right font-mono font-semibold text-orange-600 border-r-2 border-gray-200">
                         {formatearMoneda(emp.otrosDescuentos?.prestamos)}
                       </td>
-                      <td className="px-4 py-3 text-sm text-right font-mono text-orange-600 border-r border-gray-200">
-                        {formatearMoneda(emp.otrosDescuentos?.camisas)}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-right font-mono text-orange-600 border-r border-gray-200">
+                      <td className="px-5 py-4 text-sm text-right font-mono font-semibold text-orange-600 border-r-2 border-gray-200">
                         {formatearMoneda(emp.otrosDescuentos?.otros)}
                       </td>
-                      <td className="px-4 py-3 text-sm text-right font-mono font-bold text-red-700 border-r border-red-200 bg-red-50">
+                      <td className="px-5 py-4 text-sm text-right font-mono font-black text-red-900 border-r-2 border-red-300 bg-red-50">
                         {formatearMoneda(emp.totalDescuentos)}
                       </td>
-                      <td className="px-4 py-3 text-sm text-right font-mono font-bold text-green-700 bg-green-50">
+                      <td className="px-5 py-4 text-sm text-right font-mono font-black text-lg text-emerald-900 bg-emerald-50">
                         {formatearMoneda(emp.totalAPagar)}
                       </td>
-                      <td className="px-4 py-3 text-center border-l border-gray-200">
+                      <td className="px-5 py-4 text-center border-l-2 border-gray-200">
                         <div className="flex items-center justify-center gap-2">
                           {puedeEditar && (
                             <button
                               onClick={() => {
-                                // ✅ CORREGIDO: Agregar _id al objeto
                                 setEmpleadoEditando({
                                   ...emp,
                                   _id: emp.empleadoId
@@ -1023,28 +960,27 @@ console.log('   └─ Total Viáticos:', planillaActualizada.totales?.totalViat
                                   trabajoSabadoDomingo: emp.trabajoSabadoDomingo || 0,
                                   anticipos: emp.otrosDescuentos?.anticipos || 0,
                                   prestamos: emp.otrosDescuentos?.prestamos || 0,
-                                  camisas: emp.otrosDescuentos?.camisas || 0,
                                   otros: emp.otrosDescuentos?.otros || 0
                                 });
                                 setShowModalEditar(true);
                               }}
-                              className="p-2 text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                              className="p-2.5 text-blue-600 hover:bg-blue-100 rounded-lg transition-all border-2 border-transparent hover:border-blue-300"
                               title="Editar"
                             >
-                              <Edit2 size={16} />
+                              <Edit2 size={18} />
                             </button>
                           )}
                           {puedeEliminar && (
                             <button
                               onClick={() => eliminarEmpleadoDePlanilla(emp.empleadoId)}
-                              className="p-2 text-red-600 hover:bg-red-50 rounded transition-colors"
+                              className="p-2.5 text-red-600 hover:bg-red-100 rounded-lg transition-all border-2 border-transparent hover:border-red-300"
                               title="Eliminar"
                             >
-                              <Trash2 size={16} />
+                              <Trash2 size={18} />
                             </button>
                           )}
                           {soloLectura && (
-                            <span className="text-xs text-gray-400">-</span>
+                            <span className="text-sm text-gray-400 font-semibold">-</span>
                           )}
                         </div>
                       </td>
@@ -1055,45 +991,48 @@ console.log('   └─ Total Viáticos:', planillaActualizada.totales?.totalViat
 
               {/* Footer con totales */}
               {planilla && Array.isArray(planilla.empleados) && planilla.empleados.length > 0 && planilla.totales && (
-                <tfoot className="bg-gray-800 text-white font-bold">
+                <tfoot className="bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 text-white font-black border-t-4 border-gray-700">
                   <tr>
-                    <td colSpan="2" className="px-4 py-4 text-sm uppercase border-r border-gray-700">
-                      TOTALES
+                    <td colSpan="2" className="px-5 py-5 text-sm uppercase tracking-wider border-r-2 border-gray-700 bg-gray-800">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                        TOTALES GENERALES
+                      </div>
                     </td>
-                    <td className="px-4 py-4 text-sm text-right font-mono border-r border-gray-700">
+                    <td className="px-5 py-5 text-base text-right font-mono border-r-2 border-gray-700">
                       {formatearMoneda(planilla.totales?.totalSalariosQuincenales)}
                     </td>
-                    <td className="px-4 py-4 text-sm text-right font-mono border-r border-gray-700">
+                    <td className="px-5 py-5 text-base text-right font-mono border-r-2 border-gray-700">
                       {formatearMoneda(planilla.totales?.totalViaticos)}
                     </td>
-                    <td className="px-4 py-4 text-sm text-right font-mono border-r border-gray-700">
+                    <td className="px-5 py-5 text-base text-right font-mono border-r-2 border-gray-700">
                       {formatearMoneda(planilla.totales?.totalTrabajoSabadoDomingo)}
                     </td>
-                    <td className="px-4 py-4 text-sm text-right font-mono bg-indigo-900 border-r border-indigo-800">
+                    <td className="px-5 py-5 text-base text-right font-mono bg-indigo-900 border-r-2 border-indigo-800">
                       {formatearMoneda(planilla.totales?.totalSalariosMasViaticos)}
                     </td>
-                    <td className="px-4 py-4 text-sm text-right font-mono border-r border-gray-700">
+                    <td className="px-5 py-5 text-base text-right font-mono border-r-2 border-gray-700">
                       {formatearMoneda(planilla.totales?.totalISSS)}
                     </td>
-                    <td className="px-4 py-4 text-sm text-right font-mono border-r border-gray-700">
+                    <td className="px-5 py-5 text-base text-right font-mono border-r-2 border-gray-700">
                       {formatearMoneda(planilla.totales?.totalAFP)}
                     </td>
-                    <td className="px-4 py-4 text-sm text-right font-mono border-r border-gray-700">
+                    <td className="px-5 py-5 text-base text-right font-mono border-r-2 border-gray-700">
                       {formatearMoneda(planilla.totales?.totalRenta)}
                     </td>
-                    <td className="px-4 py-4 text-sm text-right font-mono border-r border-gray-700">
+                    <td className="px-5 py-5 text-base text-right font-mono border-r-2 border-gray-700">
                       {formatearMoneda(planilla.totales?.totalAnticipos)}
                     </td>
-                    <td className="px-4 py-4 text-sm text-right font-mono border-r border-gray-700">
+                    <td className="px-5 py-5 text-base text-right font-mono border-r-2 border-gray-700">
                       {formatearMoneda(planilla.totales?.totalPrestamos)}
                     </td>
-                    <td className="px-4 py-4 text-sm text-right font-mono border-r border-gray-700">
+                    <td className="px-5 py-5 text-base text-right font-mono border-r-2 border-gray-700">
                       {formatearMoneda(planilla.totales?.totalOtros)}
                     </td>
-                    <td className="px-4 py-4 text-sm text-right font-mono bg-red-900 border-r border-red-800">
+                    <td className="px-5 py-5 text-base text-right font-mono bg-red-900 border-r-2 border-red-800">
                       {formatearMoneda(planilla.totales?.totalDescuentos)}
                     </td>
-                    <td className="px-4 py-4 text-sm text-right font-mono text-lg bg-green-700">
+                    <td className="px-5 py-5 text-xl text-right font-mono font-black bg-emerald-700">
                       {formatearMoneda(planilla.totales?.totalAPagar)}
                     </td>
                     <td></td>
@@ -1276,8 +1215,6 @@ console.log('   └─ Total Viáticos:', planillaActualizada.totales?.totalViat
                   </div>
                 </div>
 
-                
-
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
                     Otros Descuentos
@@ -1433,8 +1370,6 @@ console.log('   └─ Total Viáticos:', planillaActualizada.totales?.totalViat
                     />
                   </div>
                 </div>
-
-                
 
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
