@@ -23,5 +23,12 @@ router.post("/ingreso", upload.single("voucher"), cajaChicaController.registrarI
 // REGISTRAR EGRESO (sin password, solo comprobante obligatorio)
 router.post("/egreso", upload.single("voucher"), cajaChicaController.cashOperation);
 
+// En tu archivo de rutas
+router.patch(
+  '/movements/:id/voucher', 
+  upload.single('voucher'), 
+  cajaChicaController.uploadVoucher
+);
+router.post('/:id/generar-vale', cajaChicaController.generarVale);
 
 export default router;
