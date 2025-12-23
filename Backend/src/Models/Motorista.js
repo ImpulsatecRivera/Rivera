@@ -20,7 +20,7 @@ const motoristaSchema = new Schema({
         type: String,      // Apellido del motorista/conductor
         required: true     // Campo obligatorio para identificación completa
     },
-    
+
     // Información de identificación legal
     id: {
         type: String,      // Número de identificación (DUI, cédula, etc.)
@@ -30,13 +30,13 @@ const motoristaSchema = new Schema({
         type: Date,        // Fecha de nacimiento del motorista
         required: true     // Campo obligatorio para validar edad legal para conducir
     },
-    
+
     // Información de seguridad y acceso
     password: {
         type: String,      // Contraseña hasheada para acceso al sistema
         required: true     // Campo obligatorio para autenticación del motorista
     },
-    
+
     // Información de contacto
     phone: {
         type: String,      // Número de teléfono del motorista
@@ -46,27 +46,31 @@ const motoristaSchema = new Schema({
         type: String,      // Dirección física completa del motorista
         required: true     // Campo obligatorio para registros legales y contacto
     },
-     PlanillaTipo:{
-        type:String,
-        required:true    
+    PlanillaTipo: {
+        type: String,
+        enum: [
+            'Semanal',
+            'Quincenal'
+        ],
+        required: true
     },
-    
+
     // Documentación específica para conductores
     circulationCard: {
         type: String,      // Tarjeta de circulación o licencia de conducir
         required: true     // Campo obligatorio para validar capacidad legal de conducir
     },
     phoneVerified: { type: Boolean, default: false }, // ⭐ AGREGAR ESTO
-  phoneVerifiedAt: { type: Date }, // ⭐ AGREGAR ESTO (opcional)
-    
+    phoneVerifiedAt: { type: Date }, // ⭐ AGREGAR ESTO (opcional)
+
     // Información multimedia
     img: {
         type: String,      // URL de la foto del motorista (generalmente desde Cloudinary)
         required: true     // Campo obligatorio para identificación visual y seguridad
     },
-    salario:{
-        type:Number,
-        required:true
+    salario: {
+        type: Number,
+        required: true
     }
 }, {
     // Opciones del esquema

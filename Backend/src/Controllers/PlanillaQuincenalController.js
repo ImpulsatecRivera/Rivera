@@ -336,7 +336,7 @@ PlanillaQuincenalController.crear = async (req, res) => {
             descripcion,
             empleados: empleadosProcesados,
             totales,
-            estado: 'borrador'
+            estado: 'pendiente'
         });
 
         const planillaGuardada = await nuevaPlanilla.save();
@@ -367,7 +367,7 @@ PlanillaQuincenalController.crear = async (req, res) => {
 
 /**
  * Obtener todas las planillas quincenales con filtros
- * GET /api/planillas/quincenal?año=2025&mes=12&quincena=1&estado=borrador
+ * GET /api/planillas/quincenal?año=2025&mes=12&quincena=1&estado=pendiente
  */
 PlanillaQuincenalController.obtenerTodas = async (req, res) => {
     try {
@@ -717,7 +717,7 @@ PlanillaQuincenalController.cambiarEstado = async (req, res) => {
             });
         }
 
-        const estadosValidos = ['borrador', 'pendiente', 'aprobada', 'pagada', 'cerrada'];
+        const estadosValidos = ['pendiente', 'aprobada', 'pagada', 'cerrada'];
         if (!estadosValidos.includes(estado)) {
             return res.status(400).json({
                 success: false,
@@ -745,11 +745,11 @@ PlanillaQuincenalController.cambiarEstado = async (req, res) => {
             });
         }
 
-        // Validar que si está pagada, no pueda regresar a pendiente o borrador
-        if (estadoActual === 'pagada' && (estado === 'pendiente' || estado === 'borrador')) {
+        // Validar que si está pagada, no pueda regresar a pendiente
+        if (estadoActual === 'pagada' && (estado === 'pendiente')) {
             return res.status(400).json({
                 success: false,
-                message: "No se puede regresar a estado pendiente o borrador desde pagada. Solo puede pasar a cerrada."
+                message: "No se puede regresar a estado pendiente desde pagada. Solo puede pasar a cerrada."
             });
         }
 
@@ -875,10 +875,10 @@ PlanillaQuincenalController.eliminar = async (req, res) => {
             });
         }
 
-        if (planilla.estado !== 'borrador') {
+        if (planilla.estado !== 'pendiente') {
             return res.status(400).json({
                 success: false,
-                message: "Solo se pueden eliminar planillas en estado borrador"
+                message: "Solo se pueden eliminar planillas en estado pendiente"
             });
         }
 
