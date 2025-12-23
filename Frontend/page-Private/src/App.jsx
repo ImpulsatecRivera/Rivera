@@ -30,15 +30,14 @@ import ProviderManagementInterface from "./pages/Provedores/Prooveedores";
 import AddProveedorForm from "./pages/Provedores/AgregarProovedor";
 import CotizacionesComponent from "./pages/cotizaciones/Cotizaciones";
 import CotizacionForm from "./pages/cotizaciones/EditarCotizacion";
-
 import Seleccionar from "./pages/ProcesosElegir/Seleccionar";
 import Dashboards from "./pages/Dashbord2/dashbords";
-
 import MantenimientosTable from "./pages/MantenimientosCamiones/PantallaPrincipalMantos";
 import CreateMantenimientoPage from "./pages/MantenimientosCamiones/AgregarNuevoManto";
 import EditMantenimiento from "./pages/MantenimientosCamiones/EditarMantos";
-
 import CajaChica from "./pages/CajaChica/CajaChica";
+import Planilla from "./pages/Planilla/Planilla";
+import PlanillaQuincenal from "./pages/Planilla/PlanillaQuincenal";
 
 // ✅ Diesel
 import PantallaPrincipalDiesel from "./pages/Diesel/PantallaPrincipalDiesel";
@@ -63,8 +62,6 @@ function App() {
     "/viajes/maps",
     "/mantenimientos/agregar-mantenimiento",
     "/mantenimientos/editar/:id",
-
-    // ✅ Diesel
     "/diesel/agregar",
     "/diesel/editar/:id",
   ];
@@ -122,16 +119,18 @@ function App() {
       >
         {/* Dashboard */}
         <Route path="/home" element={<Dashboards />} />
-
-        {/* (Opcional) rutas legacy si aún las usas */}
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/reports" element={<ReportsPage />} />
         <Route path="/informes" element={<ReportsPage />} />
 
+        {/* Planillas */}
+        <Route path="/planilla" element={<Planilla />} />
+        <Route path="/planilla/quincenal" element={<PlanillaQuincenal />} />
+
         {/* Caja Chica */}
         <Route path="/CajaChica" element={<CajaChica />} />
 
-        {/* 🔥 DIESEL */}
+        {/* Diesel */}
         <Route path="/diesel" element={<PantallaPrincipalDiesel />} />
         <Route path="/diesel/agregar" element={<AgregarDiesel />} />
         <Route path="/diesel/editar/:id" element={<EditDiesel />} />

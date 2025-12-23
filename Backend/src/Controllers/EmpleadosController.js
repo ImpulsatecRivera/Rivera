@@ -1,3 +1,5 @@
+
+
 import empleadosModel from "../Models/Empleados.js";
 import bcryptjs from "bcryptjs";
 import mongoose from "mongoose";
@@ -296,10 +298,21 @@ empleadosCon.get = async (req, res) => {
  */
 empleadosCon.post = async (req, res) => {
     try {
-        const { name, lastName, dui, birthDate, password, phone, address, salario, rol } = req.body;
+        const { 
+            name, 
+            lastName, 
+            dui, 
+            birthDate, 
+            password, 
+            phone, 
+            address, 
+            salario, 
+            rol,
+            planillaTipo  // ✅ Nuevo campo agregado
+        } = req.body;
 
         // Validar campos requeridos
-        const requiredFields = ['name', 'lastName', 'dui', 'birthDate', 'password', 'phone', 'address', 'salario', 'rol'];
+        const requiredFields = ['name', 'lastName', 'dui', 'birthDate', 'password', 'phone', 'address', 'salario', 'rol', 'planillaTipo']; // ✅ Agregado a requeridos
         const validation = validateRequiredFields(req.body, requiredFields);
         
         if (!validation.isValid) {
@@ -472,6 +485,7 @@ empleadosCon.post = async (req, res) => {
             address: address.trim(),
             salario: Number(salario),
             rol: rol,
+            planillaTipo: planillaTipo.trim(),  // ✅ Nuevo campo agregado
             img: imgUrl
         });
 
@@ -492,6 +506,7 @@ empleadosCon.post = async (req, res) => {
                     address: empleadoGuardado.address,
                     salario: empleadoGuardado.salario,
                     rol: empleadoGuardado.rol,
+                    planillaTipo: empleadoGuardado.planillaTipo,  // ✅ Incluido en respuesta
                     img: empleadoGuardado.img
                 }
             }
@@ -556,7 +571,18 @@ empleadosCon.put = async (req, res) => {
             });
         }
 
-        const { name, lastName, dui, birthDate, password, phone, address, salario, rol } = req.body;
+        const { 
+            name, 
+            lastName, 
+            dui, 
+            birthDate, 
+            password, 
+            phone, 
+            address, 
+            salario, 
+            rol,
+            planillaTipo  // ✅ Nuevo campo agregado
+        } = req.body;
 
         // Validaciones específicas por campo si se proporcionan
         if (name && (name.trim().length < 2 || name.trim().length > 50)) {
@@ -670,6 +696,7 @@ empleadosCon.put = async (req, res) => {
         if (address !== undefined) datosActualizados.address = address.trim();
         if (salario !== undefined) datosActualizados.salario = Number(salario);
         if (rol) datosActualizados.rol = rol;
+        if (planillaTipo) datosActualizados.planillaTipo = planillaTipo.trim();  // ✅ Nuevo campo agregado
 
         // Generar nuevo email si se proporcionan nombre o apellido
         if (name || lastName) {
@@ -800,3 +827,13 @@ empleadosCon.delete = async (req, res) => {
 };
 
 export default empleadosCon;
+/**
+ * Registrar nuevo empleado
+ * POST /empleados
+ */
+
+
+/**
+ * Actualizar empleado existente
+ * PUT /empleados/:id
+ */
