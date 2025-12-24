@@ -97,24 +97,24 @@ export default function Planillas() {
     return configs[estado] || configs['pendiente'];
   };
 
-  const handleCrearPlanilla = async (tipo) => {
-    setShowDropdown(false);
-    
-    if (tipo === 'quincenal') {
-      // Redirigir a la vista de planilla quincenal
-      navigate('/planilla-quincenal');
-    } else if (tipo === 'semanal') {
-      Swal.fire({
-        icon: 'info',
-        title: 'Próximamente',
-        text: 'La planilla semanal estará disponible pronto'
-      });
-    }
-  };
-
-  const handleVerPlanilla = (planilla) => {
-    navigate(`/planilla-quincenal/${planilla._id}`);
-  };
+const handleCrearPlanilla = async (tipo) => {
+  setShowDropdown(false);
+  
+  if (tipo === 'quincenal') {
+    // 🔥 CORRECCIÓN: Cambiar la ruta para que coincida con tu configuración
+    navigate('/planilla/quincenal');
+  } else if (tipo === 'semanal') {
+    Swal.fire({
+      icon: 'info',
+      title: 'Próximamente',
+      text: 'La planilla semanal estará disponible pronto'
+    });
+  }
+};
+const handleVerPlanilla = (planilla) => {
+  // 🔥 CORRECCIÓN: Cambiar la ruta para que coincida con tu configuración
+  navigate(`/planilla/quincenal/${planilla._id}`);
+};
 
   const handleEliminar = async (planilla) => {
     if (planilla.estado !== 'pendiente') {
