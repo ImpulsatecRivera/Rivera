@@ -63,6 +63,14 @@ const empleadoSchema = new Schema({
         type:Number,
         required:true
     },
+    PlanillaTipo:{
+        type:String,
+            enum:[
+                'Semanal',
+                'Quincenal'
+            ],
+        required:true    
+    },
     rol:{
          type: String,
         enum:[

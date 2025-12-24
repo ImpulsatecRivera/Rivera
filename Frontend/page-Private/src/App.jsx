@@ -1,7 +1,7 @@
 import { Routes, Route, useLocation, Outlet } from "react-router-dom";
 import { useState, useEffect } from "react";
-import Lottie from 'lottie-react';
-import animationData from './assets/lotties/404 not found.json';
+import Lottie from "lottie-react";
+import animationData from "./assets/lotties/404 not found.json";
 
 // Rutas privadas
 import PrivateRoute from "./components/PrivateRoutes/PrivateRoute";
@@ -12,7 +12,7 @@ import RecoverPassword from "./pages/RecoverPassword";
 import VerificationInput from "./pages/VerificationInput";
 import ResetPassword from "./pages/ResetPassword";
 
-// Privadas (páginas)
+// Privadas
 import Dashboard from "./pages/Dashboard/Dashboard";
 import ReportsPage from "./pages/Dashboard/ReportsPage";
 import ClientManagementInterface from "./pages/Clientes";
@@ -30,15 +30,21 @@ import ProviderManagementInterface from "./pages/Provedores/Prooveedores";
 import AddProveedorForm from "./pages/Provedores/AgregarProovedor";
 import CotizacionesComponent from "./pages/cotizaciones/Cotizaciones";
 import CotizacionForm from "./pages/cotizaciones/EditarCotizacion";
-import Seleccionar from "./pages/ProcesosElegir/Seleccionar"
-import Dashboards from "./pages/Dashbord2/dashbords"
-import MantenimientosTable from "./pages/MantenimientosCamiones/PantallaPrincipalMantos"
-import CreateMantenimientoPage from "./pages/MantenimientosCamiones/AgregarNuevoManto"
-import EditMantenimiento from "./pages/MantenimientosCamiones/EditarMantos"
-import CajaChica from "./pages/CajaChica/CajaChica"
+import Seleccionar from "./pages/ProcesosElegir/Seleccionar";
+import Dashboards from "./pages/Dashbord2/dashbords";
+import MantenimientosTable from "./pages/MantenimientosCamiones/PantallaPrincipalMantos";
+import CreateMantenimientoPage from "./pages/MantenimientosCamiones/AgregarNuevoManto";
+import EditMantenimiento from "./pages/MantenimientosCamiones/EditarMantos";
+import CajaChica from "./pages/CajaChica/CajaChica";
+import Planilla from "./pages/Planilla/Planilla";
+import PlanillaQuincenal from "./pages/Planilla/PlanillaQuincenal";
+
+// ✅ Diesel
+import PantallaPrincipalDiesel from "./pages/Diesel/PantallaPrincipalDiesel";
+import AgregarDiesel from "./pages/Diesel/AgregarDiesel";
+import EditDiesel from "./pages/Diesel/EditDiesel";
 
 // UI
-import SidebarNav from "./components/Nav/Nav";
 import SideNav from "./components/dashbordNav/sideNav";
 import PantallaCarga from "./components/SplashScreen/PantallaCarga";
 
@@ -46,7 +52,6 @@ function App() {
   const location = useLocation();
   const [isRouteLoading, setIsRouteLoading] = useState(false);
 
-  // Rutas que deben mostrar el splash
   const splashRoutes = [
     "/empleados/agregarEmployee",
     "/motoristas/agregarMotorista",
@@ -56,43 +61,40 @@ function App() {
     "/cotizaciones/CotizacionForm",
     "/viajes/maps",
     "/mantenimientos/agregar-mantenimiento",
-    "/mantenimientos/editar/:id"
+    "/mantenimientos/editar/:id",
+    "/diesel/agregar",
+    "/diesel/editar/:id",
   ];
 
   useEffect(() => {
-    const shouldShowSplashForRoute = splashRoutes.some((route) => {
+    const shouldShowSplash = splashRoutes.some((route) => {
       if (route.includes(":")) {
-        const pattern = route.replace(/:[^/]+/g, "[^/]+");
-        const regex = new RegExp(`^${pattern}$`);
+        const regex = new RegExp(`^${route.replace(/:[^/]+/g, "[^/]+")}$`);
         return regex.test(location.pathname);
       }
       return location.pathname === route;
     });
 
-    if (shouldShowSplashForRoute) {
+    if (shouldShowSplash) {
       setIsRouteLoading(true);
-      const timer = setTimeout(() => {
-        setIsRouteLoading(false);
-      }, 1500);
+      const timer = setTimeout(() => setIsRouteLoading(false), 1500);
       return () => clearTimeout(timer);
     } else {
       setIsRouteLoading(false);
     }
   }, [location.pathname]);
 
-  if (isRouteLoading) {
-    return <PantallaCarga />;
-  }
+  if (isRouteLoading) return <PantallaCarga />;
 
   return (
     <Routes>
-      {/* ===================== RUTAS PÚBLICAS ===================== */}
+      {/* ===================== PÚBLICAS ===================== */}
       <Route path="/" element={<Login />} />
       <Route path="/recuperar" element={<RecoverPassword />} />
       <Route path="/verification-input" element={<VerificationInput />} />
       <Route path="/reset-password" element={<ResetPassword />} />
 
-      {/* ===================== RUTA PRIVADA SIN SIDEBAR ===================== */}
+      {/* ===================== PRIVADA SIN MENÚ ===================== */}
       <Route
         path="/SeleccionarProceso"
         element={
@@ -102,11 +104,10 @@ function App() {
         }
       />
 
-       {/* ===================== RUTAS PRIVADAS + LAYOUT CON SIDEBAR ===================== */}
-        <Route
+      {/* ===================== PRIVADAS CON SIDENAV ===================== */}
+      <Route
         element={
           <PrivateRoute>
-            {/* Layout protegido (sin archivo extra) */}
             <div className="flex h-screen overflow-hidden">
               <SideNav />
               <div className="flex-1 min-h-screen overflow-y-auto">
@@ -116,32 +117,28 @@ function App() {
           </PrivateRoute>
         }
       >
-       <Route path="/home" element={<Dashboards/>} />
-        <Route path="/mantenimientos" element={<MantenimientosTable/>} />
-        <Route path="/mantenimientos/agregar-mantenimiento" element={<CreateMantenimientoPage/>} />
-        <Route path="/mantenimientos/editar/:id" element={<EditMantenimiento/>} />
-        <Route path="/CajaChica" element={<CajaChica/>} />
-
-      </Route>
-
-
-      {/* ===================== RUTAS PRIVADAS + LAYOUT CON SIDEBAR ===================== */}
-      <Route
-        element={
-          <PrivateRoute>
-            {/* Layout protegido (sin archivo extra) */}
-            <div className="flex h-screen overflow-hidden">
-              <SidebarNav />
-              <div className="flex-1 min-h-screen overflow-y-auto">
-                <Outlet />
-              </div>
-            </div>
-          </PrivateRoute>
-        }
-      >
-        {/* Dashboard e informes */}
+        {/* Dashboard */}
+        <Route path="/home" element={<Dashboards />} />
         <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/reports" element={<ReportsPage />} />
         <Route path="/informes" element={<ReportsPage />} />
+
+        {/* Planillas */}
+        <Route path="/planilla" element={<Planilla />} />
+        <Route path="/planilla/quincenal" element={<PlanillaQuincenal />} />
+
+        {/* Caja Chica */}
+        <Route path="/CajaChica" element={<CajaChica />} />
+
+        {/* Diesel */}
+        <Route path="/diesel" element={<PantallaPrincipalDiesel />} />
+        <Route path="/diesel/agregar" element={<AgregarDiesel />} />
+        <Route path="/diesel/editar/:id" element={<EditDiesel />} />
+
+        {/* Mantenimientos */}
+        <Route path="/mantenimientos" element={<MantenimientosTable />} />
+        <Route path="/mantenimientos/agregar-mantenimiento" element={<CreateMantenimientoPage />} />
+        <Route path="/mantenimientos/editar/:id" element={<EditMantenimiento />} />
 
         {/* Clientes */}
         <Route path="/clientes" element={<ClientManagementInterface />} />
@@ -158,7 +155,7 @@ function App() {
         <Route path="/viajes" element={<Travel />} />
         <Route path="/viajes/maps" element={<Maps />} />
 
-        {/* Camiones (normalizado todo en minúsculas) */}
+        {/* Camiones */}
         <Route path="/camiones" element={<Camiones />} />
         <Route path="/camiones/:id" element={<TruckDetailScreen />} />
         <Route path="/camiones/aggCamion" element={<TruckFormScreen />} />
@@ -173,23 +170,12 @@ function App() {
         <Route path="/cotizaciones/CotizacionForm" element={<CotizacionForm />} />
       </Route>
 
-      {/* ===================== 404 FUERA DEL LAYOUT (SIN MENÚ) ===================== */}
+      {/* ===================== 404 ===================== */}
       <Route
         path="*"
         element={
           <div className="flex items-center justify-center h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
-            <div className="w-full flex items-center justify-center">
-              <Lottie
-                animationData={animationData}
-                style={{ 
-                  width: '100%',
-                  maxWidth: '800px',
-                  height: 'auto'
-                }}
-                loop={true}
-                autoplay={true}
-              />
-            </div>
+            <Lottie animationData={animationData} style={{ maxWidth: 800 }} loop autoplay />
           </div>
         }
       />
