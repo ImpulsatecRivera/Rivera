@@ -1,3 +1,4 @@
+
 import motoristalModel from "../Models/Motorista.js";
 import camioneModel from "../Models/Camiones.js";
 import bcryptjs from "bcryptjs";
@@ -173,7 +174,17 @@ const generarEmail = async (name, lastName) => {
 
 motoristasCon.post = async (req, res) => {
   try {
-    const { name, lastName, id, birthDate, password, phone, address, circulationCard } = req.body;
+    const { 
+      name, 
+      lastName, 
+      id, 
+      birthDate, 
+      password, 
+      phone, 
+      address, 
+      circulationCard,
+      planillaTipo  // ✅ Nuevo campo agregado
+    } = req.body;
 
     const email = await generarEmail(name, lastName);
 
@@ -203,6 +214,7 @@ motoristasCon.post = async (req, res) => {
       phone,
       address,
       circulationCard,
+      planillaTipo,  // ✅ Nuevo campo agregado
       img: imgUrl,
     });
 
@@ -216,7 +228,15 @@ motoristasCon.post = async (req, res) => {
 motoristasCon.put = async (req, res) => {
   try {
     const motoristaId = req.params.id;
-    const { name, lastName, password, phone, address, circulationCard } = req.body;
+    const { 
+      name, 
+      lastName, 
+      password, 
+      phone, 
+      address, 
+      circulationCard,
+      planillaTipo  // ✅ Nuevo campo agregado
+    } = req.body;
 
     const motoristaExistente = await motoristalModel.findById(motoristaId);
     if (!motoristaExistente) {
@@ -238,6 +258,7 @@ motoristasCon.put = async (req, res) => {
       phone: phone?.trim() || motoristaExistente.phone,
       address: address?.trim() || motoristaExistente.address,
       circulationCard: circulationCard?.trim() || motoristaExistente.circulationCard,
+      planillaTipo: planillaTipo?.trim() || motoristaExistente.planillaTipo,  // ✅ Nuevo campo agregado
       img: imgUrl?.trim() || motoristaExistente.img,
       email: motoristaExistente.email,
       id: motoristaExistente.id,
@@ -794,3 +815,10 @@ motoristasCon.debugViajes = async (req, res) => {
 };
 
 export default motoristasCon;
+
+
+
+
+// Método POST actualizado
+
+// Método PUT actualizado

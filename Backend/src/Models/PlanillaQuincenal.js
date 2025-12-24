@@ -59,10 +59,6 @@ const otrosDescuentosSchema = new Schema({
         type: Number,
         default: 0
     },
-    camisas: {
-        type: Number,
-        default: 0
-    },
     otros: {
         type: Number,
         default: 0
@@ -202,10 +198,6 @@ const planillaQuincenalSchema = new Schema({
             type: Number,
             default: 0
         },
-        totalCamisas: {
-            type: Number,
-            default: 0
-        },
         totalOtrosDescuentos: {
             type: Number,
             default: 0
@@ -223,8 +215,8 @@ const planillaQuincenalSchema = new Schema({
     // Estado de la planilla
     estado: {
         type: String, 
-        enum: ['borrador', 'pendiente', 'aprobada', 'pagada', 'cerrada'],
-        default: 'borrador'
+        enum: ['pendiente', 'aprobada', 'pagada', 'cerrada'],
+        default: 'pendiente'
     },
     // Metadatos
     creadoPor: {

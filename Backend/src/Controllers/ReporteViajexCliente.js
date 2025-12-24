@@ -27,24 +27,36 @@ ReportesViajesRoutes.generarPDFEstiloTabla = async (req, res) => {
             });
         }
 
-        // Obtener el reporte mensual usando el método del modelo
-        const reporte = await ViajesxCliente.obtenerReporteMensual(mesNum, anoNum);
+        // ✅ CAMBIO: Buscar directamente los reportes
+        const reportes = await ViajesxCliente.find({
+            mes: mesNum,
+            año: anoNum,
+            estado: "ACTIVO"
+        }).sort({ clienteNombre: 1 });
 
-        if (!reporte.clientes || reporte.clientes.length === 0) {
+        if (!reportes || reportes.length === 0) {
             return res.status(404).json({
                 success: false,
                 message: `No hay viajes registrados para ${obtenerNombreMes(mesNum)} ${anoNum}`
             });
         }
 
+        // Calcular totales generales
+        let totalViajesGeneral = 0;
+        let totalMontoGeneral = 0;
+
         // Generar las filas de la tabla
         let filasHTML = '';
         let numeroCliente = 1;
 
-        reporte.clientes.forEach(cliente => {
-            const rutasActivas = cliente.rutas.filter(r => r.activa);
+        reportes.forEach(reporte => {
+            const rutasActivas = reporte.rutas || [];
             
             if (rutasActivas.length === 0) return;
+
+            // Sumar a totales
+            totalViajesGeneral += reporte.totalViajes || 0;
+            totalMontoGeneral += reporte.montoTotalGeneral || 0;
 
             // Primera fila del cliente (con número y monto total)
             filasHTML += `
@@ -53,7 +65,7 @@ ReportesViajesRoutes.generarPDFEstiloTabla = async (req, res) => {
                     <td class="cell-cliente">${rutasActivas[0].rutaCompleta}</td>
                     <td class="cell-viajes">${rutasActivas[0].cantidadViajes}</td>
                     <td class="cell-monto">$${rutasActivas[0].montoTotal.toFixed(2)}</td>
-                    <td rowspan="${rutasActivas.length}" class="cell-total">$ ${cliente.montoTotal.toFixed(2)}</td>
+                    <td rowspan="${rutasActivas.length}" class="cell-total">$ ${reporte.montoTotalGeneral.toFixed(2)}</td>
                 </tr>
             `;
 
@@ -186,9 +198,9 @@ ReportesViajesRoutes.generarPDFEstiloTabla = async (req, res) => {
                     ${filasHTML}
                     <tr class="total-row">
                         <td colspan="2">TOTAL</td>
-                        <td>${reporte.granTotal.totalViajes}</td>
-                        <td>$ ${reporte.granTotal.totalMonto.toFixed(2)}</td>
-                        <td>$ ${reporte.granTotal.totalMonto.toFixed(2)}</td>
+                        <td>${totalViajesGeneral}</td>
+                        <td>$ ${totalMontoGeneral.toFixed(2)}</td>
+                        <td>$ ${totalMontoGeneral.toFixed(2)}</td>
                     </tr>
                 </tbody>
             </table>

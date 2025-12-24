@@ -1,201 +1,446 @@
-/**
- * Controlador para Planillas Semanales
- * Maneja la creación, actualización y consulta de planillas semanales
- */
-
-import PlanillaSemanal from "../Models/PlanillaSemanal.js";
-import Empleado from "../Models/Empleado.js";
-import Motorista from "../Models/Motorista.js";
-import { isValidObjectId } from 'mongoose';
+import PlanillaSemanal from '../Models/PlanillaSemanal.js';
+import Empleado from '../Models/Empleados.js';
+import Motorista from '../Models/Motorista.js';
 
 const PlanillaSemanalController = {};
 
+// ============================================
+// FUNCIONES AUXILIARES
+// ============================================
+
 /**
- * Obtener número de semana del año
+ * Validar que una fecha sea lunes
  */
-const getWeekNumber = (date) => {
-    const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
-    const dayNum = d.getUTCDay() || 7;
-    d.setUTCDate(d.getUTCDate() + 4 - dayNum);
-    const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
-    return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+const esLunes = (fecha) => {
+    return fecha.getDay() === 1;
 };
 
 /**
- * Calcular totales de un empleado en la planilla
+ * Validar que una fecha sea sábado
  */
-const calcularTotalesEmpleado = (empleado) => {
-    const totalBase = empleado.registrosDiarios.reduce((sum, r) => sum + (r.base || 0), 0);
-    const totalViaticos = empleado.registrosDiarios.reduce((sum, r) => sum + (r.viaticos || 0), 0);
-    const subtotal = totalBase + totalViaticos;
-    const totalAPagar = subtotal - (empleado.anticipos || 0) - (empleado.descuentos || 0);
-
-    return {
-        totalBase,
-        totalViaticos,
-        totalAPagar
-    };
+const esSabado = (fecha) => {
+    return fecha.getDay() === 6;
 };
 
 /**
- * Calcular totales generales de la planilla
+ * Generar array de días con fechas (lunes a sábado)
  */
-const calcularTotalesGenerales = (empleados) => {
-    return {
-        totalBase: empleados.reduce((sum, e) => sum + (e.totalBase || 0), 0),
-        totalViaticos: empleados.reduce((sum, e) => sum + (e.totalViaticos || 0), 0),
-        totalAnticipos: empleados.reduce((sum, e) => sum + (e.anticipos || 0), 0),
-        totalDescuentos: empleados.reduce((sum, e) => sum + (e.descuentos || 0), 0),
-        totalGeneral: empleados.reduce((sum, e) => sum + (e.totalAPagar || 0), 0)
-    };
+const generarDiasSemana = (fechaInicio) => {
+    const dias = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado'];
+    const resultado = [];
+    const fecha = new Date(fechaInicio);
+
+    for (let i = 0; i < 6; i++) {
+        resultado.push({
+            dia: dias[i],
+            fecha: new Date(fecha),
+            base: 0,
+            viaticos: 0,
+            faltaInjustificada: false
+        });
+        fecha.setDate(fecha.getDate() + 1);
+    }
+
+    return resultado;
 };
 
 /**
- * Crear una nueva planilla semanal
- * POST /api/planillas/semanal
+ * Buscar empleado o motorista por ID
  */
-PlanillaSemanalController.crear = async (req, res) => {
+const buscarPersonal = async (id, tipo) => {
     try {
-        const { fechaInicio, fechaFin, empleados } = req.body;
+        if (tipo === 'empleado') {
+            return await Empleado.findById(id);
+        } else {
+            return await Motorista.findById(id);
+        }
+    } catch (error) {
+        return null;
+    }
+};
 
-        // Validaciones básicas
-        if (!fechaInicio || !fechaFin) {
+// ============================================
+// CREAR PLANILLA SEMANAL
+// ============================================
+PlanillaSemanalController.crearPlanilla = async (req, res) => {
+    try {
+        const { fechaInicio, fechaFin, diasHabiles } = req.body;
+
+        // Validar campos requeridos
+        if (!fechaInicio || !fechaFin || !diasHabiles) {
             return res.status(400).json({
                 success: false,
-                message: "Las fechas de inicio y fin son requeridas"
+                message: 'Faltan campos requeridos: fechaInicio, fechaFin, diasHabiles'
             });
         }
 
+        // Convertir fechas
         const inicio = new Date(fechaInicio);
         const fin = new Date(fechaFin);
 
-        // Calcular año, mes y número de semana
-        const año = inicio.getFullYear();
-        const mes = inicio.getMonth() + 1;
-        const numeroSemana = getWeekNumber(inicio);
+        // Validar que fechaInicio sea lunes
+        if (!esLunes(inicio)) {
+            return res.status(400).json({
+                success: false,
+                message: 'La fecha de inicio debe ser un lunes'
+            });
+        }
 
-        // Verificar si ya existe una planilla para esta semana
+        // Validar que fechaFin sea sábado
+        if (!esSabado(fin)) {
+            return res.status(400).json({
+                success: false,
+                message: 'La fecha de fin debe ser un sábado'
+            });
+        }
+
+        // Validar días hábiles
+        const diasHabilesNum = parseInt(diasHabiles);
+        if (isNaN(diasHabilesNum) || diasHabilesNum < 20 || diasHabilesNum > 31) {
+            return res.status(400).json({
+                success: false,
+                message: 'Los días hábiles deben estar entre 20 y 31'
+            });
+        }
+
+        // Validar que la semana sea exactamente 6 días
+        const diffDias = Math.ceil((fin - inicio) / (1000 * 60 * 60 * 24));
+        if (diffDias !== 5) { // De lunes a sábado son 5 días de diferencia
+            return res.status(400).json({
+                success: false,
+                message: 'El período debe ser exactamente de lunes a sábado (6 días)'
+            });
+        }
+
+        // Verificar si ya existe una planilla para este período
         const planillaExistente = await PlanillaSemanal.findOne({
-            año,
-            mes,
-            numeroSemana
+            $or: [
+                { fechaInicio: inicio, fechaFin: fin },
+                {
+                    $and: [
+                        { fechaInicio: { $lte: fin } },
+                        { fechaFin: { $gte: inicio } }
+                    ]
+                }
+            ]
         });
 
         if (planillaExistente) {
             return res.status(400).json({
                 success: false,
-                message: "Ya existe una planilla para esta semana",
-                planillaId: planillaExistente._id
+                message: 'Ya existe una planilla para este período o uno que se solapa'
             });
         }
 
-        // Generar descripción automática
-        const meses = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
-                       'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
-        const descripcion = `Del ${inicio.getDate()} al ${fin.getDate()} de ${meses[mes - 1]} ${año}`;
-
-        // Procesar empleados
-        const empleadosProcesados = await Promise.all(
-            (empleados || []).map(async (emp) => {
-                // Validar ObjectId
-                if (!isValidObjectId(emp.empleadoId)) {
-                    throw new Error(`ID de empleado inválido: ${emp.empleadoId}`);
-                }
-
-                // Buscar empleado en la colección correspondiente
-                let empleadoData;
-                if (emp.tipoEmpleado === 'Motorista') {
-                    empleadoData = await Motorista.findById(emp.empleadoId);
-                } else {
-                    empleadoData = await Empleado.findById(emp.empleadoId);
-                }
-
-                if (!empleadoData) {
-                    throw new Error(`Empleado con ID ${emp.empleadoId} no encontrado`);
-                }
-
-                const nombreCompleto = `${empleadoData.name} ${empleadoData.lastName || ''}`.trim();
-
-                // Calcular totales
-                const totales = calcularTotalesEmpleado(emp);
-
-                return {
-                    empleadoId: emp.empleadoId,
-                    tipoEmpleado: emp.tipoEmpleado,
-                    nombreCompleto,
-                    registrosDiarios: emp.registrosDiarios || [],
-                    totalBase: totales.totalBase,
-                    totalViaticos: totales.totalViaticos,
-                    anticipos: emp.anticipos || 0,
-                    descuentos: emp.descuentos || 0,
-                    totalAPagar: totales.totalAPagar
-                };
-            })
-        );
-
-        // Calcular totales generales
-        const totales = calcularTotalesGenerales(empleadosProcesados);
-
-        // Crear la planilla
+        // Crear nueva planilla
         const nuevaPlanilla = new PlanillaSemanal({
-            numeroSemana,
-            año,
-            mes,
             fechaInicio: inicio,
             fechaFin: fin,
-            descripcion,
-            empleados: empleadosProcesados,
-            totales,
-            estado: 'borrador'
+            diasHabiles: diasHabilesNum,
+            estado: 'pendiente',
+            empleados: []
         });
 
-        const planillaGuardada = await nuevaPlanilla.save();
+        await nuevaPlanilla.save();
 
         res.status(201).json({
             success: true,
-            message: "Planilla semanal creada exitosamente",
-            data: planillaGuardada
+            message: 'Planilla semanal creada exitosamente',
+            data: nuevaPlanilla
         });
-    } catch (error) {
-        console.error("Error al crear planilla semanal:", error);
-        
-        if (error.name === 'ValidationError') {
-            return res.status(400).json({
-                success: false,
-                message: 'Error de validación',
-                errors: Object.values(error.errors).map(e => e.message)
-            });
-        }
 
+    } catch (error) {
+        console.error('Error al crear planilla semanal:', error);
         res.status(500).json({
             success: false,
-            message: "Error al crear la planilla semanal",
+            message: 'Error al crear planilla semanal',
             error: error.message
         });
     }
 };
 
-/**
- * Obtener todas las planillas semanales con filtros
- * GET /api/planillas/semanal
- */
-PlanillaSemanalController.obtenerTodas = async (req, res) => {
+// ============================================
+// AGREGAR EMPLEADO A PLANILLA
+// ============================================
+PlanillaSemanalController.agregarEmpleado = async (req, res) => {
     try {
-        const { año, mes, estado, page = 1, limit = 10 } = req.query;
+        const { planillaId } = req.params;
+        const { empleadoId, tipo } = req.body;
 
-        const filtro = {};
-        if (año) filtro.año = parseInt(año);
-        if (mes) filtro.mes = parseInt(mes);
-        if (estado) filtro.estado = estado;
+        // Validar campos requeridos
+        if (!empleadoId || !tipo) {
+            return res.status(400).json({
+                success: false,
+                message: 'Faltan campos requeridos: empleadoId, tipo'
+            });
+        }
 
-        const skip = (parseInt(page) - 1) * parseInt(limit);
+        // Validar tipo
+        if (!['empleado', 'motorista'].includes(tipo)) {
+            return res.status(400).json({
+                success: false,
+                message: 'El tipo debe ser "empleado" o "motorista"'
+            });
+        }
 
-        const planillas = await PlanillaSemanal.find(filtro)
-            .sort({ año: -1, mes: -1, numeroSemana: -1 })
-            .skip(skip)
+        // Buscar planilla
+        const planilla = await PlanillaSemanal.findById(planillaId);
+        if (!planilla) {
+            return res.status(404).json({
+                success: false,
+                message: 'Planilla no encontrada'
+            });
+        }
+
+        // Validar que la planilla no esté cerrada o pagada
+        if (['pagada', 'cerrada'].includes(planilla.estado)) {
+            return res.status(400).json({
+                success: false,
+                message: `No se puede agregar empleados a una planilla ${planilla.estado}`
+            });
+        }
+
+        // Buscar empleado/motorista
+        const personal = await buscarPersonal(empleadoId, tipo);
+        if (!personal) {
+            return res.status(404).json({
+                success: false,
+                message: `${tipo === 'empleado' ? 'Empleado' : 'Motorista'} no encontrado`
+            });
+        }
+
+        // Verificar que tenga tipoSalario "semanal"
+        if (personal.tipoSalario !== 'semanal') {
+            return res.status(400).json({
+                success: false,
+                message: `Este ${tipo} no tiene tipo de salario semanal (actual: ${personal.tipoSalario || 'no definido'})`
+            });
+        }
+
+        // Verificar que no esté ya en la planilla
+        const yaExiste = planilla.empleados.some(
+            emp => emp.empleadoId.toString() === empleadoId && emp.tipo === tipo
+        );
+
+        if (yaExiste) {
+            return res.status(400).json({
+                success: false,
+                message: 'Este empleado ya está agregado a la planilla'
+            });
+        }
+
+        // Calcular salario semanal (salario mensual / 4)
+        const salarioMensual = parseFloat(personal.salario) || 0;
+        const salarioSemanal = salarioMensual / 4;
+
+        // Generar días de la semana con fechas
+        const dias = generarDiasSemana(planilla.fechaInicio);
+
+        // Crear objeto empleado para agregar
+        const nuevoEmpleado = {
+            empleadoId: personal._id,
+            tipo: tipo,
+            nombreCompleto: `${personal.name} ${personal.lastName}`,
+            salarioSemanal: Math.round(salarioSemanal * 100) / 100,
+            dias: dias,
+            totalBase: 0,
+            totalViaticos: 0,
+            anticipos: 0,
+            descuentos: 0,
+            totalPagar: 0
+        };
+
+        // Agregar a la planilla
+        planilla.empleados.push(nuevoEmpleado);
+        await planilla.save();
+
+        res.status(200).json({
+            success: true,
+            message: 'Empleado agregado exitosamente',
+            data: nuevoEmpleado
+        });
+
+    } catch (error) {
+        console.error('Error al agregar empleado:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error al agregar empleado',
+            error: error.message
+        });
+    }
+};
+
+// ============================================
+// REGISTRAR DÍA DE TRABAJO
+// ============================================
+PlanillaSemanalController.registrarDia = async (req, res) => {
+    try {
+        const { planillaId, empleadoIndex } = req.params;
+        const { dia, viaticos, faltaInjustificada } = req.body;
+
+        // Validar campos requeridos
+        if (!dia) {
+            return res.status(400).json({
+                success: false,
+                message: 'El campo "dia" es requerido (lunes, martes, etc.)'
+            });
+        }
+
+        // Buscar planilla
+        const planilla = await PlanillaSemanal.findById(planillaId);
+        if (!planilla) {
+            return res.status(404).json({
+                success: false,
+                message: 'Planilla no encontrada'
+            });
+        }
+
+        // Validar que la planilla esté abierta
+        if (['pagada', 'cerrada'].includes(planilla.estado)) {
+            return res.status(400).json({
+                success: false,
+                message: `No se puede registrar días en una planilla ${planilla.estado}`
+            });
+        }
+
+        // Buscar empleado en la planilla
+        const empleado = planilla.empleados[parseInt(empleadoIndex)];
+        if (!empleado) {
+            return res.status(404).json({
+                success: false,
+                message: 'Empleado no encontrado en la planilla'
+            });
+        }
+
+        // Buscar el día específico
+        const diaIndex = empleado.dias.findIndex(d => d.dia === dia);
+        if (diaIndex === -1) {
+            return res.status(404).json({
+                success: false,
+                message: 'Día no encontrado en el registro del empleado'
+            });
+        }
+
+        // Calcular base diaria (salarioSemanal / diasHabiles)
+        const baseDiaria = empleado.salarioSemanal / planilla.diasHabiles;
+
+        // Actualizar día
+        planilla.empleados[empleadoIndex].dias[diaIndex] = {
+            ...planilla.empleados[empleadoIndex].dias[diaIndex],
+            base: Math.round(baseDiaria * 100) / 100, // SIEMPRE se calcula
+            viaticos: parseFloat(viaticos) || 0,
+            faltaInjustificada: Boolean(faltaInjustificada)
+        };
+
+        // Recalcular totales del empleado
+        const diasActualizados = planilla.empleados[empleadoIndex].dias;
+        planilla.empleados[empleadoIndex].totalBase = diasActualizados.reduce((sum, d) => sum + (d.base || 0), 0);
+        planilla.empleados[empleadoIndex].totalViaticos = diasActualizados.reduce((sum, d) => sum + (d.viaticos || 0), 0);
+
+        // Recalcular total a pagar
+        const { totalBase, totalViaticos, anticipos, descuentos } = planilla.empleados[empleadoIndex];
+        planilla.empleados[empleadoIndex].totalPagar = totalBase + totalViaticos - anticipos - descuentos;
+
+        await planilla.save();
+
+        res.status(200).json({
+            success: true,
+            message: 'Día registrado exitosamente',
+            data: planilla.empleados[empleadoIndex]
+        });
+
+    } catch (error) {
+        console.error('Error al registrar día:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error al registrar día',
+            error: error.message
+        });
+    }
+};
+
+// ============================================
+// ACTUALIZAR ANTICIPOS/DESCUENTOS
+// ============================================
+PlanillaSemanalController.actualizarAnticiposDescuentos = async (req, res) => {
+    try {
+        const { planillaId, empleadoIndex } = req.params;
+        const { anticipos, descuentos } = req.body;
+
+        // Buscar planilla
+        const planilla = await PlanillaSemanal.findById(planillaId);
+        if (!planilla) {
+            return res.status(404).json({
+                success: false,
+                message: 'Planilla no encontrada'
+            });
+        }
+
+        // Validar que la planilla esté abierta
+        if (['pagada', 'cerrada'].includes(planilla.estado)) {
+            return res.status(400).json({
+                success: false,
+                message: `No se puede modificar una planilla ${planilla.estado}`
+            });
+        }
+
+        // Buscar empleado
+        const empleado = planilla.empleados[parseInt(empleadoIndex)];
+        if (!empleado) {
+            return res.status(404).json({
+                success: false,
+                message: 'Empleado no encontrado en la planilla'
+            });
+        }
+
+        // Actualizar anticipos y descuentos
+        if (anticipos !== undefined) {
+            planilla.empleados[empleadoIndex].anticipos = Math.max(0, parseFloat(anticipos) || 0);
+        }
+        if (descuentos !== undefined) {
+            planilla.empleados[empleadoIndex].descuentos = Math.max(0, parseFloat(descuentos) || 0);
+        }
+
+        // Recalcular total a pagar
+        const { totalBase, totalViaticos, anticipos: ant, descuentos: desc } = planilla.empleados[empleadoIndex];
+        planilla.empleados[empleadoIndex].totalPagar = totalBase + totalViaticos - ant - desc;
+
+        await planilla.save();
+
+        res.status(200).json({
+            success: true,
+            message: 'Anticipos/descuentos actualizados exitosamente',
+            data: planilla.empleados[empleadoIndex]
+        });
+
+    } catch (error) {
+        console.error('Error al actualizar anticipos/descuentos:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error al actualizar anticipos/descuentos',
+            error: error.message
+        });
+    }
+};
+
+// ============================================
+// OBTENER TODAS LAS PLANILLAS
+// ============================================
+PlanillaSemanalController.obtenerPlanillas = async (req, res) => {
+    try {
+        const { estado, page = 1, limit = 10 } = req.query;
+
+        const query = {};
+        if (estado) {
+            query.estado = estado;
+        }
+
+        const planillas = await PlanillaSemanal.find(query)
+            .sort({ fechaInicio: -1 })
+            .skip((page - 1) * limit)
             .limit(parseInt(limit));
 
-        const total = await PlanillaSemanal.countDocuments(filtro);
+        const total = await PlanillaSemanal.countDocuments(query);
 
         res.status(200).json({
             success: true,
@@ -203,41 +448,32 @@ PlanillaSemanalController.obtenerTodas = async (req, res) => {
             pagination: {
                 total,
                 page: parseInt(page),
-                limit: parseInt(limit),
-                totalPages: Math.ceil(total / parseInt(limit))
+                pages: Math.ceil(total / limit)
             }
         });
+
     } catch (error) {
-        console.error("Error al obtener planillas:", error);
+        console.error('Error al obtener planillas:', error);
         res.status(500).json({
             success: false,
-            message: "Error al obtener las planillas",
+            message: 'Error al obtener planillas',
             error: error.message
         });
     }
 };
 
-/**
- * Obtener una planilla por ID
- * GET /api/planillas/semanal/:id
- */
-PlanillaSemanalController.obtenerPorId = async (req, res) => {
+// ============================================
+// OBTENER PLANILLA POR ID
+// ============================================
+PlanillaSemanalController.obtenerPlanillaPorId = async (req, res) => {
     try {
         const { id } = req.params;
 
-        if (!isValidObjectId(id)) {
-            return res.status(400).json({
-                success: false,
-                message: "ID de planilla inválido"
-            });
-        }
-
         const planilla = await PlanillaSemanal.findById(id);
-
         if (!planilla) {
             return res.status(404).json({
                 success: false,
-                message: "Planilla no encontrada"
+                message: 'Planilla no encontrada'
             });
         }
 
@@ -245,418 +481,120 @@ PlanillaSemanalController.obtenerPorId = async (req, res) => {
             success: true,
             data: planilla
         });
+
     } catch (error) {
-        console.error("Error al obtener planilla:", error);
+        console.error('Error al obtener planilla:', error);
         res.status(500).json({
             success: false,
-            message: "Error al obtener la planilla",
+            message: 'Error al obtener planilla',
             error: error.message
         });
     }
 };
 
-/**
- * Actualizar registros diarios de un empleado en la planilla
- * PUT /api/planillas/semanal/:id/empleado/:empleadoId
- */
-PlanillaSemanalController.actualizarRegistroEmpleado = async (req, res) => {
-    try {
-        const { id, empleadoId } = req.params;
-        const { registrosDiarios, anticipos, descuentos } = req.body;
-
-        if (!isValidObjectId(id)) {
-            return res.status(400).json({
-                success: false,
-                message: "ID de planilla inválido"
-            });
-        }
-
-        if (!isValidObjectId(empleadoId)) {
-            return res.status(400).json({
-                success: false,
-                message: "ID de empleado inválido"
-            });
-        }
-
-        const planilla = await PlanillaSemanal.findById(id);
-
-        if (!planilla) {
-            return res.status(404).json({
-                success: false,
-                message: "Planilla no encontrada"
-            });
-        }
-
-        // Encontrar el empleado en la planilla
-        const empleadoIndex = planilla.empleados.findIndex(
-            emp => emp.empleadoId.toString() === empleadoId
-        );
-
-        if (empleadoIndex === -1) {
-            return res.status(404).json({
-                success: false,
-                message: "Empleado no encontrado en esta planilla"
-            });
-        }
-
-        // Actualizar registros
-        if (registrosDiarios) {
-            planilla.empleados[empleadoIndex].registrosDiarios = registrosDiarios;
-        }
-        if (anticipos !== undefined) {
-            planilla.empleados[empleadoIndex].anticipos = anticipos;
-        }
-        if (descuentos !== undefined) {
-            planilla.empleados[empleadoIndex].descuentos = descuentos;
-        }
-
-        // Recalcular totales del empleado
-        const totales = calcularTotalesEmpleado(planilla.empleados[empleadoIndex]);
-        planilla.empleados[empleadoIndex].totalBase = totales.totalBase;
-        planilla.empleados[empleadoIndex].totalViaticos = totales.totalViaticos;
-        planilla.empleados[empleadoIndex].totalAPagar = totales.totalAPagar;
-
-        // Recalcular totales generales
-        planilla.totales = calcularTotalesGenerales(planilla.empleados);
-
-        await planilla.save();
-
-        res.status(200).json({
-            success: true,
-            message: "Registro actualizado exitosamente",
-            data: planilla
-        });
-    } catch (error) {
-        console.error("Error al actualizar registro:", error);
-        res.status(500).json({
-            success: false,
-            message: "Error al actualizar el registro",
-            error: error.message
-        });
-    }
-};
-
-/**
- * Agregar un nuevo empleado a la planilla
- * POST /api/planillas/semanal/:id/empleado
- */
-PlanillaSemanalController.agregarEmpleado = async (req, res) => {
-    try {
-        const { id } = req.params;
-        const { empleadoId, tipoEmpleado, registrosDiarios, anticipos, descuentos } = req.body;
-
-        if (!isValidObjectId(id)) {
-            return res.status(400).json({
-                success: false,
-                message: "ID de planilla inválido"
-            });
-        }
-
-        if (!isValidObjectId(empleadoId)) {
-            return res.status(400).json({
-                success: false,
-                message: "ID de empleado inválido"
-            });
-        }
-
-        const planilla = await PlanillaSemanal.findById(id);
-
-        if (!planilla) {
-            return res.status(404).json({
-                success: false,
-                message: "Planilla no encontrada"
-            });
-        }
-
-        // Verificar si el empleado ya está en la planilla
-        const empleadoExiste = planilla.empleados.some(
-            emp => emp.empleadoId.toString() === empleadoId
-        );
-
-        if (empleadoExiste) {
-            return res.status(400).json({
-                success: false,
-                message: "El empleado ya está en esta planilla"
-            });
-        }
-
-        // Buscar datos del empleado
-        let empleadoData;
-        if (tipoEmpleado === 'Motorista') {
-            empleadoData = await Motorista.findById(empleadoId);
-        } else {
-            empleadoData = await Empleado.findById(empleadoId);
-        }
-
-        if (!empleadoData) {
-            return res.status(404).json({
-                success: false,
-                message: "Empleado no encontrado"
-            });
-        }
-
-        const nombreCompleto = `${empleadoData.name} ${empleadoData.lastName || ''}`.trim();
-
-        const nuevoEmpleado = {
-            empleadoId,
-            tipoEmpleado,
-            nombreCompleto,
-            registrosDiarios: registrosDiarios || [],
-            anticipos: anticipos || 0,
-            descuentos: descuentos || 0
-        };
-
-        // Calcular totales
-        const totales = calcularTotalesEmpleado(nuevoEmpleado);
-        nuevoEmpleado.totalBase = totales.totalBase;
-        nuevoEmpleado.totalViaticos = totales.totalViaticos;
-        nuevoEmpleado.totalAPagar = totales.totalAPagar;
-
-        planilla.empleados.push(nuevoEmpleado);
-
-        // Recalcular totales generales
-        planilla.totales = calcularTotalesGenerales(planilla.empleados);
-
-        await planilla.save();
-
-        res.status(200).json({
-            success: true,
-            message: "Empleado agregado exitosamente",
-            data: planilla
-        });
-    } catch (error) {
-        console.error("Error al agregar empleado:", error);
-        res.status(500).json({
-            success: false,
-            message: "Error al agregar el empleado",
-            error: error.message
-        });
-    }
-};
-
-/**
- * Eliminar un empleado de la planilla
- * DELETE /api/planillas/semanal/:id/empleado/:empleadoId
- */
-PlanillaSemanalController.eliminarEmpleado = async (req, res) => {
-    try {
-        const { id, empleadoId } = req.params;
-
-        if (!isValidObjectId(id)) {
-            return res.status(400).json({
-                success: false,
-                message: "ID de planilla inválido"
-            });
-        }
-
-        if (!isValidObjectId(empleadoId)) {
-            return res.status(400).json({
-                success: false,
-                message: "ID de empleado inválido"
-            });
-        }
-
-        const planilla = await PlanillaSemanal.findById(id);
-
-        if (!planilla) {
-            return res.status(404).json({
-                success: false,
-                message: "Planilla no encontrada"
-            });
-        }
-
-        const empleadoIndex = planilla.empleados.findIndex(
-            emp => emp.empleadoId.toString() === empleadoId
-        );
-
-        if (empleadoIndex === -1) {
-            return res.status(404).json({
-                success: false,
-                message: "Empleado no encontrado en esta planilla"
-            });
-        }
-
-        planilla.empleados.splice(empleadoIndex, 1);
-
-        // Recalcular totales generales
-        planilla.totales = calcularTotalesGenerales(planilla.empleados);
-
-        await planilla.save();
-
-        res.status(200).json({
-            success: true,
-            message: "Empleado eliminado exitosamente",
-            data: planilla
-        });
-    } catch (error) {
-        console.error("Error al eliminar empleado:", error);
-        res.status(500).json({
-            success: false,
-            message: "Error al eliminar el empleado",
-            error: error.message
-        });
-    }
-};
-
-/**
- * Cambiar estado de la planilla
- * PATCH /api/planillas/semanal/:id/estado
- */
+// ============================================
+// CAMBIAR ESTADO DE PLANILLA
+// ============================================
 PlanillaSemanalController.cambiarEstado = async (req, res) => {
     try {
         const { id } = req.params;
         const { estado } = req.body;
 
-        if (!isValidObjectId(id)) {
-            return res.status(400).json({
-                success: false,
-                message: "ID de planilla inválido"
-            });
-        }
-
-        const estadosValidos = ['borrador', 'pendiente', 'pagada', 'cerrada'];
+        // Validar estado
+        const estadosValidos = ['pendiente', 'aprobada', 'pagada', 'cerrada'];
         if (!estadosValidos.includes(estado)) {
             return res.status(400).json({
                 success: false,
-                message: "Estado inválido",
-                estadosValidos
+                message: `Estado inválido. Debe ser uno de: ${estadosValidos.join(', ')}`
             });
         }
 
         const planilla = await PlanillaSemanal.findById(id);
-
         if (!planilla) {
             return res.status(404).json({
                 success: false,
-                message: "Planilla no encontrada"
+                message: 'Planilla no encontrada'
+            });
+        }
+
+        // Validar transiciones de estado
+        const transicionesValidas = {
+            'pendiente': ['aprobada', 'cerrada'],
+            'aprobada': ['pagada', 'cerrada'],
+            'pagada': ['cerrada'],
+            'cerrada': []
+        };
+
+        if (!transicionesValidas[planilla.estado].includes(estado)) {
+            return res.status(400).json({
+                success: false,
+                message: `No se puede cambiar de estado "${planilla.estado}" a "${estado}"`
             });
         }
 
         planilla.estado = estado;
-
-        if (estado === 'pagada' || estado === 'cerrada') {
-            planilla.fechaAprobacion = new Date();
-        }
-
         await planilla.save();
 
         res.status(200).json({
             success: true,
-            message: `Estado cambiado a ${estado} exitosamente`,
+            message: `Planilla cambiada a estado: ${estado}`,
             data: planilla
         });
+
     } catch (error) {
-        console.error("Error al cambiar estado:", error);
+        console.error('Error al cambiar estado:', error);
         res.status(500).json({
             success: false,
-            message: "Error al cambiar el estado",
+            message: 'Error al cambiar estado de planilla',
             error: error.message
         });
     }
 };
 
-/**
- * Eliminar una planilla completa
- * DELETE /api/planillas/semanal/:id
- */
-PlanillaSemanalController.eliminar = async (req, res) => {
+// ============================================
+// ELIMINAR EMPLEADO DE PLANILLA
+// ============================================
+PlanillaSemanalController.eliminarEmpleado = async (req, res) => {
     try {
-        const { id } = req.params;
+        const { planillaId, empleadoIndex } = req.params;
 
-        if (!isValidObjectId(id)) {
-            return res.status(400).json({
-                success: false,
-                message: "ID de planilla inválido"
-            });
-        }
-
-        const planilla = await PlanillaSemanal.findById(id);
-
+        const planilla = await PlanillaSemanal.findById(planillaId);
         if (!planilla) {
             return res.status(404).json({
                 success: false,
-                message: "Planilla no encontrada"
+                message: 'Planilla no encontrada'
             });
         }
 
-        // Solo permitir eliminar si está en borrador
-        if (planilla.estado !== 'borrador') {
+        // Validar que la planilla esté abierta
+        if (['pagada', 'cerrada'].includes(planilla.estado)) {
             return res.status(400).json({
                 success: false,
-                message: "Solo se pueden eliminar planillas en estado borrador"
+                message: `No se puede eliminar empleados de una planilla ${planilla.estado}`
             });
         }
 
-        await PlanillaSemanal.findByIdAndDelete(id);
+        const index = parseInt(empleadoIndex);
+        if (index < 0 || index >= planilla.empleados.length) {
+            return res.status(404).json({
+                success: false,
+                message: 'Empleado no encontrado en la planilla'
+            });
+        }
+
+        planilla.empleados.splice(index, 1);
+        await planilla.save();
 
         res.status(200).json({
             success: true,
-            message: "Planilla eliminada exitosamente"
+            message: 'Empleado eliminado de la planilla exitosamente'
         });
+
     } catch (error) {
-        console.error("Error al eliminar planilla:", error);
+        console.error('Error al eliminar empleado:', error);
         res.status(500).json({
             success: false,
-            message: "Error al eliminar la planilla",
-            error: error.message
-        });
-    }
-};
-
-/**
- * Obtener planillas por empleado
- * GET /api/planillas/semanal/empleado/:empleadoId
- */
-PlanillaSemanalController.obtenerPorEmpleado = async (req, res) => {
-    try {
-        const { empleadoId } = req.params;
-        const { año, mes } = req.query;
-
-        if (!isValidObjectId(empleadoId)) {
-            return res.status(400).json({
-                success: false,
-                message: "ID de empleado inválido"
-            });
-        }
-
-        const filtro = {
-            'empleados.empleadoId': empleadoId
-        };
-
-        if (año) filtro.año = parseInt(año);
-        if (mes) filtro.mes = parseInt(mes);
-
-        const planillas = await PlanillaSemanal.find(filtro)
-            .sort({ año: -1, mes: -1, numeroSemana: -1 });
-
-        // Filtrar solo los datos del empleado específico
-        const planillasFiltradas = planillas.map(planilla => {
-            const empleadoEnPlanilla = planilla.empleados.find(
-                emp => emp.empleadoId.toString() === empleadoId
-            );
-
-            return {
-                _id: planilla._id,
-                numeroSemana: planilla.numeroSemana,
-                año: planilla.año,
-                mes: planilla.mes,
-                fechaInicio: planilla.fechaInicio,
-                fechaFin: planilla.fechaFin,
-                descripcion: planilla.descripcion,
-                estado: planilla.estado,
-                empleado: empleadoEnPlanilla
-            };
-        });
-
-        res.status(200).json({
-            success: true,
-            data: planillasFiltradas
-        });
-    } catch (error) {
-        console.error("Error al obtener planillas del empleado:", error);
-        res.status(500).json({
-            success: false,
-            message: "Error al obtener las planillas",
+            message: 'Error al eliminar empleado',
             error: error.message
         });
     }

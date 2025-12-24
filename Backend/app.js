@@ -24,6 +24,8 @@ import RepoprteViajexCliente from "./src/Routes/ReportexClienteRoutes.js"
 import cajachicaRoutes from "./src/Routes/cajaChicaRoutes.js";
 import reportesCajaChicaRoutes from "./src/Routes/ReportesCajaChicaRoutes.js";
 import CajaChicaConfigRoutes from "./src/Routes/CajaChicaConfigRoutes.js";
+import ViajesInternos from "./src/Routes/ViajesInternosRoutes.js"
+import RutasRoutes from "./src/Routes/RutasRoutes.js"
 import PlanillaQuincenalRoutes from "./src/Routes/PlanillaQuincenalRoutes.js";
 import ReportesPlanillaQuincenalRoutes from "./src/Routes/ReportesPlanillaQuincenalRoutes.js";
 import swaggerUi from "swagger-ui-express";
@@ -101,8 +103,12 @@ app.use("/api/mantenimientos",MantoRouter)
 app.use("/api/reporte",Reportesroutes)
 app.use("/api/resumen",ResumenRoutes)
 app.use("/api/resumenReporte",ResumenDieselReporte)
+app.use("/api/ViajesxClientes",ViajesxClientesRoutes)
 app.use("/api/reporteviaje",RepoprteViajexCliente)
 app.use("/api/reportesCajaChica", reportesCajaChicaRoutes);
+app.use("/api/viajesinternos",ViajesInternos)
+app.use("/api/rutas",RutasRoutes)
+app.use("/api/reporteviaje",RepoprteViajexCliente)
 app.use("/api/reportes/planilla/quincenal", ReportesPlanillaQuincenalRoutes);
 
 export default app;

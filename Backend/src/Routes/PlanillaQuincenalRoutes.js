@@ -36,7 +36,6 @@ const router = express.Router();
  *       "otrosDescuentos": {
  *         "anticipos": 50,
  *         "prestamos": 0,
- *         "camisas": 0,
  *         "otros": 0
  *       }
  *     }
@@ -53,12 +52,12 @@ router.post('/', PlanillaQuincenalController.crear);
  * - año: number (ej: 2025)
  * - mes: number (1-12)
  * - quincena: number (1 o 2)
- * - estado: string (borrador, pendiente, pagada, cerrada)
+ * - estado: string (pendiente, aprobada, pagada, cerrada)
  * - page: number (default: 1)
  * - limit: number (default: 10)
  * 
  * Ejemplo:
- * GET /api/planillas/quincenal?año=2025&mes=12&quincena=1&estado=borrador
+ * GET /api/planillas/quincenal?año=2025&mes=12&quincena=1&estado=pendiente
  */
 router.get('/', PlanillaQuincenalController.obtenerTodas);
 
@@ -94,7 +93,7 @@ router.get('/empleado/:empleadoId', PlanillaQuincenalController.obtenerPorEmplea
  * PUT /api/planillas/quincenal/:id/empleado/:empleadoId
  * Actualizar datos de un empleado en la planilla
  * 
- * ⚠️ Solo se puede editar si la planilla está en estado: borrador o pendiente
+ * ⚠️ Solo se puede editar si la planilla no está en estado pagada o cerrada (ej. pendiente, aprobada)
  * ❌ NO se puede editar si está: pagada o cerrada
  * 
  * Params:
@@ -109,7 +108,6 @@ router.get('/empleado/:empleadoId', PlanillaQuincenalController.obtenerPorEmplea
  *   "otrosDescuentos": {
  *     "anticipos": 60,
  *     "prestamos": 25,
- *     "camisas": 0,
  *     "otros": 0
  *   }
  * }
@@ -122,7 +120,7 @@ router.put('/:id/empleado/:empleadoId', PlanillaQuincenalController.actualizarEm
  * POST /api/planillas/quincenal/:id/empleado
  * Agregar un nuevo empleado a la planilla
  * 
- * ⚠️ Solo se puede agregar si la planilla está en estado: borrador o pendiente
+ * ⚠️ Solo se puede agregar si la planilla no está en estado pagada o cerrada (ej. pendiente, aprobada)
  * ❌ NO se puede agregar si está: pagada o cerrada
  * 
  * Params:
@@ -137,7 +135,7 @@ router.put('/:id/empleado/:empleadoId', PlanillaQuincenalController.actualizarEm
  *   "otrosDescuentos": {
  *     "anticipos": 100,
  *     "prestamos": 0,
- *     "camisas": 0,
+
  *     "otros": 0
  *   }
  * }
@@ -148,7 +146,7 @@ router.post('/:id/empleado', PlanillaQuincenalController.agregarEmpleado);
  * DELETE /api/planillas/quincenal/:id/empleado/:empleadoId
  * Eliminar un empleado de la planilla
  * 
- * ⚠️ Solo se puede eliminar si la planilla está en estado: borrador o pendiente
+ * ⚠️ Solo se puede eliminar si la planilla no está en estado pagada o cerrada (ej. pendiente, aprobada)
  * ❌ NO se puede eliminar si está: pagada o cerrada
  * 
  * Params:
@@ -165,16 +163,17 @@ router.delete('/:id/empleado/:empleadoId', PlanillaQuincenalController.eliminarE
  * Cambiar el estado de la planilla
  * 
  * Transiciones válidas:
- * - borrador    → pendiente, cerrada
- * - pendiente   → borrador, pagada, cerrada
- * - aprobada   → pagada , cerrada (NO puede regresar a pendiente o borrador)
- * - pagada      → cerrada (NO puede regresar a pendiente o borrador)
+ * - pendiente   → aprobada, pagada, cerrada
+ * - aprobada    → pagada, cerrada (NO puede regresar a pendiente)
+ * - pagada      → cerrada (NO puede regresar a pendiente)
  * - cerrada     → NO puede cambiar (estado final)
+ * 
+ * Nota: No existe el estado "borrador" en el modelo actual.
  * 
  * Params:
  * - id: ObjectId de la planilla
  * 
- * Body para cambiar a pendiente/borrador/:
+ * Body para cambiar el estado (pendiente, aprobada, pagada, cerrada):
  * {
  *   "estado": "pendiente"
  * }
@@ -204,8 +203,8 @@ router.patch('/:id/estado', PlanillaQuincenalController.cambiarEstado);
  * DELETE /api/planillas/quincenal/:id
  * Eliminar una planilla completa
  * 
- * ⚠️ Solo se puede eliminar si está en estado: borrador
- * ❌ NO se puede eliminar si está: pendiente, pagada o cerrada
+ * ⚠️ Solo se puede eliminar si está en estado: pendiente
+ * ❌ NO se puede eliminar si está: pagada o cerrada
  * 
  * Params:
  * - id: ObjectId de la planilla
