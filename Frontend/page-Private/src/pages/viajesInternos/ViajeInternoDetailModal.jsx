@@ -16,15 +16,108 @@ import {
 } from "lucide-react";
 import { config } from "../../config";
 
+const normalize = (v) => String(v ?? "").trim().toLowerCase();
+
+const toBoolPagado = (raw) => {
+  if (typeof raw === "boolean") return raw;
+  if (typeof raw === "number") return raw === 1;
+
+  const s = normalize(raw);
+  if (["true", "1", "si", "sí", "yes", "pagado", "paid"].includes(s)) return true;
+  if (["false", "0", "no"].includes(s)) return false;
+
+  return null;
+};
+
+const findPagadoDeep = (obj) => {
+  if (!obj || typeof obj !== "object") return null;
+
+  const stack = [{ v: obj, d: 0 }];
+  const keyRegex = /(pagado|paid|ispaid|ispay|pago|payment)/i;
+
+  while (stack.length) {
+    const { v, d } = stack.pop();
+    if (!v || typeof v !== "object") continue;
+    if (d > 4) continue;
+
+    for (const [k, val] of Object.entries(v)) {
+      if (keyRegex.test(k)) {
+        const b = toBoolPagado(val);
+        if (b !== null) return b;
+      }
+      if (val && typeof val === "object") stack.push({ v: val, d: d + 1 });
+    }
+  }
+
+  return null;
+};
+
+const getPagadoSafe = (viaje) => {
+  const direct =
+    viaje?.pagado ??
+    viaje?.Pagado ??
+    viaje?.paid ??
+    viaje?.Paid ??
+    viaje?.pagoConfirmado ??
+    viaje?.isPaid ??
+    viaje?.is_pagado ??
+    viaje?.pago?.pagado ??
+    viaje?.payment?.paid ??
+    null;
+
+  const b1 = toBoolPagado(direct);
+  if (b1 !== null) return b1;
+
+  const deep = findPagadoDeep(viaje);
+  return deep === null ? false : deep;
+};
+
+const getRawEstado = (viaje) => {
+  const raw =
+    viaje?.estado ??
+    viaje?.Estado ??
+    viaje?.status ??
+    viaje?.Status ??
+    viaje?.estatus ??
+    viaje?.Estatus ??
+    viaje?.estadoViaje ??
+    viaje?.estado_viaje ??
+    viaje?.estadoViajeInterno ??
+    viaje?.state ??
+    viaje?.State ??
+    null;
+
+  if (raw && typeof raw === "object") {
+    return raw?.nombre ?? raw?.name ?? raw?.label ?? raw?.estado ?? raw?.status ?? raw?.value ?? null;
+  }
+  return raw;
+};
+
+const canonEstado = (viaje) => {
+  const raw = getRawEstado(viaje) ?? "PENDIENTE";
+  const e = normalize(raw);
+
+  if (["cancelado", "canceled", "cancelled", "anulado"].includes(e)) return "Completado" === e ? "Cancelado" : "Cancelado";
+  if (getPagadoSafe(viaje)) return "Completado";
+  if (["completado", "completed", "done", "finalizado", "terminado"].includes(e)) return "Completado";
+  if (["en ruta", "en_ruta", "enruta", "in_route", "ruta"].includes(e)) return "En ruta";
+  return "Pendiente";
+};
+
+const getEstadoMeta = (estadoCanon) => {
+  const e = String(estadoCanon || "Pendiente").toUpperCase();
+  if (e === "COMPLETADO") return { label: "Completado", grad: "from-emerald-600 to-teal-600" };
+  if (e === "CANCELADO") return { label: "Cancelado", grad: "from-red-600 to-pink-600" };
+  if (e === "EN RUTA") return { label: "En ruta", grad: "from-blue-600 to-cyan-600" };
+  return { label: "Pendiente", grad: "from-indigo-600 to-purple-600" };
+};
+
 const ViajeInternoDetailModal = ({ viajeId, isOpen, onClose }) => {
   const [viaje, setViaje] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  const endpoint = useMemo(
-    () => `${config.api.API_URL}/viajesinternos/${viajeId}`,
-    [viajeId]
-  );
+  const endpoint = useMemo(() => `${config.api.API_URL}/viajesinternos/${viajeId}`, [viajeId]);
 
   useEffect(() => {
     if (isOpen && viajeId) fetchViajeById(viajeId);
@@ -36,7 +129,7 @@ const ViajeInternoDetailModal = ({ viajeId, isOpen, onClose }) => {
       setLoading(true);
       setError(null);
 
-      const response = await fetch(`${config.api.API_URL}/viajesinternos/${id}`);
+      const response = await fetch(`${config.api.API_URL}/viajesinternos/${id}`, { credentials: "include" });
       if (!response.ok) throw new Error("Error al cargar el viaje interno");
 
       const result = await response.json().catch(() => ({}));
@@ -64,26 +157,18 @@ const ViajeInternoDetailModal = ({ viajeId, isOpen, onClose }) => {
     });
   };
 
-  const formatearHora = (hora) => {
-    if (!hora) return "";
-    return String(hora);
-  };
+  const formatearHora = (hora) => (hora ? String(hora) : "");
 
   const formatearMoneda = (cantidad) => {
     const n = Number(cantidad || 0);
     return new Intl.NumberFormat("es-US", { style: "currency", currency: "USD" }).format(n);
   };
 
-  const getEstadoMeta = (estadoRaw) => {
-    const e = String(estadoRaw || "PENDIENTE").toUpperCase();
-    if (e === "COMPLETADO") return { label: "Completado", grad: "from-emerald-600 to-teal-600" };
-    if (e === "CANCELADO") return { label: "Cancelado", grad: "from-red-600 to-pink-600" };
-    return { label: "Pendiente", grad: "from-indigo-600 to-purple-600" };
-  };
-
   if (!isOpen) return null;
 
-  const estadoMeta = getEstadoMeta(viaje?.estado);
+  const pagado = getPagadoSafe(viaje);
+  const estadoCanon = canonEstado(viaje);
+  const estadoMeta = getEstadoMeta(estadoCanon);
 
   const clienteNombre = viaje?.clienteNombre || "N/A";
   const clienteTelefono = viaje?.clienteTelefono || "N/A";
@@ -96,7 +181,6 @@ const ViajeInternoDetailModal = ({ viajeId, isOpen, onClose }) => {
 
   const monto = viaje?.monto ?? 0;
 
-  const pagado = !!viaje?.pagado;
   const metodoPago = viaje?.metodoPago || "N/A";
   const tipoServicio = viaje?.tipoServicio || "N/A";
   const pasajeros = viaje?.pasajeros ?? 1;
@@ -109,13 +193,8 @@ const ViajeInternoDetailModal = ({ viajeId, isOpen, onClose }) => {
 
   return (
     <>
-      {/* Overlay */}
-      <div
-        className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm z-40 transition-opacity"
-        onClick={onClose}
-      />
+      <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm z-40 transition-opacity" onClick={onClose} />
 
-      {/* Modal */}
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
         <div
           className="bg-white rounded-3xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden pointer-events-auto transform transition-all"
@@ -142,7 +221,6 @@ const ViajeInternoDetailModal = ({ viajeId, isOpen, onClose }) => {
             </div>
           ) : viaje ? (
             <>
-              {/* Header con gradiente */}
               <div className={`bg-gradient-to-r ${estadoMeta.grad} px-8 py-6 relative overflow-hidden`}>
                 <div className="absolute top-0 right-0 w-64 h-64 bg-white opacity-5 rounded-full -mr-32 -mt-32" />
                 <div className="absolute bottom-0 left-0 w-48 h-48 bg-white opacity-5 rounded-full -ml-24 -mb-24" />
@@ -153,9 +231,12 @@ const ViajeInternoDetailModal = ({ viajeId, isOpen, onClose }) => {
                       <div className="bg-white bg-opacity-20 p-2 rounded-xl backdrop-blur-sm">
                         <Route className="text-white" size={24} />
                       </div>
+
+                      {/* ✅ Estado ya “canonizado”: si pagado => completado */}
                       <span className="text-white text-sm font-semibold px-3 py-1 bg-white bg-opacity-20 rounded-lg backdrop-blur-sm">
                         Estado: {estadoMeta.label}
                       </span>
+
                       {pagado ? (
                         <span className="text-white text-sm font-semibold px-3 py-1 bg-white bg-opacity-20 rounded-lg backdrop-blur-sm flex items-center gap-2">
                           <BadgeCheck size={16} />
@@ -184,11 +265,8 @@ const ViajeInternoDetailModal = ({ viajeId, isOpen, onClose }) => {
                 </div>
               </div>
 
-              {/* Content */}
               <div className="overflow-y-auto max-h-[calc(90vh-140px)] px-8 py-6">
-                {/* Info Cards Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                  {/* Cliente */}
                   <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-2xl p-5 border border-indigo-100">
                     <div className="flex items-start gap-3">
                       <div className="bg-indigo-100 p-2.5 rounded-xl">
@@ -205,7 +283,6 @@ const ViajeInternoDetailModal = ({ viajeId, isOpen, onClose }) => {
                     </div>
                   </div>
 
-                  {/* Fecha */}
                   <div className="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-2xl p-5 border border-blue-100">
                     <div className="flex items-start gap-3">
                       <div className="bg-blue-100 p-2.5 rounded-xl">
@@ -214,16 +291,11 @@ const ViajeInternoDetailModal = ({ viajeId, isOpen, onClose }) => {
                       <div>
                         <p className="text-gray-500 text-xs font-semibold uppercase tracking-wide mb-1">Fecha</p>
                         <p className="text-gray-900 font-bold capitalize">{formatearFecha(fecha)}</p>
-                        {hora ? (
-                          <p className="text-blue-600 text-sm font-medium mt-1">Hora: {hora}</p>
-                        ) : (
-                          <p className="text-blue-600 text-sm font-medium mt-1">Hora: N/A</p>
-                        )}
+                        <p className="text-blue-600 text-sm font-medium mt-1">Hora: {hora || "N/A"}</p>
                       </div>
                     </div>
                   </div>
 
-                  {/* Origen */}
                   <div className="bg-gradient-to-br from-emerald-50 to-teal-50 rounded-2xl p-5 border border-emerald-100">
                     <div className="flex items-start gap-3">
                       <div className="bg-emerald-100 p-2.5 rounded-xl">
@@ -232,16 +304,13 @@ const ViajeInternoDetailModal = ({ viajeId, isOpen, onClose }) => {
                       <div>
                         <p className="text-gray-500 text-xs font-semibold uppercase tracking-wide mb-1">Origen</p>
                         <p className="text-gray-900 font-bold">{origen}</p>
-                        {viaje?.origen?.esRecurrente ? (
-                          <p className="text-emerald-700 text-sm font-medium mt-1">Recurrente</p>
-                        ) : (
-                          <p className="text-emerald-700 text-sm font-medium mt-1">Esporádico</p>
-                        )}
+                        <p className="text-emerald-700 text-sm font-medium mt-1">
+                          {viaje?.origen?.esRecurrente ? "Recurrente" : "Esporádico"}
+                        </p>
                       </div>
                     </div>
                   </div>
 
-                  {/* Destino */}
                   <div className="bg-gradient-to-br from-orange-50 to-amber-50 rounded-2xl p-5 border border-orange-100">
                     <div className="flex items-start gap-3">
                       <div className="bg-orange-100 p-2.5 rounded-xl">
@@ -250,19 +319,15 @@ const ViajeInternoDetailModal = ({ viajeId, isOpen, onClose }) => {
                       <div>
                         <p className="text-gray-500 text-xs font-semibold uppercase tracking-wide mb-1">Destino</p>
                         <p className="text-gray-900 font-bold">{destino}</p>
-                        {viaje?.destino?.esRecurrente ? (
-                          <p className="text-orange-700 text-sm font-medium mt-1">Recurrente</p>
-                        ) : (
-                          <p className="text-orange-700 text-sm font-medium mt-1">Esporádico</p>
-                        )}
+                        <p className="text-orange-700 text-sm font-medium mt-1">
+                          {viaje?.destino?.esRecurrente ? "Recurrente" : "Esporádico"}
+                        </p>
                       </div>
                     </div>
                   </div>
                 </div>
 
-                {/* Info secundaria */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                  {/* Monto */}
                   <div className="bg-white rounded-2xl border border-gray-200 p-5">
                     <div className="flex items-start gap-3">
                       <div className="bg-gray-100 p-2.5 rounded-xl">
@@ -276,7 +341,6 @@ const ViajeInternoDetailModal = ({ viajeId, isOpen, onClose }) => {
                     </div>
                   </div>
 
-                  {/* Servicio */}
                   <div className="bg-white rounded-2xl border border-gray-200 p-5">
                     <div className="flex items-start gap-3">
                       <div className="bg-gray-100 p-2.5 rounded-xl">
@@ -290,7 +354,6 @@ const ViajeInternoDetailModal = ({ viajeId, isOpen, onClose }) => {
                     </div>
                   </div>
 
-                  {/* Conductor/Vehículo */}
                   <div className="bg-white rounded-2xl border border-gray-200 p-5">
                     <div className="flex items-start gap-3">
                       <div className="bg-gray-100 p-2.5 rounded-xl">
@@ -305,7 +368,6 @@ const ViajeInternoDetailModal = ({ viajeId, isOpen, onClose }) => {
                   </div>
                 </div>
 
-                {/* Notas / Referencias */}
                 {(notas || referencias) && (
                   <div className="bg-gray-50 rounded-2xl p-6 mb-6 border border-gray-200">
                     <div className="flex items-start gap-3">
@@ -333,7 +395,6 @@ const ViajeInternoDetailModal = ({ viajeId, isOpen, onClose }) => {
                   </div>
                 )}
 
-                {/* Footer monto grande */}
                 <div className="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-2xl p-6 shadow-xl">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">

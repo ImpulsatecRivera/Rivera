@@ -24,8 +24,6 @@ const CAMIONES_ENDPOINT = `${config.api.API_URL}/camiones`;
 
 const TIPO_SERVICIO = [
   { value: "REGULAR", label: "Regular" },
-  { value: "ESCOLAR", label: "Escolar" },
-  { value: "ESPECIAL", label: "Especial" },
   { value: "EMERGENCIA", label: "Emergencia" },
   { value: "OTRO", label: "Otro" },
 ];
@@ -100,6 +98,9 @@ const findPlacaDeep = (obj) => {
 const getCamionPlaca = (c) => findPlacaDeep(c);
 
 const norm = (s) => String(s || "").trim().toUpperCase();
+
+// ✅ NUEVO: estado depende de pagado
+const estadoPorPago = (pagado) => (pagado ? "COMPLETADO" : "PENDIENTE");
 
 export default function AgregarViajeInterno() {
   const navigate = useNavigate();
@@ -279,7 +280,8 @@ export default function AgregarViajeInterno() {
       body: JSON.stringify(payload),
     });
     const json = await res.json().catch(() => ({}));
-    if (!res.ok || json?.success === false) throw new Error(json?.message || "No se pudo crear el motorista");
+    if (!res.ok || json?.success === false)
+      throw new Error(json?.message || "No se pudo crear el motorista");
 
     const created = json?.data || json;
     return created?._id || created?.id || "";
@@ -553,10 +555,22 @@ export default function AgregarViajeInterno() {
   // =========================
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
+
     if (type === "checkbox") {
+      // ✅ si cambia "pagado", actualiza también estado
+      if (name === "pagado") {
+        setFormData((prev) => ({
+          ...prev,
+          pagado: checked,
+          estado: estadoPorPago(checked),
+        }));
+        return;
+      }
+
       setFormData((prev) => ({ ...prev, [name]: checked }));
       return;
     }
+
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
@@ -590,8 +604,10 @@ export default function AgregarViajeInterno() {
     }));
   };
 
-  const handleOrigenTexto = (value) => setFormData((prev) => ({ ...prev, origen: { ...prev.origen, texto: value } }));
-  const handleDestinoTexto = (value) => setFormData((prev) => ({ ...prev, destino: { ...prev.destino, texto: value } }));
+  const handleOrigenTexto = (value) =>
+    setFormData((prev) => ({ ...prev, origen: { ...prev.origen, texto: value } }));
+  const handleDestinoTexto = (value) =>
+    setFormData((prev) => ({ ...prev, destino: { ...prev.destino, texto: value } }));
   const handleConductorChange = (field, value) =>
     setFormData((prev) => ({ ...prev, conductor: { ...prev.conductor, [field]: value } }));
 
@@ -640,7 +656,8 @@ export default function AgregarViajeInterno() {
       setLoading(true);
       setError(null);
 
-      const ESTADO_INICIAL = "PENDIENTE";
+      // ✅ ahora sí depende de pagado
+      const ESTADO_INICIAL = estadoPorPago(formData.pagado);
 
       const dataToSend = {
         ...(isMongoId(formData.clienteId) ? { clienteId: formData.clienteId } : {}),
@@ -648,6 +665,7 @@ export default function AgregarViajeInterno() {
         clienteNombre: formData.clienteNombre,
         clienteTelefono: formData.clienteTelefono || "",
 
+        // ✅ IMPORTANTE: no hardcodear PENDIENTE
         estado: ESTADO_INICIAL,
         status: ESTADO_INICIAL,
         estatus: ESTADO_INICIAL,
@@ -689,7 +707,8 @@ export default function AgregarViajeInterno() {
       });
 
       const json = await res.json().catch(() => ({}));
-      if (!res.ok || json?.success === false) throw new Error(json?.message || "Error al crear el viaje interno");
+      if (!res.ok || json?.success === false)
+        throw new Error(json?.message || "Error al crear el viaje interno");
 
       navigate("/viajesInternos");
     } catch (e) {
@@ -762,14 +781,18 @@ export default function AgregarViajeInterno() {
 
               {formData.clienteEsRecurrente && (
                 <>
-                  <label className="block text-xs font-semibold text-gray-600 mb-1">Clientes existentes (backend)</label>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">
+                    Clientes existentes (backend)
+                  </label>
                   <select
                     value={formData.clienteId}
                     onChange={(e) => handleClienteSelect(e.target.value)}
                     className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
                     disabled={loadingClientes}
                   >
-                    <option value="">{loadingClientes ? "Cargando clientes..." : "Seleccionar cliente..."}</option>
+                    <option value="">
+                      {loadingClientes ? "Cargando clientes..." : "Seleccionar cliente..."}
+                    </option>
                     {clientesOptions.map((c) => (
                       <option key={c.id} value={c.id}>
                         {c.label}
@@ -808,7 +831,9 @@ export default function AgregarViajeInterno() {
 
               <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Nombre del Cliente *</label>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Nombre del Cliente *
+                  </label>
                   <input
                     type="text"
                     name="clienteNombre"
@@ -977,7 +1002,9 @@ export default function AgregarViajeInterno() {
                       className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
                       disabled={loadingUbicaciones}
                     >
-                      <option value="">{loadingUbicaciones ? "Cargando ubicaciones..." : "Seleccionar origen..."}</option>
+                      <option value="">
+                        {loadingUbicaciones ? "Cargando ubicaciones..." : "Seleccionar origen..."}
+                      </option>
                       {ubicacionesOptions.map((u) => (
                         <option key={u.id} value={u.id}>
                           {u.label}
@@ -986,7 +1013,9 @@ export default function AgregarViajeInterno() {
                     </select>
 
                     <div className="mt-3">
-                      <label className="block text-xs font-semibold text-gray-600 mb-1">Texto (se envía al backend) *</label>
+                      <label className="block text-xs font-semibold text-gray-600 mb-1">
+                        Texto (se envía al backend) *
+                      </label>
                       <input
                         type="text"
                         value={formData.origen.texto}
@@ -1034,7 +1063,9 @@ export default function AgregarViajeInterno() {
                       className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
                       disabled={loadingUbicaciones}
                     >
-                      <option value="">{loadingUbicaciones ? "Cargando ubicaciones..." : "Seleccionar destino..."}</option>
+                      <option value="">
+                        {loadingUbicaciones ? "Cargando ubicaciones..." : "Seleccionar destino..."}
+                      </option>
                       {ubicacionesOptions.map((u) => (
                         <option key={u.id} value={u.id}>
                           {u.label}
@@ -1043,7 +1074,9 @@ export default function AgregarViajeInterno() {
                     </select>
 
                     <div className="mt-3">
-                      <label className="block text-xs font-semibold text-gray-600 mb-1">Texto (se envía al backend) *</label>
+                      <label className="block text-xs font-semibold text-gray-600 mb-1">
+                        Texto (se envía al backend) *
+                      </label>
                       <input
                         type="text"
                         value={formData.destino.texto}
@@ -1087,7 +1120,9 @@ export default function AgregarViajeInterno() {
                     className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
                     disabled={loadingMotoristas}
                   >
-                    <option value="">{loadingMotoristas ? "Cargando motoristas..." : "Seleccionar motorista..."}</option>
+                    <option value="">
+                      {loadingMotoristas ? "Cargando motoristas..." : "Seleccionar motorista..."}
+                    </option>
                     {motoristasOptions.map((m) => (
                       <option key={m.id} value={m.id}>
                         {m.label}
@@ -1105,7 +1140,9 @@ export default function AgregarViajeInterno() {
                     className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
                     disabled={loadingCamiones}
                   >
-                    <option value="">{loadingCamiones ? "Cargando camiones..." : "Seleccionar camión..."}</option>
+                    <option value="">
+                      {loadingCamiones ? "Cargando camiones..." : "Seleccionar camión..."}
+                    </option>
                     {camionesOptions.map((c) => (
                       <option key={c.id} value={c.id}>
                         {c.label}
