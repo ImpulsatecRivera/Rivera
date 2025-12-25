@@ -22,8 +22,10 @@ const VIAJES_ENDPOINT = `${config.api.API_URL}/viajesinternos`;
 const ESTADOS = {
   TODOS: "Todos",
   PENDIENTE: "Pendiente",
-  EN_RUTA: "En ruta",
   COMPLETADO: "Completado",
+  // Los dejamos para mostrar badges si existen en data,
+  // pero NO los renderizamos como tabs si no los querés.
+  EN_RUTA: "En ruta",
   CANCELADO: "Cancelado",
 };
 
@@ -72,13 +74,78 @@ const getRawEstado = (row) => {
   return raw;
 };
 
+// ✅ Convierte cualquier valor a boolean pagado de forma segura
+const toBoolPagado = (raw) => {
+  if (typeof raw === "boolean") return raw;
+  if (typeof raw === "number") return raw === 1;
+
+  const s = normalize(raw);
+  if (["true", "1", "si", "sí", "yes", "pagado", "paid"].includes(s)) return true;
+  if (["false", "0", "no"].includes(s)) return false;
+
+  return null; // desconocido
+};
+
+// ✅ Deep search (por si el backend lo manda anidado)
+const findPagadoDeep = (obj) => {
+  if (!obj || typeof obj !== "object") return null;
+
+  const stack = [{ v: obj, d: 0 }];
+  const keyRegex = /(pagado|paid|ispaid|ispay|pago|payment)/i;
+
+  while (stack.length) {
+    const { v, d } = stack.pop();
+    if (!v || typeof v !== "object") continue;
+    if (d > 4) continue;
+
+    for (const [k, val] of Object.entries(v)) {
+      if (keyRegex.test(k)) {
+        const b = toBoolPagado(val);
+        if (b !== null) return b;
+      }
+      if (val && typeof val === "object") stack.push({ v: val, d: d + 1 });
+    }
+  }
+
+  return null;
+};
+
+// ✅ Detectar "pagado" aunque venga con otro nombre/tipo/anidado
+const getRawPagado = (row) => {
+  const direct =
+    row?.pagado ??
+    row?.Pagado ??
+    row?.paid ??
+    row?.Paid ??
+    row?.pagoConfirmado ??
+    row?.isPaid ??
+    row?.is_pagado ??
+    row?.pago?.pagado ??
+    row?.pago?.paid ??
+    row?.payment?.paid ??
+    row?.payment?.pagado ??
+    null;
+
+  const b1 = toBoolPagado(direct);
+  if (b1 !== null) return b1;
+
+  const deep = findPagadoDeep(row);
+  return deep === null ? false : deep;
+};
+
 const canonEstado = (row) => {
   const raw = getRawEstado(row) ?? "PENDIENTE";
   const e = normalize(raw);
 
+  // 1) Cancelado manda (si de verdad viene cancelado)
+  if (["cancelado", "canceled", "cancelled", "anulado"].includes(e)) return ESTADOS.CANCELADO;
+
+  // 2) Si está pagado => completado (aunque el estado venga pendiente)
+  if (getRawPagado(row)) return ESTADOS.COMPLETADO;
+
+  // 3) Otros estados
   if (["completado", "completed", "done", "finalizado", "terminado"].includes(e)) return ESTADOS.COMPLETADO;
   if (["en ruta", "en_ruta", "enruta", "in_route", "ruta"].includes(e)) return ESTADOS.EN_RUTA;
-  if (["cancelado", "canceled", "cancelled", "anulado"].includes(e)) return ESTADOS.CANCELADO;
 
   return ESTADOS.PENDIENTE;
 };
@@ -108,7 +175,6 @@ export default function PantallaPrincipalViajesInternos() {
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [detailId, setDetailId] = useState(null);
 
-  // ✅ Modal reportes (sin ruta)
   const [isReportesOpen, setIsReportesOpen] = useState(false);
 
   const fetchViajes = async () => {
@@ -260,7 +326,8 @@ export default function PantallaPrincipalViajesInternos() {
     );
   }
 
-  const tabs = [ESTADOS.TODOS, ESTADOS.PENDIENTE, ESTADOS.EN_RUTA, ESTADOS.COMPLETADO, ESTADOS.CANCELADO];
+  // ✅ SOLO los tabs que querés (esto quita el “espacio”)
+  const tabs = [ESTADOS.TODOS, ESTADOS.PENDIENTE, ESTADOS.COMPLETADO];
 
   return (
     <div className="min-h-screen bg-white p-8">
@@ -272,7 +339,6 @@ export default function PantallaPrincipalViajesInternos() {
           </div>
 
           <div className="flex items-center gap-3 flex-wrap">
-            {/* ✅ Reportes abre modal (NO ruta) */}
             <button
               type="button"
               onClick={() => setIsReportesOpen(true)}
@@ -358,7 +424,8 @@ export default function PantallaPrincipalViajesInternos() {
                   const id = row?._id || row?.id;
                   const fecha = row?.fecha || row?.createdAt;
 
-                  const cliente = row?.clienteNombre || row?.cliente?.nombre || row?.clienteId?.nombre || "N/A";
+                  const cliente =
+                    row?.clienteNombre || row?.cliente?.nombre || row?.clienteId?.nombre || "N/A";
                   const origen = row?.origen?.texto || "N/A";
                   const destino = row?.destino?.texto || "N/A";
 
@@ -373,14 +440,24 @@ export default function PantallaPrincipalViajesInternos() {
                       onClick={() => openDetail(row)}
                       className="border-b border-gray-100 hover:bg-gray-50 cursor-pointer transition-colors"
                     >
-                      <td className="py-5 px-6 text-gray-700 font-semibold">{startIndex + idx + 1}</td>
-                      <td className="py-5 px-6 text-gray-900 font-semibold">{formatearFecha(fecha)}</td>
+                      <td className="py-5 px-6 text-gray-700 font-semibold">
+                        {startIndex + idx + 1}
+                      </td>
+
+                      <td className="py-5 px-6 text-gray-900 font-semibold">
+                        {formatearFecha(fecha)}
+                      </td>
+
                       <td className="py-5 px-6 text-gray-700">{cliente}</td>
                       <td className="py-5 px-6 text-gray-700">{origen}</td>
                       <td className="py-5 px-6 text-gray-700">{destino}</td>
 
                       <td className="py-5 px-6">
-                        <span className={`inline-flex px-3 py-1 rounded-full text-xs font-semibold ${estadoBadgeClass(estado)}`}>
+                        <span
+                          className={`inline-flex px-3 py-1 rounded-full text-xs font-semibold ${estadoBadgeClass(
+                            estado
+                          )}`}
+                        >
                           {estado}
                         </span>
                       </td>
@@ -438,7 +515,8 @@ export default function PantallaPrincipalViajesInternos() {
 
           <div className="flex items-center justify-between px-6 py-5 border-t border-gray-200 bg-gray-50">
             <p className="text-sm text-gray-600 font-medium">
-              Mostrando {sorted.length === 0 ? 0 : startIndex + 1} a {Math.min(endIndex, sorted.length)} de {sorted.length} registros
+              Mostrando {sorted.length === 0 ? 0 : startIndex + 1} a{" "}
+              {Math.min(endIndex, sorted.length)} de {sorted.length} registros
             </p>
 
             <div className="flex items-center gap-2">
@@ -459,7 +537,9 @@ export default function PantallaPrincipalViajesInternos() {
                     key={page}
                     onClick={() => setCurrentPage(page)}
                     className={`px-4 py-2 rounded-lg font-semibold transition-colors ${
-                      currentPage === page ? "bg-indigo-600 text-white" : "text-gray-700 hover:bg-gray-100"
+                      currentPage === page
+                        ? "bg-indigo-600 text-white"
+                        : "text-gray-700 hover:bg-gray-100"
                     }`}
                   >
                     {page}
@@ -499,12 +579,10 @@ export default function PantallaPrincipalViajesInternos() {
         viajeId={detailId}
       />
 
-      {/* ✅ Modal de reportes */}
       <ReportesViajesInternosModal
         isOpen={isReportesOpen}
         onClose={() => setIsReportesOpen(false)}
         apiUrl={config.api.API_URL}
-        viajes={viajes}
       />
     </div>
   );

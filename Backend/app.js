@@ -46,13 +46,7 @@ import swaggerUi from "swagger-ui-express";
 import fs from "fs";
 import path from "path";
 
-//Traemos el archivo json
-
 const app = express();
-
-//comentRIO PARA COMMI
-//pruerba verce
-//djsjdjsj
 
 app.use(express.json());
 app.use(cookieParser());
@@ -112,7 +106,12 @@ app.use("/api/cajaChicaConfig", CajaChicaConfigRoutes);
 app.use("/api/reportesCajaChica", reportesCajaChicaRoutes);
 
 app.use("/api/ViajesxClientes", ViajesxClientesRoutes);
+
+// ✅ Ya tenías esta:
 app.use("/api/reporteviaje", RepoprteViajexCliente);
+
+// ✅ SOLO AGREGUÉ ESTA (alias para que tu modal use /api/reportes-viajes)
+app.use("/api/reportes-viajes", RepoprteViajexCliente);
 
 app.use("/api/planillas/quincenal", PlanillaQuincenalRoutes);
 app.use("/api/auto-update", autoUpdateRoutes);
