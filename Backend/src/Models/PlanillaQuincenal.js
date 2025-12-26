@@ -215,9 +215,13 @@ const planillaQuincenalSchema = new Schema({
     // Estado de la planilla
     estado: {
         type: String, 
-        enum: ['pendiente', 'aprobada', 'pagada', 'cerrada'],
+        enum: ['pendiente', 'aprobada',  'cerrada'],
         default: 'pendiente'
     },
+    pagada: {
+    type: Boolean,
+    default: false
+},
     // Metadatos
     creadoPor: {
         type: Schema.Types.ObjectId,

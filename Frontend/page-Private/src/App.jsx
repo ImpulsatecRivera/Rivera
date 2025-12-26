@@ -38,6 +38,7 @@ import EditMantenimiento from "./pages/MantenimientosCamiones/EditarMantos";
 import CajaChica from "./pages/CajaChica/CajaChica";
 import Planilla from "./pages/Planilla/Planilla";
 import PlanillaQuincenal from "./pages/Planilla/PlanillaQuincenal";
+import VerPlanillaQuincenal from "./pages/Planilla/VerPlanillasQuincenales";
 
 // ✅ Diesel
 import PantallaPrincipalDiesel from "./pages/Diesel/PantallaPrincipalDiesel";
@@ -126,6 +127,8 @@ function App() {
         {/* Planillas */}
         <Route path="/planilla" element={<Planilla />} />
         <Route path="/planilla/quincenal" element={<PlanillaQuincenal />} />
+        <Route path="/planilla/quincenales/:id" element={<VerPlanillaQuincenal />} />
+
 
         {/* Caja Chica */}
         <Route path="/CajaChica" element={<CajaChica />} />

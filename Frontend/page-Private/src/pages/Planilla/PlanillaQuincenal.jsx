@@ -500,35 +500,99 @@ export default function PlanillaQuincenal() {
     }
   };
 
-  const cambiarEstadoPlanilla = async (nuevoEstado) => {
-    if (!planilla || !planilla._id) return;
+ const cambiarEstadoPlanilla = async (nuevoEstado) => {
+  if (!planilla || !planilla._id) return;
 
-    const mensajes = {
-      aprobada: {
-        title: '¿Aprobar Planilla?',
-        text: 'Una vez aprobada, no se podrá editar',
-        confirmText: 'Sí, aprobar'
-      },
-      pagada: {
-        title: '¿Marcar como Pagada?',
-        text: 'Confirma que la planilla ha sido pagada',
-        confirmText: 'Sí, marcar como pagada'
-      },
-      cerrada: {
-        title: '¿Cerrar Planilla?',
-        text: 'Una vez cerrada, la planilla quedará bloqueada permanentemente. No se podrá eliminar.',
-        confirmText: 'Sí, cerrar planilla'
+  const mensajes = {
+    aprobada: {
+      title: '¿Aprobar Planilla?',
+      text: 'Una vez aprobada, no se podrá editar',
+      confirmText: 'Sí, aprobar',
+      showDateInput: false
+    },
+    cerrada: {
+      title: '¿Cerrar Planilla?',
+      text: 'Una vez cerrada, la planilla quedará bloqueada permanentemente. No se podrá eliminar.',
+      confirmText: 'Sí, cerrar planilla',
+      showDateInput: true
+    }
+  };
+
+  const mensaje = mensajes[nuevoEstado];
+  
+  // ✅ Si es cerrada, pedir fecha
+  if (nuevoEstado === 'cerrada') {
+    const { value: fechaCierre } = await Swal.fire({
+      title: mensaje.title,
+      text: mensaje.text,
+      icon: 'warning',
+      input: 'date',
+      inputValue: new Date().toISOString().split('T')[0],
+      inputLabel: 'Fecha de cierre',
+      showCancelButton: true,
+      confirmButtonColor: '#dc2626',
+      cancelButtonColor: '#6b7280',
+      confirmButtonText: mensaje.confirmText,
+      cancelButtonText: 'Cancelar',
+      inputValidator: (value) => {
+        if (!value) {
+          return 'Debes seleccionar una fecha de cierre';
+        }
+        const fecha = new Date(value);
+        const hoy = new Date();
+        if (fecha > hoy) {
+          return 'La fecha no puede ser futura';
+        }
       }
-    };
+    });
 
-    const mensaje = mensajes[nuevoEstado];
-    
+    if (!fechaCierre) return;
+
+    try {
+      const response = await fetch(
+        `${config.api.API_URL}/planillas/quincenal/${planilla._id}/estado`,
+        {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            estado: nuevoEstado,
+            fechaCierre: new Date(fechaCierre).toISOString()
+          })
+        }
+      );
+
+      const data = await response.json();
+      if (data.success && data.data) {
+        const planillaActualizada = {
+          ...data.data,
+          empleados: Array.isArray(data.data.empleados) ? data.data.empleados : []
+        };
+        setPlanilla(planillaActualizada);
+        Swal.fire({
+          icon: 'success',
+          title: '¡Estado actualizado!',
+          text: `Planilla cerrada el ${new Date(fechaCierre).toLocaleDateString('es-ES')}`,
+          timer: 2000,
+          showConfirmButton: false
+        });
+      } else {
+        throw new Error(data.message || 'Error al cambiar estado');
+      }
+    } catch (error) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: error.message
+      });
+    }
+  } else {
+    // ✅ Para aprobar (sin fecha)
     const result = await Swal.fire({
       title: mensaje.title,
       text: mensaje.text,
       icon: 'warning',
       showCancelButton: true,
-      confirmButtonColor: '#4f46e5',
+      confirmButtonColor: '#10b981',
       cancelButtonColor: '#6b7280',
       confirmButtonText: mensaje.confirmText,
       cancelButtonText: 'Cancelar'
@@ -570,7 +634,8 @@ export default function PlanillaQuincenal() {
         text: error.message
       });
     }
-  };
+  }
+};
 
   const limpiarFormulario = () => {
     setFormEmpleado({
@@ -709,100 +774,91 @@ export default function PlanillaQuincenal() {
             </div>
 
             <div className="flex items-center gap-3">
-              {/* Botón Agregar Empleado */}
-              <button
-                onClick={() => setShowModalAgregar(true)}
-                disabled={planilla?.estado !== 'pendiente'}
-                className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold shadow-lg transition-all ${
-                  planilla?.estado !== 'pendiente'
-                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed opacity-50'
-                    : 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:from-indigo-700 hover:to-purple-700 hover:shadow-xl transform hover:scale-105'
-                }`}
-              >
-                <Plus size={22} />
-                Agregar Empleado
-              </button>
+  {/* Botón Agregar Empleado */}
+  <button
+    onClick={() => setShowModalAgregar(true)}
+    disabled={planilla?.estado !== 'pendiente'}
+    className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold shadow-lg transition-all ${
+      planilla?.estado !== 'pendiente'
+        ? 'bg-gray-300 text-gray-500 cursor-not-allowed opacity-50'
+        : 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:from-indigo-700 hover:to-purple-700 hover:shadow-xl transform hover:scale-105'
+    }`}
+  >
+    <Plus size={22} />
+    Agregar Empleado
+  </button>
 
-              {/* Botón Aprobar */}
-              {planilla?.estado === 'pendiente' && (
-                <button
-                  onClick={() => cambiarEstadoPlanilla('aprobada')}
-                  className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl hover:from-blue-700 hover:to-blue-800 font-bold shadow-lg hover:shadow-xl transition-all transform hover:scale-105"
-                >
-                  <CheckCircle size={22} />
-                  Aprobar Planilla
-                </button>
-              )}
+  {/* ✅ Botón Aprobar - Solo para pendientes */}
+  {planilla?.estado === 'pendiente' && (
+    <button
+      onClick={() => cambiarEstadoPlanilla('aprobada')}
+      className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-emerald-600 to-green-600 text-white rounded-xl hover:from-emerald-700 hover:to-green-700 font-bold shadow-lg hover:shadow-xl transition-all transform hover:scale-105"
+    >
+      <CheckCircle size={22} />
+      Aprobar Planilla
+    </button>
+  )}
 
-              {planilla?.estado === 'aprobada' && (
-                <button
-                  onClick={() => cambiarEstadoPlanilla('pagada')}
-                  className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-emerald-600 to-green-600 text-white rounded-xl hover:from-emerald-700 hover:to-green-700 font-bold shadow-lg hover:shadow-xl transition-all transform hover:scale-105"
-                >
-                  <DollarSign size={22} />
-                  Marcar como Pagada
-                </button>
-              )}
+  {/* ✅ Botón Cerrar - TAMBIÉN para pendientes */}
+  {planilla?.estado === 'pendiente' && (
+    <button
+      onClick={() => cambiarEstadoPlanilla('cerrada')}
+      className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-red-600 to-red-700 text-white rounded-xl hover:from-red-700 hover:to-red-800 font-bold shadow-lg hover:shadow-xl transition-all transform hover:scale-105"
+    >
+      <Lock size={22} />
+      Cerrar Planilla
+    </button>
+  )}
 
-              {planilla?.estado === 'pagada' && (
-                <button
-                  onClick={() => cambiarEstadoPlanilla('cerrada')}
-                  className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-red-600 to-red-700 text-white rounded-xl hover:from-red-700 hover:to-red-800 font-bold shadow-lg hover:shadow-xl transition-all transform hover:scale-105"
-                >
-                  <Lock size={22} />
-                  Cerrar Planilla
-                </button>
-              )}
-
-              {/* Botón Nueva Planilla */}
-              {planilla?.estado !== 'pendiente' && (
-                <button
-                  onClick={async () => {
-                    setLoading(true);
-                    const proximaQuincena = calcularProximaQuincena(planilla);
-                    setInfoPlanilla(proximaQuincena);
-                    
-                    const resultado = await buscarPrimeraQuincenaDisponible();
-                    
-                    if (resultado.exito) {
-                      const planillaConEmpleados = {
-                        ...resultado.planilla,
-                        empleados: Array.isArray(resultado.planilla.empleados) 
-                          ? resultado.planilla.empleados 
-                          : []
-                      };
-                      setPlanilla(planillaConEmpleados);
-                      
-                      setInfoPlanilla({
-                        año: resultado.planilla.año,
-                        mes: resultado.planilla.mes,
-                        quincena: resultado.planilla.quincena
-                      });
-                      
-                      Swal.fire({
-                        icon: 'success',
-                        title: '¡Planilla creada!',
-                        text: resultado.mensaje,
-                        timer: 2500,
-                        showConfirmButton: false
-                      });
-                    } else {
-                      Swal.fire({
-                        icon: 'error',
-                        title: 'Error',
-                        text: resultado.mensaje
-                      });
-                    }
-                    
-                    setLoading(false);
-                  }}
-                  className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl hover:from-purple-700 hover:to-pink-700 font-bold shadow-lg hover:shadow-xl transition-all transform hover:scale-105"
-                >
-                  <Plus size={22} />
-                  Nueva Planilla
-                </button>
-              )}
-            </div>
+  {/* Botón Nueva Planilla - Para cualquier estado que no sea pendiente */}
+  {planilla?.estado !== 'pendiente' && (
+    <button
+      onClick={async () => {
+        setLoading(true);
+        const proximaQuincena = calcularProximaQuincena(planilla);
+        setInfoPlanilla(proximaQuincena);
+        
+        const resultado = await buscarPrimeraQuincenaDisponible();
+        
+        if (resultado.exito) {
+          const planillaConEmpleados = {
+            ...resultado.planilla,
+            empleados: Array.isArray(resultado.planilla.empleados) 
+              ? resultado.planilla.empleados 
+              : []
+          };
+          setPlanilla(planillaConEmpleados);
+          
+          setInfoPlanilla({
+            año: resultado.planilla.año,
+            mes: resultado.planilla.mes,
+            quincena: resultado.planilla.quincena
+          });
+          
+          Swal.fire({
+            icon: 'success',
+            title: '¡Planilla creada!',
+            text: resultado.mensaje,
+            timer: 2500,
+            showConfirmButton: false
+          });
+        } else {
+          Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: resultado.mensaje
+          });
+        }
+        
+        setLoading(false);
+      }}
+      className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl hover:from-purple-700 hover:to-pink-700 font-bold shadow-lg hover:shadow-xl transition-all transform hover:scale-105"
+    >
+      <Plus size={22} />
+      Nueva Planilla
+    </button>
+  )}
+</div>
           </div>
 
           {/* Banner de solo lectura */}

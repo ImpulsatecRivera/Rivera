@@ -36,6 +36,10 @@ const formatearFecha = (fecha) => {
  * Generar PDF de una planilla quincenal específica
  * GET /api/reportes/planilla/quincenal/:id
  */
+/**
+ * Generar PDF de una planilla quincenal específica
+ * GET /api/reportes/planilla/quincenal/:id
+ */
 ReportesPlanillasController.generarPDFQuincenal = async (req, res) => {
     let browser;
     try {
@@ -56,6 +60,10 @@ ReportesPlanillasController.generarPDFQuincenal = async (req, res) => {
                 message: 'Planilla no encontrada'
             });
         }
+
+        // 🔥 VALIDAR Y ASEGURAR QUE TOTALES EXISTA
+        const totales = planilla.totales || {};
+        const safeNumber = (value) => (value || 0).toFixed(2);
 
         const htmlContent = `
         <!DOCTYPE html>
@@ -144,14 +152,14 @@ ReportesPlanillasController.generarPDFQuincenal = async (req, res) => {
         <body>
             <div class="header">
                 <h1>PLANILLA DE NÓMINA DE SALARIOS</h1>
-                <div class="subtitle">${planilla.descripcion}</div>
+                <div class="subtitle">${planilla.descripcion || 'Sin descripción'}</div>
                 <div class="subtitle">Del ${formatearFecha(planilla.fechaInicio)} al ${formatearFecha(planilla.fechaFin)}</div>
             </div>
 
             <div class="info-section">
                 <strong>Quincena:</strong> ${planilla.quincena === 1 ? 'Primera' : 'Segunda'} - ${obtenerNombreMes(planilla.mes)} ${planilla.año}<br>
-                <strong>Estado:</strong> ${planilla.estado.toUpperCase()}<br>
-                <strong>Total Empleados:</strong> ${planilla.empleados.length}
+                <strong>Estado:</strong> ${(planilla.estado || 'pendiente').toUpperCase()}<br>
+                <strong>Total Empleados:</strong> ${planilla.empleados?.length || 0}
             </div>
 
             <table>
@@ -164,7 +172,7 @@ ReportesPlanillasController.generarPDFQuincenal = async (req, res) => {
                         <th rowspan="2" style="width: 7%;">TRABAJO SÁBADO Y DOMINGO</th>
                         <th rowspan="2" style="width: 7%;">TOTAL SALARIO MAS VIÁTICOS</th>
                         <th colspan="3" class="section-header">DESCUENTOS DE LEY</th>
-                        <th colspan="4" class="section-header">OTROS DESCUENTOS</th>
+                        <th colspan="3" class="section-header">OTROS DESCUENTOS</th>
                         <th rowspan="2" style="width: 7%;"><strong>TOTAL DE DESCUENTOS</strong></th>
                         <th rowspan="2" style="width: 8%;"><strong>TOTAL A PAGAR</strong></th>
                     </tr>
@@ -174,43 +182,58 @@ ReportesPlanillasController.generarPDFQuincenal = async (req, res) => {
                         <th style="width: 5%;">RENTA</th>
                         <th style="width: 5%;">ANTICIPOS</th>
                         <th style="width: 5%;">PTMOS</th>
-                        <th style="width: 5%;">OTROS DESCUENTOS</th>
+                        <th style="width: 5%;">OTROS DESC.</th>
                     </tr>
                 </thead>
                 <tbody>
-                    ${planilla.empleados.map((emp, index) => `
+                    ${(planilla.empleados || []).map((emp, index) => {
+                        const salarioQuincenal = emp.salarioQuincenal || 0;
+                        const viaticos = emp.viaticos || 0;
+                        const trabajoSabadoDomingo = emp.trabajoSabadoDomingo || 0;
+                        const totalSalarioMasViaticos = emp.totalSalarioMasViaticos || 0;
+                        const isss = emp.descuentosLey?.isss?.monto || 0;
+                        const afp = emp.descuentosLey?.afp?.monto || 0;
+                        const renta = emp.descuentosLey?.renta?.monto || 0;
+                        const anticipos = emp.otrosDescuentos?.anticipos || 0;
+                        const prestamos = emp.otrosDescuentos?.prestamos || 0;
+                        const otros = emp.otrosDescuentos?.otros || 0;
+                        const totalDescuentos = emp.totalDescuentos || 0;
+                        const totalAPagar = emp.totalAPagar || 0;
+
+                        return `
                         <tr>
                             <td>${index + 1}</td>
-                            <td class="text-left employee-name">${emp.nombreCompleto}</td>
-                            <td class="text-right">$ ${emp.salarioQuincenal.toFixed(2)}</td>
-                            <td class="text-right">${emp.viaticos > 0 ? '$ ' + emp.viaticos.toFixed(2) : '-'}</td>
-                            <td class="text-right">${emp.trabajoSabadoDomingo > 0 ? '$ ' + emp.trabajoSabadoDomingo.toFixed(2) : '-'}</td>
-                            <td class="text-right"><strong>$ ${emp.totalSalarioMasViaticos.toFixed(2)}</strong></td>
-                            <td class="text-right">$ ${emp.descuentosLey.isss.monto.toFixed(2)}</td>
-                            <td class="text-right">$ ${emp.descuentosLey.afp.monto.toFixed(2)}</td>
-                            <td class="text-right">${emp.descuentosLey.renta?.monto > 0 ? '$ ' + emp.descuentosLey.renta.monto.toFixed(2) : '-'}</td>
-                            <td class="text-right">${emp.otrosDescuentos.anticipos > 0 ? '$ ' + emp.otrosDescuentos.anticipos.toFixed(2) : '-'}</td>
-                            <td class="text-right">${emp.otrosDescuentos.prestamos > 0 ? '$ ' + emp.otrosDescuentos.prestamos.toFixed(2) : '-'}</td>
-                            <td class="text-right">${emp.otrosDescuentos.otros > 0 ? '$ ' + emp.otrosDescuentos.otros.toFixed(2) : '-'}</td>
-                            <td class="text-right"><strong>$ ${emp.totalDescuentos.toFixed(2)}</strong></td>
-                            <td class="text-right"><strong>$ ${emp.totalAPagar.toFixed(2)}</strong></td>
+                            <td class="text-left employee-name">${emp.nombreCompleto || 'Sin nombre'}</td>
+                            <td class="text-right">$ ${salarioQuincenal.toFixed(2)}</td>
+                            <td class="text-right">${viaticos > 0 ? '$ ' + viaticos.toFixed(2) : '-'}</td>
+                            <td class="text-right">${trabajoSabadoDomingo > 0 ? '$ ' + trabajoSabadoDomingo.toFixed(2) : '-'}</td>
+                            <td class="text-right"><strong>$ ${totalSalarioMasViaticos.toFixed(2)}</strong></td>
+                            <td class="text-right">$ ${isss.toFixed(2)}</td>
+                            <td class="text-right">$ ${afp.toFixed(2)}</td>
+                            <td class="text-right">${renta > 0 ? '$ ' + renta.toFixed(2) : '-'}</td>
+                            <td class="text-right">${anticipos > 0 ? '$ ' + anticipos.toFixed(2) : '-'}</td>
+                            <td class="text-right">${prestamos > 0 ? '$ ' + prestamos.toFixed(2) : '-'}</td>
+                            <td class="text-right">${otros > 0 ? '$ ' + otros.toFixed(2) : '-'}</td>
+                            <td class="text-right"><strong>$ ${totalDescuentos.toFixed(2)}</strong></td>
+                            <td class="text-right"><strong>$ ${totalAPagar.toFixed(2)}</strong></td>
                         </tr>
-                    `).join('')}
+                        `;
+                    }).join('')}
                     <tr class="totals-row">
-                        <td colspan="2"><strong>TOTAL DE PLANILLA</strong></td>
-                        <td class="text-right"><strong>$ ${planilla.totales.totalSalariosQuincenales.toFixed(2)}</strong></td>
-                        <td class="text-right"><strong>$ ${planilla.totales.totalViaticos.toFixed(2)}</strong></td>
-                        <td class="text-right"><strong>$ ${planilla.totales.totalTrabajoExtra.toFixed(2)}</strong></td>
-                        <td class="text-right"><strong>$ ${planilla.totales.totalSalarioMasViaticos.toFixed(2)}</strong></td>
-                        <td class="text-right"><strong>$ ${planilla.totales.totalISSS.toFixed(2)}</strong></td>
-                        <td class="text-right"><strong>$ ${planilla.totales.totalAFP.toFixed(2)}</strong></td>
-                        <td class="text-right"><strong>$ ${planilla.totales.totalRenta.toFixed(2)}</strong></td>
-                        <td class="text-right"><strong>$ ${planilla.totales.totalAnticipos.toFixed(2)}</strong></td>
-                        <td class="text-right"><strong>$ ${planilla.totales.totalPrestamos.toFixed(2)}</strong></td>
-                        <td class="text-right"><strong>$ ${planilla.totales.totalOtrosDescuentos.toFixed(2)}</strong></td>
-                        <td class="text-right"><strong>$ ${planilla.totales.totalDescuentos.toFixed(2)}</strong></td>
-                        <td class="text-right"><strong>$ ${planilla.totales.totalAPagar.toFixed(2)}</strong></td>
-                    </tr>
+    <td colspan="2"><strong>TOTAL DE PLANILLA</strong></td>
+    <td class="text-right"><strong>$ ${safeNumber(totales.totalSalariosQuincenales)}</strong></td>
+    <td class="text-right"><strong>$ ${safeNumber(totales.totalViaticos)}</strong></td>
+    <td class="text-right"><strong>$ ${safeNumber(totales.totalTrabajoSabadoDomingo)}</strong></td>
+    <td class="text-right"><strong>$ ${safeNumber(totales.totalSalariosMasViaticos)}</strong></td>
+    <td class="text-right"><strong>$ ${safeNumber(totales.totalISSS)}</strong></td>
+    <td class="text-right"><strong>$ ${safeNumber(totales.totalAFP)}</strong></td>
+    <td class="text-right"><strong>$ ${safeNumber(totales.totalRenta)}</strong></td>
+    <td class="text-right"><strong>$ ${safeNumber(totales.totalAnticipos)}</strong></td>
+    <td class="text-right"><strong>$ ${safeNumber(totales.totalPrestamos)}</strong></td>
+    <td class="text-right"><strong>$ ${safeNumber(totales.totalOtros)}</strong></td>
+    <td class="text-right"><strong>$ ${safeNumber(totales.totalDescuentos)}</strong></td>
+    <td class="text-right"><strong>$ ${safeNumber(totales.totalAPagar)}</strong></td>
+</tr>
                 </tbody>
             </table>
 

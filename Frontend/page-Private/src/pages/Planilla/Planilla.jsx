@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { 
   Plus, Search, FileText, Calendar, Clock, Download, 
   Eye, Trash2, ChevronDown, DollarSign, Lock, TrendingUp,
-  BarChart3, PieChart, Activity, Users, CheckCircle
+  BarChart3, PieChart, Activity, Users, CheckCircle, Edit
 } from 'lucide-react';
 import { config } from '../../config';
 import Swal from 'sweetalert2';
@@ -97,24 +97,23 @@ export default function Planillas() {
     return configs[estado] || configs['pendiente'];
   };
 
-const handleCrearPlanilla = async (tipo) => {
-  setShowDropdown(false);
-  
-  if (tipo === 'quincenal') {
-    // 🔥 CORRECCIÓN: Cambiar la ruta para que coincida con tu configuración
-    navigate('/planilla/quincenal');
-  } else if (tipo === 'semanal') {
-    Swal.fire({
-      icon: 'info',
-      title: 'Próximamente',
-      text: 'La planilla semanal estará disponible pronto'
-    });
-  }
-};
-const handleVerPlanilla = (planilla) => {
-  // 🔥 CORRECCIÓN: Cambiar la ruta para que coincida con tu configuración
-  navigate(`/planilla/quincenal/${planilla._id}`);
-};
+  const handleCrearPlanilla = async (tipo) => {
+    setShowDropdown(false);
+    
+    if (tipo === 'quincenal') {
+      navigate('/planilla/quincenal');
+    } else if (tipo === 'semanal') {
+      Swal.fire({
+        icon: 'info',
+        title: 'Próximamente',
+        text: 'La planilla semanal estará disponible pronto'
+      });
+    }
+  };
+
+  const handleVerPlanilla = (planilla) => {
+    navigate(`/planilla/quincenales/${planilla._id}`);
+  };
 
   const handleEliminar = async (planilla) => {
     if (planilla.estado !== 'pendiente') {
@@ -167,20 +166,70 @@ const handleVerPlanilla = (planilla) => {
     }
   };
 
-  // 📊 Calcular estadísticas
-  const estadisticas = {
-    total: planillas.length,
-    pendientes: planillas.filter(p => p.estado === 'pendiente').length,
-    aprobadas: planillas.filter(p => p.estado === 'aprobada').length,
-    pagadas: planillas.filter(p => p.estado === 'pagada').length,
-    cerradas: planillas.filter(p => p.estado === 'cerrada').length,
-    totalPagado: planillas.reduce((sum, p) => sum + (p.totales?.totalAPagar || 0), 0),
-    totalEmpleados: planillas.reduce((sum, p) => sum + (p.empleados?.length || 0), 0),
-    promedioEmpleados: planillas.length > 0 
-      ? Math.round(planillas.reduce((sum, p) => sum + (p.empleados?.length || 0), 0) / planillas.length)
-      : 0
+  const handleDescargarPDF = async (planilla) => {
+    try {
+      Swal.fire({
+        title: 'Generando PDF...',
+        text: 'Por favor espera',
+        allowOutsideClick: false,
+        didOpen: () => {
+          Swal.showLoading();
+        }
+      });
+
+      const response = await fetch(
+        `${config.api.API_URL}/reportes/planilla/quincenal/${planilla._id}`
+      );
+
+      if (!response.ok) {
+        throw new Error('Error al generar el PDF');
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `Planilla_${planilla.descripcion}_${planilla.año}_${planilla.mes}.pdf`;
+      
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      Swal.fire({
+        icon: 'success',
+        title: '¡Descargado!',
+        text: 'El PDF se ha descargado correctamente',
+        timer: 2000,
+        showConfirmButton: false
+      });
+
+    } catch (error) {
+      console.error('Error descargando PDF:', error);
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: 'No se pudo generar el PDF'
+      });
+    }
   };
 
+  // 📊 Calcular estadísticas
+// 📊 Calcular estadísticas - LÓGICA ACUMULATIVA
+// 📊 Calcular estadísticas
+// 📊 Calcular estadísticas - Aprobadas vs Pagadas separadas
+const estadisticas = {
+  total: planillas.length,
+  pendientes: planillas.filter(p => p.estado === 'pendiente').length,
+  aprobadas: planillas.filter(p => p.estado === 'aprobada' && !p.pagada).length, // Aprobadas pero NO pagadas
+  pagadas: planillas.filter(p => p.estado === 'aprobada' && p.pagada === true).length, // Aprobadas Y pagadas
+  cerradas: planillas.filter(p => p.estado === 'cerrada').length,
+  totalPagado: planillas.reduce((sum, p) => sum + (p.totales?.totalAPagar || 0), 0),
+  totalEmpleados: planillas.reduce((sum, p) => sum + (p.empleados?.length || 0), 0),
+  promedioEmpleados: planillas.length > 0 
+    ? Math.round(planillas.reduce((sum, p) => sum + (p.empleados?.length || 0), 0) / planillas.length)
+    : 0
+};
   const planillasFiltradas = planillas.filter(p => {
     const searchLower = searchTerm.toLowerCase();
     return (
@@ -215,14 +264,14 @@ const handleVerPlanilla = (planilla) => {
             </p>
           </div>
 
-          {/* 🔥 DROPDOWN MEJORADO */}
+          {/* DROPDOWN */}
           <div className="relative" ref={dropdownRef}>
             <button
               onClick={() => setShowDropdown(!showDropdown)}
               className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl hover:from-indigo-700 hover:to-purple-700 font-bold shadow-lg hover:shadow-xl transition-all transform hover:scale-105"
             >
               <Plus size={22} />
-              <span>Nueva Planilla</span>
+              <span>Planilla</span>
               <ChevronDown 
                 size={20} 
                 className={`transition-transform ${showDropdown ? 'rotate-180' : ''}`}
@@ -369,7 +418,7 @@ const handleVerPlanilla = (planilla) => {
                 <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
                   <div 
                     className="bg-gradient-to-r from-amber-400 to-amber-600 h-full rounded-full transition-all"
-                    style={{ width: `${(estadisticas.pendientes / estadisticas.total) * 100}%` }}
+                    style={{ width: `${estadisticas.total > 0 ? (estadisticas.pendientes / estadisticas.total) * 100 : 0}%` }}
                   ></div>
                 </div>
               </div>
@@ -382,7 +431,7 @@ const handleVerPlanilla = (planilla) => {
                 <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
                   <div 
                     className="bg-gradient-to-r from-blue-400 to-blue-600 h-full rounded-full transition-all"
-                    style={{ width: `${(estadisticas.aprobadas / estadisticas.total) * 100}%` }}
+                    style={{ width: `${estadisticas.total > 0 ? (estadisticas.aprobadas / estadisticas.total) * 100 : 0}%` }}
                   ></div>
                 </div>
               </div>
@@ -395,7 +444,7 @@ const handleVerPlanilla = (planilla) => {
                 <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
                   <div 
                     className="bg-gradient-to-r from-emerald-400 to-emerald-600 h-full rounded-full transition-all"
-                    style={{ width: `${(estadisticas.pagadas / estadisticas.total) * 100}%` }}
+                    style={{ width: `${estadisticas.total > 0 ? (estadisticas.pagadas / estadisticas.total) * 100 : 0}%` }}
                   ></div>
                 </div>
               </div>
@@ -408,69 +457,154 @@ const handleVerPlanilla = (planilla) => {
                 <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
                   <div 
                     className="bg-gradient-to-r from-red-400 to-red-600 h-full rounded-full transition-all"
-                    style={{ width: `${(estadisticas.cerradas / estadisticas.total) * 100}%` }}
+                    style={{ width: `${estadisticas.total > 0 ? (estadisticas.cerradas / estadisticas.total) * 100 : 0}%` }}
                   ></div>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Resumen circular */}
-          <div className="bg-white rounded-2xl p-6 border-2 border-gray-100 shadow-sm">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-xl font-bold text-gray-900">Resumen</h3>
-              <PieChart className="text-purple-600" size={28} />
-            </div>
+          {/* Resumen circular - GRÁFICO DE PASTEL MULTICOLOR */}
+          {/* Gráfico de Pastel */}
+{/* Resumen circular - GRÁFICO DE PASTEL MULTICOLOR */}
+<div className="bg-white rounded-2xl p-6 border-2 border-gray-100 shadow-sm">
+  <div className="flex items-center justify-between mb-6">
+    <h3 className="text-xl font-bold text-gray-900">Resumen</h3>
+    <PieChart className="text-purple-600" size={28} />
+  </div>
 
-            {/* Círculo visual */}
-            <div className="relative w-48 h-48 mx-auto mb-6">
-              <svg className="transform -rotate-90 w-48 h-48">
-                <circle
-                  cx="96"
-                  cy="96"
-                  r="80"
-                  stroke="#f3f4f6"
-                  strokeWidth="20"
-                  fill="transparent"
-                />
-                <circle
-                  cx="96"
-                  cy="96"
-                  r="80"
-                  stroke="url(#gradient)"
-                  strokeWidth="20"
-                  fill="transparent"
-                  strokeDasharray={`${(estadisticas.cerradas / estadisticas.total) * 502} 502`}
-                  className="transition-all duration-1000"
-                />
-                <defs>
-                  <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stopColor="#6366f1" />
-                    <stop offset="100%" stopColor="#a855f7" />
-                  </linearGradient>
-                </defs>
-              </svg>
-              <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-4xl font-black text-gray-900">{estadisticas.cerradas}</span>
-                <span className="text-sm text-gray-500 mt-1">Cerradas</span>
-              </div>
-            </div>
+  {/* Círculo visual - Gráfico de pastel con 4 segmentos */}
+  <div className="relative w-48 h-48 mx-auto mb-6">
+    <svg className="transform -rotate-90 w-48 h-48">
+      {estadisticas.total > 0 ? (
+        <>
+          {/* Segmento PENDIENTE (amarillo) */}
+          {estadisticas.pendientes > 0 && (
+            <circle
+              cx="96"
+              cy="96"
+              r="80"
+              stroke="#f59e0b"
+              strokeWidth="20"
+              fill="transparent"
+              strokeDasharray={`${((estadisticas.pendientes / estadisticas.total) * 502).toFixed(2)} 502`}
+              strokeDashoffset="0"
+              strokeLinecap="round"
+              className="transition-all duration-1000"
+            />
+          )}
+          
+          {/* Segmento APROBADA (azul) */}
+          {estadisticas.aprobadas > 0 && (
+            <circle
+              cx="96"
+              cy="96"
+              r="80"
+              stroke="#3b82f6"
+              strokeWidth="20"
+              fill="transparent"
+              strokeDasharray={`${((estadisticas.aprobadas / estadisticas.total) * 502).toFixed(2)} 502`}
+              strokeDashoffset={`-${((estadisticas.pendientes / estadisticas.total) * 502).toFixed(2)}`}
+              strokeLinecap="round"
+              className="transition-all duration-1000"
+            />
+          )}
+          
+          {/* Segmento PAGADA (verde) */}
+          {estadisticas.pagadas > 0 && (
+            <circle
+              cx="96"
+              cy="96"
+              r="80"
+              stroke="#10b981"
+              strokeWidth="20"
+              fill="transparent"
+              strokeDasharray={`${((estadisticas.pagadas / estadisticas.total) * 502).toFixed(2)} 502`}
+              strokeDashoffset={`-${(((estadisticas.pendientes + estadisticas.aprobadas) / estadisticas.total) * 502).toFixed(2)}`}
+              strokeLinecap="round"
+              className="transition-all duration-1000"
+            />
+          )}
+          
+          {/* Segmento CERRADA (rojo) */}
+          {estadisticas.cerradas > 0 && (
+            <circle
+              cx="96"
+              cy="96"
+              r="80"
+              stroke="#ef4444"
+              strokeWidth="20"
+              fill="transparent"
+              strokeDasharray={`${((estadisticas.cerradas / estadisticas.total) * 502).toFixed(2)} 502`}
+              strokeDashoffset={`-${(((estadisticas.pendientes + estadisticas.aprobadas + estadisticas.pagadas) / estadisticas.total) * 502).toFixed(2)}`}
+              strokeLinecap="round"
+              className="transition-all duration-1000"
+            />
+          )}
+        </>
+      ) : (
+        /* Círculo de fondo cuando no hay datos */
+        <circle
+          cx="96"
+          cy="96"
+          r="80"
+          stroke="#f3f4f6"
+          strokeWidth="20"
+          fill="transparent"
+        />
+      )}
+    </svg>
+    
+    {/* Centro del círculo */}
+    <div className="absolute inset-0 flex flex-col items-center justify-center">
+      <span className="text-4xl font-black text-gray-900">{estadisticas.total}</span>
+      <span className="text-sm text-gray-500 mt-1">Total</span>
+    </div>
+  </div>
 
-            <div className="space-y-2">
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-gray-600">Completadas</span>
-                <span className="font-bold text-gray-900">
-                  {Math.round((estadisticas.cerradas / estadisticas.total) * 100)}%
-                </span>
-              </div>
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-gray-600">En proceso</span>
-                <span className="font-bold text-gray-900">
-                  {Math.round(((estadisticas.pendientes + estadisticas.aprobadas) / estadisticas.total) * 100)}%
-                </span>
-              </div>
-            </div>
-          </div>
+  {/* Leyenda */}
+  <div className="space-y-2">
+    <div className="flex items-center justify-between text-sm">
+      <div className="flex items-center gap-2">
+        <div className="w-3 h-3 rounded-full bg-amber-500"></div>
+        <span className="text-gray-600">Pendientes</span>
+      </div>
+      <span className="font-bold text-gray-900">
+        {estadisticas.total > 0 ? ((estadisticas.pendientes / estadisticas.total) * 100).toFixed(0) : 0}%
+      </span>
+    </div>
+    
+    <div className="flex items-center justify-between text-sm">
+      <div className="flex items-center gap-2">
+        <div className="w-3 h-3 rounded-full bg-blue-500"></div>
+        <span className="text-gray-600">Aprobadas</span>
+      </div>
+      <span className="font-bold text-gray-900">
+        {estadisticas.total > 0 ? ((estadisticas.aprobadas / estadisticas.total) * 100).toFixed(0) : 0}%
+      </span>
+    </div>
+    
+    <div className="flex items-center justify-between text-sm">
+      <div className="flex items-center gap-2">
+        <div className="w-3 h-3 rounded-full bg-emerald-500"></div>
+        <span className="text-gray-600">Pagadas</span>
+      </div>
+      <span className="font-bold text-gray-900">
+        {estadisticas.total > 0 ? ((estadisticas.pagadas / estadisticas.total) * 100).toFixed(0) : 0}%
+      </span>
+    </div>
+    
+    <div className="flex items-center justify-between text-sm">
+      <div className="flex items-center gap-2">
+        <div className="w-3 h-3 rounded-full bg-red-500"></div>
+        <span className="text-gray-600">Cerradas</span>
+      </div>
+      <span className="font-bold text-gray-900">
+        {estadisticas.total > 0 ? ((estadisticas.cerradas / estadisticas.total) * 100).toFixed(0) : 0}%
+      </span>
+    </div>
+  </div>
+</div>
         </div>
 
         {/* Búsqueda */}
@@ -544,22 +678,31 @@ const handleVerPlanilla = (planilla) => {
                         </td>
                         <td className="px-6 py-4">
                           <div className="flex items-center justify-center gap-2">
+                            
+                            {/* VER - Siempre visible, deshabilitado si está pendiente */}
                             <button
-                              onClick={() => handleVerPlanilla(planilla)}
-                              className="p-2.5 rounded-lg bg-cyan-50 hover:bg-cyan-100 text-cyan-600 border-2 border-transparent hover:border-cyan-300 transition-all"
-                              title="Ver Planilla"
+                              onClick={() => planilla.estado !== 'pendiente' && handleVerPlanilla(planilla)}
+                              disabled={planilla.estado === 'pendiente'}
+                              className={`p-2.5 rounded-lg border-2 transition-all ${
+                                planilla.estado === 'pendiente'
+                                  ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed opacity-50'
+                                  : 'bg-cyan-50 hover:bg-cyan-100 text-cyan-600 border-transparent hover:border-cyan-300'
+                              }`}
+                              title={planilla.estado === 'pendiente' ? 'Planilla en edición' : 'Ver Planilla'}
                             >
                               <Eye size={18} />
                             </button>
 
+                            {/* DESCARGAR PDF - Para todas las planillas */}
                             <button
-                              onClick={() => console.log('Generar PDF')}
+                              onClick={() => handleDescargarPDF(planilla)}  
                               className="p-2.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-600 border-2 border-transparent hover:border-blue-300 transition-all"
                               title="Descargar PDF"
                             >
                               <Download size={18} />
                             </button>
 
+                            {/* ELIMINAR - Solo para planillas pendientes */}
                             {planilla.estado === 'pendiente' && (
                               <button
                                 onClick={() => handleEliminar(planilla)}
@@ -569,6 +712,7 @@ const handleVerPlanilla = (planilla) => {
                                 <Trash2 size={18} />
                               </button>
                             )}
+                            
                           </div>
                         </td>
                       </tr>
