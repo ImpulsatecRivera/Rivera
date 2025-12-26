@@ -1,130 +1,209 @@
+import mongoose from "mongoose";
 import Viajes from "../Models/VijaesProInterno.js";
 import Ubicaciones from "../Models/RutasModels.js";
 
 const ViajesController = {};
 
-// ============================================
-// GET - Obtener viajes
-// ============================================
+// ==============================
+// Helpers
+// ==============================
+const ESTADOS_VALIDOS = ["PENDIENTE", "EN RUTA", "COMPLETADO", "CANCELADO"];
 
-// GET ALL: Obtener todos los viajes con filtros
+const normalizeEstado = (value, fallback = "PENDIENTE") => {
+  if (value === undefined || value === null || String(value).trim() === "") return fallback;
+
+  let v = String(value).trim().toUpperCase();
+  v = v.replace(/_/g, " ").replace(/\s+/g, " ").trim();
+
+  if (["PENDIENTE", "PENDING"].includes(v)) return "PENDIENTE";
+  if (["EN RUTA", "IN ROUTE", "IN_ROUTE", "ENRUTA"].includes(v)) return "EN RUTA";
+  if (["COMPLETADO", "COMPLETED", "DONE", "FINALIZADO", "TERMINADO"].includes(v)) return "COMPLETADO";
+  if (["CANCELADO", "CANCELED", "CANCELLED", "ANULADO"].includes(v)) return "CANCELADO";
+
+  return fallback;
+};
+
+const toBool = (v) => {
+  if (v === true || v === false) return v;
+  if (typeof v === "string") return v.toLowerCase() === "true";
+  return false;
+};
+
+const toInt = (v, def) => {
+  const n = parseInt(v, 10);
+  return Number.isFinite(n) ? n : def;
+};
+
+const toDateOrThrow400 = (v, fieldName) => {
+  const d = new Date(v);
+  if (Number.isNaN(d.getTime())) {
+    const err = new Error(`${fieldName} inválida`);
+    err.status = 400;
+    throw err;
+  }
+  return d;
+};
+
+const isValidObjectId = (id) => mongoose.Types.ObjectId.isValid(String(id));
+
+const safePopulateQuery = (query) =>
+  query
+    .populate({ path: "clienteId", strictPopulate: false })
+    .populate({ path: "origen.ubicacionId", strictPopulate: false })
+    .populate({ path: "destino.ubicacionId", strictPopulate: false });
+
+// ==============================
+// GET - Obtener viajes (con filtros + paginación)
+// ==============================
 ViajesController.getViajes = async (req, res) => {
   try {
-    const { 
-      fechaInicio, 
-      fechaFin, 
-      clienteId, 
-      estado, 
+    const {
+      fechaInicio,
+      fechaFin,
+      clienteId,
+      estado,
       pagado,
       limite = 100,
-      pagina = 1
+      pagina = 1,
     } = req.query;
 
-    // Construir filtros
     const filtros = {};
-    
-    if (clienteId) filtros.clienteId = clienteId;
-    if (estado) filtros.estado = estado.toUpperCase();
-    if (pagado !== undefined) filtros.pagado = pagado === 'true';
-    
-    // Filtro de fechas
-    if (fechaInicio || fechaFin) {
-      filtros.fecha = {};
-      if (fechaInicio) filtros.fecha.$gte = new Date(fechaInicio);
-      if (fechaFin) filtros.fecha.$lte = new Date(fechaFin);
+
+    // clienteId (validación ObjectId)
+    if (clienteId) {
+      if (!isValidObjectId(clienteId)) {
+        return res.status(400).json({ success: false, message: "clienteId inválido" });
+      }
+      filtros.clienteId = clienteId;
     }
 
-    // Paginación
-    const skip = (parseInt(pagina) - 1) * parseInt(limite);
+    // estado (validación)
+    if (estado) {
+      const est = normalizeEstado(estado, null);
+      if (!est || !ESTADOS_VALIDOS.includes(est)) {
+        return res.status(400).json({
+          success: false,
+          message: "estado inválido. Usa: PENDIENTE, EN RUTA, COMPLETADO, CANCELADO",
+        });
+      }
+      filtros.estado = est;
+    }
 
-    // Obtener viajes
-    const viajes = await Viajes.find(filtros)
-      .populate('clienteId')
-      .populate('origen.ubicacionId')
-      .populate('destino.ubicacionId')
-      .sort({ fecha: -1 })
-      .limit(parseInt(limite))
-      .skip(skip);
+    // pagado
+    if (pagado !== undefined) {
+      filtros.pagado = toBool(pagado);
+    }
 
-    // Contar total
-    const total = await Viajes.countDocuments(filtros);
+    // fechas
+    if (fechaInicio || fechaFin) {
+      filtros.fecha = {};
+      if (fechaInicio) filtros.fecha.$gte = toDateOrThrow400(fechaInicio, "fechaInicio");
+      if (fechaFin) filtros.fecha.$lte = toDateOrThrow400(fechaFin, "fechaFin");
+    }
 
-    res.status(200).json({
+    // paginación segura
+    const lim = Math.min(Math.max(toInt(limite, 100), 1), 500);
+    const pag = Math.max(toInt(pagina, 1), 1);
+    const skip = (pag - 1) * lim;
+
+    let query = Viajes.find(filtros).sort({ fecha: -1 }).limit(lim).skip(skip);
+    query = safePopulateQuery(query);
+
+    const [viajes, total] = await Promise.all([
+      query,
+      Viajes.countDocuments(filtros),
+    ]);
+
+    return res.status(200).json({
       success: true,
       count: viajes.length,
-      total: total,
-      pagina: parseInt(pagina),
-      totalPaginas: Math.ceil(total / parseInt(limite)),
-      data: viajes
+      total,
+      pagina: pag,
+      totalPaginas: Math.ceil(total / lim) || 1,
+      data: viajes,
     });
-
   } catch (error) {
-    res.status(500).json({
+    console.error("🔥 getViajes ERROR:", error);
+
+    // errores comunes de mongoose
+    if (error?.name === "CastError") {
+      return res.status(400).json({ success: false, message: "Parámetro inválido", error: error.message });
+    }
+
+    return res.status(error.status || 500).json({
       success: false,
       message: "Error al obtener viajes",
-      error: error.message
+      error: error.message,
     });
   }
 };
 
-// GET ONE: Obtener un viaje específico
+// ==============================
+// GET ONE - Obtener viaje por ID
+// ==============================
 ViajesController.getViajeById = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const viaje = await Viajes.findById(id)
-      .populate('clienteId')
-      .populate('origen.ubicacionId')
-      .populate('destino.ubicacionId');
-
-    if (!viaje) {
-      return res.status(404).json({
-        success: false,
-        message: "Viaje no encontrado"
-      });
+    if (!isValidObjectId(id)) {
+      return res.status(400).json({ success: false, message: "ID inválido" });
     }
 
-    res.status(200).json({
-      success: true,
-      data: viaje
-    });
+    let query = Viajes.findById(id);
+    query = safePopulateQuery(query);
 
+    const viaje = await query;
+
+    if (!viaje) {
+      return res.status(404).json({ success: false, message: "Viaje no encontrado" });
+    }
+
+    return res.status(200).json({ success: true, data: viaje });
   } catch (error) {
-    res.status(500).json({
+    console.error("🔥 getViajeById ERROR:", error);
+    return res.status(500).json({
       success: false,
       message: "Error al obtener el viaje",
-      error: error.message
+      error: error.message,
     });
   }
 };
 
-// GET: Obtener viajes por cliente
+// ==============================
+// GET - Por cliente (usa método del modelo si existe)
+// ==============================
 ViajesController.getViajesPorCliente = async (req, res) => {
   try {
     const { clienteId } = req.params;
     const { fechaInicio, fechaFin } = req.query;
 
-    const inicio = fechaInicio ? new Date(fechaInicio) : null;
-    const fin = fechaFin ? new Date(fechaFin) : null;
+    if (!isValidObjectId(clienteId)) {
+      return res.status(400).json({ success: false, message: "clienteId inválido" });
+    }
+
+    const inicio = fechaInicio ? toDateOrThrow400(fechaInicio, "fechaInicio") : null;
+    const fin = fechaFin ? toDateOrThrow400(fechaFin, "fechaFin") : null;
 
     const viajes = await Viajes.obtenerPorCliente(clienteId, inicio, fin);
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       count: viajes.length,
-      data: viajes
+      data: viajes,
     });
-
   } catch (error) {
-    res.status(500).json({
+    console.error("🔥 getViajesPorCliente ERROR:", error);
+    return res.status(error.status || 500).json({
       success: false,
       message: "Error al obtener viajes del cliente",
-      error: error.message
+      error: error.message,
     });
   }
 };
 
-// GET: Obtener viajes por fecha
+// ==============================
+// GET - Por fecha (usa método del modelo si existe)
+// ==============================
 ViajesController.getViajesPorFecha = async (req, res) => {
   try {
     const { fechaInicio, fechaFin } = req.query;
@@ -132,31 +211,33 @@ ViajesController.getViajesPorFecha = async (req, res) => {
     if (!fechaInicio || !fechaFin) {
       return res.status(400).json({
         success: false,
-        message: "fechaInicio y fechaFin son requeridos"
+        message: "fechaInicio y fechaFin son requeridos",
       });
     }
 
-    const viajes = await Viajes.obtenerPorFecha(
-      new Date(fechaInicio),
-      new Date(fechaFin)
-    );
+    const inicio = toDateOrThrow400(fechaInicio, "fechaInicio");
+    const fin = toDateOrThrow400(fechaFin, "fechaFin");
 
-    res.status(200).json({
+    const viajes = await Viajes.obtenerPorFecha(inicio, fin);
+
+    return res.status(200).json({
       success: true,
       count: viajes.length,
-      data: viajes
+      data: viajes,
     });
-
   } catch (error) {
-    res.status(500).json({
+    console.error("🔥 getViajesPorFecha ERROR:", error);
+    return res.status(error.status || 500).json({
       success: false,
       message: "Error al obtener viajes por fecha",
-      error: error.message
+      error: error.message,
     });
   }
 };
 
-// GET: Obtener reporte de periodo
+// ==============================
+// GET - Reporte periodo (usa método del modelo si existe)
+// ==============================
 ViajesController.getReportePeriodo = async (req, res) => {
   try {
     const { fechaInicio, fechaFin } = req.query;
@@ -164,56 +245,53 @@ ViajesController.getReportePeriodo = async (req, res) => {
     if (!fechaInicio || !fechaFin) {
       return res.status(400).json({
         success: false,
-        message: "fechaInicio y fechaFin son requeridos"
+        message: "fechaInicio y fechaFin son requeridos",
       });
     }
 
-    const reporte = await Viajes.obtenerReportePeriodo(
-      new Date(fechaInicio),
-      new Date(fechaFin)
-    );
+    const inicio = toDateOrThrow400(fechaInicio, "fechaInicio");
+    const fin = toDateOrThrow400(fechaFin, "fechaFin");
 
-    res.status(200).json({
-      success: true,
-      data: reporte
-    });
+    const reporte = await Viajes.obtenerReportePeriodo(inicio, fin);
 
+    return res.status(200).json({ success: true, data: reporte });
   } catch (error) {
-    res.status(500).json({
+    console.error("🔥 getReportePeriodo ERROR:", error);
+    return res.status(error.status || 500).json({
       success: false,
       message: "Error al generar reporte",
-      error: error.message
+      error: error.message,
     });
   }
 };
 
-// GET: Obtener viajes pendientes de pago
+// ==============================
+// GET - Pendientes de pago (usa método del modelo si existe)
+// ==============================
 ViajesController.getPendientesPago = async (req, res) => {
   try {
     const viajes = await Viajes.obtenerPendientesPago();
+    const totalPendiente = viajes.reduce((sum, v) => sum + (Number(v.monto) || 0), 0);
 
-    const totalPendiente = viajes.reduce((sum, viaje) => sum + viaje.monto, 0);
-
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       count: viajes.length,
-      totalPendiente: totalPendiente,
-      data: viajes
+      totalPendiente,
+      data: viajes,
     });
-
   } catch (error) {
-    res.status(500).json({
+    console.error("🔥 getPendientesPago ERROR:", error);
+    return res.status(500).json({
       success: false,
       message: "Error al obtener viajes pendientes de pago",
-      error: error.message
+      error: error.message,
     });
   }
 };
 
-// ============================================
+// ==============================
 // POST - Crear nuevo viaje
-// ============================================
-
+// ==============================
 ViajesController.createViaje = async (req, res) => {
   try {
     const {
@@ -233,271 +311,299 @@ ViajesController.createViaje = async (req, res) => {
       pasajeros,
       notas,
       referencias,
-      conductor
+      conductor,
+      // estado: se ignora a propósito => SIEMPRE PENDIENTE
     } = req.body;
 
-    // Validaciones básicas
     if (!clienteNombre) {
-      return res.status(400).json({
-        success: false,
-        message: "clienteNombre es requerido"
-      });
+      return res.status(400).json({ success: false, message: "clienteNombre es requerido" });
     }
-
     if (!origen || !origen.texto) {
-      return res.status(400).json({
-        success: false,
-        message: "origen.texto es requerido"
-      });
+      return res.status(400).json({ success: false, message: "origen.texto es requerido" });
     }
-
     if (!destino || !destino.texto) {
-      return res.status(400).json({
-        success: false,
-        message: "destino.texto es requerido"
-      });
+      return res.status(400).json({ success: false, message: "destino.texto es requerido" });
     }
 
-    if (!monto) {
-      return res.status(400).json({
-        success: false,
-        message: "monto es requerido"
-      });
+    const montoNum = Number(monto);
+    if (Number.isNaN(montoNum) || montoNum <= 0) {
+      return res.status(400).json({ success: false, message: "monto debe ser mayor a 0" });
     }
 
-    // Generar viajeId automático
+    if (clienteId && !isValidObjectId(clienteId)) {
+      return res.status(400).json({ success: false, message: "clienteId inválido" });
+    }
+
     const viajeId = await Viajes.generarViajeId();
 
-    // Procesar origen
+    // Origen
     const origenData = {
-      texto: origen.texto.toUpperCase(),
-      esRecurrente: origen.esRecurrente || false
+      texto: String(origen.texto).toUpperCase(),
+      esRecurrente: !!origen.esRecurrente,
     };
 
-    // Si es ubicación recurrente, buscarla o usar el ID proporcionado
-    if (origen.esRecurrente) {
+    if (origenData.esRecurrente) {
       if (origen.ubicacionId) {
         origenData.ubicacionId = origen.ubicacionId;
       } else if (origen.nombreUbicacion) {
         const ubicacion = await Ubicaciones.buscarPorNombre(origen.nombreUbicacion);
         if (ubicacion) {
           origenData.ubicacionId = ubicacion._id;
-          origenData.texto = ubicacion.nombre;
+          origenData.texto = String(ubicacion.nombre).toUpperCase();
         }
       }
     }
 
-    // Procesar destino
+    // Destino
     const destinoData = {
-      texto: destino.texto.toUpperCase(),
-      esRecurrente: destino.esRecurrente || false
+      texto: String(destino.texto).toUpperCase(),
+      esRecurrente: !!destino.esRecurrente,
     };
 
-    if (destino.esRecurrente) {
+    if (destinoData.esRecurrente) {
       if (destino.ubicacionId) {
         destinoData.ubicacionId = destino.ubicacionId;
       } else if (destino.nombreUbicacion) {
         const ubicacion = await Ubicaciones.buscarPorNombre(destino.nombreUbicacion);
         if (ubicacion) {
           destinoData.ubicacionId = ubicacion._id;
-          destinoData.texto = ubicacion.nombre;
+          destinoData.texto = String(ubicacion.nombre).toUpperCase();
         }
       }
     }
 
-    // Crear el viaje
+    // Conductor (asegurar objeto)
+    let conductorObj = conductor || { nombre: "", vehiculo: "" };
+    if (typeof conductorObj === "string") {
+      try {
+        conductorObj = JSON.parse(conductorObj);
+      } catch {
+        conductorObj = { nombre: String(conductorObj), vehiculo: "" };
+      }
+    }
+
     const nuevoViaje = await Viajes.create({
       viajeId,
       clienteId: clienteId || null,
-      clienteNombre: clienteNombre.toUpperCase(),
-      clienteTelefono,
+      clienteNombre: String(clienteNombre).toUpperCase(),
+      clienteTelefono: clienteTelefono || "",
+
       origen: origenData,
       destino: destinoData,
-      monto: parseFloat(monto),
-      fecha: fecha ? new Date(fecha) : new Date(),
-      hora,
+
+      monto: montoNum,
+      fecha: fecha ? toDateOrThrow400(fecha, "fecha") : new Date(),
+      hora: hora || "",
+
       tipoServicio,
       duracion,
       distancia,
+
+      estado: "PENDIENTE", // ✅ FORZADO
+
       metodoPago,
-      pagado: pagado || false,
-      pasajeros: pasajeros || 1,
-      notas,
-      referencias,
-      conductor
+      pagado: toBool(pagado),
+      pasajeros: Number(pasajeros) || 1,
+
+      notas: notas || "",
+      referencias: referencias || "",
+      conductor: conductorObj,
     });
 
-    // Poblar referencias antes de enviar respuesta
-    await nuevoViaje.populate('origen.ubicacionId destino.ubicacionId');
+    // Populate seguro (no revienta si el schema no tiene esas rutas)
+    await nuevoViaje.populate({ path: "origen.ubicacionId", strictPopulate: false });
+    await nuevoViaje.populate({ path: "destino.ubicacionId", strictPopulate: false });
+    await nuevoViaje.populate({ path: "clienteId", strictPopulate: false });
 
-    res.status(201).json({
+    return res.status(201).json({
       success: true,
       message: "Viaje creado exitosamente",
-      data: nuevoViaje
+      data: nuevoViaje,
     });
-
   } catch (error) {
-    res.status(500).json({
+    console.error("🔥 createViaje ERROR:", error);
+    return res.status(error.status || 500).json({
       success: false,
       message: "Error al crear el viaje",
-      error: error.message
+      error: error.message,
     });
   }
 };
 
-// ============================================
+// ==============================
 // PUT - Actualizar viaje
-// ============================================
-
+// ==============================
 ViajesController.updateViaje = async (req, res) => {
   try {
     const { id } = req.params;
     const updateData = req.body;
 
-    // Buscar el viaje
-    const viaje = await Viajes.findById(id);
-
-    if (!viaje) {
-      return res.status(404).json({
-        success: false,
-        message: "Viaje no encontrado"
-      });
+    if (!isValidObjectId(id)) {
+      return res.status(400).json({ success: false, message: "ID inválido" });
     }
 
-    // Actualizar campos permitidos
+    const viaje = await Viajes.findById(id);
+    if (!viaje) {
+      return res.status(404).json({ success: false, message: "Viaje no encontrado" });
+    }
+
     const camposPermitidos = [
-      'clienteNombre', 'clienteTelefono', 'monto', 'fecha', 'hora',
-      'tipoServicio', 'duracion', 'distancia', 'estado', 'metodoPago',
-      'pagado', 'pasajeros', 'notas', 'referencias', 'conductor'
+      "clienteNombre",
+      "clienteTelefono",
+      "monto",
+      "fecha",
+      "hora",
+      "tipoServicio",
+      "duracion",
+      "distancia",
+      "estado",
+      "metodoPago",
+      "pagado",
+      "pasajeros",
+      "notas",
+      "referencias",
+      "conductor",
     ];
 
-    camposPermitidos.forEach(campo => {
+    camposPermitidos.forEach((campo) => {
       if (updateData[campo] !== undefined) {
-        viaje[campo] = updateData[campo];
+        if (campo === "estado") {
+          const est = normalizeEstado(updateData.estado, viaje.estado || "PENDIENTE");
+          viaje.estado = ESTADOS_VALIDOS.includes(est) ? est : (viaje.estado || "PENDIENTE");
+        } else if (campo === "clienteNombre") {
+          viaje.clienteNombre = String(updateData.clienteNombre).toUpperCase();
+        } else if (campo === "pagado") {
+          viaje.pagado = toBool(updateData.pagado);
+        } else if (campo === "monto") {
+          const m = Number(updateData.monto);
+          if (!Number.isNaN(m) && m > 0) viaje.monto = m;
+        } else if (campo === "fecha") {
+          viaje.fecha = updateData.fecha ? toDateOrThrow400(updateData.fecha, "fecha") : viaje.fecha;
+        } else {
+          viaje[campo] = updateData[campo];
+        }
       }
     });
 
     await viaje.save();
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       message: "Viaje actualizado exitosamente",
-      data: viaje
+      data: viaje,
     });
-
   } catch (error) {
-    res.status(500).json({
+    console.error("🔥 updateViaje ERROR:", error);
+    return res.status(error.status || 500).json({
       success: false,
       message: "Error al actualizar el viaje",
-      error: error.message
+      error: error.message,
     });
   }
 };
 
-// PUT: Marcar viaje como pagado
+// ==============================
+// PUT - Marcar como pagado
+// ==============================
 ViajesController.marcarComoPagado = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const viaje = await Viajes.findById(id);
+    if (!isValidObjectId(id)) {
+      return res.status(400).json({ success: false, message: "ID inválido" });
+    }
 
+    const viaje = await Viajes.findById(id);
     if (!viaje) {
-      return res.status(404).json({
-        success: false,
-        message: "Viaje no encontrado"
-      });
+      return res.status(404).json({ success: false, message: "Viaje no encontrado" });
     }
 
     await viaje.marcarComoPagado();
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       message: "Viaje marcado como pagado",
-      data: viaje
+      data: viaje,
     });
-
   } catch (error) {
-    res.status(500).json({
+    console.error("🔥 marcarComoPagado ERROR:", error);
+    return res.status(500).json({
       success: false,
       message: "Error al marcar viaje como pagado",
-      error: error.message
+      error: error.message,
     });
   }
 };
 
-// PUT: Cancelar viaje
+// ==============================
+// PUT - Cancelar viaje
+// ==============================
 ViajesController.cancelarViaje = async (req, res) => {
   try {
     const { id } = req.params;
     const { motivo } = req.body;
 
-    const viaje = await Viajes.findById(id);
+    if (!isValidObjectId(id)) {
+      return res.status(400).json({ success: false, message: "ID inválido" });
+    }
 
+    const viaje = await Viajes.findById(id);
     if (!viaje) {
-      return res.status(404).json({
-        success: false,
-        message: "Viaje no encontrado"
-      });
+      return res.status(404).json({ success: false, message: "Viaje no encontrado" });
     }
 
     await viaje.cancelar(motivo);
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       message: "Viaje cancelado exitosamente",
-      data: viaje
+      data: viaje,
     });
-
   } catch (error) {
-    res.status(500).json({
+    console.error("🔥 cancelarViaje ERROR:", error);
+    return res.status(500).json({
       success: false,
       message: "Error al cancelar el viaje",
-      error: error.message
+      error: error.message,
     });
   }
 };
 
-// ============================================
+// ==============================
 // DELETE - Eliminar viaje
-// ============================================
-
+// ==============================
 ViajesController.deleteViaje = async (req, res) => {
   try {
     const { id } = req.params;
     const { eliminarPermanente } = req.query;
 
-    const viaje = await Viajes.findById(id);
-
-    if (!viaje) {
-      return res.status(404).json({
-        success: false,
-        message: "Viaje no encontrado"
-      });
+    if (!isValidObjectId(id)) {
+      return res.status(400).json({ success: false, message: "ID inválido" });
     }
 
-    // Eliminar permanentemente
+    const viaje = await Viajes.findById(id);
+    if (!viaje) {
+      return res.status(404).json({ success: false, message: "Viaje no encontrado" });
+    }
+
     if (eliminarPermanente === "true") {
       await Viajes.findByIdAndDelete(id);
-      return res.status(200).json({
-        success: true,
-        message: "Viaje eliminado permanentemente"
-      });
+      return res.status(200).json({ success: true, message: "Viaje eliminado permanentemente" });
     }
 
-    // Cancelar (soft delete)
     await viaje.cancelar("Eliminado por el usuario");
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       message: "Viaje cancelado exitosamente",
-      data: viaje
+      data: viaje,
     });
-
   } catch (error) {
-    res.status(500).json({
+    console.error("🔥 deleteViaje ERROR:", error);
+    return res.status(500).json({
       success: false,
       message: "Error al eliminar el viaje",
-      error: error.message
+      error: error.message,
     });
   }
 };
