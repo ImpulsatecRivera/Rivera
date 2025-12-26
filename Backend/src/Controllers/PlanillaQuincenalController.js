@@ -705,10 +705,15 @@ PlanillaQuincenalController.eliminarEmpleado = async (req, res) => {
  * Cambiar estado de la planilla
  * PATCH /api/planillas/quincenal/:id/estado
  */
+/**
+ * Cambiar estado de la planilla y marcar como pagada
+ * PATCH /api/planillas/quincenal/:id/estado
+ * Body: { estado, pagada?, fechaPago?, fechaCierre?, fechaAprobacion? }
+ */
 PlanillaQuincenalController.cambiarEstado = async (req, res) => {
     try {
         const { id } = req.params;
-        const { estado, fechaPago, fechaCierre, fechaAprobacion } = req.body;
+        const { estado, pagada, fechaPago, fechaCierre, fechaAprobacion } = req.body;
 
         if (!isValidObjectId(id)) {
             return res.status(400).json({
@@ -717,8 +722,8 @@ PlanillaQuincenalController.cambiarEstado = async (req, res) => {
             });
         }
 
-        const estadosValidos = ['pendiente', 'aprobada', 'pagada', 'cerrada'];
-        if (!estadosValidos.includes(estado)) {
+        const estadosValidos = ['pendiente', 'aprobada', 'cerrada'];
+        if (estado && !estadosValidos.includes(estado)) {
             return res.status(400).json({
                 success: false,
                 message: "Estado inválido",
@@ -738,48 +743,55 @@ PlanillaQuincenalController.cambiarEstado = async (req, res) => {
         const estadoActual = planilla.estado;
 
         // Validar que no se pueda cambiar si ya está cerrada
-        if (estadoActual === 'cerrada') {
+        if (estadoActual === 'cerrada' && estado) {
             return res.status(400).json({
                 success: false,
                 message: "No se puede cambiar el estado de una planilla cerrada (estado final)"
             });
         }
 
-        // Validar que si está pagada, no pueda regresar a pendiente
-        if (estadoActual === 'pagada' && (estado === 'pendiente')) {
-            return res.status(400).json({
-                success: false,
-                message: "No se puede regresar a estado pendiente desde pagada. Solo puede pasar a cerrada."
-            });
-        }
-
         const now = new Date();
 
-        // Si el nuevo estado es 'pagada', requerir fechaPago
-        if (estado === 'pagada') {
-            if (!fechaPago) {
-                return res.status(400).json({
-                    success: false,
-                    message: "Se requiere la fecha de pago cuando se marca como pagada"
-                });
-            }
+        // ✅ NUEVO: Marcar como pagada
+        if (pagada !== undefined) {
+            if (pagada === true) {
+                // Validar que esté al menos aprobada para poder pagarla
+                if (estadoActual === 'pendiente' && (!estado || estado === 'pendiente')) {
+                    return res.status(400).json({
+                        success: false,
+                        message: "La planilla debe estar aprobada para poder marcarla como pagada"
+                    });
+                }
 
-            const fechaPagoDate = new Date(fechaPago);
-            if (isNaN(fechaPagoDate.getTime())) {
-                return res.status(400).json({
-                    success: false,
-                    message: "La fecha de pago no es válida"
-                });
-            }
+                if (!fechaPago) {
+                    return res.status(400).json({
+                        success: false,
+                        message: "Se requiere la fecha de pago cuando se marca como pagada"
+                    });
+                }
 
-            if (fechaPagoDate > now) {
-                return res.status(400).json({
-                    success: false,
-                    message: "La fecha de pago no puede ser una fecha futura"
-                });
-            }
+                const fechaPagoDate = new Date(fechaPago);
+                if (isNaN(fechaPagoDate.getTime())) {
+                    return res.status(400).json({
+                        success: false,
+                        message: "La fecha de pago no es válida"
+                    });
+                }
 
-            planilla.fechaPago = fechaPagoDate;
+                if (fechaPagoDate > now) {
+                    return res.status(400).json({
+                        success: false,
+                        message: "La fecha de pago no puede ser una fecha futura"
+                    });
+                }
+
+                planilla.pagada = true;
+                planilla.fechaPago = fechaPagoDate;
+            } else {
+                // Desmarcar como pagada
+                planilla.pagada = false;
+                planilla.fechaPago = undefined;
+            }
         }
 
         // Si el nuevo estado es 'aprobada', guardar fechaAprobacion
@@ -833,12 +845,17 @@ PlanillaQuincenalController.cambiarEstado = async (req, res) => {
             planilla.fechaCierre = fechaCierreDate;
         }
 
-        planilla.estado = estado;
+        if (estado) {
+            planilla.estado = estado;
+        }
+
         await planilla.save();
 
         res.status(200).json({
             success: true,
-            message: `Estado cambiado de ${estadoActual} a ${estado} exitosamente`,
+            message: estado 
+                ? `Estado cambiado de ${estadoActual} a ${estado} exitosamente`
+                : 'Planilla actualizada exitosamente',
             data: planilla
         });
     } catch (error) {
