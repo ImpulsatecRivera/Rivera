@@ -1,31 +1,26 @@
-import React, { useState, useEffect } from 'react';
-import { Home, Clock, BarChart3, Wrench, Users, Fuel, Vault, Route } from 'lucide-react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import React, { useState, useEffect } from "react";
+import { Home, Clock, BarChart3, Wrench, Users, Fuel, Vault, Route, FileText } from "lucide-react";
+import { useNavigate, useLocation } from "react-router-dom";
 
 const SidebarNav = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const [activeItem, setActiveItem] = useState('home');
+  const [activeItem, setActiveItem] = useState("home");
 
   const navItems = [
-    { id: 'home', route: '/home', icon: Home },
-    { id: 'time', route: '/time', icon: Clock },
-    { id: 'planilla', route: '/planilla', icon: BarChart3 },
-    { id: 'maintenance', route: '/mantenimientos', icon: Wrench },
-    { id: 'diesel', route: '/diesel', icon: Fuel },
-    { id: 'documents', route: '/documents', icon: FileText },
-    { id: 'viajesInternos', route: '/viajesInternos', icon: Route },
-    { id: 'users', route: '/users', icon: Users },
-    { id: 'CajaChica', route: '/CajaChica', icon: Vault },
-   
-
-    
-    { id: 'users', route: '/users', icon: Users },
-    
+    { id: "home", route: "/home", icon: Home },
+    { id: "time", route: "/time", icon: Clock },
+    { id: "planilla", route: "/planilla", icon: BarChart3 },
+    { id: "maintenance", route: "/mantenimientos", icon: Wrench },
+    { id: "diesel", route: "/diesel", icon: Fuel },
+    { id: "documents", route: "/documents", icon: FileText },
+    { id: "viajesInternos", route: "/viajesInternos", icon: Route },
+    { id: "users", route: "/users", icon: Users },
+    { id: "CajaChica", route: "/CajaChica", icon: Vault },
   ];
 
   useEffect(() => {
-    const currentItem = navItems.find(item => item.route === location.pathname);
+    const currentItem = navItems.find((item) => item.route === location.pathname);
     if (currentItem) setActiveItem(currentItem.id);
   }, [location.pathname]);
 
@@ -47,9 +42,9 @@ const SidebarNav = () => {
         >
           <defs>
             <linearGradient id="purpleGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-              <stop offset="0%" style={{ stopColor: '#6C5CE7', stopOpacity: 1 }} />
-              <stop offset="50%" style={{ stopColor: '#5F4FD1', stopOpacity: 1 }} />
-              <stop offset="100%" style={{ stopColor: '#6C5CE7', stopOpacity: 1 }} />
+              <stop offset="0%" style={{ stopColor: "#6C5CE7", stopOpacity: 1 }} />
+              <stop offset="50%" style={{ stopColor: "#5F4FD1", stopOpacity: 1 }} />
+              <stop offset="100%" style={{ stopColor: "#6C5CE7", stopOpacity: 1 }} />
             </linearGradient>
           </defs>
 
@@ -94,9 +89,10 @@ const SidebarNav = () => {
                   className={`
                     w-11 h-11 rounded-xl flex items-center justify-center
                     transition-all duration-300 relative
-                    ${isActive
-                      ? 'bg-white bg-opacity-25 backdrop-blur-sm shadow-lg'
-                      : 'hover:bg-white hover:bg-opacity-15'
+                    ${
+                      isActive
+                        ? "bg-white bg-opacity-25 backdrop-blur-sm shadow-lg"
+                        : "hover:bg-white hover:bg-opacity-15"
                     }
                   `}
                   title={item.id}
