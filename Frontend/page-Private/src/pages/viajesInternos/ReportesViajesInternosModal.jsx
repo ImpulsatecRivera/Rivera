@@ -44,6 +44,9 @@ export default function ReportesViajesInternosModal({ isOpen, onClose, apiUrl })
   const [showAlert, setShowAlert] = useState(false);
   const [alertData, setAlertData] = useState({ type: "", title: "", message: "", details: [] });
 
+  // ✅ Preview cuando el popup está bloqueado
+  const [pdfPreviewUrl, setPdfPreviewUrl] = useState("");
+
   const yearsOptions = useMemo(() => {
     const y = new Date().getFullYear();
     return Array.from({ length: 8 }, (_, i) => String(y - i));
@@ -76,7 +79,6 @@ export default function ReportesViajesInternosModal({ isOpen, onClose, apiUrl })
 
       const json = await res.json().catch(() => ({}));
       const rows = Array.isArray(json?.data) ? json.data : Array.isArray(json) ? json : [];
-
       setClientesMes(rows);
     } catch {
       showCustomAlert("error", "No se pudieron cargar los clientes", "Error de red.");
@@ -91,6 +93,14 @@ export default function ReportesViajesInternosModal({ isOpen, onClose, apiUrl })
     cargarClientesMes();
   }, [isOpen, mes, ano, cargarClientesMes]);
 
+  // ✅ limpiar blob URL al cerrar
+  useEffect(() => {
+    if (!isOpen && pdfPreviewUrl) {
+      URL.revokeObjectURL(pdfPreviewUrl);
+      setPdfPreviewUrl("");
+    }
+  }, [isOpen, pdfPreviewUrl]);
+
   const isButtonDisabled = () => {
     if (generando) return true;
     if (!mes || !ano) return true;
@@ -98,19 +108,27 @@ export default function ReportesViajesInternosModal({ isOpen, onClose, apiUrl })
     return false;
   };
 
-  // ✅ FIX POPUP BLOQUEADO: abre ventana "ya" (en el click), luego fetch y la llenas
+  // ✅ Intenta popup; si está bloqueado, muestra preview en el modal
   const abrirPDF = async () => {
-    // abrir SINCRÓNICO (para que el navegador no bloquee)
-    const win = window.open("about:blank", "_blank", "noopener,noreferrer");
-    if (!win) {
-      showCustomAlert("error", "Popup bloqueado", "Permite ventanas emergentes y vuelve a intentar.");
-      return;
+    setGenerando(true);
+
+    // Si ya había un preview anterior, lo limpiamos
+    setPdfPreviewUrl((prev) => {
+      if (prev) URL.revokeObjectURL(prev);
+      return "";
+    });
+
+    const pdfUrl = joinUrl(baseReportes, `pdf-individual/${encodeURIComponent(reporteId)}`);
+
+    // Intento abrir pestaña SINCRÓNICO (gesto de usuario)
+    let win = null;
+    try {
+      win = window.open("about:blank", "_blank", "noopener,noreferrer");
+    } catch {
+      win = null;
     }
 
-    setGenerando(true);
     try {
-      const pdfUrl = joinUrl(baseReportes, `pdf-individual/${encodeURIComponent(reporteId)}`);
-
       const res = await fetch(pdfUrl, {
         method: "GET",
         credentials: "include",
@@ -119,8 +137,8 @@ export default function ReportesViajesInternosModal({ isOpen, onClose, apiUrl })
 
       if (!res.ok) {
         const j = await res.json().catch(() => ({}));
-        win.close();
-        showCustomAlert("error", "No se pudo abrir el PDF", j?.message || `Error HTTP ${res.status}`, [
+        if (win) win.close();
+        showCustomAlert("error", "No se pudo generar el PDF", j?.message || `Error HTTP ${res.status}`, [
           "Confirma que exista: GET /api/reporteviaje/pdf-individual/:id",
           "Ese :id debe ser el _id del reporte (ViajesPorClientes).",
         ]);
@@ -130,16 +148,38 @@ export default function ReportesViajesInternosModal({ isOpen, onClose, apiUrl })
       const blob = await res.blob();
       const blobUrl = URL.createObjectURL(blob);
 
-      // manda la pestaña a mostrar el PDF
-      win.location.href = blobUrl;
+      // ✅ Si el popup sí abrió, lo mandamos al PDF
+      if (win) {
+        try {
+          win.location.replace(blobUrl);
+        } catch {
+          // si algo raro pasa con la pestaña, lo mostramos en modal
+          setPdfPreviewUrl(blobUrl);
+          showCustomAlert(
+            "warning",
+            "No se pudo abrir en pestaña",
+            "Te lo muestro aquí en el modal. Si querés, habilita popups para abrirlo en una nueva pestaña."
+          );
+          return;
+        }
 
-      // limpieza
-      setTimeout(() => URL.revokeObjectURL(blobUrl), 60_000);
+        // Opcional: liberar memoria después de un rato (no inmediato)
+        setTimeout(() => URL.revokeObjectURL(blobUrl), 5 * 60_000);
 
-      showCustomAlert("success", "¡Reporte generado!", "Se abrió el PDF del cliente en una nueva pestaña.");
+        showCustomAlert("success", "¡Reporte generado!", "Se abrió el PDF del cliente en una nueva pestaña.");
+        return;
+      }
+
+      // ✅ Popup bloqueado -> preview en el modal
+      setPdfPreviewUrl(blobUrl);
+      showCustomAlert(
+        "warning",
+        "Popup bloqueado",
+        "Tu navegador bloqueó la nueva pestaña. Te lo muestro aquí en el modal. (Si habilitas popups, se abrirá en otra pestaña)."
+      );
     } catch {
-      win.close();
-      showCustomAlert("error", "Error", "Ocurrió un problema al abrir el PDF.");
+      if (win) win.close();
+      showCustomAlert("error", "Error", "Ocurrió un problema al generar/abrir el PDF.");
     } finally {
       setGenerando(false);
     }
@@ -162,7 +202,18 @@ export default function ReportesViajesInternosModal({ isOpen, onClose, apiUrl })
               </div>
             </div>
 
-            <button type="button" onClick={onClose} className="text-white hover:bg-white hover:bg-opacity-20 p-2 rounded-lg">
+            <button
+              type="button"
+              onClick={() => {
+                // limpiar preview al cerrar
+                setPdfPreviewUrl((prev) => {
+                  if (prev) URL.revokeObjectURL(prev);
+                  return "";
+                });
+                onClose();
+              }}
+              className="text-white hover:bg-white hover:bg-opacity-20 p-2 rounded-lg"
+            >
               <X size={24} />
             </button>
           </div>
@@ -187,7 +238,10 @@ export default function ReportesViajesInternosModal({ isOpen, onClose, apiUrl })
                         </option>
                       ))}
                     </select>
-                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={20} />
+                    <ChevronDown
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
+                      size={20}
+                    />
                   </div>
                 </div>
 
@@ -205,7 +259,10 @@ export default function ReportesViajesInternosModal({ isOpen, onClose, apiUrl })
                         </option>
                       ))}
                     </select>
-                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={20} />
+                    <ChevronDown
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
+                      size={20}
+                    />
                   </div>
                 </div>
               </div>
@@ -227,7 +284,7 @@ export default function ReportesViajesInternosModal({ isOpen, onClose, apiUrl })
                   <option value="">{loadingClientes ? "Cargando..." : "Seleccionar cliente..."}</option>
 
                   {clientesMes.map((c) => {
-                    const id = c?._id || c?.id; // ✅ tolera ambos
+                    const id = c?._id || c?.id;
                     const nombre = c?.clienteNombre || c?.cliente?.nombre || "Cliente";
                     const totalViajes = Number(c?.totalViajes || 0);
                     const montoTotal = Number(c?.montoTotalGeneral ?? c?.montoTotal ?? 0).toFixed(2);
@@ -242,7 +299,10 @@ export default function ReportesViajesInternosModal({ isOpen, onClose, apiUrl })
                   })}
                 </select>
 
-                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={20} />
+                <ChevronDown
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
+                  size={20}
+                />
               </div>
 
               {!loadingClientes && clientesMes.length === 0 && (
@@ -251,13 +311,55 @@ export default function ReportesViajesInternosModal({ isOpen, onClose, apiUrl })
                 </p>
               )}
 
-              {/* ayuda rápida para depurar base */}
               <p className="text-[11px] text-gray-400 mt-2">Base: {baseReportes}</p>
             </div>
+
+            {/* ✅ PREVIEW si el popup fue bloqueado */}
+            {pdfPreviewUrl && (
+              <div className="mt-6">
+                <div className="flex items-center justify-between gap-3 mb-3">
+                  <p className="text-sm font-semibold text-gray-700">Vista previa del PDF</p>
+
+                  <div className="flex items-center gap-2">
+                    <a
+                      href={pdfPreviewUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="px-4 py-2 rounded-xl bg-gray-900 text-white text-sm font-semibold hover:bg-black"
+                    >
+                      Abrir en pestaña
+                    </a>
+
+                    <a
+                      href={pdfPreviewUrl}
+                      download={`reporte_${reporteId}_${mes}_${ano}.pdf`}
+                      className="px-4 py-2 rounded-xl bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700 flex items-center gap-2"
+                    >
+                      <Download size={18} />
+                      Descargar
+                    </a>
+                  </div>
+                </div>
+
+                <div className="border border-gray-200 rounded-2xl overflow-hidden h-[55vh]">
+                  <iframe title="Reporte PDF" src={pdfPreviewUrl} className="w-full h-full" />
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="border-t border-gray-200 px-6 py-4 bg-gray-50 flex items-center justify-between gap-3">
-            <button type="button" onClick={onClose} className="px-5 py-2.5 text-gray-700 hover:bg-gray-200 rounded-xl font-semibold">
+            <button
+              type="button"
+              onClick={() => {
+                setPdfPreviewUrl((prev) => {
+                  if (prev) URL.revokeObjectURL(prev);
+                  return "";
+                });
+                onClose();
+              }}
+              className="px-5 py-2.5 text-gray-700 hover:bg-gray-200 rounded-xl font-semibold"
+            >
               Cancelar
             </button>
 
@@ -270,7 +372,7 @@ export default function ReportesViajesInternosModal({ isOpen, onClose, apiUrl })
               {generando ? (
                 <>
                   <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  Abriendo...
+                  Generando...
                 </>
               ) : (
                 <>
@@ -298,13 +400,20 @@ export default function ReportesViajesInternosModal({ isOpen, onClose, apiUrl })
               <div className="flex flex-col items-center text-center">
                 <div
                   className={`w-16 h-16 rounded-full flex items-center justify-center mb-4 ${
-                    alertData.type === "success" ? "bg-green-100" : alertData.type === "error" ? "bg-red-100" : "bg-amber-100"
+                    alertData.type === "success"
+                      ? "bg-green-100"
+                      : alertData.type === "error"
+                      ? "bg-red-100"
+                      : "bg-amber-100"
                   }`}
                 >
                   {alertData.type === "success" ? (
                     <CheckCircle className="text-green-600" size={32} />
                   ) : (
-                    <AlertCircle className={alertData.type === "error" ? "text-red-600" : "text-amber-600"} size={32} />
+                    <AlertCircle
+                      className={alertData.type === "error" ? "text-red-600" : "text-amber-600"}
+                      size={32}
+                    />
                   )}
                 </div>
                 <h3 className="text-xl font-bold mb-2">{alertData.title}</h3>
