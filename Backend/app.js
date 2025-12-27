@@ -10,46 +10,39 @@ import ClientesRoutes from "./src/Routes/clienteRoutes.js";
 import RecoveryRoutes from "./src/Routes/Recovery.js";
 import CotizacionesRoutes from "./src/Routes/cotizacionesRoutes.js";
 import RegisterClienteRoutes from "./src/Routes/RegisterClienteRouter.js";
+
 import camionesRoutes from "./src/Routes/camionesRoutes.js";
 import empleadoRoutes from "./src/Routes/empleadosRoutes.js";
 import motoristasRoutes from "./src/Routes/motoristaRoutes.js";
 import proveedoresRoutes from "./src/Routes/proveedoresRoutes.js";
+
 import autoUpdateRoutes from "./src/Routes/autoUpdateRoutes.js";
 import callRoutes from "./src/Routes/callRoutes.js";
+
 import MantoRouter from "./src/Routes/MantenimientoRoutes.js";
 import Reportesroutes from "./src/Routes/ReportesRoutes.js";
+
 import ResumenRoutes from "./src/Routes/ResumenDieselRoutes.js";
 import ResumenDieselReporte from "./src/Routes/ResumenReportesRoutes.js";
+
 import ViajesxClientesRoutes from "./src/Routes/ViajesxClientesRoutes.js";
 import RepoprteViajexCliente from "./src/Routes/ReportexClienteRoutes.js";
+
 import cajachicaRoutes from "./src/Routes/cajaChicaRoutes.js";
 import reportesCajaChicaRoutes from "./src/Routes/ReportesCajaChicaRoutes.js";
 import CajaChicaConfigRoutes from "./src/Routes/CajaChicaConfigRoutes.js";
-import ViajesInternos from "./src/Routes/ViajesInternosRoutes.js"
-import RutasRoutes from "./src/Routes/RutasRoutes.js"
-import PlanillaQuincenalRoutes from "./src/Routes/PlanillaQuincenalRoutes.js";
-import ReportesPlanillaQuincenalRoutes from "./src/Routes/ReportesPlanillaQuincenalRoutes.js";
-import ViajesInternos from "./src/Routes/ViajesInternosRoutes.js";
-import RutasRoutes from "./src/Routes/RutasRoutes.js";
+
+import viajesInternosRoutes from "./src/Routes/ViajesInternosRoutes.js";
+import rutasRoutes from "./src/Routes/RutasRoutes.js";
 
 import PlanillaQuincenalRoutes from "./src/Routes/PlanillaQuincenalRoutes.js";
 import ReportesPlanillaQuincenalRoutes from "./src/Routes/ReportesPlanillaQuincenalRoutes.js";
-
-import ViajesInternos from "./src/Routes/ViajesInternosRoutes.js";
-import RutasRoutes from "./src/Routes/RutasRoutes.js";
-
-import PlanillaQuincenalRoutes from "./src/Routes/PlanillaQuincenalRoutes.js";
-import ReportesPlanillaQuincenalRoutes from "./src/Routes/ReportesPlanillaQuincenalRoutes.js";
-
-
-import swaggerUi from "swagger-ui-express";
-import fs from "fs";
-import path from "path";
 
 const app = express();
 
 app.use(express.json());
 app.use(cookieParser());
+
 app.use(
   cors({
     origin: [
@@ -88,14 +81,17 @@ app.get("/health", (req, res) => {
   });
 });
 
+// -------------------- ROUTES --------------------
 app.use("/api/viajes", ViajesRoutes);
 app.use("/api/login", LoginRoutes);
 app.use("/api/logout", LogoutRoutes);
 app.use("/api/register", RegisterRoutes);
+
 app.use("/api/clientes", ClientesRoutes);
 app.use("/api/recovery", RecoveryRoutes);
 app.use("/api/cotizaciones", CotizacionesRoutes);
 app.use("/api/register-cliente", RegisterClienteRoutes);
+
 app.use("/api/camiones", camionesRoutes);
 app.use("/api/empleados", empleadoRoutes);
 app.use("/api/motoristas", motoristasRoutes);
@@ -107,36 +103,22 @@ app.use("/api/reportesCajaChica", reportesCajaChicaRoutes);
 
 app.use("/api/ViajesxClientes", ViajesxClientesRoutes);
 
-// ✅ Ya tenías esta:
+// reportes por cliente (dejas ambos por compatibilidad)
 app.use("/api/reporteviaje", RepoprteViajexCliente);
-
-// ✅ SOLO AGREGUÉ ESTA (alias para que tu modal use /api/reportes-viajes)
 app.use("/api/reportes-viajes", RepoprteViajexCliente);
 
 app.use("/api/planillas/quincenal", PlanillaQuincenalRoutes);
-app.use("/api/auto-update", autoUpdateRoutes);
-app.use("/api/call",callRoutes);
-app.use("/api/mantenimientos",MantoRouter)
-app.use("/api/reporte",Reportesroutes)
-app.use("/api/resumen",ResumenRoutes)
-app.use("/api/resumenReporte",ResumenDieselReporte)
-app.use("/api/ViajesxClientes",ViajesxClientesRoutes)
-app.use("/api/reporteviaje",RepoprteViajexCliente)
-app.use("/api/reportesCajaChica", reportesCajaChicaRoutes);
-app.use("/api/viajesinternos",ViajesInternos)
-app.use("/api/rutas",RutasRoutes)
-app.use("/api/reporteviaje",RepoprteViajexCliente)
-
 app.use("/api/reportes/planilla/quincenal", ReportesPlanillaQuincenalRoutes);
 
 app.use("/api/auto-update", autoUpdateRoutes);
 app.use("/api/call", callRoutes);
+
 app.use("/api/mantenimientos", MantoRouter);
 app.use("/api/reporte", Reportesroutes);
 app.use("/api/resumen", ResumenRoutes);
 app.use("/api/resumenReporte", ResumenDieselReporte);
 
-app.use("/api/viajesinternos", ViajesInternos);
-app.use("/api/rutas", RutasRoutes);
+app.use("/api/viajesinternos", viajesInternosRoutes);
+app.use("/api/rutas", rutasRoutes);
 
 export default app;
