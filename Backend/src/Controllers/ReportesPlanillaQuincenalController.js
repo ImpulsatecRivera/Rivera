@@ -36,10 +36,6 @@ const formatearFecha = (fecha) => {
  * Generar PDF de una planilla quincenal específica
  * GET /api/reportes/planilla/quincenal/:id
  */
-/**
- * Generar PDF de una planilla quincenal específica
- * GET /api/reportes/planilla/quincenal/:id
- */
 ReportesPlanillasController.generarPDFQuincenal = async (req, res) => {
     let browser;
     try {
@@ -220,20 +216,20 @@ ReportesPlanillasController.generarPDFQuincenal = async (req, res) => {
                         `;
                     }).join('')}
                     <tr class="totals-row">
-    <td colspan="2"><strong>TOTAL DE PLANILLA</strong></td>
-    <td class="text-right"><strong>$ ${safeNumber(totales.totalSalariosQuincenales)}</strong></td>
-    <td class="text-right"><strong>$ ${safeNumber(totales.totalViaticos)}</strong></td>
-    <td class="text-right"><strong>$ ${safeNumber(totales.totalTrabajoSabadoDomingo)}</strong></td>
-    <td class="text-right"><strong>$ ${safeNumber(totales.totalSalariosMasViaticos)}</strong></td>
-    <td class="text-right"><strong>$ ${safeNumber(totales.totalISSS)}</strong></td>
-    <td class="text-right"><strong>$ ${safeNumber(totales.totalAFP)}</strong></td>
-    <td class="text-right"><strong>$ ${safeNumber(totales.totalRenta)}</strong></td>
-    <td class="text-right"><strong>$ ${safeNumber(totales.totalAnticipos)}</strong></td>
-    <td class="text-right"><strong>$ ${safeNumber(totales.totalPrestamos)}</strong></td>
-    <td class="text-right"><strong>$ ${safeNumber(totales.totalOtros)}</strong></td>
-    <td class="text-right"><strong>$ ${safeNumber(totales.totalDescuentos)}</strong></td>
-    <td class="text-right"><strong>$ ${safeNumber(totales.totalAPagar)}</strong></td>
-</tr>
+                        <td colspan="2"><strong>TOTAL DE PLANILLA</strong></td>
+                        <td class="text-right"><strong>$ ${safeNumber(totales.totalSalariosQuincenales)}</strong></td>
+                        <td class="text-right"><strong>$ ${safeNumber(totales.totalViaticos)}</strong></td>
+                        <td class="text-right"><strong>$ ${safeNumber(totales.totalTrabajoSabadoDomingo)}</strong></td>
+                        <td class="text-right"><strong>$ ${safeNumber(totales.totalSalariosMasViaticos)}</strong></td>
+                        <td class="text-right"><strong>$ ${safeNumber(totales.totalISSS)}</strong></td>
+                        <td class="text-right"><strong>$ ${safeNumber(totales.totalAFP)}</strong></td>
+                        <td class="text-right"><strong>$ ${safeNumber(totales.totalRenta)}</strong></td>
+                        <td class="text-right"><strong>$ ${safeNumber(totales.totalAnticipos)}</strong></td>
+                        <td class="text-right"><strong>$ ${safeNumber(totales.totalPrestamos)}</strong></td>
+                        <td class="text-right"><strong>$ ${safeNumber(totales.totalOtros)}</strong></td>
+                        <td class="text-right"><strong>$ ${safeNumber(totales.totalDescuentos)}</strong></td>
+                        <td class="text-right"><strong>$ ${safeNumber(totales.totalAPagar)}</strong></td>
+                    </tr>
                 </tbody>
             </table>
 
@@ -281,7 +277,7 @@ ReportesPlanillasController.generarPDFQuincenal = async (req, res) => {
 
 /**
  * Generar reporte mensual consolidado de planillas quincenales
- * GET /api/reportes/planilla/mensual/:mes/:año
+ * GET /api/reportes/planilla/quincenal/mensual/:mes/:año
  */
 ReportesPlanillasController.generarPDFMensual = async (req, res) => {
     let browser;
@@ -310,10 +306,12 @@ ReportesPlanillasController.generarPDFMensual = async (req, res) => {
             });
         }
 
-        // Calcular totales consolidados
-        const totalGeneral = planillas.reduce((sum, p) => sum + p.totales.totalAPagar, 0);
-        const totalSalarios = planillas.reduce((sum, p) => sum + p.totales.totalSalariosQuincenales, 0);
-        const totalDescuentos = planillas.reduce((sum, p) => sum + p.totales.totalDescuentos, 0);
+        // 🔥 CALCULAR TOTALES CONSOLIDADOS CON VALIDACIÓN SEGURA
+        const totalGeneral = planillas.reduce((sum, p) => sum + (p.totales?.totalAPagar || 0), 0);
+        const totalSalarios = planillas.reduce((sum, p) => sum + (p.totales?.totalSalariosQuincenales || 0), 0);
+        const totalSalariosMasViaticos = planillas.reduce((sum, p) => sum + (p.totales?.totalSalariosMasViaticos || 0), 0);
+        const totalDescuentos = planillas.reduce((sum, p) => sum + (p.totales?.totalDescuentos || 0), 0);
+        const totalEmpleados = planillas.reduce((sum, p) => sum + (p.empleados?.length || 0), 0);
 
         const htmlContent = `
         <!DOCTYPE html>
@@ -416,19 +414,19 @@ ReportesPlanillasController.generarPDFMensual = async (req, res) => {
                             <th>Descripción</th>
                             <th class="text-center">Empleados</th>
                             <th class="text-center">Estado</th>
-                            <th class="text-right">Total Salarios</th>
+                            <th class="text-right">Total Salarios + Viáticos</th>
                             <th class="text-right">Total Descuentos</th>
                             <th class="text-right">Total a Pagar</th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr>
-                            <td>${p.descripcion}</td>
-                            <td class="text-center">${p.empleados.length}</td>
-                            <td class="text-center">${p.estado.toUpperCase()}</td>
-                            <td class="text-right">$ ${p.totales.totalSalarioMasViaticos.toFixed(2)}</td>
-                            <td class="text-right">$ ${p.totales.totalDescuentos.toFixed(2)}</td>
-                            <td class="text-right"><strong>$ ${p.totales.totalAPagar.toFixed(2)}</strong></td>
+                            <td>${p.descripcion || 'Sin descripción'}</td>
+                            <td class="text-center">${p.empleados?.length || 0}</td>
+                            <td class="text-center">${(p.estado || 'pendiente').toUpperCase()}</td>
+                            <td class="text-right">$ ${(p.totales?.totalSalariosMasViaticos || 0).toFixed(2)}</td>
+                            <td class="text-right">$ ${(p.totales?.totalDescuentos || 0).toFixed(2)}</td>
+                            <td class="text-right"><strong>$ ${(p.totales?.totalAPagar || 0).toFixed(2)}</strong></td>
                         </tr>
                     </tbody>
                 </table>
@@ -442,8 +440,16 @@ ReportesPlanillasController.generarPDFMensual = async (req, res) => {
                     <span><strong>${planillas.length}</strong></span>
                 </div>
                 <div class="summary-row">
-                    <span>Total Salarios Pagados:</span>
+                    <span>Total Empleados Procesados:</span>
+                    <span><strong>${totalEmpleados}</strong></span>
+                </div>
+                <div class="summary-row">
+                    <span>Total Salarios Base:</span>
                     <span>$ ${totalSalarios.toFixed(2)}</span>
+                </div>
+                <div class="summary-row">
+                    <span>Total Salarios + Viáticos:</span>
+                    <span>$ ${totalSalariosMasViaticos.toFixed(2)}</span>
                 </div>
                 <div class="summary-row">
                     <span>Total Descuentos:</span>

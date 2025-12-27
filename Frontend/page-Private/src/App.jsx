@@ -39,6 +39,8 @@ import CajaChica from "./pages/CajaChica/CajaChica";
 import Planilla from "./pages/Planilla/Planilla";
 import PlanillaQuincenal from "./pages/Planilla/PlanillaQuincenal";
 import VerPlanillaQuincenal from "./pages/Planilla/VerPlanillasQuincenales";
+import ProgramacionViajesOperativos from "./pages/viajesInternos/ProgramacionViajesOperativos";
+
 
 // ✅ Diesel
 import PantallaPrincipalDiesel from "./pages/Diesel/PantallaPrincipalDiesel";
@@ -48,7 +50,6 @@ import EditDiesel from "./pages/Diesel/EditDiesel";
 // ✅ Viajes internos
 import PantallaPrincipalViajesInternos from "./pages/viajesInternos/PantallaPrincipalViajesInternos";
 import AgregarViajeInterno from "./pages/viajesInternos/AgregarViajeInterno";
-import EditarViajeInterno from "./pages/viajesInternos/EditarViajeInterno"; // ✅ NUEVO
 
 // UI
 import SideNav from "./components/dashbordNav/sideNav";
@@ -149,7 +150,8 @@ function App() {
         {/* ✅ Viajes Internos */}
         <Route path="/viajesInternos" element={<PantallaPrincipalViajesInternos />} />
         <Route path="/viajesInternos/agregar" element={<AgregarViajeInterno />} />
-        <Route path="/viajesInternos/editar/:id" element={<EditarViajeInterno />} /> {/* ✅ NUEVO */}
+        <Route path="/viajesInternos/programacion" element={<ProgramacionViajesOperativos />} /> {/* ✅ NUEVO */}
+
 
         {/* Mantenimientos */}
         <Route path="/mantenimientos" element={<MantenimientosTable />} />

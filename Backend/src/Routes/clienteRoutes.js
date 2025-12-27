@@ -3,8 +3,10 @@ import clienteCon from "../Controllers/ClienteController.js";
 
 const router = express.Router();
 
-// Rutas generales (sin parámetros) van PRIMERO
-router.route("/").get(clienteCon.get);
+// ✅ OPCIÓN 1: Encadenar correctamente (RECOMENDADO)
+router.route("/")
+  .get(clienteCon.get)
+  .post(clienteCon.crearClienteCorporativo);
 
 // Rutas específicas con nombres van ANTES que las rutas con parámetros
 router.get('/usuarios-activos', clienteCon.getUsuariosActivos);
