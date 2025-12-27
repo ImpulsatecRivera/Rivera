@@ -10,144 +10,409 @@ import { Schema, model } from "mongoose";
  * Contiene toda la información personal y de contacto de los clientes del sistema
  */
 const clienteSchema = new Schema({
-  // Información personal básica
+  // =====================================================
+  // 🆕 TIPO DE CLIENTE
+  // =====================================================
+  tipoCliente: {
+    type: String,
+    enum: ['natural', 'corporativo'],
+    default: 'natural',
+    required: true
+  },
+  
+  // =====================================================
+  // 🆕 INFORMACIÓN CORPORATIVA (para clientes operativos)
+  // =====================================================
+  // Nombre de la empresa/cliente corporativo
+  nombreEmpresa: {
+    type: String,
+    trim: true,
+    uppercase: true,
+    required: function() {
+      return this.tipoCliente === 'corporativo';
+    }
+  },
+  
+  // Nombre comercial o alias (como aparece en la pizarra)
+  nombreComercial: {
+    type: String,
+    trim: true,
+    uppercase: true
+    // Ej: "DIANA", "CALLEJA", "TAPASCO/SARAN"
+  },
+  
+  // RUC/NIT de la empresa
+  ruc: {
+    type: String,
+    trim: true,
+    required: function() {
+      return this.tipoCliente === 'corporativo';
+    }
+  },
+  
+  // Giro del negocio
+  giroNegocio: {
+    type: String,
+    trim: true
+    // Ej: "TRANSPORTE", "DISTRIBUCIÓN", "MANUFACTURA"
+  },
+  
+  // Persona de contacto en la empresa
+  contactoPrincipal: {
+    nombre: String,
+    cargo: String,
+    telefono: String,
+    email: String
+  },
+  
+  // Contactos adicionales
+  contactosAdicionales: [{
+    nombre: String,
+    cargo: String,
+    telefono: String,
+    email: String,
+    departamento: String
+  }],
+  
+  // Dirección de facturación (para corporativos)
+  direccionFacturacion: {
+    type: String,
+    trim: true
+  },
+  
+  // Términos de pago acordados
+  terminosPago: {
+    type: String,
+    enum: ['contado', 'credito_7', 'credito_15', 'credito_30', 'credito_60', 'otros'],
+    default: 'contado'
+  },
+  
+  // Límite de crédito (si aplica)
+  limiteCredito: {
+    type: Number,
+    default: 0
+  },
+  
+  // Estado del cliente corporativo
+  estadoCorporativo: {
+    type: String,
+    enum: ['activo', 'inactivo', 'suspendido', 'prospecto'],
+    default: 'activo'
+  },
+  
+  // Rutas frecuentes (para clientes operativos)
+  rutasFrecuentes: [{
+    origen: String,
+    destino: String,
+    frecuencia: String, // Ej: "diario", "semanal", "mensual"
+    tarifa: Number
+  }],
+  
+  // Notas internas sobre el cliente corporativo
+  notasInternas: {
+    type: String,
+    trim: true
+  },
+  
+  // =====================================================
+  // INFORMACIÓN PERSONAL BÁSICA (para clientes naturales)
+  // =====================================================
   firstName: {
-    type: String,      // Primer nombre del cliente
-    required: true     // Campo obligatorio para identificación
+    type: String,
+    required: function() {
+      return this.tipoCliente === 'natural';
+    },
+    trim: true
   },
+  
   lastName: {
-    type: String,      // Apellido del cliente
-    required: true     // Campo obligatorio para identificación completa
+    type: String,
+    required: function() {
+      return this.tipoCliente === 'natural';
+    },
+    trim: true
   },
   
-  // Información de contacto y acceso
+  // =====================================================
+  // INFORMACIÓN DE CONTACTO Y ACCESO (ambos tipos)
+  // =====================================================
   email: {
-    type: String,      // Correo electrónico del cliente (usado para login)
-    required: true,    // Campo obligatorio, debe ser único para autenticación
-    unique: true       // ✅ AGREGAR unique para evitar duplicados
+    type: String,
+    required: true,
+    unique: true,
+    trim: true,
+    lowercase: true
   },
   
-  // ✅ INFORMACIÓN DE GOOGLE OAUTH
+  // =====================================================
+  // INFORMACIÓN DE GOOGLE OAUTH (solo clientes naturales)
+  // =====================================================
   googleId: { 
     type: String, 
     unique: true, 
-    sparse: true       // sparse permite múltiples documentos con null
+    sparse: true
   },
+  
   profilePicture: { 
     type: String 
   },
+  
   isGoogleUser: { 
     type: Boolean, 
-    default: false 
+    default: false
   },
+  
   emailVerified: { 
     type: Boolean, 
     default: false 
   },
-  phoneVerified: { type: Boolean, default: false }, // ⭐ AGREGAR ESTO
-  phoneVerifiedAt: { type: Date }, // ⭐ AGREGAR ESTO (opcional)
   
-  // ✅ INFORMACIÓN OPCIONAL PARA USUARIOS DE GOOGLE
-  // Información de identificación
+  phoneVerified: { 
+    type: Boolean, 
+    default: false 
+  },
+  
+  phoneVerifiedAt: { 
+    type: Date 
+  },
+  
+  // =====================================================
+  // INFORMACIÓN DE IDENTIFICACIÓN (clientes naturales)
+  // =====================================================
   idNumber: {
-    type: String,      // Número de identificación personal (DUI, cédula, etc.)
+    type: String,
     required: function() {
-      return !this.isGoogleUser; // Solo requerido si NO es usuario de Google
-    }
+      return this.tipoCliente === 'natural' && !this.isGoogleUser;
+    },
+    trim: true
   },
+  
   birthDate: {
-    type: Date,        // Fecha de nacimiento del cliente
+    type: Date,
     required: function() {
-      return !this.isGoogleUser; // Solo requerido si NO es usuario de Google
+      return this.tipoCliente === 'natural' && !this.isGoogleUser;
     }
   },
   
-  // Información de seguridad
+  // =====================================================
+  // INFORMACIÓN DE SEGURIDAD
+  // =====================================================
   password: {
-    type: String,      // Contraseña hasheada para acceso al sistema
+    type: String,
     required: function() {
-      return !this.isGoogleUser; // Solo requerido si NO es usuario de Google
+      return this.tipoCliente === 'natural' && !this.isGoogleUser;
     }
   },
   
-  // Información de contacto físico
+  // =====================================================
+  // INFORMACIÓN DE CONTACTO FÍSICO
+  // =====================================================
   phone: {
-    type: String,      // Número de teléfono del cliente
+    type: String,
     required: function() {
-      return !this.isGoogleUser; // Solo requerido si NO es usuario de Google
-    }
+      // Requerido para corporativos O para naturales no-Google
+      return this.tipoCliente === 'corporativo' || 
+             (this.tipoCliente === 'natural' && !this.isGoogleUser);
+    },
+    trim: true
   },
+  
   address: {
-    type: String,      // Dirección física completa del cliente
+    type: String,
     required: function() {
-      return !this.isGoogleUser; // Solo requerido si NO es usuario de Google
-    }
+      // Requerido para corporativos O para naturales no-Google
+      return this.tipoCliente === 'corporativo' || 
+             (this.tipoCliente === 'natural' && !this.isGoogleUser);
+    },
+    trim: true
   },
-  img:{
-    type:String,
-    require:true
+  
+  img: {
+    type: String,
+    required: false // No requerido para corporativos
   },
 
-  // ✅ CAMPOS ADICIONALES PARA COMPLETAR PERFIL DESPUÉS
+  // =====================================================
+  // CAMPOS ADICIONALES PARA COMPLETAR PERFIL
+  // =====================================================
   profileCompleted: {
     type: Boolean,
     default: function() {
-      return !this.isGoogleUser; // true para usuarios normales, false para Google users
+      // Corporativos siempre completos
+      if (this.tipoCliente === 'corporativo') return true;
+      // Naturales dependen de Google
+      return !this.isGoogleUser;
     }
   },
   
-  // Campos que el usuario puede llenar después
-  temporaryPhone: { type: String }, // Teléfono temporal hasta completar perfil
-  temporaryAddress: { type: String }, // Dirección temporal
+  temporaryPhone: { 
+    type: String,
+    trim: true
+  },
+  
+  temporaryAddress: { 
+    type: String,
+    trim: true
+  },
   
 }, {
-  // Opciones del esquema
-  timestamps: true,      // Agrega automáticamente campos createdAt y updatedAt
-  strict: false,         // Permite campos adicionales no definidos en el esquema
-  collection: "Clientes" // Fuerza el nombre exacto de la colección en MongoDB
+  timestamps: true,
+  strict: false,
+  collection: "Clientes"
 });
 
-/**
- * Middleware para validaciones adicionales
- */
+// =====================================================
+// MIDDLEWARE PRE-SAVE
+// =====================================================
 clienteSchema.pre('save', function(next) {
   // Si es usuario de Google, marcar como verificado
   if (this.isGoogleUser && this.googleId) {
     this.emailVerified = true;
   }
   
-  // Validar que usuarios no-Google tengan los campos requeridos
-  if (!this.isGoogleUser) {
+  // Validar campos requeridos según tipo de cliente
+  if (this.tipoCliente === 'natural' && !this.isGoogleUser) {
     const requiredFields = ['idNumber', 'birthDate', 'password', 'phone', 'address'];
     const missingFields = requiredFields.filter(field => !this[field]);
     
     if (missingFields.length > 0) {
-      return next(new Error(`Campos requeridos faltantes para usuario regular: ${missingFields.join(', ')}`));
+      return next(new Error(`Campos requeridos faltantes para cliente natural: ${missingFields.join(', ')}`));
+    }
+  }
+  
+  if (this.tipoCliente === 'corporativo') {
+    const requiredFields = ['nombreEmpresa', 'ruc', 'phone', 'address'];
+    const missingFields = requiredFields.filter(field => !this[field]);
+    
+    if (missingFields.length > 0) {
+      return next(new Error(`Campos requeridos faltantes para cliente corporativo: ${missingFields.join(', ')}`));
     }
   }
   
   next();
 });
 
+// =====================================================
+// ÍNDICES
+// =====================================================
+clienteSchema.index({ tipoCliente: 1 });
+clienteSchema.index({ nombreComercial: 1 });
+clienteSchema.index({ ruc: 1 }, { sparse: true });
+clienteSchema.index({ estadoCorporativo: 1 });
+
+// =====================================================
+// MÉTODOS DE INSTANCIA
+// =====================================================
+
 /**
- * Método para verificar si el perfil está completo
+ * Verificar si el perfil está completo
  */
 clienteSchema.methods.isProfileComplete = function() {
-  if (!this.isGoogleUser) return true;
+  if (this.tipoCliente === 'corporativo') {
+    return !!(this.nombreEmpresa && this.ruc && this.phone && this.address);
+  }
   
-  // Para usuarios de Google, verificar campos mínimos
-  return !!(this.phone && this.address && this.idNumber && this.birthDate);
+  if (this.tipoCliente === 'natural') {
+    if (!this.isGoogleUser) return true;
+    return !!(this.phone && this.address && this.idNumber && this.birthDate);
+  }
+  
+  return false;
 };
 
 /**
- * Método para obtener nombre completo
+ * Obtener nombre completo o nombre de empresa
  */
 clienteSchema.methods.getFullName = function() {
-  return `${this.firstName} ${this.lastName}`.trim();
+  if (this.tipoCliente === 'corporativo') {
+    return this.nombreComercial || this.nombreEmpresa;
+  }
+  
+  return `${this.firstName || ''} ${this.lastName || ''}`.trim();
 };
 
 /**
- * Exportar el modelo basado en el esquema
- * Este modelo se usará para realizar operaciones CRUD en la colección Clientes
+ * Obtener nombre para mostrar (usado en reportes y UI)
+ */
+clienteSchema.methods.getNombreDisplay = function() {
+  if (this.tipoCliente === 'corporativo') {
+    return this.nombreComercial || this.nombreEmpresa;
+  }
+  
+  return this.getFullName();
+};
+
+/**
+ * Verificar si tiene crédito disponible
+ */
+clienteSchema.methods.tieneCreditoDisponible = function(monto) {
+  if (this.tipoCliente !== 'corporativo') return true;
+  if (this.terminosPago === 'contado') return true;
+  
+  return (this.limiteCredito || 0) >= monto;
+};
+
+// =====================================================
+// MÉTODOS ESTÁTICOS
+// =====================================================
+
+/**
+ * Obtener clientes corporativos activos
+ */
+clienteSchema.statics.obtenerCorporativosActivos = function() {
+  return this.find({
+    tipoCliente: 'corporativo',
+    estadoCorporativo: 'activo'
+  })
+  .select('nombreEmpresa nombreComercial ruc phone contactoPrincipal rutasFrecuentes')
+  .sort({ nombreComercial: 1 });
+};
+
+/**
+ * Buscar cliente por nombre comercial
+ */
+clienteSchema.statics.buscarPorNombreComercial = function(nombre) {
+  return this.findOne({
+    tipoCliente: 'corporativo',
+    $or: [
+      { nombreComercial: { $regex: nombre, $options: 'i' } },
+      { nombreEmpresa: { $regex: nombre, $options: 'i' } }
+    ]
+  });
+};
+
+/**
+ * Obtener estadísticas de clientes
+ */
+clienteSchema.statics.obtenerEstadisticas = async function() {
+  const stats = await this.aggregate([
+    {
+      $group: {
+        _id: '$tipoCliente',
+        total: { $sum: 1 },
+        activos: {
+          $sum: {
+            $cond: [
+              { $eq: ['$estadoCorporativo', 'activo'] },
+              1,
+              0
+            ]
+          }
+        }
+      }
+    }
+  ]);
+  
+  return stats.reduce((acc, stat) => {
+    acc[stat._id] = {
+      total: stat.total,
+      activos: stat.activos
+    };
+    return acc;
+  }, {});
+};
+
+/**
+ * Exportar el modelo
  */
 export default model("Clientes", clienteSchema);
