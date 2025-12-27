@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { 
   Plus, Search, FileText, Calendar, Clock, Download, 
   Eye, Trash2, ChevronDown, DollarSign, Lock, TrendingUp,
-  BarChart3, PieChart, Activity, Users, CheckCircle, Edit
+  BarChart3, PieChart, Activity, Users, CheckCircle, Edit, X
 } from 'lucide-react';
 import { config } from '../../config';
 import Swal from 'sweetalert2';
@@ -14,6 +14,9 @@ export default function Planillas() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [showDropdown, setShowDropdown] = useState(false);
+  const [showReporteMensual, setShowReporteMensual] = useState(false);
+  const [mesSeleccionado, setMesSeleccionado] = useState('');
+  const [añoSeleccionado, setAñoSeleccionado] = useState('');
   const dropdownRef = useRef(null);
 
   useEffect(() => {
@@ -214,22 +217,88 @@ export default function Planillas() {
     }
   };
 
+  // 📊 NUEVA FUNCIÓN: Descargar reporte mensual
+  const handleDescargarReporteMensual = async () => {
+    if (!mesSeleccionado || !añoSeleccionado) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'Datos incompletos',
+        text: 'Por favor selecciona mes y año'
+      });
+      return;
+    }
+
+    try {
+      Swal.fire({
+        title: 'Generando reporte mensual...',
+        text: 'Por favor espera',
+        allowOutsideClick: false,
+        didOpen: () => {
+          Swal.showLoading();
+        }
+      });
+
+      const response = await fetch(
+        `${config.api.API_URL}/reportes/planilla/quincenal/mensual/${mesSeleccionado}/${añoSeleccionado}`
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Error al generar el reporte');
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      
+      const meses = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 
+                     'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+      const nombreMes = meses[parseInt(mesSeleccionado) - 1];
+      
+      link.download = `Reporte_Mensual_${nombreMes}_${añoSeleccionado}.pdf`;
+      
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      setShowReporteMensual(false);
+      setMesSeleccionado('');
+      setAñoSeleccionado('');
+
+      Swal.fire({
+        icon: 'success',
+        title: '¡Descargado!',
+        text: 'El reporte mensual se ha descargado correctamente',
+        timer: 2000,
+        showConfirmButton: false
+      });
+
+    } catch (error) {
+      console.error('Error descargando reporte mensual:', error);
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: error.message || 'No se pudo generar el reporte mensual'
+      });
+    }
+  };
+
   // 📊 Calcular estadísticas
-// 📊 Calcular estadísticas - LÓGICA ACUMULATIVA
-// 📊 Calcular estadísticas
-// 📊 Calcular estadísticas - Aprobadas vs Pagadas separadas
-const estadisticas = {
-  total: planillas.length,
-  pendientes: planillas.filter(p => p.estado === 'pendiente').length,
-  aprobadas: planillas.filter(p => p.estado === 'aprobada' && !p.pagada).length, // Aprobadas pero NO pagadas
-  pagadas: planillas.filter(p => p.estado === 'aprobada' && p.pagada === true).length, // Aprobadas Y pagadas
-  cerradas: planillas.filter(p => p.estado === 'cerrada').length,
-  totalPagado: planillas.reduce((sum, p) => sum + (p.totales?.totalAPagar || 0), 0),
-  totalEmpleados: planillas.reduce((sum, p) => sum + (p.empleados?.length || 0), 0),
-  promedioEmpleados: planillas.length > 0 
-    ? Math.round(planillas.reduce((sum, p) => sum + (p.empleados?.length || 0), 0) / planillas.length)
-    : 0
-};
+  const estadisticas = {
+    total: planillas.length,
+    pendientes: planillas.filter(p => p.estado === 'pendiente').length,
+    aprobadas: planillas.filter(p => p.estado === 'aprobada' && !p.pagada).length,
+    pagadas: planillas.filter(p => p.estado === 'aprobada' && p.pagada === true).length,
+    cerradas: planillas.filter(p => p.estado === 'cerrada').length,
+    totalPagado: planillas.reduce((sum, p) => sum + (p.totales?.totalAPagar || 0), 0),
+    totalEmpleados: planillas.reduce((sum, p) => sum + (p.empleados?.length || 0), 0),
+    promedioEmpleados: planillas.length > 0 
+      ? Math.round(planillas.reduce((sum, p) => sum + (p.empleados?.length || 0), 0) / planillas.length)
+      : 0
+  };
+
   const planillasFiltradas = planillas.filter(p => {
     const searchLower = searchTerm.toLowerCase();
     return (
@@ -239,6 +308,9 @@ const estadisticas = {
       p.estado?.toLowerCase().includes(searchLower)
     );
   });
+
+  // Obtener años únicos de las planillas para el selector
+  const añosDisponibles = [...new Set(planillas.map(p => p.año))].sort((a, b) => b - a);
 
   if (loading) {
     return (
@@ -264,54 +336,163 @@ const estadisticas = {
             </p>
           </div>
 
-          {/* DROPDOWN */}
-          <div className="relative" ref={dropdownRef}>
+          <div className="flex gap-3">
+            {/* BOTÓN REPORTE MENSUAL */}
             <button
-              onClick={() => setShowDropdown(!showDropdown)}
-              className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl hover:from-indigo-700 hover:to-purple-700 font-bold shadow-lg hover:shadow-xl transition-all transform hover:scale-105"
+              onClick={() => setShowReporteMensual(true)}
+              className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-xl hover:from-emerald-700 hover:to-teal-700 font-bold shadow-lg hover:shadow-xl transition-all transform hover:scale-105"
             >
-              <Plus size={22} />
-              <span>Planilla</span>
-              <ChevronDown 
-                size={20} 
-                className={`transition-transform ${showDropdown ? 'rotate-180' : ''}`}
-              />
+              <Download size={22} />
+              <span>Reporte Mensual</span>
             </button>
 
-            {/* Dropdown Menu */}
-            {showDropdown && (
-              <div className="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-2xl border-2 border-gray-100 overflow-hidden z-50 animate-fadeIn">
-                <div className="p-2">
-                  <button
-                    onClick={() => handleCrearPlanilla('quincenal')}
-                    className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-indigo-50 rounded-lg transition-colors group"
-                  >
-                    <div className="p-2 bg-indigo-100 rounded-lg group-hover:bg-indigo-200 transition-colors">
-                      <Calendar className="text-indigo-600" size={20} />
-                    </div>
-                    <div>
-                      <p className="font-bold text-gray-900">Planilla Quincenal</p>
-                      <p className="text-xs text-gray-500">Pago cada 15 días</p>
-                    </div>
-                  </button>
+            {/* DROPDOWN */}
+            <div className="relative" ref={dropdownRef}>
+              <button
+                onClick={() => setShowDropdown(!showDropdown)}
+                className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl hover:from-indigo-700 hover:to-purple-700 font-bold shadow-lg hover:shadow-xl transition-all transform hover:scale-105"
+              >
+                <Plus size={22} />
+                <span>Planilla</span>
+                <ChevronDown 
+                  size={20} 
+                  className={`transition-transform ${showDropdown ? 'rotate-180' : ''}`}
+                />
+              </button>
 
-                  <button
-                    onClick={() => handleCrearPlanilla('semanal')}
-                    className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-purple-50 rounded-lg transition-colors group mt-1"
+              {/* Dropdown Menu */}
+              {showDropdown && (
+                <div className="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-2xl border-2 border-gray-100 overflow-hidden z-50 animate-fadeIn">
+                  <div className="p-2">
+                    <button
+                      onClick={() => handleCrearPlanilla('quincenal')}
+                      className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-indigo-50 rounded-lg transition-colors group"
+                    >
+                      <div className="p-2 bg-indigo-100 rounded-lg group-hover:bg-indigo-200 transition-colors">
+                        <Calendar className="text-indigo-600" size={20} />
+                      </div>
+                      <div>
+                        <p className="font-bold text-gray-900">Planilla Quincenal</p>
+                        <p className="text-xs text-gray-500">Pago cada 15 días</p>
+                      </div>
+                    </button>
+
+                    <button
+                      onClick={() => handleCrearPlanilla('semanal')}
+                      className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-purple-50 rounded-lg transition-colors group mt-1"
+                    >
+                      <div className="p-2 bg-purple-100 rounded-lg group-hover:bg-purple-200 transition-colors">
+                        <Clock className="text-purple-600" size={20} />
+                      </div>
+                      <div>
+                        <p className="font-bold text-gray-900">Planilla Semanal</p>
+                        <p className="text-xs text-gray-500">Pago cada 7 días</p>
+                      </div>
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* MODAL REPORTE MENSUAL */}
+        {showReporteMensual && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-2xl p-8 max-w-md w-full shadow-2xl animate-fadeIn">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-bold text-gray-900">Reporte Mensual</h2>
+                <button
+                  onClick={() => {
+                    setShowReporteMensual(false);
+                    setMesSeleccionado('');
+                    setAñoSeleccionado('');
+                  }}
+                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                >
+                  <X size={24} className="text-gray-500" />
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                {/* Selector de Mes */}
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Mes
+                  </label>
+                  <select
+                    value={mesSeleccionado}
+                    onChange={(e) => setMesSeleccionado(e.target.value)}
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:outline-none transition-colors font-medium"
                   >
-                    <div className="p-2 bg-purple-100 rounded-lg group-hover:bg-purple-200 transition-colors">
-                      <Clock className="text-purple-600" size={20} />
-                    </div>
-                    <div>
-                      <p className="font-bold text-gray-900">Planilla Semanal</p>
-                      <p className="text-xs text-gray-500">Pago cada 7 días</p>
-                    </div>
+                    <option value="">Seleccionar mes</option>
+                    <option value="1">Enero</option>
+                    <option value="2">Febrero</option>
+                    <option value="3">Marzo</option>
+                    <option value="4">Abril</option>
+                    <option value="5">Mayo</option>
+                    <option value="6">Junio</option>
+                    <option value="7">Julio</option>
+                    <option value="8">Agosto</option>
+                    <option value="9">Septiembre</option>
+                    <option value="10">Octubre</option>
+                    <option value="11">Noviembre</option>
+                    <option value="12">Diciembre</option>
+                  </select>
+                </div>
+
+                {/* Selector de Año */}
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Año
+                  </label>
+                  <select
+                    value={añoSeleccionado}
+                    onChange={(e) => setAñoSeleccionado(e.target.value)}
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:outline-none transition-colors font-medium"
+                  >
+                    <option value="">Seleccionar año</option>
+                    {añosDisponibles.length > 0 ? (
+                      añosDisponibles.map(año => (
+                        <option key={año} value={año}>{año}</option>
+                      ))
+                    ) : (
+                      <>
+                        <option value="2024">2024</option>
+                        <option value="2025">2025</option>
+                      </>
+                    )}
+                  </select>
+                </div>
+
+                {/* Botones */}
+                <div className="flex gap-3 pt-4">
+                  <button
+                    onClick={() => {
+                      setShowReporteMensual(false);
+                      setMesSeleccionado('');
+                      setAñoSeleccionado('');
+                    }}
+                    className="flex-1 px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 font-bold transition-all"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={handleDescargarReporteMensual}
+                    disabled={!mesSeleccionado || !añoSeleccionado}
+                    className={`flex-1 px-6 py-3 rounded-xl font-bold transition-all ${
+                      mesSeleccionado && añoSeleccionado
+                        ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white hover:from-emerald-700 hover:to-teal-700 shadow-lg'
+                        : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                    }`}
+                  >
+                    Descargar
                   </button>
                 </div>
               </div>
-            )}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* 📊 TARJETAS DE ESTADÍSTICAS CON GRÁFICAS */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
@@ -464,147 +645,145 @@ const estadisticas = {
             </div>
           </div>
 
-          {/* Resumen circular - GRÁFICO DE PASTEL MULTICOLOR */}
           {/* Gráfico de Pastel */}
-{/* Resumen circular - GRÁFICO DE PASTEL MULTICOLOR */}
-<div className="bg-white rounded-2xl p-6 border-2 border-gray-100 shadow-sm">
-  <div className="flex items-center justify-between mb-6">
-    <h3 className="text-xl font-bold text-gray-900">Resumen</h3>
-    <PieChart className="text-purple-600" size={28} />
-  </div>
+          <div className="bg-white rounded-2xl p-6 border-2 border-gray-100 shadow-sm">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-xl font-bold text-gray-900">Resumen</h3>
+              <PieChart className="text-purple-600" size={28} />
+            </div>
 
-  {/* Círculo visual - Gráfico de pastel con 4 segmentos */}
-  <div className="relative w-48 h-48 mx-auto mb-6">
-    <svg className="transform -rotate-90 w-48 h-48">
-      {estadisticas.total > 0 ? (
-        <>
-          {/* Segmento PENDIENTE (amarillo) */}
-          {estadisticas.pendientes > 0 && (
-            <circle
-              cx="96"
-              cy="96"
-              r="80"
-              stroke="#f59e0b"
-              strokeWidth="20"
-              fill="transparent"
-              strokeDasharray={`${((estadisticas.pendientes / estadisticas.total) * 502).toFixed(2)} 502`}
-              strokeDashoffset="0"
-              strokeLinecap="round"
-              className="transition-all duration-1000"
-            />
-          )}
-          
-          {/* Segmento APROBADA (azul) */}
-          {estadisticas.aprobadas > 0 && (
-            <circle
-              cx="96"
-              cy="96"
-              r="80"
-              stroke="#3b82f6"
-              strokeWidth="20"
-              fill="transparent"
-              strokeDasharray={`${((estadisticas.aprobadas / estadisticas.total) * 502).toFixed(2)} 502`}
-              strokeDashoffset={`-${((estadisticas.pendientes / estadisticas.total) * 502).toFixed(2)}`}
-              strokeLinecap="round"
-              className="transition-all duration-1000"
-            />
-          )}
-          
-          {/* Segmento PAGADA (verde) */}
-          {estadisticas.pagadas > 0 && (
-            <circle
-              cx="96"
-              cy="96"
-              r="80"
-              stroke="#10b981"
-              strokeWidth="20"
-              fill="transparent"
-              strokeDasharray={`${((estadisticas.pagadas / estadisticas.total) * 502).toFixed(2)} 502`}
-              strokeDashoffset={`-${(((estadisticas.pendientes + estadisticas.aprobadas) / estadisticas.total) * 502).toFixed(2)}`}
-              strokeLinecap="round"
-              className="transition-all duration-1000"
-            />
-          )}
-          
-          {/* Segmento CERRADA (rojo) */}
-          {estadisticas.cerradas > 0 && (
-            <circle
-              cx="96"
-              cy="96"
-              r="80"
-              stroke="#ef4444"
-              strokeWidth="20"
-              fill="transparent"
-              strokeDasharray={`${((estadisticas.cerradas / estadisticas.total) * 502).toFixed(2)} 502`}
-              strokeDashoffset={`-${(((estadisticas.pendientes + estadisticas.aprobadas + estadisticas.pagadas) / estadisticas.total) * 502).toFixed(2)}`}
-              strokeLinecap="round"
-              className="transition-all duration-1000"
-            />
-          )}
-        </>
-      ) : (
-        /* Círculo de fondo cuando no hay datos */
-        <circle
-          cx="96"
-          cy="96"
-          r="80"
-          stroke="#f3f4f6"
-          strokeWidth="20"
-          fill="transparent"
-        />
-      )}
-    </svg>
-    
-    {/* Centro del círculo */}
-    <div className="absolute inset-0 flex flex-col items-center justify-center">
-      <span className="text-4xl font-black text-gray-900">{estadisticas.total}</span>
-      <span className="text-sm text-gray-500 mt-1">Total</span>
-    </div>
-  </div>
+            {/* Círculo visual - Gráfico de pastel con 4 segmentos */}
+            <div className="relative w-48 h-48 mx-auto mb-6">
+              <svg className="transform -rotate-90 w-48 h-48">
+                {estadisticas.total > 0 ? (
+                  <>
+                    {/* Segmento PENDIENTE (amarillo) */}
+                    {estadisticas.pendientes > 0 && (
+                      <circle
+                        cx="96"
+                        cy="96"
+                        r="80"
+                        stroke="#f59e0b"
+                        strokeWidth="20"
+                        fill="transparent"
+                        strokeDasharray={`${((estadisticas.pendientes / estadisticas.total) * 502).toFixed(2)} 502`}
+                        strokeDashoffset="0"
+                        strokeLinecap="round"
+                        className="transition-all duration-1000"
+                      />
+                    )}
+                    
+                    {/* Segmento APROBADA (azul) */}
+                    {estadisticas.aprobadas > 0 && (
+                      <circle
+                        cx="96"
+                        cy="96"
+                        r="80"
+                        stroke="#3b82f6"
+                        strokeWidth="20"
+                        fill="transparent"
+                        strokeDasharray={`${((estadisticas.aprobadas / estadisticas.total) * 502).toFixed(2)} 502`}
+                        strokeDashoffset={`-${((estadisticas.pendientes / estadisticas.total) * 502).toFixed(2)}`}
+                        strokeLinecap="round"
+                        className="transition-all duration-1000"
+                      />
+                    )}
+                    
+                    {/* Segmento PAGADA (verde) */}
+                    {estadisticas.pagadas > 0 && (
+                      <circle
+                        cx="96"
+                        cy="96"
+                        r="80"
+                        stroke="#10b981"
+                        strokeWidth="20"
+                        fill="transparent"
+                        strokeDasharray={`${((estadisticas.pagadas / estadisticas.total) * 502).toFixed(2)} 502`}
+                        strokeDashoffset={`-${(((estadisticas.pendientes + estadisticas.aprobadas) / estadisticas.total) * 502).toFixed(2)}`}
+                        strokeLinecap="round"
+                        className="transition-all duration-1000"
+                      />
+                    )}
+                    
+                    {/* Segmento CERRADA (rojo) */}
+                    {estadisticas.cerradas > 0 && (
+                      <circle
+                        cx="96"
+                        cy="96"
+                        r="80"
+                        stroke="#ef4444"
+                        strokeWidth="20"
+                        fill="transparent"
+                        strokeDasharray={`${((estadisticas.cerradas / estadisticas.total) * 502).toFixed(2)} 502`}
+                        strokeDashoffset={`-${(((estadisticas.pendientes + estadisticas.aprobadas + estadisticas.pagadas) / estadisticas.total) * 502).toFixed(2)}`}
+                        strokeLinecap="round"
+                        className="transition-all duration-1000"
+                      />
+                    )}
+                  </>
+                ) : (
+                  /* Círculo de fondo cuando no hay datos */
+                  <circle
+                    cx="96"
+                    cy="96"
+                    r="80"
+                    stroke="#f3f4f6"
+                    strokeWidth="20"
+                    fill="transparent"
+                  />
+                )}
+              </svg>
+              
+              {/* Centro del círculo */}
+              <div className="absolute inset-0 flex flex-col items-center justify-center">
+                <span className="text-4xl font-black text-gray-900">{estadisticas.total}</span>
+                <span className="text-sm text-gray-500 mt-1">Total</span>
+              </div>
+            </div>
 
-  {/* Leyenda */}
-  <div className="space-y-2">
-    <div className="flex items-center justify-between text-sm">
-      <div className="flex items-center gap-2">
-        <div className="w-3 h-3 rounded-full bg-amber-500"></div>
-        <span className="text-gray-600">Pendientes</span>
-      </div>
-      <span className="font-bold text-gray-900">
-        {estadisticas.total > 0 ? ((estadisticas.pendientes / estadisticas.total) * 100).toFixed(0) : 0}%
-      </span>
-    </div>
-    
-    <div className="flex items-center justify-between text-sm">
-      <div className="flex items-center gap-2">
-        <div className="w-3 h-3 rounded-full bg-blue-500"></div>
-        <span className="text-gray-600">Aprobadas</span>
-      </div>
-      <span className="font-bold text-gray-900">
-        {estadisticas.total > 0 ? ((estadisticas.aprobadas / estadisticas.total) * 100).toFixed(0) : 0}%
-      </span>
-    </div>
-    
-    <div className="flex items-center justify-between text-sm">
-      <div className="flex items-center gap-2">
-        <div className="w-3 h-3 rounded-full bg-emerald-500"></div>
-        <span className="text-gray-600">Pagadas</span>
-      </div>
-      <span className="font-bold text-gray-900">
-        {estadisticas.total > 0 ? ((estadisticas.pagadas / estadisticas.total) * 100).toFixed(0) : 0}%
-      </span>
-    </div>
-    
-    <div className="flex items-center justify-between text-sm">
-      <div className="flex items-center gap-2">
-        <div className="w-3 h-3 rounded-full bg-red-500"></div>
-        <span className="text-gray-600">Cerradas</span>
-      </div>
-      <span className="font-bold text-gray-900">
-        {estadisticas.total > 0 ? ((estadisticas.cerradas / estadisticas.total) * 100).toFixed(0) : 0}%
-      </span>
-    </div>
-  </div>
-</div>
+            {/* Leyenda */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-sm">
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full bg-amber-500"></div>
+                  <span className="text-gray-600">Pendientes</span>
+                </div>
+                <span className="font-bold text-gray-900">
+                  {estadisticas.total > 0 ? ((estadisticas.pendientes / estadisticas.total) * 100).toFixed(0) : 0}%
+                </span>
+              </div>
+              
+              <div className="flex items-center justify-between text-sm">
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full bg-blue-500"></div>
+                  <span className="text-gray-600">Aprobadas</span>
+                </div>
+                <span className="font-bold text-gray-900">
+                  {estadisticas.total > 0 ? ((estadisticas.aprobadas / estadisticas.total) * 100).toFixed(0) : 0}%
+                </span>
+              </div>
+              
+              <div className="flex items-center justify-between text-sm">
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full bg-emerald-500"></div>
+                  <span className="text-gray-600">Pagadas</span>
+                </div>
+                <span className="font-bold text-gray-900">
+                  {estadisticas.total > 0 ? ((estadisticas.pagadas / estadisticas.total) * 100).toFixed(0) : 0}%
+                </span>
+              </div>
+              
+              <div className="flex items-center justify-between text-sm">
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full bg-red-500"></div>
+                  <span className="text-gray-600">Cerradas</span>
+                </div>
+                <span className="font-bold text-gray-900">
+                  {estadisticas.total > 0 ? ((estadisticas.cerradas / estadisticas.total) * 100).toFixed(0) : 0}%
+                </span>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Búsqueda */}
