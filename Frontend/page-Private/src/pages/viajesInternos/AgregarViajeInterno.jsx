@@ -6,172 +6,111 @@ import {
   Save,
   AlertCircle,
   User,
-  Phone,
   MapPin,
   DollarSign,
   Truck,
+  Package,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { config } from "../../config";
 
-const VIAJES_ENDPOINT = `${config.api.API_URL}/viajesinternos`;
-const RUTAS_ENDPOINT = `${config.api.API_URL}/rutas`;
+// ✅ ENDPOINTS BACKEND
+const VIAJES_OPERATIVOS_ENDPOINT = `${config.api.API_URL}/viajes-operativos/crear`;
 const CLIENTES_ENDPOINT = `${config.api.API_URL}/clientes`;
 const MOTORISTAS_ENDPOINT = `${config.api.API_URL}/motoristas`;
-
-// ✅ Backend: app.use("/api/camiones", camionesRoutes);
 const CAMIONES_ENDPOINT = `${config.api.API_URL}/camiones`;
 
-const TIPO_SERVICIO = [
-  { value: "REGULAR", label: "Regular" },
-  { value: "EMERGENCIA", label: "Emergencia" },
-  { value: "OTRO", label: "Otro" },
+const TIPO_CARGA = [
+  { value: "general", label: "General" },
+  { value: "materiales_construccion", label: "Materiales de Construcción" },
+  { value: "productos_agricolas", label: "Productos Agrícolas" },
+  { value: "alimentos", label: "Alimentos" },
+  { value: "otro", label: "Otro" },
 ];
 
-const METODO_PAGO = [
-  { value: "EFECTIVO", label: "Efectivo" },
-  { value: "TRANSFERENCIA", label: "Transferencia" },
-  { value: "TARJETA", label: "Tarjeta" },
-  { value: "CREDITO", label: "Crédito" },
-];
-
-const isMongoId = (v) => /^[a-f\d]{24}$/i.test(String(v || ""));
-
-const parseDateSafe = (v) => {
-  const d = new Date(v || "");
-  const t = d.getTime();
-  return Number.isNaN(t) ? 0 : t;
-};
-
-const getUbicacionLabel = (u) =>
-  u?.nombreUbicacion || u?.nombre || u?.name || u?.texto || u?.direccion || "Ubicación";
-
-// ===== Helpers Motoristas =====
+// ===== Helpers =====
 const getMotoristaNombre = (m) =>
-  m?.nombre ||
-  m?.name ||
-  [m?.nombres, m?.apellidos].filter(Boolean).join(" ") ||
-  m?.motoristaNombre ||
-  "Motorista";
+  m?.nombre || m?.name || [m?.nombres, m?.apellidos].filter(Boolean).join(" ") || "Motorista";
 
-const getMotoristaPlaca = (m) =>
-  m?.vehiculo ||
-  m?.placa ||
-  m?.camion?.placa ||
-  m?.camionAsignado?.placa ||
-  m?.unidad?.placa ||
-  m?.vehiculoPlaca ||
-  "";
+const getCamionPlaca = (c) =>
+  c?.placa || c?.licensePlate || c?.numeroPlaca || c?.placaCamion || c?.plate || "";
 
-// ✅ FIX: buscar "placa" incluso anidada / con nombres distintos
-const findPlacaDeep = (obj) => {
-  if (!obj || typeof obj !== "object") return "";
+const getClienteNombre = (c) =>
+  c?.nombreComercial || c?.nombreEmpresa || c?.nombre || c?.name || "";
 
-  const direct =
-    obj.placa ||
-    obj.numeroPlaca ||
-    obj.placaCamion ||
-    obj.matricula ||
-    obj.plate ||
-    obj.vehiculo;
-
-  if (typeof direct === "string" && direct.trim()) return direct.trim();
-
-  const stack = [{ v: obj, d: 0 }];
-  const keyRegex = /(placa|plate|matricula)/i;
-
-  while (stack.length) {
-    const { v, d } = stack.pop();
-    if (!v || typeof v !== "object") continue;
-    if (d > 4) continue;
-
-    for (const [k, val] of Object.entries(v)) {
-      if (typeof val === "string" && keyRegex.test(k) && val.trim()) return val.trim();
-      if (val && typeof val === "object") stack.push({ v: val, d: d + 1 });
-    }
-  }
-
-  return "";
-};
-
-// ===== Helpers Camiones (placa) =====
-const getCamionPlaca = (c) => findPlacaDeep(c);
-
-const norm = (s) => String(s || "").trim().toUpperCase();
-
-// ✅ NUEVO: estado depende de pagado
-const estadoPorPago = (pagado) => (pagado ? "COMPLETADO" : "PENDIENTE");
-
-export default function AgregarViajeInterno() {
+export default function AgregarViajeOperativo() {
   const navigate = useNavigate();
 
   const [loading, setLoading] = useState(false);
-  const [loadingUbicaciones, setLoadingUbicaciones] = useState(false);
+  const [error, setError] = useState(null);
 
-  // ✅ Clientes
+  // ✅ Clientes Corporativos
   const [loadingClientes, setLoadingClientes] = useState(false);
   const [creatingCliente, setCreatingCliente] = useState(false);
-  const [clientesApiEnabled, setClientesApiEnabled] = useState(false);
   const [clientes, setClientes] = useState([]);
-  const [nuevoCliente, setNuevoCliente] = useState({ nombre: "", telefono: "" });
+  const [nuevoCliente, setNuevoCliente] = useState({
+    nombreEmpresa: "",
+    nombreComercial: "",
+    ruc: "",
+    email: "",
+    phone: "",
+    address: "",
+  });
 
   // ✅ Motoristas
   const [motoristas, setMotoristas] = useState([]);
   const [loadingMotoristas, setLoadingMotoristas] = useState(false);
-  const [creatingMotorista, setCreatingMotorista] = useState(false);
-  const [nuevoMotorista, setNuevoMotorista] = useState({ nombre: "", placa: "" });
 
-  // ✅ Camiones (placas)
+  // ✅ Camiones
   const [camiones, setCamiones] = useState([]);
   const [loadingCamiones, setLoadingCamiones] = useState(false);
-  const [creatingCamion, setCreatingCamion] = useState(false);
-  const [nuevoCamion, setNuevoCamion] = useState({ placa: "" });
-
-  const [error, setError] = useState(null);
-  const [ubicaciones, setUbicaciones] = useState([]);
 
   const [formData, setFormData] = useState({
-    clienteEsRecurrente: false,
+    // Cliente
     clienteId: "",
-
     clienteNombre: "",
-    clienteTelefono: "",
 
-    fecha: "",
-    hora: "",
+    // Recursos
+    truckId: "",
+    conductorId: "",
 
-    tipoServicio: "REGULAR",
-    metodoPago: "EFECTIVO",
-    pagado: false,
-    pasajeros: 1,
+    // Código programación (opcional, se autogenera)
+    codigoProgramacion: "",
 
-    // ✅ estado por defecto al crear
-    estado: "PENDIENTE",
+    // Descripción
+    tripDescription: "",
 
-    monto: "",
+    // Fechas (salida y llegada)
+    departureTime: "",
+    arrivalTime: "",
 
-    origen: { esRecurrente: false, ubicacionId: "", texto: "" },
-    destino: { esRecurrente: false, ubicacionId: "", texto: "" },
+    // Ruta
+    rutaOrigen: "",
+    rutaDestino: "",
+    rutaCompleta: "",
+    distanciaTotal: "",
+    tiempoEstimado: "",
 
-    notas: "",
-    referencias: "",
+    // Carga
+    cargaDescripcion: "",
+    cargaPeso: "",
+    cargaTipo: "general",
 
-    conductor: { nombre: "", vehiculo: "" },
+    // Monto
+    montoAcordado: "",
 
-    // frontend only
-    motoristaId: "",
-    camionId: "",
+    // Condiciones
+    condiciones: {
+      clima: "normal",
+      trafico: "normal",
+      carretera: "buena",
+    },
+
+    // Observaciones
+    observaciones: "",
   });
 
-  // ✅ HOY en formato YYYY-MM-DD para bloquear fechas futuras
-  const todayISO = useMemo(() => {
-    const d = new Date();
-    const pad = (n) => String(n).padStart(2, "0");
-    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-  }, []);
-
   useEffect(() => {
-    fetchUbicaciones();
     fetchClientes();
     fetchMotoristas();
     fetchCamiones();
@@ -179,27 +118,103 @@ export default function AgregarViajeInterno() {
   }, []);
 
   // =========================
-  // Ubicaciones
+  // Clientes Corporativos
   // =========================
-  const fetchUbicaciones = async () => {
+  const fetchClientes = async () => {
     try {
-      setLoadingUbicaciones(true);
-      const res = await fetch(RUTAS_ENDPOINT);
+      setLoadingClientes(true);
+      const res = await fetch(CLIENTES_ENDPOINT);
       const json = await res.json().catch(() => ({}));
-      const rows = json?.data || (Array.isArray(json) ? json : []);
-      setUbicaciones(rows);
+      const rows = json?.data?.clientes || json?.data || (Array.isArray(json) ? json : []);
+
+      // Filtrar solo corporativos
+      const corporativos = rows.filter((c) => c?.tipoCliente === "corporativo");
+      setClientes(corporativos);
     } catch (e) {
-      console.error("Error cargando rutas/ubicaciones:", e);
+      console.error("Error cargando clientes:", e);
     } finally {
-      setLoadingUbicaciones(false);
+      setLoadingClientes(false);
     }
   };
 
-  const ubicacionesOptions = useMemo(() => {
-    return (ubicaciones || [])
-      .filter((u) => u?._id)
-      .map((u) => ({ id: u._id, label: getUbicacionLabel(u) }));
-  }, [ubicaciones]);
+  const clientesOptions = useMemo(() => {
+    return (clientes || [])
+      .filter((c) => c?._id)
+      .map((c) => {
+        const nombre = getClienteNombre(c);
+        return {
+          id: c._id,
+          nombre,
+          label: nombre,
+        };
+      });
+  }, [clientes]);
+
+  const crearClienteYSeleccionar = async () => {
+    const nombreEmpresa = (nuevoCliente.nombreEmpresa || "").trim();
+    const nombreComercial = (nuevoCliente.nombreComercial || nombreEmpresa).trim();
+    const ruc = (nuevoCliente.ruc || "").trim();
+    const email = (nuevoCliente.email || "").trim();
+    const phone = (nuevoCliente.phone || "").trim();
+    const address = (nuevoCliente.address || "").trim();
+
+    if (!nombreEmpresa || !ruc || !email || !phone || !address) {
+      setError("Completa todos los campos obligatorios del cliente");
+      return;
+    }
+
+    setCreatingCliente(true);
+    setError(null);
+
+    try {
+      const payload = {
+        tipoCliente: "corporativo",
+        nombreEmpresa,
+        nombreComercial,
+        ruc,
+        email,
+        phone,
+        address,
+        terminosPago: "contado",
+        limiteCredito: 0,
+        estadoCorporativo: "activo",
+      };
+
+      const res = await fetch(CLIENTES_ENDPOINT, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok || json?.success === false)
+        throw new Error(json?.message || "Error al crear cliente");
+
+      const created = json?.data?.cliente || json?.data || json;
+      const newId = created?._id || created?.id;
+
+      await fetchClientes();
+
+      setFormData((p) => ({
+        ...p,
+        clienteId: newId || "",
+        clienteNombre: nombreComercial,
+      }));
+
+      setNuevoCliente({
+        nombreEmpresa: "",
+        nombreComercial: "",
+        ruc: "",
+        email: "",
+        phone: "",
+        address: "",
+      });
+    } catch (e) {
+      setError(e.message || "Error creando cliente");
+    } finally {
+      setCreatingCliente(false);
+    }
+  };
 
   // =========================
   // Motoristas
@@ -223,12 +238,10 @@ export default function AgregarViajeInterno() {
       .filter((m) => m?._id)
       .map((m) => {
         const nombre = getMotoristaNombre(m);
-        const placa = getMotoristaPlaca(m);
         return {
           id: m._id,
           nombre,
-          placa,
-          label: placa ? `${nombre} - ${placa}` : nombre,
+          label: nombre,
         };
       });
   }, [motoristas]);
@@ -243,10 +256,7 @@ export default function AgregarViajeInterno() {
       const json = await res.json().catch(() => ({}));
 
       const rows =
-        json?.data?.camiones ||
-        json?.camiones ||
-        json?.data ||
-        (Array.isArray(json) ? json : []);
+        json?.data?.camiones || json?.camiones || json?.data || (Array.isArray(json) ? json : []);
 
       setCamiones(Array.isArray(rows) ? rows : []);
     } catch (e) {
@@ -264,380 +274,59 @@ export default function AgregarViajeInterno() {
         return {
           id: c._id,
           placa,
-          label: placa ? placa : `(Sin placa) ${String(c._id).slice(-6)}`,
+          label: placa || `(Sin placa) ${String(c._id).slice(-6)}`,
         };
       });
   }, [camiones]);
 
   // =========================
-  // ✅ Helpers POST (para poder crear ambos en un solo botón)
+  // Handlers
   // =========================
-  const postMotorista = async (nombre, placa) => {
-    const payload = { nombre, name: nombre, placa, vehiculo: placa };
-    const res = await fetch(MOTORISTAS_ENDPOINT, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-    const json = await res.json().catch(() => ({}));
-    if (!res.ok || json?.success === false)
-      throw new Error(json?.message || "No se pudo crear el motorista");
-
-    const created = json?.data || json;
-    return created?._id || created?.id || "";
-  };
-
-  const postCamion = async (placa) => {
-    const payload = { placa, numeroPlaca: placa, placaCamion: placa, plate: placa, matricula: placa };
-
-    const res = await fetch(CAMIONES_ENDPOINT, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-
-    const json = await res.json().catch(() => ({}));
-
-    if (res.ok && json?.success !== false) {
-      const created = json?.data || json;
-      return created?._id || created?.id || "";
-    }
-
-    // fallback local
-    const localId = `local-${Date.now()}`;
-    setCamiones((prev) => [{ _id: localId, placa }, ...(prev || [])]);
-    return localId;
-  };
-
-  // =========================
-  // ✅ Selecciones Conductor + Vehículo
-  // =========================
-  const handleMotoristaSelect = (motoristaId) => {
-    const found = motoristasOptions.find((x) => x.id === motoristaId);
-    const placaMotorista = found?.placa || "";
-
-    // ✅ intenta emparejar camión por placa
-    const matchCamion = placaMotorista
-      ? camionesOptions.find((c) => norm(c.placa) === norm(placaMotorista))
-      : null;
-
-    setFormData((p) => ({
-      ...p,
-      motoristaId,
-      camionId: matchCamion?.id || p.camionId,
-      conductor: {
-        nombre: found?.nombre || p.conductor.nombre,
-        vehiculo: matchCamion?.placa || placaMotorista || p.conductor.vehiculo,
-      },
-    }));
-  };
-
-  const handleCamionSelect = (camionId) => {
-    const found = camionesOptions.find((x) => x.id === camionId);
-
-    setFormData((p) => ({
-      ...p,
-      camionId,
-      conductor: {
-        ...p.conductor,
-        vehiculo: found?.placa || p.conductor.vehiculo,
-      },
-    }));
-  };
-
-  // ✅ Un solo botón: crear motorista + camión y seleccionarlos
-  const crearMotoristaYCamion = async () => {
-    const nombre = (nuevoMotorista.nombre || "").trim();
-    const placaMotorista = (nuevoMotorista.placa || "").trim();
-    const placaCamion = (nuevoCamion.placa || "").trim();
-    const placaFinal = placaCamion || placaMotorista;
-
-    if (!nombre) return setError("Escribe el nombre del motorista");
-    if (!placaFinal) return setError("Escribe la placa (del motorista o del camión)");
-
-    try {
-      setError(null);
-      setCreatingMotorista(true);
-      setCreatingCamion(true);
-
-      // 1) Crear motorista
-      const newMotoristaId = await postMotorista(nombre, placaFinal);
-
-      // 2) Crear camión (con la misma placa por defecto)
-      const newCamionId = await postCamion(placaFinal);
-
-      // refrescar listas
-      await Promise.all([fetchMotoristas(), fetchCamiones()]);
-
-      // seleccionar ambos + llenar conductor
-      setFormData((p) => ({
-        ...p,
-        motoristaId: newMotoristaId || p.motoristaId,
-        camionId: newCamionId || p.camionId,
-        conductor: { nombre, vehiculo: placaFinal },
-      }));
-
-      setNuevoMotorista({ nombre: "", placa: "" });
-      setNuevoCamion({ placa: "" });
-    } catch (e) {
-      setError(e.message || "Error creando motorista/camión");
-    } finally {
-      setCreatingMotorista(false);
-      setCreatingCamion(false);
-    }
-  };
-
-  // =========================
-  // Clientes
-  // =========================
-  const fetchClientes = async () => {
-    setLoadingClientes(true);
-    try {
-      try {
-        const r1 = await fetch(CLIENTES_ENDPOINT);
-        if (r1.ok) {
-          const j1 = await r1.json().catch(() => ({}));
-          const rows1 = j1?.data || (Array.isArray(j1) ? j1 : []);
-          if (Array.isArray(rows1)) {
-            setClientesApiEnabled(true);
-            setClientes(rows1);
-            return;
-          }
-        }
-        setClientesApiEnabled(false);
-      } catch (_) {
-        setClientesApiEnabled(false);
-      }
-
-      const r2 = await fetch(VIAJES_ENDPOINT);
-      const j2 = await r2.json().catch(() => ({}));
-      const rows2 = j2?.data || (Array.isArray(j2) ? j2 : []);
-
-      const map = new Map();
-
-      (rows2 || []).forEach((v) => {
-        const nombre = String(v?.clienteNombre || "").trim();
-        const telefono = String(v?.clienteTelefono || "").trim();
-        if (!nombre) return;
-
-        const key = `${nombre}|${telefono}`;
-        const t = parseDateSafe(v?.fecha || v?.createdAt);
-
-        const prev = map.get(key);
-        if (!prev || t > prev.__t) {
-          map.set(key, {
-            _id: v?.clienteId?._id || v?.clienteId || key,
-            clienteNombre: nombre,
-            clienteTelefono: telefono,
-            conductorNombre: v?.conductor?.nombre || "",
-            conductorVehiculo: v?.conductor?.vehiculo || "",
-            notas: v?.notas || "",
-            referencias: v?.referencias || "",
-            __t: t,
-          });
-        }
-      });
-
-      setClientes(Array.from(map.values()));
-    } finally {
-      setLoadingClientes(false);
-    }
-  };
-
-  const clientesOptions = useMemo(() => {
-    return (clientes || []).map((c) => {
-      const nombre = c?.clienteNombre || c?.nombre || c?.name || "";
-      const telefono = c?.clienteTelefono || c?.telefono || c?.phone || "";
-      const cid = c?._id || c?.id || `${nombre}|${telefono}`;
-
-      return {
-        id: cid,
-        nombre,
-        telefono,
-        label: telefono ? `${nombre} - ${telefono}` : nombre,
-        conductorNombre: c?.conductorNombre || c?.conductor?.nombre || "",
-        conductorVehiculo: c?.conductorVehiculo || c?.conductor?.vehiculo || "",
-        notas: c?.notas || "",
-        referencias: c?.referencias || "",
-      };
-    });
-  }, [clientes]);
-
-  const handleClienteToggle = (checked) => {
-    setFormData((p) => ({
-      ...p,
-      clienteEsRecurrente: checked,
-      clienteId: checked ? p.clienteId : "",
-    }));
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleClienteSelect = (clienteId) => {
     const found = clientesOptions.find((x) => x.id === clienteId);
-
     setFormData((p) => ({
       ...p,
-      clienteEsRecurrente: true,
       clienteId,
       clienteNombre: found?.nombre || p.clienteNombre,
-      clienteTelefono: found?.telefono || p.clienteTelefono,
-      conductor: {
-        nombre: p.conductor.nombre || found?.conductorNombre || "",
-        vehiculo: p.conductor.vehiculo || found?.conductorVehiculo || "",
-      },
-      notas: p.notas || found?.notas || "",
-      referencias: p.referencias || found?.referencias || "",
     }));
   };
 
-  const crearClienteYSeleccionar = async () => {
-    const nombre = (nuevoCliente.nombre || "").trim();
-    const telefono = (nuevoCliente.telefono || "").trim();
-
-    if (!nombre) {
-      setError("Escribe el nombre del nuevo cliente");
-      return;
-    }
-
-    setCreatingCliente(true);
-    setError(null);
-
-    try {
-      if (clientesApiEnabled) {
-        const payload = { nombre, telefono, clienteNombre: nombre, clienteTelefono: telefono };
-
-        const res = await fetch(CLIENTES_ENDPOINT, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        });
-
-        if (res.ok) {
-          const json = await res.json().catch(() => ({}));
-          const created = json?.data || json;
-          const newId = created?._id || created?.id;
-
-          await fetchClientes();
-
-          setFormData((p) => ({
-            ...p,
-            clienteEsRecurrente: true,
-            clienteId: newId || "",
-            clienteNombre: nombre,
-            clienteTelefono: telefono,
-          }));
-
-          setNuevoCliente({ nombre: "", telefono: "" });
-          return;
-        }
-      }
-
-      const localId = `${nombre}|${telefono}|${Date.now()}`;
-      setClientes((prev) => [{ _id: localId, clienteNombre: nombre, clienteTelefono: telefono }, ...(prev || [])]);
-
+  // ✅ Auto-generar rutaCompleta
+  useEffect(() => {
+    if (formData.rutaOrigen && formData.rutaDestino) {
       setFormData((p) => ({
         ...p,
-        clienteEsRecurrente: true,
-        clienteId: localId,
-        clienteNombre: nombre,
-        clienteTelefono: telefono,
+        rutaCompleta: `${p.rutaOrigen}/${p.rutaDestino}`,
       }));
-
-      setNuevoCliente({ nombre: "", telefono: "" });
-    } catch (e) {
-      setError(e.message || "Error creando cliente");
-    } finally {
-      setCreatingCliente(false);
     }
-  };
-
-  // =========================
-  // Handlers generales
-  // =========================
-  const handleInputChange = (e) => {
-    const { name, value, type, checked } = e.target;
-
-    if (type === "checkbox") {
-      // ✅ si cambia "pagado", actualiza también estado
-      if (name === "pagado") {
-        setFormData((prev) => ({
-          ...prev,
-          pagado: checked,
-          estado: estadoPorPago(checked),
-        }));
-        return;
-      }
-
-      setFormData((prev) => ({ ...prev, [name]: checked }));
-      return;
-    }
-
-    setFormData((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const handleOrigenToggle = (checked) => {
-    setFormData((prev) => ({
-      ...prev,
-      origen: { esRecurrente: checked, ubicacionId: "", texto: checked ? "" : prev.origen.texto },
-    }));
-  };
-
-  const handleDestinoToggle = (checked) => {
-    setFormData((prev) => ({
-      ...prev,
-      destino: { esRecurrente: checked, ubicacionId: "", texto: checked ? "" : prev.destino.texto },
-    }));
-  };
-
-  const handleOrigenSelect = (ubicacionId) => {
-    const found = ubicacionesOptions.find((x) => x.id === ubicacionId);
-    setFormData((prev) => ({
-      ...prev,
-      origen: { ...prev.origen, ubicacionId, texto: found?.label || "" },
-    }));
-  };
-
-  const handleDestinoSelect = (ubicacionId) => {
-    const found = ubicacionesOptions.find((x) => x.id === ubicacionId);
-    setFormData((prev) => ({
-      ...prev,
-      destino: { ...prev.destino, ubicacionId, texto: found?.label || "" },
-    }));
-  };
-
-  const handleOrigenTexto = (value) =>
-    setFormData((prev) => ({ ...prev, origen: { ...prev.origen, texto: value } }));
-  const handleDestinoTexto = (value) =>
-    setFormData((prev) => ({ ...prev, destino: { ...prev.destino, texto: value } }));
-  const handleConductorChange = (field, value) =>
-    setFormData((prev) => ({ ...prev, conductor: { ...prev.conductor, [field]: value } }));
+  }, [formData.rutaOrigen, formData.rutaDestino]);
 
   // =========================
   // Validación
   // =========================
   const validar = () => {
-    if (!formData.clienteNombre.trim()) return "El nombre del cliente es requerido";
-    if (!formData.fecha) return "La fecha es requerida";
+    if (!formData.clienteId) return "Selecciona un cliente corporativo";
+    if (!formData.truckId) return "Selecciona un camión";
+    if (!formData.conductorId) return "Selecciona un conductor";
+    if (!formData.departureTime) return "La fecha/hora de salida es requerida";
+    if (!formData.arrivalTime) return "La fecha/hora de llegada es requerida";
 
-    // ✅ Bloquear fechas futuras (hoy o antes)
-    if (formData.fecha > todayISO) return "No se permite seleccionar fechas a futuro";
+    const salida = new Date(formData.departureTime);
+    const llegada = new Date(formData.arrivalTime);
 
-    if (formData.clienteEsRecurrente && !formData.clienteId) {
-      return "Selecciona un cliente existente o agrega uno nuevo";
-    }
+    if (salida >= llegada) return "La salida debe ser anterior a la llegada";
 
-    const montoNum = Number(formData.monto);
-    if (!formData.monto || Number.isNaN(montoNum) || montoNum <= 0) return "El monto debe ser mayor a 0";
+    if (!formData.rutaOrigen.trim()) return "El origen es requerido";
+    if (!formData.rutaDestino.trim()) return "El destino es requerido";
 
-    if (!formData.origen?.texto?.trim()) return "El origen es requerido";
-    if (!formData.destino?.texto?.trim()) return "El destino es requerido";
-
-    const pasajerosNum = Number(formData.pasajeros);
-    if (Number.isNaN(pasajerosNum) || pasajerosNum < 1) return "Pasajeros debe ser al menos 1";
-
-    if (formData.origen.esRecurrente && !formData.origen.ubicacionId)
-      return "Selecciona una ubicación recurrente para Origen";
-    if (formData.destino.esRecurrente && !formData.destino.ubicacionId)
-      return "Selecciona una ubicación recurrente para Destino";
+    const montoNum = Number(formData.montoAcordado);
+    if (!formData.montoAcordado || Number.isNaN(montoNum) || montoNum <= 0)
+      return "El monto debe ser mayor a 0";
 
     return null;
   };
@@ -656,51 +345,39 @@ export default function AgregarViajeInterno() {
       setLoading(true);
       setError(null);
 
-      // ✅ ahora sí depende de pagado
-      const ESTADO_INICIAL = estadoPorPago(formData.pagado);
-
       const dataToSend = {
-        ...(isMongoId(formData.clienteId) ? { clienteId: formData.clienteId } : {}),
-
+        clienteId: formData.clienteId,
         clienteNombre: formData.clienteNombre,
-        clienteTelefono: formData.clienteTelefono || "",
 
-        // ✅ IMPORTANTE: no hardcodear PENDIENTE
-        estado: ESTADO_INICIAL,
-        status: ESTADO_INICIAL,
-        estatus: ESTADO_INICIAL,
+        truckId: formData.truckId,
+        conductorId: formData.conductorId,
 
-        origen: {
-          texto: formData.origen.texto,
-          esRecurrente: !!formData.origen.esRecurrente,
-          ...(formData.origen.ubicacionId ? { ubicacionId: formData.origen.ubicacionId } : {}),
-        },
+        codigoProgramacion: formData.codigoProgramacion || undefined,
 
-        destino: {
-          texto: formData.destino.texto,
-          esRecurrente: !!formData.destino.esRecurrente,
-          ...(formData.destino.ubicacionId ? { ubicacionId: formData.destino.ubicacionId } : {}),
-        },
+        tripDescription:
+          formData.tripDescription ||
+          `${formData.rutaCompleta} - ${formData.clienteNombre}`,
 
-        monto: Number(formData.monto),
-        fecha: formData.fecha,
-        hora: formData.hora || "",
+        departureTime: formData.departureTime,
+        arrivalTime: formData.arrivalTime,
 
-        tipoServicio: formData.tipoServicio,
-        metodoPago: formData.metodoPago,
-        pagado: !!formData.pagado,
-        pasajeros: Number(formData.pasajeros) || 1,
+        rutaOrigen: formData.rutaOrigen,
+        rutaDestino: formData.rutaDestino,
+        rutaCompleta: formData.rutaCompleta,
+        distanciaTotal: Number(formData.distanciaTotal) || 0,
+        tiempoEstimado: Number(formData.tiempoEstimado) || 0,
 
-        notas: formData.notas || "",
-        referencias: formData.referencias || "",
+        cargaDescripcion: formData.cargaDescripcion || "Carga general",
+        cargaPeso: Number(formData.cargaPeso) || 0,
+        cargaTipo: formData.cargaTipo,
 
-        conductor: {
-          nombre: formData.conductor.nombre || "",
-          vehiculo: formData.conductor.vehiculo || "",
-        },
+        montoAcordado: Number(formData.montoAcordado),
+
+        condiciones: formData.condiciones,
+        observaciones: formData.observaciones || "",
       };
 
-      const res = await fetch(VIAJES_ENDPOINT, {
+      const res = await fetch(VIAJES_OPERATIVOS_ENDPOINT, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(dataToSend),
@@ -708,7 +385,7 @@ export default function AgregarViajeInterno() {
 
       const json = await res.json().catch(() => ({}));
       if (!res.ok || json?.success === false)
-        throw new Error(json?.message || "Error al crear el viaje interno");
+        throw new Error(json?.message || "Error al crear el viaje operativo");
 
       navigate("/viajesInternos");
     } catch (e) {
@@ -727,11 +404,11 @@ export default function AgregarViajeInterno() {
         {/* Header */}
         <div className="mb-8">
           <button
-            onClick={() => navigate("/viajesInternos")}
+            onClick={() => navigate("/viajesOperativos")}
             className="flex items-center gap-2 text-gray-600 hover:text-gray-900 font-semibold mb-4 transition-colors"
           >
             <ArrowLeft size={20} />
-            Volver a Viajes Internos
+            Volver a Viajes Operativos
           </button>
 
           <div className="flex items-center gap-4">
@@ -739,8 +416,10 @@ export default function AgregarViajeInterno() {
               <Plus className="text-white" size={32} />
             </div>
             <div>
-              <h1 className="text-4xl font-bold text-gray-900 mb-1">Nuevo Viaje Interno</h1>
-              <p className="text-gray-600">Registra un viaje interno</p>
+              <h1 className="text-4xl font-bold text-gray-900 mb-1">
+                Nuevo Viaje Operativo
+              </h1>
+              <p className="text-gray-600">Programar viaje para cliente corporativo</p>
             </div>
           </div>
         </div>
@@ -758,351 +437,299 @@ export default function AgregarViajeInterno() {
             </div>
           )}
 
-          {/* Cliente */}
+          {/* Cliente Corporativo */}
           <div className="mb-8">
             <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
               <User className="text-indigo-600" size={22} />
-              Datos del Cliente
+              Cliente Corporativo
             </h3>
 
             <div className={tabsCard}>
-              <div className="flex items-center justify-between mb-3">
-                <p className="font-bold text-gray-900">Cliente *</p>
-                <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+              <label className="block text-xs font-semibold text-gray-600 mb-1">
+                Seleccionar cliente *
+              </label>
+              <select
+                value={formData.clienteId}
+                onChange={(e) => handleClienteSelect(e.target.value)}
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
+                disabled={loadingClientes}
+              >
+                <option value="">
+                  {loadingClientes ? "Cargando clientes..." : "Seleccionar cliente..."}
+                </option>
+                {clientesOptions.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.label}
+                  </option>
+                ))}
+              </select>
+
+              {/* Agregar nuevo cliente corporativo */}
+              <div className="mt-3 bg-white border border-gray-200 rounded-xl p-3">
+                <p className="text-xs font-bold text-gray-700 mb-2">
+                  ¿No aparece? Agregar nuevo cliente corporativo
+                </p>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mb-2">
                   <input
-                    type="checkbox"
-                    checked={formData.clienteEsRecurrente}
-                    onChange={(e) => handleClienteToggle(e.target.checked)}
-                    className="w-4 h-4"
+                    value={nuevoCliente.nombreEmpresa}
+                    onChange={(e) =>
+                      setNuevoCliente((p) => ({ ...p, nombreEmpresa: e.target.value }))
+                    }
+                    placeholder="Nombre Empresa *"
+                    className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   />
-                  Recurrente
-                </label>
-              </div>
-
-              {formData.clienteEsRecurrente && (
-                <>
-                  <label className="block text-xs font-semibold text-gray-600 mb-1">
-                    Clientes existentes (backend)
-                  </label>
-                  <select
-                    value={formData.clienteId}
-                    onChange={(e) => handleClienteSelect(e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
-                    disabled={loadingClientes}
-                  >
-                    <option value="">
-                      {loadingClientes ? "Cargando clientes..." : "Seleccionar cliente..."}
-                    </option>
-                    {clientesOptions.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.label}
-                      </option>
-                    ))}
-                  </select>
-
-                  <div className="mt-3 bg-white border border-gray-200 rounded-xl p-3">
-                    <p className="text-xs font-bold text-gray-700 mb-2">¿No aparece? Agregar nuevo cliente</p>
-
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-                      <input
-                        value={nuevoCliente.nombre}
-                        onChange={(e) => setNuevoCliente((p) => ({ ...p, nombre: e.target.value }))}
-                        placeholder="Nombre (Ej: DIANA)"
-                        className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                      />
-                      <input
-                        value={nuevoCliente.telefono}
-                        onChange={(e) => setNuevoCliente((p) => ({ ...p, telefono: e.target.value }))}
-                        placeholder="Teléfono (Ej: 7890-1234)"
-                        className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                      />
-                      <button
-                        type="button"
-                        onClick={crearClienteYSeleccionar}
-                        disabled={creatingCliente}
-                        className="px-4 py-2 bg-indigo-600 text-white rounded-lg font-semibold disabled:opacity-50"
-                      >
-                        {creatingCliente ? "Guardando..." : "Agregar"}
-                      </button>
-                    </div>
-                  </div>
-                </>
-              )}
-
-              <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Nombre del Cliente *
-                  </label>
                   <input
-                    type="text"
-                    name="clienteNombre"
-                    value={formData.clienteNombre}
-                    onChange={handleInputChange}
-                    placeholder="Ej: DIANA"
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
+                    value={nuevoCliente.nombreComercial}
+                    onChange={(e) =>
+                      setNuevoCliente((p) => ({ ...p, nombreComercial: e.target.value }))
+                    }
+                    placeholder="Nombre Comercial (Ej: DIANA)"
+                    className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  />
+                  <input
+                    value={nuevoCliente.ruc}
+                    onChange={(e) =>
+                      setNuevoCliente((p) => ({ ...p, ruc: e.target.value }))
+                    }
+                    placeholder="RUC/NIT *"
+                    className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  />
+                  <input
+                    value={nuevoCliente.email}
+                    onChange={(e) =>
+                      setNuevoCliente((p) => ({ ...p, email: e.target.value }))
+                    }
+                    placeholder="Email *"
+                    className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  />
+                  <input
+                    value={nuevoCliente.phone}
+                    onChange={(e) =>
+                      setNuevoCliente((p) => ({ ...p, phone: e.target.value }))
+                    }
+                    placeholder="Teléfono *"
+                    className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  />
+                  <input
+                    value={nuevoCliente.address}
+                    onChange={(e) =>
+                      setNuevoCliente((p) => ({ ...p, address: e.target.value }))
+                    }
+                    placeholder="Dirección *"
+                    className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   />
                 </div>
 
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Teléfono</label>
-                  <div className="relative">
-                    <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-                    <input
-                      type="text"
-                      name="clienteTelefono"
-                      value={formData.clienteTelefono}
-                      onChange={handleInputChange}
-                      placeholder="Ej: 7890-1234"
-                      className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
-                    />
-                  </div>
-                </div>
+                <button
+                  type="button"
+                  onClick={crearClienteYSeleccionar}
+                  disabled={creatingCliente}
+                  className="w-full px-4 py-2 bg-indigo-600 text-white rounded-lg font-semibold disabled:opacity-50"
+                >
+                  {creatingCliente ? "Creando..." : "Agregar Cliente"}
+                </button>
               </div>
             </div>
           </div>
 
-          {/* Viaje */}
+          {/* Fechas y Horarios */}
           <div className="mb-8">
             <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
               <Calendar className="text-indigo-600" size={22} />
-              Información del Viaje
+              Fechas y Horarios
+            </h3>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Fecha/Hora Salida *
+                </label>
+                <input
+                  type="datetime-local"
+                  name="departureTime"
+                  value={formData.departureTime}
+                  onChange={handleInputChange}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Fecha/Hora Llegada *
+                </label>
+                <input
+                  type="datetime-local"
+                  name="arrivalTime"
+                  value={formData.arrivalTime}
+                  onChange={handleInputChange}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Ruta */}
+          <div className="mb-8">
+            <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+              <MapPin className="text-indigo-600" size={22} />
+              Ruta
             </h3>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Fecha *</label>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Origen *
+                </label>
                 <input
-                  type="date"
-                  name="fecha"
-                  value={formData.fecha}
+                  type="text"
+                  name="rutaOrigen"
+                  value={formData.rutaOrigen}
                   onChange={handleInputChange}
-                  max={todayISO}
+                  placeholder="Ej: JULIO"
                   className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Hora</label>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Destino *
+                </label>
                 <input
-                  type="time"
-                  name="hora"
-                  value={formData.hora}
+                  type="text"
+                  name="rutaDestino"
+                  value={formData.rutaDestino}
                   onChange={handleInputChange}
+                  placeholder="Ej: RONALD"
                   className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Pasajeros</label>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Ruta Completa (auto)
+                </label>
+                <input
+                  type="text"
+                  value={formData.rutaCompleta}
+                  readOnly
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl bg-gray-50"
+                  placeholder="Ej: JULIO/RONALD"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Distancia (km)
+                </label>
                 <input
                   type="number"
-                  name="pasajeros"
-                  min="1"
-                  step="1"
-                  value={formData.pasajeros}
+                  name="distanciaTotal"
+                  value={formData.distanciaTotal}
                   onChange={handleInputChange}
+                  placeholder="Ej: 150"
                   className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Tipo de Servicio</label>
-                <select
-                  name="tipoServicio"
-                  value={formData.tipoServicio}
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Tiempo Estimado (hrs)
+                </label>
+                <input
+                  type="number"
+                  name="tiempoEstimado"
+                  value={formData.tiempoEstimado}
                   onChange={handleInputChange}
+                  placeholder="Ej: 9"
                   className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                >
-                  {TIPO_SERVICIO.map((op) => (
-                    <option key={op.value} value={op.value}>
-                      {op.label}
-                    </option>
-                  ))}
-                </select>
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Carga */}
+          <div className="mb-8">
+            <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+              <Package className="text-indigo-600" size={22} />
+              Información de Carga
+            </h3>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Descripción
+                </label>
+                <input
+                  type="text"
+                  name="cargaDescripcion"
+                  value={formData.cargaDescripcion}
+                  onChange={handleInputChange}
+                  placeholder="Ej: Carga general"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Método de Pago</label>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Peso (kg)
+                </label>
+                <input
+                  type="number"
+                  name="cargaPeso"
+                  value={formData.cargaPeso}
+                  onChange={handleInputChange}
+                  placeholder="Ej: 15000"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Tipo de Carga
+                </label>
                 <select
-                  name="metodoPago"
-                  value={formData.metodoPago}
+                  name="cargaTipo"
+                  value={formData.cargaTipo}
                   onChange={handleInputChange}
                   className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 >
-                  {METODO_PAGO.map((op) => (
+                  {TIPO_CARGA.map((op) => (
                     <option key={op.value} value={op.value}>
                       {op.label}
                     </option>
                   ))}
                 </select>
               </div>
-
-              <div className="flex items-end gap-3">
-                <label className="flex items-center gap-2 px-4 py-3 border border-gray-300 rounded-xl w-full cursor-pointer select-none">
-                  <input
-                    type="checkbox"
-                    name="pagado"
-                    checked={formData.pagado}
-                    onChange={handleInputChange}
-                    className="w-4 h-4"
-                  />
-                  <span className="font-semibold text-gray-700">Pagado</span>
-                </label>
-              </div>
-
-              <div className="md:col-span-3">
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Monto (USD) *</label>
-                <div className="relative">
-                  <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-                  <input
-                    type="number"
-                    name="monto"
-                    min="0"
-                    step="0.01"
-                    value={formData.monto}
-                    onChange={handleInputChange}
-                    placeholder="Ej: 105"
-                    className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  />
-                </div>
-              </div>
             </div>
           </div>
 
-          {/* Origen/Destino */}
+          {/* Monto */}
           <div className="mb-8">
             <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-              <MapPin className="text-indigo-600" size={22} />
-              Origen y Destino
+              <DollarSign className="text-indigo-600" size={22} />
+              Monto Acordado
             </h3>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Origen */}
-              <div className={tabsCard}>
-                <div className="flex items-center justify-between mb-3">
-                  <p className="font-bold text-gray-900">Origen *</p>
-                  <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
-                    <input
-                      type="checkbox"
-                      checked={formData.origen.esRecurrente}
-                      onChange={(e) => handleOrigenToggle(e.target.checked)}
-                      className="w-4 h-4"
-                    />
-                    Recurrente
-                  </label>
-                </div>
-
-                {formData.origen.esRecurrente ? (
-                  <>
-                    <label className="block text-xs font-semibold text-gray-600 mb-1">Seleccionar ubicación</label>
-                    <select
-                      value={formData.origen.ubicacionId}
-                      onChange={(e) => handleOrigenSelect(e.target.value)}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
-                      disabled={loadingUbicaciones}
-                    >
-                      <option value="">
-                        {loadingUbicaciones ? "Cargando ubicaciones..." : "Seleccionar origen..."}
-                      </option>
-                      {ubicacionesOptions.map((u) => (
-                        <option key={u.id} value={u.id}>
-                          {u.label}
-                        </option>
-                      ))}
-                    </select>
-
-                    <div className="mt-3">
-                      <label className="block text-xs font-semibold text-gray-600 mb-1">
-                        Texto (se envía al backend) *
-                      </label>
-                      <input
-                        type="text"
-                        value={formData.origen.texto}
-                        onChange={(e) => handleOrigenTexto(e.target.value)}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
-                        placeholder="Ej: DIANA"
-                      />
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <label className="block text-xs font-semibold text-gray-600 mb-1">Dirección / nombre *</label>
-                    <input
-                      type="text"
-                      value={formData.origen.texto}
-                      onChange={(e) => handleOrigenTexto(e.target.value)}
-                      placeholder="Ej: CASA DIANA"
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
-                    />
-                  </>
-                )}
-              </div>
-
-              {/* Destino */}
-              <div className={tabsCard}>
-                <div className="flex items-center justify-between mb-3">
-                  <p className="font-bold text-gray-900">Destino *</p>
-                  <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
-                    <input
-                      type="checkbox"
-                      checked={formData.destino.esRecurrente}
-                      onChange={(e) => handleDestinoToggle(e.target.checked)}
-                      className="w-4 h-4"
-                    />
-                    Recurrente
-                  </label>
-                </div>
-
-                {formData.destino.esRecurrente ? (
-                  <>
-                    <label className="block text-xs font-semibold text-gray-600 mb-1">Seleccionar ubicación</label>
-                    <select
-                      value={formData.destino.ubicacionId}
-                      onChange={(e) => handleDestinoSelect(e.target.value)}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
-                      disabled={loadingUbicaciones}
-                    >
-                      <option value="">
-                        {loadingUbicaciones ? "Cargando ubicaciones..." : "Seleccionar destino..."}
-                      </option>
-                      {ubicacionesOptions.map((u) => (
-                        <option key={u.id} value={u.id}>
-                          {u.label}
-                        </option>
-                      ))}
-                    </select>
-
-                    <div className="mt-3">
-                      <label className="block text-xs font-semibold text-gray-600 mb-1">
-                        Texto (se envía al backend) *
-                      </label>
-                      <input
-                        type="text"
-                        value={formData.destino.texto}
-                        onChange={(e) => handleDestinoTexto(e.target.value)}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
-                        placeholder="Ej: SARAM"
-                      />
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <label className="block text-xs font-semibold text-gray-600 mb-1">Dirección / nombre *</label>
-                    <input
-                      type="text"
-                      value={formData.destino.texto}
-                      onChange={(e) => handleDestinoTexto(e.target.value)}
-                      placeholder="Ej: HOSPITAL"
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
-                    />
-                  </>
-                )}
-              </div>
+            <div className="relative max-w-md">
+              <DollarSign
+                className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
+                size={18}
+              />
+              <input
+                type="number"
+                name="montoAcordado"
+                min="0"
+                step="0.01"
+                value={formData.montoAcordado}
+                onChange={handleInputChange}
+                placeholder="Ej: 250.00"
+                className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
             </div>
           </div>
 
-          {/* ✅ Conductor + Vehículo (JUNTOS) */}
+          {/* Conductor y Vehículo */}
           <div className="mb-8">
             <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
               <Truck className="text-indigo-600" size={22} />
@@ -1111,12 +738,15 @@ export default function AgregarViajeInterno() {
 
             <div className="bg-white border border-gray-200 rounded-2xl p-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Motorista */}
                 <div>
-                  <label className="block text-xs font-semibold text-gray-600 mb-1">Motorista</label>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">
+                    Motorista *
+                  </label>
                   <select
-                    value={formData.motoristaId}
-                    onChange={(e) => handleMotoristaSelect(e.target.value)}
+                    value={formData.conductorId}
+                    onChange={(e) =>
+                      setFormData((p) => ({ ...p, conductorId: e.target.value }))
+                    }
                     className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
                     disabled={loadingMotoristas}
                   >
@@ -1131,12 +761,13 @@ export default function AgregarViajeInterno() {
                   </select>
                 </div>
 
-                {/* Camión */}
                 <div>
-                  <label className="block text-xs font-semibold text-gray-600 mb-1">Camión (Placa)</label>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">
+                    Camión *
+                  </label>
                   <select
-                    value={formData.camionId}
-                    onChange={(e) => handleCamionSelect(e.target.value)}
+                    value={formData.truckId}
+                    onChange={(e) => setFormData((p) => ({ ...p, truckId: e.target.value }))}
                     className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
                     disabled={loadingCamiones}
                   >
@@ -1151,104 +782,43 @@ export default function AgregarViajeInterno() {
                   </select>
                 </div>
               </div>
-
-              {/* ✅ Agregar ambos */}
-              <div className="mt-4 bg-gray-50 border border-gray-200 rounded-xl p-3">
-                <p className="text-xs font-bold text-gray-700 mb-2">¿No aparecen? Agregar motorista y camión (juntos)</p>
-
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
-                  <input
-                    value={nuevoMotorista.nombre}
-                    onChange={(e) => setNuevoMotorista((p) => ({ ...p, nombre: e.target.value }))}
-                    placeholder="Nombre del motorista"
-                    className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  />
-
-                  <input
-                    value={nuevoMotorista.placa}
-                    onChange={(e) => setNuevoMotorista((p) => ({ ...p, placa: e.target.value }))}
-                    placeholder="Placa (para ambos)"
-                    className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  />
-
-                  <input
-                    value={nuevoCamion.placa}
-                    onChange={(e) => setNuevoCamion({ placa: e.target.value })}
-                    placeholder="Placa camión (opcional)"
-                    className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  />
-
-                  <button
-                    type="button"
-                    onClick={crearMotoristaYCamion}
-                    disabled={creatingMotorista || creatingCamion}
-                    className="px-4 py-2 bg-indigo-600 text-white rounded-lg font-semibold disabled:opacity-50"
-                  >
-                    {creatingMotorista || creatingCamion ? "Guardando..." : "Agregar ambos"}
-                  </button>
-                </div>
-
-                <p className="text-[11px] text-gray-500 mt-2">
-                  *Si no escribís “Placa camión”, se usa la placa del motorista para crear el camión también.
-                </p>
-              </div>
-
-              {/* Inputs manuales */}
-              <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Conductor (opcional)</label>
-                  <input
-                    type="text"
-                    value={formData.conductor.nombre}
-                    onChange={(e) => handleConductorChange("nombre", e.target.value)}
-                    placeholder="Ej: Juan Pérez"
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Vehículo/Placa (opcional)</label>
-                  <input
-                    type="text"
-                    value={formData.conductor.vehiculo}
-                    onChange={(e) => handleConductorChange("vehiculo", e.target.value)}
-                    placeholder="Ej: P123-456"
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  />
-                </div>
-              </div>
-
-              {/* Notas / Referencias */}
-              <div className="mt-4 grid grid-cols-1 gap-4">
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Notas</label>
-                  <textarea
-                    value={formData.notas}
-                    onChange={(e) => setFormData((p) => ({ ...p, notas: e.target.value }))}
-                    rows={3}
-                    placeholder="Observaciones del viaje..."
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Referencias</label>
-                  <textarea
-                    value={formData.referencias}
-                    onChange={(e) => setFormData((p) => ({ ...p, referencias: e.target.value }))}
-                    rows={2}
-                    placeholder="Referencias (opcional)..."
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
-                  />
-                </div>
-              </div>
             </div>
+          </div>
+
+          {/* Código Programación (Opcional) */}
+          <div className="mb-8">
+            <h3 className="text-xl font-bold text-gray-900 mb-4">
+              Código de Programación (Opcional)
+            </h3>
+
+            <input
+              type="text"
+              name="codigoProgramacion"
+              value={formData.codigoProgramacion}
+              onChange={handleInputChange}
+              placeholder="Ej: C-11375 (se autogenera si se deja vacío)"
+              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            />
+          </div>
+
+          {/* Observaciones */}
+          <div className="mb-8">
+            <h3 className="text-xl font-bold text-gray-900 mb-4">Observaciones</h3>
+
+            <textarea
+              name="observaciones"
+              value={formData.observaciones}
+              onChange={handleInputChange}
+              rows={3}
+              placeholder="Notas adicionales del viaje..."
+              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
+            />
           </div>
 
           {/* Botones */}
           <div className="flex items-center gap-4">
             <button
-              onClick={() => navigate("/viajesInternos")}
+              onClick={() => navigate("/viajesOperativos")}
               className="flex-1 px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-xl font-semibold hover:bg-gray-50 transition-colors"
             >
               Cancelar
@@ -1267,7 +837,7 @@ export default function AgregarViajeInterno() {
               ) : (
                 <>
                   <Save size={20} />
-                  Guardar Viaje
+                  Programar Viaje
                 </>
               )}
             </button>

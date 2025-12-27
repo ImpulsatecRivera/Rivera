@@ -1,15 +1,19 @@
 //  Backend/src/Models/Viajes.js
-// ESQUEMA ADAPTADO - Agregando configuración flexible a tu estructura existente
+// ESQUEMA COMPLETO - Con todos los campos para reportes PDF
 
 import mongoose from 'mongoose';
 const { Schema, model } = mongoose;
 
 const viajeSchema = new Schema({
-  // 🔗 REFERENCIAS A OTRAS COLECCIONES (mantener como está)
+  // =====================================================
+  // 🔗 REFERENCIAS A OTRAS COLECCIONES
+  // =====================================================
   quoteId: {
     type: Schema.Types.ObjectId,
     ref: 'Cotizaciones',
-    required: true
+    required: function() {
+      return this.tipoViaje === 'cotizacion';
+    }
   },
 
   truckId: {
@@ -24,14 +28,280 @@ const viajeSchema = new Schema({
     required: true
   },
 
-  // 📝 DESCRIPCIÓN DEL VIAJE (mantener)
+  // =====================================================
+  // 🆕 TIPO DE VIAJE
+  // =====================================================
+  tipoViaje: {
+    type: String,
+    enum: ['cotizacion', 'operativo'],
+    default: 'cotizacion',
+    required: true
+  },
+
+  // =====================================================
+  // 🆕 PARA VIAJES OPERATIVOS (sin cotización)
+  // =====================================================
+  clienteOperativo: {
+    type: Schema.Types.ObjectId,
+    ref: 'Clientes',
+    required: function() {
+      return this.tipoViaje === 'operativo';
+    }
+  },
+
+  clienteNombre: {
+    type: String,
+    trim: true,
+    uppercase: true
+  },
+
+  // Código/Número de programación (como en la pizarra)
+  codigoProgramacion: {
+    type: String,
+    trim: true,
+    uppercase: true
+    // Ej: "C-11375", "C-12150"
+  },
+
+  // Ruta directa (para viajes operativos)
+  rutaDirecta: {
+    origen: {
+      nombre: {
+        type: String,
+        trim: true,
+        uppercase: true
+      },
+      coordenadas: {
+        lat: Number,
+        lng: Number
+      }
+    },
+    destino: {
+      nombre: {
+        type: String,
+        trim: true,
+        uppercase: true
+      },
+      coordenadas: {
+        lat: Number,
+        lng: Number
+      }
+    },
+    rutaCompleta: {
+      type: String,
+      uppercase: true
+      // Ej: "JULIO/RONALD", "ENOC/YAMAY"
+    },
+    distanciaTotal: Number,
+    tiempoEstimado: Number
+  },
+
+  // Carga directa (para viajes operativos)
+  cargaDirecta: {
+    descripcion: {
+      type: String,
+      default: 'Carga general'
+    },
+    peso: {
+      valor: Number,
+      unidad: {
+        type: String,
+        default: 'kg'
+      }
+    },
+    tipo: String
+  },
+
+  // Monto acordado (para viajes operativos)
+  montoAcordado: {
+    type: Number,
+    default: 0
+  },
+
+  // =====================================================
+  // 🆕 CAMPOS PARA REPORTES Y FACTURACIÓN
+  // =====================================================
+  
+  // Número correlativo de viaje (por cliente/mes)
+  numeroViaje: {
+    type: Number,
+    // Se genera automáticamente al crear el viaje
+  },
+
+  // Número correlativo general (único en todo el sistema)
+  numeroViajeGlobal: {
+    type: String,
+    sparse: true,
+    unique: true
+    // Ej: "VOP-2025-00001"
+  },
+
+  // 💰 DATOS DE FACTURACIÓN (CRÍTICO PARA PDFs)
+  facturacion: {
+    // Monto sin IVA
+    montoSinIVA: {
+      type: Number,
+      default: 0
+    },
+    
+    // IVA (13% en El Salvador)
+    iva: {
+      type: Number,
+      default: 0
+    },
+    
+    // Monto total con IVA
+    montoTotal: {
+      type: Number,
+      default: 0
+    },
+    
+    // Tipo de consumidor
+    tipoConsumidor: {
+      type: String,
+      enum: ['contribuyente', 'consumidor_final'],
+      default: 'contribuyente'
+      // contribuyente = crédito fiscal
+      // consumidor_final = sin crédito fiscal
+    },
+    
+    // Número de factura (si aplica)
+    numeroFactura: {
+      type: String,
+      trim: true
+    },
+    
+    // Fecha de facturación
+    fechaFactura: {
+      type: Date
+    },
+    
+    // Estado de pago
+    estadoPago: {
+      type: String,
+      enum: ['pendiente', 'pagado', 'vencido', 'parcial'],
+      default: 'pendiente'
+    },
+    
+    // Fecha de pago
+    fechaPago: {
+      type: Date
+    },
+    
+    // Método de pago
+    metodoPago: {
+      type: String,
+      enum: ['efectivo', 'transferencia', 'cheque', 'credito'],
+      default: 'credito'
+    },
+    
+    // Fecha de vencimiento (para créditos)
+    fechaVencimiento: {
+      type: Date
+    },
+    
+    // Notas de facturación
+    notasFacturacion: {
+      type: String,
+      trim: true
+    }
+  },
+
+  // 📅 PERÍODO CONTABLE (para agrupar en reportes)
+  periodoContable: {
+    año: {
+      type: Number
+    },
+    mes: {
+      type: Number,
+      min: 1,
+      max: 12
+    },
+    semana: {
+      type: Number,
+      min: 1,
+      max: 53
+    }
+  },
+
+  // 🏷️ CATEGORIZACIÓN PARA REPORTES
+  categorizacion: {
+    // Tipo de servicio
+    tipoServicio: {
+      type: String,
+      enum: ['regular', 'urgente', 'especial', 'programado'],
+      default: 'regular'
+    },
+    
+    // Zona geográfica
+    zona: {
+      type: String,
+      enum: ['urbana', 'rural', 'intermunicipal', 'internacional'],
+      default: 'intermunicipal'
+    },
+    
+    // Prioridad
+    prioridad: {
+      type: String,
+      enum: ['baja', 'normal', 'alta', 'urgente'],
+      default: 'normal'
+    }
+  },
+
+  // 📝 OBSERVACIONES Y NOTAS
+  observacionesInternas: {
+    type: String,
+    trim: true
+    // Para notas que NO aparecen en PDFs del cliente
+  },
+
+  observacionesCliente: {
+    type: String,
+    trim: true
+    // Para notas que SÍ aparecen en PDFs del cliente
+  },
+
+  // ✅ APROBACIONES (para viajes operativos)
+  aprobaciones: {
+    aprobadoPor: {
+      type: String,
+      trim: true
+    },
+    fechaAprobacion: {
+      type: Date
+    },
+    requiereAprobacion: {
+      type: Boolean,
+      default: false
+    }
+  },
+
+  // 📎 DOCUMENTOS ADJUNTOS
+  documentosAdjuntos: [{
+    tipo: {
+      type: String,
+      enum: ['guia', 'factura', 'remision', 'foto', 'firma', 'otro']
+    },
+    url: String,
+    nombre: String,
+    fechaSubida: {
+      type: Date,
+      default: Date.now
+    }
+  }],
+
+  // =====================================================
+  // 📝 DESCRIPCIÓN DEL VIAJE
+  // =====================================================
   tripDescription: {
     type: String,
     required: true,
     trim: true
   },
 
-  // ⏰ HORARIOS PRINCIPALES (mantener)
+  // =====================================================
+  // ⏰ HORARIOS PRINCIPALES
+  // =====================================================
   departureTime: {
     type: Date,
     required: true
@@ -42,61 +312,46 @@ const viajeSchema = new Schema({
     required: true
   },
 
-  // 🆕 CONFIGURACIÓN FLEXIBLE (NUEVO CAMPO AGREGADO)
+  // =====================================================
+  // 🆕 CONFIGURACIÓN FLEXIBLE
+  // =====================================================
   configuracion: {
-    // Control de auto-inicio
     autoInicio: {
       type: Boolean,
       default: true
     },
-
-    // Control de auto-completado
     autoCompletado: {
       type: Boolean,
       default: true
     },
-
-    // Estrategia de cálculo de progreso
     estrategiaProgreso: {
       type: String,
       enum: ['automatico', 'manual', 'hibrido'],
       default: 'hibrido'
     },
-
-    // Requerir confirmación manual
     requiereConfirmacionManual: {
       type: Boolean,
       default: false
     },
-
-    // Confirmación recibida
     confirmacionRecibida: {
       type: Boolean,
       default: false
     },
-
-    // Ignorar detección de retrasos
     ignoreDelayDetection: {
       type: Boolean,
       default: false
     },
-
-    // Override manual
     manualOverride: {
       accion: String,
       fecha: Date,
       razon: String
     },
-
-    // Override temporal
     temporaryOverride: {
       accion: String,
       fecha: Date,
       expira: Date,
       valorAnterior: mongoose.Schema.Types.Mixed
     },
-
-    // Metadatos
     ultimaConfiguracion: {
       type: Date,
       default: Date.now
@@ -107,7 +362,9 @@ const viajeSchema = new Schema({
     }
   },
 
-  // ⏰ TIEMPOS REALES (mantener como está)
+  // =====================================================
+  // ⏰ TIEMPOS REALES
+  // =====================================================
   tiemposReales: {
     ultimaActualizacion: {
       type: Date,
@@ -118,13 +375,14 @@ const viajeSchema = new Schema({
     tiempoRealViaje: Number // en minutos
   },
 
-  // 📊 ESTADO DEL VIAJE (EXTENDER estados existentes)
+  // =====================================================
+  // 📊 ESTADO DEL VIAJE
+  // =====================================================
   estado: {
     actual: {
       type: String,
       enum: [
         'pendiente', 'en_curso', 'completado', 'cancelado', 'retrasado',
-        // 🆕 Nuevos estados agregados
         'programado', 'listo', 'pausado'
       ],
       default: 'pendiente'
@@ -137,7 +395,6 @@ const viajeSchema = new Schema({
       type: Boolean,
       default: true
     },
-    // 🆕 Info de pausa agregada
     pausaInfo: {
       fechaPausa: Date,
       estadoAnterior: String,
@@ -150,7 +407,6 @@ const viajeSchema = new Schema({
         default: Date.now
       },
       observacion: String,
-      // 🆕 Campos agregados al historial
       estadoAnterior: String,
       estadoNuevo: String,
       motivo: String,
@@ -162,7 +418,9 @@ const viajeSchema = new Schema({
     }]
   },
 
-  // 📍 TRACKING (EXTENDER tracking existente)
+  // =====================================================
+  // 📍 TRACKING
+  // =====================================================
   tracking: {
     ubicacionActual: {
       lat: Number,
@@ -176,7 +434,6 @@ const viajeSchema = new Schema({
         min: 0
       }
     },
-
     progreso: {
       porcentaje: {
         type: Number,
@@ -192,25 +449,19 @@ const viajeSchema = new Schema({
         type: Boolean,
         default: true
       },
-      // 🆕 Método de cálculo agregado
       metodoCalculo: {
         type: String,
         enum: ['tiempo', 'checkpoint', 'hibrido', 'manual', 'automatico'],
         default: 'hibrido'
       }
     },
-
-    // 🆕 Punto actual en ruta agregado
     puntoActualRuta: {
       indice: Number,
       punto: mongoose.Schema.Types.Mixed,
       progresoPunto: Number,
       timestamp: Date
     },
-
-    // 📍 CHECKPOINTS (EXTENDER checkpoints existentes)
     checkpoints: [{
-      // Campos existentes
       nombre: String,
       coordenadas: {
         lat: Number,
@@ -219,8 +470,6 @@ const viajeSchema = new Schema({
       horaEstimada: Date,
       horaReal: Date,
       completado: Boolean,
-
-      // 🆕 Campos agregados para compatibilidad con sistema flexible
       tipo: String,
       progreso: Number,
       descripcion: String,
@@ -241,7 +490,9 @@ const viajeSchema = new Schema({
     }]
   },
 
-  // 💰 COSTOS REALES (mantener como está)
+  // =====================================================
+  // 💰 COSTOS REALES
+  // =====================================================
   costosReales: {
     combustible: {
       type: Number,
@@ -265,7 +516,9 @@ const viajeSchema = new Schema({
     }
   },
 
-  // 🚨 ALERTAS (EXTENDER alertas existentes)
+  // =====================================================
+  // 🚨 ALERTAS
+  // =====================================================
   alertas: [{
     _id: {
       type: Schema.Types.ObjectId,
@@ -289,12 +542,13 @@ const viajeSchema = new Schema({
       enum: ['baja', 'media', 'alta', 'critica'],
       default: 'media'
     },
-    // 🆕 Campos agregados
     configuracion: mongoose.Schema.Types.Mixed,
     rutaInfo: mongoose.Schema.Types.Mixed
   }],
 
-  // 🌡 CONDICIONES DEL VIAJE (mantener como está)
+  // =====================================================
+  // 🌡 CONDICIONES DEL VIAJE
+  // =====================================================
   condiciones: {
     clima: String,
     trafico: String,
@@ -302,7 +556,9 @@ const viajeSchema = new Schema({
     observaciones: String
   },
 
-  // 🆕 FLAGS DE CONTROL (NUEVO CAMPO)
+  // =====================================================
+  // 🆕 FLAGS DE CONTROL
+  // =====================================================
   flags: {
     skipAutoProcessing: {
       type: Boolean,
@@ -331,13 +587,15 @@ const viajeSchema = new Schema({
   collection: "Viajes"
 });
 
+// =====================================================
 // 🔄 MIDDLEWARE PRE-SAVE MEJORADO
+// =====================================================
 viajeSchema.pre('save', async function (next) {
   const ahora = new Date();
   const config = this.configuracion || {};
 
-  // 🔄 AUTO-COMPLETAR DATOS DESDE LA COTIZACIÓN (mantener tu lógica)
-  if (this.isNew && this.quoteId) {
+  // 🔄 AUTO-COMPLETAR DATOS DESDE LA COTIZACIÓN
+  if (this.isNew && this.quoteId && this.tipoViaje === 'cotizacion') {
     try {
       const cotizacion = await mongoose.model('Cotizaciones').findById(this.quoteId);
       if (cotizacion) {
@@ -385,7 +643,56 @@ viajeSchema.pre('save', async function (next) {
     this.flags.expira = undefined;
   }
 
-  // 💰 AUTO-CALCULAR COSTO TOTAL (mantener tu lógica)
+  // 📊 CALCULAR PERÍODO CONTABLE
+  if (this.departureTime) {
+    const fecha = new Date(this.departureTime);
+    this.periodoContable = {
+      año: fecha.getFullYear(),
+      mes: fecha.getMonth() + 1,
+      semana: getISOWeek(fecha)
+    };
+  }
+
+  // 💰 CALCULAR FACTURACIÓN (para viajes operativos)
+  if (this.tipoViaje === 'operativo' && this.montoAcordado) {
+    const montoBase = this.montoAcordado;
+    
+    // Si no se ha establecido manualmente
+    if (!this.facturacion || !this.facturacion.montoSinIVA) {
+      const IVA_RATE = 0.13; // 13% El Salvador
+      
+      this.facturacion = this.facturacion || {};
+      
+      // Si el cliente es contribuyente (crédito fiscal)
+      if (this.facturacion.tipoConsumidor === 'contribuyente' || !this.facturacion.tipoConsumidor) {
+        this.facturacion.tipoConsumidor = 'contribuyente';
+        this.facturacion.montoSinIVA = montoBase;
+        this.facturacion.iva = montoBase * IVA_RATE;
+        this.facturacion.montoTotal = montoBase * (1 + IVA_RATE);
+      } else {
+        // Consumidor final (precio ya incluye IVA)
+        this.facturacion.montoTotal = montoBase;
+        this.facturacion.montoSinIVA = montoBase / (1 + IVA_RATE);
+        this.facturacion.iva = montoBase - this.facturacion.montoSinIVA;
+      }
+    }
+  }
+
+  // 🔢 GENERAR NÚMERO DE VIAJE GLOBAL (si no existe)
+  if (this.isNew && this.tipoViaje === 'operativo') {
+    if (!this.numeroViajeGlobal) {
+      const año = new Date().getFullYear();
+      const count = await this.constructor.countDocuments({
+        tipoViaje: 'operativo',
+        'periodoContable.año': año
+      });
+      
+      const numero = String(count + 1).padStart(5, '0');
+      this.numeroViajeGlobal = `VOP-${año}-${numero}`;
+    }
+  }
+
+  // 💰 AUTO-CALCULAR COSTO TOTAL
   this.costosReales.total = (this.costosReales.combustible || 0) +
     (this.costosReales.peajes || 0) +
     (this.costosReales.conductor || 0) +
@@ -407,7 +714,7 @@ viajeSchema.pre('save', async function (next) {
       this.estado.historial.push({
         estadoAnterior: 'pendiente',
         estadoNuevo: 'en_curso',
-        estado: 'en_curso', // mantener compatibilidad
+        estado: 'en_curso',
         fecha: ahora,
         observacion: 'Viaje iniciado automáticamente',
         motivo: 'automatico_hora_salida',
@@ -436,7 +743,7 @@ viajeSchema.pre('save', async function (next) {
       this.estado.historial.push({
         estadoAnterior: 'en_curso',
         estadoNuevo: 'completado',
-        estado: 'completado', // mantener compatibilidad
+        estado: 'completado',
         fecha: ahora,
         observacion: 'Viaje completado automáticamente',
         motivo: 'automatico_completado',
@@ -449,7 +756,9 @@ viajeSchema.pre('save', async function (next) {
   next();
 });
 
-// 📊 MÉTODOS VIRTUALES (mantener los existentes)
+// =====================================================
+// 📊 MÉTODOS VIRTUALES
+// =====================================================
 viajeSchema.virtual('duracionProgramada').get(function () {
   if (!this.arrivalTime || !this.departureTime) return 0;
   return Math.floor((this.arrivalTime - this.departureTime) / (1000 * 60));
@@ -460,7 +769,6 @@ viajeSchema.virtual('duracionReal').get(function () {
   return Math.floor((this.tiemposReales.llegadaReal - this.tiemposReales.salidaReal) / (1000 * 60));
 });
 
-// 🆕 NUEVOS MÉTODOS VIRTUALES
 viajeSchema.virtual('tiempoTranscurridoMinutos').get(function () {
   const inicio = this.tiemposReales?.salidaReal || this.departureTime;
   return Math.floor((new Date() - inicio) / (1000 * 60));
@@ -470,7 +778,9 @@ viajeSchema.virtual('tiempoRestanteMinutos').get(function () {
   return Math.floor((this.arrivalTime - new Date()) / (1000 * 60));
 });
 
-// 🆕 MÉTODOS DE INSTANCIA PARA CONFIGURACIÓN
+// =====================================================
+// 🆕 MÉTODOS DE INSTANCIA
+// =====================================================
 viajeSchema.methods.puedeIniciarseAutomaticamente = function () {
   const config = this.configuracion || {};
   const now = new Date();
@@ -515,18 +825,26 @@ viajeSchema.methods.tieneOverrideActivo = function () {
   return null;
 };
 
-// 🔍 ÍNDICES OPTIMIZADOS (mantener los existentes + nuevos)
+// =====================================================
+// 🔍 ÍNDICES OPTIMIZADOS
+// =====================================================
 viajeSchema.index({ 'estado.actual': 1 });
 viajeSchema.index({ departureTime: 1 });
 viajeSchema.index({ quoteId: 1 });
 viajeSchema.index({ truckId: 1 });
 viajeSchema.index({ conductorId: 1 });
-// 🆕 Nuevos índices
+viajeSchema.index({ tipoViaje: 1 });
+viajeSchema.index({ clienteOperativo: 1 });
+viajeSchema.index({ 'periodoContable.año': 1, 'periodoContable.mes': 1 });
+viajeSchema.index({ 'facturacion.estadoPago': 1 });
+viajeSchema.index({ numeroViajeGlobal: 1 });
 viajeSchema.index({ 'configuracion.autoInicio': 1, 'estado.actual': 1 });
 viajeSchema.index({ 'configuracion.estrategiaProgreso': 1 });
 viajeSchema.index({ 'flags.skipAutoProcessing': 1, 'flags.expira': 1 });
 
-// 📱 MÉTODO ESTÁTICO MEJORADO (mantener tu método + extensiones)
+// =====================================================
+// 📱 MÉTODOS ESTÁTICOS
+// =====================================================
 viajeSchema.statics.getViajeCompleto = async function (viajeId) {
   return this.aggregate([
     {
@@ -541,7 +859,10 @@ viajeSchema.statics.getViajeCompleto = async function (viajeId) {
       }
     },
     {
-      $unwind: "$cotizacion"
+      $unwind: {
+        path: "$cotizacion",
+        preserveNullAndEmptyArrays: true
+      }
     },
     {
       $addFields: {
@@ -556,7 +877,6 @@ viajeSchema.statics.getViajeCompleto = async function (viajeId) {
   ]);
 };
 
-// 🆕 NUEVOS MÉTODOS ESTÁTICOS
 viajeSchema.statics.findViajesParaAutoProcesamiento = function () {
   return this.find({
     'estado.autoActualizar': true,
@@ -610,6 +930,101 @@ viajeSchema.statics.getEstadisticasConfiguracion = async function () {
     }
   ]);
 };
+
+// =====================================================
+// 🆕 MÉTODOS ESTÁTICOS PARA REPORTES
+// =====================================================
+
+// Obtener viajes para reporte mensual
+viajeSchema.statics.obtenerReporteMensual = function(mes, año) {
+  return this.find({
+    tipoViaje: 'operativo',
+    'estado.actual': 'completado',
+    'periodoContable.año': año,
+    'periodoContable.mes': mes
+  })
+  .populate('clienteOperativo', 'nombreComercial nombreEmpresa')
+  .populate('truckId', 'licensePlate placa')
+  .populate('conductorId', 'name nombre')
+  .sort({ clienteNombre: 1, departureTime: 1 })
+  .lean();
+};
+
+// Obtener resumen por cliente
+viajeSchema.statics.obtenerResumenCliente = async function(clienteNombre, mes, año) {
+  return this.aggregate([
+    {
+      $match: {
+        tipoViaje: 'operativo',
+        clienteNombre: clienteNombre,
+        'estado.actual': 'completado',
+        'periodoContable.año': año,
+        'periodoContable.mes': mes
+      }
+    },
+    {
+      $group: {
+        _id: '$rutaDirecta.rutaCompleta',
+        cantidadViajes: { $sum: 1 },
+        montoTotal: { $sum: '$montoAcordado' },
+        montoSinIVA: { $sum: '$facturacion.montoSinIVA' },
+        iva: { $sum: '$facturacion.iva' }
+      }
+    },
+    {
+      $sort: { _id: 1 }
+    }
+  ]);
+};
+
+// Obtener consolidado anual
+viajeSchema.statics.obtenerConsolidadoAnual = async function(año) {
+  return this.aggregate([
+    {
+      $match: {
+        tipoViaje: 'operativo',
+        'estado.actual': 'completado',
+        'periodoContable.año': año
+      }
+    },
+    {
+      $group: {
+        _id: {
+          cliente: '$clienteNombre',
+          mes: '$periodoContable.mes'
+        },
+        totalViajes: { $sum: 1 },
+        montoTotal: { $sum: '$montoAcordado' }
+      }
+    },
+    {
+      $group: {
+        _id: '$_id.cliente',
+        meses: {
+          $push: {
+            mes: '$_id.mes',
+            viajes: '$totalViajes',
+            monto: '$montoTotal'
+          }
+        }
+      }
+    },
+    {
+      $sort: { _id: 1 }
+    }
+  ]);
+};
+
+// =====================================================
+// FUNCIÓN AUXILIAR PARA CALCULAR SEMANA ISO
+// =====================================================
+function getISOWeek(date) {
+  const tempDate = new Date(date.getTime());
+  tempDate.setHours(0, 0, 0, 0);
+  tempDate.setDate(tempDate.getDate() + 3 - (tempDate.getDay() + 6) % 7);
+  const week1 = new Date(tempDate.getFullYear(), 0, 4);
+  return 1 + Math.round(((tempDate.getTime() - week1.getTime()) / 86400000 - 3 + (week1.getDay() + 6) % 7) / 7);
+}
 
 // Asegurar que los virtuals se incluyan en JSON
 viajeSchema.set('toJSON', { virtuals: true });

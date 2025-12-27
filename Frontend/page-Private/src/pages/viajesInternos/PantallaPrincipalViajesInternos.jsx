@@ -7,145 +7,71 @@ import {
   Plus,
   Edit,
   Trash2,
-  Eye,
   BarChart3,
+  CheckCircle,
+  Calendar,
+  Download,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
 import { config } from "../../config";
+import ReportesViajesOperativosModal from "./ReportesViajesInternosModal";
 
-import ViajeInternoDetailModal from "./ViajeInternoDetailModal";
-import ReportesViajesInternosModal from "./ReportesViajesInternosModal";
-
-const VIAJES_ENDPOINT = `${config.api.API_URL}/viajesinternos`;
+const VIAJES_OPERATIVOS_ENDPOINT = `${config.api.API_URL}/viajes-operativos/listar`;
+const DELETE_ENDPOINT = `${config.api.API_URL}/viajes-operativos`;
+const COMPLETAR_TODOS_ENDPOINT = `${config.api.API_URL}/viajes-operativos/completar-todos`;
+const COMPLETAR_UNO_ENDPOINT = `${config.api.API_URL}/viajes-operativos/completar`;
 
 const ESTADOS = {
   TODOS: "Todos",
   PENDIENTE: "Pendiente",
+  EN_CURSO: "En Curso",
   COMPLETADO: "Completado",
-  // Los dejamos para mostrar badges si existen en data,
-  // pero NO los renderizamos como tabs si no los querés.
-  EN_RUTA: "En ruta",
   CANCELADO: "Cancelado",
 };
 
 const normalize = (v) => String(v ?? "").trim().toLowerCase();
 
-const parseLocalDate = (fecha) => {
-  if (!fecha) return null;
-  const base = String(fecha).split("T")[0];
-  const parts = base.split("-");
-  if (parts.length !== 3) return null;
-  const [y, m, d] = parts.map((x) => Number(x));
-  if (!y || !m || !d) return null;
-  return new Date(y, m - 1, d);
-};
-
 const formatearFecha = (fecha) => {
-  const d = parseLocalDate(fecha);
-  if (!d || Number.isNaN(d.getTime())) return fecha ? String(fecha) : "N/A";
-  return d.toLocaleDateString("es-ES", { year: "numeric", month: "short", day: "numeric" });
+  if (!fecha) return "N/A";
+  const d = new Date(fecha);
+  if (Number.isNaN(d.getTime())) return fecha ? String(fecha) : "N/A";
+  return d.toLocaleDateString("es-ES", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 };
 
 const formatearMoneda = (cantidad) => {
   const n = Number(cantidad || 0);
-  return new Intl.NumberFormat("es-US", { style: "currency", currency: "USD" }).format(n);
+  return new Intl.NumberFormat("es-US", {
+    style: "currency",
+    currency: "USD",
+  }).format(n);
 };
 
 const getRawEstado = (row) => {
-  const raw =
-    row?.estado ??
-    row?.Estado ??
-    row?.status ??
-    row?.Status ??
-    row?.estatus ??
-    row?.Estatus ??
-    row?.estadoViaje ??
-    row?.estado_viaje ??
-    row?.estadoViajeInterno ??
-    row?.state ??
-    row?.State ??
-    null;
+  const raw = row?.estado?.actual ?? row?.estado ?? row?.status ?? row?.estatus ?? null;
 
   if (raw && typeof raw === "object") {
-    return raw?.nombre ?? raw?.name ?? raw?.label ?? raw?.estado ?? raw?.status ?? raw?.value ?? null;
+    return raw?.nombre ?? raw?.name ?? raw?.label ?? raw?.actual ?? null;
   }
 
   return raw;
-};
-
-// ✅ Convierte cualquier valor a boolean pagado de forma segura
-const toBoolPagado = (raw) => {
-  if (typeof raw === "boolean") return raw;
-  if (typeof raw === "number") return raw === 1;
-
-  const s = normalize(raw);
-  if (["true", "1", "si", "sí", "yes", "pagado", "paid"].includes(s)) return true;
-  if (["false", "0", "no"].includes(s)) return false;
-
-  return null; // desconocido
-};
-
-// ✅ Deep search (por si el backend lo manda anidado)
-const findPagadoDeep = (obj) => {
-  if (!obj || typeof obj !== "object") return null;
-
-  const stack = [{ v: obj, d: 0 }];
-  const keyRegex = /(pagado|paid|ispaid|ispay|pago|payment)/i;
-
-  while (stack.length) {
-    const { v, d } = stack.pop();
-    if (!v || typeof v !== "object") continue;
-    if (d > 4) continue;
-
-    for (const [k, val] of Object.entries(v)) {
-      if (keyRegex.test(k)) {
-        const b = toBoolPagado(val);
-        if (b !== null) return b;
-      }
-      if (val && typeof val === "object") stack.push({ v: val, d: d + 1 });
-    }
-  }
-
-  return null;
-};
-
-// ✅ Detectar "pagado" aunque venga con otro nombre/tipo/anidado
-const getRawPagado = (row) => {
-  const direct =
-    row?.pagado ??
-    row?.Pagado ??
-    row?.paid ??
-    row?.Paid ??
-    row?.pagoConfirmado ??
-    row?.isPaid ??
-    row?.is_pagado ??
-    row?.pago?.pagado ??
-    row?.pago?.paid ??
-    row?.payment?.paid ??
-    row?.payment?.pagado ??
-    null;
-
-  const b1 = toBoolPagado(direct);
-  if (b1 !== null) return b1;
-
-  const deep = findPagadoDeep(row);
-  return deep === null ? false : deep;
 };
 
 const canonEstado = (row) => {
   const raw = getRawEstado(row) ?? "PENDIENTE";
   const e = normalize(raw);
 
-  // 1) Cancelado manda (si de verdad viene cancelado)
   if (["cancelado", "canceled", "cancelled", "anulado"].includes(e)) return ESTADOS.CANCELADO;
-
-  // 2) Si está pagado => completado (aunque el estado venga pendiente)
-  if (getRawPagado(row)) return ESTADOS.COMPLETADO;
-
-  // 3) Otros estados
-  if (["completado", "completed", "done", "finalizado", "terminado"].includes(e)) return ESTADOS.COMPLETADO;
-  if (["en ruta", "en_ruta", "enruta", "in_route", "ruta"].includes(e)) return ESTADOS.EN_RUTA;
+  if (["completado", "completed", "done", "finalizado", "terminado"].includes(e))
+    return ESTADOS.COMPLETADO;
+  if (["en_curso", "en curso", "enruta", "en_ruta", "en ruta", "in_route"].includes(e))
+    return ESTADOS.EN_CURSO;
 
   return ESTADOS.PENDIENTE;
 };
@@ -153,12 +79,12 @@ const canonEstado = (row) => {
 const estadoBadgeClass = (estado) => {
   const e = normalize(estado);
   if (e === "completado") return "bg-green-50 text-green-700 border border-green-200";
-  if (e === "en ruta") return "bg-blue-50 text-blue-700 border border-blue-200";
+  if (e === "en curso") return "bg-blue-50 text-blue-700 border border-blue-200";
   if (e === "cancelado") return "bg-red-50 text-red-700 border border-red-200";
   return "bg-yellow-50 text-yellow-800 border border-yellow-200";
 };
 
-export default function PantallaPrincipalViajesInternos() {
+export default function PantallaPrincipalViajesOperativos() {
   const navigate = useNavigate();
 
   const [loading, setLoading] = useState(true);
@@ -172,9 +98,6 @@ export default function PantallaPrincipalViajesInternos() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 8;
 
-  const [isDetailOpen, setIsDetailOpen] = useState(false);
-  const [detailId, setDetailId] = useState(null);
-
   const [isReportesOpen, setIsReportesOpen] = useState(false);
 
   const fetchViajes = async () => {
@@ -182,9 +105,13 @@ export default function PantallaPrincipalViajesInternos() {
       setLoading(true);
       setError(null);
 
-      const res = await fetch(VIAJES_ENDPOINT, { credentials: "include" });
+      const res = await fetch(VIAJES_OPERATIVOS_ENDPOINT, {
+        credentials: "include",
+      });
       const json = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(json?.message || "Error al cargar los viajes internos");
+
+      if (!res.ok || json?.success === false)
+        throw new Error(json?.message || "Error al cargar los viajes operativos");
 
       const rows = json?.data || (Array.isArray(json) ? json : []);
       setViajes(Array.isArray(rows) ? rows : []);
@@ -199,11 +126,152 @@ export default function PantallaPrincipalViajesInternos() {
     fetchViajes();
   }, []);
 
-  const openDetail = (row) => {
+  const handleCompletarTodos = async () => {
+    const result = await Swal.fire({
+      title: "¿Completar todos los viajes operativos?",
+      text: "Se marcarán como completados todos los viajes pendientes o en curso",
+      icon: "question",
+      showCancelButton: true,
+      confirmButtonText: "Sí, completar todos",
+      cancelButtonText: "Cancelar",
+      confirmButtonColor: "#10b981",
+    });
+
+    if (!result.isConfirmed) return;
+
+    try {
+      const res = await fetch(COMPLETAR_TODOS_ENDPOINT, {
+        method: "PUT",
+        credentials: "include",
+      });
+
+      const json = await res.json().catch(() => ({}));
+
+      if (!res.ok || json?.success === false)
+        throw new Error(json?.message || "Error al completar viajes");
+
+      await Swal.fire({
+        title: "¡Completados!",
+        text: json?.message || "Viajes completados exitosamente",
+        icon: "success",
+        timer: 2000,
+      });
+
+      fetchViajes();
+    } catch (err) {
+      Swal.fire({ title: "Error", text: err.message, icon: "error" });
+    }
+  };
+
+  const handleCompletarUno = async (e, row) => {
+    e.stopPropagation();
+
     const id = row?._id || row?.id;
     if (!id) return;
-    setDetailId(String(id));
-    setIsDetailOpen(true);
+
+    const result = await Swal.fire({
+      title: "¿Completar este viaje?",
+      text: `Se marcará como completado: ${row?.rutaDirecta?.rutaCompleta || "Viaje"}`,
+      icon: "question",
+      showCancelButton: true,
+      confirmButtonText: "Sí, completar",
+      cancelButtonText: "Cancelar",
+      confirmButtonColor: "#10b981",
+    });
+
+    if (!result.isConfirmed) return;
+
+    try {
+      const res = await fetch(`${COMPLETAR_UNO_ENDPOINT}/${id}`, {
+        method: "PUT",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          observacion: "Viaje completado manualmente desde el panel",
+        }),
+      });
+
+      const json = await res.json().catch(() => ({}));
+
+      if (!res.ok || json?.success === false)
+        throw new Error(json?.message || "Error al completar");
+
+      await Swal.fire({
+        title: "¡Completado!",
+        text: "Viaje marcado como completado",
+        icon: "success",
+        timer: 1500,
+      });
+
+      fetchViajes();
+    } catch (err) {
+      Swal.fire({ title: "Error", text: err.message, icon: "error" });
+    }
+  };
+
+  const handleDescargarPDF = async (e, row) => {
+    e.stopPropagation();
+
+    const clienteNombre = row?.clienteNombre || "";
+
+    if (!clienteNombre) {
+      Swal.fire({
+        icon: "error",
+        title: "Error",
+        text: "No se encontró el nombre del cliente",
+      });
+      return;
+    }
+
+    // Obtener mes y año del viaje
+    const fechaSalida = new Date(row?.departureTime);
+    const mes = fechaSalida.getMonth() + 1;
+    const año = fechaSalida.getFullYear();
+
+    try {
+      const url = `${config.api.API_URL}/reportes-directos/individual/${encodeURIComponent(
+        clienteNombre
+      )}/${mes}/${año}`;
+      const nombreArchivo = `reporte-${clienteNombre}-${mes}-${año}.pdf`;
+
+      console.log("📄 Descargando PDF desde:", url);
+
+      const res = await fetch(url, {
+        method: "GET",
+        credentials: "include",
+      });
+
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({}));
+        throw new Error(json?.message || "Error al generar el PDF");
+      }
+
+      // Descargar el PDF
+      const blob = await res.blob();
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = downloadUrl;
+      link.download = nombreArchivo;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(downloadUrl);
+
+      await Swal.fire({
+        title: "¡Descargado!",
+        text: `PDF generado: ${nombreArchivo}`,
+        icon: "success",
+        timer: 2000,
+        showConfirmButton: false,
+      });
+    } catch (error) {
+      console.error("Error descargando PDF:", error);
+      Swal.fire({
+        title: "Error",
+        text: error.message || "No se pudo generar el PDF",
+        icon: "error",
+      });
+    }
   };
 
   const handleEdit = (e, row) => {
@@ -211,11 +279,15 @@ export default function PantallaPrincipalViajesInternos() {
     const id = row?._id || row?.id;
 
     if (!id) {
-      Swal.fire({ icon: "error", title: "Error", text: "No se encontró el ID del viaje para editar." });
+      Swal.fire({
+        icon: "error",
+        title: "Error",
+        text: "No se encontró el ID del viaje para editar.",
+      });
       return;
     }
 
-    navigate(`/viajesInternos/editar/${String(id)}`);
+    navigate(`/viajesOperativos/editar/${String(id)}`);
   };
 
   const handleDelete = async (e, row) => {
@@ -225,7 +297,7 @@ export default function PantallaPrincipalViajesInternos() {
     if (!id) return;
 
     const result = await Swal.fire({
-      title: "¿Eliminar viaje interno?",
+      title: "¿Eliminar viaje operativo?",
       text: "Esta acción no se puede deshacer",
       icon: "warning",
       showCancelButton: true,
@@ -237,14 +309,23 @@ export default function PantallaPrincipalViajesInternos() {
     if (!result.isConfirmed) return;
 
     try {
-      const res = await fetch(`${VIAJES_ENDPOINT}/${id}?eliminarPermanente=true`, {
+      const res = await fetch(`${DELETE_ENDPOINT}/${id}`, {
         method: "DELETE",
         credentials: "include",
       });
-      const json = await res.json().catch(() => ({}));
-      if (!res.ok || json?.success === false) throw new Error(json?.message || "Error al eliminar");
 
-      await Swal.fire({ title: "¡Eliminado!", text: "Viaje eliminado", icon: "success", timer: 1500 });
+      const json = await res.json().catch(() => ({}));
+
+      if (!res.ok || json?.success === false)
+        throw new Error(json?.message || "Error al eliminar");
+
+      await Swal.fire({
+        title: "¡Eliminado!",
+        text: "Viaje eliminado",
+        icon: "success",
+        timer: 1500,
+      });
+
       fetchViajes();
     } catch (err) {
       Swal.fire({ title: "Error", text: err.message, icon: "error" });
@@ -261,16 +342,18 @@ export default function PantallaPrincipalViajesInternos() {
 
       if (!s) return true;
 
-      const fecha = row?.fecha || row?.createdAt;
-      const cliente = row?.clienteNombre || row?.cliente?.nombre || row?.clienteId?.nombre || "";
-      const origen = row?.origen?.texto || "";
-      const destino = row?.destino?.texto || "";
+      const cliente = row?.clienteNombre || "";
+      const origen = row?.rutaDirecta?.origen?.nombre || "";
+      const destino = row?.rutaDirecta?.destino?.nombre || "";
+      const rutaCompleta = row?.rutaDirecta?.rutaCompleta || "";
+      const codigo = row?.codigoProgramacion || row?.numeroViajeGlobal || "";
 
       return (
-        String(formatearFecha(fecha)).toLowerCase().includes(s) ||
         String(cliente).toLowerCase().includes(s) ||
         String(origen).toLowerCase().includes(s) ||
-        String(destino).toLowerCase().includes(s)
+        String(destino).toLowerCase().includes(s) ||
+        String(rutaCompleta).toLowerCase().includes(s) ||
+        String(codigo).toLowerCase().includes(s)
       );
     });
   }, [viajes, searchTerm, estadoFiltro]);
@@ -278,16 +361,11 @@ export default function PantallaPrincipalViajesInternos() {
   const sorted = useMemo(() => {
     const arr = [...filtered];
     arr.sort((a, b) => {
-      const fa = a?.fecha || a?.createdAt;
-      const fb = b?.fecha || b?.createdAt;
+      const fa = a?.departureTime || a?.createdAt;
+      const fb = b?.departureTime || b?.createdAt;
 
-      const ta = !Number.isNaN(new Date(fa).getTime())
-        ? new Date(fa).getTime()
-        : (parseLocalDate(fa)?.getTime() || 0);
-
-      const tb = !Number.isNaN(new Date(fb).getTime())
-        ? new Date(fb).getTime()
-        : (parseLocalDate(fb)?.getTime() || 0);
+      const ta = new Date(fa).getTime() || 0;
+      const tb = new Date(fb).getTime() || 0;
 
       return sortBy === "newest" ? tb - ta : ta - tb;
     });
@@ -306,7 +384,7 @@ export default function PantallaPrincipalViajesInternos() {
       <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="text-center">
           <Loader2 className="w-12 h-12 animate-spin text-indigo-600 mx-auto mb-4" />
-          <p className="text-gray-600 font-medium">Cargando viajes internos...</p>
+          <p className="text-gray-600 font-medium">Cargando viajes operativos...</p>
         </div>
       </div>
     );
@@ -318,7 +396,10 @@ export default function PantallaPrincipalViajesInternos() {
         <div className="text-center">
           <p className="text-red-600 font-semibold mb-2">Error al cargar</p>
           <p className="text-gray-600">{error}</p>
-          <button onClick={fetchViajes} className="mt-4 px-6 py-2 bg-indigo-600 text-white rounded-lg">
+          <button
+            onClick={fetchViajes}
+            className="mt-4 px-6 py-2 bg-indigo-600 text-white rounded-lg"
+          >
             Reintentar
           </button>
         </div>
@@ -326,19 +407,28 @@ export default function PantallaPrincipalViajesInternos() {
     );
   }
 
-  // ✅ SOLO los tabs que querés (esto quita el “espacio”)
-  const tabs = [ESTADOS.TODOS, ESTADOS.PENDIENTE, ESTADOS.COMPLETADO];
+  const tabs = [ESTADOS.TODOS, ESTADOS.PENDIENTE, ESTADOS.EN_CURSO, ESTADOS.COMPLETADO];
 
   return (
     <div className="min-h-screen bg-white p-8">
       <div className="max-w-7xl mx-auto">
+        {/* Header */}
         <div className="mb-6 flex items-start justify-between flex-wrap gap-3">
           <div>
-            <h1 className="text-4xl font-bold text-gray-900 mb-1">Viajes Internos</h1>
-            <p className="text-gray-500">Gestión de viajes internos</p>
+            <h1 className="text-4xl font-bold text-gray-900 mb-1">Viajes Operativos</h1>
+            <p className="text-gray-500">Gestión de viajes operativos para clientes corporativos</p>
           </div>
 
           <div className="flex items-center gap-3 flex-wrap">
+            <button
+              type="button"
+              onClick={handleCompletarTodos}
+              className="flex items-center gap-2 px-5 py-3 bg-green-600 text-white rounded-xl hover:bg-green-700 font-semibold shadow-lg"
+            >
+              <CheckCircle size={20} />
+              Completar Todos
+            </button>
+
             <button
               type="button"
               onClick={() => setIsReportesOpen(true)}
@@ -350,15 +440,25 @@ export default function PantallaPrincipalViajesInternos() {
 
             <button
               type="button"
+              onClick={() => navigate("/viajesInternos/programacion")}
+              className="flex items-center gap-2 px-5 py-3 bg-white border border-gray-200 text-gray-800 rounded-xl hover:bg-gray-50 font-semibold shadow-sm"
+            >
+              <Calendar size={20} />
+              Programación
+            </button>
+
+            <button
+              type="button"
               onClick={() => navigate("/viajesInternos/agregar")}
               className="flex items-center gap-2 px-5 py-3 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 font-semibold shadow-lg"
             >
               <Plus size={20} />
-              Agregar Viaje
+              Programar Viaje
             </button>
           </div>
         </div>
 
+        {/* Tabs Estados */}
         <div className="mt-4 flex items-center gap-3 flex-wrap">
           {tabs.map((est) => (
             <button
@@ -376,13 +476,17 @@ export default function PantallaPrincipalViajesInternos() {
           ))}
         </div>
 
+        {/* Búsqueda y Ordenar */}
         <div className="bg-white rounded-2xl shadow-md mb-6 mt-6 p-5 border border-gray-100">
           <div className="flex items-center justify-between gap-4 flex-wrap">
             <div className="relative flex-1 min-w-[300px]">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+              <Search
+                className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
+                size={20}
+              />
               <input
                 type="text"
-                placeholder="Buscar por cliente, origen, destino o fecha..."
+                placeholder="Buscar por cliente, ruta, código..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
@@ -403,54 +507,69 @@ export default function PantallaPrincipalViajesInternos() {
           </div>
         </div>
 
+        {/* Tabla */}
         <div className="bg-white rounded-2xl shadow-md overflow-hidden border border-gray-100">
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
                 <tr className="bg-white border-b border-gray-200">
                   <th className="text-left py-5 px-6 text-gray-500 font-semibold text-sm">#</th>
-                  <th className="text-left py-5 px-6 text-gray-500 font-semibold text-sm">Fecha</th>
-                  <th className="text-left py-5 px-6 text-gray-500 font-semibold text-sm">Cliente</th>
-                  <th className="text-left py-5 px-6 text-gray-500 font-semibold text-sm">Origen</th>
-                  <th className="text-left py-5 px-6 text-gray-500 font-semibold text-sm">Destino</th>
-                  <th className="text-left py-5 px-6 text-gray-500 font-semibold text-sm">Estado</th>
-                  <th className="text-right py-5 px-6 text-gray-500 font-semibold text-sm">Monto</th>
-                  <th className="text-center py-5 px-6 text-gray-500 font-semibold text-sm">Acciones</th>
+                  <th className="text-left py-5 px-6 text-gray-500 font-semibold text-sm">
+                    Código
+                  </th>
+                  <th className="text-left py-5 px-6 text-gray-500 font-semibold text-sm">
+                    Cliente
+                  </th>
+                  <th className="text-left py-5 px-6 text-gray-500 font-semibold text-sm">
+                    Ruta
+                  </th>
+                  <th className="text-left py-5 px-6 text-gray-500 font-semibold text-sm">
+                    Salida
+                  </th>
+                  <th className="text-left py-5 px-6 text-gray-500 font-semibold text-sm">
+                    Estado
+                  </th>
+                  <th className="text-right py-5 px-6 text-gray-500 font-semibold text-sm">
+                    Monto
+                  </th>
+                  <th className="text-center py-5 px-6 text-gray-500 font-semibold text-sm">
+                    Acciones
+                  </th>
                 </tr>
               </thead>
 
               <tbody>
                 {currentRows.map((row, idx) => {
                   const id = row?._id || row?.id;
-                  const fecha = row?.fecha || row?.createdAt;
-
-                  const cliente =
-                    row?.clienteNombre || row?.cliente?.nombre || row?.clienteId?.nombre || "N/A";
-                  const origen = row?.origen?.texto || "N/A";
-                  const destino = row?.destino?.texto || "N/A";
-
+                  const codigo = row?.codigoProgramacion || row?.numeroViajeGlobal || "N/A";
+                  const cliente = row?.clienteNombre || "N/A";
+                  const ruta = row?.rutaDirecta?.rutaCompleta || "N/A";
+                  const salida = row?.departureTime;
                   const estado = canonEstado(row);
-                  const monto = row?.monto ?? 0;
+                  const monto = row?.montoAcordado ?? 0;
 
                   const esCompletado = normalize(estado) === "completado";
+const esCancelado = normalize(estado) === "cancelado"; // ✅ Primero declarar
+const puedeCompletar = !esCompletado && !esCancelado; // ✅ Ahora sí existe
+
 
                   return (
                     <tr
                       key={String(id || idx)}
-                      onClick={() => openDetail(row)}
                       className="border-b border-gray-100 hover:bg-gray-50 cursor-pointer transition-colors"
                     >
                       <td className="py-5 px-6 text-gray-700 font-semibold">
                         {startIndex + idx + 1}
                       </td>
 
-                      <td className="py-5 px-6 text-gray-900 font-semibold">
-                        {formatearFecha(fecha)}
-                      </td>
+                      <td className="py-5 px-6 text-gray-900 font-semibold">{codigo}</td>
 
                       <td className="py-5 px-6 text-gray-700">{cliente}</td>
-                      <td className="py-5 px-6 text-gray-700">{origen}</td>
-                      <td className="py-5 px-6 text-gray-700">{destino}</td>
+                      <td className="py-5 px-6 text-gray-700">{ruta}</td>
+
+                      <td className="py-5 px-6 text-gray-900 text-sm">
+                        {formatearFecha(salida)}
+                      </td>
 
                       <td className="py-5 px-6">
                         <span
@@ -467,37 +586,33 @@ export default function PantallaPrincipalViajesInternos() {
                       </td>
 
                       <td className="py-5 px-6" onClick={(e) => e.stopPropagation()}>
-                        <div className="flex items-center justify-center gap-2">
-                          <button
-                            type="button"
-                            onClick={() => openDetail(row)}
-                            className="p-2 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-600 transition-colors"
-                            title="Ver"
-                          >
-                            <Eye size={18} />
-                          </button>
+  <div className="flex items-center justify-center gap-2">
+    {/* ✅ Botón Descargar PDF */}
+    <button
+      type="button"
+      onClick={(e) => handleDescargarPDF(e, row)}
+      className="p-2 rounded-lg bg-purple-50 hover:bg-purple-100 text-purple-600 transition-colors"
+      title="Descargar Reporte PDF"
+    >
+      <Download size={18} />
+    </button>
 
-                          {!esCompletado && (
-                            <button
-                              type="button"
-                              onClick={(e) => handleEdit(e, row)}
-                              className="p-2 rounded-lg bg-yellow-50 hover:bg-yellow-100 text-yellow-600 transition-colors"
-                              title="Editar"
-                            >
-                              <Edit size={18} />
-                            </button>
-                          )}
+    {/* ✅ Botón Completar - SOLO si NO está Completado ni Cancelado */}
+   {puedeCompletar && (
+  <button
+    type="button"
+    onClick={(e) => handleCompletarUno(e, row)}
+    className="p-2 rounded-lg bg-green-50 hover:bg-green-100 text-green-600 transition-colors"
+    title="Completar"
+  >
+    <CheckCircle size={18} />
+  </button>
+)}
 
-                          <button
-                            type="button"
-                            onClick={(e) => handleDelete(e, row)}
-                            className="p-2 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 transition-colors"
-                            title="Eliminar"
-                          >
-                            <Trash2 size={18} />
-                          </button>
-                        </div>
-                      </td>
+    {/* ✅ Botón Eliminar - Siempre disponible */}
+   
+  </div>
+</td>
                     </tr>
                   );
                 })}
@@ -505,7 +620,7 @@ export default function PantallaPrincipalViajesInternos() {
                 {currentRows.length === 0 && (
                   <tr>
                     <td colSpan={8} className="py-10 text-center text-gray-500">
-                      No hay viajes internos para mostrar.
+                      No hay viajes operativos para mostrar.
                     </td>
                   </tr>
                 )}
@@ -513,6 +628,7 @@ export default function PantallaPrincipalViajesInternos() {
             </table>
           </div>
 
+          {/* Paginación */}
           <div className="flex items-center justify-between px-6 py-5 border-t border-gray-200 bg-gray-50">
             <p className="text-sm text-gray-600 font-medium">
               Mostrando {sorted.length === 0 ? 0 : startIndex + 1} a{" "}
@@ -573,16 +689,10 @@ export default function PantallaPrincipalViajesInternos() {
         </div>
       </div>
 
-      <ViajeInternoDetailModal
-        isOpen={isDetailOpen}
-        onClose={() => setIsDetailOpen(false)}
-        viajeId={detailId}
-      />
-
-      <ReportesViajesInternosModal
+      {/* Modal de Reportes */}
+      <ReportesViajesOperativosModal
         isOpen={isReportesOpen}
         onClose={() => setIsReportesOpen(false)}
-        apiUrl={config.api.API_URL}
       />
     </div>
   );
