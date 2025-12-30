@@ -134,9 +134,11 @@ const deepEmail = (c) =>
     get(c, "contact.email")
   );
 
+// ✅ Soporta fechas tipo { "$date": "..." } (Mongo export)
 const fmtTime = (v) => {
-  if (!v) return "No especificada";
-  const d = new Date(v);
+  const raw = v && typeof v === "object" && v.$date ? v.$date : v;
+  if (!raw) return "No especificada";
+  const d = new Date(raw);
   if (isNaN(d.getTime())) return "No especificada";
   return d.toLocaleTimeString("es-ES", {
     hour: "2-digit",
@@ -294,6 +296,15 @@ const pickLocation = (raw, prefixes = []) => {
   return pickUseful(...candidates);
 };
 
+// ✅ Parseo por texto tipo "RED ROCKS/ULTRA - CLIENTE" o "ORIGEN/DESTINO"
+const parseRutaCompleta = (s) => {
+  if (!s) return null;
+  const base = String(s).split("-")[0].trim(); // antes del " - cliente"
+  const parts = base.split("/").map((x) => x.trim()).filter(Boolean);
+  if (parts.length >= 2) return { origen: parts[0], destino: parts[1] };
+  return null;
+};
+
 const getTripUI = (tripOrRaw) => {
   const t = tripOrRaw || {};
   const raw = t.raw || t;
@@ -403,6 +414,17 @@ const getTripUI = (tripOrRaw) => {
     scanStrings(raw, /(descripcion|description|detalle|observa)/i)[0] ||
     "Sin descripción";
 
+  // ✅ rutaCompleta para fallback (operativos y otros)
+  const rutaCompleta =
+    pickUseful(
+      get(raw, "rutaDirecta.rutaCompleta"),
+      get(raw, "rutaCompleta"),
+      get(raw, "routeName"),
+      get(raw, "rutaNombre")
+    ) || null;
+
+  const parsedRuta = parseRutaCompleta(rutaCompleta || raw.tripDescription || descripcion);
+
   const horaSalida =
     pickUseful(t.horaSalida) ||
     fmtTime(raw.departureTime || get(raw, "horarios.fechaSalida") || get(raw, "fechaSalida"));
@@ -431,8 +453,16 @@ const getTripUI = (tripOrRaw) => {
     scanStrings(raw, /(asistente|ayudante|helper|conductor|driver).*(name|nombre)/i)[0] ||
     "Por asignar";
 
+  // ✅ Soporta viajes operativos (rutaDirecta)
   const origen =
     pickUseful(
+      // Operativo
+      get(raw, "rutaDirecta.origen.nombre"),
+      get(raw, "rutaDirecta.origen.name"),
+      get(raw, "rutaDirecta.origen.direccion"),
+      get(raw, "rutaDirecta.origen.address"),
+
+      // Lo que ya tenías
       t.origen,
       get(t, "quoteId.ruta.origen.nombre"),
       get(t, "quoteId.ruta.origen.direccion"),
@@ -447,12 +477,20 @@ const getTripUI = (tripOrRaw) => {
       get(raw, "quoteId.ruta.origen.direccion"),
       get(raw, "quoteId.ruta.origen.address")
     ) ||
-    pickLocation(raw, ["route.origin", "route.pickup", "ruta.origen", "ruta.pickup"]) ||
+    pickLocation(raw, ["rutaDirecta.origen", "route.origin", "route.pickup", "ruta.origen", "ruta.pickup"]) ||
+    pickUseful(parsedRuta?.origen) ||
     scanStrings(raw, /(origen|origin|pickup).*(nombre|name|direccion|address|location)/i)[0] ||
     null;
 
   const destino =
     pickUseful(
+      // Operativo
+      get(raw, "rutaDirecta.destino.nombre"),
+      get(raw, "rutaDirecta.destino.name"),
+      get(raw, "rutaDirecta.destino.direccion"),
+      get(raw, "rutaDirecta.destino.address"),
+
+      // Lo que ya tenías
       t.destino,
       get(t, "quoteId.ruta.destino.nombre"),
       get(t, "quoteId.ruta.destino.direccion"),
@@ -467,7 +505,8 @@ const getTripUI = (tripOrRaw) => {
       get(raw, "quoteId.ruta.destino.direccion"),
       get(raw, "quoteId.ruta.destino.address")
     ) ||
-    pickLocation(raw, ["route.destination", "ruta.destino"]) ||
+    pickLocation(raw, ["rutaDirecta.destino", "route.destination", "ruta.destino"]) ||
+    pickUseful(parsedRuta?.destino) ||
     scanStrings(raw, /(destino|destination|dropoff).*(nombre|name|direccion|address|location)/i)[0] ||
     null;
 
@@ -598,14 +637,26 @@ const styles = StyleSheet.create({
 const Icon = ({ name, size = 20 }) => {
   const icons = {
     user: "👤",
-    truck: "🚛_toggle",
+    truck: "🚛",
     description: "📋",
     clock: "🕐",
     assistant: "👨‍🔧",
     location: "📍",
     route: "🗺️",
   };
-  return <Text style={{ fontSize: size }}>{icons[name] || "•"}</Text>;
+
+  return (
+    <Text
+      style={{
+        fontSize: size,
+        lineHeight: size + 2,
+        textAlign: "center",
+        includeFontPadding: false,
+      }}
+    >
+      {icons[name] || "•"}
+    </Text>
+  );
 };
 
 const InfoRow = ({ icon, label, value, iconBg = "#F0F4FF" }) => (
@@ -625,8 +676,6 @@ const InfoViajeScreen = ({ navigation, route }) => {
   const { token } = useAuth();
   const insets = useSafeAreaInsets();
 
-  // ✅ Si viene el tabBarHeight desde la pantalla anterior, lo usamos.
-  // Si NO viene, ponemos un fallback seguro (tu tab es flotante, suele rondar 70-90).
   const tabBarHeightParam = Number(route?.params?.tabBarHeight || 0);
   const effectiveTabBarHeight = tabBarHeightParam > 0 ? tabBarHeightParam : 90;
 
@@ -654,7 +703,6 @@ const InfoViajeScreen = ({ navigation, route }) => {
     selectedClientName: null,
   });
 
-  // ✅ Si no viene el viaje, mostramos mensaje pero sin romper hooks
   const missingTrip = !rawInitial;
 
   // 1) Traer viaje completo por ID si existe
@@ -679,15 +727,19 @@ const InfoViajeScreen = ({ navigation, route }) => {
     return () => controller.abort();
   }, [rawInitial, token]);
 
-  // 2) Enriquecer cotización/cliente/camión/conductor
+  // 2) Enriquecer cotización/cliente/camión/conductor + ✅ ruta desde cotización
   const enriquecer = useCallback(
     async (signal) => {
       if (!raw) return;
       const next = {};
 
-      // --- Cotización / Cliente ---
+      const missingOrigen = !isUseful(ui.origen);
+      const missingDestino = !isUseful(ui.destino);
+      const missingCliente = ui.cliente === "Cliente no especificado" || looksLikeWeakName(ui.cliente);
+
+      // --- Cotización / Cliente / Ruta ---
       const qId = resolveId(raw?.quoteId || raw?.cotizacionId || raw?.quote || raw?.quote_id);
-      if ((ui.cliente === "Cliente no especificado" || looksLikeWeakName(ui.cliente)) && qId) {
+      if ((missingCliente || missingOrigen || missingDestino) && qId) {
         const q = await tryFetchFirst(
           [
             `${API_BASE_URL}/cotizaciones/${encodeURIComponent(qId)}`,
@@ -700,6 +752,7 @@ const InfoViajeScreen = ({ navigation, route }) => {
 
         setDebug((d) => ({ ...d, quoteFetch: q, quoteKeys: q ? Object.keys(q).join(", ") : null }));
 
+        // ---- Cliente desde cotización
         let clientName = getQuoteClientName(q);
 
         let clientIdRaw = q?.clientIdSimple ?? q?.clientId ?? q?.clienteId ?? q?.customerId ?? null;
@@ -731,8 +784,55 @@ const InfoViajeScreen = ({ navigation, route }) => {
         setDebug((d) => ({ ...d, selectedClientName: clientName || "(vacío)" }));
 
         const desc = q?.quoteDescription || q?.descripcion || null;
-        if (clientName) next.cliente = clientName;
+        if (clientName && missingCliente) next.cliente = clientName;
         if (desc && !isUseful(ui.descripcion)) next.descripcion = desc;
+
+        // ✅ Ruta desde cotización (si no venía en el viaje)
+        if (missingOrigen || missingDestino) {
+          const qRutaCompleta =
+            pickUseful(
+              get(q, "ruta.rutaCompleta"),
+              get(q, "rutaDirecta.rutaCompleta"),
+              get(q, "rutaCompleta"),
+              get(q, "routeName"),
+              get(q, "route.rutaCompleta"),
+              q?.tripDescription,
+              q?.quoteDescription
+            ) || null;
+
+          const qp = parseRutaCompleta(qRutaCompleta);
+
+          const qOrigen =
+            pickUseful(
+              get(q, "ruta.origen.nombre"),
+              get(q, "ruta.origen.direccion"),
+              get(q, "ruta.origen.address"),
+              get(q, "route.origin.name"),
+              get(q, "route.origin.address"),
+              get(q, "origen.nombre"),
+              get(q, "origen.direccion"),
+              get(q, "origin"),
+              pickLocation(q, ["ruta.origen", "route.origin", "route.pickup", "origen"]),
+              qp?.origen
+            ) || null;
+
+          const qDestino =
+            pickUseful(
+              get(q, "ruta.destino.nombre"),
+              get(q, "ruta.destino.direccion"),
+              get(q, "ruta.destino.address"),
+              get(q, "route.destination.name"),
+              get(q, "route.destination.address"),
+              get(q, "destino.nombre"),
+              get(q, "destino.direccion"),
+              get(q, "destination"),
+              pickLocation(q, ["ruta.destino", "route.destination", "destino"]),
+              qp?.destino
+            ) || null;
+
+          if (qOrigen && missingOrigen) next.origen = qOrigen;
+          if (qDestino && missingDestino) next.destino = qDestino;
+        }
       }
 
       // --- Camión ---
@@ -778,7 +878,7 @@ const InfoViajeScreen = ({ navigation, route }) => {
 
       if (Object.keys(next).length) setUi((prev) => ({ ...prev, ...next }));
     },
-    [raw, token, ui.cliente, ui.camion, ui.asistente, ui.descripcion]
+    [raw, token, ui.cliente, ui.camion, ui.asistente, ui.descripcion, ui.origen, ui.destino]
   );
 
   useEffect(() => {
