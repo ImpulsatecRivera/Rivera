@@ -34,6 +34,373 @@ const formatearHora = (fecha) => {
   });
 };
 
+// ===== NUEVAS FUNCIONES AUXILIARES PARA PERÍODOS =====
+
+const obtenerDiasDelMes = (ano, mes) => {
+  return new Date(ano, mes, 0).getDate();
+};
+
+const obtenerMesesTrimestre = (trimestre) => {
+  const meses = [
+    ['ENE', 'FEB', 'MAR'],
+    ['ABR', 'MAY', 'JUN'],
+    ['JUL', 'AGO', 'SEP'],
+    ['OCT', 'NOV', 'DIC']
+  ];
+  return meses[trimestre - 1];
+};
+
+const obtenerFechaInicioSemana = (ano, mes, semana) => {
+  const primerDia = new Date(ano, mes - 1, 1);
+  const diaInicio = 1 + ((semana - 1) * 7);
+  return new Date(ano, mes - 1, diaInicio);
+};
+
+const obtenerFechaFinSemana = (ano, mes, semana) => {
+  const fechaInicio = obtenerFechaInicioSemana(ano, mes, semana);
+  const fechaFin = new Date(fechaInicio);
+  fechaFin.setDate(fechaInicio.getDate() + 6);
+  
+  // Ajustar si se pasa del mes
+  const ultimoDiaMes = obtenerDiasDelMes(ano, mes);
+  if (fechaFin.getDate() > ultimoDiaMes || fechaFin.getMonth() !== mes - 1) {
+    return new Date(ano, mes - 1, ultimoDiaMes);
+  }
+  return fechaFin;
+};
+
+const generarColumnasMeses = (cantidad, mesInicio) => {
+  const columnas = [];
+  for (let i = 0; i < cantidad; i++) {
+    const mesNum = ((mesInicio - 1 + i) % 12) + 1;
+    columnas.push({
+      key: mesNum,
+      label: obtenerNombreMes(mesNum).substring(0, 3),
+      tipo: 'mes'
+    });
+  }
+  return columnas;
+};
+
+const generarColumnasDias = (cantidad, fechaInicio) => {
+  const columnas = [];
+  const fecha = new Date(fechaInicio);
+  
+  for (let i = 0; i < cantidad; i++) {
+    const diaActual = new Date(fecha);
+    diaActual.setDate(fecha.getDate() + i);
+    
+    columnas.push({
+      key: diaActual.getDate(),
+      label: `${diaActual.getDate()}`,
+      tipo: 'dia',
+      fecha: diaActual
+    });
+  }
+  return columnas;
+};
+
+const procesarDatosClientes = (datos, columnas) => {
+  return datos.map(cliente => {
+    const columnasArray = columnas.map(col => {
+      let periodoData;
+      
+      if (col.tipo === 'mes') {
+        periodoData = cliente.periodos?.find(p => p.mes === col.key);
+      } else if (col.tipo === 'dia') {
+        periodoData = cliente.periodos?.find(p => p.dia === col.key);
+      }
+      
+      return {
+        periodo: col.key,
+        viajes: periodoData?.viajes || 0,
+        monto: periodoData?.monto || 0
+      };
+    });
+
+    const totalPeriodo = columnasArray.reduce((sum, p) => sum + p.monto, 0);
+    const totalViajes = columnasArray.reduce((sum, p) => sum + p.viajes, 0);
+
+    return {
+      cliente: cliente._id,
+      columnas: columnasArray,
+      totalPeriodo,
+      totalViajes
+    };
+  });
+};
+
+const generarHTMLConsolidado = (titulo, columnas, clientesData, landscape = true) => {
+  const fontSize = columnas.length > 20 ? '7px' : columnas.length > 15 ? '8px' : '10px';
+  const cellPadding = columnas.length > 20 ? '3px' : columnas.length > 15 ? '4px' : '6px';
+  const headerFontSize = columnas.length > 20 ? '7px' : columnas.length > 15 ? '8px' : '9px';
+  
+  return `
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: Arial, sans-serif; padding: 20px; background: #fff; }
+    .header { text-align: center; margin-bottom: 20px; }
+    .header h1 { font-size: 18px; font-weight: bold; }
+    .header .periodo { font-size: 16px; color: #2563eb; font-weight: bold; margin-top: 5px; }
+    table { width: 100%; border-collapse: collapse; font-size: ${fontSize}; }
+    th, td { border: 1px solid #000; padding: ${cellPadding}; text-align: center; }
+    th { background: #d3d3d3; font-weight: bold; }
+    .cliente-cell { 
+      text-align: left; 
+      font-weight: bold; 
+      min-width: ${landscape ? '100px' : '120px'}; 
+      max-width: ${landscape ? '150px' : '180px'};
+      font-size: ${landscape ? '9px' : '10px'};
+    }
+    .text-right { text-align: right; }
+    .total-row { background: #e8e8e8; font-weight: bold; }
+    .periodo-header { font-size: ${headerFontSize}; }
+    .total-cell { font-weight: bold; font-size: ${fontSize === '7px' ? '8px' : '10px'}; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>CONSOLIDADO DE VIAJES</h1>
+    <div class="periodo">${titulo}</div>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th class="cliente-cell">CLIENTE</th>
+        ${columnas.map(col => `<th class="periodo-header">${col.label}</th>`).join('')}
+        <th class="total-cell">TOTAL</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${clientesData.map(cliente => `
+        <tr>
+          <td class="cliente-cell">${cliente.cliente}</td>
+          ${cliente.columnas.map(col => `
+            <td class="text-right">${col.monto > 0 ? `$${col.monto.toFixed(0)}` : '-'}</td>
+          `).join('')}
+          <td class="text-right total-cell">$${cliente.totalPeriodo.toFixed(2)}</td>
+        </tr>
+      `).join('')}
+      <tr class="total-row">
+        <td class="cliente-cell">TOTAL</td>
+        ${columnas.map((_, colIndex) => {
+          const totalCol = clientesData.reduce((sum, c) => sum + c.columnas[colIndex].monto, 0);
+          return `<td class="text-right">$${totalCol > 0 ? totalCol.toFixed(0) : '-'}</td>`;
+        }).join('')}
+        <td class="text-right total-cell">$${clientesData.reduce((sum, c) => sum + c.totalPeriodo, 0).toFixed(2)}</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div style="margin-top: 15px; font-size: 10px; text-align: center;">
+    <p><strong>Generado:</strong> ${formatearFecha(new Date())} a las ${formatearHora(new Date())}</p>
+    <p>Total clientes: ${clientesData.length} | Total viajes: ${clientesData.reduce((sum, c) => sum + c.totalViajes, 0)}</p>
+  </div>
+</body>
+</html>
+`;
+};
+
+// =====================================================
+// 📊 NUEVO: PDF CONSOLIDADO POR PERÍODO (UNIVERSAL)
+// Soporta: semanal, mensual, trimestral, semestral, 9meses, anual
+// =====================================================
+ReportesViajesDirecto.generarPDFConsolidadoPeriodo = async (req, res) => {
+  let browser;
+  try {
+    const { periodo, ano, mes, trimestre, semana, semestre } = req.query;
+
+    // Validaciones básicas
+    if (!periodo || !ano) {
+      return res.status(400).json({
+        success: false,
+        message: "Se requieren los parámetros: periodo y ano",
+      });
+    }
+
+    const anoNum = parseInt(ano);
+    console.log(`📊 Generando PDF Consolidado: ${periodo.toUpperCase()} - ${ano}`);
+
+    let datos, titulo, columnas, landscape = true;
+
+    // Configurar según el período solicitado
+    switch (periodo.toLowerCase()) {
+      case 'semanal':
+        if (!mes || !semana) {
+          return res.status(400).json({
+            success: false,
+            message: "Para reporte semanal se requieren: ano, mes, semana",
+          });
+        }
+        const mesNumSemanal = parseInt(mes);
+        const semanaNum = parseInt(semana);
+        
+        if (mesNumSemanal < 1 || mesNumSemanal > 12) {
+          return res.status(400).json({
+            success: false,
+            message: "El mes debe estar entre 1 y 12",
+          });
+        }
+        
+        if (semanaNum < 1 || semanaNum > 5) {
+          return res.status(400).json({
+            success: false,
+            message: "La semana debe estar entre 1 y 5",
+          });
+        }
+        
+        datos = await ViajesModel.obtenerConsolidadoSemanal(anoNum, mesNumSemanal, semanaNum);
+        const fechaInicio = obtenerFechaInicioSemana(anoNum, mesNumSemanal, semanaNum);
+        const fechaFin = obtenerFechaFinSemana(anoNum, mesNumSemanal, semanaNum);
+        titulo = `SEMANA ${semanaNum} - ${obtenerNombreMes(mesNumSemanal)} ${anoNum}<br><span style="font-size: 12px;">(${formatearFecha(fechaInicio)} al ${formatearFecha(fechaFin)})</span>`;
+        columnas = generarColumnasDias(7, fechaInicio);
+        landscape = false;
+        break;
+
+      case 'mensual':
+        if (!mes) {
+          return res.status(400).json({
+            success: false,
+            message: "Para reporte mensual se requieren: ano, mes",
+          });
+        }
+        const mesNumMensual = parseInt(mes);
+        
+        if (mesNumMensual < 1 || mesNumMensual > 12) {
+          return res.status(400).json({
+            success: false,
+            message: "El mes debe estar entre 1 y 12",
+          });
+        }
+        
+        datos = await ViajesModel.obtenerConsolidadoMensual(anoNum, mesNumMensual);
+        titulo = `${obtenerNombreMes(mesNumMensual)} ${anoNum}`;
+        const diasDelMes = obtenerDiasDelMes(anoNum, mesNumMensual);
+        columnas = generarColumnasDias(diasDelMes, new Date(anoNum, mesNumMensual - 1, 1));
+        landscape = true;
+        break;
+
+      case 'trimestral':
+        if (!trimestre) {
+          return res.status(400).json({
+            success: false,
+            message: "Para reporte trimestral se requieren: ano, trimestre (1-4)",
+          });
+        }
+        const trimestreNum = parseInt(trimestre);
+        
+        if (trimestreNum < 1 || trimestreNum > 4) {
+          return res.status(400).json({
+            success: false,
+            message: "El trimestre debe estar entre 1 y 4",
+          });
+        }
+        
+        datos = await ViajesModel.obtenerConsolidadoTrimestral(anoNum, trimestreNum);
+        const mesesTrimestre = obtenerMesesTrimestre(trimestreNum);
+        titulo = `TRIMESTRE ${trimestreNum} (${mesesTrimestre.join('-')}) ${anoNum}`;
+        columnas = generarColumnasMeses(3, (trimestreNum - 1) * 3 + 1);
+        landscape = false;
+        break;
+
+      case 'semestral':
+        const semestreNum = parseInt(semestre || 1);
+        
+        if (semestreNum < 1 || semestreNum > 2) {
+          return res.status(400).json({
+            success: false,
+            message: "El semestre debe ser 1 o 2",
+          });
+        }
+        
+        datos = await ViajesModel.obtenerConsolidadoSemestral(anoNum, semestreNum);
+        titulo = `${semestreNum === 1 ? 'PRIMER' : 'SEGUNDO'} SEMESTRE ${anoNum}`;
+        columnas = generarColumnasMeses(6, semestreNum === 1 ? 1 : 7);
+        landscape = true;
+        break;
+
+      case '9meses':
+        datos = await ViajesModel.obtenerConsolidado9Meses(anoNum);
+        titulo = `PRIMEROS 9 MESES - ${anoNum}`;
+        columnas = generarColumnasMeses(9, 1);
+        landscape = true;
+        break;
+
+      case 'anual':
+        datos = await ViajesModel.obtenerConsolidadoAnual(anoNum);
+        titulo = `AÑO ${anoNum}`;
+        columnas = generarColumnasMeses(12, 1);
+        landscape = true;
+        break;
+
+      default:
+        return res.status(400).json({
+          success: false,
+          message: `Período no válido. Opciones: semanal, mensual, trimestral, semestral, 9meses, anual`,
+        });
+    }
+
+    if (!datos || datos.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: `No hay viajes completados en el período seleccionado`,
+      });
+    }
+
+    // Procesar datos según las columnas
+    const clientesData = procesarDatosClientes(datos, columnas);
+
+    // Generar HTML
+    const htmlContent = generarHTMLConsolidado(titulo, columnas, clientesData, landscape);
+
+    // Generar PDF con Puppeteer
+    browser = await puppeteer.launch({
+      headless: "new",
+      args: ["--no-sandbox", "--disable-setuid-sandbox"],
+    });
+
+    const page = await browser.newPage();
+    await page.setContent(htmlContent, { waitUntil: "networkidle0" });
+
+    const pdfBuffer = await page.pdf({
+      format: "A4",
+      landscape: landscape,
+      printBackground: true,
+      margin: { top: "15px", right: "15px", bottom: "15px", left: "15px" },
+    });
+
+    await browser.close();
+
+    // Generar nombre de archivo
+    let filename = `consolidado-${periodo}-${anoNum}`;
+    if (mes) filename += `-mes${mes}`;
+    if (semana) filename += `-sem${semana}`;
+    if (trimestre) filename += `-t${trimestre}`;
+    if (semestre) filename += `-s${semestre}`;
+    filename += '.pdf';
+
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `attachment; filename=${filename}`);
+    res.send(pdfBuffer);
+
+    console.log(`✅ PDF Consolidado ${periodo} generado exitosamente`);
+
+  } catch (error) {
+    if (browser) await browser.close();
+    console.error("❌ Error al generar PDF Consolidado:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error al generar el PDF consolidado",
+      error: error.message,
+    });
+  }
+};
+
 // =====================================================
 // 📊 GET: OBTENER CLIENTES CON VIAJES DEL MES
 // =====================================================
@@ -50,7 +417,6 @@ ReportesViajesDirecto.obtenerClientesMes = async (req, res) => {
       });
     }
 
-    // Usar el período contable del modelo
     const clientes = await ViajesModel.aggregate([
       {
         $match: {
@@ -98,8 +464,6 @@ ReportesViajesDirecto.obtenerClientesMes = async (req, res) => {
 
 // =====================================================
 // 📄 PDF 1: RESUMEN MENSUAL (Imagen 3)
-// Formato: # | CLIENTE | VIAJES | MONTO POR VIAJES | MONTO TOTAL
-// Nota: PRECIO SIN IVA
 // =====================================================
 ReportesViajesDirecto.generarPDFResumenMensual = async (req, res) => {
   let browser;
@@ -117,7 +481,6 @@ ReportesViajesDirecto.generarPDFResumenMensual = async (req, res) => {
       });
     }
 
-    // 🚛 OBTENER VIAJES OPERATIVOS COMPLETADOS DEL MES
     const viajes = await ViajesModel.find({
       tipoViaje: 'operativo',
       'estado.actual': 'completado',
@@ -138,7 +501,6 @@ ReportesViajesDirecto.generarPDFResumenMensual = async (req, res) => {
       });
     }
 
-    // 📊 AGRUPAR POR CLIENTE Y RUTA
     const clientesMap = new Map();
 
     viajes.forEach((viaje) => {
@@ -169,7 +531,6 @@ ReportesViajesDirecto.generarPDFResumenMensual = async (req, res) => {
       ruta.montoTotal += (viaje.montoAcordado || 0);
     });
 
-    // 📝 GENERAR HTML
     let totalViajesGeneral = 0;
     let totalMontoGeneral = 0;
     let numeroCliente = 1;
@@ -183,7 +544,6 @@ ReportesViajesDirecto.generarPDFResumenMensual = async (req, res) => {
       totalViajesGeneral += totalViajesCliente;
       totalMontoGeneral += totalMontoCliente;
 
-      // Primera fila del cliente con rowspan
       filasHTML += `
         <tr>
           <td rowspan="${rutasArray.length}" class="cell-numero">${numeroCliente}</td>
@@ -194,7 +554,6 @@ ReportesViajesDirecto.generarPDFResumenMensual = async (req, res) => {
         </tr>
       `;
 
-      // Filas adicionales de rutas
       for (let i = 1; i < rutasArray.length; i++) {
         filasHTML += `
           <tr>
@@ -308,7 +667,6 @@ ReportesViajesDirecto.generarPDFResumenMensual = async (req, res) => {
 
 // =====================================================
 // 📄 PDF 2: INDIVIDUAL POR CLIENTE (Detallado)
-// Muestra todos los viajes de un cliente específico
 // =====================================================
 ReportesViajesDirecto.generarPDFClienteIndividual = async (req, res) => {
   let browser;
@@ -347,7 +705,6 @@ ReportesViajesDirecto.generarPDFClienteIndividual = async (req, res) => {
       });
     }
 
-    // 📊 AGRUPAR POR RUTA
     const rutasMap = new Map();
 
     viajes.forEach((viaje) => {
@@ -516,8 +873,7 @@ ReportesViajesDirecto.generarPDFClienteIndividual = async (req, res) => {
 };
 
 // =====================================================
-// 📄 PDF 3: RESUMEN CON CRÉDITO FISCAL (Imagen 2)
-// Incluye separación de crédito fiscal y consumidor final
+// 📄 PDF 3: RESUMEN CON CRÉDITO FISCAL
 // =====================================================
 ReportesViajesDirecto.generarPDFCreditoFiscal = async (req, res) => {
   let browser;
@@ -545,7 +901,6 @@ ReportesViajesDirecto.generarPDFCreditoFiscal = async (req, res) => {
       });
     }
 
-    // 📊 AGRUPAR POR CLIENTE Y TIPO DE CONSUMIDOR
     const clientesMap = new Map();
 
     viajes.forEach((viaje) => {
@@ -573,7 +928,6 @@ ReportesViajesDirecto.generarPDFCreditoFiscal = async (req, res) => {
 
     const clientesArray = Array.from(clientesMap.values());
     
-    // Separar por tipo de consumidor
     const contribuyentes = clientesArray.filter(c => c.tipoConsumidor === 'contribuyente');
     const consumidoresFinales = clientesArray.filter(c => c.tipoConsumidor === 'consumidor_final');
 
@@ -727,8 +1081,7 @@ ReportesViajesDirecto.generarPDFCreditoFiscal = async (req, res) => {
 };
 
 // =====================================================
-// 📄 PDF 4: CONSOLIDADO ANUAL (Imagen 4 - Landscape)
-// Muestra todos los meses del año en formato horizontal
+// 📄 PDF 4: CONSOLIDADO ANUAL (Mantener original)
 // =====================================================
 ReportesViajesDirecto.generarPDFConsolidadoAnual = async (req, res) => {
   let browser;
@@ -738,7 +1091,6 @@ ReportesViajesDirecto.generarPDFConsolidadoAnual = async (req, res) => {
 
     console.log(`📊 Generando PDF Consolidado Anual: ${anoNum}`);
 
-    // Obtener datos usando el método estático del modelo
     const datos = await ViajesModel.obtenerConsolidadoAnual(anoNum);
 
     if (datos.length === 0) {
@@ -748,10 +1100,9 @@ ReportesViajesDirecto.generarPDFConsolidadoAnual = async (req, res) => {
       });
     }
 
-    // Crear matriz de 12 meses para cada cliente
     const clientesData = datos.map(cliente => {
       const mesesArray = Array(12).fill(null).map((_, index) => {
-        const mesData = cliente.meses.find(m => m.mes === (index + 1));
+        const mesData = cliente.periodos?.find(m => m.mes === (index + 1));
         return {
           mes: index + 1,
           viajes: mesData?.viajes || 0,
@@ -842,7 +1193,7 @@ ReportesViajesDirecto.generarPDFConsolidadoAnual = async (req, res) => {
 
     const pdfBuffer = await page.pdf({
       format: "A4",
-      landscape: true, // ← HORIZONTAL
+      landscape: true,
       printBackground: true,
       margin: { top: "15px", right: "15px", bottom: "15px", left: "15px" },
     });
