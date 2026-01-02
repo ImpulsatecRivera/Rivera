@@ -39,6 +39,8 @@ import CajaChica from "./pages/CajaChica/CajaChica";
 import Planilla from "./pages/Planilla/Planilla";
 import PlanillaQuincenal from "./pages/Planilla/PlanillaQuincenal";
 import VerPlanillaQuincenal from "./pages/Planilla/VerPlanillasQuincenales";
+import PlanillaSemanal from "./pages/Planilla/Planillasemanal ";
+import PlanillaSemanalNueva from "./pages/Planilla/Planillasemanalnueva ";
 import ProgramacionViajesOperativos from "./pages/viajesInternos/ProgramacionViajesOperativos";
 import Nav from "./components/Nav/Nav";
 
@@ -132,6 +134,9 @@ function App() {
         <Route path="/planilla" element={<Planilla />} />
         <Route path="/planilla/quincenal" element={<PlanillaQuincenal />} />
         <Route path="/planilla/quincenales/:id" element={<VerPlanillaQuincenal />} />
+        <Route path="/planilla/semanal/nueva" element={<PlanillaSemanalNueva />} />        
+        <Route path="/planilla/semanal/:id" element={<PlanillaSemanal />} />
+
 
         {/* Caja Chica */}
         <Route path="/CajaChica" element={<CajaChica />} />

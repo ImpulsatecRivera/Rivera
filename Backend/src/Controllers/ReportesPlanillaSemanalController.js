@@ -32,6 +32,15 @@ ReportesPlanillaSemanalController.generarPDFSemanalDetallado = async (req, res) 
             });
         }
 
+        // Función helper para formatear fechas
+        const formatearFechaCorta = (fecha) => {
+            if (!fecha) return '';
+            const d = new Date(fecha);
+            const dia = String(d.getDate()).padStart(2, '0');
+            const mes = String(d.getMonth() + 1).padStart(2, '0');
+            return `${dia}/${mes}`;
+        };
+
         // Generar HTML
         const htmlContent = `
         <!DOCTYPE html>
@@ -142,16 +151,16 @@ ReportesPlanillaSemanalController.generarPDFSemanalDetallado = async (req, res) 
                     ${planilla.empleados.map((empleado, index) => `
                         <tr>
                             <td>${index + 1}</td>
-                            <td class="nombre-col">${empleado.nombreCompleto}</td>
+                            <td class="nombre-col">${empleado.nombreCompleto || 'Sin nombre'}</td>
                             ${empleado.dias.map(dia => `
-                                <td class="${dia.faltaInjustificada ? 'falta' : ''}">${dia.base > 0 ? dia.base.toFixed(2) : '-'}</td>
-                                <td>${dia.viaticos > 0 ? dia.viaticos.toFixed(2) : '-'}</td>
+                                <td class="${dia.faltaInjustificada ? 'falta' : ''}">${(dia.base || 0) > 0 ? (dia.base || 0).toFixed(2) : '-'}</td>
+                                <td>${(dia.viaticos || 0) > 0 ? (dia.viaticos || 0).toFixed(2) : '-'}</td>
                             `).join('')}
-                            <td class="total-col">$ ${empleado.totalBase.toFixed(2)}</td>
-                            <td class="total-col">$ ${empleado.totalViaticos.toFixed(2)}</td>
-                            <td>$ ${empleado.anticipos.toFixed(2)}</td>
-                            <td>$ ${empleado.descuentos.toFixed(2)}</td>
-                            <td class="total-col">$ ${empleado.totalPagar.toFixed(2)}</td>
+                            <td class="total-col">$ ${(empleado.totalBase || 0).toFixed(2)}</td>
+                            <td class="total-col">$ ${(empleado.totalViaticos || 0).toFixed(2)}</td>
+                            <td>$ ${(empleado.anticipos || 0).toFixed(2)}</td>
+                            <td>$ ${(empleado.totalDescuentos || empleado.descuentos || 0).toFixed(2)}</td>
+                            <td class="total-col">$ ${(empleado.totalAPagar || empleado.totalPagar || 0).toFixed(2)}</td>
                         </tr>
                     `).join('')}
                     <tr class="totales-row">
@@ -165,18 +174,18 @@ ReportesPlanillaSemanalController.generarPDFSemanalDetallado = async (req, res) 
                             }, 0);
                             return `<td>$ ${total.toFixed(2)}</td>`;
                         }).join('')}
-                        <td>$ ${planilla.empleados.reduce((sum, emp) => sum + emp.totalBase, 0).toFixed(2)}</td>
-                        <td>$ ${planilla.empleados.reduce((sum, emp) => sum + emp.totalViaticos, 0).toFixed(2)}</td>
-                        <td>$ ${planilla.empleados.reduce((sum, emp) => sum + emp.anticipos, 0).toFixed(2)}</td>
-                        <td>$ ${planilla.empleados.reduce((sum, emp) => sum + emp.descuentos, 0).toFixed(2)}</td>
-                        <td>$ ${planilla.empleados.reduce((sum, emp) => sum + emp.totalPagar, 0).toFixed(2)}</td>
+                        <td>$ ${planilla.empleados.reduce((sum, emp) => sum + (emp.totalBase || 0), 0).toFixed(2)}</td>
+                        <td>$ ${planilla.empleados.reduce((sum, emp) => sum + (emp.totalViaticos || 0), 0).toFixed(2)}</td>
+                        <td>$ ${planilla.empleados.reduce((sum, emp) => sum + (emp.anticipos || 0), 0).toFixed(2)}</td>
+                        <td>$ ${planilla.empleados.reduce((sum, emp) => sum + (emp.totalDescuentos || emp.descuentos || 0), 0).toFixed(2)}</td>
+                        <td>$ ${planilla.empleados.reduce((sum, emp) => sum + (emp.totalAPagar || emp.totalPagar || 0), 0).toFixed(2)}</td>
                     </tr>
                 </tbody>
             </table>
 
             <div style="margin-top: 20px; font-size: 9px;">
                 <p>() DESCUENTOS</p>
-                <p>TOTAL: $ ${planilla.empleados.reduce((sum, emp) => sum + emp.totalPagar, 0).toFixed(2)}</p>
+                <p>TOTAL: $ ${planilla.empleados.reduce((sum, emp) => sum + (emp.totalAPagar || emp.totalPagar || 0), 0).toFixed(2)}</p>
             </div>
         </body>
         </html>
