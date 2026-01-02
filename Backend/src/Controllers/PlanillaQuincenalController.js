@@ -110,7 +110,7 @@ const obtenerSalarioValido = (empleadoData, nombreCompleto, tipoEmpleado) => {
     // 🔧 CRÍTICO: Convertir string a número si es necesario (caso Motoristas)
     if (typeof salarioMensual === 'string') {
         salarioMensual = parseFloat(salarioMensual.replace(/[^0-9.-]/g, '')); // Limpiar caracteres no numéricos
-        
+
         // Validar que la conversión fue exitosa
         if (isNaN(salarioMensual)) {
             console.error('❌ Error: El salario no es válido:', {
@@ -135,34 +135,29 @@ const obtenerSalarioValido = (empleadoData, nombreCompleto, tipoEmpleado) => {
  * Ahora descuentos de ley se calculan sobre el salario total
  */
 const calcularTotalesEmpleado = (empleado) => {
-    // 1. Calcular salario total (base + extras)
-    const totalSalarioMasViaticos =
-        (empleado.salarioQuincenal || 0) +
-        (empleado.viaticos || 0) +
-        (empleado.trabajoSabadoDomingo || 0);
+    // Normalizar y asegurar que sean números
+    const salarioQuincenal = Number(empleado.salarioQuincenal || 0);
+    const viaticos = Number(empleado.viaticos || 0);
+    const trabajoSabadoDomingo = Number(empleado.trabajoSabadoDomingo || 0);
 
-    // 2. RECALCULAR descuentos de ley sobre el SALARIO TOTAL
-    const descuentosLeyActualizados = calcularDescuentosLey(totalSalarioMasViaticos);
-    
-    // Actualizar descuentos de ley en el objeto empleado
-    empleado.descuentosLey = descuentosLeyActualizados;
+    // Calcular descuentos de ley en base al salario quincenal
+    const descuentosLey = calcularDescuentosLey(salarioQuincenal);
+    // Asegurarnos de guardar los descuentos calculados en el objeto empleado
+    empleado.descuentosLey = descuentosLey;
 
-    // 3. Calcular total de descuentos de ley
+    const totalSalarioMasViaticos = salarioQuincenal + viaticos + trabajoSabadoDomingo;
+
     const totalDescuentosLey =
-        descuentosLeyActualizados.isss.monto +
-        descuentosLeyActualizados.afp.monto +
-        descuentosLeyActualizados.renta.monto;
+        (descuentosLey?.isss?.monto || 0) +
+        (descuentosLey?.afp?.monto || 0) +
+        (descuentosLey?.renta?.monto || 0);
 
-    // 4. Calcular otros descuentos (SIN CAMISAS)
     const totalOtrosDescuentos =
         (empleado.otrosDescuentos?.anticipos || 0) +
         (empleado.otrosDescuentos?.prestamos || 0) +
         (empleado.otrosDescuentos?.otros || 0);
 
-    // 5. Total de descuentos
     const totalDescuentos = totalDescuentosLey + totalOtrosDescuentos;
-
-    // 6. Total a pagar
     const totalAPagar = totalSalarioMasViaticos - totalDescuentos;
 
     return {
@@ -178,7 +173,7 @@ const calcularTotalesEmpleado = (empleado) => {
 const calcularTotalesGenerales = (empleados) => {
     console.log('🔥 INICIANDO calcularTotalesGenerales');
     console.log('📦 Empleados recibidos:', empleados.length);
-    
+
     const totales = {
         totalSalariosQuincenales: 0,
         totalViaticos: 0,
@@ -197,7 +192,7 @@ const calcularTotalesGenerales = (empleados) => {
     empleados.forEach(emp => {
         console.log('👤 Procesando empleado:', emp.nombreCompleto);
         console.log('   - Trabajo Sáb/Dom:', emp.trabajoSabadoDomingo);
-        
+
         totales.totalSalariosQuincenales += emp.salarioQuincenal || 0;
         totales.totalViaticos += emp.viaticos || 0;
         totales.totalTrabajoSabadoDomingo += emp.trabajoSabadoDomingo || 0;
@@ -853,7 +848,7 @@ PlanillaQuincenalController.cambiarEstado = async (req, res) => {
 
         res.status(200).json({
             success: true,
-            message: estado 
+            message: estado
                 ? `Estado cambiado de ${estadoActual} a ${estado} exitosamente`
                 : 'Planilla actualizada exitosamente',
             data: planilla

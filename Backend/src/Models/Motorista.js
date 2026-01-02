@@ -46,7 +46,7 @@ const motoristaSchema = new Schema({
         type: String,      // Dirección física completa del motorista
         required: true     // Campo obligatorio para registros legales y contacto
     },
-    PlanillaTipo: {
+    planillaTipo: {
         type: String,
         enum: [
             'Semanal',
