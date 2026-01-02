@@ -466,8 +466,8 @@ PlanillaQuincenalController.actualizarEmpleado = async (req, res) => {
             });
         }
 
-        // Validar que la planilla no esté pagada o cerrada
-        if (planilla.estado === 'pagada' || planilla.estado === 'cerrada') {
+        // Validar que la planilla no esté pagada o pagada
+        if (planilla.estado === 'pagada') {
             return res.status(400).json({
                 success: false,
                 message: `No se pueden editar empleados de una planilla en estado ${planilla.estado}`
@@ -551,8 +551,8 @@ PlanillaQuincenalController.agregarEmpleado = async (req, res) => {
             });
         }
 
-        // Validar que la planilla no esté pagada o cerrada
-        if (planilla.estado === 'pagada' || planilla.estado === 'cerrada') {
+        // Validar que la planilla no esté pagada o pagada
+        if (planilla.estado === 'pagada') {
             return res.status(400).json({
                 success: false,
                 message: `No se pueden agregar empleados a una planilla en estado ${planilla.estado}`
@@ -657,8 +657,8 @@ PlanillaQuincenalController.eliminarEmpleado = async (req, res) => {
             });
         }
 
-        // Validar que la planilla no esté pagada o cerrada
-        if (planilla.estado === 'pagada' || planilla.estado === 'cerrada') {
+        // Validar que la planilla no esté pagada o pagada
+        if (planilla.estado === 'pagada') {
             return res.status(400).json({
                 success: false,
                 message: `No se pueden eliminar empleados de una planilla en estado ${planilla.estado}`
@@ -717,7 +717,7 @@ PlanillaQuincenalController.cambiarEstado = async (req, res) => {
             });
         }
 
-        const estadosValidos = ['pendiente', 'aprobada', 'cerrada'];
+        const estadosValidos = ['pendiente', 'aprobada', 'pagada'];
         if (estado && !estadosValidos.includes(estado)) {
             return res.status(400).json({
                 success: false,
@@ -737,11 +737,11 @@ PlanillaQuincenalController.cambiarEstado = async (req, res) => {
 
         const estadoActual = planilla.estado;
 
-        // Validar que no se pueda cambiar si ya está cerrada
-        if (estadoActual === 'cerrada' && estado) {
+        // Validar que no se pueda cambiar si ya está pagada
+        if (estadoActual === 'pagada' && estado) {
             return res.status(400).json({
                 success: false,
-                message: "No se puede cambiar el estado de una planilla cerrada (estado final)"
+                message: "No se puede cambiar el estado de una planilla pagada (estado final)"
             });
         }
 
@@ -813,32 +813,6 @@ PlanillaQuincenalController.cambiarEstado = async (req, res) => {
             }
         }
 
-        // Si el nuevo estado es 'cerrada', requerir fechaCierre
-        if (estado === 'cerrada') {
-            if (!fechaCierre) {
-                return res.status(400).json({
-                    success: false,
-                    message: "Se requiere la fecha de cierre cuando se marca como cerrada"
-                });
-            }
-
-            const fechaCierreDate = new Date(fechaCierre);
-            if (isNaN(fechaCierreDate.getTime())) {
-                return res.status(400).json({
-                    success: false,
-                    message: "La fecha de cierre no es válida"
-                });
-            }
-
-            if (fechaCierreDate > now) {
-                return res.status(400).json({
-                    success: false,
-                    message: "La fecha de cierre no puede ser una fecha futura"
-                });
-            }
-
-            planilla.fechaCierre = fechaCierreDate;
-        }
 
         if (estado) {
             planilla.estado = estado;
