@@ -17,6 +17,7 @@ export default function Planillas() {
   const [showReporteMensual, setShowReporteMensual] = useState(false);
   const [mesSeleccionado, setMesSeleccionado] = useState('');
   const [añoSeleccionado, setAñoSeleccionado] = useState('');
+  const [filtroTipo, setFiltroTipo] = useState('todas'); // 'todas', 'quincenal', 'semanal'
   const dropdownRef = useRef(null);
 
   useEffect(() => {
@@ -38,14 +39,32 @@ export default function Planillas() {
   const cargarPlanillas = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`${config.api.API_URL}/planillas/quincenal`);
-      const data = await response.json();
+      // Cargar planillas quincenales
+      const responseQuincenal = await fetch(`${config.api.API_URL}/planillas/quincenal`);
+      const dataQuincenal = await responseQuincenal.json();
       
-      if (data.success && Array.isArray(data.data)) {
-        setPlanillas(data.data);
-      } else {
-        setPlanillas([]);
-      }
+      // Cargar planillas semanales
+      const responseSemanal = await fetch(`${config.api.API_URL}/planillas/semanal`);
+      const dataSemanal = await responseSemanal.json();
+      
+      const planillasQuincenales = (dataQuincenal.success && Array.isArray(dataQuincenal.data)) 
+        ? dataQuincenal.data.map(p => ({ ...p, tipo: 'quincenal' }))
+        : [];
+      
+      const planillasSemanales = (dataSemanal.success && Array.isArray(dataSemanal.data))
+        ? dataSemanal.data.map(p => ({ ...p, tipo: 'semanal' }))
+        : [];
+      
+      // Combinar ambas listas y ordenar por fecha
+      const todasPlanillas = [...planillasQuincenales, ...planillasSemanales]
+        .sort((a, b) => {
+          // Ordenar por fecha de inicio o creación
+          const fechaA = new Date(a.fechaInicio || a.createdAt);
+          const fechaB = new Date(b.fechaInicio || b.createdAt);
+          return fechaB - fechaA; // Más recientes primero
+        });
+      
+      setPlanillas(todasPlanillas);
     } catch (error) {
       console.error('Error cargando planillas:', error);
       setPlanillas([]);
@@ -88,13 +107,6 @@ export default function Planillas() {
         text: 'text-emerald-800',
         border: 'border-emerald-300',
         icon: DollarSign
-      },
-      'cerrada': {
-        label: 'Cerrada',
-        bg: 'bg-red-100',
-        text: 'text-red-800',
-        border: 'border-red-300',
-        icon: Lock
       }
     };
     return configs[estado] || configs['pendiente'];
@@ -106,16 +118,40 @@ export default function Planillas() {
     if (tipo === 'quincenal') {
       navigate('/planilla/quincenal');
     } else if (tipo === 'semanal') {
-      Swal.fire({
-        icon: 'info',
-        title: 'Próximamente',
-        text: 'La planilla semanal estará disponible pronto'
-      });
+      // Verificar si ya existe una planilla semanal pendiente
+      try {
+        const response = await fetch(`${config.api.API_URL}/planillas/semanal?estado=pendiente&limit=1`);
+        const data = await response.json();
+        
+        if (data.success && data.data && data.data.length > 0) {
+          // Ya existe una planilla pendiente, ir a editarla
+          const planillaPendiente = data.data[0];
+          Swal.fire({
+            icon: 'info',
+            title: 'Planilla en proceso',
+            text: `Ya tienes una planilla semanal pendiente. Te llevaremos a editarla.`,
+            timer: 2000,
+            showConfirmButton: false
+          });
+          navigate(`/planilla/semanal/${planillaPendiente._id}`);
+        } else {
+          // No existe, crear una nueva
+          navigate('/planilla/semanal/nueva');
+        }
+      } catch (error) {
+        console.error('Error verificando planillas:', error);
+        // Si hay error, ir a crear nueva de todos modos
+        navigate('/planilla/semanal/nueva');
+      }
     }
   };
 
   const handleVerPlanilla = (planilla) => {
-    navigate(`/planilla/quincenales/${planilla._id}`);
+    if (planilla.tipo === 'semanal') {
+      navigate(`/planilla/semanal/${planilla._id}`);
+    } else {
+      navigate(`/planilla/quincenales/${planilla._id}`);
+    }
   };
 
   const handleEliminar = async (planilla) => {
@@ -140,11 +176,11 @@ export default function Planillas() {
 
     if (result.isConfirmed) {
       try {
-        const response = await fetch(
-          `${config.api.API_URL}/planillas/quincenal/${planilla._id}`,
-          { method: 'DELETE' }
-        );
-
+        const endpoint = planilla.tipo === 'semanal' 
+          ? `${config.api.API_URL}/planillas/semanal/${planilla._id}`
+          : `${config.api.API_URL}/planillas/quincenal/${planilla._id}`;
+        
+        const response = await fetch(endpoint, { method: 'DELETE' });
         const data = await response.json();
 
         if (data.success) {
@@ -180,9 +216,21 @@ export default function Planillas() {
         }
       });
 
-      const response = await fetch(
-        `${config.api.API_URL}/reportes/planilla/quincenal/${planilla._id}`
-      );
+      // Determinar el endpoint según el tipo de planilla
+      let endpoint;
+      let filename;
+      
+      if (planilla.tipo === 'semanal') {
+        endpoint = `${config.api.API_URL}/reportes/planilla/semanal/semanal-detallado/${planilla._id}`;
+        const fechaInicio = new Date(planilla.fechaInicio).toLocaleDateString('es-ES').replace(/\//g, '-');
+        const fechaFin = new Date(planilla.fechaFin).toLocaleDateString('es-ES').replace(/\//g, '-');
+        filename = `Planilla_Semanal_${fechaInicio}_al_${fechaFin}.pdf`;
+      } else {
+        endpoint = `${config.api.API_URL}/reportes/planilla/quincenal/${planilla._id}`;
+        filename = `Planilla_${planilla.descripcion}_${planilla.año}_${planilla.mes}.pdf`;
+      }
+
+      const response = await fetch(endpoint);
 
       if (!response.ok) {
         throw new Error('Error al generar el PDF');
@@ -192,7 +240,7 @@ export default function Planillas() {
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `Planilla_${planilla.descripcion}_${planilla.año}_${planilla.mes}.pdf`;
+      link.download = filename;
       
       document.body.appendChild(link);
       link.click();
@@ -285,29 +333,38 @@ export default function Planillas() {
     }
   };
 
-  // 📊 Calcular estadísticas
+  // 📊 Calcular estadísticas (aplicando filtro de tipo)
+  const planillasFiltradas = planillas.filter(p => {
+    // Filtro por tipo
+    if (filtroTipo !== 'todas' && p.tipo !== filtroTipo) {
+      return false;
+    }
+    
+    // Filtro por búsqueda
+    if (searchTerm) {
+      const searchLower = searchTerm.toLowerCase();
+      return (
+        p.descripcion?.toLowerCase().includes(searchLower) ||
+        p.año?.toString().includes(searchLower) ||
+        p.mes?.toString().includes(searchLower) ||
+        p.estado?.toLowerCase().includes(searchLower)
+      );
+    }
+    
+    return true;
+  });
+
   const estadisticas = {
-    total: planillas.length,
-    pendientes: planillas.filter(p => p.estado === 'pendiente').length,
-    aprobadas: planillas.filter(p => p.estado === 'aprobada' && !p.pagada).length,
-    pagadas: planillas.filter(p => p.estado === 'aprobada' && p.pagada === true).length,
-    cerradas: planillas.filter(p => p.estado === 'cerrada').length,
-    totalPagado: planillas.reduce((sum, p) => sum + (p.totales?.totalAPagar || 0), 0),
-    totalEmpleados: planillas.reduce((sum, p) => sum + (p.empleados?.length || 0), 0),
-    promedioEmpleados: planillas.length > 0 
-      ? Math.round(planillas.reduce((sum, p) => sum + (p.empleados?.length || 0), 0) / planillas.length)
+    total: planillasFiltradas.length,
+    pendientes: planillasFiltradas.filter(p => p.estado === 'pendiente').length,
+    aprobadas: planillasFiltradas.filter(p => p.estado === 'aprobada').length,
+    pagadas: planillasFiltradas.filter(p => p.estado === 'pagada').length,
+    totalPagado: planillasFiltradas.reduce((sum, p) => sum + (p.totales?.totalAPagar || 0), 0),
+    totalEmpleados: planillasFiltradas.reduce((sum, p) => sum + (p.empleados?.length || 0), 0),
+    promedioEmpleados: planillasFiltradas.length > 0 
+      ? Math.round(planillasFiltradas.reduce((sum, p) => sum + (p.empleados?.length || 0), 0) / planillasFiltradas.length)
       : 0
   };
-
-  const planillasFiltradas = planillas.filter(p => {
-    const searchLower = searchTerm.toLowerCase();
-    return (
-      p.descripcion?.toLowerCase().includes(searchLower) ||
-      p.año?.toString().includes(searchLower) ||
-      p.mes?.toString().includes(searchLower) ||
-      p.estado?.toLowerCase().includes(searchLower)
-    );
-  });
 
   // Obtener años únicos de las planillas para el selector
   const añosDisponibles = [...new Set(planillas.map(p => p.año))].sort((a, b) => b - a);
@@ -629,19 +686,6 @@ export default function Planillas() {
                   ></div>
                 </div>
               </div>
-
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-semibold text-gray-700">Cerradas</span>
-                  <span className="text-sm font-bold text-red-600">{estadisticas.cerradas}</span>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
-                  <div 
-                    className="bg-gradient-to-r from-red-400 to-red-600 h-full rounded-full transition-all"
-                    style={{ width: `${estadisticas.total > 0 ? (estadisticas.cerradas / estadisticas.total) * 100 : 0}%` }}
-                  ></div>
-                </div>
-              </div>
             </div>
           </div>
 
@@ -652,7 +696,7 @@ export default function Planillas() {
               <PieChart className="text-purple-600" size={28} />
             </div>
 
-            {/* Círculo visual - Gráfico de pastel con 4 segmentos */}
+            {/* Círculo visual - Gráfico de pastel con 3 segmentos */}
             <div className="relative w-48 h-48 mx-auto mb-6">
               <svg className="transform -rotate-90 w-48 h-48">
                 {estadisticas.total > 0 ? (
@@ -700,22 +744,6 @@ export default function Planillas() {
                         fill="transparent"
                         strokeDasharray={`${((estadisticas.pagadas / estadisticas.total) * 502).toFixed(2)} 502`}
                         strokeDashoffset={`-${(((estadisticas.pendientes + estadisticas.aprobadas) / estadisticas.total) * 502).toFixed(2)}`}
-                        strokeLinecap="round"
-                        className="transition-all duration-1000"
-                      />
-                    )}
-                    
-                    {/* Segmento CERRADA (rojo) */}
-                    {estadisticas.cerradas > 0 && (
-                      <circle
-                        cx="96"
-                        cy="96"
-                        r="80"
-                        stroke="#ef4444"
-                        strokeWidth="20"
-                        fill="transparent"
-                        strokeDasharray={`${((estadisticas.cerradas / estadisticas.total) * 502).toFixed(2)} 502`}
-                        strokeDashoffset={`-${(((estadisticas.pendientes + estadisticas.aprobadas + estadisticas.pagadas) / estadisticas.total) * 502).toFixed(2)}`}
                         strokeLinecap="round"
                         className="transition-all duration-1000"
                       />
@@ -772,16 +800,45 @@ export default function Planillas() {
                   {estadisticas.total > 0 ? ((estadisticas.pagadas / estadisticas.total) * 100).toFixed(0) : 0}%
                 </span>
               </div>
-              
-              <div className="flex items-center justify-between text-sm">
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full bg-red-500"></div>
-                  <span className="text-gray-600">Cerradas</span>
-                </div>
-                <span className="font-bold text-gray-900">
-                  {estadisticas.total > 0 ? ((estadisticas.cerradas / estadisticas.total) * 100).toFixed(0) : 0}%
-                </span>
-              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Filtros por Tipo */}
+        <div className="bg-white rounded-xl p-5 border-2 border-gray-100 shadow-sm">
+          <div className="flex items-center gap-4">
+            <span className="text-sm font-bold text-gray-700">Filtrar por:</span>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setFiltroTipo('todas')}
+                className={`px-6 py-2.5 rounded-xl font-bold transition-all ${
+                  filtroTipo === 'todas'
+                    ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                📋 Todas ({planillas.length})
+              </button>
+              <button
+                onClick={() => setFiltroTipo('quincenal')}
+                className={`px-6 py-2.5 rounded-xl font-bold transition-all ${
+                  filtroTipo === 'quincenal'
+                    ? 'bg-gradient-to-r from-indigo-600 to-blue-600 text-white shadow-lg'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                📆 Quincenales ({planillas.filter(p => p.tipo === 'quincenal').length})
+              </button>
+              <button
+                onClick={() => setFiltroTipo('semanal')}
+                className={`px-6 py-2.5 rounded-xl font-bold transition-all ${
+                  filtroTipo === 'semanal'
+                    ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                📅 Semanales ({planillas.filter(p => p.tipo === 'semanal').length})
+              </button>
             </div>
           </div>
         </div>
@@ -806,6 +863,7 @@ export default function Planillas() {
             <table className="w-full">
               <thead className="bg-gradient-to-r from-gray-100 to-gray-200 border-b-4 border-gray-300">
                 <tr>
+                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-800 uppercase tracking-wider">Tipo</th>
                   <th className="px-6 py-4 text-left text-xs font-bold text-gray-800 uppercase tracking-wider">Descripción</th>
                   <th className="px-6 py-4 text-left text-xs font-bold text-gray-800 uppercase tracking-wider">Período</th>
                   <th className="px-6 py-4 text-center text-xs font-bold text-gray-800 uppercase tracking-wider">Empleados</th>
@@ -817,7 +875,7 @@ export default function Planillas() {
               <tbody className="divide-y-2 divide-gray-200">
                 {planillasFiltradas.length === 0 ? (
                   <tr>
-                    <td colSpan="6" className="px-6 py-12 text-center">
+                    <td colSpan="7" className="px-6 py-12 text-center">
                       <FileText className="mx-auto text-gray-300 mb-3" size={48} />
                       <p className="text-gray-500 font-medium">No hay planillas registradas</p>
                       <p className="text-gray-400 text-sm mt-1">Comienza creando una nueva planilla</p>
@@ -834,12 +892,23 @@ export default function Planillas() {
                         className="hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 transition-all"
                       >
                         <td className="px-6 py-4">
+                          <span className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border-2 text-xs font-bold ${
+                            planilla.tipo === 'semanal' 
+                              ? 'bg-purple-100 text-purple-800 border-purple-300'
+                              : 'bg-indigo-100 text-indigo-800 border-indigo-300'
+                          }`}>
+                            {planilla.tipo === 'semanal' ? '📅 Semanal' : '📆 Quincenal'}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4">
                           <span className="font-bold text-gray-900">
-                            {planilla.descripcion}
+                            {planilla.descripcion || `Planilla ${planilla.tipo}`}
                           </span>
                         </td>
                         <td className="px-6 py-4 text-gray-600 font-medium">
-                          {planilla.año} - Mes {planilla.mes}
+                          {planilla.año && planilla.mes 
+                            ? `${planilla.año} - Mes ${planilla.mes}` 
+                            : new Date(planilla.fechaInicio).toLocaleDateString('es-ES')}
                         </td>
                         <td className="px-6 py-4 text-center">
                           <span className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-indigo-100 text-indigo-700 font-bold">
