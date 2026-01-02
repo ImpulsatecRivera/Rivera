@@ -32,8 +32,13 @@ const planillaSemanalSchema = new Schema({
     // Estado de la planilla
     estado: {
         type: String,
-        enum: ['pendiente', 'aprobada', 'pagada', 'cerrada'],
+        enum: ['pendiente', 'aprobada', 'pagada'],
         default: 'pendiente'
+    },
+
+    pagada: {
+        type: Boolean,
+        default: false
     },
 
     // Empleados en esta planilla
@@ -54,8 +59,11 @@ const planillaSemanalSchema = new Schema({
             type: String,
             required: true
         },
-        salarioSemanal: {
-            type: Number,
+
+        //  Guardar el planillaTipo para saber cómo calcular anticipos
+        planillaTipo: {
+            type: String,
+            enum: ['Semanal', 'Quincenal'],
             required: true
         },
 
@@ -68,7 +76,7 @@ const planillaSemanalSchema = new Schema({
             },
             fecha: {
                 type: Date,
-                required: true  // AGREGAR ESTO
+                required: true
             },
             base: {
                 type: Number,
@@ -82,6 +90,10 @@ const planillaSemanalSchema = new Schema({
             faltaInjustificada: {
                 type: Boolean,
                 default: false
+            },
+            descuentoFalta: {
+                type: Number,
+                default: 0
             }
         }],
 
@@ -99,20 +111,57 @@ const planillaSemanalSchema = new Schema({
             type: Number,
             default: 0
         },
-        // DESCUENTOS (incluye penalización por faltas)
-        descuentos: {
+        
+        totalDescuentos: {
             type: Number,
             default: 0
         },
 
-        totalPagar: {
+        totalAPagar: {
             type: Number,
             default: 0
         }
-    }]
+    }],
+
+    // Totales generales de la planilla
+    totales: {
+        totalBase: {
+            type: Number,
+            default: 0
+        },
+        totalViaticos: {
+            type: Number,
+            default: 0
+        },
+        totalAnticipos: {
+            type: Number,
+            default: 0
+        },
+        totalDescuentos: {
+            type: Number,
+            default: 0
+        },
+        totalAPagar: {
+            type: Number,
+            default: 0
+        }
+    },
+
+    
+    fechaAprobacion: {
+        type: Date
+    },
+    fechaPago: {
+        type: Date
+    }
 }, {
     timestamps: true,
     collection: 'PlanillaSemanal'
 });
+
+// Índices para búsquedas eficientes
+planillaSemanalSchema.index({ fechaInicio: 1, fechaFin: 1 });
+planillaSemanalSchema.index({ 'empleados.empleadoId': 1 });
+planillaSemanalSchema.index({ estado: 1 });
 
 export default model("PlanillaSemanal", planillaSemanalSchema);
