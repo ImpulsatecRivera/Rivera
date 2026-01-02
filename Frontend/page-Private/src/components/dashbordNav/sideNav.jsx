@@ -9,13 +9,10 @@ const SidebarNav = () => {
 
   const navItems = [
     { id: "home", route: "/home", icon: Home },
-    { id: "time", route: "/time", icon: Clock },
     { id: "planilla", route: "/planilla", icon: BarChart3 },
     { id: "maintenance", route: "/mantenimientos", icon: Wrench },
     { id: "diesel", route: "/diesel", icon: Fuel },
-    { id: "documents", route: "/documents", icon: FileText },
     { id: "viajesInternos", route: "/viajesInternos", icon: Route },
-    { id: "users", route: "/users", icon: Users },
     { id: "CajaChica", route: "/CajaChica", icon: Vault },
   ];
 

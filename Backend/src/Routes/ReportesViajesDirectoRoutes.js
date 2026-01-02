@@ -15,7 +15,10 @@ router.get("/individual/:clienteNombre/:mes/:ano", ReportesViajesDirecto.generar
 // ✅ PDF 3: Con crédito fiscal (Imagen 2)
 router.get("/credito-fiscal/:mes/:ano", ReportesViajesDirecto.generarPDFCreditoFiscal);
 
-// ✅ PDF 4: Consolidado anual (Imagen 4 - landscape)
+// ✅ PDF 4: Consolidado anual (Imagen 4 - landscape) - MANTENER para compatibilidad
 router.get("/consolidado/:ano", ReportesViajesDirecto.generarPDFConsolidadoAnual);
+
+// 🆕 PDF 5: CONSOLIDADO UNIVERSAL (semanal, mensual, trimestral, semestral, 9meses, anual)
+router.get("/consolidado-periodo", ReportesViajesDirecto.generarPDFConsolidadoPeriodo);
 
 export default router;
