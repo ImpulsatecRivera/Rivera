@@ -60,7 +60,6 @@ const viajeSchema = new Schema({
     type: String,
     trim: true,
     uppercase: true
-    // Ej: "C-11375", "C-12150"
   },
 
   // Ruta directa (para viajes operativos)
@@ -90,7 +89,6 @@ const viajeSchema = new Schema({
     rutaCompleta: {
       type: String,
       uppercase: true
-      // Ej: "JULIO/RONALD", "ENOC/YAMAY"
     },
     distanciaTotal: Number,
     tiempoEstimado: Number
@@ -122,85 +120,68 @@ const viajeSchema = new Schema({
   // 🆕 CAMPOS PARA REPORTES Y FACTURACIÓN
   // =====================================================
   
-  // Número correlativo de viaje (por cliente/mes)
   numeroViaje: {
     type: Number,
-    // Se genera automáticamente al crear el viaje
   },
 
-  // Número correlativo general (único en todo el sistema)
   numeroViajeGlobal: {
     type: String,
     sparse: true,
     unique: true
-    // Ej: "VOP-2025-00001"
   },
 
   // 💰 DATOS DE FACTURACIÓN (CRÍTICO PARA PDFs)
   facturacion: {
-    // Monto sin IVA
     montoSinIVA: {
       type: Number,
       default: 0
     },
     
-    // IVA (13% en El Salvador)
     iva: {
       type: Number,
       default: 0
     },
     
-    // Monto total con IVA
     montoTotal: {
       type: Number,
       default: 0
     },
     
-    // Tipo de consumidor
     tipoConsumidor: {
       type: String,
       enum: ['contribuyente', 'consumidor_final'],
       default: 'contribuyente'
-      // contribuyente = crédito fiscal
-      // consumidor_final = sin crédito fiscal
     },
     
-    // Número de factura (si aplica)
     numeroFactura: {
       type: String,
       trim: true
     },
     
-    // Fecha de facturación
     fechaFactura: {
       type: Date
     },
     
-    // Estado de pago
     estadoPago: {
       type: String,
       enum: ['pendiente', 'pagado', 'vencido', 'parcial'],
       default: 'pendiente'
     },
     
-    // Fecha de pago
     fechaPago: {
       type: Date
     },
     
-    // Método de pago
     metodoPago: {
       type: String,
       enum: ['efectivo', 'transferencia', 'cheque', 'credito'],
       default: 'credito'
     },
     
-    // Fecha de vencimiento (para créditos)
     fechaVencimiento: {
       type: Date
     },
     
-    // Notas de facturación
     notasFacturacion: {
       type: String,
       trim: true
@@ -226,21 +207,18 @@ const viajeSchema = new Schema({
 
   // 🏷️ CATEGORIZACIÓN PARA REPORTES
   categorizacion: {
-    // Tipo de servicio
     tipoServicio: {
       type: String,
       enum: ['regular', 'urgente', 'especial', 'programado'],
       default: 'regular'
     },
     
-    // Zona geográfica
     zona: {
       type: String,
       enum: ['urbana', 'rural', 'intermunicipal', 'internacional'],
       default: 'intermunicipal'
     },
     
-    // Prioridad
     prioridad: {
       type: String,
       enum: ['baja', 'normal', 'alta', 'urgente'],
@@ -252,13 +230,11 @@ const viajeSchema = new Schema({
   observacionesInternas: {
     type: String,
     trim: true
-    // Para notas que NO aparecen en PDFs del cliente
   },
 
   observacionesCliente: {
     type: String,
     trim: true
-    // Para notas que SÍ aparecen en PDFs del cliente
   },
 
   // ✅ APROBACIONES (para viajes operativos)
@@ -372,7 +348,7 @@ const viajeSchema = new Schema({
     },
     salidaReal: Date,
     llegadaReal: Date,
-    tiempoRealViaje: Number // en minutos
+    tiempoRealViaje: Number
   },
 
   // =====================================================
@@ -932,7 +908,7 @@ viajeSchema.statics.getEstadisticasConfiguracion = async function () {
 };
 
 // =====================================================
-// 🆕 MÉTODOS ESTÁTICOS PARA REPORTES
+// 🆕 MÉTODOS ESTÁTICOS PARA REPORTES BÁSICOS
 // =====================================================
 
 // Obtener viajes para reporte mensual
@@ -977,14 +953,124 @@ viajeSchema.statics.obtenerResumenCliente = async function(clienteNombre, mes, a
   ]);
 };
 
-// Obtener consolidado anual
-viajeSchema.statics.obtenerConsolidadoAnual = async function(año) {
-  return this.aggregate([
+// =====================================================
+// 🆕 MÉTODOS ESTÁTICOS PARA CONSOLIDADOS POR PERÍODO
+// =====================================================
+
+// SEMANAL: Agrupa por día de la semana
+viajeSchema.statics.obtenerConsolidadoSemanal = async function (ano, mes, semana) {
+  const fechaInicio = new Date(ano, mes - 1, 1 + ((semana - 1) * 7));
+  const fechaFin = new Date(fechaInicio);
+  fechaFin.setDate(fechaInicio.getDate() + 6);
+  
+  const ultimoDia = new Date(ano, mes, 0).getDate();
+  if (fechaFin.getDate() > ultimoDia || fechaFin.getMonth() !== mes - 1) {
+    fechaFin.setDate(ultimoDia);
+    fechaFin.setMonth(mes - 1);
+  }
+
+  return await this.aggregate([
     {
       $match: {
         tipoViaje: 'operativo',
         'estado.actual': 'completado',
-        'periodoContable.año': año
+        'periodoContable.año': ano,
+        'periodoContable.mes': mes,
+        departureTime: {
+          $gte: fechaInicio,
+          $lte: fechaFin
+        }
+      }
+    },
+    {
+      $addFields: {
+        dia: { $dayOfMonth: '$departureTime' }
+      }
+    },
+    {
+      $group: {
+        _id: {
+          cliente: '$clienteNombre',
+          dia: '$dia'
+        },
+        viajes: { $sum: 1 },
+        monto: { $sum: '$montoAcordado' }
+      }
+    },
+    {
+      $group: {
+        _id: '$_id.cliente',
+        periodos: {
+          $push: {
+            dia: '$_id.dia',
+            viajes: '$viajes',
+            monto: '$monto'
+          }
+        }
+      }
+    },
+    {
+      $sort: { _id: 1 }
+    }
+  ]);
+};
+
+// MENSUAL: Agrupa por día del mes
+viajeSchema.statics.obtenerConsolidadoMensual = async function (ano, mes) {
+  return await this.aggregate([
+    {
+      $match: {
+        tipoViaje: 'operativo',
+        'estado.actual': 'completado',
+        'periodoContable.año': ano,
+        'periodoContable.mes': mes
+      }
+    },
+    {
+      $addFields: {
+        dia: { $dayOfMonth: '$departureTime' }
+      }
+    },
+    {
+      $group: {
+        _id: {
+          cliente: '$clienteNombre',
+          dia: '$dia'
+        },
+        viajes: { $sum: 1 },
+        monto: { $sum: '$montoAcordado' }
+      }
+    },
+    {
+      $group: {
+        _id: '$_id.cliente',
+        periodos: {
+          $push: {
+            dia: '$_id.dia',
+            viajes: '$viajes',
+            monto: '$monto'
+          }
+        }
+      }
+    },
+    {
+      $sort: { _id: 1 }
+    }
+  ]);
+};
+
+// TRIMESTRAL: Agrupa por mes (3 meses)
+viajeSchema.statics.obtenerConsolidadoTrimestral = async function (ano, trimestre) {
+  const mesInicio = (trimestre - 1) * 3 + 1;
+  const mesFin = mesInicio + 2;
+
+  return await this.aggregate([
+    {
+      $match: {
+        tipoViaje: 'operativo',
+        'estado.actual': 'completado',
+        'periodoContable.año': ano,
+        'periodoContable.mes': { $gte: mesInicio, $lte: mesFin }
       }
     },
     {
@@ -993,18 +1079,137 @@ viajeSchema.statics.obtenerConsolidadoAnual = async function(año) {
           cliente: '$clienteNombre',
           mes: '$periodoContable.mes'
         },
-        totalViajes: { $sum: 1 },
-        montoTotal: { $sum: '$montoAcordado' }
+        viajes: { $sum: 1 },
+        monto: { $sum: '$montoAcordado' }
       }
     },
     {
       $group: {
         _id: '$_id.cliente',
-        meses: {
+        periodos: {
           $push: {
             mes: '$_id.mes',
-            viajes: '$totalViajes',
-            monto: '$montoTotal'
+            viajes: '$viajes',
+            monto: '$monto'
+          }
+        }
+      }
+    },
+    {
+      $sort: { _id: 1 }
+    }
+  ]);
+};
+
+// SEMESTRAL: Agrupa por mes (6 meses)
+viajeSchema.statics.obtenerConsolidadoSemestral = async function (ano, semestre) {
+  const mesInicio = semestre === 1 ? 1 : 7;
+  const mesFin = semestre === 1 ? 6 : 12;
+
+  return await this.aggregate([
+    {
+      $match: {
+        tipoViaje: 'operativo',
+        'estado.actual': 'completado',
+        'periodoContable.año': ano,
+        'periodoContable.mes': { $gte: mesInicio, $lte: mesFin }
+      }
+    },
+    {
+      $group: {
+        _id: {
+          cliente: '$clienteNombre',
+          mes: '$periodoContable.mes'
+        },
+        viajes: { $sum: 1 },
+        monto: { $sum: '$montoAcordado' }
+      }
+    },
+    {
+      $group: {
+        _id: '$_id.cliente',
+        periodos: {
+          $push: {
+            mes: '$_id.mes',
+            viajes: '$viajes',
+            monto: '$monto'
+          }
+        }
+      }
+    },
+    {
+      $sort: { _id: 1 }
+    }
+  ]);
+};
+
+// 9 MESES: Agrupa por mes (9 meses)
+viajeSchema.statics.obtenerConsolidado9Meses = async function (ano) {
+  return await this.aggregate([
+    {
+      $match: {
+        tipoViaje: 'operativo',
+        'estado.actual': 'completado',
+        'periodoContable.año': ano,
+        'periodoContable.mes': { $gte: 1, $lte: 9 }
+      }
+    },
+    {
+      $group: {
+        _id: {
+          cliente: '$clienteNombre',
+          mes: '$periodoContable.mes'
+        },
+        viajes: { $sum: 1 },
+        monto: { $sum: '$montoAcordado' }
+      }
+    },
+    {
+      $group: {
+        _id: '$_id.cliente',
+        periodos: {
+          $push: {
+            mes: '$_id.mes',
+            viajes: '$viajes',
+            monto: '$monto'
+          }
+        }
+      }
+    },
+    {
+      $sort: { _id: 1 }
+    }
+  ]);
+};
+
+// ANUAL: Agrupa por mes (12 meses)
+viajeSchema.statics.obtenerConsolidadoAnual = async function(ano) {
+  return this.aggregate([
+    {
+      $match: {
+        tipoViaje: 'operativo',
+        'estado.actual': 'completado',
+        'periodoContable.año': ano
+      }
+    },
+    {
+      $group: {
+        _id: {
+          cliente: '$clienteNombre',
+          mes: '$periodoContable.mes'
+        },
+        viajes: { $sum: 1 },
+        monto: { $sum: '$montoAcordado' }
+      }
+    },
+    {
+      $group: {
+        _id: '$_id.cliente',
+        periodos: {
+          $push: {
+            mes: '$_id.mes',
+            viajes: '$viajes',
+            monto: '$monto'
           }
         }
       }

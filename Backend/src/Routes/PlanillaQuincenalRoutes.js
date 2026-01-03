@@ -52,7 +52,7 @@ router.post('/', PlanillaQuincenalController.crear);
  * - año: number (ej: 2025)
  * - mes: number (1-12)
  * - quincena: number (1 o 2)
- * - estado: string (pendiente, aprobada, pagada, cerrada)
+ * - estado: string (pendiente, aprobada, pagada)
  * - page: number (default: 1)
  * - limit: number (default: 10)
  * 
@@ -93,8 +93,8 @@ router.get('/empleado/:empleadoId', PlanillaQuincenalController.obtenerPorEmplea
  * PUT /api/planillas/quincenal/:id/empleado/:empleadoId
  * Actualizar datos de un empleado en la planilla
  * 
- * ⚠️ Solo se puede editar si la planilla no está en estado pagada o cerrada (ej. pendiente, aprobada)
- * ❌ NO se puede editar si está: pagada o cerrada
+ * ⚠️ Solo se puede editar si la planilla no está en estado pagada o pagada (ej. pendiente, aprobada)
+ * ❌ NO se puede editar si está: pagada o pagada
  * 
  * Params:
  * - id: ObjectId de la planilla
@@ -120,8 +120,8 @@ router.put('/:id/empleado/:empleadoId', PlanillaQuincenalController.actualizarEm
  * POST /api/planillas/quincenal/:id/empleado
  * Agregar un nuevo empleado a la planilla
  * 
- * ⚠️ Solo se puede agregar si la planilla no está en estado pagada o cerrada (ej. pendiente, aprobada)
- * ❌ NO se puede agregar si está: pagada o cerrada
+ * ⚠️ Solo se puede agregar si la planilla no está en estado pagada o pagada (ej. pendiente, aprobada)
+ * ❌ NO se puede agregar si está: pagada o pagada
  * 
  * Params:
  * - id: ObjectId de la planilla
@@ -146,8 +146,8 @@ router.post('/:id/empleado', PlanillaQuincenalController.agregarEmpleado);
  * DELETE /api/planillas/quincenal/:id/empleado/:empleadoId
  * Eliminar un empleado de la planilla
  * 
- * ⚠️ Solo se puede eliminar si la planilla no está en estado pagada o cerrada (ej. pendiente, aprobada)
- * ❌ NO se puede eliminar si está: pagada o cerrada
+ * ⚠️ Solo se puede eliminar si la planilla no está en estado pagada o pagada (ej. pendiente, aprobada)
+ * ❌ NO se puede eliminar si está: pagada o pagada
  * 
  * Params:
  * - id: ObjectId de la planilla
@@ -163,17 +163,17 @@ router.delete('/:id/empleado/:empleadoId', PlanillaQuincenalController.eliminarE
  * Cambiar el estado de la planilla
  * 
  * Transiciones válidas:
- * - pendiente   → aprobada, pagada, cerrada
- * - aprobada    → pagada, cerrada (NO puede regresar a pendiente)
- * - pagada      → cerrada (NO puede regresar a pendiente)
- * - cerrada     → NO puede cambiar (estado final)
+ * - pendiente   → aprobada, pagada, pagada
+ * - aprobada    → pagada, pagada (NO puede regresar a pendiente)
+ * - pagada      → pagada (NO puede regresar a pendiente)
+ * - pagada     → NO puede cambiar (estado final)
  * 
  * Nota: No existe el estado "borrador" en el modelo actual.
  * 
  * Params:
  * - id: ObjectId de la planilla
  * 
- * Body para cambiar el estado (pendiente, aprobada, pagada, cerrada):
+ * Body para cambiar el estado (pendiente, aprobada, pagada):
  * {
  *   "estado": "pendiente"
  * }
@@ -189,11 +189,6 @@ router.delete('/:id/empleado/:empleadoId', PlanillaQuincenalController.eliminarE
  *   "fechaPago": "2025-12-15T10:30:00"
  * }
  * 
- * Body para cambiar a cerrada (REQUIERE fechaCierre — tomada desde el frontend; no se aceptan fechas futuras):
- * {
- *   "estado": "cerrada",
- *   "fechaCierre": "2025-12-15T10:30:00"
- * }
  * 
  * Nota: Las fechas se validan en la zona de El Salvador (America/El_Salvador). NO SE ACEPTAN FECHAS FUTURAS.
  */
@@ -204,7 +199,7 @@ router.patch('/:id/estado', PlanillaQuincenalController.cambiarEstado);
  * Eliminar una planilla completa
  * 
  * ⚠️ Solo se puede eliminar si está en estado: pendiente
- * ❌ NO se puede eliminar si está: pagada o cerrada
+ * ❌ NO se puede eliminar si está: pagada o pagada
  * 
  * Params:
  * - id: ObjectId de la planilla
