@@ -35,16 +35,19 @@ const Badge = ({ text }) => (
   </View>
 );
 
-const Row = ({ icon, label, value }) => (
-  <View style={styles.row}>
-    <View style={styles.rowIcon}>
-      <Text style={{ fontSize: 16 }}>{icon}</Text>
-    </View>
-    <View style={{ flex: 1, minWidth: 0 }}>
-      <Text style={styles.rowLabel}>{label}</Text>
-      <Text style={styles.rowValue} numberOfLines={3}>
-        {textSafe(value)}
-      </Text>
+// ✅ NUEVO: Card individual para cada dato
+const InfoCard = ({ icon, label, value }) => (
+  <View style={styles.infoCard}>
+    <View style={styles.cardContent}>
+      <View style={styles.iconContainer}>
+        <Text style={styles.iconText}>{icon}</Text>
+      </View>
+      <View style={styles.textContainer}>
+        <Text style={styles.label}>{label}</Text>
+        <Text style={styles.value} numberOfLines={2}>
+          {textSafe(value)}
+        </Text>
+      </View>
     </View>
   </View>
 );
@@ -130,7 +133,7 @@ export default function CamionScreen() {
           />
         }
       >
-        {/* Card principal */}
+        {/* Card principal - Mi camión */}
         <View style={styles.cardTop}>
           <View style={styles.cardTopHeader}>
             <Text style={styles.cardTopTitle}>Mi camión</Text>
@@ -156,49 +159,61 @@ export default function CamionScreen() {
             </View>
           ) : (
             <>
-              {/* Si viene como string, lo mostramos como resumen */}
+              {/* Resumen del camión */}
               {!!camionData.resumen && (
                 <View style={styles.highlight}>
                   <Text style={styles.highlightText}>{camionData.resumen}</Text>
                 </View>
               )}
-
-              <View style={styles.infoCard}>
-                <Row icon="🏷️" label="Marca" value={camionData.brand} />
-                <View style={styles.divider} />
-                <Row icon="📌" label="Modelo" value={camionData.model} />
-                <View style={styles.divider} />
-                <Row icon="🪪" label="Placa" value={camionData.plate} />
-                <View style={styles.divider} />
-                <Row icon="🎨" label="Color" value={camionData.color} />
-                <View style={styles.divider} />
-                <Row icon="✅" label="Estado" value={camionData.state} />
-                {!!camionData.gasoline && (
-                  <>
-                    <View style={styles.divider} />
-                    <Row
-                      icon="⛽"
-                      label="Nivel de gasolina"
-                      value={camionData.gasoline}
-                    />
-                  </>
-                )}
-              </View>
             </>
           )}
         </View>
+
+        {/* ✅ CARDS SEPARADAS - Una por cada dato */}
+        {camionData?.has && (
+          <View style={styles.cardsContainer}>
+            {/* Card: Marca */}
+            <InfoCard icon="🏷️" label="Marca" value={camionData.brand} />
+
+            {/* Card: Modelo */}
+            <InfoCard icon="📌" label="Modelo" value={camionData.model} />
+
+            {/* Card: Placa */}
+            <InfoCard icon="🪪" label="Placa" value={camionData.plate} />
+
+            {/* Card: Color */}
+            <InfoCard icon="🎨" label="Color" value={camionData.color} />
+
+            {/* Card: Estado */}
+            <InfoCard icon="✅" label="Estado" value={camionData.state} />
+
+            {/* Card: Nivel de gasolina */}
+            {!!camionData.gasoline && (
+              <InfoCard
+                icon="⛽"
+                label="Nivel de gasolina"
+                value={camionData.gasoline}
+              />
+            )}
+          </View>
+        )}
       </ScrollView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#F5F7FA" },
+  container: { 
+    flex: 1, 
+    backgroundColor: "#F5F7FA" 
+  },
 
+  // Card principal "Mi camión"
   cardTop: {
     backgroundColor: "#fff",
     borderRadius: 16,
     padding: 16,
+    marginBottom: 16,
     ...Platform.select({
       ios: {
         shadowColor: "#000",
@@ -206,7 +221,9 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.08,
         shadowRadius: 8,
       },
-      android: { elevation: 3 },
+      android: { 
+        elevation: 3 
+      },
     }),
   },
 
@@ -216,62 +233,134 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
 
-  cardTopTitle: { fontSize: 18, fontWeight: "800", color: "#111" },
-  cardTopSubtitle: { marginTop: 6, color: "#6B7280", fontSize: 13 },
+  cardTopTitle: { 
+    fontSize: 22, 
+    fontWeight: "800", 
+    color: "#111" 
+  },
+
+  cardTopSubtitle: { 
+    marginTop: 6, 
+    color: "#6B7280", 
+    fontSize: 13 
+  },
 
   badge: {
     backgroundColor: "#E8F5E9",
-    paddingHorizontal: 10,
+    paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 999,
   },
-  badgeText: { color: "#2E7D32", fontWeight: "800", fontSize: 12 },
+
+  badgeText: { 
+    color: "#2E7D32", 
+    fontWeight: "700", 
+    fontSize: 13 
+  },
 
   highlight: {
-    marginTop: 14,
+    marginTop: 16,
     backgroundColor: "#F0FDF4",
     borderColor: "#BBF7D0",
     borderWidth: 1,
-    padding: 12,
-    borderRadius: 12,
-  },
-  highlightText: { color: "#14532D", fontWeight: "700" },
-
-  infoCard: {
-    marginTop: 14,
-    backgroundColor: "#fff",
-    borderRadius: 12,
     padding: 14,
-    borderWidth: 1,
-    borderColor: "rgba(0,0,0,0.06)",
+    borderRadius: 12,
   },
 
-  row: { flexDirection: "row", alignItems: "flex-start", paddingVertical: 10 },
-  rowIcon: {
-    width: 34,
-    height: 34,
-    borderRadius: 10,
+  highlightText: { 
+    color: "#14532D", 
+    fontWeight: "700",
+    fontSize: 16,
+  },
+
+  // ✅ NUEVO: Contenedor de cards separadas
+  cardsContainer: {
+    gap: 12,
+  },
+
+  // ✅ NUEVO: Card individual para cada dato
+  infoCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 12,
+    padding: 16,
+    ...Platform.select({
+      ios: {
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 4,
+      },
+      android: { 
+        elevation: 2 
+      },
+    }),
+  },
+
+  cardContent: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+
+  iconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
     backgroundColor: "#F3F4F6",
     alignItems: "center",
     justifyContent: "center",
-    marginRight: 12,
+    marginRight: 14,
   },
-  rowLabel: { fontSize: 12, color: "#6B7280", fontWeight: "700" },
-  rowValue: { fontSize: 15, color: "#111827", fontWeight: "600" },
 
-  divider: { height: 1, backgroundColor: "#EEF2F7" },
+  iconText: {
+    fontSize: 22,
+  },
 
-  loadingText: { marginTop: 10, color: "#6B7280", textAlign: "center" },
+  textContainer: {
+    flex: 1,
+    minWidth: 0,
+  },
+
+  label: {
+    fontSize: 13,
+    color: "#6B7280",
+    fontWeight: "600",
+    marginBottom: 4,
+  },
+
+  value: {
+    fontSize: 16,
+    color: "#111827",
+    fontWeight: "700",
+  },
+
+  // Estados de carga y vacío
+  loadingText: { 
+    marginTop: 10, 
+    color: "#6B7280", 
+    textAlign: "center" 
+  },
 
   emptyBox: {
     marginTop: 14,
     backgroundColor: "#F9FAFB",
     borderRadius: 12,
-    padding: 16,
+    padding: 20,
     alignItems: "center",
     borderWidth: 1,
     borderColor: "#EEF2F7",
   },
-  emptyTitle: { marginTop: 8, fontWeight: "800", color: "#111" },
-  emptySub: { marginTop: 6, color: "#6B7280", textAlign: "center" },
+
+  emptyTitle: { 
+    marginTop: 8, 
+    fontWeight: "800", 
+    color: "#111",
+    fontSize: 16,
+  },
+
+  emptySub: { 
+    marginTop: 6, 
+    color: "#6B7280", 
+    textAlign: "center",
+    fontSize: 14,
+  },
 });
