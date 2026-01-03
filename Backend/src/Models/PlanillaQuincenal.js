@@ -215,7 +215,7 @@ const planillaQuincenalSchema = new Schema({
     // Estado de la planilla
     estado: {
         type: String, 
-        enum: ['pendiente', 'aprobada',  'cerrada'],
+        enum: ['pendiente', 'aprobada', 'pagada'],
         default: 'pendiente'
     },
     pagada: {
@@ -235,9 +235,6 @@ const planillaQuincenalSchema = new Schema({
         type: Date
     },
     fechaPago: {
-        type: Date
-    },
-    fechaCierre: {
         type: Date
     },
 

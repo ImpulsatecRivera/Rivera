@@ -31,6 +31,9 @@ import CajaChicaConfigRoutes from "./src/Routes/CajaChicaConfigRoutes.js";
 import PlanillaQuincenalRoutes from "./src/Routes/PlanillaQuincenalRoutes.js";
 import ReportesPlanillaQuincenalRoutes from "./src/Routes/ReportesPlanillaQuincenalRoutes.js";
 
+import PlanillaSemanalRoutes from "./src/Routes/PlanillaSemanalRoutes.js";
+import ReportesPlanillaSemanalRoutes from "./src/Routes/ReportesPlanillaSemanalRoutes.js";
+
 // ✅ Rutas nuevas que venían en master
 import viajesOperativosRoutes from "./src/Routes/ViajesOperativosRoutes.js";
 import reportesViajesDirectoRoutes from "./src/Routes/ReportesViajesDirectoRoutes.js";
@@ -105,6 +108,9 @@ app.use("/api/reportesCajaChica", reportesCajaChicaRoutes);
 
 app.use("/api/planillas/quincenal", PlanillaQuincenalRoutes);
 app.use("/api/reportes/planilla/quincenal", ReportesPlanillaQuincenalRoutes);
+
+app.use("/api/planillas/semanal", PlanillaSemanalRoutes);
+app.use("/api/reportes/planilla/semanal", ReportesPlanillaSemanalRoutes);
 
 app.use("/api/auto-update", autoUpdateRoutes);
 app.use("/api/call", callRoutes);

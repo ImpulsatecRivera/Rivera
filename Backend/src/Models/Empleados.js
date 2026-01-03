@@ -63,7 +63,7 @@ const empleadoSchema = new Schema({
         type:Number,
         required:true
     },
-    PlanillaTipo:{
+    planillaTipo:{
         type:String,
             enum:[
                 'Semanal',
