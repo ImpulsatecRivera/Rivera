@@ -1,5 +1,5 @@
 // src/screens/CamionScreen.js
-import React, { useCallback, useMemo } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -15,8 +15,12 @@ import { useFocusEffect } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import Svg, { Circle, Text as SvgText } from 'react-native-svg';
+import { launchCamera, launchImageLibrary } from 'react-native-image-picker';
 import Header from "../components/Header";
 import { useProfile } from "../hooks/useProfile";
+
+// ✅ CONFIGURAR TU API URL
+const API_URL = "https://tu-api.com/api"; // Cambiar por tu URL real
 
 const textSafe = (v, fb = "—") => {
   if (v === null || v === undefined) return fb;
@@ -50,17 +54,15 @@ const SmallInfoCard = ({ icon, label, value }) => (
 );
 
 // ✅ GRÁFICA DE PASTEL PARA GASOLINA
-const GasolineChart = ({ percentage, onAddReceipt }) => {
+const GasolineChart = ({ percentage }) => {
   const numericPercentage = parseInt(percentage) || 0;
   const radius = 70;
   const strokeWidth = 15;
   const center = radius + strokeWidth;
   const circumference = 2 * Math.PI * radius;
   
-  // Calcular el dashoffset para el porcentaje
   const dashOffset = circumference - (circumference * numericPercentage) / 100;
 
-  // Colores según el nivel
   let fillColor = '#10B981'; // Verde
   if (numericPercentage < 20) {
     fillColor = '#EF4444'; // Rojo
@@ -73,7 +75,6 @@ const GasolineChart = ({ percentage, onAddReceipt }) => {
   return (
     <View style={styles.chartContainer}>
       <Svg width={size} height={size}>
-        {/* Círculo de fondo (gris) */}
         <Circle
           cx={center}
           cy={center}
@@ -82,8 +83,6 @@ const GasolineChart = ({ percentage, onAddReceipt }) => {
           strokeWidth={strokeWidth}
           fill="none"
         />
-        
-        {/* Círculo de progreso */}
         <Circle
           cx={center}
           cy={center}
@@ -96,8 +95,6 @@ const GasolineChart = ({ percentage, onAddReceipt }) => {
           strokeLinecap="round"
           transform={`rotate(-90 ${center} ${center})`}
         />
-        
-        {/* Texto del porcentaje */}
         <SvgText
           x={center}
           y={center}
@@ -128,6 +125,7 @@ const GasolineChart = ({ percentage, onAddReceipt }) => {
 export default function CamionScreen() {
   const { profile, loading, fetchProfile } = useProfile();
   const insets = useSafeAreaInsets();
+  const [uploading, setUploading] = useState(false);
 
   let tabBarHeight = 0;
   try {
@@ -162,6 +160,7 @@ export default function CamionScreen() {
         color: "",
         state: "",
         gasoline: "",
+        camionId: null,
       };
     }
 
@@ -182,8 +181,123 @@ export default function CamionScreen() {
       plate ? `Placa: ${plate}` : ""
     );
 
-    return { has: true, resumen, brand, model, plate, color, state, gasoline };
+    return { 
+      has: true, 
+      resumen, 
+      brand, 
+      model, 
+      plate, 
+      color, 
+      state, 
+      gasoline,
+      camionId: raw._id || raw.id || null,
+    };
   }, [profile]);
+
+  // ✅ FUNCIÓN PARA SUBIR COMPROBANTE
+  const subirComprobante = async (imageUri, imageType, imageName) => {
+    try {
+      if (!camionData.camionId) {
+        Alert.alert("Error", "No se encontró el ID del camión");
+        return;
+      }
+
+      setUploading(true);
+
+      // Crear FormData
+      const formData = new FormData();
+      
+      // Agregar imagen
+      formData.append('comprobante', {
+        uri: Platform.OS === 'ios' ? imageUri.replace('file://', '') : imageUri,
+        type: imageType || 'image/jpeg',
+        name: imageName || `comprobante_${Date.now()}.jpg`,
+      });
+
+      // Agregar datos del resumen
+      formData.append('CicurlationCard', camionData.camionId);
+      formData.append('Galones', '0'); // Puedes pedir estos datos al usuario
+      formData.append('Total', '0'); // Puedes pedir estos datos al usuario
+      formData.append('fecha', new Date().toISOString());
+
+      console.log('📤 Subiendo comprobante...');
+
+      const response = await fetch(`${API_URL}/resumen`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+        body: formData,
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        Alert.alert(
+          "¡Éxito!",
+          "Comprobante subido correctamente",
+          [
+            {
+              text: "OK",
+              onPress: () => fetchProfile?.(),
+            }
+          ]
+        );
+      } else {
+        throw new Error(data.message || 'Error al subir el comprobante');
+      }
+
+    } catch (error) {
+      console.error('❌ Error subiendo comprobante:', error);
+      Alert.alert(
+        "Error",
+        error.message || "No se pudo subir el comprobante"
+      );
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  // ✅ FUNCIÓN PARA TOMAR FOTO
+  const tomarFoto = () => {
+    launchCamera(
+      {
+        mediaType: 'photo',
+        quality: 0.8,
+        saveToPhotos: true,
+      },
+      (response) => {
+        if (response.didCancel) {
+          console.log('Usuario canceló');
+        } else if (response.errorCode) {
+          Alert.alert('Error', response.errorMessage || 'Error al tomar la foto');
+        } else if (response.assets && response.assets[0]) {
+          const { uri, type, fileName } = response.assets[0];
+          subirComprobante(uri, type, fileName);
+        }
+      }
+    );
+  };
+
+  // ✅ FUNCIÓN PARA SELECCIONAR ARCHIVO
+  const seleccionarArchivo = () => {
+    launchImageLibrary(
+      {
+        mediaType: 'photo',
+        quality: 0.8,
+      },
+      (response) => {
+        if (response.didCancel) {
+          console.log('Usuario canceló');
+        } else if (response.errorCode) {
+          Alert.alert('Error', response.errorMessage || 'Error al seleccionar el archivo');
+        } else if (response.assets && response.assets[0]) {
+          const { uri, type, fileName } = response.assets[0];
+          subirComprobante(uri, type, fileName);
+        }
+      }
+    );
+  };
 
   const bottomSpace = Math.max(insets.bottom || 0, 12) + tabBarHeight + 16;
 
@@ -229,7 +343,6 @@ export default function CamionScreen() {
             </View>
           ) : (
             <>
-              {/* Resumen del camión */}
               {!!camionData.resumen && (
                 <View style={styles.highlight}>
                   <Text style={styles.highlightText}>{camionData.resumen}</Text>
@@ -239,30 +352,26 @@ export default function CamionScreen() {
           )}
         </View>
 
-        {/* ✅ GRID 2x2 + 1 - PRIMERAS 5 CARDS */}
+        {/* GRID 2x2 + 1 */}
         {camionData?.has && (
           <>
-            {/* Primera fila: Marca y Modelo */}
             <View style={styles.gridRow}>
               <SmallInfoCard icon="🏷️" label="Marca" value={camionData.brand} />
               <SmallInfoCard icon="📌" label="Modelo" value={camionData.model} />
             </View>
 
-            {/* Segunda fila: Placa y Color */}
             <View style={styles.gridRow}>
               <SmallInfoCard icon="🪪" label="Placa" value={camionData.plate} />
               <SmallInfoCard icon="🎨" label="Color" value={camionData.color} />
             </View>
 
-            {/* Tercera fila: Estado (ocupa todo el ancho) */}
             <View style={styles.fullWidthCard}>
               <SmallInfoCard icon="✅" label="Estado" value={camionData.state} />
             </View>
 
-            {/* ✅ GRÁFICA DE PASTEL - NIVEL DE GASOLINA */}
+            {/* GRÁFICA DE GASOLINA */}
             {!!camionData.gasoline && (
               <View style={styles.gasolineCard}>
-                {/* Header con emoji y título */}
                 <View style={styles.gasolineHeader}>
                   <View style={styles.gasolineTitleContainer}>
                     <Text style={styles.gasolineEmoji}>⛽</Text>
@@ -270,16 +379,19 @@ export default function CamionScreen() {
                   </View>
                 </View>
 
-                {/* Gráfica */}
                 <GasolineChart percentage={camionData.gasoline} />
 
-                {/* Botón para agregar comprobante */}
+                {/* BOTÓN PARA AGREGAR COMPROBANTE */}
                 <TouchableOpacity 
-                  style={styles.addReceiptButton}
+                  style={[
+                    styles.addReceiptButton,
+                    uploading && styles.addReceiptButtonDisabled
+                  ]}
+                  disabled={uploading}
                   onPress={() => {
                     Alert.alert(
                       "Agregar comprobante",
-                      "¿Deseas subir un comprobante de gasolina?",
+                      "¿Cómo deseas subir el comprobante?",
                       [
                         {
                           text: "Cancelar",
@@ -287,24 +399,27 @@ export default function CamionScreen() {
                         },
                         {
                           text: "Tomar foto",
-                          onPress: () => {
-                            // TODO: Implementar tomar foto
-                            console.log("Tomar foto");
-                          }
+                          onPress: tomarFoto
                         },
                         {
                           text: "Elegir archivo",
-                          onPress: () => {
-                            // TODO: Implementar seleccionar archivo
-                            console.log("Elegir archivo");
-                          }
+                          onPress: seleccionarArchivo
                         }
                       ]
                     );
                   }}
                 >
-                  <Text style={styles.addReceiptIcon}>📸</Text>
-                  <Text style={styles.addReceiptText}>Agregar comprobante</Text>
+                  {uploading ? (
+                    <>
+                      <ActivityIndicator color="#FFFFFF" size="small" />
+                      <Text style={styles.addReceiptText}>Subiendo...</Text>
+                    </>
+                  ) : (
+                    <>
+                      <Text style={styles.addReceiptIcon}>📸</Text>
+                      <Text style={styles.addReceiptText}>Agregar comprobante</Text>
+                    </>
+                  )}
                 </TouchableOpacity>
               </View>
             )}
@@ -321,7 +436,6 @@ const styles = StyleSheet.create({
     backgroundColor: "#F5F7FA" 
   },
 
-  // Card principal "Mi camión"
   cardTop: {
     backgroundColor: "#fff",
     borderRadius: 16,
@@ -386,7 +500,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
 
-  // ✅ GRID LAYOUT - 2x2
   gridRow: {
     flexDirection: 'row',
     gap: 12,
@@ -397,7 +510,6 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
 
-  // ✅ CARD PEQUEÑA PARA GRID
   smallCard: {
     flex: 1,
     backgroundColor: "#FFFFFF",
@@ -438,7 +550,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 
-  // ✅ CARD DE GASOLINA CON GRÁFICA
   gasolineCard: {
     backgroundColor: "#FFFFFF",
     borderRadius: 16,
@@ -508,7 +619,6 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
 
-  // ✅ BOTÓN PARA AGREGAR COMPROBANTE
   addReceiptButton: {
     marginTop: 20,
     backgroundColor: "#3B82F6",
@@ -532,6 +642,11 @@ const styles = StyleSheet.create({
     }),
   },
 
+  addReceiptButtonDisabled: {
+    backgroundColor: "#9CA3AF",
+    opacity: 0.7,
+  },
+
   addReceiptIcon: {
     fontSize: 20,
   },
@@ -542,7 +657,6 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
 
-  // Estados de carga y vacío
   loadingText: { 
     marginTop: 10, 
     color: "#6B7280", 

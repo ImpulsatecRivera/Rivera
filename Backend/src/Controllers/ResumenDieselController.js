@@ -1,8 +1,18 @@
 import { isValidObjectId } from "mongoose";
 import DieselModel from "../Models/ResumenDiesel.js";
 import CamionesModel from "../Models/Camiones.js";
+import { v2 as cloudinary } from "cloudinary";
+import { config } from "../config.js";
+import fs from 'fs/promises';
 
 const ResumenCon = {};
+
+// Configurar Cloudinary
+cloudinary.config({
+  cloud_name: config.cloudinary.cloudinary_name,
+  api_key: config.cloudinary.cloudinary_api_key,
+  api_secret: config.cloudinary.cloudinary_api_secret,
+});
 
 const ESTADOS = {
   PENDIENTE: "Pendiente",
@@ -41,8 +51,8 @@ ResumenCon.getResumen = async (req, res) => {
       CicurlationCard: m.CicurlationCard,
       mes: m.mes,
       ano: m.ano,
-      // ✅ IMPORTANTE: enviar estado
       estado: m.estado || ESTADOS.PENDIENTE,
+      comprobante: m.comprobante || null, // ✅ NUEVO: URL del comprobante
     }));
 
     return res.status(200).json({
@@ -65,6 +75,12 @@ ResumenCon.AgregarDiesel = async (req, res) => {
   try {
     const { fecha, Galones, Total, CicurlationCard, estado } = req.body;
 
+    console.log('📥 AGREGAR DIESEL - Datos recibidos:');
+    console.log('   - CicurlationCard:', CicurlationCard);
+    console.log('   - Galones:', Galones);
+    console.log('   - Total:', Total);
+    console.log('   - hasFile:', !!req.file);
+
     if (!CicurlationCard) {
       return res.status(400).json({ success: false, message: "CicurlationCard es requerido" });
     }
@@ -82,6 +98,32 @@ ResumenCon.AgregarDiesel = async (req, res) => {
     const mes = Fecha_Diesel.getMonth() + 1;
     const ano = Fecha_Diesel.getFullYear();
 
+    // ✅ SUBIR COMPROBANTE A CLOUDINARY (OPCIONAL)
+    let comprobanteUrl = null;
+    if (req.file) {
+      try {
+        console.log('📤 Subiendo comprobante a Cloudinary...');
+        const result = await cloudinary.uploader.upload(req.file.path, {
+          folder: "comprobantes_gasolina",
+          resource_type: "auto"
+        });
+        comprobanteUrl = result.secure_url;
+        console.log('✅ Comprobante subido:', comprobanteUrl);
+
+        // Eliminar archivo temporal
+        await fs.unlink(req.file.path);
+      } catch (err) {
+        console.warn("⚠️ Error subiendo comprobante:", err.message);
+        
+        // Intentar eliminar archivo temporal
+        if (req.file?.path) {
+          try {
+            await fs.unlink(req.file.path);
+          } catch {}
+        }
+      }
+    }
+
     const nuevoResumen = new DieselModel({
       CicurlationCard,
       Galones,
@@ -89,12 +131,14 @@ ResumenCon.AgregarDiesel = async (req, res) => {
       mes,
       ano,
       Total,
-      // ✅ por defecto Pendiente (si no mandas nada)
       estado: canonEstado(estado || ESTADOS.PENDIENTE),
+      comprobante: comprobanteUrl, // ✅ NUEVO: guardar URL del comprobante
     });
 
     await nuevoResumen.save();
     await nuevoResumen.populate("CicurlationCard", "name gasolineLevel licensePlate brand model");
+
+    console.log('✅ Resumen de diesel creado exitosamente');
 
     return res.status(201).json({
       success: true,
@@ -102,7 +146,14 @@ ResumenCon.AgregarDiesel = async (req, res) => {
       data: nuevoResumen,
     });
   } catch (error) {
-    console.error("Error al registrar el resumen del diesel:", error);
+    console.error("❌ Error al registrar el resumen del diesel:", error);
+
+    // Limpiar archivo temporal en caso de error
+    if (req.file?.path) {
+      try {
+        await fs.unlink(req.file.path);
+      } catch {}
+    }
 
     if (error.name === "ValidationError") {
       return res.status(400).json({
@@ -122,8 +173,6 @@ ResumenCon.AgregarDiesel = async (req, res) => {
 
 // ============================
 // PUT /resumen/:id
-// - Actualiza estado también
-// - Si ya está completado: NO deja editar nada
 // ============================
 ResumenCon.PutDiesel = async (req, res) => {
   try {
@@ -188,12 +237,49 @@ ResumenCon.PutDiesel = async (req, res) => {
     // ✅ Estado (opcional)
     if (estado !== undefined) {
       const nuevoEstado = canonEstado(estado);
-
-      // si lo marcas completado, queda bloqueado para siempre
       if (nuevoEstado === ESTADOS.COMPLETADO) {
         DieselExisting.estado = ESTADOS.COMPLETADO;
       } else {
         DieselExisting.estado = ESTADOS.PENDIENTE;
+      }
+    }
+
+    // ✅ ACTUALIZAR COMPROBANTE (OPCIONAL)
+    if (req.file) {
+      try {
+        console.log('📤 Subiendo nuevo comprobante...');
+        
+        // Eliminar comprobante anterior de Cloudinary (si existe)
+        if (DieselExisting.comprobante) {
+          try {
+            const urlParts = DieselExisting.comprobante.split('/');
+            const fileName = urlParts[urlParts.length - 1];
+            const publicId = `comprobantes_gasolina/${fileName.split('.')[0]}`;
+            await cloudinary.uploader.destroy(publicId);
+            console.log('🗑️ Comprobante anterior eliminado');
+          } catch (err) {
+            console.warn('⚠️ Error eliminando comprobante anterior:', err.message);
+          }
+        }
+
+        // Subir nuevo comprobante
+        const result = await cloudinary.uploader.upload(req.file.path, {
+          folder: "comprobantes_gasolina",
+          resource_type: "auto"
+        });
+        DieselExisting.comprobante = result.secure_url;
+        console.log('✅ Nuevo comprobante subido');
+
+        // Eliminar archivo temporal
+        await fs.unlink(req.file.path);
+      } catch (err) {
+        console.warn("⚠️ Error subiendo comprobante:", err.message);
+        
+        if (req.file?.path) {
+          try {
+            await fs.unlink(req.file.path);
+          } catch {}
+        }
       }
     }
 
@@ -206,7 +292,14 @@ ResumenCon.PutDiesel = async (req, res) => {
       data: DieselExisting,
     });
   } catch (error) {
-    console.error("Error al actualizar el resumen de diesel:", error);
+    console.error("❌ Error al actualizar el resumen de diesel:", error);
+
+    // Limpiar archivo temporal
+    if (req.file?.path) {
+      try {
+        await fs.unlink(req.file.path);
+      } catch {}
+    }
 
     if (error.name === "ValidationError") {
       return res.status(400).json({
@@ -249,6 +342,19 @@ ResumenCon.DeleteResumen = async (req, res) => {
       });
     }
 
+    // ✅ Eliminar comprobante de Cloudinary (si existe)
+    if (ResumenEliminado.comprobante) {
+      try {
+        const urlParts = ResumenEliminado.comprobante.split('/');
+        const fileName = urlParts[urlParts.length - 1];
+        const publicId = `comprobantes_gasolina/${fileName.split('.')[0]}`;
+        await cloudinary.uploader.destroy(publicId);
+        console.log('🗑️ Comprobante eliminado de Cloudinary');
+      } catch (err) {
+        console.warn('⚠️ Error eliminando comprobante:', err.message);
+      }
+    }
+
     return res.status(200).json({
       success: true,
       message: "Resumen de diesel eliminado exitosamente",
@@ -260,7 +366,7 @@ ResumenCon.DeleteResumen = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Error al eliminar resumen de diesel:", error);
+    console.error("❌ Error al eliminar resumen de diesel:", error);
     return res.status(500).json({
       success: false,
       message: "Error al eliminar el resumen",
