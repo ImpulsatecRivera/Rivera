@@ -495,7 +495,7 @@ cajaChicaController.uploadVoucher = async (req, res) => {
 };
 
 // ========================================
-// FUNCIÓN GENERAR VALE - VERSIÓN COMPLETA Y CORREGIDA
+// FUNCIÓN GENERAR VALE - FORMATO RIVERA TRANSPORTES
 // ========================================
 cajaChicaController.generarVale = async (req, res) => {
   let browser;
@@ -559,7 +559,7 @@ cajaChicaController.generarVale = async (req, res) => {
 
     const page = await browser.newPage();
     
-    // ✅ HTML DEL VALE - COMPLETAMENTE FORMATEADO
+    // ✅ HTML DEL VALE - FORMATO RIVERA TRANSPORTES
     const htmlContent = `
       <!DOCTYPE html>
       <html lang="es">
@@ -575,146 +575,202 @@ cajaChicaController.generarVale = async (req, res) => {
           }
           
           body {
-            font-family: 'Arial', sans-serif;
-            padding: 40px;
+            font-family: Arial, sans-serif;
+            padding: 20px;
             background: white;
-            color: #000;
           }
           
           .container {
+            width: 100%;
             max-width: 800px;
             margin: 0 auto;
-            border: 3px solid #000;
-            padding: 30px;
-            background: white;
+            border: 2px solid #000;
           }
           
           .header {
+            background: #D4A574;
+            padding: 15px;
             text-align: center;
             border-bottom: 2px solid #000;
-            padding-bottom: 20px;
-            margin-bottom: 30px;
           }
           
           .header h1 {
-            font-size: 32px;
-            margin-bottom: 10px;
-            font-weight: bold;
-            letter-spacing: 2px;
-          }
-          
-          .header .numero-vale {
-            font-size: 18px;
-            font-weight: bold;
-            color: #333;
-            background: #f0f0f0;
-            padding: 8px 15px;
-            display: inline-block;
-            border: 1px solid #000;
-          }
-          
-          .content {
-            padding: 20px 0;
-          }
-          
-          .row {
-            display: flex;
-            justify-content: space-between;
-            margin: 15px 0;
-            padding: 12px;
-            border-bottom: 1px solid #ddd;
-          }
-          
-          .row strong {
+            font-size: 24px;
             font-weight: bold;
             color: #000;
-            font-size: 14px;
-            width: 40%;
+            margin: 0;
           }
           
-          .row span {
-            color: #333;
-            font-size: 14px;
-            width: 60%;
-            text-align: right;
+          .fecha-section {
+            display: flex;
+            border-bottom: 2px solid #000;
           }
           
-          .amount-box {
-            background: #f5f5f5;
-            padding: 25px;
-            margin: 30px 0;
-            border: 3px double #000;
+          .fecha-label {
+            background: #E8E8E8;
+            padding: 8px 12px;
+            border-right: 2px solid #000;
+            font-weight: bold;
+            font-size: 12px;
+            min-width: 100px;
+          }
+          
+          .fecha-fields {
+            display: flex;
+            flex: 1;
+          }
+          
+          .fecha-field {
+            flex: 1;
+            padding: 8px;
+            border-right: 2px solid #000;
             text-align: center;
           }
           
-          .amount-box .label {
-            font-size: 16px;
-            margin-bottom: 15px;
-            font-weight: bold;
-            color: #555;
+          .fecha-field:last-child {
+            border-right: none;
           }
           
-          .amount-box .amount {
-            font-size: 40px;
-            font-weight: bold;
-            color: #000;
-            font-family: 'Courier New', monospace;
+          .fecha-field-label {
+            font-size: 10px;
+            color: #666;
+            margin-bottom: 2px;
           }
           
-          .concepto-box {
-            background: #fff;
-            padding: 15px;
-            margin: 20px 0;
-            border: 2px solid #000;
-            min-height: 80px;
-          }
-          
-          .concepto-box .label {
-            font-weight: bold;
-            margin-bottom: 10px;
+          .fecha-field-value {
             font-size: 14px;
+            font-weight: bold;
           }
           
-          .concepto-box .text {
+          .numero-section {
+            display: flex;
+            border-bottom: 2px solid #000;
+          }
+          
+          .numero-label {
+            background: #E8E8E8;
+            padding: 8px 12px;
+            border-right: 2px solid #000;
+            font-weight: bold;
+            font-size: 12px;
+            text-align: center;
+            min-width: 100px;
+          }
+          
+          .numero-value {
+            flex: 1;
+            padding: 8px 12px;
+            font-size: 16px;
+            font-weight: bold;
+          }
+          
+          .monto-section {
+            display: flex;
+            align-items: center;
+            border-bottom: 2px solid #000;
+            padding: 10px 12px;
+          }
+          
+          .monto-symbol {
+            font-size: 20px;
+            font-weight: bold;
+            margin-right: 10px;
+          }
+          
+          .monto-value {
+            font-size: 24px;
+            font-weight: bold;
+          }
+          
+          .concepto-section {
+            border-bottom: 2px solid #000;
+          }
+          
+          .concepto-label {
+            background: #E8E8E8;
+            padding: 8px 12px;
+            font-weight: bold;
+            font-size: 12px;
+            border-bottom: 1px solid #000;
+          }
+          
+          .concepto-value {
+            padding: 15px 12px;
+            min-height: 80px;
             font-size: 14px;
             line-height: 1.6;
           }
           
-          .signatures {
-            display: flex;
-            justify-content: space-around;
-            margin-top: 80px;
-            padding-top: 40px;
+          .cantidad-letras-section {
+            border-bottom: 2px solid #000;
           }
           
-          .signature-box {
-            text-align: center;
-            width: 45%;
-          }
-          
-          .signature-line {
-            border-top: 2px solid #000;
-            margin-bottom: 10px;
-            padding-top: 60px;
-          }
-          
-          .signature-box label {
-            font-size: 13px;
+          .cantidad-letras-label {
+            background: #E8E8E8;
+            padding: 8px 12px;
             font-weight: bold;
-            color: #000;
+            font-size: 12px;
+            border-bottom: 1px solid #000;
           }
           
-          .footer {
-            margin-top: 40px;
-            padding-top: 20px;
-            border-top: 1px solid #ccc;
+          .cantidad-letras-value {
+            padding: 12px;
+            min-height: 60px;
+            font-size: 14px;
+          }
+          
+          .firma-section {
+            display: flex;
+            border-bottom: 2px solid #000;
+          }
+          
+          .logo-container {
+            width: 200px;
+            border-right: 2px solid #000;
+            padding: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #F5F5F5;
+          }
+          
+          .logo-text {
             text-align: center;
-            font-size: 11px;
+          }
+          
+          .logo-name {
+            font-size: 18px;
+            font-weight: bold;
+            color: #2E5C8A;
+          }
+          
+          .logo-subtitle {
+            font-size: 10px;
             color: #666;
           }
           
-          .footer p {
-            margin: 5px 0;
+          .firma-beneficiario {
+            flex: 1;
+            padding: 15px;
+          }
+          
+          .firma-label {
+            font-size: 12px;
+            font-weight: bold;
+            margin-bottom: 50px;
+          }
+          
+          .firma-line {
+            border-top: 2px solid #000;
+            margin-top: 50px;
+          }
+          
+          .footer-info {
+            padding: 10px 12px;
+            text-align: center;
+            font-size: 10px;
+            color: #666;
+            background: #F9F9F9;
           }
         </style>
       </head>
@@ -723,70 +779,81 @@ cajaChicaController.generarVale = async (req, res) => {
           <!-- ENCABEZADO -->
           <div class="header">
             <h1>VALE DE CAJA CHICA</h1>
-            <div class="numero-vale">No. ${numeroVale}</div>
           </div>
           
-          <!-- CONTENIDO -->
-          <div class="content">
-            <!-- Fecha -->
-            <div class="row">
-              <strong>Fecha:</strong>
-              <span>${new Date().toLocaleDateString('es-ES', { 
-                day: '2-digit', 
-                month: 'long', 
-                year: 'numeric' 
-              })}</span>
-            </div>
-            
-            <!-- Beneficiario -->
-            <div class="row">
-              <strong>Beneficiario:</strong>
-              <span>${nombreBeneficiario}</span>
-            </div>
-            
-            <!-- Monto -->
-            <div class="amount-box">
-              <div class="label">MONTO A PAGAR</div>
-              <div class="amount">$${movement.amount.toFixed(2)}</div>
-            </div>
-            
-            <!-- Concepto -->
-            <div class="concepto-box">
-              <div class="label">CONCEPTO:</div>
-              <div class="text">${movement.reason}</div>
-            </div>
-            
-            <!-- Cantidad en letras -->
-            <div class="row">
-              <strong>Cantidad en letras:</strong>
-              <span>${cantidadLetras || 'PENDIENTE'}</span>
+          <!-- FECHA -->
+          <div class="fecha-section">
+            <div class="fecha-label">FECHA:</div>
+            <div class="fecha-fields">
+              <div class="fecha-field">
+                <div class="fecha-field-label">DÍA</div>
+                <div class="fecha-field-value">${new Date().getDate().toString().padStart(2, '0')}</div>
+              </div>
+              <div class="fecha-field">
+                <div class="fecha-field-label">MES</div>
+                <div class="fecha-field-value">${(new Date().getMonth() + 1).toString().padStart(2, '0')}</div>
+              </div>
+              <div class="fecha-field">
+                <div class="fecha-field-label">AÑO</div>
+                <div class="fecha-field-value">${new Date().getFullYear()}</div>
+              </div>
             </div>
           </div>
           
-          <!-- FIRMAS -->
-          <div class="signatures">
-            <div class="signature-box">
-              <div class="signature-line"></div>
-              <label>Firma del Beneficiario</label>
+          <!-- NÚMERO DE VALE -->
+          <div class="numero-section">
+            <div class="numero-label">No.</div>
+            <div class="numero-value">${numeroVale}</div>
+          </div>
+          
+          <!-- PAGADO A -->
+          <div class="numero-section">
+            <div class="numero-label">PAGADO A:</div>
+            <div class="numero-value">${nombreBeneficiario}</div>
+          </div>
+          
+          <!-- MONTO -->
+          <div class="monto-section">
+            <span class="monto-symbol">$</span>
+            <span class="monto-value">${movement.amount.toFixed(2)}</span>
+          </div>
+          
+          <!-- CONCEPTO -->
+          <div class="concepto-section">
+            <div class="concepto-label">POR CONCEPTO DE:</div>
+            <div class="concepto-value">${movement.reason}</div>
+          </div>
+          
+          <!-- CANTIDAD EN LETRAS -->
+          <div class="cantidad-letras-section">
+            <div class="cantidad-letras-label">CANTIDAD EN LETRAS:</div>
+            <div class="cantidad-letras-value">${cantidadLetras || 'PENDIENTE'}</div>
+          </div>
+          
+          <!-- FIRMA DEL BENEFICIARIO -->
+          <div class="firma-section">
+            <div class="logo-container">
+              <div class="logo-text">
+                <div class="logo-name">RIVERA</div>
+                <div class="logo-subtitle">Combustibles y Transportes</div>
+              </div>
             </div>
-            
-            <div class="signature-box">
-              <div class="signature-line"></div>
-              <label>Firma Autorizada</label>
+            <div class="firma-beneficiario">
+              <div class="firma-label">FIRMA DEL BENEFICIARIO:</div>
+              <div class="firma-line"></div>
             </div>
           </div>
           
-          <!-- PIE DE PÁGINA -->
-          <div class="footer">
-            <p><strong>Rivera Transportes</strong></p>
-            <p>Sistema de Caja Chica</p>
-            <p>Generado el ${new Date().toLocaleString('es-ES', {
+          <!-- FOOTER -->
+          <div class="footer-info">
+            Generado el ${new Date().toLocaleDateString('es-ES', {
               day: '2-digit',
               month: '2-digit',
-              year: 'numeric',
+              year: 'numeric'
+            })} a las ${new Date().toLocaleTimeString('es-ES', {
               hour: '2-digit',
               minute: '2-digit'
-            })}</p>
+            })}
           </div>
         </div>
       </body>
