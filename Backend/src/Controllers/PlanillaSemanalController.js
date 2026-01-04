@@ -164,6 +164,27 @@ PlanillaSemanalController.crear = async (req, res) => {
             });
         }
 
+        // Validar que el periodo no supere una semana (lunes a sábado)
+        // Comparamos las fechas en 00:00:00 para contar días enteros
+        const inicioDia = new Date(fechaInicio + 'T00:00:00');
+        const finDia = new Date(fechaFin + 'T00:00:00');
+        const msPorDia = 24 * 60 * 60 * 1000;
+        const diasIncl = Math.round((finDia - inicioDia) / msPorDia) + 1;
+
+        if (isNaN(diasIncl) || diasIncl < 1) {
+            return res.status(400).json({
+                success: false,
+                message: 'La fecha de fin debe ser posterior o igual a la fecha de inicio'
+            });
+        }
+
+        if (diasIncl > 6) {
+            return res.status(400).json({
+                success: false,
+                message: 'El período debe cubrir como máximo una semana (lunes a sábado, 6 días)'
+            });
+        }
+
         // Validar días hábiles
         const diasHabilesNum = parseInt(diasHabiles);
         if (isNaN(diasHabilesNum) || diasHabilesNum < 20 || diasHabilesNum > 31) {
