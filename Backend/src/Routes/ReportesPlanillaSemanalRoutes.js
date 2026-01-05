@@ -39,7 +39,7 @@ router.get('/mensual/:mes/:ano', ReportesPlanillaSemanalController.generarPDFMen
  * - 9 meses: { "meses": [1, 2, 3, 4, 5, 6, 7, 8, 9], "ano": 2025 }
  * - Custom: { "meses": [1, 3, 5, 7], "ano": 2025 } // Meses no consecutivos
  */
-router.get('/multiMes', ReportesPlanillaSemanalController.generarPDFMultiMes);
+router.post('/multiMes', ReportesPlanillaSemanalController.generarPDFMultiMes);
 
 /**
  * GET /api/reportes/planilla/semanal/anual/:ano

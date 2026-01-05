@@ -2,8 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Plus, Search, FileText, Calendar, Clock, Download, 
-  Eye, Trash2, ChevronDown, DollarSign, Lock, TrendingUp,
-  BarChart3, PieChart, Activity, Users, CheckCircle, Edit, X
+  Eye, Trash2, ChevronDown, DollarSign, TrendingUp,
+  BarChart3, PieChart, Activity, Users, CheckCircle, X
 } from 'lucide-react';
 import { config } from '../../config';
 import Swal from 'sweetalert2';
@@ -14,21 +14,35 @@ export default function Planillas() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [showDropdown, setShowDropdown] = useState(false);
+  const [showReportesMenu, setShowReportesMenu] = useState(false);
+  
+  // Modales de reportes
   const [showReporteMensual, setShowReporteMensual] = useState(false);
+  const [showReporteMultiMes, setShowReporteMultiMes] = useState(false);
+  const [showReporteAnual, setShowReporteAnual] = useState(false);
+  const [tipoReporte, setTipoReporte] = useState(''); // 'quincenal' o 'semanal'
+  
   const [mesSeleccionado, setMesSeleccionado] = useState('');
   const [añoSeleccionado, setAñoSeleccionado] = useState('');
-  const [filtroTipo, setFiltroTipo] = useState('todas'); // 'todas', 'quincenal', 'semanal'
+  const [mesesSeleccionadosMulti, setMesesSeleccionadosMulti] = useState([]);
+  const [añoMultiMes, setAñoMultiMes] = useState('');
+  const [añoAnual, setAñoAnual] = useState('');
+  const [filtroTipo, setFiltroTipo] = useState('todas');
+  
   const dropdownRef = useRef(null);
+  const reportesRef = useRef(null);
 
   useEffect(() => {
     cargarPlanillas();
   }, []);
 
-  // Cerrar dropdown al hacer click fuera
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
         setShowDropdown(false);
+      }
+      if (reportesRef.current && !reportesRef.current.contains(event.target)) {
+        setShowReportesMenu(false);
       }
     };
 
@@ -39,11 +53,9 @@ export default function Planillas() {
   const cargarPlanillas = async () => {
     setLoading(true);
     try {
-      // Cargar planillas quincenales
       const responseQuincenal = await fetch(`${config.api.API_URL}/planillas/quincenal`);
       const dataQuincenal = await responseQuincenal.json();
       
-      // Cargar planillas semanales
       const responseSemanal = await fetch(`${config.api.API_URL}/planillas/semanal`);
       const dataSemanal = await responseSemanal.json();
       
@@ -55,13 +67,11 @@ export default function Planillas() {
         ? dataSemanal.data.map(p => ({ ...p, tipo: 'semanal' }))
         : [];
       
-      // Combinar ambas listas y ordenar por fecha
       const todasPlanillas = [...planillasQuincenales, ...planillasSemanales]
         .sort((a, b) => {
-          // Ordenar por fecha de inicio o creación
           const fechaA = new Date(a.fechaInicio || a.createdAt);
           const fechaB = new Date(b.fechaInicio || b.createdAt);
-          return fechaB - fechaA; // Más recientes primero
+          return fechaB - fechaA;
         });
       
       setPlanillas(todasPlanillas);
@@ -118,13 +128,11 @@ export default function Planillas() {
     if (tipo === 'quincenal') {
       navigate('/planilla/quincenal');
     } else if (tipo === 'semanal') {
-      // Verificar si ya existe una planilla semanal pendiente
       try {
         const response = await fetch(`${config.api.API_URL}/planillas/semanal?estado=pendiente&limit=1`);
         const data = await response.json();
         
         if (data.success && data.data && data.data.length > 0) {
-          // Ya existe una planilla pendiente, ir a editarla
           const planillaPendiente = data.data[0];
           Swal.fire({
             icon: 'info',
@@ -135,12 +143,10 @@ export default function Planillas() {
           });
           navigate(`/planilla/semanal/${planillaPendiente._id}`);
         } else {
-          // No existe, crear una nueva
           navigate('/planilla/semanal/nueva');
         }
       } catch (error) {
         console.error('Error verificando planillas:', error);
-        // Si hay error, ir a crear nueva de todos modos
         navigate('/planilla/semanal/nueva');
       }
     }
@@ -216,12 +222,11 @@ export default function Planillas() {
         }
       });
 
-      // Determinar el endpoint según el tipo de planilla
       let endpoint;
       let filename;
       
       if (planilla.tipo === 'semanal') {
-        endpoint = `${config.api.API_URL}/reportes/planilla/semanal/semanal-detallado/${planilla._id}`;
+        endpoint = `${config.api.API_URL}/reportes/planilla/semanal/detallado/${planilla._id}`;
         const fechaInicio = new Date(planilla.fechaInicio).toLocaleDateString('es-ES').replace(/\//g, '-');
         const fechaFin = new Date(planilla.fechaFin).toLocaleDateString('es-ES').replace(/\//g, '-');
         filename = `Planilla_Semanal_${fechaInicio}_al_${fechaFin}.pdf`;
@@ -265,7 +270,28 @@ export default function Planillas() {
     }
   };
 
-  // 📊 NUEVA FUNCIÓN: Descargar reporte mensual
+  // Abrir modal de reporte mensual
+  const handleAbrirReporteMensual = (tipo) => {
+    setTipoReporte(tipo);
+    setShowReportesMenu(false);
+    setShowReporteMensual(true);
+  };
+
+  // Abrir modal de reporte multi-mes
+  const handleAbrirReporteMultiMes = (tipo) => {
+    setTipoReporte(tipo);
+    setShowReportesMenu(false);
+    setShowReporteMultiMes(true);
+  };
+
+  // Abrir modal de reporte anual
+  const handleAbrirReporteAnual = (tipo) => {
+    setTipoReporte(tipo);
+    setShowReportesMenu(false);
+    setShowReporteAnual(true);
+  };
+
+  // Descargar reporte mensual
   const handleDescargarReporteMensual = async () => {
     if (!mesSeleccionado || !añoSeleccionado) {
       Swal.fire({
@@ -286,9 +312,11 @@ export default function Planillas() {
         }
       });
 
-      const response = await fetch(
-        `${config.api.API_URL}/reportes/planilla/quincenal/mensual/${mesSeleccionado}/${añoSeleccionado}`
-      );
+      const endpoint = tipoReporte === 'semanal'
+        ? `${config.api.API_URL}/reportes/planilla/semanal/mensual/${mesSeleccionado}/${añoSeleccionado}`
+        : `${config.api.API_URL}/reportes/planilla/quincenal/mensual/${mesSeleccionado}/${añoSeleccionado}`;
+
+      const response = await fetch(endpoint);
 
       if (!response.ok) {
         const errorData = await response.json();
@@ -304,7 +332,8 @@ export default function Planillas() {
                      'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
       const nombreMes = meses[parseInt(mesSeleccionado) - 1];
       
-      link.download = `Reporte_Mensual_${nombreMes}_${añoSeleccionado}.pdf`;
+      const prefijo = tipoReporte === 'semanal' ? 'Planilla_Extra' : 'Reporte_Mensual';
+      link.download = `${prefijo}_${nombreMes}_${añoSeleccionado}.pdf`;
       
       document.body.appendChild(link);
       link.click();
@@ -314,6 +343,7 @@ export default function Planillas() {
       setShowReporteMensual(false);
       setMesSeleccionado('');
       setAñoSeleccionado('');
+      setTipoReporte('');
 
       Swal.fire({
         icon: 'success',
@@ -333,14 +363,186 @@ export default function Planillas() {
     }
   };
 
-  // 📊 Calcular estadísticas (aplicando filtro de tipo)
+  // Descargar reporte multi-mes
+  const handleDescargarReporteMultiMes = async () => {
+    if (!mesesSeleccionadosMulti.length || !añoMultiMes) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'Datos incompletos',
+        text: 'Por favor selecciona al menos un mes y el año'
+      });
+      return;
+    }
+
+    if (mesesSeleccionadosMulti.length > 9) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'Demasiados meses',
+        text: 'Solo puedes seleccionar hasta 9 meses'
+      });
+      return;
+    }
+
+    try {
+      Swal.fire({
+        title: 'Generando reporte consolidado...',
+        text: 'Por favor espera',
+        allowOutsideClick: false,
+        didOpen: () => {
+          Swal.showLoading();
+        }
+      });
+
+      const endpoint = tipoReporte === 'semanal'
+        ? `${config.api.API_URL}/reportes/planilla/semanal/multiMes`
+        : `${config.api.API_URL}/reportes/planilla/quincenal/multiMes`;
+
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          meses: mesesSeleccionadosMulti.sort((a, b) => a - b),
+          ano: parseInt(añoMultiMes)
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Error al generar el reporte');
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      
+      const periodo = mesesSeleccionadosMulti.length === 3 ? 'Trimestre' :
+                     mesesSeleccionadosMulti.length === 6 ? 'Semestre' :
+                     mesesSeleccionadosMulti.length === 9 ? '9-Meses' : 
+                     `${mesesSeleccionadosMulti.length}-Meses`;
+      
+      link.download = `Planilla_Consolidado_${periodo}_${añoMultiMes}.pdf`;
+      
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      setShowReporteMultiMes(false);
+      setMesesSeleccionadosMulti([]);
+      setAñoMultiMes('');
+      setTipoReporte('');
+
+      Swal.fire({
+        icon: 'success',
+        title: '¡Descargado!',
+        text: 'El reporte consolidado se ha descargado correctamente',
+        timer: 2000,
+        showConfirmButton: false
+      });
+
+    } catch (error) {
+      console.error('Error descargando reporte multi-mes:', error);
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: error.message || 'No se pudo generar el reporte consolidado'
+      });
+    }
+  };
+
+  // Descargar reporte anual
+  const handleDescargarReporteAnual = async () => {
+    if (!añoAnual) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'Datos incompletos',
+        text: 'Por favor selecciona el año'
+      });
+      return;
+    }
+
+    try {
+      Swal.fire({
+        title: 'Generando reporte anual...',
+        text: 'Por favor espera',
+        allowOutsideClick: false,
+        didOpen: () => {
+          Swal.showLoading();
+        }
+      });
+
+      const endpoint = tipoReporte === 'semanal'
+        ? `${config.api.API_URL}/reportes/planilla/semanal/anual/${añoAnual}`
+        : `${config.api.API_URL}/reportes/planilla/quincenal/anual/${añoAnual}`;
+
+      const response = await fetch(endpoint);
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Error al generar el reporte');
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      
+      link.download = `Planilla_Anual_${añoAnual}.pdf`;
+      
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      setShowReporteAnual(false);
+      setAñoAnual('');
+      setTipoReporte('');
+
+      Swal.fire({
+        icon: 'success',
+        title: '¡Descargado!',
+        text: 'El reporte anual se ha descargado correctamente',
+        timer: 2000,
+        showConfirmButton: false
+      });
+
+    } catch (error) {
+      console.error('Error descargando reporte anual:', error);
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: error.message || 'No se pudo generar el reporte anual'
+      });
+    }
+  };
+
+  const toggleMesSeleccionado = (mes) => {
+    setMesesSeleccionadosMulti(prev => {
+      if (prev.includes(mes)) {
+        return prev.filter(m => m !== mes);
+      } else {
+        if (prev.length >= 9) {
+          Swal.fire({
+            icon: 'warning',
+            title: 'Límite alcanzado',
+            text: 'Solo puedes seleccionar hasta 9 meses',
+            timer: 2000
+          });
+          return prev;
+        }
+        return [...prev, mes];
+      }
+    });
+  };
+
   const planillasFiltradas = planillas.filter(p => {
-    // Filtro por tipo
     if (filtroTipo !== 'todas' && p.tipo !== filtroTipo) {
       return false;
     }
     
-    // Filtro por búsqueda
     if (searchTerm) {
       const searchLower = searchTerm.toLowerCase();
       return (
@@ -366,8 +568,7 @@ export default function Planillas() {
       : 0
   };
 
-  // Obtener años únicos de las planillas para el selector
-  const añosDisponibles = [...new Set(planillas.map(p => p.año))].sort((a, b) => b - a);
+  const añosDisponibles = [...new Set(planillas.map(p => p.año))].filter(Boolean).sort((a, b) => b - a);
 
   if (loading) {
     return (
@@ -394,30 +595,143 @@ export default function Planillas() {
           </div>
 
           <div className="flex gap-3">
-            {/* BOTÓN REPORTE MENSUAL */}
-            <button
-              onClick={() => setShowReporteMensual(true)}
-              className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-xl hover:from-emerald-700 hover:to-teal-700 font-bold shadow-lg hover:shadow-xl transition-all transform hover:scale-105"
-            >
-              <Download size={22} />
-              <span>Reporte Mensual</span>
-            </button>
+            {/* MENÚ DE REPORTES */}
+            <div className="relative" ref={reportesRef}>
+              <button
+                onClick={() => setShowReportesMenu(!showReportesMenu)}
+                className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-xl hover:from-emerald-700 hover:to-teal-700 font-bold shadow-lg hover:shadow-xl transition-all transform hover:scale-105"
+              >
+                <BarChart3 size={22} />
+                <span>Reportes</span>
+                <ChevronDown 
+                  size={20} 
+                  className={`transition-transform ${showReportesMenu ? 'rotate-180' : ''}`}
+                />
+              </button>
 
-            {/* DROPDOWN */}
+              {/* Dropdown de Reportes */}
+              {showReportesMenu && (
+                <div className="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-2xl border-2 border-gray-100 overflow-hidden z-50 animate-fadeIn">
+                  <div className="p-3">
+                    {/* REPORTES QUINCENALES */}
+                    <div className="mb-3">
+                      <div className="px-3 py-2 bg-indigo-50 rounded-lg mb-2">
+                        <h3 className="text-sm font-bold text-indigo-900 flex items-center gap-2">
+                          <Calendar size={16} />
+                          Reportes Quincenales
+                        </h3>
+                      </div>
+                      
+                      <button
+                        onClick={() => handleAbrirReporteMensual('quincenal')}
+                        className="w-full flex items-center gap-3 px-4 py-2.5 text-left hover:bg-indigo-50 rounded-lg transition-colors group"
+                      >
+                        <div className="p-2 bg-indigo-100 rounded-lg group-hover:bg-indigo-200 transition-colors">
+                          <FileText size={18} className="text-indigo-600" />
+                        </div>
+                        <div className="flex-1">
+                          <p className="font-semibold text-gray-900 text-sm">Reporte Mensual</p>
+                          <p className="text-xs text-gray-500">Consolidado de un mes</p>
+                        </div>
+                      </button>
+
+                      <button
+                        onClick={() => handleAbrirReporteMultiMes('quincenal')}
+                        className="w-full flex items-center gap-3 px-4 py-2.5 text-left hover:bg-blue-50 rounded-lg transition-colors group mt-1"
+                      >
+                        <div className="p-2 bg-blue-100 rounded-lg group-hover:bg-blue-200 transition-colors">
+                          <BarChart3 size={18} className="text-blue-600" />
+                        </div>
+                        <div className="flex-1">
+                          <p className="font-semibold text-gray-900 text-sm">Reporte Multi-Mes</p>
+                          <p className="text-xs text-gray-500">Trimestre, semestre, etc.</p>
+                        </div>
+                      </button>
+
+                      <button
+                        onClick={() => handleAbrirReporteAnual('quincenal')}
+                        className="w-full flex items-center gap-3 px-4 py-2.5 text-left hover:bg-purple-50 rounded-lg transition-colors group mt-1"
+                      >
+                        <div className="p-2 bg-purple-100 rounded-lg group-hover:bg-purple-200 transition-colors">
+                          <Calendar size={18} className="text-purple-600" />
+                        </div>
+                        <div className="flex-1">
+                          <p className="font-semibold text-gray-900 text-sm">Reporte Anual</p>
+                          <p className="text-xs text-gray-500">Todos los meses del año</p>
+                        </div>
+                      </button>
+                    </div>
+
+                    {/* Divisor */}
+                    <div className="border-t-2 border-gray-200 my-3"></div>
+
+                    {/* REPORTES SEMANALES */}
+                    <div>
+                      <div className="px-3 py-2 bg-purple-50 rounded-lg mb-2">
+                        <h3 className="text-sm font-bold text-purple-900 flex items-center gap-2">
+                          <Clock size={16} />
+                          Reportes Semanales
+                        </h3>
+                      </div>
+                      
+                      <button
+                        onClick={() => handleAbrirReporteMensual('semanal')}
+                        className="w-full flex items-center gap-3 px-4 py-2.5 text-left hover:bg-purple-50 rounded-lg transition-colors group"
+                      >
+                        <div className="p-2 bg-purple-100 rounded-lg group-hover:bg-purple-200 transition-colors">
+                          <FileText size={18} className="text-purple-600" />
+                        </div>
+                        <div className="flex-1">
+                          <p className="font-semibold text-gray-900 text-sm">Reporte Mensual</p>
+                          <p className="text-xs text-gray-500">Planilla extra del mes</p>
+                        </div>
+                      </button>
+
+                      <button
+                        onClick={() => handleAbrirReporteMultiMes('semanal')}
+                        className="w-full flex items-center gap-3 px-4 py-2.5 text-left hover:bg-pink-50 rounded-lg transition-colors group mt-1"
+                      >
+                        <div className="p-2 bg-pink-100 rounded-lg group-hover:bg-pink-200 transition-colors">
+                          <BarChart3 size={18} className="text-pink-600" />
+                        </div>
+                        <div className="flex-1">
+                          <p className="font-semibold text-gray-900 text-sm">Reporte Multi-Mes</p>
+                          <p className="text-xs text-gray-500">Trimestre, semestre, etc.</p>
+                        </div>
+                      </button>
+
+                      <button
+                        onClick={() => handleAbrirReporteAnual('semanal')}
+                        className="w-full flex items-center gap-3 px-4 py-2.5 text-left hover:bg-indigo-50 rounded-lg transition-colors group mt-1"
+                      >
+                        <div className="p-2 bg-indigo-100 rounded-lg group-hover:bg-indigo-200 transition-colors">
+                          <Calendar size={18} className="text-indigo-600" />
+                        </div>
+                        <div className="flex-1">
+                          <p className="font-semibold text-gray-900 text-sm">Reporte Anual</p>
+                          <p className="text-xs text-gray-500">Todos los meses del año</p>
+                        </div>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* DROPDOWN CREAR PLANILLA */}
             <div className="relative" ref={dropdownRef}>
               <button
                 onClick={() => setShowDropdown(!showDropdown)}
                 className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl hover:from-indigo-700 hover:to-purple-700 font-bold shadow-lg hover:shadow-xl transition-all transform hover:scale-105"
               >
                 <Plus size={22} />
-                <span>Planilla</span>
+                <span>Nueva Planilla</span>
                 <ChevronDown 
                   size={20} 
                   className={`transition-transform ${showDropdown ? 'rotate-180' : ''}`}
                 />
               </button>
 
-              {/* Dropdown Menu */}
               {showDropdown && (
                 <div className="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-2xl border-2 border-gray-100 overflow-hidden z-50 animate-fadeIn">
                   <div className="p-2">
@@ -458,12 +772,18 @@ export default function Planillas() {
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-2xl p-8 max-w-md w-full shadow-2xl animate-fadeIn">
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-bold text-gray-900">Reporte Mensual</h2>
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-900">Reporte Mensual</h2>
+                  <p className="text-sm text-gray-500 mt-1">
+                    {tipoReporte === 'semanal' ? '📅 Planillas Semanales' : '📆 Planillas Quincenales'}
+                  </p>
+                </div>
                 <button
                   onClick={() => {
                     setShowReporteMensual(false);
                     setMesSeleccionado('');
                     setAñoSeleccionado('');
+                    setTipoReporte('');
                   }}
                   className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
                 >
@@ -472,7 +792,6 @@ export default function Planillas() {
               </div>
 
               <div className="space-y-4">
-                {/* Selector de Mes */}
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
                     Mes
@@ -498,7 +817,6 @@ export default function Planillas() {
                   </select>
                 </div>
 
-                {/* Selector de Año */}
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
                     Año
@@ -522,13 +840,13 @@ export default function Planillas() {
                   </select>
                 </div>
 
-                {/* Botones */}
                 <div className="flex gap-3 pt-4">
                   <button
                     onClick={() => {
                       setShowReporteMensual(false);
                       setMesSeleccionado('');
                       setAñoSeleccionado('');
+                      setTipoReporte('');
                     }}
                     className="flex-1 px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 font-bold transition-all"
                   >
@@ -550,6 +868,214 @@ export default function Planillas() {
             </div>
           </div>
         )}
+
+        {/* MODAL REPORTE MULTI-MES */}
+        {showReporteMultiMes && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-2xl p-8 max-w-2xl w-full shadow-2xl animate-fadeIn max-h-[90vh] overflow-y-auto">
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-900">Reporte Multi-Mes</h2>
+                  <p className="text-sm text-gray-500 mt-1">
+                    {tipoReporte === 'semanal' ? '📅 Planillas Semanales' : '📆 Planillas Quincenales'}
+                  </p>
+                </div>
+                <button
+                  onClick={() => {
+                    setShowReporteMultiMes(false);
+                    setMesesSeleccionadosMulti([]);
+                    setAñoMultiMes('');
+                    setTipoReporte('');
+                  }}
+                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                >
+                  <X size={24} className="text-gray-500" />
+                </button>
+              </div>
+
+              <div className="space-y-6">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Año
+                  </label>
+                  <select
+                    value={añoMultiMes}
+                    onChange={(e) => setAñoMultiMes(e.target.value)}
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:outline-none transition-colors font-medium"
+                  >
+                    <option value="">Seleccionar año</option>
+                    {añosDisponibles.length > 0 ? (
+                      añosDisponibles.map(año => (
+                        <option key={año} value={año}>{año}</option>
+                      ))
+                    ) : (
+                      <>
+                        <option value="2024">2024</option>
+                        <option value="2025">2025</option>
+                      </>
+                    )}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-3">
+                    Meses (Selecciona hasta 9 meses)
+                  </label>
+                  <div className="grid grid-cols-3 gap-3">
+                    {['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 
+                      'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'].map((mes, index) => {
+                      const mesNum = index + 1;
+                      const isSelected = mesesSeleccionadosMulti.includes(mesNum);
+                      
+                      return (
+                        <button
+                          key={mesNum}
+                          onClick={() => toggleMesSeleccionado(mesNum)}
+                          className={`px-4 py-3 rounded-xl font-bold transition-all ${
+                            isSelected
+                              ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg transform scale-105'
+                              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                          }`}
+                        >
+                          {mes}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  
+                  {mesesSeleccionadosMulti.length > 0 && (
+                    <div className="mt-3 p-3 bg-blue-50 rounded-lg border-2 border-blue-200">
+                      <p className="text-sm font-semibold text-blue-900">
+                        {mesesSeleccionadosMulti.length} mes(es) seleccionado(s)
+                      </p>
+                      <p className="text-xs text-blue-700 mt-1">
+                        {mesesSeleccionadosMulti.length === 3 && '📊 Reporte Trimestral'}
+                        {mesesSeleccionadosMulti.length === 6 && '📊 Reporte Semestral'}
+                        {mesesSeleccionadosMulti.length === 9 && '📊 Reporte 9 Meses'}
+                        {mesesSeleccionadosMulti.length !== 3 && 
+                         mesesSeleccionadosMulti.length !== 6 && 
+                         mesesSeleccionadosMulti.length !== 9 && 
+                         '📊 Reporte Personalizado'}
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex gap-3 pt-4">
+                  <button
+                    onClick={() => {
+                      setShowReporteMultiMes(false);
+                      setMesesSeleccionadosMulti([]);
+                      setAñoMultiMes('');
+                      setTipoReporte('');
+                    }}
+                    className="flex-1 px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 font-bold transition-all"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={handleDescargarReporteMultiMes}
+                    disabled={!mesesSeleccionadosMulti.length || !añoMultiMes}
+                    className={`flex-1 px-6 py-3 rounded-xl font-bold transition-all ${
+                      mesesSeleccionadosMulti.length && añoMultiMes
+                        ? 'bg-gradient-to-r from-blue-600 to-cyan-600 text-white hover:from-blue-700 hover:to-cyan-700 shadow-lg'
+                        : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                    }`}
+                  >
+                    Descargar Reporte
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* MODAL REPORTE ANUAL */}
+        {showReporteAnual && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-2xl p-8 max-w-md w-full shadow-2xl animate-fadeIn">
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-900">Reporte Anual</h2>
+                  <p className="text-sm text-gray-500 mt-1">
+                    {tipoReporte === 'semanal' ? '📅 Planillas Semanales' : '📆 Planillas Quincenales'}
+                  </p>
+                </div>
+                <button
+                  onClick={() => {
+                    setShowReporteAnual(false);
+                    setAñoAnual('');
+                    setTipoReporte('');
+                  }}
+                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                >
+                  <X size={24} className="text-gray-500" />
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Año
+                  </label>
+                  <select
+                    value={añoAnual}
+                    onChange={(e) => setAñoAnual(e.target.value)}
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:outline-none transition-colors font-medium"
+                  >
+                    <option value="">Seleccionar año</option>
+                    {añosDisponibles.length > 0 ? (
+                      añosDisponibles.map(año => (
+                        <option key={año} value={año}>{año}</option>
+                      ))
+                    ) : (
+                      <>
+                        <option value="2024">2024</option>
+                        <option value="2025">2025</option>
+                      </>
+                    )}
+                  </select>
+                </div>
+
+                <div className="p-4 bg-purple-50 rounded-xl border-2 border-purple-200">
+                  <p className="text-sm font-semibold text-purple-900 mb-2">
+                    📅 Reporte Completo del Año
+                  </p>
+                  <p className="text-xs text-purple-700">
+                    Este reporte incluirá todos los meses del año seleccionado (Enero a Diciembre)
+                  </p>
+                </div>
+
+                <div className="flex gap-3 pt-4">
+                  <button
+                    onClick={() => {
+                      setShowReporteAnual(false);
+                      setAñoAnual('');
+                      setTipoReporte('');
+                    }}
+                    className="flex-1 px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 font-bold transition-all"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={handleDescargarReporteAnual}
+                    disabled={!añoAnual}
+                    className={`flex-1 px-6 py-3 rounded-xl font-bold transition-all ${
+                      añoAnual
+                        ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:from-purple-700 hover:to-pink-700 shadow-lg'
+                        : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                    }`}
+                  >
+                    Descargar Reporte
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Resto del código (estadísticas, filtros, tabla) permanece igual... */}
+        {/* Copio el resto del código desde aquí */}
 
         {/* 📊 TARJETAS DE ESTADÍSTICAS CON GRÁFICAS */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
@@ -646,7 +1172,6 @@ export default function Planillas() {
               <BarChart3 className="text-indigo-600" size={28} />
             </div>
 
-            {/* Barra de estados */}
             <div className="space-y-4">
               <div>
                 <div className="flex items-center justify-between mb-2">
@@ -696,12 +1221,10 @@ export default function Planillas() {
               <PieChart className="text-purple-600" size={28} />
             </div>
 
-            {/* Círculo visual - Gráfico de pastel con 3 segmentos */}
             <div className="relative w-48 h-48 mx-auto mb-6">
               <svg className="transform -rotate-90 w-48 h-48">
                 {estadisticas.total > 0 ? (
                   <>
-                    {/* Segmento PENDIENTE (amarillo) */}
                     {estadisticas.pendientes > 0 && (
                       <circle
                         cx="96"
@@ -717,7 +1240,6 @@ export default function Planillas() {
                       />
                     )}
                     
-                    {/* Segmento APROBADA (azul) */}
                     {estadisticas.aprobadas > 0 && (
                       <circle
                         cx="96"
@@ -733,7 +1255,6 @@ export default function Planillas() {
                       />
                     )}
                     
-                    {/* Segmento PAGADA (verde) */}
                     {estadisticas.pagadas > 0 && (
                       <circle
                         cx="96"
@@ -750,7 +1271,6 @@ export default function Planillas() {
                     )}
                   </>
                 ) : (
-                  /* Círculo de fondo cuando no hay datos */
                   <circle
                     cx="96"
                     cy="96"
@@ -762,14 +1282,12 @@ export default function Planillas() {
                 )}
               </svg>
               
-              {/* Centro del círculo */}
               <div className="absolute inset-0 flex flex-col items-center justify-center">
                 <span className="text-4xl font-black text-gray-900">{estadisticas.total}</span>
                 <span className="text-sm text-gray-500 mt-1">Total</span>
               </div>
             </div>
 
-            {/* Leyenda */}
             <div className="space-y-2">
               <div className="flex items-center justify-between text-sm">
                 <div className="flex items-center gap-2">
@@ -926,8 +1444,6 @@ export default function Planillas() {
                         </td>
                         <td className="px-6 py-4">
                           <div className="flex items-center justify-center gap-2">
-                            
-                            {/* VER - Siempre visible, deshabilitado si está pendiente */}
                             <button
                               onClick={() => planilla.estado !== 'pendiente' && handleVerPlanilla(planilla)}
                               disabled={planilla.estado === 'pendiente'}
@@ -941,7 +1457,6 @@ export default function Planillas() {
                               <Eye size={18} />
                             </button>
 
-                            {/* DESCARGAR PDF - Para todas las planillas */}
                             <button
                               onClick={() => handleDescargarPDF(planilla)}  
                               className="p-2.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-600 border-2 border-transparent hover:border-blue-300 transition-all"
@@ -950,7 +1465,6 @@ export default function Planillas() {
                               <Download size={18} />
                             </button>
 
-                            {/* ELIMINAR - Solo para planillas pendientes */}
                             {planilla.estado === 'pendiente' && (
                               <button
                                 onClick={() => handleEliminar(planilla)}
@@ -960,7 +1474,6 @@ export default function Planillas() {
                                 <Trash2 size={18} />
                               </button>
                             )}
-                            
                           </div>
                         </td>
                       </tr>
@@ -974,7 +1487,6 @@ export default function Planillas() {
 
       </div>
 
-      {/* Agregar animación para dropdown */}
       <style jsx>{`
         @keyframes fadeIn {
           from {
