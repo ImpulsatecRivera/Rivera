@@ -47,7 +47,7 @@ ReportesRoutes.generarPDFIndividual = async (req, res) => {
                 body {
                     font-family: 'Segoe UI', Arial, sans-serif;
                     padding: 40px;
-                    color: #1e293b;
+                    color: #34353A;
                     background: #f8fafc;
                 }
                 .container {
@@ -59,11 +59,20 @@ ReportesRoutes.generarPDFIndividual = async (req, res) => {
                 .header {
                     text-align: center;
                     margin-bottom: 40px;
-                    border-bottom: 4px solid #2563eb;
+                    border-bottom: 4px solid #5F8EAD;
                     padding-bottom: 25px;
                 }
+                .header .logo-container {
+                    margin-bottom: 20px;
+                    display: flex;
+                    justify-content: center;
+                }
+                .header .logo-svg {
+                    width: 250px;
+                    height: auto;
+                }
                 .header h1 {
-                    color: #2563eb;
+                    color: #5F8EAD;
                     font-size: 32px;
                     margin-bottom: 8px;
                     font-weight: 700;
@@ -71,7 +80,7 @@ ReportesRoutes.generarPDFIndividual = async (req, res) => {
                     letter-spacing: 1px;
                 }
                 .header .subtitle {
-                    color: #64748b;
+                    color: #34353A;
                     font-size: 16px;
                     font-weight: 500;
                 }
@@ -81,7 +90,7 @@ ReportesRoutes.generarPDFIndividual = async (req, res) => {
                     padding: 8px 16px;
                     border-radius: 8px;
                     font-size: 12px;
-                    color: #475569;
+                    color: #34353A;
                     margin-top: 10px;
                     font-family: monospace;
                 }
@@ -90,10 +99,10 @@ ReportesRoutes.generarPDFIndividual = async (req, res) => {
                     background: #f8fafc;
                     padding: 25px;
                     border-radius: 10px;
-                    border-left: 5px solid #2563eb;
+                    border-left: 5px solid #5F8EAD;
                 }
                 .section-title {
-                    color: #2563eb;
+                    color: #5F8EAD;
                     font-size: 20px;
                     font-weight: 700;
                     margin-bottom: 20px;
@@ -105,7 +114,7 @@ ReportesRoutes.generarPDFIndividual = async (req, res) => {
                     content: '';
                     width: 8px;
                     height: 8px;
-                    background: #2563eb;
+                    background: #5D9646;
                     border-radius: 50%;
                 }
                 .info-grid {
@@ -123,14 +132,14 @@ ReportesRoutes.generarPDFIndividual = async (req, res) => {
                 .info-item label {
                     display: block;
                     font-weight: 600;
-                    color: #64748b;
+                    color: #5F8EAD;
                     font-size: 11px;
                     margin-bottom: 8px;
                     text-transform: uppercase;
                     letter-spacing: 0.5px;
                 }
                 .info-item .value {
-                    color: #1e293b;
+                    color: #34353A;
                     font-size: 15px;
                     font-weight: 500;
                 }
@@ -148,7 +157,7 @@ ReportesRoutes.generarPDFIndividual = async (req, res) => {
                 }
                 .badge-preventivo {
                     background: #dcfce7;
-                    color: #166534;
+                    color: #5D9646;
                 }
                 .badge-correctivo {
                     background: #fee2e2;
@@ -160,7 +169,7 @@ ReportesRoutes.generarPDFIndividual = async (req, res) => {
                 }
                 .badge-rines {
                     background: #dbeafe;
-                    color: #1e40af;
+                    color: #5F8EAD;
                 }
                 .badge-furgo {
                     background: #fce7f3;
@@ -176,7 +185,7 @@ ReportesRoutes.generarPDFIndividual = async (req, res) => {
                 }
                 .badge-bomba {
                     background: #bfdbfe;
-                    color: #1e3a8a;
+                    color: #5F8EAD;
                 }
                 .badge-reparacion_turbo {
                     background: #fecaca;
@@ -196,7 +205,7 @@ ReportesRoutes.generarPDFIndividual = async (req, res) => {
                     box-shadow: 0 2px 4px rgba(0,0,0,0.05);
                 }
                 thead {
-                    background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+                    background: linear-gradient(135deg, #5F8EAD 0%, #34353A 100%);
                     color: white;
                 }
                 th {
@@ -223,11 +232,11 @@ ReportesRoutes.generarPDFIndividual = async (req, res) => {
                 }
                 .total-section {
                     margin-top: 30px;
-                    background: linear-gradient(135deg, #1e40af 0%, #2563eb 100%);
+                    background: linear-gradient(135deg, #34353A 0%, #5F8EAD 100%);
                     color: white;
                     padding: 25px;
                     border-radius: 10px;
-                    box-shadow: 0 4px 6px rgba(37, 99, 235, 0.2);
+                    box-shadow: 0 4px 6px rgba(95, 142, 173, 0.3);
                 }
                 .total-grid {
                     display: grid;
@@ -269,7 +278,7 @@ ReportesRoutes.generarPDFIndividual = async (req, res) => {
                 .footer {
                     margin-top: 50px;
                     text-align: center;
-                    color: #64748b;
+                    color: #34353A;
                     font-size: 11px;
                     border-top: 2px solid #e2e8f0;
                     padding-top: 20px;
@@ -279,13 +288,26 @@ ReportesRoutes.generarPDFIndividual = async (req, res) => {
                 }
                 .timestamp {
                     font-weight: 600;
-                    color: #475569;
+                    color: #34353A;
                 }
             </style>
         </head>
         <body>
             <div class="container">
                 <div class="header">
+                    <div class="logo-container">
+                        <svg class="logo-svg" viewBox="0 0 350 120" xmlns="http://www.w3.org/2000/svg">
+                            <g>
+                                <path d="M 25 55 L 45 35 L 65 55 L 65 85 L 25 85 Z" fill="#5F8EAD" stroke="#34353A" stroke-width="2"/>
+                                <rect x="32" y="62" width="10" height="14" fill="#FFFFFF"/>
+                                <rect x="48" y="62" width="10" height="14" fill="#FFFFFF"/>
+                                <path d="M 30 50 L 45 35 L 60 50" fill="none" stroke="#34353A" stroke-width="2"/>
+                                <path d="M 15 90 Q 45 70 75 90" fill="none" stroke="#5D9646" stroke-width="4" stroke-linecap="round"/>
+                                <text x="90" y="65" font-family="Arial, sans-serif" font-size="42" font-weight="bold" fill="#5F8EAD" letter-spacing="2">RIVERA</text>
+                                <text x="90" y="90" font-family="Arial, sans-serif" font-size="16" fill="#34353A">Distribuidora y Transportes</text>
+                            </g>
+                        </svg>
+                    </div>
                     <h1>📋 Reporte de Mantenimiento</h1>
                     <p class="subtitle">Registro Detallado de Servicio Vehicular</p>
                     <div class="id-badge">ID: ${manto._id}</div>
@@ -416,7 +438,7 @@ ReportesRoutes.generarPDFIndividual = async (req, res) => {
                         day: 'numeric'
                     })} a las ${new Date().toLocaleTimeString('es-ES')}</p>
                     <p>Sistema de Gestión de Mantenimiento Vehicular</p>
-                    <p>© ${new Date().getFullYear()} - Todos los derechos reservados</p>
+                    <p>© ${new Date().getFullYear()} Rivera Distribuidora y Transportes - Todos los derechos reservados</p>
                 </div>
             </div>
         </body>
@@ -504,15 +526,24 @@ ReportesRoutes.generarPDFTodosMantenimientos = async (req, res) => {
                 body {
                     font-family: 'Segoe UI', Arial, sans-serif;
                     padding: 30px;
-                    color: #1e293b;
+                    color: #34353A;
                 }
                 .header {
                     text-align: center;
                     margin-bottom: 40px;
-                    background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+                    background: linear-gradient(135deg, #5F8EAD 0%, #34353A 100%);
                     color: white;
                     padding: 30px;
                     border-radius: 12px;
+                }
+                .header .logo-container {
+                    margin-bottom: 15px;
+                    display: flex;
+                    justify-content: center;
+                }
+                .header .logo-svg {
+                    width: 200px;
+                    height: auto;
                 }
                 .header h1 {
                     font-size: 32px;
@@ -535,12 +566,12 @@ ReportesRoutes.generarPDFTodosMantenimientos = async (req, res) => {
                     padding: 20px;
                     border-radius: 10px;
                     text-align: center;
-                    border-left: 4px solid #2563eb;
+                    border-left: 4px solid #5F8EAD;
                 }
                 .stat-card label {
                     display: block;
                     font-size: 11px;
-                    color: #64748b;
+                    color: #34353A;
                     text-transform: uppercase;
                     margin-bottom: 10px;
                     font-weight: 600;
@@ -549,7 +580,7 @@ ReportesRoutes.generarPDFTodosMantenimientos = async (req, res) => {
                 .stat-card .value {
                     font-size: 24px;
                     font-weight: 700;
-                    color: #2563eb;
+                    color: #5F8EAD;
                 }
                 table {
                     width: 100%;
@@ -559,7 +590,7 @@ ReportesRoutes.generarPDFTodosMantenimientos = async (req, res) => {
                     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
                 }
                 thead {
-                    background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+                    background: linear-gradient(135deg, #5F8EAD 0%, #34353A 100%);
                     color: white;
                 }
                 th {
@@ -588,19 +619,19 @@ ReportesRoutes.generarPDFTodosMantenimientos = async (req, res) => {
                     font-weight: 600;
                     text-transform: uppercase;
                 }
-                .badge-preventivo { background: #dcfce7; color: #166534; }
+                .badge-preventivo { background: #dcfce7; color: #5D9646; }
                 .badge-correctivo { background: #fee2e2; color: #991b1b; }
                 .badge-llantas { background: #fef3c7; color: #92400e; }
-                .badge-rines { background: #dbeafe; color: #1e40af; }
+                .badge-rines { background: #dbeafe; color: #5F8EAD; }
                 .badge-furgo { background: #fce7f3; color: #831843; }
                 .badge-madera_furgo { background: #fed7aa; color: #7c2d12; }
                 .badge-torno { background: #e9d5ff; color: #6b21a8; }
-                .badge-bomba { background: #bfdbfe; color: #1e3a8a; }
+                .badge-bomba { background: #bfdbfe; color: #5F8EAD; }
                 .badge-reparacion_turbo { background: #fecaca; color: #7f1d1d; }
                 .badge-otros { background: #e0e7ff; color: #3730a3; }
                 .summary {
                     margin-top: 30px;
-                    background: linear-gradient(135deg, #1e40af 0%, #2563eb 100%);
+                    background: linear-gradient(135deg, #34353A 0%, #5F8EAD 100%);
                     color: white;
                     padding: 25px;
                     border-radius: 10px;
@@ -618,7 +649,7 @@ ReportesRoutes.generarPDFTodosMantenimientos = async (req, res) => {
                 .footer {
                     margin-top: 40px;
                     text-align: center;
-                    color: #64748b;
+                    color: #34353A;
                     font-size: 11px;
                     border-top: 2px solid #e2e8f0;
                     padding-top: 20px;
@@ -627,6 +658,19 @@ ReportesRoutes.generarPDFTodosMantenimientos = async (req, res) => {
         </head>
         <body>
             <div class="header">
+                <div class="logo-container">
+                    <svg class="logo-svg" viewBox="0 0 350 120" xmlns="http://www.w3.org/2000/svg">
+                        <g>
+                            <path d="M 25 55 L 45 35 L 65 55 L 65 85 L 25 85 Z" fill="#FFFFFF" stroke="#FFFFFF" stroke-width="2"/>
+                            <rect x="32" y="62" width="10" height="14" fill="#5F8EAD"/>
+                            <rect x="48" y="62" width="10" height="14" fill="#5F8EAD"/>
+                            <path d="M 30 50 L 45 35 L 60 50" fill="none" stroke="#FFFFFF" stroke-width="2"/>
+                            <path d="M 15 90 Q 45 70 75 90" fill="none" stroke="#5D9646" stroke-width="4" stroke-linecap="round"/>
+                            <text x="90" y="65" font-family="Arial, sans-serif" font-size="42" font-weight="bold" fill="#FFFFFF" letter-spacing="2">RIVERA</text>
+                            <text x="90" y="90" font-family="Arial, sans-serif" font-size="16" fill="#FFFFFF">Distribuidora y Transportes</text>
+                        </g>
+                    </svg>
+                </div>
                 <h1>📊 REPORTE CONSOLIDADO</h1>
                 <p class="subtitle">Todos los Mantenimientos Registrados</p>
             </div>
@@ -689,7 +733,7 @@ ReportesRoutes.generarPDFTodosMantenimientos = async (req, res) => {
 
             <div class="footer">
                 <p>Documento generado el ${new Date().toLocaleDateString('es-ES')} a las ${new Date().toLocaleTimeString('es-ES')}</p>
-                <p>Sistema de Gestión de Mantenimiento Vehicular - Reporte Consolidado</p>
+                <p>Rivera Distribuidora y Transportes - Sistema de Gestión de Mantenimiento Vehicular</p>
             </div>
         </body>
         </html>
@@ -726,6 +770,7 @@ ReportesRoutes.generarPDFTodosMantenimientos = async (req, res) => {
         });
     }
 };
+
 // 3. PDF REPORTE MENSUAL SIMPLE - Solo placas y montos de un mes
 ReportesRoutes.generarPDFMensualSimple = async (req, res) => {
     let browser;
@@ -789,40 +834,52 @@ ReportesRoutes.generarPDFMensualSimple = async (req, res) => {
                 body {
                     font-family: Arial, sans-serif;
                     padding: 40px;
-                    color: #000;
+                    color: #34353A;
                     background: #fff;
                 }
                 .header {
                     text-align: center;
                     margin-bottom: 30px;
                     padding-bottom: 20px;
-                    border-bottom: 3px solid #000;
+                    border-bottom: 3px solid #34353A;
+                }
+                .header .logo-container {
+                    margin-bottom: 20px;
+                    display: flex;
+                    justify-content: center;
+                }
+                .header .logo-svg {
+                    width: 250px;
+                    height: auto;
                 }
                 .header h1 {
                     font-size: 24px;
                     font-weight: bold;
                     text-transform: uppercase;
                     margin-bottom: 5px;
+                    color: #34353A;
                 }
                 .header .period {
                     font-size: 20px;
                     font-weight: bold;
                     margin-top: 10px;
+                    color: #5F8EAD;
                 }
                 table {
                     width: 100%;
                     max-width: 600px;
                     margin: 0 auto;
                     border-collapse: collapse;
-                    border: 2px solid #000;
+                    border: 2px solid #34353A;
                 }
                 th, td {
-                    border: 1px solid #000;
+                    border: 1px solid #34353A;
                     padding: 12px;
                     text-align: center;
                 }
                 th {
-                    background: #d3d3d3;
+                    background: #5F8EAD;
+                    color: white;
                     font-weight: bold;
                     font-size: 16px;
                     text-transform: uppercase;
@@ -853,6 +910,19 @@ ReportesRoutes.generarPDFMensualSimple = async (req, res) => {
         </head>
         <body>
             <div class="header">
+                <div class="logo-container">
+                    <svg class="logo-svg" viewBox="0 0 350 120" xmlns="http://www.w3.org/2000/svg">
+                        <g>
+                            <path d="M 25 55 L 45 35 L 65 55 L 65 85 L 25 85 Z" fill="#5F8EAD" stroke="#34353A" stroke-width="2"/>
+                            <rect x="32" y="62" width="10" height="14" fill="#FFFFFF"/>
+                            <rect x="48" y="62" width="10" height="14" fill="#FFFFFF"/>
+                            <path d="M 30 50 L 45 35 L 60 50" fill="none" stroke="#34353A" stroke-width="2"/>
+                            <path d="M 15 90 Q 45 70 75 90" fill="none" stroke="#5D9646" stroke-width="4" stroke-linecap="round"/>
+                            <text x="90" y="65" font-family="Arial, sans-serif" font-size="42" font-weight="bold" fill="#5F8EAD" letter-spacing="2">RIVERA</text>
+                            <text x="90" y="90" font-family="Arial, sans-serif" font-size="16" fill="#34353A">Distribuidora y Transportes</text>
+                        </g>
+                    </svg>
+                </div>
                 <h1>MANTENIMIENTO POR CAMION MES</h1>
                 <div class="period">${obtenerNombreMes(mesNum).toUpperCase()} ${anoNum}</div>
             </div>
@@ -1032,24 +1102,35 @@ ReportesRoutes.generarPDFMultiplesMeses = async (req, res) => {
                 body {
                     font-family: Arial, sans-serif;
                     padding: 30px;
-                    color: #000;
+                    color: #34353A;
                     background: #fff;
                 }
                 .main-header {
                     text-align: center;
                     margin-bottom: 40px;
                     padding-bottom: 20px;
-                    border-bottom: 3px solid #000;
+                    border-bottom: 3px solid #34353A;
+                }
+                .main-header .logo-container {
+                    margin-bottom: 20px;
+                    display: flex;
+                    justify-content: center;
+                }
+                .main-header .logo-svg {
+                    width: 250px;
+                    height: auto;
                 }
                 .main-header h1 {
                     font-size: 26px;
                     font-weight: bold;
                     text-transform: uppercase;
                     margin-bottom: 10px;
+                    color: #34353A;
                 }
                 .main-header .subtitle {
                     font-size: 16px;
                     margin-top: 10px;
+                    color: #5F8EAD;
                 }
                 .mes-section {
                     margin-bottom: 50px;
@@ -1059,8 +1140,9 @@ ReportesRoutes.generarPDFMultiplesMeses = async (req, res) => {
                     text-align: center;
                     margin-bottom: 20px;
                     padding: 15px;
-                    background: #f0f0f0;
-                    border: 2px solid #000;
+                    background: #5F8EAD;
+                    border: 2px solid #34353A;
+                    color: white;
                 }
                 .mes-header h2 {
                     font-size: 20px;
@@ -1071,15 +1153,16 @@ ReportesRoutes.generarPDFMultiplesMeses = async (req, res) => {
                     max-width: 600px;
                     margin: 0 auto;
                     border-collapse: collapse;
-                    border: 2px solid #000;
+                    border: 2px solid #34353A;
                 }
                 th, td {
-                    border: 1px solid #000;
+                    border: 1px solid #34353A;
                     padding: 12px;
                     text-align: center;
                 }
                 th {
-                    background: #d3d3d3;
+                    background: #5F8EAD;
+                    color: white;
                     font-weight: bold;
                     font-size: 16px;
                     text-transform: uppercase;
@@ -1109,10 +1192,11 @@ ReportesRoutes.generarPDFMultiplesMeses = async (req, res) => {
                 .resumen-final {
                     margin-top: 40px;
                     padding: 25px;
-                    background: #f5f5f5;
-                    border: 3px solid #000;
+                    background: linear-gradient(135deg, #5F8EAD 0%, #34353A 100%);
+                    border: 3px solid #34353A;
                     text-align: center;
                     page-break-inside: avoid;
+                    color: white;
                 }
                 .resumen-final h3 {
                     font-size: 20px;
@@ -1128,6 +1212,19 @@ ReportesRoutes.generarPDFMultiplesMeses = async (req, res) => {
         </head>
         <body>
             <div class="main-header">
+                <div class="logo-container">
+                    <svg class="logo-svg" viewBox="0 0 350 120" xmlns="http://www.w3.org/2000/svg">
+                        <g>
+                            <path d="M 25 55 L 45 35 L 65 55 L 65 85 L 25 85 Z" fill="#5F8EAD" stroke="#34353A" stroke-width="2"/>
+                            <rect x="32" y="62" width="10" height="14" fill="#FFFFFF"/>
+                            <rect x="48" y="62" width="10" height="14" fill="#FFFFFF"/>
+                            <path d="M 30 50 L 45 35 L 60 50" fill="none" stroke="#34353A" stroke-width="2"/>
+                            <path d="M 15 90 Q 45 70 75 90" fill="none" stroke="#5D9646" stroke-width="4" stroke-linecap="round"/>
+                            <text x="90" y="65" font-family="Arial, sans-serif" font-size="42" font-weight="bold" fill="#5F8EAD" letter-spacing="2">RIVERA</text>
+                            <text x="90" y="90" font-family="Arial, sans-serif" font-size="16" fill="#34353A">Distribuidora y Transportes</text>
+                        </g>
+                    </svg>
+                </div>
                 <h1>REPORTE DE MANTENIMIENTO</h1>
                 <div class="subtitle">Período: ${mesesValidos.map(m => obtenerNombreMes(m)).join(', ')} ${anoNum}</div>
             </div>
@@ -1176,4 +1273,4 @@ ReportesRoutes.generarPDFMultiplesMeses = async (req, res) => {
     }
 };
 
-export default ReportesRoutes
+export default ReportesRoutes;

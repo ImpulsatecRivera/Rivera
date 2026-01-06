@@ -17,9 +17,10 @@
 // 6. Rango de Fechas: Período personalizado
 //
 // Patrón de diseño:
-// - Todos los reportes siguen un diseño tradicional tipo contable
-// - Bordes negros sólidos, sin gradientes ni colores modernos
-// - Optimizado para impresión (ahorro de tinta)
+// - Diseño con colores corporativos de Rivera Transportes
+// - Logo corporativo integrado
+// - Colores: #5F8EAD (azul), #5D9646 (verde), #34353A (gris oscuro)
+// - Optimizado para impresión
 //
 // Manejo especial:
 // - employeeId puede ser el string 'admin' o un ObjectId
@@ -35,11 +36,6 @@ const ReportesCajaChicaController = {};
 // =====================================================
 // FUNCIÓN AUXILIAR: Obtener nombre del mes en español
 // =====================================================
-// Convierte número de mes (1-12) a nombre en español
-// Parámetro: mes (number) - Número del 1 al 12
-// Retorna: (string) - Nombre del mes o 'Mes Inválido'
-// Ejemplo: obtenerNombreMes(12) -> 'Diciembre'
-// =====================================================
 function obtenerNombreMes(mes) {
     const meses = [
         'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
@@ -51,35 +47,11 @@ function obtenerNombreMes(mes) {
 // =====================================================
 // 1. PDF REPORTE INDIVIDUAL DE MOVIMIENTO
 // =====================================================
-// Genera un PDF con los detalles completos de un movimiento
-// específico de caja chica (ingreso o egreso)
-//
-// Parámetros:
-//   - req.params.id: ObjectId del movimiento
-//
-// Respuesta:
-//   - Éxito: PDF descargable
-//   - Error 404: Movimiento no encontrado
-//   - Error 500: Error al generar PDF
-//
-// Características del reporte:
-//   - Tabla con información del movimiento
-//   - Balance anterior y actual
-//   - Empleado responsable
-//   - Fecha, hora y descripción
-//   - Comprobante (si existe)
-//
-// Uso típico:
-//   GET /api/reportes-caja-chica/individual/507f1f77bcf86cd799439011
-// =====================================================
 ReportesCajaChicaController.generarPDFIndividual = async (req, res) => {
     let browser;
     try {
         const { id } = req.params;
         
-        // PASO 1: Buscar el movimiento SIN populate inicial
-        // Importante: No usar .populate() directamente porque employeeId
-        // puede ser el string 'admin' en lugar de un ObjectId
         const movimiento = await CajaChica.findById(id);
 
         if (!movimiento) {
@@ -89,11 +61,8 @@ ReportesCajaChicaController.generarPDFIndividual = async (req, res) => {
             });
         }
 
-        // PASO 2: Hacer populate manual SOLO si NO es 'admin' y es un ObjectId válido
-        // Esto evita el error "Cast to ObjectId failed for value 'admin'"
         if (movimiento.employeeId !== 'admin' && movimiento.employeeId) {
             try {
-                // Validar que sea un ObjectId válido (24 caracteres hexadecimales)
                 if (movimiento.employeeId.toString().match(/^[0-9a-fA-F]{24}$/)) {
                     await movimiento.populate('employeeId', 'name email');
                 }
@@ -102,7 +71,6 @@ ReportesCajaChicaController.generarPDFIndividual = async (req, res) => {
             }
         }
 
-        // PASO 3: Determinar el nombre del empleado para mostrar
         const empleado = movimiento.employeeId === 'admin' 
             ? 'Administrador' 
             : movimiento.employeeId?.name || 'N/A';
@@ -123,37 +91,49 @@ ReportesCajaChicaController.generarPDFIndividual = async (req, res) => {
                 body {
                     font-family: Arial, 'Courier New', monospace;
                     padding: 30px;
-                    color: #000;
+                    color: #34353A;
                     background: #fff;
                 }
                 .header {
                     text-align: center;
                     margin-bottom: 30px;
-                    border-bottom: 3px solid #000;
+                    border-bottom: 3px solid #34353A;
                     padding-bottom: 15px;
+                }
+                .header .logo-container {
+                    margin-bottom: 15px;
+                    display: flex;
+                    justify-content: center;
+                }
+                .header .logo-svg {
+                    width: 200px;
+                    height: auto;
                 }
                 .header h1 {
                     font-size: 32px;
                     font-weight: bold;
                     letter-spacing: 8px;
                     margin-bottom: 5px;
+                    color: #5F8EAD;
                 }
                 .header .subtitle {
                     font-size: 14px;
                     font-weight: bold;
                     margin-top: 8px;
+                    color: #34353A;
                 }
                 .header .balance-info {
                     text-align: right;
                     font-size: 18px;
                     font-weight: bold;
                     margin-top: 10px;
+                    color: #5F8EAD;
                 }
                 .stats-summary {
                     margin-bottom: 15px;
                     padding: 10px;
                     background: #f5f5f5;
-                    border: 2px solid #000;
+                    border: 2px solid #34353A;
                 }
                 .stats-row {
                     display: flex;
@@ -161,6 +141,7 @@ ReportesCajaChicaController.generarPDFIndividual = async (req, res) => {
                     padding: 5px 0;
                     border-bottom: 1px solid #ccc;
                     font-size: 11px;
+                    color: #34353A;
                 }
                 .stats-row:last-child {
                     border-bottom: none;
@@ -169,10 +150,10 @@ ReportesCajaChicaController.generarPDFIndividual = async (req, res) => {
                     width: 100%;
                     border-collapse: collapse;
                     margin-bottom: 20px;
-                    border: 3px solid #000;
+                    border: 3px solid #34353A;
                 }
                 thead {
-                    background: #000;
+                    background: linear-gradient(135deg, #5F8EAD 0%, #34353A 100%);
                     color: #fff;
                 }
                 th {
@@ -180,20 +161,22 @@ ReportesCajaChicaController.generarPDFIndividual = async (req, res) => {
                     text-align: center;
                     font-size: 12px;
                     font-weight: bold;
-                    border: 2px solid #000;
+                    border: 2px solid #34353A;
                     text-transform: uppercase;
                 }
                 td {
                     padding: 10px 8px;
-                    border: 1px solid #000;
+                    border: 1px solid #34353A;
                     font-size: 11px;
                     background: #fff;
+                    color: #34353A;
                 }
                 .col-label {
                     width: 200px;
                     font-weight: bold;
                     text-align: left;
                     padding-left: 15px;
+                    background: #f5f5f5;
                 }
                 .col-value {
                     text-align: left;
@@ -204,7 +187,7 @@ ReportesCajaChicaController.generarPDFIndividual = async (req, res) => {
                     margin-top: 20px;
                     padding: 12px;
                     background: #f9f9f9;
-                    border: 2px solid #000;
+                    border: 2px solid #34353A;
                     text-align: center;
                 }
                 .footer-section .balance-final {
@@ -213,13 +196,14 @@ ReportesCajaChicaController.generarPDFIndividual = async (req, res) => {
                     margin: 8px 0;
                     padding: 10px;
                     background: #fff;
-                    border: 2px solid #000;
+                    border: 2px solid #5F8EAD;
+                    color: #5F8EAD;
                 }
                 .footer-info {
                     margin-top: 30px;
                     text-align: center;
                     font-size: 10px;
-                    color: #666;
+                    color: #34353A;
                     border-top: 1px solid #ccc;
                     padding-top: 15px;
                 }
@@ -227,6 +211,19 @@ ReportesCajaChicaController.generarPDFIndividual = async (req, res) => {
         </head>
         <body>
             <div class="header">
+                <div class="logo-container">
+                    <svg class="logo-svg" viewBox="0 0 350 120" xmlns="http://www.w3.org/2000/svg">
+                        <g>
+                            <path d="M 25 55 L 45 35 L 65 55 L 65 85 L 25 85 Z" fill="#5F8EAD" stroke="#34353A" stroke-width="2"/>
+                            <rect x="32" y="62" width="10" height="14" fill="#FFFFFF"/>
+                            <rect x="48" y="62" width="10" height="14" fill="#FFFFFF"/>
+                            <path d="M 30 50 L 45 35 L 60 50" fill="none" stroke="#34353A" stroke-width="2"/>
+                            <path d="M 15 90 Q 45 70 75 90" fill="none" stroke="#5D9646" stroke-width="4" stroke-linecap="round"/>
+                            <text x="90" y="65" font-family="Arial, sans-serif" font-size="42" font-weight="bold" fill="#5F8EAD" letter-spacing="2">RIVERA</text>
+                            <text x="90" y="90" font-family="Arial, sans-serif" font-size="16" fill="#34353A">Distribuidora y Transportes</text>
+                        </g>
+                    </svg>
+                </div>
                 <h1>CAJA CHICA</h1>
                 <div class="subtitle">COMPROBANTE DE ${tipoOperacion}</div>
                 <div class="balance-info">$ ${movimiento.currentBalance.toFixed(2)}</div>
@@ -306,20 +303,14 @@ ReportesCajaChicaController.generarPDFIndividual = async (req, res) => {
         </html>
         `;
 
-        // PASO 4: Generar el PDF usando Puppeteer
-        // - headless: 'new' usa la nueva versión de Chrome headless
-        // - args: parámetros necesarios para entornos Docker/Linux
         browser = await puppeteer.launch({
             headless: 'new',
             args: ['--no-sandbox', '--disable-setuid-sandbox']
         });
 
-        // Crear una nueva página y cargar el HTML
         const page = await browser.newPage();
         await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
 
-        // Generar el PDF con formato A4 y márgenes de 20px
-        // printBackground: true asegura que los estilos de fondo se impriman
         const pdfBuffer = await page.pdf({
             format: 'A4',
             printBackground: true,
@@ -333,7 +324,6 @@ ReportesCajaChicaController.generarPDFIndividual = async (req, res) => {
 
         await browser.close();
 
-        // PASO 5: Configurar headers y enviar el PDF al cliente
         res.setHeader('Content-Type', 'application/pdf');
         res.setHeader('Content-Disposition', `attachment; filename="caja-chica-${tipoOperacion.toLowerCase()}-${Date.now()}.pdf"`);
         res.setHeader('Content-Length', pdfBuffer.length);
@@ -341,7 +331,6 @@ ReportesCajaChicaController.generarPDFIndividual = async (req, res) => {
         res.send(pdfBuffer);
 
     } catch (error) {
-        // Asegurar que el navegador se cierre incluso si hay error
         if (browser) await browser.close();
         console.error('Error al generar PDF individual:', error);
         res.status(500).json({
@@ -355,46 +344,16 @@ ReportesCajaChicaController.generarPDFIndividual = async (req, res) => {
 // =====================================================
 // 2. PDF CONSOLIDADO - Todos los movimientos
 // =====================================================
-// Genera un PDF con TODOS los movimientos de caja chica
-// registrados en el sistema, ordenados por fecha (más recientes primero)
-//
-// Parámetros: Ninguno
-//
-// Respuesta:
-//   - Éxito: PDF descargable
-//   - Error 404: No hay movimientos registrados
-//   - Error 500: Error al generar PDF
-//
-// Características del reporte:
-//   - Tabla completa con todos los movimientos
-//   - Total de ingresos y egresos
-//   - Balance actual
-//   - Cantidad de movimientos por tipo
-//   - Formato landscape (horizontal) para mejor visualización
-//
-// Uso típico:
-//   GET /api/reportes-caja-chica/todos
-//
-// Ideal para:
-//   - Auditorías completas
-//   - Revisión histórica total
-//   - Análisis general de caja chica
-// =====================================================
 ReportesCajaChicaController.generarPDFTodosMovimientos = async (req, res) => {
     let browser;
     try {
-        // PASO 1: Buscar todos los movimientos SIN populate inicial
-        // Ordenar por fecha descendente (más recientes primero)
         const movimientos = await CajaChica.find()
             .sort({ date: -1, createdAt: -1 });
         
-        // PASO 2: Hacer populate manual SOLO para ObjectIds válidos
-        // Se usa Promise.all para procesar todos en paralelo (más rápido)
         await Promise.all(
             movimientos.map(async (movement) => {
                 if (movement.employeeId !== 'admin' && movement.employeeId) {
                     try {
-                        // Validar que sea un ObjectId válido antes de hacer populate
                         if (movement.employeeId.toString().match(/^[0-9a-fA-F]{24}$/)) {
                             await movement.populate('employeeId', 'name email');
                         }
@@ -412,7 +371,6 @@ ReportesCajaChicaController.generarPDFTodosMovimientos = async (req, res) => {
             });
         }
 
-        // Calcular estadísticas
         const totalIngresos = movimientos
             .filter(m => m.type === 'income')
             .reduce((sum, m) => sum + m.amount, 0);
@@ -422,8 +380,6 @@ ReportesCajaChicaController.generarPDFTodosMovimientos = async (req, res) => {
             .reduce((sum, m) => sum + m.amount, 0);
 
         const balanceFinal = movimientos[0].currentBalance;
-        const cantidadIngresos = movimientos.filter(m => m.type === 'income').length;
-        const cantidadEgresos = movimientos.filter(m => m.type === 'expense').length;
 
         const htmlContent = `
         <!DOCTYPE html>
@@ -439,32 +395,43 @@ ReportesCajaChicaController.generarPDFTodosMovimientos = async (req, res) => {
                 body {
                     font-family: Arial, 'Courier New', monospace;
                     padding: 30px;
-                    color: #000;
+                    color: #34353A;
                     background: #fff;
                 }
                 .header {
                     text-align: center;
                     margin-bottom: 30px;
-                    border-bottom: 3px solid #000;
+                    border-bottom: 3px solid #34353A;
                     padding-bottom: 15px;
+                }
+                .header .logo-container {
+                    margin-bottom: 15px;
+                    display: flex;
+                    justify-content: center;
+                }
+                .header .logo-svg {
+                    width: 180px;
+                    height: auto;
                 }
                 .header h1 {
                     font-size: 32px;
                     font-weight: bold;
                     letter-spacing: 8px;
                     margin-bottom: 5px;
+                    color: #5F8EAD;
                 }
                 .header .balance-info {
                     text-align: right;
                     font-size: 18px;
                     font-weight: bold;
                     margin-top: 10px;
+                    color: #5F8EAD;
                 }
                 .stats-summary {
                     margin-bottom: 15px;
                     padding: 10px;
                     background: #f5f5f5;
-                    border: 2px solid #000;
+                    border: 2px solid #34353A;
                 }
                 .stats-row {
                     display: flex;
@@ -482,10 +449,10 @@ ReportesCajaChicaController.generarPDFTodosMovimientos = async (req, res) => {
                     width: 100%;
                     border-collapse: collapse;
                     margin-bottom: 20px;
-                    border: 3px solid #000;
+                    border: 3px solid #34353A;
                 }
                 thead {
-                    background: #000;
+                    background: linear-gradient(135deg, #5F8EAD 0%, #34353A 100%);
                     color: #fff;
                 }
                 th {
@@ -493,12 +460,12 @@ ReportesCajaChicaController.generarPDFTodosMovimientos = async (req, res) => {
                     text-align: center;
                     font-size: 12px;
                     font-weight: bold;
-                    border: 2px solid #000;
+                    border: 2px solid #34353A;
                     text-transform: uppercase;
                 }
                 td {
                     padding: 10px 8px;
-                    border: 1px solid #000;
+                    border: 1px solid #34353A;
                     font-size: 11px;
                     background: #fff;
                 }
@@ -526,10 +493,10 @@ ReportesCajaChicaController.generarPDFTodosMovimientos = async (req, res) => {
                     padding-right: 15px;
                 }
                 .tipo-egreso {
-                    color: #000;
+                    color: #34353A;
                 }
                 .tipo-ingreso {
-                    color: #000;
+                    color: #5D9646;
                     font-weight: bold;
                 }
                 .total-row {
@@ -542,7 +509,7 @@ ReportesCajaChicaController.generarPDFTodosMovimientos = async (req, res) => {
                     margin-top: 20px;
                     padding: 12px;
                     background: #f9f9f9;
-                    border: 2px solid #000;
+                    border: 2px solid #34353A;
                     text-align: center;
                 }
                 .footer-section .balance-final {
@@ -551,13 +518,14 @@ ReportesCajaChicaController.generarPDFTodosMovimientos = async (req, res) => {
                     margin: 8px 0;
                     padding: 10px;
                     background: #fff;
-                    border: 2px solid #000;
+                    border: 2px solid #5F8EAD;
+                    color: #5F8EAD;
                 }
                 .footer-info {
                     margin-top: 30px;
                     text-align: center;
                     font-size: 10px;
-                    color: #666;
+                    color: #34353A;
                     border-top: 1px solid #ccc;
                     padding-top: 15px;
                 }
@@ -565,6 +533,19 @@ ReportesCajaChicaController.generarPDFTodosMovimientos = async (req, res) => {
         </head>
         <body>
             <div class="header">
+                <div class="logo-container">
+                    <svg class="logo-svg" viewBox="0 0 350 120" xmlns="http://www.w3.org/2000/svg">
+                        <g>
+                            <path d="M 25 55 L 45 35 L 65 55 L 65 85 L 25 85 Z" fill="#5F8EAD" stroke="#34353A" stroke-width="2"/>
+                            <rect x="32" y="62" width="10" height="14" fill="#FFFFFF"/>
+                            <rect x="48" y="62" width="10" height="14" fill="#FFFFFF"/>
+                            <path d="M 30 50 L 45 35 L 60 50" fill="none" stroke="#34353A" stroke-width="2"/>
+                            <path d="M 15 90 Q 45 70 75 90" fill="none" stroke="#5D9646" stroke-width="4" stroke-linecap="round"/>
+                            <text x="90" y="65" font-family="Arial, sans-serif" font-size="42" font-weight="bold" fill="#5F8EAD" letter-spacing="2">RIVERA</text>
+                            <text x="90" y="90" font-family="Arial, sans-serif" font-size="16" fill="#34353A">Distribuidora y Transportes</text>
+                        </g>
+                    </svg>
+                </div>
                 <h1>CAJA CHICA</h1>
                 <div class="balance-info">$ ${balanceFinal.toFixed(2)}</div>
             </div>
@@ -668,35 +649,6 @@ ReportesCajaChicaController.generarPDFTodosMovimientos = async (req, res) => {
 // =====================================================
 // 3. PDF REPORTE MENSUAL SIMPLE
 // =====================================================
-// 3. PDF REPORTE MENSUAL SIMPLE
-// =====================================================
-// Genera un PDF con los movimientos de un mes específico
-//
-// Parámetros:
-//   - req.params.mes: Número del mes (1-12)
-//   - req.params.ano: Año (ej: 2025)
-//
-// Respuesta:
-//   - Éxito: PDF descargable
-//   - Error 400: Mes inválido
-//   - Error 404: No hay movimientos para ese mes
-//   - Error 500: Error al generar PDF
-//
-// Características del reporte:
-//   - Estadísticas del mes (ingresos, egresos)
-//   - Balance inicial y final del mes
-//   - Variación del mes
-//   - Tabla detallada de todos los movimientos
-//   - Fila de total al final
-//
-// Uso típico:
-//   GET /api/reportes-caja-chica/mensual-simple/12/2025
-//
-// Ideal para:
-//   - Cierres mensuales
-//   - Reportes contables mensuales
-//   - Análisis de un mes específico
-// =====================================================
 ReportesCajaChicaController.generarPDFMensualSimple = async (req, res) => {
     let browser;
     try {
@@ -704,7 +656,6 @@ ReportesCajaChicaController.generarPDFMensualSimple = async (req, res) => {
         const mesNum = parseInt(mes);
         const anoNum = parseInt(ano);
 
-        // PASO 1: Validar que el mes esté en rango válido
         if (mesNum < 1 || mesNum > 12) {
             return res.status(400).json({
                 success: false,
@@ -712,14 +663,9 @@ ReportesCajaChicaController.generarPDFMensualSimple = async (req, res) => {
             });
         }
 
-        // PASO 2: Construir rango de fechas para el mes completo
-        // fechaInicio: Primer día del mes a las 00:00:00
-        // fechaFin: Último día del mes a las 23:59:59
         const fechaInicio = new Date(anoNum, mesNum - 1, 1);
         const fechaFin = new Date(anoNum, mesNum, 0, 23, 59, 59);
 
-        // PASO 3: Buscar movimientos del mes SIN populate inicial
-        // Ordenar por fecha ascendente (cronológico) para el reporte
         const movimientos = await CajaChica.find({
             date: {
                 $gte: fechaInicio,
@@ -728,7 +674,6 @@ ReportesCajaChicaController.generarPDFMensualSimple = async (req, res) => {
         })
         .sort({ date: 1 });
 
-        // PASO 4: Hacer populate manual SOLO para ObjectIds válidos
         await Promise.all(
             movimientos.map(async (movement) => {
                 if (movement.employeeId !== 'admin' && movement.employeeId) {
@@ -750,20 +695,15 @@ ReportesCajaChicaController.generarPDFMensualSimple = async (req, res) => {
             });
         }
 
-        // PASO 5: Calcular estadísticas del mes
-        // Total de ingresos: sumar todos los movimientos type='income'
         const totalIngresos = movimientos
             .filter(m => m.type === 'income')
             .reduce((sum, m) => sum + m.amount, 0);
 
-        // Total de egresos: sumar todos los movimientos type='expense'
         const totalEgresos = movimientos
             .filter(m => m.type === 'expense')
             .reduce((sum, m) => sum + m.amount, 0);
 
-        // Balance inicial: previousBalance del primer movimiento del mes
         const balanceInicial = movimientos[0].previousBalance;
-        // Balance final: currentBalance del último movimiento del mes
         const balanceFinal = movimientos[movimientos.length - 1].currentBalance;
         const variacion = balanceFinal - balanceInicial;
 
@@ -781,37 +721,49 @@ ReportesCajaChicaController.generarPDFMensualSimple = async (req, res) => {
                 body {
                     font-family: Arial, 'Courier New', monospace;
                     padding: 30px;
-                    color: #000;
+                    color: #34353A;
                     background: #fff;
                 }
                 .header {
                     text-align: center;
                     margin-bottom: 30px;
-                    border-bottom: 3px solid #000;
+                    border-bottom: 3px solid #34353A;
                     padding-bottom: 15px;
+                }
+                .header .logo-container {
+                    margin-bottom: 15px;
+                    display: flex;
+                    justify-content: center;
+                }
+                .header .logo-svg {
+                    width: 200px;
+                    height: auto;
                 }
                 .header h1 {
                     font-size: 32px;
                     font-weight: bold;
                     letter-spacing: 8px;
                     margin-bottom: 5px;
+                    color: #5F8EAD;
                 }
                 .header .subtitle {
                     font-size: 12px;
                     font-weight: bold;
                     margin-top: 8px;
+                    color: #34353A;
                 }
                 .header .balance-info {
                     text-align: right;
                     font-size: 18px;
                     font-weight: bold;
                     margin-top: 10px;
+                    color: #5F8EAD;
                 }
                 .stats-summary {
                     margin-bottom: 15px;
                     padding: 10px;
                     background: #f5f5f5;
-                    border: 2px solid #000;
+                    border: 2px solid #34353A;
                 }
                 .stats-row {
                     display: flex;
@@ -826,31 +778,33 @@ ReportesCajaChicaController.generarPDFMensualSimple = async (req, res) => {
                     font-size: 12px;
                     margin-top: 10px;
                     padding-top: 15px;
-                    border-top: 2px solid #000;
+                    border-top: 2px solid #34353A;
                 }
                 .variacion-box {
                     text-align: center;
                     padding: 10px;
                     margin: 15px 0;
                     background: #f9f9f9;
-                    border: 2px solid #000;
+                    border: 2px solid #34353A;
                     font-weight: bold;
                 }
                 .variacion-box .label {
                     font-size: 14px;
                     margin-bottom: 10px;
+                    color: #34353A;
                 }
                 .variacion-box .value {
                     font-size: 18px;
+                    color: ${variacion >= 0 ? '#5D9646' : '#991b1b'};
                 }
                 table {
                     width: 100%;
                     border-collapse: collapse;
                     margin-bottom: 20px;
-                    border: 3px solid #000;
+                    border: 3px solid #34353A;
                 }
                 thead {
-                    background: #000;
+                    background: linear-gradient(135deg, #5F8EAD 0%, #34353A 100%);
                     color: #fff;
                 }
                 th {
@@ -858,12 +812,12 @@ ReportesCajaChicaController.generarPDFMensualSimple = async (req, res) => {
                     text-align: center;
                     font-size: 12px;
                     font-weight: bold;
-                    border: 2px solid #000;
+                    border: 2px solid #34353A;
                     text-transform: uppercase;
                 }
                 td {
                     padding: 10px 8px;
-                    border: 1px solid #000;
+                    border: 1px solid #34353A;
                     font-size: 11px;
                     background: #fff;
                 }
@@ -900,7 +854,7 @@ ReportesCajaChicaController.generarPDFMensualSimple = async (req, res) => {
                     margin-top: 20px;
                     padding: 12px;
                     background: #f9f9f9;
-                    border: 2px solid #000;
+                    border: 2px solid #34353A;
                     text-align: center;
                 }
                 .footer-section .balance-final {
@@ -909,13 +863,14 @@ ReportesCajaChicaController.generarPDFMensualSimple = async (req, res) => {
                     margin: 8px 0;
                     padding: 10px;
                     background: #fff;
-                    border: 2px solid #000;
+                    border: 2px solid #5F8EAD;
+                    color: #5F8EAD;
                 }
                 .footer-info {
                     margin-top: 30px;
                     text-align: center;
                     font-size: 10px;
-                    color: #666;
+                    color: #34353A;
                     border-top: 1px solid #ccc;
                     padding-top: 15px;
                 }
@@ -923,6 +878,19 @@ ReportesCajaChicaController.generarPDFMensualSimple = async (req, res) => {
         </head>
         <body>
             <div class="header">
+                <div class="logo-container">
+                    <svg class="logo-svg" viewBox="0 0 350 120" xmlns="http://www.w3.org/2000/svg">
+                        <g>
+                            <path d="M 25 55 L 45 35 L 65 55 L 65 85 L 25 85 Z" fill="#5F8EAD" stroke="#34353A" stroke-width="2"/>
+                            <rect x="32" y="62" width="10" height="14" fill="#FFFFFF"/>
+                            <rect x="48" y="62" width="10" height="14" fill="#FFFFFF"/>
+                            <path d="M 30 50 L 45 35 L 60 50" fill="none" stroke="#34353A" stroke-width="2"/>
+                            <path d="M 15 90 Q 45 70 75 90" fill="none" stroke="#5D9646" stroke-width="4" stroke-linecap="round"/>
+                            <text x="90" y="65" font-family="Arial, sans-serif" font-size="42" font-weight="bold" fill="#5F8EAD" letter-spacing="2">RIVERA</text>
+                            <text x="90" y="90" font-family="Arial, sans-serif" font-size="16" fill="#34353A">Distribuidora y Transportes</text>
+                        </g>
+                    </svg>
+                </div>
                 <h1>CAJA CHICA</h1>
                 <div class="subtitle">${obtenerNombreMes(mesNum).toUpperCase()} ${anoNum}</div>
                 <div class="balance-info">$ ${balanceFinal.toFixed(2)}</div>
@@ -949,7 +917,7 @@ ReportesCajaChicaController.generarPDFMensualSimple = async (req, res) => {
 
             <div class="variacion-box">
                 <div class="label">VARIACIÓN DEL MES</div>
-                <div class="value" style="color: ${variacion >= 0 ? '#000' : '#000'}">
+                <div class="value">
                     ${variacion >= 0 ? '+' : ''} $ ${variacion.toFixed(2)}
                 </div>
             </div>
@@ -1030,36 +998,7 @@ ReportesCajaChicaController.generarPDFMensualSimple = async (req, res) => {
 };
 
 // =====================================================
-// =====================================================
 // 4. PDF REPORTE COMPARATIVO DE MÚLTIPLES MESES
-// =====================================================
-// Genera un PDF comparando varios meses seleccionados
-// Muestra estadísticas individuales de cada mes y totales generales
-//
-// Parámetros:
-//   - req.body.meses: Array de meses a comparar [1, 3, 6, 12]
-//   - req.body.ano: Año común para todos los meses
-//
-// Respuesta:
-//   - Éxito: PDF descargable
-//   - Error 400: Array de meses inválido o vacío
-//   - Error 404: No hay movimientos para los meses seleccionados
-//   - Error 500: Error al generar PDF
-//
-// Características del reporte:
-//   - Sección individual para cada mes con sus estadísticas
-//   - Ingresos, egresos y neto por mes
-//   - Resumen general consolidado al final
-//   - Comparación visual entre períodos
-//
-// Uso típico:
-//   POST /api/reportes-caja-chica/mensual-multiple
-//   Body: { "meses": [10, 11, 12], "ano": 2025 }
-//
-// Ideal para:
-//   - Análisis trimestral
-//   - Comparativas mensuales
-//   - Identificar tendencias
 // =====================================================
 ReportesCajaChicaController.generarPDFMultiplesMeses = async (req, res) => {
     let browser;
@@ -1083,7 +1022,6 @@ ReportesCajaChicaController.generarPDFMultiplesMeses = async (req, res) => {
             });
         }
 
-        // Agrupar datos por mes
         const porMes = {};
         let totalGeneralIngresos = 0;
         let totalGeneralEgresos = 0;
@@ -1092,7 +1030,6 @@ ReportesCajaChicaController.generarPDFMultiplesMeses = async (req, res) => {
             const fechaInicio = new Date(anoNum, mesNum - 1, 1);
             const fechaFin = new Date(anoNum, mesNum, 0, 23, 59, 59);
 
-            // Buscar movimientos SIN populate inicial
             const movimientos = await CajaChica.find({
                 date: {
                     $gte: fechaInicio,
@@ -1100,7 +1037,6 @@ ReportesCajaChicaController.generarPDFMultiplesMeses = async (req, res) => {
                 }
             });
 
-            // Hacer populate manual SOLO para ObjectIds válidos
             await Promise.all(
                 movimientos.map(async (movement) => {
                     if (movement.employeeId !== 'admin' && movement.employeeId) {
@@ -1135,7 +1071,6 @@ ReportesCajaChicaController.generarPDFMultiplesMeses = async (req, res) => {
             };
         }
 
-        // Generar HTML para cada mes
         const mesesHTML = mesesValidos.map(mesNum => {
             const datos = porMes[mesNum];
             
@@ -1182,66 +1117,80 @@ ReportesCajaChicaController.generarPDFMultiplesMeses = async (req, res) => {
                 body {
                     font-family: Arial, 'Courier New', monospace;
                     padding: 30px;
-                    color: #000;
+                    color: #34353A;
                     background: #fff;
                 }
                 .header {
                     text-align: center;
                     margin-bottom: 30px;
-                    border-bottom: 3px solid #000;
+                    border-bottom: 3px solid #34353A;
                     padding-bottom: 15px;
+                }
+                .header .logo-container {
+                    margin-bottom: 15px;
+                    display: flex;
+                    justify-content: center;
+                }
+                .header .logo-svg {
+                    width: 200px;
+                    height: auto;
                 }
                 .header h1 {
                     font-size: 32px;
                     font-weight: bold;
                     letter-spacing: 8px;
                     margin-bottom: 5px;
+                    color: #5F8EAD;
                 }
                 .header .subtitle {
                     font-size: 14px;
                     font-weight: bold;
                     margin-top: 8px;
+                    color: #34353A;
                 }
                 .mes-section {
                     margin-bottom: 25px;
                     background: #f5f5f5;
                     padding: 20px;
-                    border: 2px solid #000;
+                    border: 2px solid #34353A;
                 }
                 .mes-header {
                     margin-bottom: 15px;
                     padding-bottom: 10px;
-                    border-bottom: 2px solid #000;
+                    border-bottom: 2px solid #5F8EAD;
                     text-align: center;
                 }
                 .mes-header h2 {
                     font-size: 18px;
                     font-weight: bold;
+                    color: #5F8EAD;
                 }
                 .mes-table {
                     width: 100%;
                     border-collapse: collapse;
                     background: #fff;
-                    border: 2px solid #000;
+                    border: 2px solid #34353A;
                 }
                 .mes-table td {
                     padding: 10px 15px;
-                    border: 1px solid #000;
+                    border: 1px solid #34353A;
                     font-size: 12px;
                 }
                 .mes-table .label {
                     font-weight: bold;
                     width: 150px;
+                    background: #f5f5f5;
                 }
                 .mes-table .value {
                     text-align: right;
                 }
                 .resumen-final {
-                    background: #f9f9f9;
+                    background: linear-gradient(135deg, #5F8EAD 0%, #34353A 100%);
                     padding: 20px;
-                    border: 3px solid #000;
+                    border: 3px solid #34353A;
                     text-align: center;
                     margin-top: 30px;
+                    color: #fff;
                 }
                 .resumen-final h3 {
                     font-size: 20px;
@@ -1255,27 +1204,29 @@ ReportesCajaChicaController.generarPDFMultiplesMeses = async (req, res) => {
                     margin-top: 15px;
                     border-collapse: collapse;
                     background: #fff;
-                    border: 2px solid #000;
+                    border: 2px solid #34353A;
                 }
                 .total-table td {
                     padding: 12px 15px;
-                    border: 1px solid #000;
+                    border: 1px solid #34353A;
                     font-size: 13px;
+                    color: #34353A;
                 }
                 .total-table .label {
                     font-weight: bold;
                     width: 250px;
+                    background: #f5f5f5;
                 }
                 .total-table .value {
                     text-align: right;
                     font-weight: bold;
-                    font-size: 12px;
+                    font-size: 14px;
                 }
                 .footer-info {
                     margin-top: 30px;
                     text-align: center;
                     font-size: 10px;
-                    color: #666;
+                    color: #34353A;
                     border-top: 1px solid #ccc;
                     padding-top: 15px;
                 }
@@ -1283,6 +1234,19 @@ ReportesCajaChicaController.generarPDFMultiplesMeses = async (req, res) => {
         </head>
         <body>
             <div class="header">
+                <div class="logo-container">
+                    <svg class="logo-svg" viewBox="0 0 350 120" xmlns="http://www.w3.org/2000/svg">
+                        <g>
+                            <path d="M 25 55 L 45 35 L 65 55 L 65 85 L 25 85 Z" fill="#5F8EAD" stroke="#34353A" stroke-width="2"/>
+                            <rect x="32" y="62" width="10" height="14" fill="#FFFFFF"/>
+                            <rect x="48" y="62" width="10" height="14" fill="#FFFFFF"/>
+                            <path d="M 30 50 L 45 35 L 60 50" fill="none" stroke="#34353A" stroke-width="2"/>
+                            <path d="M 15 90 Q 45 70 75 90" fill="none" stroke="#5D9646" stroke-width="4" stroke-linecap="round"/>
+                            <text x="90" y="65" font-family="Arial, sans-serif" font-size="42" font-weight="bold" fill="#5F8EAD" letter-spacing="2">RIVERA</text>
+                            <text x="90" y="90" font-family="Arial, sans-serif" font-size="16" fill="#34353A">Distribuidora y Transportes</text>
+                        </g>
+                    </svg>
+                </div>
                 <h1>CAJA CHICA</h1>
                 <div class="subtitle">REPORTE COMPARATIVO - ${mesesValidos.map(m => obtenerNombreMes(m)).join(', ').toUpperCase()} ${anoNum}</div>
             </div>
@@ -1354,43 +1318,13 @@ ReportesCajaChicaController.generarPDFMultiplesMeses = async (req, res) => {
 };
 
 // =====================================================
-// =====================================================
 // 5. PDF REPORTE DE UN SOLO DÍA (DIARIO)
-// =====================================================
-// Genera un PDF con todos los movimientos de un día específico
-// Incluye la HORA de cada transacción
-//
-// Parámetros:
-//   - req.params.fecha: Fecha en formato YYYY-MM-DD
-//
-// Respuesta:
-//   - Éxito: PDF descargable
-//   - Error 400: Formato de fecha inválido
-//   - Error 404: No hay movimientos para ese día
-//   - Error 500: Error al generar PDF
-//
-// Características del reporte:
-//   - Tabla con columna de HORA (HH:MM)
-//   - Balance inicial y final del día
-//   - Variación del día
-//   - Fecha completa con día de la semana
-//
-// Uso típico:
-//   GET /api/reportes-caja-chica/diario/2025-12-12
-//
-// Ideal para:
-//   - Cierre de caja diario
-//   - Cuadre de turno
-//   - Verificación de movimientos del día
-//
-// Nota: La hora se toma del campo 'date' del movimiento
 // =====================================================
 ReportesCajaChicaController.generarPDFDiario = async (req, res) => {
     let browser;
     try {
-        const { fecha } = req.params; // formato: YYYY-MM-DD
+        const { fecha } = req.params;
 
-        // Validar formato de fecha
         const fechaObj = new Date(fecha);
         if (isNaN(fechaObj.getTime())) {
             return res.status(400).json({
@@ -1399,14 +1333,12 @@ ReportesCajaChicaController.generarPDFDiario = async (req, res) => {
             });
         }
 
-        // Construir rango de fechas para el día completo
         const fechaInicio = new Date(fecha);
         fechaInicio.setHours(0, 0, 0, 0);
         
         const fechaFin = new Date(fecha);
         fechaFin.setHours(23, 59, 59, 999);
 
-        // Buscar movimientos SIN populate inicial
         const movimientos = await CajaChica.find({
             date: {
                 $gte: fechaInicio,
@@ -1414,7 +1346,6 @@ ReportesCajaChicaController.generarPDFDiario = async (req, res) => {
             }
         }).sort({ date: 1, createdAt: 1 });
 
-        // Hacer populate manual SOLO para ObjectIds válidos
         await Promise.all(
             movimientos.map(async (movement) => {
                 if (movement.employeeId !== 'admin' && movement.employeeId) {
@@ -1436,7 +1367,6 @@ ReportesCajaChicaController.generarPDFDiario = async (req, res) => {
             });
         }
 
-        // Calcular estadísticas del día
         const totalIngresos = movimientos
             .filter(m => m.type === 'income')
             .reduce((sum, m) => sum + m.amount, 0);
@@ -1463,37 +1393,49 @@ ReportesCajaChicaController.generarPDFDiario = async (req, res) => {
                 body {
                     font-family: Arial, 'Courier New', monospace;
                     padding: 30px;
-                    color: #000;
+                    color: #34353A;
                     background: #fff;
                 }
                 .header {
                     text-align: center;
                     margin-bottom: 30px;
-                    border-bottom: 3px solid #000;
+                    border-bottom: 3px solid #34353A;
                     padding-bottom: 15px;
+                }
+                .header .logo-container {
+                    margin-bottom: 15px;
+                    display: flex;
+                    justify-content: center;
+                }
+                .header .logo-svg {
+                    width: 200px;
+                    height: auto;
                 }
                 .header h1 {
                     font-size: 32px;
                     font-weight: bold;
                     letter-spacing: 8px;
                     margin-bottom: 5px;
+                    color: #5F8EAD;
                 }
                 .header .subtitle {
                     font-size: 12px;
                     font-weight: bold;
                     margin-top: 8px;
+                    color: #34353A;
                 }
                 .header .balance-info {
                     text-align: right;
                     font-size: 18px;
                     font-weight: bold;
                     margin-top: 10px;
+                    color: #5F8EAD;
                 }
                 .stats-summary {
                     margin-bottom: 15px;
                     padding: 10px;
                     background: #f5f5f5;
-                    border: 2px solid #000;
+                    border: 2px solid #34353A;
                 }
                 .stats-row {
                     display: flex;
@@ -1508,31 +1450,33 @@ ReportesCajaChicaController.generarPDFDiario = async (req, res) => {
                     font-size: 12px;
                     margin-top: 10px;
                     padding-top: 15px;
-                    border-top: 2px solid #000;
+                    border-top: 2px solid #34353A;
                 }
                 .variacion-box {
                     text-align: center;
                     padding: 10px;
                     margin: 15px 0;
                     background: #f9f9f9;
-                    border: 2px solid #000;
+                    border: 2px solid #34353A;
                     font-weight: bold;
                 }
                 .variacion-box .label {
                     font-size: 14px;
                     margin-bottom: 10px;
+                    color: #34353A;
                 }
                 .variacion-box .value {
                     font-size: 18px;
+                    color: ${variacion >= 0 ? '#5D9646' : '#991b1b'};
                 }
                 table {
                     width: 100%;
                     border-collapse: collapse;
                     margin-bottom: 20px;
-                    border: 3px solid #000;
+                    border: 3px solid #34353A;
                 }
                 thead {
-                    background: #000;
+                    background: linear-gradient(135deg, #5F8EAD 0%, #34353A 100%);
                     color: #fff;
                 }
                 th {
@@ -1540,12 +1484,12 @@ ReportesCajaChicaController.generarPDFDiario = async (req, res) => {
                     text-align: center;
                     font-size: 12px;
                     font-weight: bold;
-                    border: 2px solid #000;
+                    border: 2px solid #34353A;
                     text-transform: uppercase;
                 }
                 td {
                     padding: 10px 8px;
-                    border: 1px solid #000;
+                    border: 1px solid #34353A;
                     font-size: 11px;
                     background: #fff;
                 }
@@ -1582,7 +1526,7 @@ ReportesCajaChicaController.generarPDFDiario = async (req, res) => {
                     margin-top: 20px;
                     padding: 12px;
                     background: #f9f9f9;
-                    border: 2px solid #000;
+                    border: 2px solid #34353A;
                     text-align: center;
                 }
                 .footer-section .balance-final {
@@ -1591,13 +1535,14 @@ ReportesCajaChicaController.generarPDFDiario = async (req, res) => {
                     margin: 8px 0;
                     padding: 10px;
                     background: #fff;
-                    border: 2px solid #000;
+                    border: 2px solid #5F8EAD;
+                    color: #5F8EAD;
                 }
                 .footer-info {
                     margin-top: 30px;
                     text-align: center;
                     font-size: 10px;
-                    color: #666;
+                    color: #34353A;
                     border-top: 1px solid #ccc;
                     padding-top: 15px;
                 }
@@ -1605,6 +1550,19 @@ ReportesCajaChicaController.generarPDFDiario = async (req, res) => {
         </head>
         <body>
             <div class="header">
+                <div class="logo-container">
+                    <svg class="logo-svg" viewBox="0 0 350 120" xmlns="http://www.w3.org/2000/svg">
+                        <g>
+                            <path d="M 25 55 L 45 35 L 65 55 L 65 85 L 25 85 Z" fill="#5F8EAD" stroke="#34353A" stroke-width="2"/>
+                            <rect x="32" y="62" width="10" height="14" fill="#FFFFFF"/>
+                            <rect x="48" y="62" width="10" height="14" fill="#FFFFFF"/>
+                            <path d="M 30 50 L 45 35 L 60 50" fill="none" stroke="#34353A" stroke-width="2"/>
+                            <path d="M 15 90 Q 45 70 75 90" fill="none" stroke="#5D9646" stroke-width="4" stroke-linecap="round"/>
+                            <text x="90" y="65" font-family="Arial, sans-serif" font-size="42" font-weight="bold" fill="#5F8EAD" letter-spacing="2">RIVERA</text>
+                            <text x="90" y="90" font-family="Arial, sans-serif" font-size="16" fill="#34353A">Distribuidora y Transportes</text>
+                        </g>
+                    </svg>
+                </div>
                 <h1>CAJA CHICA</h1>
                 <div class="subtitle">REPORTE DIARIO - ${fechaObj.toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }).toUpperCase()}</div>
                 <div class="balance-info">$ ${balanceFinal.toFixed(2)}</div>
@@ -1631,7 +1589,7 @@ ReportesCajaChicaController.generarPDFDiario = async (req, res) => {
 
             <div class="variacion-box">
                 <div class="label">VARIACIÓN DEL DÍA</div>
-                <div class="value" style="color: ${variacion >= 0 ? '#000' : '#000'}">
+                <div class="value">
                     ${variacion >= 0 ? '+' : ''} $ ${variacion.toFixed(2)}
                 </div>
             </div>
@@ -1713,40 +1671,7 @@ ReportesCajaChicaController.generarPDFDiario = async (req, res) => {
 };
 
 // =====================================================
-// =====================================================
-// 6. PDF REPORTE POR RANGO DE FECHAS (SEMANAL O PERSONALIZADO)
-// =====================================================
-// Genera un PDF con movimientos entre dos fechas específicas
-// SIN límite de días - puede cruzar meses y años
-//
-// Parámetros:
-//   - req.body.fechaInicio: Fecha inicial en formato YYYY-MM-DD
-//   - req.body.fechaFin: Fecha final en formato YYYY-MM-DD
-//
-// Respuesta:
-//   - Éxito: PDF descargable
-//   - Error 400: Formato de fecha inválido o fechaInicio > fechaFin
-//   - Error 404: No hay movimientos en ese rango
-//   - Error 500: Error al generar PDF
-//
-// Características del reporte:
-//   - Calcula automáticamente días del período
-//   - Muestra si es SEMANAL (≤7 días) o RANGO DE FECHAS
-//   - Balance inicial y final del período
-//   - Variación total del período
-//   - Tabla completa con todos los movimientos
-//
-// Ejemplos de uso:
-//   - Semanal: { "fechaInicio": "2025-12-01", "fechaFin": "2025-12-07" }
-//   - Quincenal: { "fechaInicio": "2025-12-01", "fechaFin": "2025-12-15" }
-//   - Cruzando meses: { "fechaInicio": "2024-11-01", "fechaFin": "2025-01-02" }
-//
-// Ideal para:
-//   - Reportes semanales
-//   - Períodos personalizados
-//   - Rangos que cruzan meses
-//
-// Nota: NO hay límite de días, a diferencia de otras implementaciones
+// 6. PDF REPORTE POR RANGO DE FECHAS
 // =====================================================
 ReportesCajaChicaController.generarPDFRangoFechas = async (req, res) => {
     let browser;
@@ -1760,7 +1685,6 @@ ReportesCajaChicaController.generarPDFRangoFechas = async (req, res) => {
             });
         }
 
-        // Validar formato de fechas
         const inicio = new Date(fechaInicio);
         const fin = new Date(fechaFin);
 
@@ -1778,15 +1702,12 @@ ReportesCajaChicaController.generarPDFRangoFechas = async (req, res) => {
             });
         }
 
-        // Calcular diferencia en días
         const diffTime = Math.abs(fin - inicio);
         const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
-        // Ajustar horas para cubrir todo el día
         inicio.setHours(0, 0, 0, 0);
         fin.setHours(23, 59, 59, 999);
 
-        // Buscar movimientos SIN populate inicial
         const movimientos = await CajaChica.find({
             date: {
                 $gte: inicio,
@@ -1794,7 +1715,6 @@ ReportesCajaChicaController.generarPDFRangoFechas = async (req, res) => {
             }
         }).sort({ date: 1, createdAt: 1 });
 
-        // Hacer populate manual SOLO para ObjectIds válidos
         await Promise.all(
             movimientos.map(async (movement) => {
                 if (movement.employeeId !== 'admin' && movement.employeeId) {
@@ -1816,7 +1736,6 @@ ReportesCajaChicaController.generarPDFRangoFechas = async (req, res) => {
             });
         }
 
-        // Calcular estadísticas del período
         const totalIngresos = movimientos
             .filter(m => m.type === 'income')
             .reduce((sum, m) => sum + m.amount, 0);
@@ -1829,7 +1748,6 @@ ReportesCajaChicaController.generarPDFRangoFechas = async (req, res) => {
         const balanceFinal = movimientos[movimientos.length - 1].currentBalance;
         const variacion = balanceFinal - balanceInicial;
 
-        // Determinar si es semanal o rango personalizado
         const tipoReporte = diffDays <= 7 ? 'SEMANAL' : 'RANGO DE FECHAS';
 
         const htmlContent = `
@@ -1846,41 +1764,54 @@ ReportesCajaChicaController.generarPDFRangoFechas = async (req, res) => {
                 body {
                     font-family: Arial, 'Courier New', monospace;
                     padding: 30px;
-                    color: #000;
+                    color: #34353A;
                     background: #fff;
                 }
                 .header {
                     text-align: center;
                     margin-bottom: 30px;
-                    border-bottom: 3px solid #000;
+                    border-bottom: 3px solid #34353A;
                     padding-bottom: 15px;
+                }
+                .header .logo-container {
+                    margin-bottom: 15px;
+                    display: flex;
+                    justify-content: center;
+                }
+                .header .logo-svg {
+                    width: 200px;
+                    height: auto;
                 }
                 .header h1 {
                     font-size: 32px;
                     font-weight: bold;
                     letter-spacing: 8px;
                     margin-bottom: 5px;
+                    color: #5F8EAD;
                 }
                 .header .subtitle {
                     font-size: 14px;
                     font-weight: bold;
                     margin-top: 8px;
+                    color: #34353A;
                 }
                 .header .periodo {
                     font-size: 12px;
                     margin-top: 5px;
+                    color: #34353A;
                 }
                 .header .balance-info {
                     text-align: right;
                     font-size: 18px;
                     font-weight: bold;
                     margin-top: 10px;
+                    color: #5F8EAD;
                 }
                 .stats-summary {
                     margin-bottom: 15px;
                     padding: 10px;
                     background: #f5f5f5;
-                    border: 2px solid #000;
+                    border: 2px solid #34353A;
                 }
                 .stats-row {
                     display: flex;
@@ -1895,31 +1826,33 @@ ReportesCajaChicaController.generarPDFRangoFechas = async (req, res) => {
                     font-size: 12px;
                     margin-top: 10px;
                     padding-top: 15px;
-                    border-top: 2px solid #000;
+                    border-top: 2px solid #34353A;
                 }
                 .variacion-box {
                     text-align: center;
                     padding: 10px;
                     margin: 15px 0;
                     background: #f9f9f9;
-                    border: 2px solid #000;
+                    border: 2px solid #34353A;
                     font-weight: bold;
                 }
                 .variacion-box .label {
                     font-size: 14px;
                     margin-bottom: 10px;
+                    color: #34353A;
                 }
                 .variacion-box .value {
                     font-size: 18px;
+                    color: ${variacion >= 0 ? '#5D9646' : '#991b1b'};
                 }
                 table {
                     width: 100%;
                     border-collapse: collapse;
                     margin-bottom: 20px;
-                    border: 3px solid #000;
+                    border: 3px solid #34353A;
                 }
                 thead {
-                    background: #000;
+                    background: linear-gradient(135deg, #5F8EAD 0%, #34353A 100%);
                     color: #fff;
                 }
                 th {
@@ -1927,12 +1860,12 @@ ReportesCajaChicaController.generarPDFRangoFechas = async (req, res) => {
                     text-align: center;
                     font-size: 12px;
                     font-weight: bold;
-                    border: 2px solid #000;
+                    border: 2px solid #34353A;
                     text-transform: uppercase;
                 }
                 td {
                     padding: 10px 8px;
-                    border: 1px solid #000;
+                    border: 1px solid #34353A;
                     font-size: 11px;
                     background: #fff;
                 }
@@ -1969,7 +1902,7 @@ ReportesCajaChicaController.generarPDFRangoFechas = async (req, res) => {
                     margin-top: 20px;
                     padding: 12px;
                     background: #f9f9f9;
-                    border: 2px solid #000;
+                    border: 2px solid #34353A;
                     text-align: center;
                 }
                 .footer-section .balance-final {
@@ -1978,13 +1911,14 @@ ReportesCajaChicaController.generarPDFRangoFechas = async (req, res) => {
                     margin: 8px 0;
                     padding: 10px;
                     background: #fff;
-                    border: 2px solid #000;
+                    border: 2px solid #5F8EAD;
+                    color: #5F8EAD;
                 }
                 .footer-info {
                     margin-top: 30px;
                     text-align: center;
                     font-size: 10px;
-                    color: #666;
+                    color: #34353A;
                     border-top: 1px solid #ccc;
                     padding-top: 15px;
                 }
@@ -1992,6 +1926,19 @@ ReportesCajaChicaController.generarPDFRangoFechas = async (req, res) => {
         </head>
         <body>
             <div class="header">
+                <div class="logo-container">
+                    <svg class="logo-svg" viewBox="0 0 350 120" xmlns="http://www.w3.org/2000/svg">
+                        <g>
+                            <path d="M 25 55 L 45 35 L 65 55 L 65 85 L 25 85 Z" fill="#5F8EAD" stroke="#34353A" stroke-width="2"/>
+                            <rect x="32" y="62" width="10" height="14" fill="#FFFFFF"/>
+                            <rect x="48" y="62" width="10" height="14" fill="#FFFFFF"/>
+                            <path d="M 30 50 L 45 35 L 60 50" fill="none" stroke="#34353A" stroke-width="2"/>
+                            <path d="M 15 90 Q 45 70 75 90" fill="none" stroke="#5D9646" stroke-width="4" stroke-linecap="round"/>
+                            <text x="90" y="65" font-family="Arial, sans-serif" font-size="42" font-weight="bold" fill="#5F8EAD" letter-spacing="2">RIVERA</text>
+                            <text x="90" y="90" font-family="Arial, sans-serif" font-size="16" fill="#34353A">Distribuidora y Transportes</text>
+                        </g>
+                    </svg>
+                </div>
                 <h1>CAJA CHICA</h1>
                 <div class="subtitle">REPORTE ${tipoReporte}</div>
                 <div class="periodo">${inicio.toLocaleDateString('es-ES')} - ${fin.toLocaleDateString('es-ES')}</div>
@@ -2023,7 +1970,7 @@ ReportesCajaChicaController.generarPDFRangoFechas = async (req, res) => {
 
             <div class="variacion-box">
                 <div class="label">VARIACIÓN DEL PERÍODO</div>
-                <div class="value" style="color: ${variacion >= 0 ? '#000' : '#000'}">
+                <div class="value">
                     ${variacion >= 0 ? '+' : ''} $ ${variacion.toFixed(2)}
                 </div>
             </div>
@@ -2104,41 +2051,3 @@ ReportesCajaChicaController.generarPDFRangoFechas = async (req, res) => {
 };
 
 export default ReportesCajaChicaController;
-
-// =====================================================
-// NOTAS FINALES Y MEJORES PRÁCTICAS
-// =====================================================
-//
-// 1. MANEJO DE employeeId:
-//    - Siempre verificar si es "admin" antes de hacer populate
-//    - Usar regex para validar ObjectIds: /^[0-9a-fA-F]{24}$/
-//    - Hacer populate manual, NO en la query principal
-//
-// 2. GENERACIÓN DE PDFs:
-//    - Usar Puppeteer con headless: "new"
-//    - Siempre cerrar el browser en el finally/catch
-//    - printBackground: true para estilos
-//    - Formato A4 con márgenes de 15-20px
-//
-// 3. DISEÑO DE REPORTES:
-//    - Estilo tradicional tipo contable (blanco y negro)
-//    - Bordes negros sólidos, sin gradientes
-//    - Optimizado para impresión (ahorro de tinta)
-//    - Texto en mayúsculas para secciones principales
-//
-// 4. VALIDACIONES:
-//    - Siempre validar parámetros de entrada
-//    - Retornar mensajes descriptivos en errores
-//    - Usar códigos HTTP apropiados (400, 404, 500)
-//
-// 5. RENDIMIENTO:
-//    - Usar Promise.all para populate paralelo
-//    - Ordenar en la query de MongoDB (.sort())
-//    - Filtrar en memoria solo cuando sea necesario
-//
-// 6. MANTENIMIENTO:
-//    - Cada reporte es independiente (fácil modificación)
-//    - Estilos CSS inline para compatibilidad
-//    - Comentarios descriptivos en cada sección
-//
-// =====================================================
