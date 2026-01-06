@@ -1,6 +1,7 @@
 /**
  * Controlador para generar reportes PDF de planillas quincenales
  * Estilo similar a ReportesCajaChicaController
+ * Colores personalizados: #5F8EAD (azul), #5D9646 (verde), #34353A (gris oscuro)
  */
 
 import puppeteer from 'puppeteer';
@@ -75,31 +76,43 @@ ReportesPlanillasController.generarPDFQuincenal = async (req, res) => {
                 body {
                     font-family: Arial, sans-serif;
                     padding: 20px;
-                    color: #000;
+                    color: #34353A;
                     background: #fff;
                 }
                 .header {
                     text-align: center;
                     margin-bottom: 20px;
                     padding-bottom: 15px;
-                    border-bottom: 2px solid #000;
+                    border-bottom: 3px solid #5F8EAD;
+                }
+                .header .logo-container {
+                    margin-bottom: 10px;
+                }
+                .header .logo-container img {
+                    max-width: 180px;
+                    height: auto;
                 }
                 .header h1 {
                     font-size: 16px;
                     font-weight: bold;
                     text-transform: uppercase;
                     margin-bottom: 5px;
+                    color: #34353A;
                 }
                 .header .subtitle {
                     font-size: 12px;
-                    color: #333;
+                    color: #5F8EAD;
                 }
                 .info-section {
                     margin-bottom: 15px;
                     padding: 10px;
-                    background: #f5f5f5;
-                    border: 1px solid #000;
+                    background: #f5f9fc;
+                    border: 2px solid #5F8EAD;
+                    border-radius: 5px;
                     font-size: 11px;
+                }
+                .info-section strong {
+                    color: #34353A;
                 }
                 table {
                     width: 100%;
@@ -108,16 +121,16 @@ ReportesPlanillasController.generarPDFQuincenal = async (req, res) => {
                     font-size: 8px;
                 }
                 th {
-                    background: #000;
+                    background: #34353A;
                     color: white;
                     padding: 6px 3px;
                     text-align: center;
                     font-weight: bold;
-                    border: 1px solid #000;
+                    border: 1px solid #34353A;
                 }
                 td {
                     padding: 4px 3px;
-                    border: 1px solid #000;
+                    border: 1px solid #5F8EAD;
                     text-align: center;
                 }
                 .text-left { text-align: left; }
@@ -125,28 +138,36 @@ ReportesPlanillasController.generarPDFQuincenal = async (req, res) => {
                 .employee-name {
                     font-weight: bold;
                     font-size: 7px;
+                    color: #34353A;
                 }
                 .section-header {
-                    background: #666;
+                    background: #5F8EAD;
                     color: white;
                     font-weight: bold;
                 }
                 .totals-row {
-                    background: #e0e0e0;
+                    background: #e8f4e8;
                     font-weight: bold;
+                    color: #34353A;
+                }
+                .totals-row td {
+                    border: 2px solid #5D9646;
                 }
                 .footer {
                     margin-top: 20px;
                     text-align: center;
                     font-size: 9px;
-                    color: #666;
-                    border-top: 1px solid #000;
+                    color: #5F8EAD;
+                    border-top: 2px solid #5D9646;
                     padding-top: 10px;
                 }
             </style>
         </head>
         <body>
             <div class="header">
+                <div class="logo-container">
+                    <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjgwIiB2aWV3Qm94PSIwIDAgMzAwIDgwIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPgogIDwhLS0gTG9nbyBDb250YWluZXIgLS0+CiAgPGcgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoMTAsMTApIj4KICAgIDwhLS0gVHJ1Y2sgU2lsaG91ZXR0ZSAtLT4KICAgIDxwYXRoIGQ9Ik0yMCA1MCBRMTUgNDUgMTUgMzUgTDE1IDI1IFEyMCAyMCAzMCAyMCBMNTAgMjAgUTU1IDIwIDU1IDI1IEw1NSA0NSBRNTUgNTAgNTAgNTAgWiIgZmlsbD0iIzVGOEVBRCIgc3Ryb2tlPSIjMzQzNTNBIiBzdHJva2Utd2lkdGg9IjIiLz4KICAgIDxjaXJjbGUgY3g9IjI1IiBjeT0iNTUiIHI9IjUiIGZpbGw9IiMzNDM1M0EiLz4KICAgIDxjaXJjbGUgY3g9IjQ1IiBjeT0iNTUiIHI9IjUiIGZpbGw9IiMzNDM1M0EiLz4KICAgIDxyZWN0IHg9IjIwIiB5PSIyNSIgd2lkdGg9IjI1IiBoZWlnaHQ9IjE1IiBmaWxsPSIjZjVmOWZjIiBvcGFjaXR5PSIwLjUiLz4KICA8L2c+CiAgCiAgPCEtLSBUZXh0byAtLT4KICA8dGV4dCB4PSI4NSIgeT0iMzUiIGZvbnQtZmFtaWx5PSJBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIyOCIgZm9udC13ZWlnaHQ9ImJvbGQiIGZpbGw9IiM1RjhFQUQiPlJJVkVSQTwvdGV4dD4KICA8dGV4dCB4PSI4NSIgeT0iNTAiIGZvbnQtZmFtaWx5PSJBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxMiIgZmlsbD0iIzVEOTY0NiI+RGlzdHJpYnVpZG9yYSB5IFRyYW5zcG9ydGVzPC90ZXh0PgogIAogIDwhLS0gRGVjb3JhdGl2ZSBMaW5lIC0tPgogIDxwYXRoIGQ9Ik04MCA2MCBRMTUwIDU1IDI5MCA2MCIgc3Ryb2tlPSIjNUQ5NjQ2IiBzdHJva2Utd2lkdGg9IjMiIGZpbGw9Im5vbmUiLz4KPC9zdmc+" alt="Rivera Logo" />
+                </div>
                 <h1>PLANILLA DE NÓMINA DE SALARIOS</h1>
                 <div class="subtitle">${planilla.descripcion || 'Sin descripción'}</div>
                 <div class="subtitle">Del ${formatearFecha(planilla.fechaInicio)} al ${formatearFecha(planilla.fechaFin)}</div>
@@ -169,8 +190,8 @@ ReportesPlanillasController.generarPDFQuincenal = async (req, res) => {
                         <th rowspan="2" style="width: 7%;">TOTAL SALARIO MAS VIÁTICOS</th>
                         <th colspan="3" class="section-header">DESCUENTOS DE LEY</th>
                         <th colspan="3" class="section-header">OTROS DESCUENTOS</th>
-                        <th rowspan="2" style="width: 7%;"><strong>TOTAL DE DESCUENTOS</strong></th>
-                        <th rowspan="2" style="width: 8%;"><strong>TOTAL A PAGAR</strong></th>
+                        <th rowspan="2" style="width: 7%; background: #5D9646;"><strong>TOTAL DE DESCUENTOS</strong></th>
+                        <th rowspan="2" style="width: 8%; background: #5D9646;"><strong>TOTAL A PAGAR</strong></th>
                     </tr>
                     <tr>
                         <th style="width: 5%;">ISSS 3%</th>
@@ -235,7 +256,7 @@ ReportesPlanillasController.generarPDFQuincenal = async (req, res) => {
 
             <div class="footer">
                 <p>Documento generado el ${new Date().toLocaleDateString('es-ES')} a las ${new Date().toLocaleTimeString('es-ES')}</p>
-                <p>Sistema de Gestión Rivera © ${new Date().getFullYear()}</p>
+                <p><strong>Rivera Distribuidora y Transportes</strong> - Sistema de Gestión © ${new Date().getFullYear()}</p>
             </div>
         </body>
         </html>
@@ -327,29 +348,38 @@ ReportesPlanillasController.generarPDFMensual = async (req, res) => {
                 body {
                     font-family: Arial, sans-serif;
                     padding: 30px;
-                    color: #000;
+                    color: #34353A;
                     background: #fff;
                 }
                 .header {
                     text-align: center;
                     margin-bottom: 25px;
                     padding-bottom: 15px;
-                    border-bottom: 3px solid #000;
+                    border-bottom: 4px solid #5F8EAD;
+                }
+                .header .logo-container {
+                    margin-bottom: 15px;
+                }
+                .header .logo-container img {
+                    max-width: 200px;
+                    height: auto;
                 }
                 .header h1 {
                     font-size: 20px;
                     font-weight: bold;
                     margin-bottom: 10px;
+                    color: #34353A;
                 }
                 .section {
                     margin: 30px 0;
                 }
                 .section h2 {
                     font-size: 16px;
-                    background: #000;
+                    background: #5F8EAD;
                     color: white;
                     padding: 10px;
                     margin-bottom: 15px;
+                    border-radius: 5px;
                 }
                 table {
                     width: 100%;
@@ -358,51 +388,61 @@ ReportesPlanillasController.generarPDFMensual = async (req, res) => {
                     font-size: 12px;
                 }
                 th {
-                    background: #666;
+                    background: #34353A;
                     color: white;
                     padding: 8px;
                     text-align: left;
-                    border: 1px solid #000;
+                    border: 1px solid #34353A;
                 }
                 td {
                     padding: 8px;
-                    border: 1px solid #000;
+                    border: 1px solid #5F8EAD;
                 }
                 .text-right { text-align: right; }
                 .text-center { text-align: center; }
                 .summary {
                     margin-top: 30px;
                     padding: 20px;
-                    background: #f5f5f5;
-                    border: 2px solid #000;
+                    background: #f5f9fc;
+                    border: 3px solid #5D9646;
+                    border-radius: 8px;
+                }
+                .summary h3 {
+                    color: #5D9646;
+                    margin-bottom: 15px;
                 }
                 .summary-row {
                     display: flex;
                     justify-content: space-between;
                     padding: 8px 0;
                     font-size: 14px;
+                    color: #34353A;
                 }
                 .summary-row.total {
                     font-size: 18px;
                     font-weight: bold;
-                    border-top: 2px solid #000;
+                    border-top: 3px solid #5D9646;
                     margin-top: 15px;
                     padding-top: 15px;
+                    color: #5D9646;
                 }
                 .footer {
                     margin-top: 40px;
                     text-align: center;
                     font-size: 10px;
-                    color: #666;
-                    border-top: 1px solid #000;
+                    color: #5F8EAD;
+                    border-top: 2px solid #5D9646;
                     padding-top: 10px;
                 }
             </style>
         </head>
         <body>
             <div class="header">
+                <div class="logo-container">
+                    <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjgwIiB2aWV3Qm94PSIwIDAgMzAwIDgwIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPgogIDwhLS0gTG9nbyBDb250YWluZXIgLS0+CiAgPGcgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoMTAsMTApIj4KICAgIDwhLS0gVHJ1Y2sgU2lsaG91ZXR0ZSAtLT4KICAgIDxwYXRoIGQ9Ik0yMCA1MCBRMTUgNDUgMTUgMzUgTDE1IDI1IFEyMCAyMCAzMCAyMCBMNTAgMjAgUTU1IDIwIDU1IDI1IEw1NSA0NSBRNTUgNTAgNTAgNTAgWiIgZmlsbD0iIzVGOEVBRCIgc3Ryb2tlPSIjMzQzNTNBIiBzdHJva2Utd2lkdGg9IjIiLz4KICAgIDxjaXJjbGUgY3g9IjI1IiBjeT0iNTUiIHI9IjUiIGZpbGw9IiMzNDM1M0EiLz4KICAgIDxjaXJjbGUgY3g9IjQ1IiBjeT0iNTUiIHI9IjUiIGZpbGw9IiMzNDM1M0EiLz4KICAgIDxyZWN0IHg9IjIwIiB5PSIyNSIgd2lkdGg9IjI1IiBoZWlnaHQ9IjE1IiBmaWxsPSIjZjVmOWZjIiBvcGFjaXR5PSIwLjUiLz4KICA8L2c+CiAgCiAgPCEtLSBUZXh0byAtLT4KICA8dGV4dCB4PSI4NSIgeT0iMzUiIGZvbnQtZmFtaWx5PSJBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIyOCIgZm9udC13ZWlnaHQ9ImJvbGQiIGZpbGw9IiM1RjhFQUQiPlJJVkVSQTwvdGV4dD4KICA8dGV4dCB4PSI4NSIgeT0iNTAiIGZvbnQtZmFtaWx5PSJBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxMiIgZmlsbD0iIzVEOTY0NiI+RGlzdHJpYnVpZG9yYSB5IFRyYW5zcG9ydGVzPC90ZXh0PgogIAogIDwhLS0gRGVjb3JhdGl2ZSBMaW5lIC0tPgogIDxwYXRoIGQ9Ik04MCA2MCBRMTUwIDU1IDI5MCA2MCIgc3Ryb2tlPSIjNUQ5NjQ2IiBzdHJva2Utd2lkdGg9IjMiIGZpbGw9Im5vbmUiLz4KPC9zdmc+" alt="Rivera Logo" />
+                </div>
                 <h1>REPORTE MENSUAL DE PLANILLAS QUINCENALES</h1>
-                <div>${obtenerNombreMes(mesNum)} ${añoNum}</div>
+                <div style="font-size: 14px; color: #5F8EAD;">${obtenerNombreMes(mesNum)} ${añoNum}</div>
             </div>
 
             ${planillas.map(p => `
@@ -434,7 +474,7 @@ ReportesPlanillasController.generarPDFMensual = async (req, res) => {
             `).join('')}
 
             <div class="summary">
-                <h3 style="margin-bottom: 15px;">💰 RESUMEN GENERAL DEL MES</h3>
+                <h3>💰 RESUMEN GENERAL DEL MES</h3>
                 <div class="summary-row">
                     <span>Total Planillas Quincenales:</span>
                     <span><strong>${planillas.length}</strong></span>
@@ -463,7 +503,7 @@ ReportesPlanillasController.generarPDFMensual = async (req, res) => {
 
             <div class="footer">
                 <p>Documento generado el ${new Date().toLocaleDateString('es-ES')} a las ${new Date().toLocaleTimeString('es-ES')}</p>
-                <p>Sistema de Gestión Rivera © ${new Date().getFullYear()}</p>
+                <p><strong>Rivera Distribuidora y Transportes</strong> - Sistema de Gestión © ${new Date().getFullYear()}</p>
             </div>
         </body>
         </html>
