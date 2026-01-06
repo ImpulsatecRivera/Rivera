@@ -74,6 +74,14 @@ function App() {
     "/diesel/agregar",
     "/diesel/editar/:id",
     "/viajesInternos/editar/:id",
+    "/planilla/quincenal",
+    "/planilla/quincenales/:id",
+    "/planilla/semanal/nueva",
+    "/planilla/semanal/:id",
+    "/viajesInternos/agregar",
+    "/viajesInternos/programacion",
+    
+
   ];
 
   useEffect(() => {

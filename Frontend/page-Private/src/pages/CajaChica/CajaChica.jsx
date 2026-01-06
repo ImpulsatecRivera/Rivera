@@ -201,7 +201,6 @@ export default function CajaChicaModern() {
     }
   };
 
-  // ✅ FUNCIÓN MEJORADA PARA SUBIR COMPROBANTE - RESPONSIVE Y SIN EMOJI
   const subirComprobante = async (transaccion) => {
     const { value: file } = await Swal.fire({
       title: 'Subir Comprobante',
@@ -273,8 +272,6 @@ export default function CajaChicaModern() {
       );
 
       const contentType = response.headers.get('content-type');
-      console.log('📋 Content-Type:', contentType);
-      console.log('📊 Status:', response.status);
       
       if (!response.ok) {
         let errorMessage = 'Error al subir el comprobante';
@@ -292,7 +289,6 @@ export default function CajaChicaModern() {
       }
 
       const data = await response.json();
-      console.log('✅ Respuesta del backend:', data);
 
       Swal.fire({
         title: '¡Comprobante subido!',
@@ -315,7 +311,7 @@ export default function CajaChicaModern() {
     }
   };
 
-  // FUNCIÓN PARA GENERAR VALE
+  // ✅ FUNCIÓN SIMPLIFICADA PARA GENERAR VALE - SOLO CONSUME LA API
   const generarVale = async (transaccion) => {
     const { value: formValues } = await Swal.fire({
       title: 'Generar Vale',
@@ -834,7 +830,6 @@ export default function CajaChicaModern() {
           </div>
         </div>
 
-        {/* SECCIÓN REGISTRAR TRANSACCIÓN - SIN BOTÓN DE COMPROBANTE */}
         <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-200">
           <h3 className="text-lg font-semibold text-slate-800 mb-4">Registrar Transacción</h3>
           <div className="space-y-4">
@@ -932,7 +927,6 @@ export default function CajaChicaModern() {
                     <td className="px-6 py-4 text-right text-slate-600 font-mono text-sm">{formatearMoneda(tx.currentBalance)}</td>
                     <td className="px-6 py-4">
                       <div className="flex items-center justify-center gap-2">
-                        {/* COLUMNA DE COMPROBANTE - CON BOTÓN PARA SUBIR SI NO EXISTE */}
                         {tx.voucher ? (
                           <button
                             onClick={() => abrirArchivo(tx.voucher)}
@@ -951,7 +945,6 @@ export default function CajaChicaModern() {
                           </button>
                         )}
                         
-                        {/* BOTÓN DE VALE */}
                         {tx.type === 'expense' && (
                           <>
                             {tx.ticket && (

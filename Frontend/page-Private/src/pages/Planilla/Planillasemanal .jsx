@@ -288,10 +288,10 @@ export default function PlanillaSemanal() {
       });
 
       console.log('🔍 Generando PDF para planilla:', planilla._id);
-      console.log('📡 Endpoint:', `${config.api.API_URL}/reportes/planilla/semanal/semanal-detallado/${planilla._id}`);
+      console.log('📡 Endpoint:', `${config.api.API_URL}/reportes/planilla/semanal/detallado/${planilla._id}`);
 
       const response = await fetch(
-        `${config.api.API_URL}/reportes/planilla/semanal/semanal-detallado/${planilla._id}`
+        `${config.api.API_URL}/reportes/planilla/semanal/detallado/${planilla._id}`
       );
 
       console.log('📊 Response status:', response.status, response.statusText);
