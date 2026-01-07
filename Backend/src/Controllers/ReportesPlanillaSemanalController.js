@@ -1,19 +1,64 @@
+/**
+ * Controlador para generar reportes PDF de planillas semanales
+ * Colores personalizados: #5F8EAD (azul), #5D9646 (verde), #34353A (gris oscuro)
+ */
+
 import puppeteer from 'puppeteer';
 import PlanillaSemanal from '../Models/PlanillaSemanal.js';
 import { isValidObjectId } from 'mongoose';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
 
 const ReportesPlanillaSemanalController = {};
 
-/**
- * Función auxiliar para redondear dinero
- */
+// Obtener __dirname en ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+// Función para convertir imagen a base64
+const convertirImagenABase64 = (rutaImagen) => {
+    try {
+        console.log('Intentando leer imagen desde:', rutaImagen);
+        
+        if (!fs.existsSync(rutaImagen)) {
+            console.error('La imagen no existe en la ruta:', rutaImagen);
+            console.log('Contenido del directorio padre:');
+            const dirPadre = path.dirname(rutaImagen);
+            if (fs.existsSync(dirPadre)) {
+                console.log(fs.readdirSync(dirPadre));
+            }
+            return null;
+        }
+        
+        const imagen = fs.readFileSync(rutaImagen);
+        const base64 = imagen.toString('base64');
+        const ext = path.extname(rutaImagen).toLowerCase();
+        const mimeType = ext === '.png' ? 'image/png' : 'image/jpeg';
+        
+        console.log('Imagen convertida exitosamente a base64');
+        return `data:${mimeType};base64,${base64}`;
+    } catch (error) {
+        console.error('Error al convertir imagen:', error);
+        return null;
+    }
+};
+
+// OPCIÓN 1: Desde la raíz del proyecto (RECOMENDADO)
+// Asumiendo que ejecutas el servidor desde C:\Users\djpoc\Desktop\Rivera\Backend
+const RUTA_LOGO = path.join(process.cwd(), 'src', 'imagenes', 'imagen_15.png');
+
+// OPCIÓN 2: Si no funciona la opción 1, usa ruta absoluta directa:
+// const RUTA_LOGO = 'C:\\Users\\djpoc\\Desktop\\Rivera\\Backend\\src\\imagenes\\imagen_15.png';
+
+// OPCIÓN 3: Si el controlador está en Backend/src/Controllers/
+// const RUTA_LOGO = path.join(__dirname, '..', 'imagenes', 'imagen_15.png');
+
 const redondearDinero = (valor) => {
     return Math.round(valor * 100) / 100;
 };
 
-/**
- * Formatear fecha en español
- */
 const formatearFecha = (fecha) => {
     const meses = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 
                    'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
@@ -21,9 +66,6 @@ const formatearFecha = (fecha) => {
     return `${f.getDate()} de ${meses[f.getMonth()]} ${f.getFullYear()}`;
 };
 
-/**
- * Formatear rango de fechas
- */
 const formatearRangoFechas = (inicio, fin) => {
     const meses = ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO', 
                    'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
@@ -33,13 +75,26 @@ const formatearRangoFechas = (inicio, fin) => {
     return `DEL ${fechaInicio.getDate()} AL ${fechaFin.getDate()} DE ${meses[fechaInicio.getMonth()]} ${fechaInicio.getFullYear()}`;
 };
 
-/**
- * GET /api/reportes/planilla-semanal/semanal-detallado/:id
- * Generar PDF de planilla semanal detallada (día por día como imagen 1)
- */
 ReportesPlanillaSemanalController.generarPDFSemanalDetallado = async (req, res) => {
     let browser;
     try {
+        // DEBUG: Imprime información útil
+        console.log('=== DEBUG RUTAS ===');
+        console.log('process.cwd():', process.cwd());
+        console.log('__dirname:', __dirname);
+        console.log('Ruta del logo:', RUTA_LOGO);
+        console.log('¿Existe el archivo?:', fs.existsSync(RUTA_LOGO));
+        
+        // Listar archivos en el directorio de imágenes
+        const dirImagenes = path.join(process.cwd(), 'src', 'imagenes');
+        console.log('Contenido de src/imagenes:');
+        if (fs.existsSync(dirImagenes)) {
+            console.log(fs.readdirSync(dirImagenes));
+        } else {
+            console.log('El directorio no existe');
+        }
+        console.log('==================');
+        
         const { id } = req.params;
 
         if (!isValidObjectId(id)) {
@@ -58,10 +113,9 @@ ReportesPlanillaSemanalController.generarPDFSemanalDetallado = async (req, res) 
             });
         }
 
-        // Generar HTML para el PDF
-        const html = generarHTMLSemanalDetallado(planilla);
+        const logoBase64 = convertirImagenABase64(RUTA_LOGO);
+        const html = generarHTMLSemanalDetallado(planilla, logoBase64);
 
-        // Generar PDF con Puppeteer
         browser = await puppeteer.launch({
             headless: true,
             args: ['--no-sandbox', '--disable-setuid-sandbox']
@@ -84,7 +138,6 @@ ReportesPlanillaSemanalController.generarPDFSemanalDetallado = async (req, res) 
 
         await browser.close();
 
-        // Enviar PDF
         res.setHeader('Content-Type', 'application/pdf');
         res.setHeader('Content-Disposition', `attachment; filename=planilla-semanal-${formatearFecha(planilla.fechaInicio)}.pdf`);
         res.send(pdfBuffer);
@@ -100,10 +153,6 @@ ReportesPlanillaSemanalController.generarPDFSemanalDetallado = async (req, res) 
     }
 };
 
-/**
- * GET /api/reportes/planilla-semanal/mensual/:mes/:ano
- * Generar PDF mensual consolidado (estilo imagen 2)
- */
 ReportesPlanillaSemanalController.generarPDFMensual = async (req, res) => {
     let browser;
     try {
@@ -119,7 +168,6 @@ ReportesPlanillaSemanalController.generarPDFMensual = async (req, res) => {
             });
         }
 
-        // Buscar todas las planillas del mes
         const planillas = await PlanillaSemanal.find({
             fechaInicio: {
                 $gte: new Date(anoNum, mesNum - 1, 1),
@@ -134,10 +182,9 @@ ReportesPlanillaSemanalController.generarPDFMensual = async (req, res) => {
             });
         }
 
-        // Generar HTML
-        const html = generarHTMLMensual(planillas, mesNum, anoNum);
+        const logoBase64 = convertirImagenABase64(RUTA_LOGO);
+        const html = generarHTMLMensual(planillas, mesNum, anoNum, logoBase64);
 
-        // Generar PDF
         browser = await puppeteer.launch({
             headless: true,
             args: ['--no-sandbox', '--disable-setuid-sandbox']
@@ -178,15 +225,6 @@ ReportesPlanillaSemanalController.generarPDFMensual = async (req, res) => {
     }
 };
 
-/**
- * POST /api/reportes/planilla-semanal/multi-mes
- * Generar PDF consolidado de múltiples meses (trimestral, semestral, 9 meses)
- * 
- * Body: {
- *   "meses": [1, 2, 3],  // Array de meses (1-12), máximo 9
- *   "ano": 2025
- * }
- */
 ReportesPlanillaSemanalController.generarPDFMultiMes = async (req, res) => {
     let browser;
     try {
@@ -199,7 +237,6 @@ ReportesPlanillaSemanalController.generarPDFMultiMes = async (req, res) => {
             });
         }
 
-        // Validar que todos sean números válidos
         const mesesValidos = meses.every(m => m >= 1 && m <= 12);
         if (!mesesValidos) {
             return res.status(400).json({
@@ -211,7 +248,6 @@ ReportesPlanillaSemanalController.generarPDFMultiMes = async (req, res) => {
         const anoNum = parseInt(ano);
         const planillasPorMes = [];
 
-        // Obtener planillas de cada mes
         for (const mes of meses) {
             const planillas = await PlanillaSemanal.find({
                 fechaInicio: {
@@ -235,10 +271,9 @@ ReportesPlanillaSemanalController.generarPDFMultiMes = async (req, res) => {
             });
         }
 
-        // Generar HTML
-        const html = generarHTMLMultiMes(planillasPorMes, anoNum);
+        const logoBase64 = convertirImagenABase64(RUTA_LOGO);
+        const html = generarHTMLMultiMes(planillasPorMes, anoNum, logoBase64);
 
-        // Generar PDF
         browser = await puppeteer.launch({
             headless: true,
             args: ['--no-sandbox', '--disable-setuid-sandbox']
@@ -280,10 +315,6 @@ ReportesPlanillaSemanalController.generarPDFMultiMes = async (req, res) => {
     }
 };
 
-/**
- * GET /api/reportes/planilla-semanal/anual/:ano
- * Generar PDF anual consolidado (todos los meses del año)
- */
 ReportesPlanillaSemanalController.generarPDFAnual = async (req, res) => {
     let browser;
     try {
@@ -292,7 +323,6 @@ ReportesPlanillaSemanalController.generarPDFAnual = async (req, res) => {
 
         const planillasPorMes = [];
 
-        // Obtener planillas de cada mes del año
         for (let mes = 1; mes <= 12; mes++) {
             const planillas = await PlanillaSemanal.find({
                 fechaInicio: {
@@ -316,10 +346,9 @@ ReportesPlanillaSemanalController.generarPDFAnual = async (req, res) => {
             });
         }
 
-        // Generar HTML
-        const html = generarHTMLAnual(planillasPorMes, anoNum);
+        const logoBase64 = convertirImagenABase64(RUTA_LOGO);
+        const html = generarHTMLAnual(planillasPorMes, anoNum, logoBase64);
 
-        // Generar PDF
         browser = await puppeteer.launch({
             headless: true,
             args: ['--no-sandbox', '--disable-setuid-sandbox']
@@ -357,17 +386,9 @@ ReportesPlanillaSemanalController.generarPDFAnual = async (req, res) => {
     }
 };
 
-// ============================================
-// FUNCIONES AUXILIARES PARA GENERAR HTML
-// ============================================
-
-/**
- * Generar HTML para reporte semanal detallado (imagen 1)
- */
-function generarHTMLSemanalDetallado(planilla) {
+function generarHTMLSemanalDetallado(planilla, logoBase64) {
     const titulo = `PLANILLA SEMANAL, VIÁTICOS Y ANTICIPO ${formatearRangoFechas(planilla.fechaInicio, planilla.fechaFin)}`;
     
-    // Obtener fechas de cada día
     const diasFechas = {};
     if (planilla.empleados.length > 0 && planilla.empleados[0].dias.length > 0) {
         planilla.empleados[0].dias.forEach(d => {
@@ -376,14 +397,12 @@ function generarHTMLSemanalDetallado(planilla) {
         });
     }
 
-    // Construir filas de empleados
     let filasEmpleados = '';
     let numeroEmpleado = 1;
 
     planilla.empleados.forEach(emp => {
         const dias = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado'];
         
-        // Crear objeto con datos de cada día
         const datosDias = {};
         emp.dias.forEach(d => {
             datosDias[d.dia] = d;
@@ -395,7 +414,6 @@ function generarHTMLSemanalDetallado(planilla) {
                 <td style="text-align: left;">${emp.nombreCompleto}</td>
         `;
 
-        // Columnas para cada día (BASE y VIÁTICOS)
         dias.forEach(dia => {
             const dato = datosDias[dia] || { base: 0, viaticos: 0 };
             const base = dato.base || 0;
@@ -407,23 +425,21 @@ function generarHTMLSemanalDetallado(planilla) {
             `;
         });
 
-        // Columnas finales
         filasEmpleados += `
-                <td>$ ${emp.totalBase.toFixed(2)}</td>
-                <td>$ ${emp.totalViaticos.toFixed(2)}</td>
+                <td style="background-color: #e8f4e8;">$ ${emp.totalBase.toFixed(2)}</td>
+                <td style="background-color: #e8f4e8;">$ ${emp.totalViaticos.toFixed(2)}</td>
                 <td>$ ${emp.anticipos > 0 ? emp.anticipos.toFixed(2) : '-'}</td>
                 <td>$ ${emp.totalDescuentos > 0 ? emp.totalDescuentos.toFixed(2) : '-'}</td>
-                <td>$ ${emp.totalAPagar.toFixed(2)}</td>
+                <td style="background-color: #e8f4e8; font-weight: bold;">$ ${emp.totalAPagar.toFixed(2)}</td>
             </tr>
         `;
 
         numeroEmpleado++;
     });
 
-    // Fila de totales
     const totales = planilla.totales;
     const filaTotales = `
-        <tr style="font-weight: bold; background-color: #e0e0e0;">
+        <tr style="font-weight: bold; background-color: #5D9646; color: white;">
             <td colspan="2">TOTAL</td>
             <td colspan="12"></td>
             <td>$ ${totales.totalBase.toFixed(2)}</td>
@@ -450,13 +466,30 @@ function generarHTMLSemanalDetallado(planilla) {
                     font-family: Arial, sans-serif;
                     font-size: 9px;
                     padding: 10px;
+                    color: #34353A;
+                }
+                
+                .header {
+                    text-align: center;
+                    margin-bottom: 15px;
+                    padding-bottom: 10px;
+                    border-bottom: 3px solid #5F8EAD;
+                }
+                
+                .header .logo-container {
+                    margin-bottom: 10px;
+                }
+                
+                .header .logo-container img {
+                    max-width: 200px;
+                    height: auto;
                 }
                 
                 h1 {
-                    text-align: center;
                     font-size: 11px;
-                    margin-bottom: 15px;
+                    margin-bottom: 5px;
                     font-weight: bold;
+                    color: #34353A;
                 }
                 
                 table {
@@ -466,31 +499,43 @@ function generarHTMLSemanalDetallado(planilla) {
                 }
                 
                 th, td {
-                    border: 1px solid #000;
+                    border: 1px solid #5F8EAD;
                     padding: 4px 2px;
                     text-align: center;
                     font-size: 8px;
                 }
                 
                 th {
-                    background-color: #f0f0f0;
+                    background-color: #34353A;
+                    color: white;
                     font-weight: bold;
                     font-size: 7px;
-                }
-                
-                .subtotal {
-                    background-color: #f5f5f5;
-                    font-weight: bold;
                 }
                 
                 .header-dia {
+                    background-color: #5F8EAD;
+                    color: white;
                     font-size: 7px;
                     font-weight: bold;
+                }
+                
+                .footer {
+                    margin-top: 20px;
+                    font-size: 8px;
+                    text-align: center;
+                    color: #5F8EAD;
+                    border-top: 2px solid #5D9646;
+                    padding-top: 10px;
                 }
             </style>
         </head>
         <body>
-            <h1>${titulo}</h1>
+            <div class="header">
+                <div class="logo-container">
+                    ${logoBase64 ? `<img src="${logoBase64}" alt="Rivera Logo" />` : '<p>RIVERA - Distribuidora y Transportes</p>'}
+                </div>
+                <h1>${titulo}</h1>
+            </div>
             
             <table>
                 <thead>
@@ -503,11 +548,11 @@ function generarHTMLSemanalDetallado(planilla) {
                         <th colspan="2" class="header-dia">JUEVES ${diasFechas['jueves'] || ''}</th>
                         <th colspan="2" class="header-dia">VIERNES ${diasFechas['viernes'] || ''}</th>
                         <th colspan="2" class="header-dia">SÁBADO ${diasFechas['sabado'] || ''}</th>
-                        <th rowspan="2">BASE</th>
-                        <th rowspan="2">VIÁTICOS</th>
-                        <th rowspan="2">ANTICIPO<br/></th>
-                        <th rowspan="2">DESCUENTO-<br/> FALTAS</th>
-                        <th rowspan="2">TOTAL A PAGAR</th>
+                        <th rowspan="2" style="background-color: #5D9646;">BASE</th>
+                        <th rowspan="2" style="background-color: #5D9646;">VIÁTICOS</th>
+                        <th rowspan="2">ANTICIPO</th>
+                        <th rowspan="2">DESCUENTO-<br/>FALTAS</th>
+                        <th rowspan="2" style="background-color: #5D9646;">TOTAL A PAGAR</th>
                     </tr>
                     <tr>
                         <th>BASE</th>
@@ -530,25 +575,21 @@ function generarHTMLSemanalDetallado(planilla) {
                 </tbody>
             </table>
             
-            <div style="margin-top: 40px; font-size: 8px; text-align: center; color: #666;">
+            <div class="footer">
                 <p>Documento generado el ${new Date().toLocaleDateString('es-ES')} a las ${new Date().toLocaleTimeString('es-ES')}</p>
-                <p>Sistema de Gestión Rivera © ${new Date().getFullYear()}</p>
+                <p><strong>Rivera Distribuidora y Transportes</strong> - Sistema de Gestión © ${new Date().getFullYear()}</p>
             </div>
         </body>
         </html>
     `;
 }
 
-/**
- * Generar HTML para reporte mensual (imagen 2)
- */
-function generarHTMLMensual(planillas, mes, ano) {
+function generarHTMLMensual(planillas, mes, ano, logoBase64) {
     const meses = ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO',
                    'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
     
     const titulo = `PLANILLA DE EXTRA ${meses[mes - 1]} ${ano}`;
 
-    // Consolidar datos por empleado
     const empleadosMap = new Map();
 
     planillas.forEach(planilla => {
@@ -569,18 +610,14 @@ function generarHTMLMensual(planillas, mes, ano) {
         });
     });
 
-    // Generar filas
     let filasEmpleados = '';
     let numeroEmpleado = 1;
-
-    // Determinar número máximo de semanas
     const maxSemanas = planillas.length;
 
     empleadosMap.forEach((data, empleadoId) => {
         let totalEmpleado = 0;
         let columnasSemanales = '';
 
-        // Generar columnas para cada semana
         for (let i = 0; i < maxSemanas; i++) {
             if (i < data.semanas.length) {
                 const monto = data.semanas[i].total;
@@ -596,14 +633,13 @@ function generarHTMLMensual(planillas, mes, ano) {
                 <td>${numeroEmpleado}</td>
                 <td style="text-align: left;">${data.nombreCompleto}</td>
                 ${columnasSemanales}
-                <td style="font-weight: bold;">$ ${totalEmpleado.toFixed(2)}</td>
+                <td style="font-weight: bold; background-color: #e8f4e8;">$ ${totalEmpleado.toFixed(2)}</td>
             </tr>
         `;
 
         numeroEmpleado++;
     });
 
-    // Calcular totales por semana
     let totalesPorSemana = '';
     let totalGeneral = 0;
     
@@ -620,14 +656,13 @@ function generarHTMLMensual(planillas, mes, ano) {
         totalesPorSemana += `<td style="font-weight: bold;">$ ${totalSemana.toFixed(2)}</td>`;
     }
 
-    // Headers dinámicos para las semanas
     let headersSemanales = '';
     planillas.forEach((planilla, index) => {
-        headersSemanales += `<th>${formatearRangoFechas(planilla.fechaInicio, planilla.fechaFin)}</th>`;
+        headersSemanales += `<th style="background-color: #5F8EAD; color: white;">${formatearRangoFechas(planilla.fechaInicio, planilla.fechaFin)}</th>`;
     });
 
     const filaTotales = `
-        <tr style="font-weight: bold; background-color: #e0e0e0;">
+        <tr style="font-weight: bold; background-color: #5D9646; color: white;">
             <td colspan="2">TOTAL</td>
             ${totalesPorSemana}
             <td>$ ${totalGeneral.toFixed(2)}</td>
@@ -650,13 +685,31 @@ function generarHTMLMensual(planillas, mes, ano) {
                     font-family: Arial, sans-serif;
                     font-size: 11px;
                     padding: 20px;
+                    color: #34353A;
+                }
+                
+                .header {
+                    text-align: center;
+                    margin-bottom: 20px;
+                    padding-bottom: 15px;
+                    border-bottom: 3px solid #5F8EAD;
+                }
+                
+                .header .logo-container {
+                    margin-bottom: 10px;
+                }
+                
+                .header .logo-container img {
+                    max-width: 250px;
+                    height: auto;
                 }
                 
                 h1 {
                     text-align: center;
                     font-size: 14px;
-                    margin-bottom: 20px;
+                    margin-bottom: 5px;
                     font-weight: bold;
+                    color: #34353A;
                 }
                 
                 table {
@@ -666,20 +719,35 @@ function generarHTMLMensual(planillas, mes, ano) {
                 }
                 
                 th, td {
-                    border: 1px solid #000;
+                    border: 1px solid #5F8EAD;
                     padding: 6px 4px;
                     text-align: center;
                 }
                 
                 th {
-                    background-color: #f0f0f0;
+                    background-color: #34353A;
+                    color: white;
                     font-weight: bold;
                     font-size: 10px;
+                }
+                
+                .footer {
+                    margin-top: 40px;
+                    font-size: 8px;
+                    text-align: center;
+                    color: #5F8EAD;
+                    border-top: 2px solid #5D9646;
+                    padding-top: 10px;
                 }
             </style>
         </head>
         <body>
-            <h1>${titulo}</h1>
+            <div class="header">
+                <div class="logo-container">
+                    ${logoBase64 ? `<img src="${logoBase64}" alt="Rivera Logo" />` : '<p>RIVERA - Distribuidora y Transportes</p>'}
+                </div>
+                <h1>${titulo}</h1>
+            </div>
             
             <table>
                 <thead>
@@ -687,7 +755,7 @@ function generarHTMLMensual(planillas, mes, ano) {
                         <th>#</th>
                         <th>NOMBRE</th>
                         ${headersSemanales}
-                        <th>TOTAL</th>
+                        <th style="background-color: #5D9646;">TOTAL</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -696,26 +764,22 @@ function generarHTMLMensual(planillas, mes, ano) {
                 </tbody>
             </table>
             
-            <div style="margin-top: 40px; font-size: 8px; text-align: center; color: #666;">
+            <div class="footer">
                 <p>Documento generado el ${new Date().toLocaleDateString('es-ES')} a las ${new Date().toLocaleTimeString('es-ES')}</p>
-                <p>Sistema de Gestión Rivera © ${new Date().getFullYear()}</p>
+                <p><strong>Rivera Distribuidora y Transportes</strong> - Sistema de Gestión © ${new Date().getFullYear()}</p>
             </div>
         </body>
         </html>
     `;
 }
 
-/**
- * Generar HTML para reporte multi-mes (trimestral, semestral, 9 meses)
- */
-function generarHTMLMultiMes(planillasPorMes, ano) {
+function generarHTMLMultiMes(planillasPorMes, ano, logoBase64) {
     const meses = ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO',
                    'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
     
     const mesesIncluidos = planillasPorMes.map(p => meses[p.mes - 1]).join(', ');
     const titulo = `PLANILLA CONSOLIDADA ${mesesIncluidos} ${ano}`;
 
-    // Consolidar datos por empleado
     const empleadosMap = new Map();
 
     planillasPorMes.forEach(({ mes, planillas }) => {
@@ -740,12 +804,10 @@ function generarHTMLMultiMes(planillasPorMes, ano) {
         });
     });
 
-    // Generar filas
     let filasEmpleados = '';
     let numeroEmpleado = 1;
     let totalesPorMes = new Map();
 
-    // Inicializar totales
     planillasPorMes.forEach(({ mes }) => {
         totalesPorMes.set(mes, 0);
     });
@@ -767,23 +829,21 @@ function generarHTMLMultiMes(planillasPorMes, ano) {
                 <td>${numeroEmpleado}</td>
                 <td style="text-align: left;">${data.nombreCompleto}</td>
                 ${columnasMeses}
-                <td style="font-weight: bold;">$ ${totalEmpleado.toFixed(2)}</td>
+                <td style="font-weight: bold; background-color: #e8f4e8;">$ ${totalEmpleado.toFixed(2)}</td>
             </tr>
         `;
 
         numeroEmpleado++;
     });
 
-    // Headers de meses
     let headersMeses = '';
     planillasPorMes.forEach(({ mes }) => {
-        headersMeses += `<th>${meses[mes - 1]}</th>`;
+        headersMeses += `<th style="background-color: #5F8EAD; color: white;">${meses[mes - 1]}</th>`;
     });
 
-    // Totales por mes
     let columnaTotales = '';
     let granTotal = 0;
-    
+
     planillasPorMes.forEach(({ mes }) => {
         const total = totalesPorMes.get(mes);
         granTotal += total;
@@ -791,7 +851,7 @@ function generarHTMLMultiMes(planillasPorMes, ano) {
     });
 
     const filaTotales = `
-        <tr style="font-weight: bold; background-color: #e0e0e0;">
+        <tr style="font-weight: bold; background-color: #5D9646; color: white;">
             <td colspan="2">TOTAL</td>
             ${columnaTotales}
             <td>$ ${granTotal.toFixed(2)}</td>
@@ -814,13 +874,31 @@ function generarHTMLMultiMes(planillasPorMes, ano) {
                     font-family: Arial, sans-serif;
                     font-size: 11px;
                     padding: 20px;
+                    color: #34353A;
+                }
+                
+                .header {
+                    text-align: center;
+                    margin-bottom: 20px;
+                    padding-bottom: 15px;
+                    border-bottom: 3px solid #5F8EAD;
+                }
+                
+                .header .logo-container {
+                    margin-bottom: 10px;
+                }
+                
+                .header .logo-container img {
+                    max-width: 250px;
+                    height: auto;
                 }
                 
                 h1 {
                     text-align: center;
                     font-size: 14px;
-                    margin-bottom: 20px;
+                    margin-bottom: 5px;
                     font-weight: bold;
+                    color: #34353A;
                 }
                 
                 table {
@@ -830,19 +908,34 @@ function generarHTMLMultiMes(planillasPorMes, ano) {
                 }
                 
                 th, td {
-                    border: 1px solid #000;
+                    border: 1px solid #5F8EAD;
                     padding: 6px 4px;
                     text-align: center;
                 }
                 
                 th {
-                    background-color: #f0f0f0;
+                    background-color: #34353A;
+                    color: white;
                     font-weight: bold;
+                }
+                
+                .footer {
+                    margin-top: 40px;
+                    font-size: 8px;
+                    text-align: center;
+                    color: #5F8EAD;
+                    border-top: 2px solid #5D9646;
+                    padding-top: 10px;
                 }
             </style>
         </head>
         <body>
-            <h1>${titulo}</h1>
+            <div class="header">
+                <div class="logo-container">
+                    ${logoBase64 ? `<img src="${logoBase64}" alt="Rivera Logo" />` : '<p>RIVERA - Distribuidora y Transportes</p>'}
+                </div>
+                <h1>${titulo}</h1>
+            </div>
             
             <table>
                 <thead>
@@ -850,7 +943,7 @@ function generarHTMLMultiMes(planillasPorMes, ano) {
                         <th>#</th>
                         <th>NOMBRE</th>
                         ${headersMeses}
-                        <th>TOTAL</th>
+                        <th style="background-color: #5D9646;">TOTAL</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -859,25 +952,20 @@ function generarHTMLMultiMes(planillasPorMes, ano) {
                 </tbody>
             </table>
             
-            <div style="margin-top: 40px; font-size: 8px; text-align: center; color: #666;">
+            <div class="footer">
                 <p>Documento generado el ${new Date().toLocaleDateString('es-ES')} a las ${new Date().toLocaleTimeString('es-ES')}</p>
-                <p>Sistema de Gestión Rivera © ${new Date().getFullYear()}</p>
+                <p><strong>Rivera Distribuidora y Transportes</strong> - Sistema de Gestión © ${new Date().getFullYear()}</p>
             </div>
         </body>
         </html>
     `;
 }
 
-/**
- * Generar HTML para reporte anual
- */
-function generarHTMLAnual(planillasPorMes, ano) {
+function generarHTMLAnual(planillasPorMes, ano, logoBase64) {
     const meses = ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO',
                    'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
-    
     const titulo = `PLANILLA ANUAL ${ano}`;
 
-    // Consolidar datos por empleado
     const empleadosMap = new Map();
 
     planillasPorMes.forEach(({ mes, planillas }) => {
@@ -902,12 +990,10 @@ function generarHTMLAnual(planillasPorMes, ano) {
         });
     });
 
-    // Generar filas
     let filasEmpleados = '';
     let numeroEmpleado = 1;
     let totalesPorMes = new Map();
 
-    // Inicializar totales para los 12 meses
     for (let i = 1; i <= 12; i++) {
         totalesPorMes.set(i, 0);
     }
@@ -929,23 +1015,21 @@ function generarHTMLAnual(planillasPorMes, ano) {
                 <td>${numeroEmpleado}</td>
                 <td style="text-align: left;">${data.nombreCompleto}</td>
                 ${columnasMeses}
-                <td style="font-weight: bold;">$ ${totalEmpleado.toFixed(2)}</td>
+                <td style="font-weight: bold; background-color: #e8f4e8;">$ ${totalEmpleado.toFixed(2)}</td>
             </tr>
         `;
 
         numeroEmpleado++;
     });
 
-    // Headers de meses
     let headersMeses = '';
     meses.forEach(mes => {
-        headersMeses += `<th>${mes.substring(0, 3)}</th>`;
+        headersMeses += `<th style="background-color: #5F8EAD; color: white;">${mes.substring(0, 3)}</th>`;
     });
 
-    // Totales por mes
     let columnaTotales = '';
     let granTotal = 0;
-    
+
     for (let mes = 1; mes <= 12; mes++) {
         const total = totalesPorMes.get(mes);
         granTotal += total;
@@ -953,7 +1037,7 @@ function generarHTMLAnual(planillasPorMes, ano) {
     }
 
     const filaTotales = `
-        <tr style="font-weight: bold; background-color: #e0e0e0;">
+        <tr style="font-weight: bold; background-color: #5D9646; color: white;">
             <td colspan="2">TOTAL</td>
             ${columnaTotales}
             <td>$ ${granTotal.toFixed(2)}</td>
@@ -976,13 +1060,31 @@ function generarHTMLAnual(planillasPorMes, ano) {
                     font-family: Arial, sans-serif;
                     font-size: 9px;
                     padding: 15px;
+                    color: #34353A;
+                }
+                
+                .header {
+                    text-align: center;
+                    margin-bottom: 15px;
+                    padding-bottom: 10px;
+                    border-bottom: 3px solid #5F8EAD;
+                }
+                
+                .header .logo-container {
+                    margin-bottom: 10px;
+                }
+                
+                .header .logo-container img {
+                    max-width: 220px;
+                    height: auto;
                 }
                 
                 h1 {
                     text-align: center;
                     font-size: 12px;
-                    margin-bottom: 15px;
+                    margin-bottom: 5px;
                     font-weight: bold;
+                    color: #34353A;
                 }
                 
                 table {
@@ -992,20 +1094,35 @@ function generarHTMLAnual(planillasPorMes, ano) {
                 }
                 
                 th, td {
-                    border: 1px solid #000;
+                    border: 1px solid #5F8EAD;
                     padding: 4px 2px;
                     text-align: center;
                     font-size: 8px;
                 }
                 
                 th {
-                    background-color: #f0f0f0;
+                    background-color: #34353A;
+                    color: white;
                     font-weight: bold;
+                }
+                
+                .footer {
+                    margin-top: 40px;
+                    font-size: 8px;
+                    text-align: center;
+                    color: #5F8EAD;
+                    border-top: 2px solid #5D9646;
+                    padding-top: 10px;
                 }
             </style>
         </head>
         <body>
-            <h1>${titulo}</h1>
+            <div class="header">
+                <div class="logo-container">
+                    ${logoBase64 ? `<img src="${logoBase64}" alt="Rivera Logo" />` : '<p>RIVERA - Distribuidora y Transportes</p>'}
+                </div>
+                <h1>${titulo}</h1>
+            </div>
             
             <table>
                 <thead>
@@ -1013,7 +1130,7 @@ function generarHTMLAnual(planillasPorMes, ano) {
                         <th>#</th>
                         <th>NOMBRE</th>
                         ${headersMeses}
-                        <th>TOTAL</th>
+                        <th style="background-color: #5D9646;">TOTAL</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -1022,9 +1139,9 @@ function generarHTMLAnual(planillasPorMes, ano) {
                 </tbody>
             </table>
             
-            <div style="margin-top: 40px; font-size: 8px; text-align: center; color: #666;">
+            <div class="footer">
                 <p>Documento generado el ${new Date().toLocaleDateString('es-ES')} a las ${new Date().toLocaleTimeString('es-ES')}</p>
-                <p>Sistema de Gestión Rivera © ${new Date().getFullYear()}</p>
+                <p><strong>Rivera Distribuidora y Transportes</strong> - Sistema de Gestión © ${new Date().getFullYear()}</p>
             </div>
         </body>
         </html>

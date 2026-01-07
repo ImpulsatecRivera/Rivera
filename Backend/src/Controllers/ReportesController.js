@@ -1,7 +1,41 @@
 import puppeteer from 'puppeteer';
 import MantenimientoCamiones from '../Models/MantenimientoCamiones.js';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
 
 const ReportesRoutes = {};
+
+// Obtener __dirname en ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+// Función para convertir imagen a base64
+const convertirImagenABase64 = (rutaImagen) => {
+    try {
+        console.log('Intentando leer imagen desde:', rutaImagen);
+        
+        if (!fs.existsSync(rutaImagen)) {
+            console.error('La imagen no existe en la ruta:', rutaImagen);
+            return null;
+        }
+        
+        const imagen = fs.readFileSync(rutaImagen);
+        const base64 = imagen.toString('base64');
+        const ext = path.extname(rutaImagen).toLowerCase();
+        const mimeType = ext === '.png' ? 'image/png' : 'image/jpeg';
+        
+        console.log('Imagen convertida exitosamente a base64');
+        return `data:${mimeType};base64,${base64}`;
+    } catch (error) {
+        console.error('Error al convertir imagen:', error);
+        return null;
+    }
+};
+
+// Ruta al logo
+const RUTA_LOGO = path.join(process.cwd(), 'src', 'imagenes', 'imagen_15.png');
 
 // Función auxiliar para obtener nombre del mes
 const obtenerNombreMes = (mes) => {
@@ -30,6 +64,9 @@ ReportesRoutes.generarPDFIndividual = async (req, res) => {
                 message: 'Mantenimiento no encontrado'
             });
         }
+
+        // Convertir imagen a base64
+        const logoBase64 = convertirImagenABase64(RUTA_LOGO);
 
         const totalDetalle = manto.detalles.reduce((sum, detalle) => sum + detalle.subTotal, 0);
 
@@ -67,8 +104,8 @@ ReportesRoutes.generarPDFIndividual = async (req, res) => {
                     display: flex;
                     justify-content: center;
                 }
-                .header .logo-svg {
-                    width: 250px;
+                .header .logo-container img {
+                    max-width: 250px;
                     height: auto;
                 }
                 .header h1 {
@@ -296,17 +333,7 @@ ReportesRoutes.generarPDFIndividual = async (req, res) => {
             <div class="container">
                 <div class="header">
                     <div class="logo-container">
-                        <svg class="logo-svg" viewBox="0 0 350 120" xmlns="http://www.w3.org/2000/svg">
-                            <g>
-                                <path d="M 25 55 L 45 35 L 65 55 L 65 85 L 25 85 Z" fill="#5F8EAD" stroke="#34353A" stroke-width="2"/>
-                                <rect x="32" y="62" width="10" height="14" fill="#FFFFFF"/>
-                                <rect x="48" y="62" width="10" height="14" fill="#FFFFFF"/>
-                                <path d="M 30 50 L 45 35 L 60 50" fill="none" stroke="#34353A" stroke-width="2"/>
-                                <path d="M 15 90 Q 45 70 75 90" fill="none" stroke="#5D9646" stroke-width="4" stroke-linecap="round"/>
-                                <text x="90" y="65" font-family="Arial, sans-serif" font-size="42" font-weight="bold" fill="#5F8EAD" letter-spacing="2">RIVERA</text>
-                                <text x="90" y="90" font-family="Arial, sans-serif" font-size="16" fill="#34353A">Distribuidora y Transportes</text>
-                            </g>
-                        </svg>
+                        ${logoBase64 ? `<img src="${logoBase64}" alt="Rivera Logo" />` : '<p>RIVERA - Distribuidora y Transportes</p>'}
                     </div>
                     <h1>📋 Reporte de Mantenimiento</h1>
                     <p class="subtitle">Registro Detallado de Servicio Vehicular</p>
@@ -498,6 +525,9 @@ ReportesRoutes.generarPDFTodosMantenimientos = async (req, res) => {
             });
         }
 
+        // Convertir imagen a base64
+        const logoBase64 = convertirImagenABase64(RUTA_LOGO);
+
         // Calcular estadísticas generales
         const totalGeneral = mantenimientos.reduce((sum, m) => {
             const total = m.detalles.reduce((s, d) => s + d.subTotal, 0);
@@ -541,8 +571,8 @@ ReportesRoutes.generarPDFTodosMantenimientos = async (req, res) => {
                     display: flex;
                     justify-content: center;
                 }
-                .header .logo-svg {
-                    width: 200px;
+                .header .logo-container img {
+                    max-width: 200px;
                     height: auto;
                 }
                 .header h1 {
@@ -659,17 +689,7 @@ ReportesRoutes.generarPDFTodosMantenimientos = async (req, res) => {
         <body>
             <div class="header">
                 <div class="logo-container">
-                    <svg class="logo-svg" viewBox="0 0 350 120" xmlns="http://www.w3.org/2000/svg">
-                        <g>
-                            <path d="M 25 55 L 45 35 L 65 55 L 65 85 L 25 85 Z" fill="#FFFFFF" stroke="#FFFFFF" stroke-width="2"/>
-                            <rect x="32" y="62" width="10" height="14" fill="#5F8EAD"/>
-                            <rect x="48" y="62" width="10" height="14" fill="#5F8EAD"/>
-                            <path d="M 30 50 L 45 35 L 60 50" fill="none" stroke="#FFFFFF" stroke-width="2"/>
-                            <path d="M 15 90 Q 45 70 75 90" fill="none" stroke="#5D9646" stroke-width="4" stroke-linecap="round"/>
-                            <text x="90" y="65" font-family="Arial, sans-serif" font-size="42" font-weight="bold" fill="#FFFFFF" letter-spacing="2">RIVERA</text>
-                            <text x="90" y="90" font-family="Arial, sans-serif" font-size="16" fill="#FFFFFF">Distribuidora y Transportes</text>
-                        </g>
-                    </svg>
+                    ${logoBase64 ? `<img src="${logoBase64}" alt="Rivera Logo" />` : '<p>RIVERA - Distribuidora y Transportes</p>'}
                 </div>
                 <h1>📊 REPORTE CONSOLIDADO</h1>
                 <p class="subtitle">Todos los Mantenimientos Registrados</p>
@@ -801,6 +821,9 @@ ReportesRoutes.generarPDFMensualSimple = async (req, res) => {
             });
         }
 
+        // Convertir imagen a base64
+        const logoBase64 = convertirImagenABase64(RUTA_LOGO);
+
         // Agrupar por placa y sumar totales
         const porPlaca = {};
         mantenimientos.forEach(m => {
@@ -848,8 +871,8 @@ ReportesRoutes.generarPDFMensualSimple = async (req, res) => {
                     display: flex;
                     justify-content: center;
                 }
-                .header .logo-svg {
-                    width: 250px;
+                .header .logo-container img {
+                    max-width: 250px;
                     height: auto;
                 }
                 .header h1 {
@@ -911,17 +934,7 @@ ReportesRoutes.generarPDFMensualSimple = async (req, res) => {
         <body>
             <div class="header">
                 <div class="logo-container">
-                    <svg class="logo-svg" viewBox="0 0 350 120" xmlns="http://www.w3.org/2000/svg">
-                        <g>
-                            <path d="M 25 55 L 45 35 L 65 55 L 65 85 L 25 85 Z" fill="#5F8EAD" stroke="#34353A" stroke-width="2"/>
-                            <rect x="32" y="62" width="10" height="14" fill="#FFFFFF"/>
-                            <rect x="48" y="62" width="10" height="14" fill="#FFFFFF"/>
-                            <path d="M 30 50 L 45 35 L 60 50" fill="none" stroke="#34353A" stroke-width="2"/>
-                            <path d="M 15 90 Q 45 70 75 90" fill="none" stroke="#5D9646" stroke-width="4" stroke-linecap="round"/>
-                            <text x="90" y="65" font-family="Arial, sans-serif" font-size="42" font-weight="bold" fill="#5F8EAD" letter-spacing="2">RIVERA</text>
-                            <text x="90" y="90" font-family="Arial, sans-serif" font-size="16" fill="#34353A">Distribuidora y Transportes</text>
-                        </g>
-                    </svg>
+                    ${logoBase64 ? `<img src="${logoBase64}" alt="Rivera Logo" />` : '<p>RIVERA - Distribuidora y Transportes</p>'}
                 </div>
                 <h1>MANTENIMIENTO POR CAMION MES</h1>
                 <div class="period">${obtenerNombreMes(mesNum).toUpperCase()} ${anoNum}</div>
@@ -1024,6 +1037,9 @@ ReportesRoutes.generarPDFMultiplesMeses = async (req, res) => {
             });
         }
 
+        // Convertir imagen a base64
+        const logoBase64 = convertirImagenABase64(RUTA_LOGO);
+
         // Agrupar por mes
         const porMes = {};
         mesesValidos.forEach(m => {
@@ -1116,8 +1132,8 @@ ReportesRoutes.generarPDFMultiplesMeses = async (req, res) => {
                     display: flex;
                     justify-content: center;
                 }
-                .main-header .logo-svg {
-                    width: 250px;
+                .main-header .logo-container img {
+                    max-width: 250px;
                     height: auto;
                 }
                 .main-header h1 {
@@ -1213,17 +1229,7 @@ ReportesRoutes.generarPDFMultiplesMeses = async (req, res) => {
         <body>
             <div class="main-header">
                 <div class="logo-container">
-                    <svg class="logo-svg" viewBox="0 0 350 120" xmlns="http://www.w3.org/2000/svg">
-                        <g>
-                            <path d="M 25 55 L 45 35 L 65 55 L 65 85 L 25 85 Z" fill="#5F8EAD" stroke="#34353A" stroke-width="2"/>
-                            <rect x="32" y="62" width="10" height="14" fill="#FFFFFF"/>
-                            <rect x="48" y="62" width="10" height="14" fill="#FFFFFF"/>
-                            <path d="M 30 50 L 45 35 L 60 50" fill="none" stroke="#34353A" stroke-width="2"/>
-                            <path d="M 15 90 Q 45 70 75 90" fill="none" stroke="#5D9646" stroke-width="4" stroke-linecap="round"/>
-                            <text x="90" y="65" font-family="Arial, sans-serif" font-size="42" font-weight="bold" fill="#5F8EAD" letter-spacing="2">RIVERA</text>
-                            <text x="90" y="90" font-family="Arial, sans-serif" font-size="16" fill="#34353A">Distribuidora y Transportes</text>
-                        </g>
-                    </svg>
+                    ${logoBase64 ? `<img src="${logoBase64}" alt="Rivera Logo" />` : '<p>RIVERA - Distribuidora y Transportes</p>'}
                 </div>
                 <h1>REPORTE DE MANTENIMIENTO</h1>
                 <div class="subtitle">Período: ${mesesValidos.map(m => obtenerNombreMes(m)).join(', ')} ${anoNum}</div>
