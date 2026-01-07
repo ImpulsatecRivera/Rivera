@@ -499,5 +499,697 @@ ReportesPlanillasController.generarPDFMensual = async (req, res) => {
         });
     }
 };
+// =====================================================
+// 3. PDF REPORTE CONSOLIDADO MÚLTIPLES MESES
+// =====================================================
+ReportesPlanillasController.generarPDFMultiMes = async (req, res) => {
+    let browser;
+    try {
+        const { meses, ano } = req.body;
 
+        // Validaciones
+        if (!Array.isArray(meses) || meses.length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'Debe proporcionar un array de meses'
+            });
+        }
+
+        if (meses.length > 9) {
+            return res.status(400).json({
+                success: false,
+                message: 'El máximo de meses permitidos es 9'
+            });
+        }
+
+        const anoNum = parseInt(ano);
+        const mesesValidos = meses.filter(m => m >= 1 && m <= 12);
+
+        if (mesesValidos.length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'No hay meses válidos en la lista'
+            });
+        }
+
+        // Objeto para almacenar datos por mes
+        const porMes = {};
+        let totalGeneralBruto = 0;
+        let totalGeneralDescuentos = 0;
+        let totalGeneralLiquido = 0;
+        let totalQuincenasConDatos = 0;
+
+        // Procesar cada mes
+        for (const mesNum of mesesValidos) {
+            const planillas = await PlanillaQuincenal.find({
+                mes: mesNum,
+                año: anoNum
+            }).sort({ quincena: 1 });
+
+            if (planillas && planillas.length > 0) {
+                let totalBrutoMes = 0;
+                let totalDescuentosMes = 0;
+                let totalLiquidoMes = 0;
+                let totalEmpleadosMes = 0;
+
+                planillas.forEach(planilla => {
+                    totalBrutoMes += planilla.totales?.totalSalariosMasViaticos || 0;
+                    totalDescuentosMes += planilla.totales?.totalDescuentos || 0;
+                    totalLiquidoMes += planilla.totales?.totalAPagar || 0;
+                    totalEmpleadosMes += planilla.empleados?.length || 0;
+                });
+
+                totalGeneralBruto += totalBrutoMes;
+                totalGeneralDescuentos += totalDescuentosMes;
+                totalGeneralLiquido += totalLiquidoMes;
+                totalQuincenasConDatos += planillas.length;
+
+                porMes[mesNum] = {
+                    nombre: obtenerNombreMes(mesNum),
+                    quincenas: planillas.length,
+                    empleados: totalEmpleadosMes,
+                    totalBruto: totalBrutoMes,
+                    totalDescuentos: totalDescuentosMes,
+                    totalLiquido: totalLiquidoMes
+                };
+            }
+        }
+
+        // Verificar si hay datos
+        if (Object.keys(porMes).length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'No hay planillas quincenales para los meses seleccionados'
+            });
+        }
+
+        // Determinar tipo de reporte
+        let tipoReporte = 'CONSOLIDADO';
+        if (mesesValidos.length === 3) tipoReporte = 'TRIMESTRAL';
+        else if (mesesValidos.length === 6) tipoReporte = 'SEMESTRAL';
+        else if (mesesValidos.length === 9) tipoReporte = '9 MESES';
+
+        // Generar filas de tabla para cada mes
+        const filasHTML = mesesValidos.map(mesNum => {
+            const datos = porMes[mesNum];
+            if (!datos) return '';
+
+            return `
+                <tr>
+                    <td class="mes-nombre">${datos.nombre.toUpperCase()}</td>
+                    <td class="text-center">${datos.quincenas}</td>
+                    <td class="text-center">${datos.empleados}</td>
+                    <td class="text-right">$ ${datos.totalBruto.toFixed(2)}</td>
+                    <td class="text-right">$ ${datos.totalDescuentos.toFixed(2)}</td>
+                    <td class="text-right total-destacado">$ ${datos.totalLiquido.toFixed(2)}</td>
+                </tr>
+            `;
+        }).join('');
+
+        const htmlContent = `
+        <!DOCTYPE html>
+        <html lang="es">
+        <head>
+            <meta charset="UTF-8">
+            <style>
+                * {
+                    margin: 0;
+                    padding: 0;
+                    box-sizing: border-box;
+                }
+                body {
+                    font-family: Arial, sans-serif;
+                    padding: 30px;
+                    color: #34353A;
+                    background: #fff;
+                }
+                .header {
+                    text-align: center;
+                    margin-bottom: 25px;
+                    padding-bottom: 15px;
+                    border-bottom: 3px solid #34353A;
+                }
+                .header .logo-container {
+                    margin-bottom: 15px;
+                    display: flex;
+                    justify-content: center;
+                }
+                .header .logo-svg {
+                    width: 200px;
+                    height: auto;
+                }
+                .header h1 {
+                    font-size: 22px;
+                    font-weight: bold;
+                    margin-bottom: 8px;
+                    color: #5F8EAD;
+                    letter-spacing: 2px;
+                }
+                .header .subtitle {
+                    font-size: 14px;
+                    color: #34353A;
+                    font-weight: bold;
+                }
+                table {
+                    width: 100%;
+                    border-collapse: collapse;
+                    margin-bottom: 20px;
+                    font-size: 12px;
+                    border: 2px solid #34353A;
+                }
+                thead {
+                    background: linear-gradient(135deg, #5F8EAD 0%, #34353A 100%);
+                    color: white;
+                }
+                th {
+                    padding: 12px 10px;
+                    text-align: center;
+                    font-weight: bold;
+                    border: 1px solid #34353A;
+                    text-transform: uppercase;
+                    font-size: 11px;
+                }
+                td {
+                    padding: 10px;
+                    border: 1px solid #34353A;
+                }
+                .mes-nombre {
+                    font-weight: bold;
+                    text-align: left;
+                    padding-left: 15px;
+                    background: #f8f9fa;
+                }
+                .text-center {
+                    text-align: center;
+                }
+                .text-right {
+                    text-align: right;
+                    padding-right: 15px;
+                }
+                .total-destacado {
+                    font-weight: bold;
+                    color: #5F8EAD;
+                }
+                .totals-row {
+                    background: linear-gradient(135deg, #5F8EAD 0%, #34353A 100%);
+                    color: white;
+                    font-weight: bold;
+                    font-size: 13px;
+                }
+                .totals-row td {
+                    padding: 12px 10px;
+                    border-color: #34353A;
+                }
+                .footer {
+                    margin-top: 30px;
+                    text-align: center;
+                    font-size: 10px;
+                    color: #666;
+                    border-top: 1px solid #ccc;
+                    padding-top: 10px;
+                }
+            </style>
+        </head>
+        <body>
+            <div class="header">
+                <div class="logo-container">
+                    <svg class="logo-svg" viewBox="0 0 350 120" xmlns="http://www.w3.org/2000/svg">
+                        <g>
+                            <path d="M 25 55 L 45 35 L 65 55 L 65 85 L 25 85 Z" fill="#5F8EAD" stroke="#34353A" stroke-width="2"/>
+                            <rect x="32" y="62" width="10" height="14" fill="#FFFFFF"/>
+                            <rect x="48" y="62" width="10" height="14" fill="#FFFFFF"/>
+                            <path d="M 30 50 L 45 35 L 60 50" fill="none" stroke="#34353A" stroke-width="2"/>
+                            <path d="M 15 90 Q 45 70 75 90" fill="none" stroke="#5D9646" stroke-width="4" stroke-linecap="round"/>
+                            <text x="90" y="65" font-family="Arial, sans-serif" font-size="42" font-weight="bold" fill="#5F8EAD" letter-spacing="2">RIVERA</text>
+                            <text x="90" y="90" font-family="Arial, sans-serif" font-size="16" fill="#34353A">Distribuidora y Transportes</text>
+                        </g>
+                    </svg>
+                </div>
+                <h1>REPORTE ${tipoReporte} DE PLANILLAS QUINCENALES</h1>
+                <div class="subtitle">${mesesValidos.map(m => obtenerNombreMes(m)).join(', ')} ${anoNum}</div>
+            </div>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width: 20%;">MES</th>
+                        <th style="width: 12%;">QUINCENAS</th>
+                        <th style="width: 12%;">EMPLEADOS</th>
+                        <th style="width: 18%;">TOTAL BRUTO</th>
+                        <th style="width: 18%;">DESCUENTOS</th>
+                        <th style="width: 20%;">TOTAL A PAGAR</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${filasHTML}
+                    <tr class="totals-row">
+                        <td class="text-right" style="padding-right: 15px;">TOTAL GENERAL:</td>
+                        <td class="text-center">${totalQuincenasConDatos}</td>
+                        <td class="text-center">-</td>
+                        <td class="text-right" style="padding-right: 15px;">$ ${totalGeneralBruto.toFixed(2)}</td>
+                        <td class="text-right" style="padding-right: 15px;">$ ${totalGeneralDescuentos.toFixed(2)}</td>
+                        <td class="text-right" style="padding-right: 15px;">$ ${totalGeneralLiquido.toFixed(2)}</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="footer">
+                <p>Documento generado el ${new Date().toLocaleDateString('es-ES')} a las ${new Date().toLocaleTimeString('es-ES')}</p>
+                <p>Rivera Distribuidora y Transportes © ${new Date().getFullYear()}</p>
+            </div>
+        </body>
+        </html>
+        `;
+
+        browser = await puppeteer.launch({
+            headless: 'new',
+            args: ['--no-sandbox', '--disable-setuid-sandbox']
+        });
+
+        const page = await browser.newPage();
+        await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
+
+        const pdfBuffer = await page.pdf({
+            format: 'A4',
+            printBackground: true,
+            margin: { top: '20px', right: '20px', bottom: '20px', left: '20px' }
+        });
+
+        await browser.close();
+
+        const nombresMeses = mesesValidos.map(m => obtenerNombreMes(m)).join('-');
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename="planilla-quincenal-${tipoReporte.toLowerCase().replace(/ /g, '-')}-${anoNum}.pdf"`);
+        res.send(pdfBuffer);
+
+    } catch (error) {
+        if (browser) await browser.close();
+        console.error('Error al generar PDF múltiples meses:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error al generar el PDF',
+            error: error.message
+        });
+    }
+};
+// =====================================================
+// 4. PDF REPORTE ANUAL CONSOLIDADO
+// =====================================================
+ReportesPlanillasController.generarPDFAnual = async (req, res) => {
+    let browser;
+    try {
+        const { ano } = req.params;
+        const anoNum = parseInt(ano);
+
+        // Objeto para almacenar datos de todos los meses
+        const porMes = {};
+        let totalAnualBruto = 0;
+        let totalAnualDescuentos = 0;
+        let totalAnualLiquido = 0;
+        const empleadosUnicos = new Set();
+        let mesesConDatos = 0;
+        let totalQuincenasAnual = 0;
+
+        // Variables para máximos y mínimos
+        let mesMaxNomina = { mes: '', valor: 0 };
+        let mesMinNomina = { mes: '', valor: Infinity };
+
+        // Procesar todos los meses del año
+        for (let mesNum = 1; mesNum <= 12; mesNum++) {
+            const planillas = await PlanillaQuincenal.find({
+                mes: mesNum,
+                año: anoNum
+            });
+
+            if (planillas && planillas.length > 0) {
+                let totalBrutoMes = 0;
+                let totalDescuentosMes = 0;
+                let totalLiquidoMes = 0;
+                let totalEmpleadosMes = 0;
+
+                planillas.forEach(planilla => {
+                    // Sumar totales de la planilla
+                    totalBrutoMes += planilla.totales?.totalSalariosMasViaticos || 0;
+                    totalDescuentosMes += planilla.totales?.totalDescuentos || 0;
+                    totalLiquidoMes += planilla.totales?.totalAPagar || 0;
+
+                    // Contar empleados únicos
+                    planilla.empleados.forEach(emp => {
+                        empleadosUnicos.add(emp.empleadoId.toString());
+                        totalEmpleadosMes++;
+                    });
+                });
+
+                totalAnualBruto += totalBrutoMes;
+                totalAnualDescuentos += totalDescuentosMes;
+                totalAnualLiquido += totalLiquidoMes;
+                mesesConDatos++;
+                totalQuincenasAnual += planillas.length;
+
+                // Actualizar máximo y mínimo
+                if (totalLiquidoMes > mesMaxNomina.valor) {
+                    mesMaxNomina = { mes: obtenerNombreMes(mesNum), valor: totalLiquidoMes };
+                }
+                if (totalLiquidoMes < mesMinNomina.valor) {
+                    mesMinNomina = { mes: obtenerNombreMes(mesNum), valor: totalLiquidoMes };
+                }
+
+                porMes[mesNum] = {
+                    nombre: obtenerNombreMes(mesNum),
+                    quincenas: planillas.length,
+                    empleados: totalEmpleadosMes,
+                    totalBruto: totalBrutoMes,
+                    totalDescuentos: totalDescuentosMes,
+                    totalLiquido: totalLiquidoMes
+                };
+            } else {
+                porMes[mesNum] = {
+                    nombre: obtenerNombreMes(mesNum),
+                    quincenas: 0,
+                    empleados: 0,
+                    totalBruto: 0,
+                    totalDescuentos: 0,
+                    totalLiquido: 0
+                };
+            }
+        }
+
+        // Verificar si hay datos
+        if (mesesConDatos === 0) {
+            return res.status(404).json({
+                success: false,
+                message: `No hay planillas quincenales registradas para el año ${anoNum}`
+            });
+        }
+
+        const promedioMensual = totalAnualLiquido / mesesConDatos;
+
+        // Generar filas de la tabla para cada mes
+        const filasHTML = Object.keys(porMes).map(mesNum => {
+            const datos = porMes[mesNum];
+            const tieneRegistros = datos.quincenas > 0;
+            
+            return `
+                <tr style="${!tieneRegistros ? 'opacity: 0.5;' : ''}">
+                    <td class="col-mes">${datos.nombre.toUpperCase()}</td>
+                    <td class="col-numero">${datos.quincenas}</td>
+                    <td class="col-numero">${datos.empleados}</td>
+                    <td class="col-monto">$ ${datos.totalBruto.toFixed(2)}</td>
+                    <td class="col-monto">$ ${datos.totalDescuentos.toFixed(2)}</td>
+                    <td class="col-monto"><strong>$ ${datos.totalLiquido.toFixed(2)}</strong></td>
+                </tr>
+            `;
+        }).join('');
+
+        const htmlContent = `
+        <!DOCTYPE html>
+        <html lang="es">
+        <head>
+            <meta charset="UTF-8">
+            <style>
+                * {
+                    margin: 0;
+                    padding: 0;
+                    box-sizing: border-box;
+                }
+                body {
+                    font-family: Arial, 'Courier New', monospace;
+                    padding: 30px;
+                    color: #34353A;
+                    background: #fff;
+                }
+                .header {
+                    text-align: center;
+                    margin-bottom: 30px;
+                    border-bottom: 3px solid #34353A;
+                    padding-bottom: 15px;
+                }
+                .header .logo-container {
+                    margin-bottom: 15px;
+                    display: flex;
+                    justify-content: center;
+                }
+                .header .logo-svg {
+                    width: 200px;
+                    height: auto;
+                }
+                .header h1 {
+                    font-size: 28px;
+                    font-weight: bold;
+                    letter-spacing: 6px;
+                    margin-bottom: 5px;
+                    color: #5F8EAD;
+                }
+                .header .subtitle {
+                    font-size: 16px;
+                    font-weight: bold;
+                    margin-top: 8px;
+                    color: #34353A;
+                }
+                .stats-summary {
+                    margin-bottom: 20px;
+                    padding: 15px;
+                    background: #f5f5f5;
+                    border: 2px solid #34353A;
+                    display: grid;
+                    grid-template-columns: repeat(4, 1fr);
+                    gap: 15px;
+                }
+                .stat-card {
+                    text-align: center;
+                    padding: 10px;
+                    background: #fff;
+                    border: 1px solid #34353A;
+                }
+                .stat-card .label {
+                    font-size: 9px;
+                    font-weight: bold;
+                    color: #34353A;
+                    margin-bottom: 5px;
+                    text-transform: uppercase;
+                }
+                .stat-card .value {
+                    font-size: 15px;
+                    font-weight: bold;
+                    color: #5F8EAD;
+                }
+                table {
+                    width: 100%;
+                    border-collapse: collapse;
+                    margin-bottom: 20px;
+                    border: 3px solid #34353A;
+                }
+                thead {
+                    background: linear-gradient(135deg, #5F8EAD 0%, #34353A 100%);
+                    color: #fff;
+                }
+                th {
+                    padding: 12px 8px;
+                    text-align: center;
+                    font-size: 10px;
+                    font-weight: bold;
+                    border: 2px solid #34353A;
+                    text-transform: uppercase;
+                }
+                td {
+                    padding: 10px 8px;
+                    border: 1px solid #34353A;
+                    font-size: 10px;
+                    background: #fff;
+                }
+                .col-mes {
+                    width: 100px;
+                    text-align: left;
+                    padding-left: 15px;
+                    font-weight: bold;
+                }
+                .col-numero {
+                    width: 70px;
+                    text-align: center;
+                }
+                .col-monto {
+                    text-align: right;
+                    padding-right: 15px;
+                }
+                .total-row {
+                    background: linear-gradient(135deg, #5F8EAD 0%, #34353A 100%) !important;
+                    color: #fff !important;
+                    font-weight: bold;
+                    font-size: 12px;
+                }
+                .total-row td {
+                    background: transparent;
+                    color: #fff;
+                    border-color: #34353A;
+                }
+                .resumen-final {
+                    background: #f5f5f5;
+                    padding: 20px;
+                    border: 3px solid #34353A;
+                    margin-top: 20px;
+                }
+                .resumen-final h3 {
+                    font-size: 16px;
+                    font-weight: bold;
+                    margin-bottom: 15px;
+                    color: #5F8EAD;
+                    text-transform: uppercase;
+                    text-align: center;
+                    border-bottom: 2px solid #5F8EAD;
+                    padding-bottom: 10px;
+                }
+                .resumen-grid {
+                    display: grid;
+                    grid-template-columns: repeat(2, 1fr);
+                    gap: 15px;
+                }
+                .resumen-item {
+                    background: #fff;
+                    padding: 12px;
+                    border: 2px solid #34353A;
+                }
+                .resumen-item .label {
+                    font-size: 10px;
+                    font-weight: bold;
+                    color: #34353A;
+                    margin-bottom: 5px;
+                    text-transform: uppercase;
+                }
+                .resumen-item .value {
+                    font-size: 14px;
+                    font-weight: bold;
+                    color: #5F8EAD;
+                }
+                .footer-info {
+                    margin-top: 30px;
+                    text-align: center;
+                    font-size: 10px;
+                    color: #34353A;
+                    border-top: 1px solid #ccc;
+                    padding-top: 15px;
+                }
+            </style>
+        </head>
+        <body>
+            <div class="header">
+                <div class="logo-container">
+                    <svg class="logo-svg" viewBox="0 0 350 120" xmlns="http://www.w3.org/2000/svg">
+                        <g>
+                            <path d="M 25 55 L 45 35 L 65 55 L 65 85 L 25 85 Z" fill="#5F8EAD" stroke="#34353A" stroke-width="2"/>
+                            <rect x="32" y="62" width="10" height="14" fill="#FFFFFF"/>
+                            <rect x="48" y="62" width="10" height="14" fill="#FFFFFF"/>
+                            <path d="M 30 50 L 45 35 L 60 50" fill="none" stroke="#34353A" stroke-width="2"/>
+                            <path d="M 15 90 Q 45 70 75 90" fill="none" stroke="#5D9646" stroke-width="4" stroke-linecap="round"/>
+                            <text x="90" y="65" font-family="Arial, sans-serif" font-size="42" font-weight="bold" fill="#5F8EAD" letter-spacing="2">RIVERA</text>
+                            <text x="90" y="90" font-family="Arial, sans-serif" font-size="16" fill="#34353A">Distribuidora y Transportes</text>
+                        </g>
+                    </svg>
+                </div>
+                <h1>PLANILLA QUINCENAL</h1>
+                <div class="subtitle">REPORTE ANUAL ${anoNum}</div>
+            </div>
+
+            <div class="stats-summary">
+                <div class="stat-card">
+                    <div class="label">Meses con Datos</div>
+                    <div class="value">${mesesConDatos} / 12</div>
+                </div>
+                <div class="stat-card">
+                    <div class="label">Quincenas Procesadas</div>
+                    <div class="value">${totalQuincenasAnual}</div>
+                </div>
+                <div class="stat-card">
+                    <div class="label">Empleados Únicos</div>
+                    <div class="value">${empleadosUnicos.size}</div>
+                </div>
+                <div class="stat-card">
+                    <div class="label">Promedio Mensual</div>
+                    <div class="value">$ ${promedioMensual.toFixed(2)}</div>
+                </div>
+            </div>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th class="col-mes">MES</th>
+                        <th class="col-numero">QUINCENAS</th>
+                        <th class="col-numero">EMPLEADOS</th>
+                        <th class="col-monto">TOTAL BRUTO</th>
+                        <th class="col-monto">DESCUENTOS</th>
+                        <th class="col-monto">TOTAL LÍQUIDO</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${filasHTML}
+                    <tr class="total-row">
+                        <td class="col-mes">TOTAL ANUAL</td>
+                        <td class="col-numero">${totalQuincenasAnual}</td>
+                        <td class="col-numero">-</td>
+                        <td class="col-monto">$ ${totalAnualBruto.toFixed(2)}</td>
+                        <td class="col-monto">$ ${totalAnualDescuentos.toFixed(2)}</td>
+                        <td class="col-monto">$ ${totalAnualLiquido.toFixed(2)}</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="resumen-final">
+                <h3>Análisis del Año</h3>
+                <div class="resumen-grid">
+                    <div class="resumen-item">
+                        <div class="label">Total Pagado (Anual)</div>
+                        <div class="value">$ ${totalAnualLiquido.toFixed(2)}</div>
+                    </div>
+                    <div class="resumen-item">
+                        <div class="label">Total Descuentos (Anual)</div>
+                        <div class="value">$ ${totalAnualDescuentos.toFixed(2)}</div>
+                    </div>
+                    <div class="resumen-item">
+                        <div class="label">Mes Mayor Nómina</div>
+                        <div class="value">${mesMaxNomina.mes} ($ ${mesMaxNomina.valor.toFixed(2)})</div>
+                    </div>
+                    <div class="resumen-item">
+                        <div class="label">Mes Menor Nómina</div>
+                        <div class="value">${mesMinNomina.mes} ($ ${mesMinNomina.valor.toFixed(2)})</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="footer-info">
+                <p>Documento generado el ${new Date().toLocaleDateString('es-ES')} a las ${new Date().toLocaleTimeString('es-ES')}</p>
+                <p>Rivera Distribuidora y Transportes © ${new Date().getFullYear()}</p>
+            </div>
+        </body>
+        </html>
+        `;
+
+        browser = await puppeteer.launch({
+            headless: 'new',
+            args: ['--no-sandbox', '--disable-setuid-sandbox']
+        });
+
+        const page = await browser.newPage();
+        await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
+
+        const pdfBuffer = await page.pdf({
+            format: 'A4',
+            printBackground: true,
+            margin: { top: '20px', right: '20px', bottom: '20px', left: '20px' }
+        });
+
+        await browser.close();
+
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename="planilla-quincenal-anual-${anoNum}.pdf"`);
+        res.send(pdfBuffer);
+
+    } catch (error) {
+        if (browser) await browser.close();
+        console.error('Error al generar PDF anual:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error al generar el PDF',
+            error: error.message
+        });
+    }
+};
 export default ReportesPlanillasController;
