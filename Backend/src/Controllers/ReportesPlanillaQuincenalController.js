@@ -7,8 +7,42 @@
 import puppeteer from 'puppeteer';
 import PlanillaQuincenal from '../Models/PlanillaQuincenal.js';
 import { isValidObjectId } from 'mongoose';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
 
 const ReportesPlanillasController = {};
+
+// Obtener __dirname en ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+// Función para convertir imagen a base64
+const convertirImagenABase64 = (rutaImagen) => {
+    try {
+        console.log('Intentando leer imagen desde:', rutaImagen);
+        
+        if (!fs.existsSync(rutaImagen)) {
+            console.error('La imagen no existe en la ruta:', rutaImagen);
+            return null;
+        }
+        
+        const imagen = fs.readFileSync(rutaImagen);
+        const base64 = imagen.toString('base64');
+        const ext = path.extname(rutaImagen).toLowerCase();
+        const mimeType = ext === '.png' ? 'image/png' : 'image/jpeg';
+        
+        console.log('Imagen convertida exitosamente a base64');
+        return `data:${mimeType};base64,${base64}`;
+    } catch (error) {
+        console.error('Error al convertir imagen:', error);
+        return null;
+    }
+};
+
+// Ruta al logo
+const RUTA_LOGO = path.join(process.cwd(), 'src', 'imagenes', 'imagen_15.png');
 
 /**
  * Función auxiliar para obtener nombre del mes
@@ -57,6 +91,9 @@ ReportesPlanillasController.generarPDFQuincenal = async (req, res) => {
                 message: 'Planilla no encontrada'
             });
         }
+
+        // Convertir imagen a base64
+        const logoBase64 = convertirImagenABase64(RUTA_LOGO);
 
         // 🔥 VALIDAR Y ASEGURAR QUE TOTALES EXISTA
         const totales = planilla.totales || {};
@@ -166,7 +203,7 @@ ReportesPlanillasController.generarPDFQuincenal = async (req, res) => {
         <body>
             <div class="header">
                 <div class="logo-container">
-                    <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjgwIiB2aWV3Qm94PSIwIDAgMzAwIDgwIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPgogIDwhLS0gTG9nbyBDb250YWluZXIgLS0+CiAgPGcgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoMTAsMTApIj4KICAgIDwhLS0gVHJ1Y2sgU2lsaG91ZXR0ZSAtLT4KICAgIDxwYXRoIGQ9Ik0yMCA1MCBRMTUgNDUgMTUgMzUgTDE1IDI1IFEyMCAyMCAzMCAyMCBMNTAgMjAgUTU1IDIwIDU1IDI1IEw1NSA0NSBRNTUgNTAgNTAgNTAgWiIgZmlsbD0iIzVGOEVBRCIgc3Ryb2tlPSIjMzQzNTNBIiBzdHJva2Utd2lkdGg9IjIiLz4KICAgIDxjaXJjbGUgY3g9IjI1IiBjeT0iNTUiIHI9IjUiIGZpbGw9IiMzNDM1M0EiLz4KICAgIDxjaXJjbGUgY3g9IjQ1IiBjeT0iNTUiIHI9IjUiIGZpbGw9IiMzNDM1M0EiLz4KICAgIDxyZWN0IHg9IjIwIiB5PSIyNSIgd2lkdGg9IjI1IiBoZWlnaHQ9IjE1IiBmaWxsPSIjZjVmOWZjIiBvcGFjaXR5PSIwLjUiLz4KICA8L2c+CiAgCiAgPCEtLSBUZXh0byAtLT4KICA8dGV4dCB4PSI4NSIgeT0iMzUiIGZvbnQtZmFtaWx5PSJBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIyOCIgZm9udC13ZWlnaHQ9ImJvbGQiIGZpbGw9IiM1RjhFQUQiPlJJVkVSQTwvdGV4dD4KICA8dGV4dCB4PSI4NSIgeT0iNTAiIGZvbnQtZmFtaWx5PSJBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxMiIgZmlsbD0iIzVEOTY0NiI+RGlzdHJpYnVpZG9yYSB5IFRyYW5zcG9ydGVzPC90ZXh0PgogIAogIDwhLS0gRGVjb3JhdGl2ZSBMaW5lIC0tPgogIDxwYXRoIGQ9Ik04MCA2MCBRMTUwIDU1IDI5MCA2MCIgc3Ryb2tlPSIjNUQ5NjQ2IiBzdHJva2Utd2lkdGg9IjMiIGZpbGw9Im5vbmUiLz4KPC9zdmc+" alt="Rivera Logo" />
+                    ${logoBase64 ? `<img src="${logoBase64}" alt="Rivera Logo" />` : '<p>RIVERA - Distribuidora y Transportes</p>'}
                 </div>
                 <h1>PLANILLA DE NÓMINA DE SALARIOS</h1>
                 <div class="subtitle">${planilla.descripcion || 'Sin descripción'}</div>
@@ -327,6 +364,9 @@ ReportesPlanillasController.generarPDFMensual = async (req, res) => {
             });
         }
 
+        // Convertir imagen a base64
+        const logoBase64 = convertirImagenABase64(RUTA_LOGO);
+
         // 🔥 CALCULAR TOTALES CONSOLIDADOS CON VALIDACIÓN SEGURA
         const totalGeneral = planillas.reduce((sum, p) => sum + (p.totales?.totalAPagar || 0), 0);
         const totalSalarios = planillas.reduce((sum, p) => sum + (p.totales?.totalSalariosQuincenales || 0), 0);
@@ -439,7 +479,7 @@ ReportesPlanillasController.generarPDFMensual = async (req, res) => {
         <body>
             <div class="header">
                 <div class="logo-container">
-                    <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjgwIiB2aWV3Qm94PSIwIDAgMzAwIDgwIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPgogIDwhLS0gTG9nbyBDb250YWluZXIgLS0+CiAgPGcgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoMTAsMTApIj4KICAgIDwhLS0gVHJ1Y2sgU2lsaG91ZXR0ZSAtLT4KICAgIDxwYXRoIGQ9Ik0yMCA1MCBRMTUgNDUgMTUgMzUgTDE1IDI1IFEyMCAyMCAzMCAyMCBMNTAgMjAgUTU1IDIwIDU1IDI1IEw1NSA0NSBRNTUgNTAgNTAgNTAgWiIgZmlsbD0iIzVGOEVBRCIgc3Ryb2tlPSIjMzQzNTNBIiBzdHJva2Utd2lkdGg9IjIiLz4KICAgIDxjaXJjbGUgY3g9IjI1IiBjeT0iNTUiIHI9IjUiIGZpbGw9IiMzNDM1M0EiLz4KICAgIDxjaXJjbGUgY3g9IjQ1IiBjeT0iNTUiIHI9IjUiIGZpbGw9IiMzNDM1M0EiLz4KICAgIDxyZWN0IHg9IjIwIiB5PSIyNSIgd2lkdGg9IjI1IiBoZWlnaHQ9IjE1IiBmaWxsPSIjZjVmOWZjIiBvcGFjaXR5PSIwLjUiLz4KICA8L2c+CiAgCiAgPCEtLSBUZXh0byAtLT4KICA8dGV4dCB4PSI4NSIgeT0iMzUiIGZvbnQtZmFtaWx5PSJBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIyOCIgZm9udC13ZWlnaHQ9ImJvbGQiIGZpbGw9IiM1RjhFQUQiPlJJVkVSQTwvdGV4dD4KICA8dGV4dCB4PSI4NSIgeT0iNTAiIGZvbnQtZmFtaWx5PSJBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxMiIgZmlsbD0iIzVEOTY0NiI+RGlzdHJpYnVpZG9yYSB5IFRyYW5zcG9ydGVzPC90ZXh0PgogIAogIDwhLS0gRGVjb3JhdGl2ZSBMaW5lIC0tPgogIDxwYXRoIGQ9Ik04MCA2MCBRMTUwIDU1IDI5MCA2MCIgc3Ryb2tlPSIjNUQ5NjQ2IiBzdHJva2Utd2lkdGg9IjMiIGZpbGw9Im5vbmUiLz4KPC9zdmc+" alt="Rivera Logo" />
+                    ${logoBase64 ? `<img src="${logoBase64}" alt="Rivera Logo" />` : '<p>RIVERA - Distribuidora y Transportes</p>'}
                 </div>
                 <h1>REPORTE MENSUAL DE PLANILLAS QUINCENALES</h1>
                 <div style="font-size: 14px; color: #5F8EAD;">${obtenerNombreMes(mesNum)} ${añoNum}</div>
