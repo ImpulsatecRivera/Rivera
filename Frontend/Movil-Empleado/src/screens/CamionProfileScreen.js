@@ -15,18 +15,37 @@ import { useFocusEffect } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import Svg, { Circle, Text as SvgText } from 'react-native-svg';
-import { launchCamera, launchImageLibrary } from 'react-native-image-picker';
+import * as ImagePicker from 'expo-image-picker';
 import Header from "../components/Header";
 import { useProfile } from "../hooks/useProfile";
 
 // ✅ CONFIGURAR TU API URL
-const API_URL = "https://tu-api.com/api"; // Cambiar por tu URL real
+const API_URL = "http://192.168.1.100:4000/api";
 
 const textSafe = (v, fb = "—") => {
   if (v === null || v === undefined) return fb;
   const s = String(v).trim();
   return s ? s : fb;
 };
+
+const pedirPermisosCamara = async () => {
+  const { status } = await ImagePicker.requestCameraPermissionsAsync();
+  if (status !== 'granted') {
+    Alert.alert('Permiso requerido', 'Se necesita acceso a la cámara');
+    return false;
+  }
+  return true;
+};
+
+const pedirPermisosGaleria = async () => {
+  const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+  if (status !== 'granted') {
+    Alert.alert('Permiso requerido', 'Se necesita acceso a la galería');
+    return false;
+  }
+  return true;
+};
+
 
 const pick = (...vals) => {
   for (const v of vals) {
@@ -259,45 +278,38 @@ export default function CamionScreen() {
   };
 
   // ✅ FUNCIÓN PARA TOMAR FOTO
-  const tomarFoto = () => {
-    launchCamera(
-      {
-        mediaType: 'photo',
-        quality: 0.8,
-        saveToPhotos: true,
-      },
-      (response) => {
-        if (response.didCancel) {
-          console.log('Usuario canceló');
-        } else if (response.errorCode) {
-          Alert.alert('Error', response.errorMessage || 'Error al tomar la foto');
-        } else if (response.assets && response.assets[0]) {
-          const { uri, type, fileName } = response.assets[0];
-          subirComprobante(uri, type, fileName);
-        }
-      }
-    );
-  };
+  const tomarFoto = async () => {
+  const permitido = await pedirPermisosCamara();
+  if (!permitido) return;
+
+  const result = await ImagePicker.launchCameraAsync({
+    mediaTypes: ImagePicker.MediaTypeOptions.Images,
+    quality: 0.8,
+  });
+
+  if (!result.canceled) {
+    const asset = result.assets[0];
+    subirComprobante(asset.uri, asset.mimeType, 'foto.jpg');
+  }
+};
+
 
   // ✅ FUNCIÓN PARA SELECCIONAR ARCHIVO
-  const seleccionarArchivo = () => {
-    launchImageLibrary(
-      {
-        mediaType: 'photo',
-        quality: 0.8,
-      },
-      (response) => {
-        if (response.didCancel) {
-          console.log('Usuario canceló');
-        } else if (response.errorCode) {
-          Alert.alert('Error', response.errorMessage || 'Error al seleccionar el archivo');
-        } else if (response.assets && response.assets[0]) {
-          const { uri, type, fileName } = response.assets[0];
-          subirComprobante(uri, type, fileName);
-        }
-      }
-    );
-  };
+const seleccionarArchivo = async () => {
+  const permitido = await pedirPermisosGaleria();
+  if (!permitido) return;
+
+  const result = await ImagePicker.launchImageLibraryAsync({
+    mediaTypes: ImagePicker.MediaTypeOptions.Images,
+    quality: 0.8,
+  });
+
+  if (!result.canceled) {
+    const asset = result.assets[0];
+    subirComprobante(asset.uri, asset.mimeType, 'galeria.jpg');
+  }
+};
+
 
   const bottomSpace = Math.max(insets.bottom || 0, 12) + tabBarHeight + 16;
 
