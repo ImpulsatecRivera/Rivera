@@ -8,7 +8,6 @@ const AgregarDiesel = () => {
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-
   const [camiones, setCamiones] = useState([]);
 
   const ESTADOS = {
@@ -16,17 +15,15 @@ const AgregarDiesel = () => {
     COMPLETADO: "Completado",
   };
 
-  // ✅ Guardamos EL ID del camión en CicurlationCard
   const [formData, setFormData] = useState({
     fecha: "",
-    CicurlationCard: "", // ✅ _id del camión
+    CicurlationCard: "",
     Galones: "",
     precioGalon: "",
     Total: "",
-    estado: ESTADOS.PENDIENTE, // ✅ por defecto
+    estado: ESTADOS.PENDIENTE,
   });
 
-  // ✅ Fecha de hoy en formato YYYY-MM-DD (LOCAL)
   const getTodayISO = () => {
     const d = new Date();
     const yyyy = d.getFullYear();
@@ -60,7 +57,6 @@ const AgregarDiesel = () => {
     return new Intl.NumberFormat("es-US", { style: "currency", currency: "USD" }).format(n);
   };
 
-  // ✅ si hay precio por galón, calculamos el total
   const totalCalculado = useMemo(() => {
     const gal = toNumber(formData.Galones);
     const precio = toNumber(formData.precioGalon);
@@ -71,7 +67,6 @@ const AgregarDiesel = () => {
   const handleInputChange = (e) => {
     const { name, value } = e.target;
 
-    // ✅ FECHA: solo permitir pasado o hoy
     if (name === "fecha") {
       const today = getTodayISO();
       if (value && value > today) {
@@ -83,7 +78,6 @@ const AgregarDiesel = () => {
       return;
     }
 
-    // permitir strings en inputs numéricos para que el usuario pueda borrar
     if (["Galones", "precioGalon", "Total"].includes(name)) {
       setFormData((prev) => ({ ...prev, [name]: value }));
       return;
@@ -103,14 +97,12 @@ const AgregarDiesel = () => {
       setLoading(true);
       setError(null);
 
-      // ✅ Backend espera Galones/Total/CicurlationCard
-      // ✅ estado por defecto: Pendiente
       const payload = {
         fecha: formData.fecha,
         Galones: toNumber(formData.Galones),
         Total: totalCalculado,
         CicurlationCard: formData.CicurlationCard,
-        estado: ESTADOS.PENDIENTE, // ✅ SIEMPRE pendiente al crear
+        estado: ESTADOS.PENDIENTE,
       };
 
       const response = await fetch(`${config.api.API_URL}/resumen`, {
@@ -140,21 +132,20 @@ const AgregarDiesel = () => {
         <div className="mb-8">
           <button
             onClick={() => navigate("/diesel")}
-            className="flex items-center gap-2 text-gray-600 hover:text-gray-900 font-semibold mb-4 transition-colors"
+            className="flex items-center gap-2 text-[#5F8EAD] hover:text-[#34353A] font-semibold mb-4 transition-colors"
           >
             <ArrowLeft size={20} />
             Volver a Diésel
           </button>
 
           <div className="flex items-center gap-4">
-            <div className="bg-gradient-to-br from-indigo-600 to-purple-600 p-4 rounded-2xl shadow-lg">
+            <div className="bg-gradient-to-br from-[#34353A] to-[#5F8EAD] p-4 rounded-2xl shadow-lg">
               <Fuel className="text-white" size={32} />
             </div>
             <div>
-              <h1 className="text-4xl font-bold text-gray-900 mb-1">Nuevo Registro de Diésel</h1>
+              <h1 className="text-4xl font-bold text-[#34353A] mb-1">Nuevo Registro de Diésel</h1>
               <p className="text-gray-600">Registra una carga de combustible para tu flota</p>
 
-              {/* ✅ Muestra el estado, pero no se edita */}
               <span className="inline-flex mt-2 items-center px-3 py-1 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-800">
                 Estado: {ESTADOS.PENDIENTE}
               </span>
@@ -164,7 +155,7 @@ const AgregarDiesel = () => {
 
         <div className="bg-white rounded-3xl shadow-xl p-8">
           {error && (
-            <div className="mb-6 bg-red-50 border border-red-200 rounded-xl p-4 flex items-start gap-3">
+            <div className="mb-6 bg-red-50 border-2 border-red-200 rounded-xl p-4 flex items-start gap-3">
               <AlertCircle className="text-red-600 flex-shrink-0 mt-0.5" size={20} />
               <div>
                 <p className="text-red-800 font-semibold">Error</p>
@@ -174,31 +165,31 @@ const AgregarDiesel = () => {
           )}
 
           <div className="mb-8">
-            <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-              <Calendar className="text-indigo-600" size={22} />
+            <h3 className="text-xl font-bold text-[#34353A] mb-4 flex items-center gap-2">
+              <Calendar className="text-[#5F8EAD]" size={22} />
               Información Básica
             </h3>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Fecha *</label>
+                <label className="block text-sm font-semibold text-[#34353A] mb-2">Fecha *</label>
                 <input
                   type="date"
                   name="fecha"
                   value={formData.fecha}
                   onChange={handleInputChange}
                   max={getTodayISO()}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#5F8EAD] focus:border-[#5F8EAD]"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Camión / Placa *</label>
+                <label className="block text-sm font-semibold text-[#34353A] mb-2">Camión / Placa *</label>
                 <select
                   name="CicurlationCard"
                   value={formData.CicurlationCard}
                   onChange={handleInputChange}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#5F8EAD] focus:border-[#5F8EAD]"
                 >
                   <option value="">Seleccionar camión...</option>
                   {camiones.map((camion) => (
@@ -210,7 +201,7 @@ const AgregarDiesel = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Galones *</label>
+                <label className="block text-sm font-semibold text-[#34353A] mb-2">Galones *</label>
                 <input
                   type="number"
                   name="Galones"
@@ -219,12 +210,12 @@ const AgregarDiesel = () => {
                   min="0"
                   step="0.01"
                   placeholder="Ej: 35.50"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#5F8EAD] focus:border-[#5F8EAD]"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Precio por Galón</label>
+                <label className="block text-sm font-semibold text-[#34353A] mb-2">Precio por Galón</label>
                 <input
                   type="number"
                   name="precioGalon"
@@ -233,12 +224,12 @@ const AgregarDiesel = () => {
                   min="0"
                   step="0.01"
                   placeholder="Ej: 4.20"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#5F8EAD] focus:border-[#5F8EAD]"
                 />
               </div>
 
               <div className="md:col-span-2">
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                <label className="block text-sm font-semibold text-[#34353A] mb-2">
                   Total *{" "}
                   <span className="text-gray-400 font-medium">
                     (si ingresas precio por galón se calcula automáticamente)
@@ -253,7 +244,7 @@ const AgregarDiesel = () => {
                   step="0.01"
                   placeholder="Ej: 149.10"
                   disabled={toNumber(formData.precioGalon) > 0}
-                  className={`w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
+                  className={`w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#5F8EAD] focus:border-[#5F8EAD] ${
                     toNumber(formData.precioGalon) > 0 ? "bg-gray-100 cursor-not-allowed" : ""
                   }`}
                 />
@@ -261,7 +252,7 @@ const AgregarDiesel = () => {
             </div>
           </div>
 
-          <div className="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-2xl p-6 mb-6">
+          <div className="bg-gradient-to-r from-[#34353A] to-[#5D9646] rounded-2xl p-6 mb-6">
             <div className="flex items-center justify-between">
               <span className="text-white text-lg font-semibold">Total del Registro</span>
               <span className="text-white text-4xl font-bold">{formatearMoneda(totalCalculado)}</span>
@@ -279,7 +270,7 @@ const AgregarDiesel = () => {
             <button
               onClick={handleSubmit}
               disabled={loading}
-              className="flex-1 px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl font-semibold hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              className="flex-1 px-6 py-3 bg-gradient-to-r from-[#34353A] to-[#5F8EAD] text-white rounded-xl font-semibold hover:opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg"
             >
               {loading ? (
                 <>

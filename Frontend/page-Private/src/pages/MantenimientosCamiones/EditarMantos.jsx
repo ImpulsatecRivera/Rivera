@@ -23,15 +23,15 @@ export default function EditMantenimiento({ onClose }) {
     fecha_mantenimiento: "",
     tipo_de_mantenimiento: "",
     descripcion: "",
-    estado: "pendiente", // ← NUEVO campo de estado
+    estado: "pendiente",
     detalles: []
   });
 
-  // Opciones de estado
+  // Opciones de estado con colores corporativos
   const estadosDisponibles = [
     { value: 'pendiente', label: 'Pendiente', color: '#eab308' },
-    { value: 'en_proceso', label: 'En Proceso', color: '#3b82f6' },
-    { value: 'completado', label: 'Completado', color: '#10b981' },
+    { value: 'en_proceso', label: 'En Proceso', color: '#5F8EAD' },
+    { value: 'completado', label: 'Completado', color: '#5D9646' },
     { value: 'cancelado', label: 'Cancelado', color: '#ef4444' }
   ];
 
@@ -62,7 +62,7 @@ export default function EditMantenimiento({ onClose }) {
           fecha_mantenimiento: data.fecha_mantenimiento || "",
           tipo_de_mantenimiento: data.tipo_de_mantenimiento || data.tipoMantenimiento || "",
           descripcion: data.descripcion || "",
-          estado: data.estado || "pendiente", // ← CARGAR estado
+          estado: data.estado || "pendiente",
           detalles: Array.isArray(data.detalles) ? data.detalles : []
         });
         setLoading(false);
@@ -120,7 +120,7 @@ export default function EditMantenimiento({ onClose }) {
         fecha_mantenimiento: manto.fecha_mantenimiento,
         tipo_de_mantenimiento: manto.tipo_de_mantenimiento,
         descripcion: manto.descripcion,
-        estado: manto.estado, // ← ENVIAR estado
+        estado: manto.estado,
         detalles: detallesConSubtotal
       };
 
@@ -139,7 +139,6 @@ export default function EditMantenimiento({ onClose }) {
       if (response.ok && result.success) {
         alert("✅ Mantenimiento actualizado exitosamente!");
         
-        // Mensaje adicional si se completó el mantenimiento
         if (manto.estado === 'completado') {
           alert("🚛 El camión ha sido actualizado a estado DISPONIBLE");
         }
@@ -164,7 +163,7 @@ export default function EditMantenimiento({ onClose }) {
         minHeight: '400px',
         fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
       }}>
-        <Typography sx={{ color: '#666', fontSize: '16px', mb: 2 }}>Cargando mantenimiento...</Typography>
+        <Typography sx={{ color: '#5F8EAD', fontSize: '16px', mb: 2, fontWeight: 600 }}>Cargando mantenimiento...</Typography>
         <Typography sx={{ color: '#999', fontSize: '14px' }}>ID: {id}</Typography>
       </Box>
     );
@@ -190,8 +189,8 @@ export default function EditMantenimiento({ onClose }) {
           <IconButton 
             onClick={() => navigate('/mantenimientos')} 
             sx={{ 
-              color: '#666',
-              '&:hover': { backgroundColor: '#f3f4f6' }
+              color: '#5F8EAD',
+              '&:hover': { backgroundColor: '#5F8EAD', backgroundOpacity: 0.1 }
             }}
           >
             <ArrowBack />
@@ -199,7 +198,7 @@ export default function EditMantenimiento({ onClose }) {
           <Typography sx={{ 
             fontSize: '24px',
             fontWeight: 600,
-            color: '#1a1a1a',
+            color: '#34353A',
             letterSpacing: '-0.5px'
           }}>
             Editar Mantenimiento
@@ -212,7 +211,7 @@ export default function EditMantenimiento({ onClose }) {
         p: 3, 
         mb: 3,
         borderRadius: '12px',
-        border: '1px solid #e5e7eb',
+        border: '2px solid #5F8EAD',
         boxShadow: 'none'
       }}>
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
@@ -221,7 +220,7 @@ export default function EditMantenimiento({ onClose }) {
             <Typography sx={{ 
               fontSize: '14px',
               fontWeight: 500,
-              color: '#374151',
+              color: '#34353A',
               mb: 1
             }}>
               Fecha de Mantenimiento
@@ -237,8 +236,8 @@ export default function EditMantenimiento({ onClose }) {
                   backgroundColor: '#f9fafb',
                   fontSize: '14px',
                   '& fieldset': { borderColor: '#e5e7eb' },
-                  '&:hover fieldset': { borderColor: '#d1d5db' },
-                  '&.Mui-focused fieldset': { borderColor: '#6366f1', borderWidth: '2px' }
+                  '&:hover fieldset': { borderColor: '#5F8EAD' },
+                  '&.Mui-focused fieldset': { borderColor: '#5F8EAD', borderWidth: '2px' }
                 }
               }}
             />
@@ -249,7 +248,7 @@ export default function EditMantenimiento({ onClose }) {
             <Typography sx={{ 
               fontSize: '14px',
               fontWeight: 500,
-              color: '#374151',
+              color: '#34353A',
               mb: 1
             }}>
               Tipo de Mantenimiento
@@ -265,19 +264,19 @@ export default function EditMantenimiento({ onClose }) {
                   backgroundColor: '#f9fafb',
                   fontSize: '14px',
                   '& fieldset': { borderColor: '#e5e7eb' },
-                  '&:hover fieldset': { borderColor: '#d1d5db' },
-                  '&.Mui-focused fieldset': { borderColor: '#6366f1', borderWidth: '2px' }
+                  '&:hover fieldset': { borderColor: '#5F8EAD' },
+                  '&.Mui-focused fieldset': { borderColor: '#5F8EAD', borderWidth: '2px' }
                 }
               }}
             />
           </Box>
 
-          {/* ESTADO DEL MANTENIMIENTO - NUEVO */}
+          {/* ESTADO DEL MANTENIMIENTO */}
           <Box>
             <Typography sx={{ 
               fontSize: '14px',
               fontWeight: 500,
-              color: '#374151',
+              color: '#34353A',
               mb: 1
             }}>
               🚦 Estado del Mantenimiento
@@ -291,8 +290,8 @@ export default function EditMantenimiento({ onClose }) {
                   backgroundColor: '#f9fafb',
                   fontSize: '14px',
                   '& fieldset': { borderColor: '#e5e7eb' },
-                  '&:hover fieldset': { borderColor: '#d1d5db' },
-                  '&.Mui-focused fieldset': { borderColor: '#6366f1', borderWidth: '2px' }
+                  '&:hover fieldset': { borderColor: '#5F8EAD' },
+                  '&.Mui-focused fieldset': { borderColor: '#5F8EAD', borderWidth: '2px' }
                 }}
               >
                 {estadosDisponibles.map((estado) => (
@@ -315,7 +314,7 @@ export default function EditMantenimiento({ onClose }) {
             {manto?.estado === 'completado' && (
               <Typography sx={{ 
                 fontSize: '12px', 
-                color: '#10b981', 
+                color: '#5D9646', 
                 mt: 1,
                 fontWeight: 500 
               }}>
@@ -329,7 +328,7 @@ export default function EditMantenimiento({ onClose }) {
             <Typography sx={{ 
               fontSize: '14px',
               fontWeight: 500,
-              color: '#374151',
+              color: '#34353A',
               mb: 1
             }}>
               Descripción
@@ -347,8 +346,8 @@ export default function EditMantenimiento({ onClose }) {
                   backgroundColor: '#f9fafb',
                   fontSize: '14px',
                   '& fieldset': { borderColor: '#e5e7eb' },
-                  '&:hover fieldset': { borderColor: '#d1d5db' },
-                  '&.Mui-focused fieldset': { borderColor: '#6366f1', borderWidth: '2px' }
+                  '&:hover fieldset': { borderColor: '#5F8EAD' },
+                  '&.Mui-focused fieldset': { borderColor: '#5F8EAD', borderWidth: '2px' }
                 }
               }}
             />
@@ -360,14 +359,14 @@ export default function EditMantenimiento({ onClose }) {
       <Paper sx={{ 
         p: 3,
         borderRadius: '12px',
-        border: '1px solid #e5e7eb',
+        border: '2px solid #5D9646',
         boxShadow: 'none'
       }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
           <Typography sx={{ 
             fontSize: '18px',
             fontWeight: 600,
-            color: '#1a1a1a'
+            color: '#34353A'
           }}>
             Detalles del mantenimiento
           </Typography>
@@ -378,12 +377,13 @@ export default function EditMantenimiento({ onClose }) {
               textTransform: 'none',
               fontSize: '14px',
               fontWeight: 500,
-              color: '#6366f1',
-              borderColor: '#6366f1',
+              color: '#5D9646',
+              borderColor: '#5D9646',
               borderRadius: '8px',
               '&:hover': {
-                backgroundColor: '#eef2ff',
-                borderColor: '#6366f1'
+                backgroundColor: '#5D9646',
+                backgroundOpacity: 0.1,
+                borderColor: '#5D9646'
               }
             }}
             variant="outlined"
@@ -418,8 +418,8 @@ export default function EditMantenimiento({ onClose }) {
                     backgroundColor: '#fff',
                     fontSize: '14px',
                     '& fieldset': { borderColor: '#e5e7eb' },
-                    '&:hover fieldset': { borderColor: '#d1d5db' },
-                    '&.Mui-focused fieldset': { borderColor: '#6366f1', borderWidth: '2px' }
+                    '&:hover fieldset': { borderColor: '#5F8EAD' },
+                    '&.Mui-focused fieldset': { borderColor: '#5F8EAD', borderWidth: '2px' }
                   }
                 }}
               />
@@ -434,8 +434,8 @@ export default function EditMantenimiento({ onClose }) {
                     backgroundColor: '#fff',
                     fontSize: '14px',
                     '& fieldset': { borderColor: '#e5e7eb' },
-                    '&:hover fieldset': { borderColor: '#d1d5db' },
-                    '&.Mui-focused fieldset': { borderColor: '#6366f1', borderWidth: '2px' }
+                    '&:hover fieldset': { borderColor: '#5F8EAD' },
+                    '&.Mui-focused fieldset': { borderColor: '#5F8EAD', borderWidth: '2px' }
                   }
                 }}
               />
@@ -450,8 +450,8 @@ export default function EditMantenimiento({ onClose }) {
                     backgroundColor: '#fff',
                     fontSize: '14px',
                     '& fieldset': { borderColor: '#e5e7eb' },
-                    '&:hover fieldset': { borderColor: '#d1d5db' },
-                    '&.Mui-focused fieldset': { borderColor: '#6366f1', borderWidth: '2px' }
+                    '&:hover fieldset': { borderColor: '#5F8EAD' },
+                    '&.Mui-focused fieldset': { borderColor: '#5F8EAD', borderWidth: '2px' }
                   }
                 }}
               />
@@ -475,13 +475,13 @@ export default function EditMantenimiento({ onClose }) {
             justifyContent: 'flex-end', 
             mt: 3,
             pt: 3,
-            borderTop: '1px solid #e5e7eb'
+            borderTop: '2px solid #5D9646'
           }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
               <Typography sx={{ fontSize: '16px', fontWeight: 500, color: '#6b7280' }}>
                 Total:
               </Typography>
-              <Typography sx={{ fontSize: '24px', fontWeight: 700, color: '#1a1a1a' }}>
+              <Typography sx={{ fontSize: '24px', fontWeight: 700, color: '#5D9646' }}>
                 ${calcularTotal().toFixed(2)}
               </Typography>
             </Box>
@@ -520,11 +520,11 @@ export default function EditMantenimiento({ onClose }) {
             fontWeight: 600,
             py: 1.5,
             borderRadius: '8px',
-            backgroundColor: '#6366f1',
+            background: 'linear-gradient(135deg, #34353A 0%, #5F8EAD 100%)',
             boxShadow: 'none',
             '&:hover': {
-              backgroundColor: '#4f46e5',
-              boxShadow: '0 4px 6px -1px rgba(99, 102, 241, 0.3)'
+              opacity: 0.9,
+              boxShadow: '0 4px 6px -1px rgba(52, 53, 58, 0.3)'
             }
           }}
         >
