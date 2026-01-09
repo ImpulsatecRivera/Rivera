@@ -1,6 +1,11 @@
 import express from "express";
 import cookieParser from "cookie-parser";
 import cors from "cors";
+import swaggerUi from "swagger-ui-express";
+import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url"; // ✅ FALTA ESTA LÍNEA
+
 
 import ViajesRoutes from "./src/Routes/ViajesRoutes.js";
 import LoginRoutes from "./src/Routes/LoginRoutes.js";
@@ -39,9 +44,7 @@ import viajesOperativosRoutes from "./src/Routes/ViajesOperativosRoutes.js";
 import reportesViajesDirectoRoutes from "./src/Routes/ReportesViajesDirectoRoutes.js";
 
 // (si luego usas swagger en tu proyecto)
-import swaggerUi from "swagger-ui-express";
-import fs from "fs";
-import path from "path";
+
 
 const app = express();
 
@@ -85,6 +88,11 @@ app.get("/health", (req, res) => {
     timestamp: new Date().toISOString(),
   });
 });
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+app.use("/public", express.static(path.join(__dirname, "public")));
 
 // -------------------- ROUTES --------------------
 app.use("/api/viajes", ViajesRoutes);
