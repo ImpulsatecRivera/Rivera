@@ -9,13 +9,12 @@ const CreateMantenimientoPage = () => {
   const [error, setError] = useState(null);
   const [camiones, setCamiones] = useState([]);
   
-  // Form state
   const [formData, setFormData] = useState({
     fecha_mantenimiento: '',
     tipo_de_mantenimiento: '',
     descripcion: '',
     ciculatioCard: '',
-    estado: 'pendiente', // Estado por defecto
+    estado: 'pendiente',
     detalles: [
       { concepto: '', cantidad: 1, precioUnitario: 0 }
     ]
@@ -34,7 +33,6 @@ const CreateMantenimientoPage = () => {
     { value: 'otros', label: 'Otros' }
   ];
 
-  // Cargar camiones al montar el componente
   useEffect(() => {
     fetchCamiones();
   }, []);
@@ -104,7 +102,6 @@ const CreateMantenimientoPage = () => {
   };
 
   const handleSubmit = async () => {
-    // Validaciones
     if (!formData.fecha_mantenimiento) {
       setError('La fecha es requerida');
       return;
@@ -122,7 +119,6 @@ const CreateMantenimientoPage = () => {
       return;
     }
 
-    // Validar detalles
     const detallesValidos = formData.detalles.every(d => 
       d.concepto.trim() && d.cantidad > 0 && d.precioUnitario > 0
     );
@@ -136,7 +132,6 @@ const CreateMantenimientoPage = () => {
       setLoading(true);
       setError(null);
 
-      // Preparar datos para enviar
       const fecha = new Date(formData.fecha_mantenimiento);
       const dataToSend = {
         fecha_mantenimiento: formData.fecha_mantenimiento,
@@ -145,7 +140,7 @@ const CreateMantenimientoPage = () => {
         tipo_de_mantenimiento: formData.tipo_de_mantenimiento,
         descripcion: formData.descripcion,
         ciculatioCard: formData.ciculatioCard,
-        estado: 'pendiente', // Estado por defecto: pendiente
+        estado: 'pendiente',
         detalles: formData.detalles.map(d => ({
           concepto: d.concepto,
           cantidad: d.cantidad,
@@ -154,7 +149,7 @@ const CreateMantenimientoPage = () => {
         }))
       };
 
-      console.log('Datos enviados al backend:', dataToSend); // Para debugging
+      console.log('Datos enviados al backend:', dataToSend);
 
       const response = await fetch(`${config.api.API_URL}/mantenimientos`, {
         method: 'POST',
@@ -171,7 +166,6 @@ const CreateMantenimientoPage = () => {
       const result = await response.json();
       console.log('Mantenimiento creado:', result);
       
-      // Navegar de vuelta a la lista
       navigate('/mantenimientos');
 
     } catch (err) {
@@ -185,22 +179,22 @@ const CreateMantenimientoPage = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-8">
       <div className="max-w-6xl mx-auto">
-        {/* Header con botón de regreso */}
+        {/* Header */}
         <div className="mb-8">
           <button
             onClick={() => navigate('/mantenimientos')}
-            className="flex items-center gap-2 text-gray-600 hover:text-gray-900 font-semibold mb-4 transition-colors"
+            className="flex items-center gap-2 text-[#5F8EAD] hover:text-[#34353A] font-semibold mb-4 transition-colors"
           >
             <ArrowLeft size={20} />
             Volver a Mantenimientos
           </button>
           
           <div className="flex items-center gap-4">
-            <div className="bg-gradient-to-br from-indigo-600 to-purple-600 p-4 rounded-2xl shadow-lg">
+            <div className="bg-gradient-to-br from-[#34353A] to-[#5F8EAD] p-4 rounded-2xl shadow-lg">
               <Plus className="text-white" size={32} />
             </div>
             <div>
-              <h1 className="text-4xl font-bold text-gray-900 mb-1">
+              <h1 className="text-4xl font-bold text-[#34353A] mb-1">
                 Nuevo Mantenimiento
               </h1>
               <p className="text-gray-600">
@@ -213,11 +207,11 @@ const CreateMantenimientoPage = () => {
           </div>
         </div>
 
-        {/* Contenido del formulario */}
+        {/* Formulario */}
         <div className="bg-white rounded-3xl shadow-xl p-8">
           {/* Error Message */}
           {error && (
-            <div className="mb-6 bg-red-50 border border-red-200 rounded-xl p-4 flex items-start gap-3">
+            <div className="mb-6 bg-red-50 border-2 border-red-200 rounded-xl p-4 flex items-start gap-3">
               <AlertCircle className="text-red-600 flex-shrink-0 mt-0.5" size={20} />
               <div>
                 <p className="text-red-800 font-semibold">Error</p>
@@ -228,15 +222,15 @@ const CreateMantenimientoPage = () => {
 
           {/* Información Básica */}
           <div className="mb-8">
-            <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-              <Calendar className="text-indigo-600" size={22} />
+            <h3 className="text-xl font-bold text-[#34353A] mb-4 flex items-center gap-2">
+              <Calendar className="text-[#5F8EAD]" size={22} />
               Información Básica
             </h3>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Fecha */}
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                <label className="block text-sm font-semibold text-[#34353A] mb-2">
                   Fecha de Mantenimiento *
                 </label>
                 <input
@@ -244,20 +238,20 @@ const CreateMantenimientoPage = () => {
                   name="fecha_mantenimiento"
                   value={formData.fecha_mantenimiento}
                   onChange={handleInputChange}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#5F8EAD] focus:border-[#5F8EAD]"
                 />
               </div>
 
-              {/* Tipo de Mantenimiento */}
+              {/* Tipo */}
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                <label className="block text-sm font-semibold text-[#34353A] mb-2">
                   Tipo de Mantenimiento *
                 </label>
                 <select
                   name="tipo_de_mantenimiento"
                   value={formData.tipo_de_mantenimiento}
                   onChange={handleInputChange}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#5F8EAD] focus:border-[#5F8EAD]"
                 >
                   <option value="">Seleccionar tipo...</option>
                   {tipoMantenimientoOptions.map(option => (
@@ -270,14 +264,14 @@ const CreateMantenimientoPage = () => {
 
               {/* Camión */}
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                <label className="block text-sm font-semibold text-[#34353A] mb-2">
                   Camión *
                 </label>
                 <select
                   name="ciculatioCard"
                   value={formData.ciculatioCard}
                   onChange={handleInputChange}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#5F8EAD] focus:border-[#5F8EAD]"
                 >
                   <option value="">Seleccionar camión...</option>
                   {camiones.map(camion => (
@@ -290,7 +284,7 @@ const CreateMantenimientoPage = () => {
 
               {/* Descripción */}
               <div className="md:col-span-2">
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                <label className="block text-sm font-semibold text-[#34353A] mb-2">
                   Descripción *
                 </label>
                 <textarea
@@ -299,7 +293,7 @@ const CreateMantenimientoPage = () => {
                   onChange={handleInputChange}
                   rows={3}
                   placeholder="Describe los trabajos realizados..."
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#5F8EAD] focus:border-[#5F8EAD] resize-none"
                 />
               </div>
             </div>
@@ -308,13 +302,13 @@ const CreateMantenimientoPage = () => {
           {/* Detalles/Conceptos */}
           <div className="mb-6">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-                <FileText className="text-indigo-600" size={22} />
+              <h3 className="text-xl font-bold text-[#34353A] flex items-center gap-2">
+                <FileText className="text-[#5D9646]" size={22} />
                 Detalles de Costos
               </h3>
               <button
                 onClick={agregarDetalle}
-                className="px-4 py-2 bg-indigo-100 text-indigo-700 rounded-lg hover:bg-indigo-200 transition-colors font-semibold text-sm flex items-center gap-2"
+                className="px-4 py-2 bg-[#5D9646] bg-opacity-20 text-[#5D9646] rounded-lg hover:bg-[#5D9646] hover:bg-opacity-30 transition-colors font-semibold text-sm flex items-center gap-2"
               >
                 <Plus size={18} />
                 Agregar Item
@@ -323,7 +317,7 @@ const CreateMantenimientoPage = () => {
 
             <div className="space-y-3">
               {formData.detalles.map((detalle, index) => (
-                <div key={index} className="bg-gray-50 rounded-xl p-4 border border-gray-200">
+                <div key={index} className="bg-gray-50 rounded-xl p-4 border-2 border-gray-200">
                   <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
                     {/* Concepto */}
                     <div className="md:col-span-5">
@@ -335,7 +329,7 @@ const CreateMantenimientoPage = () => {
                         value={detalle.concepto}
                         onChange={(e) => handleDetalleChange(index, 'concepto', e.target.value)}
                         placeholder="Ej: Cambio de aceite"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5F8EAD] focus:border-[#5F8EAD]"
                       />
                     </div>
 
@@ -350,7 +344,7 @@ const CreateMantenimientoPage = () => {
                         onChange={(e) => handleDetalleChange(index, 'cantidad', e.target.value)}
                         min="1"
                         step="1"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5F8EAD] focus:border-[#5F8EAD]"
                       />
                     </div>
 
@@ -365,7 +359,7 @@ const CreateMantenimientoPage = () => {
                         onChange={(e) => handleDetalleChange(index, 'precioUnitario', e.target.value)}
                         min="0"
                         step="0.01"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5F8EAD] focus:border-[#5F8EAD]"
                       />
                     </div>
 
@@ -374,7 +368,7 @@ const CreateMantenimientoPage = () => {
                       <label className="block text-xs font-semibold text-gray-600 mb-1">
                         Subtotal
                       </label>
-                      <div className="px-3 py-2 bg-gray-100 rounded-lg font-bold text-gray-900 text-sm">
+                      <div className="px-3 py-2 bg-[#5D9646] bg-opacity-10 rounded-lg font-bold text-[#5D9646] text-sm">
                         {formatearMoneda(calcularSubtotal(detalle.cantidad, detalle.precioUnitario))}
                       </div>
                     </div>
@@ -396,7 +390,7 @@ const CreateMantenimientoPage = () => {
           </div>
 
           {/* Total */}
-          <div className="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-2xl p-6 mb-6">
+          <div className="bg-gradient-to-r from-[#34353A] to-[#5D9646] rounded-2xl p-6 mb-6">
             <div className="flex items-center justify-between">
               <span className="text-white text-lg font-semibold">Total del Mantenimiento</span>
               <span className="text-white text-4xl font-bold">
@@ -416,7 +410,7 @@ const CreateMantenimientoPage = () => {
             <button
               onClick={handleSubmit}
               disabled={loading}
-              className="flex-1 px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl font-semibold hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              className="flex-1 px-6 py-3 bg-gradient-to-r from-[#34353A] to-[#5F8EAD] text-white rounded-xl font-semibold hover:opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg"
             >
               {loading ? (
                 <>

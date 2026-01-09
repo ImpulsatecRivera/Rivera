@@ -110,7 +110,7 @@ const obtenerSalarioValido = (empleadoData, nombreCompleto, tipoEmpleado) => {
     // 🔧 CRÍTICO: Convertir string a número si es necesario (caso Motoristas)
     if (typeof salarioMensual === 'string') {
         salarioMensual = parseFloat(salarioMensual.replace(/[^0-9.-]/g, '')); // Limpiar caracteres no numéricos
-        
+
         // Validar que la conversión fue exitosa
         if (isNaN(salarioMensual)) {
             console.error('❌ Error: El salario no es válido:', {
@@ -127,31 +127,30 @@ const obtenerSalarioValido = (empleadoData, nombreCompleto, tipoEmpleado) => {
         throw new Error(`El salario de ${nombreCompleto} debe ser mayor a 0. Salario actual: ${salarioMensual}`);
     }
 
-    // Debug opcional (útil para troubleshooting)
-    console.log('💰 Salario procesado:', {
-        empleado: nombreCompleto,
-        tipo: tipoEmpleado,
-        salarioOriginal: empleadoData.salario || empleadoData.salary,
-        salarioMensual: salarioMensual,
-        salarioQuincenal: redondearDinero(salarioMensual / 2)
-    });
-
     return salarioMensual;
 };
 
 /**
- * Calcular totales de un empleado
+ * ✅ CORREGIDO: Calcular totales de un empleado
+ * Ahora descuentos de ley se calculan sobre el salario total
  */
 const calcularTotalesEmpleado = (empleado) => {
-    const totalSalarioMasViaticos =
-        (empleado.salarioQuincenal || 0) +
-        (empleado.viaticos || 0) +
-        (empleado.trabajoSabadoDomingo || 0);
+    // Normalizar y asegurar que sean números
+    const salarioQuincenal = Number(empleado.salarioQuincenal || 0);
+    const viaticos = Number(empleado.viaticos || 0);
+    const trabajoSabadoDomingo = Number(empleado.trabajoSabadoDomingo || 0);
+
+    // Calcular descuentos de ley en base al salario quincenal
+    const descuentosLey = calcularDescuentosLey(salarioQuincenal);
+    // Asegurarnos de guardar los descuentos calculados en el objeto empleado
+    empleado.descuentosLey = descuentosLey;
+
+    const totalSalarioMasViaticos = salarioQuincenal + viaticos + trabajoSabadoDomingo;
 
     const totalDescuentosLey =
-        (empleado.descuentosLey?.isss?.monto || 0) +
-        (empleado.descuentosLey?.afp?.monto || 0) +
-        (empleado.descuentosLey?.renta?.monto || 0);
+        (descuentosLey?.isss?.monto || 0) +
+        (descuentosLey?.afp?.monto || 0) +
+        (descuentosLey?.renta?.monto || 0);
 
     const totalOtrosDescuentos =
         (empleado.otrosDescuentos?.anticipos || 0) +
@@ -169,35 +168,41 @@ const calcularTotalesEmpleado = (empleado) => {
 };
 
 /**
- * Calcular totales generales de la planilla
+ * Calcular totales generales de la planilla (SIN CAMISAS)
  */
 const calcularTotalesGenerales = (empleados) => {
+    console.log('🔥 INICIANDO calcularTotalesGenerales');
+    console.log('📦 Empleados recibidos:', empleados.length);
+
     const totales = {
         totalSalariosQuincenales: 0,
         totalViaticos: 0,
         totalTrabajoSabadoDomingo: 0,
-        totalSalarioMasViaticos: 0,
+        totalSalariosMasViaticos: 0,
         totalISSS: 0,
         totalAFP: 0,
         totalRenta: 0,
         totalAnticipos: 0,
         totalPrestamos: 0,
-        totalOtrosDescuentos: 0,
+        totalOtros: 0,
         totalDescuentos: 0,
         totalAPagar: 0
     };
 
     empleados.forEach(emp => {
+        console.log('👤 Procesando empleado:', emp.nombreCompleto);
+        console.log('   - Trabajo Sáb/Dom:', emp.trabajoSabadoDomingo);
+
         totales.totalSalariosQuincenales += emp.salarioQuincenal || 0;
         totales.totalViaticos += emp.viaticos || 0;
         totales.totalTrabajoSabadoDomingo += emp.trabajoSabadoDomingo || 0;
-        totales.totalSalarioMasViaticos += emp.totalSalarioMasViaticos || 0;
+        totales.totalSalariosMasViaticos += emp.totalSalarioMasViaticos || 0;
         totales.totalISSS += emp.descuentosLey?.isss?.monto || 0;
         totales.totalAFP += emp.descuentosLey?.afp?.monto || 0;
         totales.totalRenta += emp.descuentosLey?.renta?.monto || 0;
         totales.totalAnticipos += emp.otrosDescuentos?.anticipos || 0;
         totales.totalPrestamos += emp.otrosDescuentos?.prestamos || 0;
-        totales.totalOtrosDescuentos += emp.otrosDescuentos?.otros || 0;
+        totales.totalOtros += emp.otrosDescuentos?.otros || 0;
         totales.totalDescuentos += emp.totalDescuentos || 0;
         totales.totalAPagar += emp.totalAPagar || 0;
     });
@@ -207,9 +212,11 @@ const calcularTotalesGenerales = (empleados) => {
         totales[key] = redondearDinero(totales[key]);
     });
 
+    console.log('✅ TOTALES CALCULADOS (BACKEND):', totales);
+    console.log('   🎯 totalTrabajoSabadoDomingo:', totales.totalTrabajoSabadoDomingo);
+
     return totales;
 };
-
 /**
  * Crear una nueva planilla quincenal
  * POST /api/planillas/quincenal
@@ -277,12 +284,8 @@ PlanillaQuincenalController.crear = async (req, res) => {
 
                 const nombreCompleto = `${empleadoData.name} ${empleadoData.lastName || ''}`.trim();
 
-                // ✅ ACTUALIZADO: Obtener salario válido (maneja String y Number)
                 const salarioMensual = obtenerSalarioValido(empleadoData, nombreCompleto, tipoEmpleado);
                 const salarioQuincenal = redondearDinero(salarioMensual / 2);
-
-                // Calcular descuentos de ley automáticamente
-                const descuentosLey = calcularDescuentosLey(salarioQuincenal);
 
                 const empleadoPlanilla = {
                     empleadoId: emp.empleadoId,
@@ -291,7 +294,7 @@ PlanillaQuincenalController.crear = async (req, res) => {
                     salarioQuincenal,
                     viaticos: emp.viaticos || 0,
                     trabajoSabadoDomingo: emp.trabajoSabadoDomingo || 0,
-                    descuentosLey,
+                    descuentosLey: {},
                     otrosDescuentos: emp.otrosDescuentos || {
                         anticipos: 0,
                         prestamos: 0,
@@ -439,7 +442,7 @@ PlanillaQuincenalController.obtenerPorId = async (req, res) => {
 };
 
 /**
- * Actualizar datos de un empleado en la planilla
+ * Actualizar datos de un empleado en la planilla (SIN CAMISAS)
  * PUT /api/planillas/quincenal/:id/empleado/:empleadoId
  */
 PlanillaQuincenalController.actualizarEmpleado = async (req, res) => {
@@ -463,8 +466,8 @@ PlanillaQuincenalController.actualizarEmpleado = async (req, res) => {
             });
         }
 
-        // Validar que la planilla no esté pagada o cerrada
-        if (planilla.estado === 'pagada' || planilla.estado === 'cerrada') {
+        // Validar que la planilla no esté pagada o pagada
+        if (planilla.estado === 'pagada') {
             return res.status(400).json({
                 success: false,
                 message: `No se pueden editar empleados de una planilla en estado ${planilla.estado}`
@@ -524,7 +527,7 @@ PlanillaQuincenalController.actualizarEmpleado = async (req, res) => {
 };
 
 /**
- * Agregar un nuevo empleado a la planilla
+ * Agregar un nuevo empleado a la planilla (SIN CAMISAS)
  * POST /api/planillas/quincenal/:id/empleado
  */
 PlanillaQuincenalController.agregarEmpleado = async (req, res) => {
@@ -548,8 +551,8 @@ PlanillaQuincenalController.agregarEmpleado = async (req, res) => {
             });
         }
 
-        // Validar que la planilla no esté pagada o cerrada
-        if (planilla.estado === 'pagada' || planilla.estado === 'cerrada') {
+        // Validar que la planilla no esté pagada o pagada
+        if (planilla.estado === 'pagada') {
             return res.status(400).json({
                 success: false,
                 message: `No se pueden agregar empleados a una planilla en estado ${planilla.estado}`
@@ -586,10 +589,8 @@ PlanillaQuincenalController.agregarEmpleado = async (req, res) => {
 
         const nombreCompleto = `${empleadoData.name} ${empleadoData.lastName || ''}`.trim();
 
-        // ✅ ACTUALIZADO: Obtener salario válido (maneja String y Number)
         const salarioMensual = obtenerSalarioValido(empleadoData, nombreCompleto, tipoEmpleado);
         const salarioQuincenal = redondearDinero(salarioMensual / 2);
-        const descuentosLey = calcularDescuentosLey(salarioQuincenal);
 
         const nuevoEmpleado = {
             empleadoId,
@@ -598,7 +599,7 @@ PlanillaQuincenalController.agregarEmpleado = async (req, res) => {
             salarioQuincenal,
             viaticos: viaticos || 0,
             trabajoSabadoDomingo: trabajoSabadoDomingo || 0,
-            descuentosLey,
+            descuentosLey: {},
             otrosDescuentos: otrosDescuentos || {
                 anticipos: 0,
                 prestamos: 0,
@@ -606,6 +607,7 @@ PlanillaQuincenalController.agregarEmpleado = async (req, res) => {
             }
         };
 
+        // Calcular totales
         const totales = calcularTotalesEmpleado(nuevoEmpleado);
         nuevoEmpleado.totalSalarioMasViaticos = totales.totalSalarioMasViaticos;
         nuevoEmpleado.totalDescuentos = totales.totalDescuentos;
@@ -655,8 +657,8 @@ PlanillaQuincenalController.eliminarEmpleado = async (req, res) => {
             });
         }
 
-        // Validar que la planilla no esté pagada o cerrada
-        if (planilla.estado === 'pagada' || planilla.estado === 'cerrada') {
+        // Validar que la planilla no esté pagada o pagada
+        if (planilla.estado === 'pagada') {
             return res.status(400).json({
                 success: false,
                 message: `No se pueden eliminar empleados de una planilla en estado ${planilla.estado}`
@@ -698,10 +700,15 @@ PlanillaQuincenalController.eliminarEmpleado = async (req, res) => {
  * Cambiar estado de la planilla
  * PATCH /api/planillas/quincenal/:id/estado
  */
+/**
+ * Cambiar estado de la planilla y marcar como pagada
+ * PATCH /api/planillas/quincenal/:id/estado
+ * Body: { estado, pagada?, fechaPago?, fechaCierre?, fechaAprobacion? }
+ */
 PlanillaQuincenalController.cambiarEstado = async (req, res) => {
     try {
         const { id } = req.params;
-        const { estado, fechaPago, fechaCierre, fechaAprobacion } = req.body;
+        const { estado, pagada, fechaPago, fechaCierre, fechaAprobacion } = req.body;
 
         if (!isValidObjectId(id)) {
             return res.status(400).json({
@@ -710,8 +717,8 @@ PlanillaQuincenalController.cambiarEstado = async (req, res) => {
             });
         }
 
-        const estadosValidos = ['pendiente', 'aprobada', 'pagada', 'cerrada'];
-        if (!estadosValidos.includes(estado)) {
+        const estadosValidos = ['pendiente', 'aprobada', 'pagada'];
+        if (estado && !estadosValidos.includes(estado)) {
             return res.status(400).json({
                 success: false,
                 message: "Estado inválido",
@@ -730,49 +737,56 @@ PlanillaQuincenalController.cambiarEstado = async (req, res) => {
 
         const estadoActual = planilla.estado;
 
-        // Validar que no se pueda cambiar si ya está cerrada
-        if (estadoActual === 'cerrada') {
+        // Validar que no se pueda cambiar si ya está pagada
+        if (estadoActual === 'pagada' && estado) {
             return res.status(400).json({
                 success: false,
-                message: "No se puede cambiar el estado de una planilla cerrada (estado final)"
-            });
-        }
-
-        // Validar que si está pagada, no pueda regresar a pendiente
-        if (estadoActual === 'pagada' && (estado === 'pendiente')) {
-            return res.status(400).json({
-                success: false,
-                message: "No se puede regresar a estado pendiente desde pagada. Solo puede pasar a cerrada."
+                message: "No se puede cambiar el estado de una planilla pagada (estado final)"
             });
         }
 
         const now = new Date();
 
-        // Si el nuevo estado es 'pagada', requerir fechaPago
-        if (estado === 'pagada') {
-            if (!fechaPago) {
-                return res.status(400).json({
-                    success: false,
-                    message: "Se requiere la fecha de pago cuando se marca como pagada"
-                });
-            }
+        // ✅ NUEVO: Marcar como pagada
+        if (pagada !== undefined) {
+            if (pagada === true) {
+                // Validar que esté al menos aprobada para poder pagarla
+                if (estadoActual === 'pendiente' && (!estado || estado === 'pendiente')) {
+                    return res.status(400).json({
+                        success: false,
+                        message: "La planilla debe estar aprobada para poder marcarla como pagada"
+                    });
+                }
 
-            const fechaPagoDate = new Date(fechaPago);
-            if (isNaN(fechaPagoDate.getTime())) {
-                return res.status(400).json({
-                    success: false,
-                    message: "La fecha de pago no es válida"
-                });
-            }
+                if (!fechaPago) {
+                    return res.status(400).json({
+                        success: false,
+                        message: "Se requiere la fecha de pago cuando se marca como pagada"
+                    });
+                }
 
-            if (fechaPagoDate > now) {
-                return res.status(400).json({
-                    success: false,
-                    message: "La fecha de pago no puede ser una fecha futura"
-                });
-            }
+                const fechaPagoDate = new Date(fechaPago);
+                if (isNaN(fechaPagoDate.getTime())) {
+                    return res.status(400).json({
+                        success: false,
+                        message: "La fecha de pago no es válida"
+                    });
+                }
 
-            planilla.fechaPago = fechaPagoDate;
+                if (fechaPagoDate > now) {
+                    return res.status(400).json({
+                        success: false,
+                        message: "La fecha de pago no puede ser una fecha futura"
+                    });
+                }
+
+                planilla.pagada = true;
+                planilla.fechaPago = fechaPagoDate;
+            } else {
+                // Desmarcar como pagada
+                planilla.pagada = false;
+                planilla.fechaPago = undefined;
+            }
         }
 
         // Si el nuevo estado es 'aprobada', guardar fechaAprobacion
@@ -799,39 +813,18 @@ PlanillaQuincenalController.cambiarEstado = async (req, res) => {
             }
         }
 
-        // Si el nuevo estado es 'cerrada', requerir fechaCierre
-        if (estado === 'cerrada') {
-            if (!fechaCierre) {
-                return res.status(400).json({
-                    success: false,
-                    message: "Se requiere la fecha de cierre cuando se marca como cerrada"
-                });
-            }
 
-            const fechaCierreDate = new Date(fechaCierre);
-            if (isNaN(fechaCierreDate.getTime())) {
-                return res.status(400).json({
-                    success: false,
-                    message: "La fecha de cierre no es válida"
-                });
-            }
-
-            if (fechaCierreDate > now) {
-                return res.status(400).json({
-                    success: false,
-                    message: "La fecha de cierre no puede ser una fecha futura"
-                });
-            }
-
-            planilla.fechaCierre = fechaCierreDate;
+        if (estado) {
+            planilla.estado = estado;
         }
 
-        planilla.estado = estado;
         await planilla.save();
 
         res.status(200).json({
             success: true,
-            message: `Estado cambiado de ${estadoActual} a ${estado} exitosamente`,
+            message: estado
+                ? `Estado cambiado de ${estadoActual} a ${estado} exitosamente`
+                : 'Planilla actualizada exitosamente',
             data: planilla
         });
     } catch (error) {

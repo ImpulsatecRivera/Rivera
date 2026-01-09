@@ -1,40 +1,55 @@
-import { Schema, model } from "mongoose";
+import mongoose from "mongoose";
 
-const DieselSchema = new Schema({
-  fecha: {
-    type: Date,
-    required: true,
-    default: Date.now,
+const ResumenDieselSchema = new mongoose.Schema({
+  CicurlationCard: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Camiones",
+    required: [true, "El camión es obligatorio"],
   },
   Galones: {
     type: Number,
-    required: true,
+    required: [true, "Los galones son obligatorios"],
+    min: [0, "Los galones no pueden ser negativos"],
   },
-  Total: {
-    type: Number,
-    required: true,
-  },
-  CicurlationCard: {
-    type: Schema.Types.ObjectId,
-    ref: "Camiones",
-    required: true,
+  fecha: {
+    type: Date,
+    default: Date.now,
   },
   mes: {
     type: Number,
     required: true,
+    min: 1,
+    max: 12,
   },
   ano: {
     type: Number,
     required: true,
   },
-
-  // ✅ NUEVO
+  Total: {
+    type: Number,
+    required: [true, "El total es obligatorio"],
+    min: [0, "El total no puede ser negativo"],
+  },
   estado: {
     type: String,
     enum: ["Pendiente", "Completado"],
     default: "Pendiente",
-    required: true,
   },
+  // ✅ NUEVO CAMPO: Comprobante de gasolina
+  comprobante: {
+    type: String,
+    default: null,
+  },
+}, {
+  timestamps: true,
+  versionKey: false,
 });
 
-export default model("ResumenDiesel", DieselSchema);
+// Índices para mejorar búsquedas
+ResumenDieselSchema.index({ CicurlationCard: 1, fecha: -1 });
+ResumenDieselSchema.index({ mes: 1, ano: 1 });
+ResumenDieselSchema.index({ estado: 1 });
+
+const ResumenDiesel = mongoose.model("ResumenDiesel", ResumenDieselSchema);
+
+export default ResumenDiesel;
