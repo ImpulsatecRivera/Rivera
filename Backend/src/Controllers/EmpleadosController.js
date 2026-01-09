@@ -1,5 +1,3 @@
-
-
 import empleadosModel from "../Models/Empleados.js";
 import bcryptjs from "bcryptjs";
 import mongoose from "mongoose";
@@ -179,6 +177,27 @@ const formatPhone = (phone) => {
 };
 
 /**
+ * ✅ NUEVO: Normalización de campos tipo "enum"
+ * Esto evita errores como "Rol inválido" cuando el front manda:
+ * "Supervisor " (con espacio), "supervisor" (minúsculas), "SUPERVISOR", etc.
+ */
+const normalizeText = (v) => String(v ?? "").trim();
+
+const normalizeRol = (rol) => {
+    const r = normalizeText(rol).toLowerCase();
+    if (r === "operativo") return "Operativo";
+    if (r === "supervisor") return "Supervisor";
+    return normalizeText(rol); // si viene raro, quedará raro y fallará en validación
+};
+
+const normalizePlanillaTipo = (planillaTipo) => {
+    const p = normalizeText(planillaTipo).toLowerCase();
+    if (p === "semanal") return "Semanal";
+    if (p === "quincenal") return "Quincenal";
+    return normalizeText(planillaTipo);
+};
+
+/**
  * Generar email automático para empleados basado en nombre y apellido
  * @param {string} name - Nombre del empleado
  * @param {string} lastName - Apellido del empleado
@@ -311,9 +330,18 @@ empleadosCon.post = async (req, res) => {
             planillaTipo  // ✅ Nuevo campo agregado
         } = req.body;
 
+        /**
+         * ✅ NUEVO: normalizar antes de validar (aquí se arregla tu "Rol inválido")
+         */
+        const rolNormalizado = normalizeRol(rol);
+        const planillaTipoNormalizado = normalizePlanillaTipo(planillaTipo);
+
         // Validar campos requeridos
         const requiredFields = ['name', 'lastName', 'dui', 'birthDate', 'password', 'phone', 'address', 'salario', 'rol', 'planillaTipo']; // ✅ Agregado a requeridos
-        const validation = validateRequiredFields(req.body, requiredFields);
+        const validation = validateRequiredFields(
+            { ...req.body, rol: rolNormalizado, planillaTipo: planillaTipoNormalizado },
+            requiredFields
+        );
         
         if (!validation.isValid) {
             return res.status(400).json({
@@ -324,13 +352,25 @@ empleadosCon.post = async (req, res) => {
             });
         }
 
-        // Validar rol
+        // Validar rol (ya normalizado)
         const rolesPermitidos = ['Operativo', 'Supervisor'];
-        if (!rolesPermitidos.includes(rol)) {
+        if (!rolesPermitidos.includes(rolNormalizado)) {
             return res.status(400).json({
                 success: false,
                 message: "Rol inválido",
-                error: `El rol debe ser uno de los siguientes: ${rolesPermitidos.join(', ')}`
+                error: `El rol debe ser uno de los siguientes: ${rolesPermitidos.join(', ')}`,
+                received: rolNormalizado
+            });
+        }
+
+        // ✅ NUEVO: Validar planillaTipo (ya normalizado)
+        const planillasPermitidas = ['Semanal', 'Quincenal'];
+        if (!planillasPermitidas.includes(planillaTipoNormalizado)) {
+            return res.status(400).json({
+                success: false,
+                message: "Tipo de planilla inválido",
+                error: `El tipo de planilla debe ser uno de los siguientes: ${planillasPermitidas.join(', ')}`,
+                received: planillaTipoNormalizado
             });
         }
 
@@ -484,8 +524,8 @@ empleadosCon.post = async (req, res) => {
             phone: formatPhone(phone),
             address: address.trim(),
             salario: Number(salario),
-            rol: rol,
-            planillaTipo: planillaTipo.trim(),  // ✅ Nuevo campo agregado
+            rol: rolNormalizado, // ✅ guardado ya normalizado
+            planillaTipo: planillaTipoNormalizado,  // ✅ guardado ya normalizado
             img: imgUrl
         });
 
@@ -584,6 +624,10 @@ empleadosCon.put = async (req, res) => {
             planillaTipo  // ✅ Nuevo campo agregado
         } = req.body;
 
+        // ✅ NUEVO: normalizar si vienen estos campos
+        const rolNormalizado = (rol !== undefined) ? normalizeRol(rol) : undefined;
+        const planillaTipoNormalizado = (planillaTipo !== undefined) ? normalizePlanillaTipo(planillaTipo) : undefined;
+
         // Validaciones específicas por campo si se proporcionan
         if (name && (name.trim().length < 2 || name.trim().length > 50)) {
             return res.status(400).json({
@@ -655,14 +699,28 @@ empleadosCon.put = async (req, res) => {
             });
         }
 
-        // Validar rol si se proporciona
-        if (rol) {
+        // Validar rol si se proporciona (normalizado)
+        if (rolNormalizado !== undefined) {
             const rolesPermitidos = ['Operativo', 'Supervisor'];
-            if (!rolesPermitidos.includes(rol)) {
+            if (!rolesPermitidos.includes(rolNormalizado)) {
                 return res.status(400).json({
                     success: false,
                     message: "Rol inválido",
-                    error: `El rol debe ser uno de los siguientes: ${rolesPermitidos.join(', ')}`
+                    error: `El rol debe ser uno de los siguientes: ${rolesPermitidos.join(', ')}`,
+                    received: rolNormalizado
+                });
+            }
+        }
+
+        // ✅ NUEVO: Validar planillaTipo si se proporciona (normalizado)
+        if (planillaTipoNormalizado !== undefined) {
+            const planillasPermitidas = ['Semanal', 'Quincenal'];
+            if (!planillasPermitidas.includes(planillaTipoNormalizado)) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Tipo de planilla inválido",
+                    error: `El tipo de planilla debe ser uno de los siguientes: ${planillasPermitidas.join(', ')}`,
+                    received: planillaTipoNormalizado
                 });
             }
         }
@@ -695,8 +753,8 @@ empleadosCon.put = async (req, res) => {
         if (phone) datosActualizados.phone = formatPhone(phone);
         if (address !== undefined) datosActualizados.address = address.trim();
         if (salario !== undefined) datosActualizados.salario = Number(salario);
-        if (rol) datosActualizados.rol = rol;
-        if (planillaTipo) datosActualizados.planillaTipo = planillaTipo.trim();  // ✅ Nuevo campo agregado
+        if (rolNormalizado !== undefined) datosActualizados.rol = rolNormalizado;
+        if (planillaTipoNormalizado !== undefined) datosActualizados.planillaTipo = planillaTipoNormalizado;
 
         // Generar nuevo email si se proporcionan nombre o apellido
         if (name || lastName) {
@@ -827,11 +885,11 @@ empleadosCon.delete = async (req, res) => {
 };
 
 export default empleadosCon;
+
 /**
  * Registrar nuevo empleado
  * POST /empleados
  */
-
 
 /**
  * Actualizar empleado existente

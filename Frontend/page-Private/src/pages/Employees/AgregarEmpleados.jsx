@@ -1,55 +1,81 @@
-import React, { useState, useEffect } from 'react';
-import { User, Mail, Phone, MapPin, Lock, CreditCard, UserPlus, DollarSign } from 'lucide-react';
-import { config } from '../../config';
-import axios from 'axios';
+import React, { useState, useEffect } from "react";
+import {
+  User,
+  Mail,
+  Phone,
+  MapPin,
+  Lock,
+  CreditCard,
+  UserPlus,
+  DollarSign,
+} from "lucide-react";
+import { config } from "../../config";
+import axios from "axios";
 
 const API_URL = config.api.API_URL;
 
 // Importar componentes UI
-import PageHeader from '../../components/UIEmpleados/PageHeader';
-import HeroSection from '../../components/UIEmpleados/HeroSecction';
-import SubmitButton from '../../components/UIEmpleados/SubmitButton';
+import PageHeader from "../../components/UIEmpleados/PageHeader";
+import HeroSection from "../../components/UIEmpleados/HeroSecction";
+import SubmitButton from "../../components/UIEmpleados/SubmitButton";
 
 // Importar componentes de formulario
-import ImageUploader from '../../components/FormsEmpleados/ImageUploader';
-import FormInput from '../../components/FormsEmpleados/FormInput';
-import FormTextarea from '../../components/FormsEmpleados/FormTextarea';
-import DatePicker from '../../components/FormsEmpleados/DatePicker';
+import ImageUploader from "../../components/FormsEmpleados/ImageUploader";
+import FormInput from "../../components/FormsEmpleados/FormInput";
+import FormTextarea from "../../components/FormsEmpleados/FormTextarea";
+import DatePicker from "../../components/FormsEmpleados/DatePicker";
 
 // Importar utilidades
-import { showSuccessAlert, showErrorAlert, showLoadingAlert, showValidationAlert } from '../../components/UIEmpleados/SweetAlertUtils';
-import { validateEmployeeForm, formatInput } from '../../components/UIEmpleados/FormValidation';
-import { generateEmail } from '../../components/UIEmpleados/EmailGenerator';
-import { useImageUpload } from '../../components/Empleados/hooks/useImageUpload';
+import {
+  showSuccessAlert,
+  showErrorAlert,
+  showLoadingAlert,
+  showValidationAlert,
+} from "../../components/UIEmpleados/SweetAlertUtils";
+import {
+  validateEmployeeForm,
+  formatInput,
+} from "../../components/UIEmpleados/FormValidation";
+import { generateEmail } from "../../components/UIEmpleados/EmailGenerator";
+import { useImageUpload } from "../../components/Empleados/hooks/useImageUpload";
 
 const AgregarEmpleado = () => {
+  // ✅ Opciones según tu schema (ENUM)
+  const TIPOS_PLANILLA = ["Semanal", "Quincenal"];
+  // OJO: tu schema dice "SUpervisor" (así tal cual). Debe coincidir EXACTO.
+  const ROLES = ["Operativo", "SUpervisor"];
+
   // Estados del formulario
   const [formData, setFormData] = useState({
-    name: '',
-    lastName: '',
-    email: '',
-    dui: '',
-    birthDate: '',
-    password: '',
-    phone: '',
-    address: '',
-    salario: '',
-    img: null
+    name: "",
+    lastName: "",
+    email: "",
+    dui: "",
+    birthDate: "",
+    password: "",
+    phone: "",
+    address: "",
+    salario: "",
+    planillaTipo: "", // ✅ NUEVO
+    rol: "", // ✅ NUEVO
+    img: null,
   });
 
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
 
   // Hook personalizado para manejo de imágenes
-  const { imagePreview, handleImageChange, removeImage, setImagePreview } = useImageUpload();
+  const { imagePreview, handleImageChange, removeImage, setImagePreview } =
+    useImageUpload();
 
   // Generar email automáticamente cuando cambien nombre o apellido
   useEffect(() => {
     const email = generateEmail(formData.name, formData.lastName);
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      email: email
+      email: email,
     }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formData.name, formData.lastName]);
 
   // Manejo de cambios en inputs
@@ -57,23 +83,21 @@ const AgregarEmpleado = () => {
     const { name, value } = e.target;
 
     // No permitir editar email
-    if (name === 'email') {
-      return;
-    }
+    if (name === "email") return;
 
     // Formatear inputs específicos
     const formattedValue = formatInput(name, value);
 
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [name]: formattedValue
+      [name]: formattedValue,
     }));
 
-    // Limpiar error del campo cuando el usuario empiece a escribir
+    // Limpiar error del campo
     if (errors[name]) {
-      setErrors(prev => ({
+      setErrors((prev) => ({
         ...prev,
-        [name]: ''
+        [name]: "",
       }));
     }
   };
@@ -82,17 +106,16 @@ const AgregarEmpleado = () => {
   const handleSalaryChange = (e) => {
     const value = e.target.value;
     // Permitir solo números y punto decimal
-    if (value === '' || /^\d*\.?\d*$/.test(value)) {
-      setFormData(prev => ({
+    if (value === "" || /^\d*\.?\d*$/.test(value)) {
+      setFormData((prev) => ({
         ...prev,
-        salario: value
+        salario: value,
       }));
 
-      // Limpiar error si existe
       if (errors.salario) {
-        setErrors(prev => ({
+        setErrors((prev) => ({
           ...prev,
-          salario: ''
+          salario: "",
         }));
       }
     }
@@ -101,41 +124,75 @@ const AgregarEmpleado = () => {
   // Manejo de imagen
   const onImageChange = (e) => {
     handleImageChange(e, setFormData);
+    if (errors.img) {
+      setErrors((prev) => ({ ...prev, img: "" }));
+    }
   };
 
   const onRemoveImage = () => {
     removeImage(setFormData);
   };
 
+  // Navegación
+  const handleBackToMenu = () => {
+    // Mejor usar react-router para back
+    if (window.history.length > 1) {
+      window.history.back();
+    } else {
+      // Ruta existente en tu App.jsx
+      // (si prefieres /dashboard o /home, cámbiala aquí)
+      console.log("No hay historial. Navegando a /empleados");
+      // Si quieres forzar navegación:
+      // navigate("/empleados");
+    }
+  };
+
   // Validación y envío del formulario
   const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log('=== INICIO DEL SUBMIT ===');
 
-    // Validar formulario
+    // Validación base (tu utilidad)
     const formErrors = validateEmployeeForm(formData);
-    
-    // Validación adicional para salario
-    if (!formData.salary || formData.salary === '' || parseFloat(formData.salary) <= 0) {
-      formErrors.salary = 'El salario es requerido y debe ser mayor a 0';
+
+    // ✅ FIX: validar salario correcto (antes estaba como salary)
+    if (
+      !formData.salario ||
+      formData.salario === "" ||
+      parseFloat(formData.salario) <= 0
+    ) {
+      formErrors.salario = "El salario es requerido y debe ser mayor a 0";
     }
 
-    console.log('Errores de validación:', formErrors);
+    // ✅ Validar campos nuevos (schema)
+    if (!formData.planillaTipo || !TIPOS_PLANILLA.includes(formData.planillaTipo)) {
+      formErrors.planillaTipo = "Selecciona el tipo de planilla";
+    }
+
+    if (!formData.rol || !ROLES.includes(formData.rol)) {
+      formErrors.rol = "Selecciona un rol válido";
+    }
+
+    // ✅ Si tu schema exige img required: true
+    if (!formData.img) {
+      formErrors.img = "La imagen es obligatoria";
+    }
+
     setErrors(formErrors);
 
     if (Object.keys(formErrors).length > 0) {
-      console.log('Formulario tiene errores, no se envía');
-
-      const camposFaltantes = Object.keys(formErrors).map(field => {
+      const camposFaltantes = Object.keys(formErrors).map((field) => {
         const fieldNames = {
-          name: 'Nombre',
-          lastName: 'Apellido',
-          dui: 'DUI',
-          birthDate: 'Fecha de nacimiento',
-          password: 'Contraseña',
-          phone: 'Teléfono',
-          address: 'Dirección',
-          salary: 'Salario'
+          name: "Nombre",
+          lastName: "Apellido",
+          dui: "DUI",
+          birthDate: "Fecha de nacimiento",
+          password: "Contraseña",
+          phone: "Teléfono",
+          address: "Dirección",
+          salario: "Salario",
+          planillaTipo: "Tipo de planilla",
+          rol: "Rol",
+          img: "Imagen",
         };
         return fieldNames[field] || field;
       });
@@ -147,174 +204,122 @@ const AgregarEmpleado = () => {
     try {
       showLoadingAlert();
       setLoading(true);
-      console.log('Estado de loading activado');
 
       // Preparar FormData
       const formDataToSend = new FormData();
-      formDataToSend.append('name', formData.name.trim());
-      formDataToSend.append('lastName', formData.lastName.trim());
-      formDataToSend.append('dui', formData.dui.trim());
-      formDataToSend.append('birthDate', formData.birthDate);
-      formDataToSend.append('password', formData.password);
-      formDataToSend.append('phone', formData.phone.trim());
-      formDataToSend.append('address', formData.address.trim());
-      
-      // Convertir y validar salario
+      formDataToSend.append("name", formData.name.trim());
+      formDataToSend.append("lastName", formData.lastName.trim());
+
+      // ✅ FIX: estabas generando email pero no lo enviabas
+      formDataToSend.append("email", formData.email.trim());
+
+      formDataToSend.append("dui", formData.dui.trim());
+      formDataToSend.append("birthDate", formData.birthDate);
+      formDataToSend.append("password", formData.password);
+      formDataToSend.append("phone", formData.phone.trim());
+      formDataToSend.append("address", formData.address.trim());
+
+      // ✅ Nuevos campos
+      formDataToSend.append("planillaTipo", formData.planillaTipo);
+      formDataToSend.append("rol", formData.rol);
+
+      // Salario
       const salarioValue = parseFloat(formData.salario);
-      if (!isNaN(salarioValue) && salarioValue > 0) {
-        formDataToSend.append('salario', salarioValue);
-        console.log('✅ Salario agregado:', salarioValue);
-      } else {
-        console.error('❌ Salario inválido:', formData.salario);
-      }
+      formDataToSend.append("salario", salarioValue);
 
+      // Imagen
       if (formData.img) {
-        formDataToSend.append('img', formData.img);
+        formDataToSend.append("img", formData.img);
       }
-
-      console.log('=== DATOS A ENVIAR ===');
-      console.log('Incluye imagen:', !!formData.img);
-      console.log('Salario original:', formData.salario);
-      console.log('Salario parseado:', salarioValue);
-      
-      // Mostrar todos los campos del FormData
-      console.log('=== CONTENIDO DEL FORMDATA ===');
-      for (let pair of formDataToSend.entries()) {
-        console.log(pair[0] + ':', pair[1]);
-      }
-
-      console.log('=== ENVIANDO PETICIÓN ===');
-      console.log('URL:', `${API_URL}/empleados`);
 
       // Enviar petición
       const response = await axios.post(`${API_URL}/empleados`, formDataToSend, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
+        headers: { "Content-Type": "multipart/form-data" },
         timeout: 10000,
       });
 
-      console.log('=== RESPUESTA RECIBIDA ===');
-      console.log('Status:', response.status);
-      console.log('Respuesta del servidor:', response.data);
-
       if (response.status === 200 || response.status === 201) {
-        console.log('¡Empleado creado exitosamente!');
-
-        // Cerrar loading y mostrar éxito
+        // Mostrar éxito
         showSuccessAlert(handleBackToMenu);
 
-        // Limpiar formulario
+        // Reset
         setFormData({
-          name: '',
-          lastName: '',
-          email: '',
-          dui: '',
-          birthDate: '',
-          password: '',
-          phone: '',
-          address: '',
-          salario: '',
-          img: null
+          name: "",
+          lastName: "",
+          email: "",
+          dui: "",
+          birthDate: "",
+          password: "",
+          phone: "",
+          address: "",
+          salario: "",
+          planillaTipo: "",
+          rol: "",
+          img: null,
         });
         setImagePreview(null);
         setErrors({});
       }
-
     } catch (error) {
-      console.error('=== ERROR CAPTURADO ===');
-      console.error('Error completo:', error);
-      console.error('Error response:', error.response);
-      console.error('Error response data:', error.response?.data);
-      console.error('Error response status:', error.response?.status);
+      console.error("Error:", error);
 
-      let errorMsg = 'Error desconocido';
-      let errorTitle = '❌ Error al agregar empleado';
+      let errorMsg = "Error desconocido";
 
       if (error.response) {
         const statusCode = error.response.status;
-        const errorMessage = error.response.data?.message || error.response.data?.error || 'Error del servidor';
-        const errorDetails = error.response.data?.details || error.response.data?.errors || null;
-
-        console.log('Status Code:', statusCode);
-        console.log('Error Message:', errorMessage);
-        console.log('Error Details:', errorDetails);
-        console.log('Full Response Data:', error.response.data);
+        const errorMessage =
+          error.response.data?.message ||
+          error.response.data?.error ||
+          "Error del servidor";
+        const errorDetails =
+          error.response.data?.details || error.response.data?.errors || null;
 
         switch (statusCode) {
           case 400:
-            errorTitle = '❌ Error de validación';
-            if (errorDetails) {
-              // Si hay detalles específicos de validación
-              errorMsg = `${errorMessage}\n\nDetalles:\n${JSON.stringify(errorDetails, null, 2)}`;
-            } else {
-              errorMsg = errorMessage;
-            }
+            errorMsg = errorDetails
+              ? `${errorMessage}\n\nDetalles:\n${JSON.stringify(errorDetails, null, 2)}`
+              : errorMessage;
             break;
           case 401:
-            errorTitle = '🔒 No autorizado';
-            errorMsg = 'No tienes permisos para realizar esta acción. Verifica tus credenciales.';
+            errorMsg = "No tienes permisos para realizar esta acción. Verifica tus credenciales.";
             break;
           case 403:
-            errorTitle = '⛔ Acceso denegado';
-            errorMsg = 'No tienes permisos suficientes para agregar empleados.';
+            errorMsg = "No tienes permisos suficientes para agregar empleados.";
             break;
           case 404:
-            errorTitle = '🔍 Servicio no encontrado';
-            errorMsg = 'El servicio no está disponible. Contacta al administrador.';
+            errorMsg = "El servicio no está disponible. Contacta al administrador.";
             break;
           case 409:
-            errorTitle = '⚠️ Conflicto de datos';
             errorMsg = `Ya existe un empleado con estos datos: ${errorMessage}`;
             break;
           case 500:
-            errorTitle = '🔥 Error del servidor';
-            errorMsg = 'Error interno del servidor. Inténtalo más tarde.';
+            errorMsg = "Error interno del servidor. Inténtalo más tarde.";
             break;
           default:
-            errorTitle = '❌ Error inesperado';
             errorMsg = `Error del servidor (${statusCode}): ${errorMessage}`;
         }
       } else if (error.request) {
-        console.error('No hubo respuesta del servidor');
-        errorTitle = '🌐 Sin conexión';
-        errorMsg = 'No se pudo conectar con el servidor. Verifica tu conexión a internet.';
+        errorMsg = "No se pudo conectar con el servidor. Verifica tu conexión a internet.";
       } else {
-        console.error('Error en la configuración:', error.message);
-        errorTitle = '⚙️ Error de configuración';
-        errorMsg = 'Error al configurar la petición. Contacta al administrador.';
+        errorMsg = "Error al configurar la petición. Contacta al administrador.";
       }
 
       showErrorAlert(errorMsg);
-
     } finally {
-      console.log('=== FINALIZANDO ===');
       setLoading(false);
     }
   };
 
-  // Navegación
-  const handleBackToMenu = () => {
-    if (window.history.length > 1) {
-      window.history.back();
-    } else {
-      console.log('Navegar a la página anterior');
-    }
-  };
-
   return (
-    <div className="min-h-screen" style={{ backgroundColor: '#34353A' }}>
+    <div className="min-h-screen" style={{ backgroundColor: "#34353A" }}>
       {/* Header */}
-      <PageHeader 
-        onBack={handleBackToMenu}
-        title="Volver al menú principal"
-      />
+      <PageHeader onBack={handleBackToMenu} title="Volver al menú principal" />
 
       {/* Main Content */}
       <div className="px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
         <div className="max-w-7xl mx-auto">
           {/* Hero Section */}
-          <HeroSection 
+          <HeroSection
             icon={UserPlus}
             title="Agregar Nuevo Empleado"
             subtitle="Complete la información del empleado para agregarlo al sistema"
@@ -323,17 +328,20 @@ const AgregarEmpleado = () => {
           {/* Form Container */}
           <div className="bg-white rounded-2xl sm:rounded-3xl shadow-2xl p-4 sm:p-6 lg:p-8 xl:p-12">
             <form onSubmit={handleSubmit} className="space-y-6 sm:space-y-8">
-              
               {/* Profile Image Section */}
-              <ImageUploader 
+              <ImageUploader
                 imagePreview={imagePreview}
                 onImageChange={onImageChange}
                 onRemoveImage={onRemoveImage}
               />
+              {errors.img && (
+                <p className="text-red-500 text-sm font-semibold -mt-4">
+                  {errors.img}
+                </p>
+              )}
 
               {/* Form Fields Grid */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-                
                 {/* Nombre */}
                 <FormInput
                   id="name"
@@ -443,6 +451,56 @@ const AgregarEmpleado = () => {
                   required
                   error={errors.salario}
                 />
+
+                {/* ✅ Tipo de planilla */}
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Tipo de planilla <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    name="planillaTipo"
+                    value={formData.planillaTipo}
+                    onChange={handleInputChange}
+                    className={`w-full px-4 py-3 border-2 rounded-xl focus:outline-none transition-colors font-semibold ${
+                      errors.planillaTipo
+                        ? "border-red-400 focus:border-red-500"
+                        : "border-gray-200 focus:border-indigo-500"
+                    }`}
+                  >
+                    <option value="">Selecciona...</option>
+                    <option value="Semanal">Semanal</option>
+                    <option value="Quincenal">Quincenal</option>
+                  </select>
+                  {errors.planillaTipo && (
+                    <p className="text-red-500 text-xs mt-1">
+                      {errors.planillaTipo}
+                    </p>
+                  )}
+                </div>
+
+                {/* ✅ Rol */}
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Rol <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    name="rol"
+                    value={formData.rol}
+                    onChange={handleInputChange}
+                    className={`w-full px-4 py-3 border-2 rounded-xl focus:outline-none transition-colors font-semibold ${
+                      errors.rol
+                        ? "border-red-400 focus:border-red-500"
+                        : "border-gray-200 focus:border-indigo-500"
+                    }`}
+                  >
+                    <option value="">Selecciona...</option>
+                    <option value="Operativo">Operativo</option>
+                    <option value="SUpervisor">Supervisor</option>
+                  </select>
+                  {errors.rol && (
+                    <p className="text-red-500 text-xs mt-1">{errors.rol}</p>
+                  )}
+                </div>
 
                 {/* Dirección */}
                 <div className="sm:col-span-2 lg:col-span-3">
