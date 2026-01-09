@@ -301,7 +301,7 @@ const ModernDashboard = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Hero Banner con Spline - COLORES CAMBIADOS */}
+      {/* Hero Banner con Spline */}
       <div className="relative h-[300px] overflow-hidden">
         <div className="absolute inset-0" style={{ pointerEvents: 'auto' }}>
           <Spline 
@@ -364,7 +364,7 @@ const ModernDashboard = () => {
         </div>
       </div>
 
-      {/* Stats Grid - COLORES CAMBIADOS */}
+      {/* Stats Grid */}
       <div className="container mx-auto px-8 -mt-20 relative z-20">
         <div className="flex items-center justify-end mb-4">
           <div className="bg-white/95 backdrop-blur-xl rounded-full px-4 py-2 shadow-lg border-2 border-[#5F8EAD]">
@@ -417,7 +417,7 @@ const ModernDashboard = () => {
           })}
         </div>
 
-        {/* Content Grid - COLORES CAMBIADOS */}
+        {/* Content Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
           
           <div className="lg:col-span-2 bg-white rounded-2xl p-6 shadow-lg hover:shadow-xl transition-shadow">
@@ -455,7 +455,7 @@ const ModernDashboard = () => {
               </div>
             </div>
 
-            {/* Gráfico de barras - COLORES CAMBIADOS */}
+            {/* Gráfico de barras */}
             <div className="mb-6 bg-gradient-to-br from-gray-50 to-white rounded-xl p-5 border border-gray-100">
               <div className="flex items-center justify-between mb-4">
                 <h4 className="text-sm font-bold text-[#34353A] flex items-center gap-2">
@@ -543,17 +543,17 @@ const ModernDashboard = () => {
               </div>
             </div>
 
-            {/* Tarjetas de resumen - COLORES CAMBIADOS */}
+            {/* Tarjetas de resumen - TEXTO BLANCO ACTUALIZADO */}
             <div className="grid grid-cols-3 gap-4 mb-6">
-              <div className="bg-gradient-to-br from-[#5D9646] from-opacity-10 to-[#5D9646] to-opacity-5 rounded-xl p-4 border-2 border-[#5D9646] hover:shadow-lg transition-all">
+              <div className="bg-[#5D9646] rounded-xl p-4 border-2 border-[#5D9646] hover:shadow-lg transition-all">
                 <div className="flex items-center gap-2 mb-2">
-                  <TrendingUp className="text-[#5D9646]" size={20} />
-                  <span className="text-xs font-semibold text-[#5D9646]">INGRESOS</span>
+                  <TrendingUp className="text-white" size={20} />
+                  <span className="text-xs font-semibold text-white">INGRESOS</span>
                 </div>
-                <div className="text-2xl font-bold text-[#34353A] mb-1">{formatearMoneda(totales.ingresos)}</div>
-                <div className="text-xs text-[#5D9646] mt-1">Viajes y otros ingresos</div>
-                <div className="mt-2 pt-2 border-t-2 border-[#5D9646] border-opacity-30">
-                  <div className="flex items-center gap-1 text-xs text-[#5D9646]">
+                <div className="text-2xl font-bold text-white mb-1">{formatearMoneda(totales.ingresos)}</div>
+                <div className="text-xs text-white opacity-90 mt-1">Viajes y otros ingresos</div>
+                <div className="mt-2 pt-2 border-t-2 border-white border-opacity-30">
+                  <div className="flex items-center gap-1 text-xs text-white">
                     <Calendar size={12} />
                     <span className="font-semibold">
                       {estadisticas.viajesOperativos.total + estadisticas.cajaChica.transacciones} transacciones
@@ -562,15 +562,15 @@ const ModernDashboard = () => {
                 </div>
               </div>
 
-              <div className="bg-gradient-to-br from-red-50 to-rose-50 rounded-xl p-4 border-2 border-red-200 hover:shadow-lg transition-all">
+              <div className="bg-red-500 rounded-xl p-4 border-2 border-red-500 hover:shadow-lg transition-all">
                 <div className="flex items-center gap-2 mb-2">
-                  <TrendingUp className="text-red-600 rotate-180" size={20} />
-                  <span className="text-xs font-semibold text-red-700">GASTOS</span>
+                  <TrendingUp className="text-white rotate-180" size={20} />
+                  <span className="text-xs font-semibold text-white">GASTOS</span>
                 </div>
-                <div className="text-2xl font-bold text-[#34353A] mb-1">{formatearMoneda(totales.gastos)}</div>
-                <div className="text-xs text-red-600 mt-1">Operativos y planillas</div>
-                <div className="mt-2 pt-2 border-t-2 border-red-200">
-                  <div className="flex items-center gap-1 text-xs text-red-700">
+                <div className="text-2xl font-bold text-white mb-1">{formatearMoneda(totales.gastos)}</div>
+                <div className="text-xs text-white opacity-90 mt-1">Operativos y planillas</div>
+                <div className="mt-2 pt-2 border-t-2 border-white border-opacity-30">
+                  <div className="flex items-center gap-1 text-xs text-white">
                     <Activity size={12} />
                     <span className="font-semibold">
                       {estadisticas.mantenimientos.total + estadisticas.diesel.total + estadisticas.planillas.total} registros
@@ -579,23 +579,23 @@ const ModernDashboard = () => {
                 </div>
               </div>
 
-              <div className={`bg-gradient-to-br rounded-xl p-4 border-2 hover:shadow-lg transition-all ${
+              <div className={`rounded-xl p-4 border-2 hover:shadow-lg transition-all ${
                 totales.balance >= 0 
-                  ? 'from-[#5F8EAD] from-opacity-10 to-[#5F8EAD] to-opacity-5 border-[#5F8EAD]' 
-                  : 'from-orange-50 to-amber-50 border-orange-200'
+                  ? 'bg-[#5F8EAD] border-[#5F8EAD]' 
+                  : 'bg-orange-500 border-orange-500'
               }`}>
                 <div className="flex items-center gap-2 mb-2">
-                  <DollarSign className={totales.balance >= 0 ? 'text-[#5F8EAD]' : 'text-orange-600'} size={20} />
-                  <span className={`text-xs font-semibold ${totales.balance >= 0 ? 'text-[#5F8EAD]' : 'text-orange-700'}`}>BALANCE</span>
+                  <DollarSign className="text-white" size={20} />
+                  <span className="text-xs font-semibold text-white">BALANCE</span>
                 </div>
-                <div className={`text-2xl font-bold mb-1 ${totales.balance >= 0 ? 'text-[#34353A]' : 'text-orange-900'}`}>
+                <div className="text-2xl font-bold mb-1 text-white">
                   {formatearMoneda(totales.balance)}
                 </div>
-                <div className={`text-xs mt-1 ${totales.balance >= 0 ? 'text-[#5F8EAD]' : 'text-orange-600'}`}>
+                <div className="text-xs mt-1 text-white opacity-90">
                   {totales.balance >= 0 ? 'Positivo' : 'Atención requerida'}
                 </div>
-                <div className={`mt-2 pt-2 border-t-2 ${totales.balance >= 0 ? 'border-[#5F8EAD] border-opacity-30' : 'border-orange-200'}`}>
-                  <div className={`flex items-center gap-1 text-xs ${totales.balance >= 0 ? 'text-[#5F8EAD]' : 'text-orange-700'}`}>
+                <div className="mt-2 pt-2 border-t-2 border-white border-opacity-30">
+                  <div className="flex items-center gap-1 text-xs text-white">
                     <CheckCircle size={12} />
                     <span className="font-semibold">
                       {totales.ingresos > totales.gastos ? 'Rentable' : 'Revisar gastos'}
@@ -605,7 +605,7 @@ const ModernDashboard = () => {
               </div>
             </div>
 
-            {/* Resumen por módulos - COLORES CAMBIADOS */}
+            {/* Resumen por módulos */}
             <div className="space-y-3">
               <div className="bg-gradient-to-r from-[#5F8EAD] from-opacity-10 to-[#5F8EAD] to-opacity-5 rounded-xl p-4 border-2 border-[#5F8EAD] mb-4">
                 <div className="flex items-center justify-between">
@@ -676,7 +676,7 @@ const ModernDashboard = () => {
             </div>
           </div>
 
-          {/* Sidebar Stats - COLORES CAMBIADOS */}
+          {/* Sidebar Stats */}
           <div className="space-y-6">
             
             <div className="bg-white rounded-2xl p-5 shadow-lg hover:shadow-xl transition-shadow">

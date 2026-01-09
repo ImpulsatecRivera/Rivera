@@ -132,13 +132,45 @@ ResumenCon.AgregarDiesel = async (req, res) => {
       ano,
       Total,
       estado: canonEstado(estado || ESTADOS.PENDIENTE),
-      comprobante: comprobanteUrl, // ✅ NUEVO: guardar URL del comprobante
+      comprobante: comprobanteUrl,
     });
 
     await nuevoResumen.save();
     await nuevoResumen.populate("CicurlationCard", "name gasolineLevel licensePlate brand model");
 
     console.log('✅ Resumen de diesel creado exitosamente');
+
+    // 🚀 ACTUALIZAR NIVEL DE GASOLINA DEL CAMIÓN
+    try {
+      const galonesNum = parseFloat(Galones) || 0;
+      const nivelActual = camion.gasolineLevel || 0;
+      
+      // 📊 AJUSTA ESTA LÓGICA SEGÚN TU NECESIDAD
+      // Opción 1: Incremento fijo por galón (1 galón = 1%)
+      const incrementoPorGalon = 1; // Ajusta este valor
+      let nuevoNivel = nivelActual + (galonesNum * incrementoPorGalon);
+      
+      // Opción 2: Basado en capacidad del tanque
+      // const capacidadTanque = 100; // galones totales del tanque
+      // const porcentajePorGalon = 100 / capacidadTanque;
+      // let nuevoNivel = nivelActual + (galonesNum * porcentajePorGalon);
+      
+      // Limitar entre 0 y 100
+      if (nuevoNivel > 100) nuevoNivel = 100;
+      if (nuevoNivel < 0) nuevoNivel = 0;
+
+      // Actualizar el nivel en la base de datos
+      await CamionesModel.findByIdAndUpdate(CicurlationCard, {
+        gasolineLevel: Math.round(nuevoNivel) // Redondear al entero más cercano
+      });
+
+      console.log(`⛽ Nivel de gasolina actualizado: ${nivelActual}% → ${Math.round(nuevoNivel)}%`);
+      console.log(`   Incremento: +${galonesNum} galones`);
+
+    } catch (updateError) {
+      // No fallar si la actualización del nivel falla
+      console.warn("⚠️ Error actualizando nivel de gasolina:", updateError.message);
+    }
 
     return res.status(201).json({
       success: true,
