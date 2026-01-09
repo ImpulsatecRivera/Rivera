@@ -1,4 +1,3 @@
-
 import motoristalModel from "../Models/Motorista.js";
 import camioneModel from "../Models/Camiones.js";
 import bcryptjs from "bcryptjs";
@@ -31,7 +30,7 @@ const esFechaValida = (fecha) => {
 const pickFechaSalida = (v) =>
   v?.fechaSalida ??
   v?.fecha ??
-  v?.createdAt ??        // fallback por si no hay fecha clara
+  v?.createdAt ?? // fallback por si no hay fecha clara
   v?.departureTime ??
   v?.salida ??
   v?.horarios?.fechaSalida ??
@@ -160,7 +159,7 @@ motoristasCon.getById = async (req, res) => {
 
 const generarEmail = async (name, lastName) => {
   const dominio = "rivera.com";
-  let base = `${name.toLowerCase()}.${lastName.toLowerCase()}`;
+  let base = `${String(name).toLowerCase()}.${String(lastName).toLowerCase()}`;
   let email = `${base}@${dominio}`;
   let contador = 1;
 
@@ -172,70 +171,122 @@ const generarEmail = async (name, lastName) => {
   return email;
 };
 
+/* ====================== POST (CREAR) ====================== */
+/**
+ * ✅ FIX IMPORTANTE:
+ * - Incluye salario (tu schema lo requiere)
+ * - Si no hay imagen, devuelve 400 (tu schema requiere img)
+ * - Si hay error de validación, devuelve 400 (no 500)
+ * - Logs para ver qué llega realmente
+ */
 motoristasCon.post = async (req, res) => {
   try {
-    const { 
-      name, 
-      lastName, 
-      id, 
-      birthDate, 
-      password, 
-      phone, 
-      address, 
+    const {
+      name,
+      lastName,
+      id,
+      birthDate,
+      password,
+      phone,
+      address,
       circulationCard,
-      planillaTipo  // ✅ Nuevo campo agregado
+      planillaTipo,
+      salario, // ✅ Nuevo (requerido por schema)
     } = req.body;
 
-    const email = await generarEmail(name, lastName);
+    // ✅ Debug temporal (quitalo cuando ya funcione)
+    console.log("POST /motoristas body:", req.body);
+    console.log("POST /motoristas file:", req.file);
+
+    // ✅ Validaciones para evitar 500
+    if (!name?.trim() || !lastName?.trim()) {
+      return res.status(400).json({ message: "Nombre y apellido son obligatorios" });
+    }
+    if (!id?.trim()) return res.status(400).json({ message: "El DUI es obligatorio" });
+    if (!birthDate) return res.status(400).json({ message: "La fecha de nacimiento es obligatoria" });
+    if (!password) return res.status(400).json({ message: "La contraseña es obligatoria" });
+    if (!phone?.trim()) return res.status(400).json({ message: "El teléfono es obligatorio" });
+    if (!address?.trim()) return res.status(400).json({ message: "La dirección es obligatoria" });
+    if (!circulationCard?.trim()) return res.status(400).json({ message: "La tarjeta de circulación es obligatoria" });
+    if (!planillaTipo?.trim()) return res.status(400).json({ message: "El tipo de planilla es obligatorio" });
+
+    const salarioNum = Number(salario);
+    if (!salario || Number.isNaN(salarioNum) || salarioNum <= 0) {
+      return res.status(400).json({ message: "El salario debe ser un número mayor a 0" });
+    }
+
+    // ✅ Tu modelo requiere img (required: true)
+    if (!req.file) {
+      return res.status(400).json({ message: "La imagen (img) es obligatoria" });
+    }
+
+    const email = await generarEmail(name.trim(), lastName.trim());
 
     const validarMotorista = await motoristalModel.findOne({ email });
     if (validarMotorista) {
       return res.status(400).json({ message: "Motorista ya registrado" });
     }
 
-    let imgUrl = "";
-    if (req.file) {
-      const resul = await cloudinary.uploader.upload(req.file.path, {
-        folder: "public",
-        allowed_formats: ["png", "jpg", "jpeg"],
-      });
-      imgUrl = resul.secure_url;
-    }
+    // ✅ Subir a Cloudinary
+    const result = await cloudinary.uploader.upload(req.file.path, {
+      folder: "public",
+      allowed_formats: ["png", "jpg", "jpeg", "webp", "gif"],
+    });
 
     const contraHash = await bcryptjs.hash(password, 10);
 
     const newmotorista = new motoristalModel({
-      name,
-      lastName,
+      name: name.trim(),
+      lastName: lastName.trim(),
       email,
-      id,
+      id: id.trim(),
       birthDate,
       password: contraHash,
-      phone,
-      address,
-      circulationCard,
-      planillaTipo,  // ✅ Nuevo campo agregado
-      img: imgUrl,
+      phone: phone.trim(),
+      address: address.trim(),
+      circulationCard: circulationCard.trim(),
+      planillaTipo: planillaTipo.trim(),
+      salario: salarioNum, // ✅ GUARDAR
+      img: result.secure_url, // ✅ SIEMPRE lleno
     });
 
     await newmotorista.save();
-    res.status(200).json({ Message: "Motorista agregado correctamente" });
+
+    return res.status(201).json({
+      message: "Motorista agregado correctamente",
+      motorista: newmotorista,
+    });
   } catch (error) {
-    res.status(500).json({ message: "Error al agregar motoristas", error: error.message });
+    console.error("Error real POST /motoristas:", error);
+
+    // ✅ Validación de Mongoose => 400
+    if (error?.name === "ValidationError") {
+      return res.status(400).json({ message: "Datos inválidos", error: error.message });
+    }
+
+    return res.status(500).json({ message: "Error al agregar motoristas", error: error.message });
   }
 };
 
+/* ====================== PUT (EDITAR) ====================== */
+/**
+ * ✅ Mejoras:
+ * - Agrega salario y planillaTipo
+ * - Si viene img, sube a cloudinary
+ * - Si viene nombre/apellido, regenera email
+ */
 motoristasCon.put = async (req, res) => {
   try {
     const motoristaId = req.params.id;
-    const { 
-      name, 
-      lastName, 
-      password, 
-      phone, 
-      address, 
+    const {
+      name,
+      lastName,
+      password,
+      phone,
+      address,
       circulationCard,
-      planillaTipo  // ✅ Nuevo campo agregado
+      planillaTipo,
+      salario, // ✅ Nuevo
     } = req.body;
 
     const motoristaExistente = await motoristalModel.findById(motoristaId);
@@ -247,9 +298,19 @@ motoristasCon.put = async (req, res) => {
     if (req.file) {
       const resul = await cloudinary.uploader.upload(req.file.path, {
         folder: "public",
-        allowed_formats: ["png", "jpg", "jpeg"],
+        allowed_formats: ["png", "jpg", "jpeg", "webp", "gif"],
       });
       imgUrl = resul.secure_url;
+    }
+
+    // ✅ salario opcional, pero si viene debe ser válido
+    let salarioFinal = motoristaExistente.salario;
+    if (salario !== undefined && salario !== null && String(salario).trim() !== "") {
+      const salarioNum = Number(salario);
+      if (Number.isNaN(salarioNum) || salarioNum <= 0) {
+        return res.status(400).json({ message: "El salario debe ser un número mayor a 0" });
+      }
+      salarioFinal = salarioNum;
     }
 
     const updateData = {
@@ -258,19 +319,22 @@ motoristasCon.put = async (req, res) => {
       phone: phone?.trim() || motoristaExistente.phone,
       address: address?.trim() || motoristaExistente.address,
       circulationCard: circulationCard?.trim() || motoristaExistente.circulationCard,
-      planillaTipo: planillaTipo?.trim() || motoristaExistente.planillaTipo,  // ✅ Nuevo campo agregado
+      planillaTipo: planillaTipo?.trim() || motoristaExistente.planillaTipo,
+      salario: salarioFinal, // ✅ Guardar salario
       img: imgUrl?.trim() || motoristaExistente.img,
       email: motoristaExistente.email,
       id: motoristaExistente.id,
       birthDate: motoristaExistente.birthDate,
     };
 
+    // ✅ Si cambian nombre/apellido => regenerar email
     if (name?.trim() || lastName?.trim()) {
       const nombreFinal = name?.trim() || motoristaExistente.name;
       const apellidoFinal = lastName?.trim() || motoristaExistente.lastName;
       updateData.email = await generarEmail(nombreFinal, apellidoFinal);
     }
 
+    // ✅ Password opcional
     if (password?.trim()) {
       updateData.password = await bcryptjs.hash(password.trim(), 10);
     } else {
@@ -291,6 +355,12 @@ motoristasCon.put = async (req, res) => {
       motorista: motoristaActualizado,
     });
   } catch (error) {
+    console.error("Error real PUT /motoristas:", error);
+
+    if (error?.name === "ValidationError") {
+      return res.status(400).json({ message: "Datos inválidos", error: error.message });
+    }
+
     res.status(500).json({
       message: "Error al actualizar motorista",
       error: error.message,
@@ -330,22 +400,27 @@ motoristasCon.getViajesProgramados = async (req, res) => {
     const camion = await camioneModel.findOne({ driverId: { $in: driverVariants } });
     if (!camion) {
       // AÚN SIN CAMIÓN: igual vamos a buscar por CONDUCTOR para no devolver vacío
-      const estadoIn = ["programado","pendiente","confirmado","iniciado","en_curso","en_transito"];
+      const estadoIn = ["programado", "pendiente", "confirmado", "iniciado", "en_curso", "en_transito"];
       const driverOr = buildDriverMatch(motorista);
-      const docsSoloConductor = await viajesModel.find({ $and: [{ $or: driverOr }, { estado: { $in: estadoIn } }] }).lean();
+      const docsSoloConductor = await viajesModel
+        .find({ $and: [{ $or: driverOr }, { estado: { $in: estadoIn } }] })
+        .lean();
 
       const fechaActual = new Date();
       const fechaLimite = new Date();
       fechaLimite.setDate(fechaActual.getDate() + 30);
 
-      const enRango = (d) => esFechaValida(d) && new Date(d).getTime() >= fechaActual.getTime() && new Date(d).getTime() <= fechaLimite.getTime();
+      const enRango = (d) =>
+        esFechaValida(d) &&
+        new Date(d).getTime() >= fechaActual.getTime() &&
+        new Date(d).getTime() <= fechaLimite.getTime();
 
       const viajesValidos = docsSoloConductor
-        .map((v)=>({ ...v, _salida: pickFechaSalida(v), _estadoNorm: normalizarEstado(v.estado) }))
-        .filter((v)=>enRango(v._salida))
-        .sort((a,b)=> new Date(a._salida)-new Date(b._salida));
+        .map((v) => ({ ...v, _salida: pickFechaSalida(v), _estadoNorm: normalizarEstado(v.estado) }))
+        .filter((v) => enRango(v._salida))
+        .sort((a, b) => new Date(a._salida) - new Date(b._salida));
 
-      const viajesPlano = viajesValidos.map((v)=>({
+      const viajesPlano = viajesValidos.map((v) => ({
         _id: v._id,
         origen: v.origen,
         destino: v.destino,
@@ -362,7 +437,9 @@ motoristasCon.getViajesProgramados = async (req, res) => {
         const d = new Date(v.fechaSalida).toISOString().split("T")[0];
         (agrupado[d] ||= []).push(v);
       }
-      const viajesPorDia = Object.keys(agrupado).sort().map((fecha)=>({ fecha, viajes: agrupado[fecha] }));
+      const viajesPorDia = Object.keys(agrupado)
+        .sort()
+        .map((fecha) => ({ fecha, viajes: agrupado[fecha] }));
 
       return res.status(200).json({
         motorista: {
@@ -389,7 +466,7 @@ motoristasCon.getViajesProgramados = async (req, res) => {
     const driverOr = buildDriverMatch(motorista);
 
     // Trae TODO por identificación y estado; fecha se evalúa en JS
-    const estadoIn = ["programado","pendiente","confirmado","iniciado","en_curso","en_transito"];
+    const estadoIn = ["programado", "pendiente", "confirmado", "iniciado", "en_curso", "en_transito"];
     const query = { $and: [{ $or: [...truckOr, ...driverOr] }, { estado: { $in: estadoIn } }] };
 
     const docs = await viajesModel.find(query).lean();
@@ -736,7 +813,7 @@ motoristasCon.getHistorialCompleto = async (req, res) => {
       historialCompleto: historialPlano, // compat hook
       historialPorMes,
       viajesPorDia,
-      viajes: historialPlano,            // lista plana adicional (compat)
+      viajes: historialPlano, // lista plana adicional (compat)
     });
   } catch (error) {
     console.error("Error en getHistorialCompleto:", error);
@@ -815,10 +892,3 @@ motoristasCon.debugViajes = async (req, res) => {
 };
 
 export default motoristasCon;
-
-
-
-
-// Método POST actualizado
-
-// Método PUT actualizado

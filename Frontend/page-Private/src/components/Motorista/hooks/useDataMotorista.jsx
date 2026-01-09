@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { config } from '../../../config';
 import { useNavigate } from 'react-router-dom';
 import axios from "axios";
@@ -14,88 +14,143 @@ const useDataMotorista = () => {
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState('Newest');
-  
+
   // Estados de modales
   const [showAlert, setShowAlert] = useState(false);
   const [showConfirmDelete, setShowConfirmDelete] = useState(false);
   const [showSuccessAlert, setShowSuccessAlert] = useState(false);
   const [showEditAlert, setShowEditAlert] = useState(false);
   const [successType, setSuccessType] = useState('delete');
-  
+
+  // ✅ estado para botón/loading en Update
+  const [uploading, setUploading] = useState(false);
+
   const navigate = useNavigate();
+
+  // ✅ Helper: normalizar motorista con campos del model
+  const normalizeMotorista = useCallback((m, idx = 0) => {
+    return {
+      ...m,
+      _id: m?._id || m?.id || `temp-${idx}`,
+
+      name: m?.name || '',
+      lastName: m?.lastName || '',
+      email: m?.email || '',
+      id: m?.id || '',
+      birthDate: m?.birthDate || null,
+      phone: m?.phone || '',
+      address: m?.address || '',
+      circulationCard: m?.circulationCard || '',
+      img: m?.img || null,
+
+      // ✅ nuevos/campos del model
+      planillaTipo: (m?.planillaTipo || '').toString(),
+      salario: m?.salario ?? 0,
+      phoneVerified: Boolean(m?.phoneVerified),
+      phoneVerifiedAt: m?.phoneVerifiedAt || null,
+
+      createdAt: m?.createdAt || null,
+      updatedAt: m?.updatedAt || null,
+    };
+  }, []);
+
+  // ✅ Fetch motoristas (soporta varias estructuras)
+  const fetchMotoristas = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const response = await axios.get(`${API_URL}/motoristas`);
+
+      const data = response.data;
+
+      let arr = [];
+      if (Array.isArray(data)) arr = data;
+      else if (Array.isArray(data?.data?.motoristas)) arr = data.data.motoristas;
+      else if (Array.isArray(data?.motoristas)) arr = data.motoristas;
+      else if (Array.isArray(data?.data)) arr = data.data;
+      else arr = [];
+
+      const normalized = arr.map((m, i) => normalizeMotorista(m, i));
+
+      // ✅ ordenar si quieres (por defecto createdAt desc si existe)
+      const sorted = [...normalized].sort((a, b) => {
+        const da = a?.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const db = b?.createdAt ? new Date(b.createdAt).getTime() : 0;
+        return db - da;
+      });
+
+      setMotoristas(sorted);
+    } catch (err) {
+      console.error('Error al cargar motoristas:', err);
+
+      if (err?.message?.includes('Network') || err?.code === 'ERR_NETWORK') {
+        setError('No se puede conectar al servidor. Verifica que el backend esté corriendo y la URL sea correcta.');
+      } else if (err?.response) {
+        setError(`Error del servidor: ${err.response.status} - ${err.response.data?.message || 'Error desconocido'}`);
+      } else {
+        setError(`Error al cargar los motoristas: ${err.message}`);
+      }
+
+      setMotoristas([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [normalizeMotorista]);
 
   // Cargar motoristas al iniciar
   useEffect(() => {
-    const fetchMotoristas = async () => {
-      try {
-        setLoading(true);
-        console.log('Iniciando petición a la API de motoristas...');
-        
-        const response = await fetch(`${API_URL}/motoristas`, {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        });
-
-        console.log('Response status:', response.status);
-        
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        const data = await response.json();
-        console.log('Datos recibidos:', data);
-        
-        setMotoristas(data);
-        setError(null);
-      } catch (error) {
-        console.error('Error al cargar los motoristas:', error);
-        setError(`Error al cargar los motoristas: ${error.message}`);
-        setMotoristas([]);
-      } finally {
-        setLoading(false);
-        console.log('Carga completada');
-      }
-    };
-    
     fetchMotoristas();
-  }, []);
+  }, [fetchMotoristas]);
 
-  // Función para verificar si la licencia está vigente
+  // ✅ Función para verificar licencia (misma lógica, con safety)
   const isLicenseValid = (motorista) => {
     try {
-      if (!motorista || !motorista.circulationCard) return false;
-      
-      if (motorista.birthDate) {
+      if (!motorista?.circulationCard) return false;
+
+      if (motorista?.birthDate) {
         const birthDate = new Date(motorista.birthDate);
+        if (Number.isNaN(birthDate.getTime())) return Boolean(motorista.circulationCard);
+
         const today = new Date();
-        const age = today.getFullYear() - birthDate.getFullYear();
-        
-        // Verificar si es mayor de edad
+        let age = today.getFullYear() - birthDate.getFullYear();
+        const m = today.getMonth() - birthDate.getMonth();
+        if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) age--;
         return age >= 18;
       }
-      
-      // Si no hay fecha de nacimiento, asumir que está vigente si tiene tarjeta
-      return Boolean(motorista.circulationCard);
-    } catch (error) {
-      console.error('Error en isLicenseValid:', error);
+
+      return true;
+    } catch (e) {
+      console.error('Error en isLicenseValid:', e);
       return false;
     }
   };
 
-  // Filtrar motoristas
-  const filterMotoristas = motoristas.filter((motorista) => 
-    [motorista.name, motorista.lastName, motorista.id, motorista.email]
-      .join(' ')
-      .toLowerCase()
-      .includes(searchTerm.toLowerCase())
-  );
+  // ✅ Filtrar motoristas (incluye planillaTipo/salario)
+  const filterMotoristas = useMemo(() => {
+    const list = Array.isArray(motoristas) ? motoristas : [];
+    const q = String(searchTerm || '').toLowerCase().trim();
+
+    if (!q) return list;
+
+    return list.filter((m) => {
+      const haystack = [
+        m.name,
+        m.lastName,
+        m.id,
+        m.email,
+        m.planillaTipo,
+        String(m.salario ?? ''),
+        m.circulationCard
+      ].join(' ').toLowerCase();
+
+      return haystack.includes(q);
+    });
+  }, [motoristas, searchTerm]);
 
   // Navegación
   const handleContinue = (e) => {
     e.preventDefault();
-    console.log('Navegando a agregar motorista...');
     navigate('/motoristas/agregarMotorista');
   };
 
@@ -119,189 +174,222 @@ const useDataMotorista = () => {
   const confirmDelete = async () => {
     setShowConfirmDelete(false);
     try {
-      console.log('Eliminando motorista con ID:', selectedMotorista._id);
+      if (!selectedMotorista?._id) {
+        setError('No hay motorista seleccionado para eliminar');
+        return;
+      }
+
       await axios.delete(`${API_URL}/motoristas/${selectedMotorista._id}`);
-      setMotoristas(motoristas.filter(mot => mot._id !== selectedMotorista._id));
-      console.log("Motorista eliminado exitosamente");
+
+      setMotoristas(prev =>
+        Array.isArray(prev) ? prev.filter(m => m._id !== selectedMotorista._id) : []
+      );
+
       setShowDetailView(false);
       setSelectedMotorista(null);
       setSuccessType('delete');
       setShowSuccessAlert(true);
-    } catch (error) {
-      console.error("Error al eliminar motorista:", error);
+    } catch (err) {
+      console.error("Error al eliminar motorista:", err);
       setError("Error al eliminar el motorista");
     }
   };
 
-  const cancelDelete = () => {
-    setShowConfirmDelete(false);
-  };
+  const cancelDelete = () => setShowConfirmDelete(false);
 
-  // 📸 Editar motorista con soporte para imágenes
+  // ✅ Editar motorista: soporta multipart (img) + nuevos campos
+  // NOTA: aquí "formData" puede ser:
+  // 1) Un FormData (si tu modal ya lo manda como FormData)
+  // 2) Un objeto normal (si tu modal manda { name, ... , image })
   const handleSaveEdit = async (formData) => {
+    if (!selectedMotorista?._id) {
+      setError('No hay motorista seleccionado para actualizar');
+      return;
+    }
+
+    setUploading(true);
+
     try {
-      console.log('=== INICIANDO ACTUALIZACIÓN ===');
-      console.log('Datos del formulario:', formData);
-      console.log('Motorista seleccionado:', selectedMotorista);
-      console.log('¿Hay imagen?', !!formData.image);
-      
-      // 🖼️ Si hay imagen, usar FormData (multipart/form-data)
-      if (formData.image) {
-        console.log('📸 Enviando con imagen usando FormData');
-        
-        const submitData = new FormData();
-        
-        // Agregar campos de texto (solo los que tienen valor)
-        if (formData.name && formData.name.trim()) {
-          submitData.append('name', formData.name.trim());
-        }
-        if (formData.lastName && formData.lastName.trim()) {
-          submitData.append('lastName', formData.lastName.trim());
-        }
-        if (formData.phone && formData.phone.trim()) {
-          submitData.append('phone', formData.phone.trim());
-        }
-        if (formData.address && formData.address.trim()) {
-          submitData.append('address', formData.address.trim());
-        }
-        if (formData.password && formData.password.trim()) {
-          submitData.append('password', formData.password.trim());
-        }
-        if (formData.circulationCard && formData.circulationCard.trim()) {
-          submitData.append('circulationCard', formData.circulationCard.trim());
-        }
-        
-        // Agregar imagen
-        submitData.append('img', formData.image);
-        
-        console.log('FormData creado, enviando...');
-        
-        // Enviar con fetch (axios tiene problemas con FormData a veces)
-        const response = await fetch(`${API_URL}/motoristas/${selectedMotorista._id}`, {
-          method: 'PUT',
-          body: submitData,
-          // No agregar Content-Type, el navegador lo maneja automáticamente para FormData
-          credentials: 'include'
+      const url = `${API_URL}/motoristas/${selectedMotorista._id}`;
+
+      // --- Caso 1: ya viene FormData ---
+      if (typeof FormData !== 'undefined' && formData instanceof FormData) {
+        // ✅ asegurar que envíe campos nuevos si existen (por si tu modal no los añadió)
+        // (Si ya están, append duplicará, así que solo "set" si existe)
+        // FormData no tiene set en todos los navegadores viejos, pero en modern sí.
+        // Lo dejamos simple: no tocar si ya lo estás manejando en el modal.
+
+        const response = await axios.put(url, formData, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+          timeout: 20000
         });
-        
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.message || `HTTP ${response.status}`);
-        }
-        
-        const responseData = await response.json();
-        console.log('=== RESPUESTA EXITOSA (CON IMAGEN) ===');
-        console.log('Response:', responseData);
-        
-        // Actualizar la lista de motoristas
-        const motoristaActualizado = responseData.motorista || responseData.data || { ...selectedMotorista, ...formData };
-        
-        setMotoristas(motoristas.map(mot => 
-          mot._id === selectedMotorista._id ? motoristaActualizado : mot
-        ));
-        
-        // Actualizar el motorista seleccionado
-        setSelectedMotorista(motoristaActualizado);
-        
-      } else {
-        // 📝 Sin imagen, usar JSON normal
-        console.log('📝 Enviando sin imagen usando JSON');
-        
-        // Preparar solo los campos que tienen valor
-        const updateData = {};
-        
-        if (formData.name && formData.name.trim()) {
-          updateData.name = formData.name.trim();
-        }
-        if (formData.lastName && formData.lastName.trim()) {
-          updateData.lastName = formData.lastName.trim();
-        }
-        if (formData.phone && formData.phone.trim()) {
-          updateData.phone = formData.phone.trim();
-        }
-        if (formData.address && formData.address.trim()) {
-          updateData.address = formData.address.trim();
-        }
-        if (formData.password && formData.password.trim()) {
-          updateData.password = formData.password.trim();
-        }
-        if (formData.circulationCard && formData.circulationCard.trim()) {
-          updateData.circulationCard = formData.circulationCard.trim();
-        }
 
-        console.log('Datos a enviar:', updateData);
-        
-        // Verificar que hay algo que actualizar
-        if (Object.keys(updateData).length === 0) {
-          setError('No hay cambios para guardar');
-          return;
-        }
+        const serverMotorista =
+          response.data?.data?.motorista ||
+          response.data?.motorista ||
+          response.data?.data ||
+          response.data;
 
-        const response = await axios.put(
-          `${API_URL}/motoristas/${selectedMotorista._id}`, 
-          updateData,
-          {
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            timeout: 10000
-          }
+        const normalizedFromServer = normalizeMotorista(serverMotorista, 0);
+
+        const merged = normalizeMotorista(
+          { ...selectedMotorista, ...normalizedFromServer, _id: selectedMotorista._id },
+          0
         );
-        
-        console.log('=== RESPUESTA EXITOSA (SIN IMAGEN) ===');
-        console.log('Response:', response.data);
-        
-        // Actualizar la lista de motoristas
-        const motoristaActualizado = response.data.motorista || response.data.data || { ...selectedMotorista, ...updateData };
-        
-        setMotoristas(motoristas.map(mot => 
-          mot._id === selectedMotorista._id ? motoristaActualizado : mot
-        ));
-        
-        // Actualizar el motorista seleccionado
-        setSelectedMotorista(motoristaActualizado);
+
+        setMotoristas(prev =>
+          Array.isArray(prev) ? prev.map(m => (m._id === selectedMotorista._id ? merged : m)) : [merged]
+        );
+        setSelectedMotorista(merged);
+
+        setShowEditAlert(false);
+        setSuccessType('edit');
+        setShowSuccessAlert(true);
+        return;
       }
-      
-      console.log("✅ Motorista actualizado exitosamente");
-      
+
+      // --- Caso 2: viene objeto normal ---
+      // Espera keys: name,lastName,phone,address,password,circulationCard,planillaTipo,salario,image/img
+      const imgFile = formData?.image || formData?.img;
+
+      // si hay imagen => multipart
+      if (imgFile) {
+        const submitData = new FormData();
+
+        const appendIf = (key, val) => {
+          if (val === undefined || val === null) return;
+          const s = typeof val === 'string' ? val.trim() : val;
+          if (typeof s === 'string' && s === '') return;
+          submitData.append(key, s);
+        };
+
+        appendIf('name', formData?.name);
+        appendIf('lastName', formData?.lastName);
+        appendIf('phone', formData?.phone);
+        appendIf('address', formData?.address);
+        appendIf('password', formData?.password);
+        appendIf('circulationCard', formData?.circulationCard);
+
+        // ✅ NUEVOS CAMPOS
+        appendIf('planillaTipo', formData?.planillaTipo);
+        if (String(formData?.salario ?? '').trim() !== '') {
+          submitData.append('salario', String(Number(formData.salario)));
+        }
+
+        submitData.append('img', imgFile);
+
+        const response = await axios.put(url, submitData, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+          timeout: 20000
+        });
+
+        const serverMotorista =
+          response.data?.data?.motorista ||
+          response.data?.motorista ||
+          response.data?.data ||
+          response.data;
+
+        const normalizedFromServer = normalizeMotorista(serverMotorista, 0);
+
+        const merged = normalizeMotorista(
+          { ...selectedMotorista, ...normalizedFromServer, _id: selectedMotorista._id },
+          0
+        );
+
+        setMotoristas(prev =>
+          Array.isArray(prev) ? prev.map(m => (m._id === selectedMotorista._id ? merged : m)) : [merged]
+        );
+        setSelectedMotorista(merged);
+
+        setShowEditAlert(false);
+        setSuccessType('edit');
+        setShowSuccessAlert(true);
+        return;
+      }
+
+      // sin imagen => JSON
+      const updateData = {};
+
+      const setIf = (key, val) => {
+        if (val === undefined || val === null) return;
+        if (typeof val === 'string') {
+          const t = val.trim();
+          if (!t) return;
+          updateData[key] = t;
+        } else {
+          updateData[key] = val;
+        }
+      };
+
+      setIf('name', formData?.name);
+      setIf('lastName', formData?.lastName);
+      setIf('phone', formData?.phone);
+      setIf('address', formData?.address);
+      setIf('password', formData?.password);
+      setIf('circulationCard', formData?.circulationCard);
+
+      // ✅ NUEVOS CAMPOS
+      setIf('planillaTipo', formData?.planillaTipo);
+      if (String(formData?.salario ?? '').trim() !== '') {
+        updateData.salario = Number(formData.salario);
+      }
+
+      if (Object.keys(updateData).length === 0) {
+        setError('No hay cambios para guardar');
+        return;
+      }
+
+      const response = await axios.put(url, updateData, {
+        headers: { 'Content-Type': 'application/json' },
+        timeout: 20000
+      });
+
+      const serverMotorista =
+        response.data?.data?.motorista ||
+        response.data?.motorista ||
+        response.data?.data ||
+        response.data;
+
+      const normalizedFromServer = normalizeMotorista(serverMotorista, 0);
+
+      const merged = normalizeMotorista(
+        { ...selectedMotorista, ...normalizedFromServer, ...updateData, _id: selectedMotorista._id },
+        0
+      );
+
+      setMotoristas(prev =>
+        Array.isArray(prev) ? prev.map(m => (m._id === selectedMotorista._id ? merged : m)) : [merged]
+      );
+      setSelectedMotorista(merged);
+
       setShowEditAlert(false);
       setSuccessType('edit');
       setShowSuccessAlert(true);
-      
-    } catch (error) {
-      console.error('=== ERROR EN ACTUALIZACIÓN ===');
-      console.error('Error completo:', error);
-      
-      if (error.response) {
-        console.error('Status:', error.response.status);
-        console.error('Data:', error.response.data);
-        const errorMessage = error.response.data?.message || 'Error del servidor';
-        setError(`Error: ${errorMessage}`);
-      } else if (error.message) {
-        console.error('Error message:', error.message);
-        setError(`Error: ${error.message}`);
+    } catch (err) {
+      console.error('Error al actualizar motorista:', err);
+
+      if (err?.response) {
+        const msg = err.response.data?.message || 'Error del servidor';
+        setError(`Error: ${msg}`);
       } else {
-        console.error('Error desconocido');
-        setError('Error desconocido al actualizar motorista');
+        setError(`Error: ${err.message || 'Error desconocido'}`);
       }
+    } finally {
+      setUploading(false);
     }
   };
 
   // Cerrar modales
-  const closeAlert = () => {
-    setShowAlert(false);
-  };
-
-  const closeSuccessAlert = () => {
-    setShowSuccessAlert(false);
-  };
-
-  const closeEditAlert = () => {
-    setShowEditAlert(false);
-  };
+  const closeAlert = () => setShowAlert(false);
+  const closeSuccessAlert = () => setShowSuccessAlert(false);
+  const closeEditAlert = () => setShowEditAlert(false);
 
   // Seleccionar motorista
   const selectMotorista = (motorista) => {
+    if (!motorista?._id) {
+      setError('Motorista inválido seleccionado');
+      return;
+    }
     setSelectedMotorista(motorista);
     setShowDetailView(true);
   };
@@ -314,29 +402,26 @@ const useDataMotorista = () => {
 
   // Refrescar datos
   const handleRefresh = async () => {
-    setLoading(true);
-    try {
-      const response = await fetch(`${API_URL}/motoristas`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-      setMotoristas(data);
-      setError(null);
-    } catch (error) {
-      console.error('Error al recargar los motoristas:', error);
-      setError(`Error al recargar los motoristas: ${error.message}`);
-    } finally {
-      setLoading(false);
-    }
+    await fetchMotoristas();
   };
+
+  // ✅ (Opcional) ordenamiento real con sortBy
+  const sortedMotoristas = useMemo(() => {
+    const list = Array.isArray(filterMotoristas) ? [...filterMotoristas] : [];
+    if (sortBy === 'Newest') {
+      return list.sort((a, b) => (new Date(b.createdAt || 0)) - (new Date(a.createdAt || 0)));
+    }
+    if (sortBy === 'Oldest') {
+      return list.sort((a, b) => (new Date(a.createdAt || 0)) - (new Date(b.createdAt || 0)));
+    }
+    if (sortBy === 'A-Z') {
+      return list.sort((a, b) => `${a.name} ${a.lastName}`.localeCompare(`${b.name} ${b.lastName}`));
+    }
+    if (sortBy === 'Z-A') {
+      return list.sort((a, b) => `${b.name} ${b.lastName}`.localeCompare(`${a.name} ${a.lastName}`));
+    }
+    return list;
+  }, [filterMotoristas, sortBy]);
 
   return {
     // Estados
@@ -352,7 +437,10 @@ const useDataMotorista = () => {
     showSuccessAlert,
     showEditAlert,
     successType,
-    filterMotoristas,
+    uploading,
+
+    // listas
+    filterMotoristas: sortedMotoristas,
 
     // Setters
     setSearchTerm,
@@ -360,6 +448,7 @@ const useDataMotorista = () => {
     setError,
 
     // Funciones
+    fetchMotoristas,
     handleContinue,
     handleOptionsClick,
     handleEdit,
