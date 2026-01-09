@@ -1,5 +1,6 @@
 /* ========================================
    ESTILOS PARA MODAL DE CONTRASEÑA
+   COLORES CORPORATIVOS RIVERA TRANSPORTES
    ======================================== */
 
 /* Modal Container */
@@ -7,9 +8,9 @@
   text-align: left;
 }
 
-/* Header del Modal con Gradiente */
+/* Header del Modal con Gradiente - COLORES CAMBIADOS */
 .modal-header-custom {
-  background: linear-gradient(135deg, #6366f1 0%, #a855f7 50%, #ec4899 100%);
+  background: linear-gradient(135deg, #34353A 0%, #5F8EAD 100%);
   padding: 2rem;
   border-radius: 1rem 1rem 0 0;
   margin: -1.25rem -1.25rem 1.5rem -1.25rem;
@@ -95,10 +96,11 @@
   font-weight: 500;
 }
 
+/* Monto con gradiente corporativo - COLORES CAMBIADOS */
 .info-amount {
   font-size: 1.5rem;
   font-weight: 700;
-  background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+  background: linear-gradient(135deg, #34353A 0%, #5F8EAD 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -116,7 +118,7 @@
   color: #475569;
 }
 
-/* Input de Contraseña */
+/* Input de Contraseña - COLORES CAMBIADOS */
 .password-input-custom {
   border: 2px solid #e2e8f0 !important;
   border-radius: 0.75rem !important;
@@ -127,8 +129,8 @@
 }
 
 .password-input-custom:focus {
-  border-color: #6366f1 !important;
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1) !important;
+  border-color: #5F8EAD !important;
+  box-shadow: 0 0 0 3px rgba(95, 142, 173, 0.1) !important;
   background: white !important;
 }
 
@@ -139,7 +141,7 @@
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25) !important;
 }
 
-/* Botones */
+/* Botones - COLORES CAMBIADOS */
 .confirm-btn-custom, .cancel-btn-custom {
   border-radius: 0.75rem !important;
   padding: 0.875rem 1.5rem !important;
@@ -148,13 +150,13 @@
 }
 
 .confirm-btn-custom {
-  background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%) !important;
+  background: linear-gradient(135deg, #34353A 0%, #5F8EAD 100%) !important;
   border: none !important;
 }
 
 .confirm-btn-custom:hover {
   transform: scale(1.02) !important;
-  box-shadow: 0 10px 25px rgba(99, 102, 241, 0.3) !important;
+  box-shadow: 0 10px 25px rgba(95, 142, 173, 0.3) !important;
 }
 
 .cancel-btn-custom:hover {

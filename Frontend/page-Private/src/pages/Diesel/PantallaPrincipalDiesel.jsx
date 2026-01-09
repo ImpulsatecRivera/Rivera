@@ -9,7 +9,7 @@ import {
   Trash2,
   Plus,
 } from "lucide-react";
-import { useNavigate, useLocation } from "react-router-dom"; // ✅ useLocation
+import { useNavigate, useLocation } from "react-router-dom";
 import Swal from "sweetalert2";
 import { config } from "../../config";
 
@@ -21,7 +21,7 @@ const DIESEL_REPORTE_ENDPOINT = `${config.api.API_URL}/resumenReporte`;
 
 const PantallaPrincipalDiesel = () => {
   const navigate = useNavigate();
-  const location = useLocation(); // ✅
+  const location = useLocation();
 
   const [currentPage, setCurrentPage] = useState(1);
   const [sortBy, setSortBy] = useState("newest");
@@ -63,7 +63,6 @@ const PantallaPrincipalDiesel = () => {
     row?.truck?.licensePlate ||
     "N/A";
 
-  // ✅ importante: leer estado del backend
   const pickEstado = (row) => row?.estado || row?.Estado || row?.status || row?.Status || "Pendiente";
 
   const normalize = (v) => String(v || "").trim().toLowerCase();
@@ -101,7 +100,6 @@ const PantallaPrincipalDiesel = () => {
     return new Intl.NumberFormat("es-ES", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(num);
   };
 
-  // ✅ FETCH
   const fetchDiesel = async () => {
     try {
       setLoading(true);
@@ -118,10 +116,8 @@ const PantallaPrincipalDiesel = () => {
     }
   };
 
-  // ✅ Refresca al entrar y cada vez que vuelves a esta ruta
   useEffect(() => {
     fetchDiesel();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.key]);
 
   const handleDelete = async (row) => {
@@ -213,7 +209,7 @@ const PantallaPrincipalDiesel = () => {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="text-center">
-          <Loader2 className="w-12 h-12 animate-spin text-indigo-600 mx-auto mb-4" />
+          <Loader2 className="w-12 h-12 animate-spin text-[#5F8EAD] mx-auto mb-4" />
           <p className="text-gray-600 font-medium">Cargando registros de diésel...</p>
         </div>
       </div>
@@ -226,7 +222,7 @@ const PantallaPrincipalDiesel = () => {
         <div className="text-center">
           <p className="text-red-600 font-semibold mb-2">Error al cargar los datos</p>
           <p className="text-gray-600">{error}</p>
-          <button onClick={fetchDiesel} className="mt-4 px-6 py-2 bg-indigo-600 text-white rounded-lg">
+          <button onClick={fetchDiesel} className="mt-4 px-6 py-2 bg-gradient-to-r from-[#34353A] to-[#5F8EAD] text-white rounded-lg hover:opacity-90">
             Reintentar
           </button>
         </div>
@@ -238,29 +234,29 @@ const PantallaPrincipalDiesel = () => {
 
   const estadoBadge = (estado) => {
     const e = normalize(estado);
-    if (e === "completado") return "bg-green-50 text-green-700 border border-green-200";
-    return "bg-yellow-50 text-yellow-800 border border-yellow-200";
+    if (e === "completado") return "bg-[#5D9646] bg-opacity-20 text-[#5D9646] border-2 border-[#5D9646]";
+    return "bg-yellow-50 text-yellow-800 border-2 border-yellow-200";
   };
 
   return (
     <div className="min-h-screen bg-white p-8">
       <div className="max-w-7xl mx-auto">
         <div className="mb-6">
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">Diésel</h1>
+          <h1 className="text-4xl font-bold text-[#34353A] mb-2">Diésel</h1>
 
           <div className="flex items-center justify-between flex-wrap gap-2">
-            <p className="text-indigo-600 text-base font-semibold">Total: {diesel.length} registros</p>
+            <p className="text-[#5F8EAD] text-base font-semibold">Total: {diesel.length} registros</p>
             <p className="text-gray-700 font-semibold">
-              Total general (filtrado): <span className="text-gray-900">{formatearMoneda(totalGeneral)}</span>
+              Total general (filtrado): <span className="text-[#34353A]">{formatearMoneda(totalGeneral)}</span>
             </p>
           </div>
 
           <div className="mt-4 flex items-center gap-3 flex-wrap">
             <button
               onClick={() => setEstadoFiltro(ESTADOS.TODOS)}
-              className={`px-4 py-2 rounded-xl font-semibold border transition-colors ${
+              className={`px-4 py-2 rounded-xl font-semibold border-2 transition-colors ${
                 estadoFiltro === ESTADOS.TODOS
-                  ? "bg-indigo-600 text-white border-indigo-600"
+                  ? "bg-gradient-to-r from-[#34353A] to-[#5F8EAD] text-white border-[#5F8EAD]"
                   : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50"
               }`}
             >
@@ -269,9 +265,9 @@ const PantallaPrincipalDiesel = () => {
 
             <button
               onClick={() => setEstadoFiltro(ESTADOS.PENDIENTE)}
-              className={`px-4 py-2 rounded-xl font-semibold border transition-colors ${
+              className={`px-4 py-2 rounded-xl font-semibold border-2 transition-colors ${
                 estadoFiltro === ESTADOS.PENDIENTE
-                  ? "bg-indigo-600 text-white border-indigo-600"
+                  ? "bg-gradient-to-r from-[#34353A] to-[#5F8EAD] text-white border-[#5F8EAD]"
                   : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50"
               }`}
             >
@@ -280,9 +276,9 @@ const PantallaPrincipalDiesel = () => {
 
             <button
               onClick={() => setEstadoFiltro(ESTADOS.COMPLETADO)}
-              className={`px-4 py-2 rounded-xl font-semibold border transition-colors ${
+              className={`px-4 py-2 rounded-xl font-semibold border-2 transition-colors ${
                 estadoFiltro === ESTADOS.COMPLETADO
-                  ? "bg-indigo-600 text-white border-indigo-600"
+                  ? "bg-gradient-to-r from-[#34353A] to-[#5F8EAD] text-white border-[#5F8EAD]"
                   : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50"
               }`}
             >
@@ -300,7 +296,7 @@ const PantallaPrincipalDiesel = () => {
                 placeholder="Buscar por placa o fecha..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#5F8EAD]"
               />
             </div>
 
@@ -310,7 +306,7 @@ const PantallaPrincipalDiesel = () => {
                 <select
                   value={sortBy}
                   onChange={(e) => setSortBy(e.target.value)}
-                  className="border border-gray-200 rounded-xl px-4 py-3 text-sm font-medium focus:ring-2 focus:ring-indigo-500"
+                  className="border border-gray-200 rounded-xl px-4 py-3 text-sm font-medium focus:ring-2 focus:ring-[#5F8EAD]"
                 >
                   <option value="newest">Más reciente</option>
                   <option value="oldest">Más antiguo</option>
@@ -319,7 +315,7 @@ const PantallaPrincipalDiesel = () => {
 
               <button
                 onClick={() => setIsReportesModalOpen(true)}
-                className="flex items-center gap-2 px-4 py-3 bg-gradient-to-r from-indigo-600 to-indigo-700 text-white rounded-xl hover:from-indigo-700 hover:to-indigo-800 font-semibold shadow-lg transition-all"
+                className="flex items-center gap-2 px-4 py-3 bg-gradient-to-r from-[#5F8EAD] to-[#34353A] text-white rounded-xl hover:opacity-90 font-semibold shadow-lg transition-all"
               >
                 <Download size={18} />
                 Generar Reportes
@@ -327,7 +323,7 @@ const PantallaPrincipalDiesel = () => {
 
               <button
                 onClick={() => navigate("/diesel/agregar")}
-                className="flex items-center gap-2 px-5 py-3 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 font-semibold shadow-lg"
+                className="flex items-center gap-2 px-5 py-3 bg-[#5D9646] text-white rounded-xl hover:opacity-90 font-semibold shadow-lg"
               >
                 <Plus size={20} />
                 Agregar Diésel
@@ -340,14 +336,14 @@ const PantallaPrincipalDiesel = () => {
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="bg-white border-b border-gray-200">
-                  <th className="text-left py-5 px-6 text-gray-500 font-semibold text-sm">#</th>
-                  <th className="text-left py-5 px-6 text-gray-500 font-semibold text-sm">Fecha</th>
-                  <th className="text-left py-5 px-6 text-gray-500 font-semibold text-sm">Placa</th>
-                  <th className="text-left py-5 px-6 text-gray-500 font-semibold text-sm">Estado</th>
-                  <th className="text-right py-5 px-6 text-gray-500 font-semibold text-sm">Galones</th>
-                  <th className="text-right py-5 px-6 text-gray-500 font-semibold text-sm">Total</th>
-                  <th className="text-center py-5 px-6 text-gray-500 font-semibold text-sm">Acciones</th>
+                <tr className="bg-gradient-to-r from-[#34353A] to-[#5F8EAD] border-b-2 border-[#5D9646]">
+                  <th className="text-left py-5 px-6 text-white font-semibold text-sm">#</th>
+                  <th className="text-left py-5 px-6 text-white font-semibold text-sm">Fecha</th>
+                  <th className="text-left py-5 px-6 text-white font-semibold text-sm">Placa</th>
+                  <th className="text-left py-5 px-6 text-white font-semibold text-sm">Estado</th>
+                  <th className="text-right py-5 px-6 text-white font-semibold text-sm">Galones</th>
+                  <th className="text-right py-5 px-6 text-white font-semibold text-sm">Total</th>
+                  <th className="text-center py-5 px-6 text-white font-semibold text-sm">Acciones</th>
                 </tr>
               </thead>
 
@@ -359,7 +355,7 @@ const PantallaPrincipalDiesel = () => {
                   const galones = pickGalones(row);
                   const total = pickTotal(row);
                   const estado = canonEstado(row);
-                  const isCompletado = estado === ESTADOS.COMPLETADO; // ✅
+                  const isCompletado = estado === ESTADOS.COMPLETADO;
 
                   return (
                     <tr
@@ -368,7 +364,7 @@ const PantallaPrincipalDiesel = () => {
                       className="border-b border-gray-100 hover:bg-gray-50 cursor-pointer transition-colors"
                     >
                       <td className="py-5 px-6 text-gray-700 font-semibold">{startIndex + idx + 1}</td>
-                      <td className="py-5 px-6 text-gray-900 font-semibold">{formatearFecha(fecha)}</td>
+                      <td className="py-5 px-6 text-[#34353A] font-semibold">{formatearFecha(fecha)}</td>
                       <td className="py-5 px-6 text-gray-600">{placa}</td>
 
                       <td className="py-5 px-6">
@@ -377,20 +373,19 @@ const PantallaPrincipalDiesel = () => {
                         </span>
                       </td>
 
-                      <td className="py-5 px-6 text-right text-gray-900 font-semibold">{formatearNumero(galones)}</td>
-                      <td className="py-5 px-6 text-right font-bold text-gray-900">{formatearMoneda(total)}</td>
+                      <td className="py-5 px-6 text-right text-[#34353A] font-semibold">{formatearNumero(galones)}</td>
+                      <td className="py-5 px-6 text-right font-bold text-[#34353A]">{formatearMoneda(total)}</td>
 
                       <td className="py-5 px-6" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center justify-center gap-2">
                           <button
                             onClick={() => window.open(`${DIESEL_REPORTE_ENDPOINT}/individual/${id}`, "_blank")}
-                            className="p-2 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-600 transition-colors"
+                            className="p-2 rounded-lg bg-[#5F8EAD] bg-opacity-20 hover:bg-[#5F8EAD] hover:bg-opacity-30 text-[#5F8EAD] transition-colors"
                             title="Descargar PDF"
                           >
                             <Download size={18} />
                           </button>
 
-                          {/* ✅ Ocultar Editar si está completado */}
                           {!isCompletado && (
                             <button
                               onClick={() => navigate(`/diesel/editar/${id}`)}
@@ -446,7 +441,7 @@ const PantallaPrincipalDiesel = () => {
                     key={page}
                     onClick={() => setCurrentPage(page)}
                     className={`px-4 py-2 rounded-lg font-semibold transition-colors ${
-                      currentPage === page ? "bg-indigo-600 text-white" : "text-gray-700 hover:bg-gray-100"
+                      currentPage === page ? "bg-gradient-to-r from-[#34353A] to-[#5F8EAD] text-white" : "text-gray-700 hover:bg-gray-100"
                     }`}
                   >
                     {page}
@@ -482,7 +477,6 @@ const PantallaPrincipalDiesel = () => {
         dieselId={selectedDieselId}
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        // ✅ si en tu modal cambias estado, llama a fetchDiesel() desde allí cuando actualice
       />
 
       <ReportesDieselModal
