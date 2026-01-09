@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Home, Clock, BarChart3, Wrench, Users, Fuel, Vault, Route, FileText } from "lucide-react";
+import { Home, Clock, BarChart3, Wrench, Users, Fuel, Vault, Route } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 
 const SidebarNav = () => {
@@ -38,10 +38,10 @@ const SidebarNav = () => {
           xmlns="http://www.w3.org/2000/svg"
         >
           <defs>
-            <linearGradient id="purpleGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-              <stop offset="0%" style={{ stopColor: "#6C5CE7", stopOpacity: 1 }} />
-              <stop offset="50%" style={{ stopColor: "#5F4FD1", stopOpacity: 1 }} />
-              <stop offset="100%" style={{ stopColor: "#6C5CE7", stopOpacity: 1 }} />
+            <linearGradient id="riveraGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" style={{ stopColor: "#34353A", stopOpacity: 1 }} />
+              <stop offset="50%" style={{ stopColor: "#5F8EAD", stopOpacity: 1 }} />
+              <stop offset="100%" style={{ stopColor: "#34353A", stopOpacity: 1 }} />
             </linearGradient>
           </defs>
 
@@ -53,23 +53,23 @@ const SidebarNav = () => {
                C 80 500, 70 520, 60 550
                C 50 580, 30 600, 0 600
                L 0 0 Z"
-            fill="url(#purpleGradient)"
+            fill="url(#riveraGradient)"
           />
 
           <path
             d="M 80 0
                C 60 50, 70 100, 80 150"
             fill="none"
-            stroke="rgba(255, 255, 255, 0.1)"
-            strokeWidth="1"
+            stroke="rgba(95, 142, 173, 0.2)"
+            strokeWidth="1.5"
           />
 
           <path
             d="M 80 450
                C 70 500, 60 550, 80 600"
             fill="none"
-            stroke="rgba(255, 255, 255, 0.1)"
-            strokeWidth="1"
+            stroke="rgba(93, 150, 70, 0.2)"
+            strokeWidth="1.5"
           />
         </svg>
 
@@ -96,7 +96,7 @@ const SidebarNav = () => {
                 >
                   <Icon size={24} strokeWidth={1.8} className="text-white" />
                   {isActive && (
-                    <div className="absolute -right-10 top-0 w-1 h-full bg-emerald-500 rounded-l-full"></div>
+                    <div className="absolute -right-10 top-0 w-1 h-full bg-[#5D9646] rounded-l-full shadow-lg"></div>
                   )}
                 </button>
               );

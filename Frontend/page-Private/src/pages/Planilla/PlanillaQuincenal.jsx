@@ -64,11 +64,9 @@ export default function PlanillaQuincenal() {
   useEffect(() => {
     cargarEmpleadosYMotoristas();
     
-    // 🔥 Si hay ID en la URL, cargar esa planilla específica
     if (id) {
       cargarPlanillaExistente(id);
     } else {
-      // 🔥 Si NO hay ID, cargar la ÚLTIMA planilla (sin importar estado)
       cargarUltimaPlanilla();
     }
   }, [id]);
@@ -85,14 +83,12 @@ export default function PlanillaQuincenal() {
         empleadosArray = dataEmpleados;
       }
       
-      console.log('✅ Empleados extraídos:', empleadosArray.length, empleadosArray);
       setEmpleados(empleadosArray);
 
       const resMotoristas = await fetch(`${config.api.API_URL}/motoristas`);
       const dataMotoristas = await resMotoristas.json();
       const motoristasArray = Array.isArray(dataMotoristas) ? dataMotoristas : [];
       
-      console.log('✅ Motoristas extraídos:', motoristasArray.length, motoristasArray);
       setMotoristas(motoristasArray);
     } catch (error) {
       console.error('❌ Error cargando personal:', error);
@@ -101,7 +97,6 @@ export default function PlanillaQuincenal() {
     }
   };
 
-  // 🔥 FUNCIÓN: Cargar planilla específica por ID
   const cargarPlanillaExistente = async (planillaId) => {
     setLoading(true);
     try {
@@ -122,8 +117,6 @@ export default function PlanillaQuincenal() {
           mes: data.data.mes,
           quincena: data.data.quincena
         });
-        
-        console.log('✅ Planilla cargada por ID:', planillaConEmpleados);
       } else {
         throw new Error('Planilla no encontrada');
       }
@@ -142,17 +135,13 @@ export default function PlanillaQuincenal() {
     }
   };
 
-  // 🔥 NUEVA FUNCIÓN: Cargar la última planilla creada
   const cargarUltimaPlanilla = async () => {
     setLoading(true);
     try {
       const response = await fetch(`${config.api.API_URL}/planillas/quincenal`);
       const data = await response.json();
       
-      console.log('📥 Respuesta planillas:', data);
-      
       if (data.success && Array.isArray(data.data) && data.data.length > 0) {
-        // Ordenar por año, mes, quincena (más reciente primero)
         const planillasOrdenadas = [...data.data].sort((a, b) => {
           if (a.año !== b.año) return b.año - a.año;
           if (a.mes !== b.mes) return b.mes - a.mes;
@@ -160,8 +149,6 @@ export default function PlanillaQuincenal() {
         });
         
         const ultimaPlanilla = planillasOrdenadas[0];
-        
-        console.log('📋 Cargando última planilla:', ultimaPlanilla);
         
         const planillaConEmpleados = {
           ...ultimaPlanilla,
@@ -178,8 +165,6 @@ export default function PlanillaQuincenal() {
           quincena: ultimaPlanilla.quincena
         });
       } else {
-        // Si no hay ninguna planilla, crear una nueva
-        console.log('⚠️ No hay planillas, creando nueva...');
         await crearNuevaPlanilla();
       }
     } catch (error) {
@@ -194,7 +179,6 @@ export default function PlanillaQuincenal() {
     }
   };
 
-  // 🔥 FUNCIÓN PARA CREAR NUEVA PLANILLA
   const crearNuevaPlanilla = async () => {
     try {
       const { año, mes, quincena } = infoPlanilla;
@@ -342,15 +326,11 @@ export default function PlanillaQuincenal() {
 
       const data = await response.json();
       
-      console.log('📥 Respuesta del servidor:', data);
-      
       if (data.success && data.data) {
         const planillaActualizada = {
           ...data.data,
           empleados: Array.isArray(data.data.empleados) ? data.data.empleados : []
         };
-        
-        console.log('📊 TOTALES RECIBIDOS:', planillaActualizada.totales);
         
         setPlanilla(planillaActualizada);
         setShowModalAgregar(false);
@@ -415,15 +395,11 @@ export default function PlanillaQuincenal() {
 
       const data = await response.json();
       
-      console.log('📥 Respuesta del servidor (EDITAR):', data);
-      
       if (data.success && data.data) {
         const planillaActualizada = {
           ...data.data,
           empleados: Array.isArray(data.data.empleados) ? data.data.empleados : []
         };
-        
-        console.log('📊 TOTALES RECIBIDOS:', planillaActualizada.totales);
 
         setPlanilla(planillaActualizada);
         setShowModalEditar(false);
@@ -508,7 +484,7 @@ export default function PlanillaQuincenal() {
       text: 'Una vez aprobada, no se podrá editar',
       icon: 'warning',
       showCancelButton: true,
-      confirmButtonColor: '#10b981',
+      confirmButtonColor: '#5D9646',
       cancelButtonColor: '#6b7280',
       confirmButtonText: 'Sí, aprobar',
       cancelButtonText: 'Cancelar'
@@ -581,10 +557,30 @@ export default function PlanillaQuincenal() {
 
   const getEstadoBadge = (estado) => {
     const badges = {
-      pendiente: { bg: 'bg-amber-100', text: 'text-amber-800', icon: <Clock size={14} />, border: 'border-amber-300' },
-      aprobada: { bg: 'bg-blue-100', text: 'text-blue-800', icon: <CheckCircle size={14} />, border: 'border-blue-300' },
-      pagada: { bg: 'bg-emerald-100', text: 'text-emerald-800', icon: <DollarSign size={14} />, border: 'border-emerald-300' },
-      cerrada: { bg: 'bg-red-100', text: 'text-red-800', icon: <Lock size={14} />, border: 'border-red-300' }
+      pendiente: { 
+        bg: 'bg-amber-50', 
+        text: 'text-amber-800', 
+        icon: <Clock size={14} />, 
+        border: 'border-amber-300' 
+      },
+      aprobada: { 
+        bg: 'bg-[#5F8EAD] bg-opacity-10', 
+        text: 'text-[#5F8EAD]', 
+        icon: <CheckCircle size={14} />, 
+        border: 'border-[#5F8EAD]' 
+      },
+      pagada: { 
+        bg: 'bg-[#5D9646] bg-opacity-10', 
+        text: 'text-[#5D9646]', 
+        icon: <DollarSign size={14} />, 
+        border: 'border-[#5D9646]' 
+      },
+      cerrada: { 
+        bg: 'bg-red-100', 
+        text: 'text-red-800', 
+        icon: <Lock size={14} />, 
+        border: 'border-red-300' 
+      }
     };
 
     const badge = badges[estado] || badges.pendiente;
@@ -606,34 +602,17 @@ export default function PlanillaQuincenal() {
       ? motoristas.map(m => ({ ...m, tipo: 'Motorista' })) 
       : [];
     
-    const personal = [...empleadosMapeados, ...motoristasMapeados];
-    
-    console.log('Todo el personal combinado:', {
-      totalEmpleados: empleadosMapeados.length,
-      totalMotoristas: motoristasMapeados.length,
-      totalGeneral: personal.length,
-      personal: personal
-    });
-    
-    return personal;
+    return [...empleadosMapeados, ...motoristasMapeados];
   }, [empleados, motoristas]);
 
   const personalFiltrado = React.useMemo(() => {
     if (!searchTerm) return [];
     
-    const filtrado = todoElPersonal.filter(p => {
+    return todoElPersonal.filter(p => {
       const nombreCompleto = `${p.name || ''} ${p.lastName || ''}`.toLowerCase();
       const busqueda = searchTerm.toLowerCase();
       return nombreCompleto.includes(busqueda);
     });
-    
-    console.log('Personal filtrado:', {
-      searchTerm,
-      resultados: filtrado.length,
-      filtrado
-    });
-    
-    return filtrado;
   }, [todoElPersonal, searchTerm]);
 
   const puedeEditar = planilla?.estado === 'pendiente';
@@ -646,8 +625,8 @@ export default function PlanillaQuincenal() {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
         <div className="text-center">
-          <div className="w-20 h-20 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-700 font-bold text-xl">Cargando planilla...</p>
+          <div className="w-20 h-20 border-4 border-[#5F8EAD] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-[#34353A] font-bold text-xl">Cargando planilla...</p>
           <p className="text-gray-500 text-sm mt-2">Por favor espera un momento</p>
         </div>
       </div>
@@ -658,16 +637,16 @@ export default function PlanillaQuincenal() {
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-indigo-50 p-6">
       <div className="max-w-[1800px] mx-auto">
         
-        {/* Header Mejorado */}
+        {/* Header con colores corporativos */}
         <div className="bg-white rounded-2xl shadow-lg border-2 border-gray-100 p-8 mb-8">
           <div className="flex items-center justify-between">
             <div>
               <div className="flex items-center gap-3 mb-3">
-                <div className="p-3 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl shadow-lg">
+                <div className="p-3 bg-gradient-to-br from-[#34353A] to-[#5F8EAD] rounded-xl shadow-lg">
                   <FileText size={32} className="text-white" />
                 </div>
                 <div>
-                  <h1 className="text-4xl font-black text-gray-900 tracking-tight">
+                  <h1 className="text-4xl font-black text-[#34353A] tracking-tight">
                     Planilla Quincenal
                   </h1>
                   <p className="text-sm text-gray-500 mt-1">Sistema de Gestión de Nómina</p>
@@ -675,10 +654,10 @@ export default function PlanillaQuincenal() {
               </div>
               <div className="flex items-center gap-6 text-sm">
                 <div className="flex items-center gap-2 px-4 py-2 bg-gray-50 rounded-lg border border-gray-200">
-                  <Calendar size={18} className="text-indigo-600" />
+                  <Calendar size={18} className="text-[#5F8EAD]" />
                   <span className="font-bold text-gray-700">
                     {planilla?.descripcion || 
-                     `${infoPlanilla.quincena === 1 ? 'Primera' : 'Segunda'} Quincena - ${getMesNombre(infoPlanilla.mes)} ${infoPlanilla.año}`}
+                     `${infoPlanilla.quincena === 1 ? 'Primera' : 'Segunda'} quincena de ${getMesNombre(infoPlanilla.mes)} ${infoPlanilla.año}`}
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
@@ -696,25 +675,25 @@ export default function PlanillaQuincenal() {
                 className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold shadow-lg transition-all ${
                   planilla?.estado !== 'pendiente'
                     ? 'bg-gray-300 text-gray-500 cursor-not-allowed opacity-50'
-                    : 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:from-indigo-700 hover:to-purple-700 hover:shadow-xl transform hover:scale-105'
+                    : 'bg-gradient-to-r from-[#34353A] to-[#5F8EAD] text-white hover:shadow-xl transform hover:scale-105'
                 }`}
               >
                 <Plus size={22} />
                 Agregar Empleado
               </button>
 
-              {/* ✅ Botón Aprobar - Solo para pendientes */}
+              {/* Botón Aprobar */}
               {planilla?.estado === 'pendiente' && (
                 <button
                   onClick={() => cambiarEstadoPlanilla('aprobada')}
-                  className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-emerald-600 to-green-600 text-white rounded-xl hover:from-emerald-700 hover:to-green-700 font-bold shadow-lg hover:shadow-xl transition-all transform hover:scale-105"
+                  className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-[#5D9646] to-[#5D9646] text-white rounded-xl hover:opacity-90 font-bold shadow-lg hover:shadow-xl transition-all transform hover:scale-105"
                 >
                   <CheckCircle size={22} />
                   Aprobar Planilla
                 </button>
               )}
 
-              {/* Botón Nueva Planilla - Para cualquier estado que no sea pendiente */}
+              {/* Botón Nueva Planilla */}
               {planilla?.estado !== 'pendiente' && (
                 <button
                   onClick={async () => {
@@ -756,7 +735,7 @@ export default function PlanillaQuincenal() {
                     
                     setLoading(false);
                   }}
-                  className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl hover:from-purple-700 hover:to-pink-700 font-bold shadow-lg hover:shadow-xl transition-all transform hover:scale-105"
+                  className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-[#5F8EAD] to-[#5D9646] text-white rounded-xl hover:opacity-90 font-bold shadow-lg hover:shadow-xl transition-all transform hover:scale-105"
                 >
                   <Plus size={22} />
                   Nueva Planilla
@@ -782,10 +761,10 @@ export default function PlanillaQuincenal() {
           )}
         </div>
 
-        {/* Tabla Mejorada */}
+        {/* Tabla con colores corporativos */}
         <div className="bg-white rounded-2xl shadow-xl border-2 border-gray-100 overflow-hidden">
           {/* Header de la tabla */}
-          <div className="bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-700 px-8 py-6 border-b-4 border-indigo-800">
+          <div className="bg-gradient-to-r from-[#34353A] via-[#5F8EAD] to-[#34353A] px-8 py-6 border-b-4 border-[#5D9646]">
             <div className="flex items-center justify-between text-white">
               <div className="flex items-center gap-4">
                 <div className="p-3 bg-white/20 backdrop-blur-sm rounded-xl">
@@ -793,13 +772,13 @@ export default function PlanillaQuincenal() {
                 </div>
                 <div>
                   <h2 className="font-black text-2xl tracking-tight">Registro de Empleados</h2>
-                  <p className="text-xs text-indigo-100 mt-1 font-medium">
+                  <p className="text-xs text-white/80 mt-1 font-medium">
                     Formato: Quincenal | Período: {getMesNombre(planilla?.mes || infoPlanilla.mes)} {planilla?.año || infoPlanilla.año}
                   </p>
                 </div>
               </div>
               <div className="text-right bg-white/20 backdrop-blur-sm px-6 py-3 rounded-xl">
-                <p className="text-xs text-indigo-100 font-semibold">Total Empleados</p>
+                <p className="text-xs text-white/80 font-semibold">Total Empleados</p>
                 <p className="text-3xl font-black">{planilla?.empleados?.length || 0}</p>
               </div>
             </div>
@@ -809,22 +788,22 @@ export default function PlanillaQuincenal() {
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="bg-gradient-to-r from-gray-100 to-gray-200 border-b-4 border-gray-300">
-                  <th className="px-5 py-4 text-left text-xs font-black text-gray-800 uppercase tracking-wider border-r-2 border-gray-300 w-12 bg-gray-200">#</th>
-                  <th className="px-5 py-4 text-left text-xs font-black text-gray-800 uppercase tracking-wider border-r-2 border-gray-300 min-w-[220px]">Nombre Completo</th>
-                  <th className="px-5 py-4 text-right text-xs font-black text-gray-800 uppercase tracking-wider border-r-2 border-gray-300 w-36">Salario Quincenal</th>
-                  <th className="px-5 py-4 text-right text-xs font-black text-gray-800 uppercase tracking-wider border-r-2 border-gray-300 w-32">Viáticos</th>
-                  <th className="px-5 py-4 text-right text-xs font-black text-gray-800 uppercase tracking-wider border-r-2 border-gray-300 w-32">Sáb/Dom</th>
-                  <th className="px-5 py-4 text-right text-xs font-black text-indigo-800 uppercase tracking-wider border-r-2 border-indigo-300 bg-indigo-100 w-36">Total Salario</th>
-                  <th className="px-5 py-4 text-right text-xs font-black text-gray-800 uppercase tracking-wider border-r-2 border-gray-300 w-28">ISSS</th>
-                  <th className="px-5 py-4 text-right text-xs font-black text-gray-800 uppercase tracking-wider border-r-2 border-gray-300 w-28">AFP</th>
-                  <th className="px-5 py-4 text-right text-xs font-black text-gray-800 uppercase tracking-wider border-r-2 border-gray-300 w-28">Renta</th>
-                  <th className="px-5 py-4 text-right text-xs font-black text-gray-800 uppercase tracking-wider border-r-2 border-gray-300 w-32">Anticipos</th>
-                  <th className="px-5 py-4 text-right text-xs font-black text-gray-800 uppercase tracking-wider border-r-2 border-gray-300 w-32">Préstamos</th>
-                  <th className="px-5 py-4 text-right text-xs font-black text-gray-800 uppercase tracking-wider border-r-2 border-gray-300 w-28">Otros</th>
+                <tr className="bg-gradient-to-r from-gray-100 to-gray-200 border-b-4 border-[#5D9646]">
+                  <th className="px-5 py-4 text-left text-xs font-black text-[#34353A] uppercase tracking-wider border-r-2 border-gray-300 w-12 bg-gray-200">#</th>
+                  <th className="px-5 py-4 text-left text-xs font-black text-[#34353A] uppercase tracking-wider border-r-2 border-gray-300 min-w-[220px]">Nombre Completo</th>
+                  <th className="px-5 py-4 text-right text-xs font-black text-[#34353A] uppercase tracking-wider border-r-2 border-gray-300 w-36">Salario Quincenal</th>
+                  <th className="px-5 py-4 text-right text-xs font-black text-[#34353A] uppercase tracking-wider border-r-2 border-gray-300 w-32">Viáticos</th>
+                  <th className="px-5 py-4 text-right text-xs font-black text-[#34353A] uppercase tracking-wider border-r-2 border-gray-300 w-32">Sáb/Dom</th>
+                  <th className="px-5 py-4 text-right text-xs font-black text-[#5F8EAD] uppercase tracking-wider border-r-2 border-[#5F8EAD] bg-[#5F8EAD] bg-opacity-10 w-36">Total Salario</th>
+                  <th className="px-5 py-4 text-right text-xs font-black text-[#34353A] uppercase tracking-wider border-r-2 border-gray-300 w-28">ISSS</th>
+                  <th className="px-5 py-4 text-right text-xs font-black text-[#34353A] uppercase tracking-wider border-r-2 border-gray-300 w-28">AFP</th>
+                  <th className="px-5 py-4 text-right text-xs font-black text-[#34353A] uppercase tracking-wider border-r-2 border-gray-300 w-28">Renta</th>
+                  <th className="px-5 py-4 text-right text-xs font-black text-[#34353A] uppercase tracking-wider border-r-2 border-gray-300 w-32">Anticipos</th>
+                  <th className="px-5 py-4 text-right text-xs font-black text-[#34353A] uppercase tracking-wider border-r-2 border-gray-300 w-32">Préstamos</th>
+                  <th className="px-5 py-4 text-right text-xs font-black text-[#34353A] uppercase tracking-wider border-r-2 border-gray-300 w-28">Otros</th>
                   <th className="px-5 py-4 text-right text-xs font-black text-red-800 uppercase tracking-wider border-r-2 border-red-300 bg-red-100 w-36">Total Desc.</th>
-                  <th className="px-5 py-4 text-right text-xs font-black text-emerald-800 uppercase tracking-wider bg-emerald-100 w-40">A Pagar</th>
-                  <th className="px-5 py-4 text-center text-xs font-black text-gray-800 uppercase tracking-wider w-32">Acciones</th>
+                  <th className="px-5 py-4 text-right text-xs font-black text-[#5D9646] uppercase tracking-wider bg-[#5D9646] bg-opacity-10 w-40">A Pagar</th>
+                  <th className="px-5 py-4 text-center text-xs font-black text-[#34353A] uppercase tracking-wider w-32">Acciones</th>
                 </tr>
               </thead>
 
@@ -837,7 +816,7 @@ export default function PlanillaQuincenal() {
                           <User className="text-gray-400" size={64} />
                         </div>
                         <div>
-                          <p className="text-gray-700 font-black text-2xl mb-2">
+                          <p className="text-[#34353A] font-black text-2xl mb-2">
                             No hay empleados en esta planilla
                           </p>
                           <p className="text-gray-500 text-base mb-6">
@@ -846,7 +825,7 @@ export default function PlanillaQuincenal() {
                           {puedeEditar && (
                             <button
                               onClick={() => setShowModalAgregar(true)}
-                              className="px-8 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl hover:from-indigo-700 hover:to-purple-700 font-bold shadow-lg transform hover:scale-105 transition-all"
+                              className="px-8 py-3 bg-gradient-to-r from-[#34353A] to-[#5F8EAD] text-white rounded-xl hover:opacity-90 font-bold shadow-lg transform hover:scale-105 transition-all"
                             >
                               Agregar Primer Empleado
                             </button>
@@ -864,13 +843,13 @@ export default function PlanillaQuincenal() {
                       <td className="px-5 py-4 text-sm font-black text-gray-700 border-r-2 border-gray-200 bg-gray-50">
                         {index + 1}
                       </td>
-                      <td className="px-5 py-4 text-sm font-bold text-gray-900 border-r-2 border-gray-200">
+                      <td className="px-5 py-4 text-sm font-bold text-[#34353A] border-r-2 border-gray-200">
                         {emp.nombreCompleto}
-                        <span className="ml-2 text-xs font-semibold px-2 py-1 bg-indigo-100 text-indigo-700 rounded-md border border-indigo-200">
+                        <span className="ml-2 text-xs font-semibold px-2 py-1 bg-[#5F8EAD] bg-opacity-20 text-[#5F8EAD] rounded-md border border-[#5F8EAD]">
                           {emp.tipoEmpleado}
                         </span>
                       </td>
-                      <td className="px-5 py-4 text-sm text-right font-mono font-bold text-gray-900 border-r-2 border-gray-200 bg-gray-50">
+                      <td className="px-5 py-4 text-sm text-right font-mono font-bold text-[#34353A] border-r-2 border-gray-200 bg-gray-50">
                         {formatearMoneda(emp.salarioQuincenal)}
                       </td>
                       <td className="px-5 py-4 text-sm text-right font-mono font-semibold text-gray-700 border-r-2 border-gray-200">
@@ -879,7 +858,7 @@ export default function PlanillaQuincenal() {
                       <td className="px-5 py-4 text-sm text-right font-mono font-semibold text-gray-700 border-r-2 border-gray-200">
                         {formatearMoneda(emp.trabajoSabadoDomingo)}
                       </td>
-                      <td className="px-5 py-4 text-sm text-right font-mono font-black text-indigo-900 border-r-2 border-indigo-300 bg-indigo-50">
+                      <td className="px-5 py-4 text-sm text-right font-mono font-black text-[#5F8EAD] border-r-2 border-[#5F8EAD] bg-[#5F8EAD] bg-opacity-10">
                         {formatearMoneda(emp.totalSalarioMasViaticos)}
                       </td>
                       <td className="px-5 py-4 text-sm text-right font-mono font-semibold text-red-600 border-r-2 border-gray-200">
@@ -903,7 +882,7 @@ export default function PlanillaQuincenal() {
                       <td className="px-5 py-4 text-sm text-right font-mono font-black text-red-900 border-r-2 border-red-300 bg-red-50">
                         {formatearMoneda(emp.totalDescuentos)}
                       </td>
-                      <td className="px-5 py-4 text-sm text-right font-mono font-black text-lg text-emerald-900 bg-emerald-50">
+                      <td className="px-5 py-4 text-sm text-right font-mono font-black text-lg text-[#5D9646] bg-[#5D9646] bg-opacity-10">
                         {formatearMoneda(emp.totalAPagar)}
                       </td>
                       <td className="px-5 py-4 text-center border-l-2 border-gray-200">
@@ -924,7 +903,7 @@ export default function PlanillaQuincenal() {
                                 });
                                 setShowModalEditar(true);
                               }}
-                              className="p-2.5 text-blue-600 hover:bg-blue-100 rounded-lg transition-all border-2 border-transparent hover:border-blue-300"
+                              className="p-2.5 text-[#5F8EAD] hover:bg-[#5F8EAD] hover:bg-opacity-10 rounded-lg transition-all border-2 border-transparent hover:border-[#5F8EAD]"
                               title="Editar"
                             >
                               <Edit2 size={18} />
@@ -951,11 +930,11 @@ export default function PlanillaQuincenal() {
 
               {/* Footer con totales */}
               {planilla && Array.isArray(planilla.empleados) && planilla.empleados.length > 0 && planilla.totales && (
-                <tfoot className="bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 text-white font-black border-t-4 border-gray-700">
+                <tfoot className="bg-gradient-to-r from-[#34353A] via-[#34353A] to-[#34353A] text-white font-black border-t-4 border-[#5D9646]">
                   <tr>
-                    <td colSpan="2" className="px-5 py-5 text-sm uppercase tracking-wider border-r-2 border-gray-700 bg-gray-800">
+                    <td colSpan="2" className="px-5 py-5 text-sm uppercase tracking-wider border-r-2 border-gray-700 bg-[#34353A]">
                       <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                        <div className="w-2 h-2 bg-[#5D9646] rounded-full animate-pulse"></div>
                         TOTALES GENERALES
                       </div>
                     </td>
@@ -968,7 +947,7 @@ export default function PlanillaQuincenal() {
                     <td className="px-5 py-5 text-base text-right font-mono border-r-2 border-gray-700">
                       {formatearMoneda(planilla.totales?.totalTrabajoSabadoDomingo)}
                     </td>
-                    <td className="px-5 py-5 text-base text-right font-mono bg-indigo-900 border-r-2 border-indigo-800">
+                    <td className="px-5 py-5 text-base text-right font-mono bg-[#5F8EAD] border-r-2 border-[#5F8EAD]">
                       {formatearMoneda(planilla.totales?.totalSalariosMasViaticos)}
                     </td>
                     <td className="px-5 py-5 text-base text-right font-mono border-r-2 border-gray-700">
@@ -992,7 +971,7 @@ export default function PlanillaQuincenal() {
                     <td className="px-5 py-5 text-base text-right font-mono bg-red-900 border-r-2 border-red-800">
                       {formatearMoneda(planilla.totales?.totalDescuentos)}
                     </td>
-                    <td className="px-5 py-5 text-xl text-right font-mono font-black bg-emerald-700">
+                    <td className="px-5 py-5 text-xl text-right font-mono font-black bg-[#5D9646]">
                       {formatearMoneda(planilla.totales?.totalAPagar)}
                     </td>
                     <td></td>
@@ -1010,7 +989,7 @@ export default function PlanillaQuincenal() {
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between p-6 border-b border-gray-200">
-              <h2 className="text-2xl font-bold text-gray-900">Agregar Empleado a Planilla</h2>
+              <h2 className="text-2xl font-bold text-[#34353A]">Agregar Empleado a Planilla</h2>
               <button
                 onClick={() => {
                   setShowModalAgregar(false);
@@ -1025,7 +1004,7 @@ export default function PlanillaQuincenal() {
             <div className="p-6 space-y-6">
               {/* Búsqueda y selección de empleado */}
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                <label className="block text-sm font-semibold text-[#34353A] mb-2">
                   Buscar Empleado o Motorista
                 </label>
                 <div className="relative">
@@ -1035,7 +1014,7 @@ export default function PlanillaQuincenal() {
                     placeholder="Buscar por nombre..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pl-10 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:outline-none"
+                    className="w-full pl-10 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:border-[#5F8EAD] focus:outline-none"
                   />
                 </div>
 
@@ -1049,9 +1028,9 @@ export default function PlanillaQuincenal() {
                             setEmpleadoSeleccionado(persona);
                             setSearchTerm('');
                           }}
-                          className="w-full px-4 py-3 text-left hover:bg-indigo-50 transition-colors border-b border-gray-100 last:border-0"
+                          className="w-full px-4 py-3 text-left hover:bg-[#5F8EAD] hover:bg-opacity-10 transition-colors border-b border-gray-100 last:border-0"
                         >
-                          <p className="font-semibold text-gray-900">
+                          <p className="font-semibold text-[#34353A]">
                             {persona.name} {persona.lastName}
                           </p>
                           <p className="text-sm text-gray-600">
@@ -1071,11 +1050,11 @@ export default function PlanillaQuincenal() {
                 )}
 
                 {empleadoSeleccionado && (
-                  <div className="mt-4 p-4 bg-indigo-50 border-2 border-indigo-200 rounded-xl">
-                    <p className="font-semibold text-indigo-900">
+                  <div className="mt-4 p-4 bg-[#5F8EAD] bg-opacity-10 border-2 border-[#5F8EAD] rounded-xl">
+                    <p className="font-semibold text-[#34353A]">
                       Seleccionado: {empleadoSeleccionado.name} {empleadoSeleccionado.lastName}
                     </p>
-                    <p className="text-sm text-indigo-700">
+                    <p className="text-sm text-[#5F8EAD]">
                       {empleadoSeleccionado.tipo} • Salario Quincenal: {formatearMoneda((empleadoSeleccionado.salario || empleadoSeleccionado.salary || 0) / 2)}
                     </p>
                   </div>
@@ -1085,12 +1064,12 @@ export default function PlanillaQuincenal() {
               {/* Formulario de valores adicionales */}
               <div className="grid grid-cols-3 gap-4">
                 {/* Nota informativa */}
-                <div className="col-span-3 p-4 bg-blue-50 border-l-4 border-blue-500 rounded-lg">
+                <div className="col-span-3 p-4 bg-[#5F8EAD] bg-opacity-10 border-l-4 border-[#5F8EAD] rounded-lg">
                   <div className="flex items-start gap-3">
-                    <AlertCircle className="text-blue-600 flex-shrink-0 mt-0.5" size={20} />
+                    <AlertCircle className="text-[#5F8EAD] flex-shrink-0 mt-0.5" size={20} />
                     <div>
-                      <p className="text-sm font-semibold text-blue-900">Cálculo Automático</p>
-                      <p className="text-xs text-blue-700 mt-1">
+                      <p className="text-sm font-semibold text-[#34353A]">Cálculo Automático</p>
+                      <p className="text-xs text-gray-700 mt-1">
                         Los descuentos de ley (ISSS 3%, AFP 7.25%, Renta según tabla) se calculan automáticamente según el salario del empleado.
                       </p>
                     </div>
@@ -1099,13 +1078,13 @@ export default function PlanillaQuincenal() {
 
                 {/* INGRESOS ADICIONALES */}
                 <div className="col-span-3">
-                  <h3 className="text-lg font-bold text-gray-900 mb-3 pb-2 border-b-2 border-green-500">
+                  <h3 className="text-lg font-bold text-[#34353A] mb-3 pb-2 border-b-2 border-[#5D9646]">
                     ✅ Ingresos Adicionales
                   </h3>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  <label className="block text-sm font-semibold text-[#34353A] mb-2">
                     Viáticos
                   </label>
                   <div className="relative">
@@ -1115,13 +1094,13 @@ export default function PlanillaQuincenal() {
                       step="0.01"
                       value={formEmpleado.viaticos}
                       onChange={(e) => setFormEmpleado({ ...formEmpleado, viaticos: e.target.value })}
-                      className="w-full pl-10 pr-4 py-2.5 border-2 border-gray-200 rounded-xl focus:border-green-500 focus:outline-none"
+                      className="w-full pl-10 pr-4 py-2.5 border-2 border-gray-200 rounded-xl focus:border-[#5D9646] focus:outline-none"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  <label className="block text-sm font-semibold text-[#34353A] mb-2">
                     Trabajo Sábado/Domingo
                   </label>
                   <div className="relative">
@@ -1131,20 +1110,20 @@ export default function PlanillaQuincenal() {
                       step="0.01"
                       value={formEmpleado.trabajoSabadoDomingo}
                       onChange={(e) => setFormEmpleado({ ...formEmpleado, trabajoSabadoDomingo: e.target.value })}
-                      className="w-full pl-10 pr-4 py-2.5 border-2 border-gray-200 rounded-xl focus:border-green-500 focus:outline-none"
+                      className="w-full pl-10 pr-4 py-2.5 border-2 border-gray-200 rounded-xl focus:border-[#5D9646] focus:outline-none"
                     />
                   </div>
                 </div>
 
                 {/* OTROS DESCUENTOS */}
                 <div className="col-span-3 mt-4">
-                  <h3 className="text-lg font-bold text-gray-900 mb-3 pb-2 border-b-2 border-orange-500">
+                  <h3 className="text-lg font-bold text-[#34353A] mb-3 pb-2 border-b-2 border-orange-500">
                     📋 Otros Descuentos
                   </h3>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  <label className="block text-sm font-semibold text-[#34353A] mb-2">
                     Anticipos
                   </label>
                   <div className="relative">
@@ -1160,7 +1139,7 @@ export default function PlanillaQuincenal() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  <label className="block text-sm font-semibold text-[#34353A] mb-2">
                     Préstamos
                   </label>
                   <div className="relative">
@@ -1176,7 +1155,7 @@ export default function PlanillaQuincenal() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  <label className="block text-sm font-semibold text-[#34353A] mb-2">
                     Otros Descuentos
                   </label>
                   <div className="relative">
@@ -1206,7 +1185,7 @@ export default function PlanillaQuincenal() {
               <button
                 onClick={agregarEmpleadoAPlanilla}
                 disabled={!empleadoSeleccionado}
-                className="px-6 py-2.5 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-6 py-2.5 bg-[#5F8EAD] text-white rounded-xl hover:opacity-90 font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Agregar a Planilla
               </button>
@@ -1219,9 +1198,9 @@ export default function PlanillaQuincenal() {
       {showModalEditar && empleadoEditando && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50">
+            <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-gradient-to-r from-[#5F8EAD] from-opacity-10 to-transparent">
               <div>
-                <h2 className="text-2xl font-bold text-gray-900">Editar Empleado</h2>
+                <h2 className="text-2xl font-bold text-[#34353A]">Editar Empleado</h2>
                 <p className="text-sm text-gray-600 mt-1">
                   {empleadoEditando.nombreCompleto} - {empleadoEditando.tipoEmpleado}
                 </p>
@@ -1241,12 +1220,12 @@ export default function PlanillaQuincenal() {
             <div className="p-6 space-y-6">
               <div className="grid grid-cols-3 gap-4">
                 {/* Nota informativa */}
-                <div className="col-span-3 p-4 bg-blue-50 border-l-4 border-blue-500 rounded-lg">
+                <div className="col-span-3 p-4 bg-[#5F8EAD] bg-opacity-10 border-l-4 border-[#5F8EAD] rounded-lg">
                   <div className="flex items-start gap-3">
-                    <AlertCircle className="text-blue-600 flex-shrink-0 mt-0.5" size={20} />
+                    <AlertCircle className="text-[#5F8EAD] flex-shrink-0 mt-0.5" size={20} />
                     <div>
-                      <p className="text-sm font-semibold text-blue-900">Cálculo Automático</p>
-                      <p className="text-xs text-blue-700 mt-1">
+                      <p className="text-sm font-semibold text-[#34353A]">Cálculo Automático</p>
+                      <p className="text-xs text-gray-700 mt-1">
                         Los descuentos de ley (ISSS, AFP, Renta) se recalculan automáticamente al guardar los cambios.
                       </p>
                     </div>
@@ -1255,13 +1234,13 @@ export default function PlanillaQuincenal() {
 
                 {/* INGRESOS ADICIONALES */}
                 <div className="col-span-3">
-                  <h3 className="text-lg font-bold text-gray-900 mb-3 pb-2 border-b-2 border-green-500">
+                  <h3 className="text-lg font-bold text-[#34353A] mb-3 pb-2 border-b-2 border-[#5D9646]">
                     ✅ Ingresos Adicionales
                   </h3>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  <label className="block text-sm font-semibold text-[#34353A] mb-2">
                     Viáticos
                   </label>
                   <div className="relative">
@@ -1271,13 +1250,13 @@ export default function PlanillaQuincenal() {
                       step="0.01"
                       value={formEmpleado.viaticos}
                       onChange={(e) => setFormEmpleado({ ...formEmpleado, viaticos: e.target.value })}
-                      className="w-full pl-10 pr-4 py-2.5 border-2 border-gray-200 rounded-xl focus:border-green-500 focus:outline-none"
+                      className="w-full pl-10 pr-4 py-2.5 border-2 border-gray-200 rounded-xl focus:border-[#5D9646] focus:outline-none"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  <label className="block text-sm font-semibold text-[#34353A] mb-2">
                     Trabajo Sábado/Domingo
                   </label>
                   <div className="relative">
@@ -1287,20 +1266,20 @@ export default function PlanillaQuincenal() {
                       step="0.01"
                       value={formEmpleado.trabajoSabadoDomingo}
                       onChange={(e) => setFormEmpleado({ ...formEmpleado, trabajoSabadoDomingo: e.target.value })}
-                      className="w-full pl-10 pr-4 py-2.5 border-2 border-gray-200 rounded-xl focus:border-green-500 focus:outline-none"
+                      className="w-full pl-10 pr-4 py-2.5 border-2 border-gray-200 rounded-xl focus:border-[#5D9646] focus:outline-none"
                     />
                   </div>
                 </div>
 
                 {/* OTROS DESCUENTOS */}
                 <div className="col-span-3 mt-4">
-                  <h3 className="text-lg font-bold text-gray-900 mb-3 pb-2 border-b-2 border-orange-500">
+                  <h3 className="text-lg font-bold text-[#34353A] mb-3 pb-2 border-b-2 border-orange-500">
                     📋 Otros Descuentos
                   </h3>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  <label className="block text-sm font-semibold text-[#34353A] mb-2">
                     Anticipos
                   </label>
                   <div className="relative">
@@ -1316,7 +1295,7 @@ export default function PlanillaQuincenal() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  <label className="block text-sm font-semibold text-[#34353A] mb-2">
                     Préstamos
                   </label>
                   <div className="relative">
@@ -1332,7 +1311,7 @@ export default function PlanillaQuincenal() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  <label className="block text-sm font-semibold text-[#34353A] mb-2">
                     Otros Descuentos
                   </label>
                   <div className="relative">
@@ -1362,7 +1341,7 @@ export default function PlanillaQuincenal() {
               </button>
               <button
                 onClick={editarEmpleadoDePlanilla}
-                className="px-6 py-2.5 bg-blue-600 text-white rounded-xl hover:bg-blue-700 font-semibold"
+                className="px-6 py-2.5 bg-[#5F8EAD] text-white rounded-xl hover:opacity-90 font-semibold"
               >
                 Guardar Cambios
               </button>
