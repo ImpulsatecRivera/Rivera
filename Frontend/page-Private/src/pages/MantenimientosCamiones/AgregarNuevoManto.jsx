@@ -132,22 +132,24 @@ const CreateMantenimientoPage = () => {
       setLoading(true);
       setError(null);
 
-      const fecha = new Date(formData.fecha_mantenimiento);
-      const dataToSend = {
-        fecha_mantenimiento: formData.fecha_mantenimiento,
-        mes: fecha.getMonth() + 1,
-        ano: fecha.getFullYear(),
-        tipo_de_mantenimiento: formData.tipo_de_mantenimiento,
-        descripcion: formData.descripcion,
-        ciculatioCard: formData.ciculatioCard,
-        estado: 'pendiente',
-        detalles: formData.detalles.map(d => ({
-          concepto: d.concepto,
-          cantidad: d.cantidad,
-          precioUnitario: d.precioUnitario,
-          subTotal: calcularSubtotal(d.cantidad, d.precioUnitario)
-        }))
-      };
+      const fechaLocal = new Date(formData.fecha_mantenimiento + 'T12:00:00');
+
+const dataToSend = {
+  fecha_mantenimiento: fechaLocal.toISOString(),
+  mes: fechaLocal.getMonth() + 1,
+  ano: fechaLocal.getFullYear(),
+  tipo_de_mantenimiento: formData.tipo_de_mantenimiento,
+  descripcion: formData.descripcion,
+  ciculatioCard: formData.ciculatioCard,
+  estado: 'pendiente',
+  detalles: formData.detalles.map(d => ({
+    concepto: d.concepto,
+    cantidad: d.cantidad,
+    precioUnitario: d.precioUnitario,
+    subTotal: calcularSubtotal(d.cantidad, d.precioUnitario)
+  }))
+};
+
 
       console.log('Datos enviados al backend:', dataToSend);
 
