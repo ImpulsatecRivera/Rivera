@@ -290,7 +290,7 @@ export default function PlanillaSemanalNueva() {
         <div className="bg-white rounded-2xl p-6 border-2 border-gray-100 shadow-sm">
           <div className="flex items-center gap-4 mb-4">
             <button
-              onClick={() => navigate('/planillas')}
+              onClick={() => navigate('/planilla')}
               className="p-3 hover:bg-gray-100 rounded-xl transition-colors"
             >
               <ArrowLeft size={24} className="text-gray-600" />
@@ -464,7 +464,7 @@ export default function PlanillaSemanalNueva() {
         <div className="bg-white rounded-2xl p-6 border-2 border-gray-100 shadow-sm">
           <div className="flex items-center justify-between">
             <button
-              onClick={() => navigate('/planillas')}
+              onClick={() => navigate('/planilla')}
               className="px-8 py-3 border-2 border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 font-bold transition-all"
             >
               Cancelar

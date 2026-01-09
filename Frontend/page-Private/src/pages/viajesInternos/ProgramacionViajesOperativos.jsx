@@ -268,7 +268,7 @@ const getEstadosPermitidos = (estadoActual) => {
         {/* Header */}
         <div className="mb-8">
           <button
-            onClick={() => navigate("/viajesOperativos")}
+            onClick={() => navigate("/viajesInternos")}
             className="flex items-center gap-2 text-gray-600 hover:text-gray-900 font-semibold mb-4 transition-colors"
           >
             <ArrowLeft size={20} />
