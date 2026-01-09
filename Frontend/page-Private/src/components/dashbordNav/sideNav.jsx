@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Home, Clock, BarChart3, Wrench, Users, Fuel, Vault, Route } from "lucide-react";
+import { Home, Clock, BarChart3, Wrench, Users, Fuel, Vault, Route, LogOut } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 
 const SidebarNav = () => {
@@ -26,6 +26,10 @@ const SidebarNav = () => {
       setActiveItem(item.id);
       navigate(item.route);
     }
+  };
+
+  const handleLogout = () => {
+    navigate("/SeleccionarProceso");
   };
 
   return (
@@ -101,6 +105,18 @@ const SidebarNav = () => {
                 </button>
               );
             })}
+
+            {/* Botón de salir justo debajo de Caja Chica */}
+            <button
+              onClick={handleLogout}
+              className="w-11 h-11 rounded-xl flex items-center justify-center
+                       transition-all duration-300
+                       hover:bg-red-500 hover:bg-opacity-20
+                       hover:scale-110 group"
+              title="Salir"
+            >
+              <LogOut size={24} strokeWidth={1.8} className="text-white group-hover:text-red-200 transition-colors" />
+            </button>
           </nav>
         </div>
       </div>

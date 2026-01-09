@@ -207,7 +207,7 @@ export default function CajaChicaModern() {
       html: `
         <div class="px-4 py-2">
           <p class="text-sm text-gray-600 mb-4">Selecciona una imagen o PDF del comprobante</p>
-          <label for="swal-input-file" class="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-indigo-500 hover:bg-gray-50 transition-all">
+          <label for="swal-input-file" class="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-[#5F8EAD] hover:bg-gray-50 transition-all">
             <div class="flex flex-col items-center justify-center pt-5 pb-6">
               <svg class="w-10 h-10 mb-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
@@ -217,7 +217,7 @@ export default function CajaChicaModern() {
               </p>
               <p class="text-xs text-gray-400">Imágenes (JPG, PNG) o PDF (MAX. 10MB)</p>
             </div>
-            <input type="file" id="swal-input-file" accept="image/*,.pdf" class="hidden" onchange="document.getElementById('file-name').textContent = this.files[0]?.name || 'Sin archivos seleccionados'; document.getElementById('file-name').className = this.files[0] ? 'text-base font-semibold text-center text-indigo-600 mt-3 break-all px-2' : 'text-sm text-center text-gray-500 mt-2';">
+            <input type="file" id="swal-input-file" accept="image/*,.pdf" class="hidden" onchange="document.getElementById('file-name').textContent = this.files[0]?.name || 'Sin archivos seleccionados'; document.getElementById('file-name').className = this.files[0] ? 'text-base font-semibold text-center text-[#5F8EAD] mt-3 break-all px-2' : 'text-sm text-center text-gray-500 mt-2';">
           </label>
           <p id="file-name" class="text-sm text-center text-gray-500 mt-2">Sin archivos seleccionados</p>
         </div>
@@ -225,7 +225,7 @@ export default function CajaChicaModern() {
       showCancelButton: true,
       confirmButtonText: 'Subir',
       cancelButtonText: 'Cancelar',
-      confirmButtonColor: '#6366f1',
+      confirmButtonColor: '#5F8EAD',
       cancelButtonColor: '#64748b',
       width: '90%',
       maxWidth: '500px',
@@ -311,7 +311,6 @@ export default function CajaChicaModern() {
     }
   };
 
-  // ✅ FUNCIÓN SIMPLIFICADA PARA GENERAR VALE - SOLO CONSUME LA API
   const generarVale = async (transaccion) => {
     const { value: formValues } = await Swal.fire({
       title: 'Generar Vale',
@@ -321,7 +320,7 @@ export default function CajaChicaModern() {
       showCancelButton: true,
       confirmButtonText: 'Generar',
       cancelButtonText: 'Cancelar',
-      confirmButtonColor: '#6366f1',
+      confirmButtonColor: '#5F8EAD',
       cancelButtonColor: '#64748b',
       inputValidator: (value) => {
         if (!value) {
@@ -419,7 +418,7 @@ export default function CajaChicaModern() {
       showCancelButton: true,
       confirmButtonText: 'Confirmar',
       cancelButtonText: 'Cancelar',
-      confirmButtonColor: '#6366f1',
+      confirmButtonColor: '#5F8EAD',
       cancelButtonColor: '#64748b',
       inputValidator: (value) => {
         if (!value) {
@@ -513,7 +512,7 @@ export default function CajaChicaModern() {
       showCancelButton: true,
       confirmButtonText: 'Confirmar',
       cancelButtonText: 'Cancelar',
-      confirmButtonColor: '#10b981',
+      confirmButtonColor: '#5D9646',
       cancelButtonColor: '#64748b',
       inputValidator: (value) => {
         if (!value) {
@@ -583,7 +582,7 @@ export default function CajaChicaModern() {
       showCancelButton: true,
       confirmButtonText: 'Continuar',
       cancelButtonText: 'Cancelar',
-      confirmButtonColor: '#10b981',
+      confirmButtonColor: '#5D9646',
       cancelButtonColor: '#64748b',
       inputValidator: (value) => {
         if (!value) {
@@ -607,7 +606,7 @@ export default function CajaChicaModern() {
       showCancelButton: true,
       confirmButtonText: 'Sí, registrar',
       cancelButtonText: 'Cancelar',
-      confirmButtonColor: '#10b981'
+      confirmButtonColor: '#5D9646'
     });
 
     if (result.isConfirmed) {
@@ -722,7 +721,7 @@ export default function CajaChicaModern() {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center">
         <div className="text-center">
-          <Loader2 className="w-12 h-12 animate-spin text-indigo-600 mx-auto mb-4" />
+          <Loader2 className="w-12 h-12 animate-spin text-[#5F8EAD] mx-auto mb-4" />
           <p className="text-gray-600 font-medium">Cargando caja chica...</p>
         </div>
       </div>
@@ -745,22 +744,24 @@ export default function CajaChicaModern() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-4 md:p-8">
       <div className="max-w-7xl mx-auto space-y-6">
+        {/* Header - COLORES CAMBIADOS */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-slate-800">Caja Chica</h1>
+            <h1 className="text-3xl font-bold text-[#34353A]">Caja Chica</h1>
             <p className="text-slate-500 mt-1">Gestiona tus transacciones diarias</p>
           </div>
           <button
             onClick={() => setShowConfigModal(true)}
-            className="flex items-center gap-2 bg-slate-700 text-white px-4 py-2.5 rounded-xl font-medium hover:bg-slate-800 transition-colors"
+            className="flex items-center gap-2 bg-[#34353A] text-white px-4 py-2.5 rounded-xl font-medium hover:opacity-90 transition-colors"
           >
             <Settings size={18} />
             Configurar
           </button>
         </div>
 
+        {/* Stats Cards - COLORES CAMBIADOS */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          <div className="md:col-span-2 bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600 rounded-2xl p-6 text-white shadow-xl relative overflow-hidden">
+          <div className="md:col-span-2 bg-gradient-to-br from-[#34353A] to-[#5F8EAD] rounded-2xl p-6 text-white shadow-xl relative overflow-hidden">
             <div className="absolute top-0 right-0 w-64 h-64 bg-white opacity-5 rounded-full -mr-32 -mt-32"></div>
             <div className="absolute bottom-0 left-0 w-48 h-48 bg-white opacity-5 rounded-full -ml-24 -mb-24"></div>
             <div className="relative z-10">
@@ -784,12 +785,12 @@ export default function CajaChicaModern() {
           >
             <div className="flex items-center justify-between mb-3">
               <p className="text-slate-600 text-sm font-medium">Total Ingresos</p>
-              <div className="bg-emerald-100 p-2 rounded-lg">
-                <Plus className="text-emerald-600" size={18} />
+              <div className="bg-[#5D9646] bg-opacity-20 p-2 rounded-lg">
+                <Plus className="text-[#5D9646]" size={18} />
               </div>
             </div>
-            <h3 className="text-2xl font-bold text-slate-800 mb-2">{formatearMoneda(stats.totalIngresos)}</h3>
-            <p className="text-sm font-medium text-emerald-600">Click para agregar</p>
+            <h3 className="text-2xl font-bold text-[#34353A] mb-2">{formatearMoneda(stats.totalIngresos)}</h3>
+            <p className="text-sm font-medium text-[#5D9646]">Click para agregar</p>
           </div>
 
           <div
@@ -818,7 +819,7 @@ export default function CajaChicaModern() {
               />
             </div>
 
-            <h3 className="text-2xl font-bold text-slate-800 mb-2">
+            <h3 className="text-2xl font-bold text-[#34353A] mb-2">
               {formatearMoneda(stats.totalGastos)}
             </h3>
 
@@ -830,8 +831,9 @@ export default function CajaChicaModern() {
           </div>
         </div>
 
+        {/* Registrar Transacción - COLORES CAMBIADOS */}
         <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-200">
-          <h3 className="text-lg font-semibold text-slate-800 mb-4">Registrar Transacción</h3>
+          <h3 className="text-lg font-semibold text-[#34353A] mb-4">Registrar Transacción</h3>
           <div className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <input
@@ -840,30 +842,31 @@ export default function CajaChicaModern() {
                 placeholder="0.00"
                 value={formData.amount}
                 onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
-                className="px-4 py-3 border-2 border-slate-200 rounded-xl focus:border-indigo-500 focus:outline-none transition-colors"
+                className="px-4 py-3 border-2 border-slate-200 rounded-xl focus:border-[#5F8EAD] focus:outline-none transition-colors"
               />
               <input
                 type="text"
                 placeholder="Descripción"
                 value={formData.reason}
                 onChange={(e) => setFormData({ ...formData, reason: e.target.value })}
-                className="px-4 py-3 border-2 border-slate-200 rounded-xl focus:border-indigo-500 focus:outline-none transition-colors"
+                className="px-4 py-3 border-2 border-slate-200 rounded-xl focus:border-[#5F8EAD] focus:outline-none transition-colors"
               />
             </div>
             <button
               onClick={registrarEgreso}
-              className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-3 rounded-xl font-medium hover:shadow-lg hover:scale-[1.02] transition-all duration-200"
+              className="w-full bg-gradient-to-r from-[#34353A] to-[#5F8EAD] text-white py-3 rounded-xl font-medium hover:opacity-90 hover:scale-[1.02] transition-all duration-200"
             >
               📤 Registrar Egreso
             </button>
           </div>
         </div>
 
+        {/* Tabla Transacciones - COLORES CAMBIADOS */}
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
           <div className="p-6 border-b border-slate-200">
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
               <div>
-                <h3 className="text-lg font-semibold text-slate-800">
+                <h3 className="text-lg font-semibold text-[#34353A]">
                   Últimas Transacciones
                 </h3>
                 <p className="text-sm text-slate-500 mt-1">
@@ -873,7 +876,7 @@ export default function CajaChicaModern() {
 
               <button
                 onClick={() => setShowReportesModal(true)}
-                className="flex items-center gap-2 bg-emerald-600 text-white px-4 py-2.5 rounded-xl font-medium hover:bg-emerald-700 transition-all"
+                className="flex items-center gap-2 bg-[#5D9646] text-white px-4 py-2.5 rounded-xl font-medium hover:opacity-90 transition-all"
               >
                 <FileText size={18} />
                 Generar Reportes
@@ -887,7 +890,7 @@ export default function CajaChicaModern() {
                   onClick={() => setActiveTab(tab)}
                   className={`px-4 py-2 rounded-lg font-medium transition-all ${
                     activeTab === tab
-                      ? 'bg-slate-800 text-white'
+                      ? 'bg-[#34353A] text-white'
                       : 'text-slate-600 hover:bg-slate-100'
                   }`}
                 >
@@ -899,39 +902,39 @@ export default function CajaChicaModern() {
 
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-slate-50 border-b border-slate-200">
+              <thead className="bg-gradient-to-r from-[#34353A] to-[#5F8EAD] border-b-2 border-[#5D9646]">
                 <tr>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase">Fecha</th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase">Descripción</th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase">Tipo</th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase">Usuario</th>
-                  <th className="px-6 py-4 text-right text-xs font-semibold text-slate-600 uppercase">Monto</th>
-                  <th className="px-6 py-4 text-right text-xs font-semibold text-slate-600 uppercase">Balance</th>
-                  <th className="px-6 py-4 text-center text-xs font-semibold text-slate-600 uppercase">Acciones</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-white uppercase">Fecha</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-white uppercase">Descripción</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-white uppercase">Tipo</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-white uppercase">Usuario</th>
+                  <th className="px-6 py-4 text-right text-xs font-semibold text-white uppercase">Monto</th>
+                  <th className="px-6 py-4 text-right text-xs font-semibold text-white uppercase">Balance</th>
+                  <th className="px-6 py-4 text-center text-xs font-semibold text-white uppercase">Acciones</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200">
                 {filteredTransactions.map((tx) => (
                   <tr key={tx._id} className="hover:bg-slate-50 transition-colors">
                     <td className="px-6 py-4 text-slate-600 text-sm">{formatearFecha(tx.date)}</td>
-                    <td className="px-6 py-4"><span className="font-medium text-slate-800">{tx.reason}</span></td>
+                    <td className="px-6 py-4"><span className="font-medium text-[#34353A]">{tx.reason}</span></td>
                     <td className="px-6 py-4">
-                      <span className={`px-3 py-1 rounded-full text-sm font-medium ${tx.type === 'income' ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
+                      <span className={`px-3 py-1 rounded-full text-sm font-medium ${tx.type === 'income' ? 'bg-[#5D9646] bg-opacity-20 text-[#5D9646] border border-[#5D9646]' : 'bg-rose-100 text-rose-700 border border-rose-200'}`}>
                         {tx.type === 'income' ? 'Ingreso' : 'Egreso'}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-slate-600 text-sm">{tx.employeeId?.name || 'Admin'}</td>
-                    <td className={`px-6 py-4 text-right font-semibold ${tx.type === 'income' ? 'text-emerald-600' : 'text-rose-600'}`}>
+                    <td className={`px-6 py-4 text-right font-semibold ${tx.type === 'income' ? 'text-[#5D9646]' : 'text-rose-600'}`}>
                       {tx.type === 'income' ? '+' : '-'}{formatearMoneda(tx.amount)}
                     </td>
-                    <td className="px-6 py-4 text-right text-slate-600 font-mono text-sm">{formatearMoneda(tx.currentBalance)}</td>
+                    <td className="px-6 py-4 text-right text-[#34353A] font-mono text-sm font-semibold">{formatearMoneda(tx.currentBalance)}</td>
                     <td className="px-6 py-4">
                       <div className="flex items-center justify-center gap-2">
                         {tx.voucher ? (
                           <button
                             onClick={() => abrirArchivo(tx.voucher)}
                             title="Ver comprobante"
-                            className="p-2 rounded-lg bg-indigo-100 hover:bg-indigo-200 text-indigo-600 transition-all hover:scale-110"
+                            className="p-2 rounded-lg bg-[#5F8EAD] bg-opacity-20 hover:bg-[#5F8EAD] hover:bg-opacity-30 text-[#5F8EAD] transition-all hover:scale-110"
                           >
                             <Search size={18} />
                           </button>
@@ -951,10 +954,10 @@ export default function CajaChicaModern() {
                               <button
                                 onClick={() => abrirArchivo(tx.ticket)}
                                 title={`Ver vale ${tx.vale || 'generado'}`}
-                                className="p-2 rounded-lg transition-all hover:scale-110 bg-green-100 hover:bg-green-200 text-green-700 relative"
+                                className="p-2 rounded-lg transition-all hover:scale-110 bg-[#5D9646] bg-opacity-20 hover:bg-[#5D9646] hover:bg-opacity-30 text-[#5D9646] relative"
                               >
                                 <FileText size={18} />
-                                <span className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-white"></span>
+                                <span className="absolute -top-1 -right-1 w-3 h-3 bg-[#5D9646] rounded-full border-2 border-white"></span>
                               </button>
                             )}
                             
@@ -973,7 +976,7 @@ export default function CajaChicaModern() {
                         <button
                           onClick={() => descargarReporteIndividual(tx._id)}
                           title="Descargar reporte individual"
-                          className="p-2 rounded-lg bg-emerald-100 hover:bg-emerald-200 text-emerald-700 transition-all hover:scale-110"
+                          className="p-2 rounded-lg bg-[#5D9646] bg-opacity-20 hover:bg-[#5D9646] hover:bg-opacity-30 text-[#5D9646] transition-all hover:scale-110"
                         >
                           <Download size={18} />
                         </button>
@@ -986,27 +989,28 @@ export default function CajaChicaModern() {
           </div>
         </div>
 
+        {/* Modal Configuración - COLORES CAMBIADOS */}
         {showConfigModal && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl">
-              <h2 className="text-2xl font-bold text-slate-800 mb-6">⚙️ Configuración de Caja Chica</h2>
+              <h2 className="text-2xl font-bold text-[#34353A] mb-6">⚙️ Configuración de Caja Chica</h2>
               <div className="space-y-6">
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-3">
+                  <label className="block text-sm font-semibold text-[#34353A] mb-3">
                     Máximo Permitido: ${tempMaximo.toFixed(2)}
                   </label>
                   <input
                     type="range" min="100" max="10000" step="50"
                     value={tempMaximo}
                     onChange={(e) => setTempMaximo(Number(e.target.value))}
-                    className="w-full h-3 bg-indigo-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
+                    className="w-full h-3 bg-[#5F8EAD] bg-opacity-30 rounded-lg appearance-none cursor-pointer accent-[#5F8EAD]"
                   />
                   <div className="flex justify-between text-xs text-slate-500 mt-1">
                     <span>$100</span><span>$10,000</span>
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-3">
+                  <label className="block text-sm font-semibold text-[#34353A] mb-3">
                     Mínimo para Reintegro: ${tempMinimo.toFixed(2)}
                   </label>
                   <input
@@ -1029,7 +1033,7 @@ export default function CajaChicaModern() {
                 </button>
                 <button
                   onClick={guardarConfiguracion}
-                  className="flex-1 px-4 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl font-medium hover:shadow-lg transition-all"
+                  className="flex-1 px-4 py-3 bg-gradient-to-r from-[#34353A] to-[#5F8EAD] text-white rounded-xl font-medium hover:opacity-90 transition-all"
                 >
                   Guardar
                 </button>
@@ -1038,27 +1042,28 @@ export default function CajaChicaModern() {
           </div>
         )}
 
+        {/* Modal Ingreso - COLORES CAMBIADOS */}
         {showIngresoModal && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl">
-              <h2 className="text-2xl font-bold text-slate-800 mb-6">💰 Registrar Ingreso</h2>
+              <h2 className="text-2xl font-bold text-[#34353A] mb-6">💰 Registrar Ingreso</h2>
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-2">Monto</label>
+                  <label className="block text-sm font-semibold text-[#34353A] mb-2">Monto</label>
                   <input
                     type="number" step="0.01" placeholder="0.00"
                     value={montoIngreso}
                     onChange={(e) => setMontoIngreso(e.target.value)}
-                    className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:border-emerald-500 focus:outline-none transition-colors"
+                    className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:border-[#5D9646] focus:outline-none transition-colors"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-2">Descripción</label>
+                  <label className="block text-sm font-semibold text-[#34353A] mb-2">Descripción</label>
                   <input
                     type="text" placeholder="Concepto del ingreso"
                     value={descripcionIngreso}
                     onChange={(e) => setDescripcionIngreso(e.target.value)}
-                    className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:border-emerald-500 focus:outline-none transition-colors"
+                    className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:border-[#5D9646] focus:outline-none transition-colors"
                   />
                 </div>
               </div>
@@ -1075,7 +1080,7 @@ export default function CajaChicaModern() {
                 </button>
                 <button
                   onClick={registrarIngreso}
-                  className="flex-1 px-4 py-3 bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-xl font-medium hover:shadow-lg transition-all"
+                  className="flex-1 px-4 py-3 bg-gradient-to-r from-[#5D9646] to-[#5F8EAD] text-white rounded-xl font-medium hover:opacity-90 transition-all"
                 >
                   Registrar
                 </button>
