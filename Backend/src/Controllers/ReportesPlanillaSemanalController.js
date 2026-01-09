@@ -194,14 +194,14 @@ ReportesPlanillaSemanalController.generarPDFMensual = async (req, res) => {
         await page.setContent(html, { waitUntil: 'networkidle0' });
 
         const pdfBuffer = await page.pdf({
-            format: 'Letter',
-            landscape: false,
+            format: 'Legal',
+            landscape: true,
             printBackground: true,
             margin: {
-                top: '15mm',
-                right: '15mm',
-                bottom: '15mm',
-                left: '15mm'
+                top: '10mm',
+                right: '10mm',
+                bottom: '10mm',
+                left: '10mm'
             }
         });
 
@@ -283,14 +283,14 @@ ReportesPlanillaSemanalController.generarPDFMultiMes = async (req, res) => {
         await page.setContent(html, { waitUntil: 'networkidle0' });
 
         const pdfBuffer = await page.pdf({
-            format: 'Letter',
-            landscape: false,
+            format: 'Legal',
+            landscape: true,
             printBackground: true,
             margin: {
-                top: '15mm',
-                right: '15mm',
-                bottom: '15mm',
-                left: '15mm'
+                top: '10mm',
+                right: '10mm',
+                bottom: '10mm',
+                left: '10mm'
             }
         });
 
@@ -358,14 +358,14 @@ ReportesPlanillaSemanalController.generarPDFAnual = async (req, res) => {
         await page.setContent(html, { waitUntil: 'networkidle0' });
 
         const pdfBuffer = await page.pdf({
-            format: 'Letter',
-            landscape: false,
+            format: 'Legal',
+            landscape: true,
             printBackground: true,
             margin: {
-                top: '15mm',
-                right: '15mm',
-                bottom: '15mm',
-                left: '15mm'
+                top: '10mm',
+                right: '10mm',
+                bottom: '10mm',
+                left: '10mm'
             }
         });
 
@@ -631,7 +631,7 @@ function generarHTMLMensual(planillas, mes, ano, logoBase64) {
         filasEmpleados += `
             <tr>
                 <td>${numeroEmpleado}</td>
-                <td style="text-align: left;">${data.nombreCompleto}</td>
+                <td style="text-align: left; padding-left: 10px;">${data.nombreCompleto}</td>
                 ${columnasSemanales}
                 <td style="font-weight: bold; background-color: #e8f4e8;">$ ${totalEmpleado.toFixed(2)}</td>
             </tr>
@@ -683,30 +683,30 @@ function generarHTMLMensual(planillas, mes, ano, logoBase64) {
                 
                 body {
                     font-family: Arial, sans-serif;
-                    font-size: 11px;
-                    padding: 20px;
+                    font-size: 10px;
+                    padding: 10px;
                     color: #34353A;
                 }
                 
                 .header {
                     text-align: center;
-                    margin-bottom: 20px;
-                    padding-bottom: 15px;
+                    margin-bottom: 15px;
+                    padding-bottom: 10px;
                     border-bottom: 3px solid #5F8EAD;
                 }
                 
                 .header .logo-container {
-                    margin-bottom: 10px;
+                    margin-bottom: 8px;
                 }
                 
                 .header .logo-container img {
-                    max-width: 250px;
+                    max-width: 180px;
                     height: auto;
                 }
                 
                 h1 {
                     text-align: center;
-                    font-size: 14px;
+                    font-size: 12px;
                     margin-bottom: 5px;
                     font-weight: bold;
                     color: #34353A;
@@ -715,24 +715,25 @@ function generarHTMLMensual(planillas, mes, ano, logoBase64) {
                 table {
                     width: 100%;
                     border-collapse: collapse;
-                    margin-bottom: 20px;
+                    margin-bottom: 15px;
                 }
                 
                 th, td {
                     border: 1px solid #5F8EAD;
-                    padding: 6px 4px;
+                    padding: 5px 3px;
                     text-align: center;
+                    font-size: 9px;
                 }
                 
                 th {
                     background-color: #34353A;
                     color: white;
                     font-weight: bold;
-                    font-size: 10px;
+                    font-size: 8px;
                 }
                 
                 .footer {
-                    margin-top: 40px;
+                    margin-top: 20px;
                     font-size: 8px;
                     text-align: center;
                     color: #5F8EAD;
@@ -827,7 +828,7 @@ function generarHTMLMultiMes(planillasPorMes, ano, logoBase64) {
         filasEmpleados += `
             <tr>
                 <td>${numeroEmpleado}</td>
-                <td style="text-align: left;">${data.nombreCompleto}</td>
+                <td style="text-align: left; padding-left: 10px;">${data.nombreCompleto}</td>
                 ${columnasMeses}
                 <td style="font-weight: bold; background-color: #e8f4e8;">$ ${totalEmpleado.toFixed(2)}</td>
             </tr>
@@ -872,30 +873,30 @@ function generarHTMLMultiMes(planillasPorMes, ano, logoBase64) {
                 
                 body {
                     font-family: Arial, sans-serif;
-                    font-size: 11px;
-                    padding: 20px;
+                    font-size: 10px;
+                    padding: 10px;
                     color: #34353A;
                 }
                 
                 .header {
                     text-align: center;
-                    margin-bottom: 20px;
-                    padding-bottom: 15px;
+                    margin-bottom: 15px;
+                    padding-bottom: 10px;
                     border-bottom: 3px solid #5F8EAD;
                 }
                 
                 .header .logo-container {
-                    margin-bottom: 10px;
+                    margin-bottom: 8px;
                 }
                 
                 .header .logo-container img {
-                    max-width: 250px;
+                    max-width: 180px;
                     height: auto;
                 }
                 
                 h1 {
                     text-align: center;
-                    font-size: 14px;
+                    font-size: 12px;
                     margin-bottom: 5px;
                     font-weight: bold;
                     color: #34353A;
@@ -904,13 +905,14 @@ function generarHTMLMultiMes(planillasPorMes, ano, logoBase64) {
                 table {
                     width: 100%;
                     border-collapse: collapse;
-                    margin-bottom: 20px;
+                    margin-bottom: 15px;
                 }
                 
                 th, td {
                     border: 1px solid #5F8EAD;
-                    padding: 6px 4px;
+                    padding: 5px 3px;
                     text-align: center;
+                    font-size: 9px;
                 }
                 
                 th {
@@ -920,7 +922,7 @@ function generarHTMLMultiMes(planillasPorMes, ano, logoBase64) {
                 }
                 
                 .footer {
-                    margin-top: 40px;
+                    margin-top: 20px;
                     font-size: 8px;
                     text-align: center;
                     color: #5F8EAD;
@@ -1013,7 +1015,7 @@ function generarHTMLAnual(planillasPorMes, ano, logoBase64) {
         filasEmpleados += `
             <tr>
                 <td>${numeroEmpleado}</td>
-                <td style="text-align: left;">${data.nombreCompleto}</td>
+                <td style="text-align: left; padding-left: 8px;">${data.nombreCompleto}</td>
                 ${columnasMeses}
                 <td style="font-weight: bold; background-color: #e8f4e8;">$ ${totalEmpleado.toFixed(2)}</td>
             </tr>
@@ -1058,30 +1060,30 @@ function generarHTMLAnual(planillasPorMes, ano, logoBase64) {
                 
                 body {
                     font-family: Arial, sans-serif;
-                    font-size: 9px;
-                    padding: 15px;
+                    font-size: 8px;
+                    padding: 10px;
                     color: #34353A;
                 }
                 
                 .header {
                     text-align: center;
-                    margin-bottom: 15px;
-                    padding-bottom: 10px;
+                    margin-bottom: 12px;
+                    padding-bottom: 8px;
                     border-bottom: 3px solid #5F8EAD;
                 }
                 
                 .header .logo-container {
-                    margin-bottom: 10px;
+                    margin-bottom: 6px;
                 }
                 
                 .header .logo-container img {
-                    max-width: 220px;
+                    max-width: 160px;
                     height: auto;
                 }
                 
                 h1 {
                     text-align: center;
-                    font-size: 12px;
+                    font-size: 11px;
                     margin-bottom: 5px;
                     font-weight: bold;
                     color: #34353A;
@@ -1090,14 +1092,14 @@ function generarHTMLAnual(planillasPorMes, ano, logoBase64) {
                 table {
                     width: 100%;
                     border-collapse: collapse;
-                    margin-bottom: 20px;
+                    margin-bottom: 15px;
                 }
                 
                 th, td {
                     border: 1px solid #5F8EAD;
-                    padding: 4px 2px;
+                    padding: 3px 2px;
                     text-align: center;
-                    font-size: 8px;
+                    font-size: 7px;
                 }
                 
                 th {
@@ -1107,12 +1109,12 @@ function generarHTMLAnual(planillasPorMes, ano, logoBase64) {
                 }
                 
                 .footer {
-                    margin-top: 40px;
-                    font-size: 8px;
+                    margin-top: 15px;
+                    font-size: 7px;
                     text-align: center;
                     color: #5F8EAD;
                     border-top: 2px solid #5D9646;
-                    padding-top: 10px;
+                    padding-top: 8px;
                 }
             </style>
         </head>
