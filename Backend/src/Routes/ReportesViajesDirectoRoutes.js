@@ -27,6 +27,16 @@ router.get("/individual/:clienteNombre/:mes/:ano", ReportesViajesDirecto.generar
 // ✅ PDF 3: Con crédito fiscal (Imagen 2)
 router.get("/credito-fiscal/:mes/:ano", ReportesViajesDirecto.generarPDFCreditoFiscal);
 
+// 🆕 PDF: CUADRO COMPARATIVO EFECTIVO POR AÑO
+// Uso:
+//   GET /api/reportes-directos/comparativo-efectivo/:ano
+//   o  GET /api/reportes-directos/comparativo-efectivo
+//   - :ano  -> año en formato YYYY (opcional, por defecto año actual)
+// Respuesta:
+//   - 200: application/pdf (attachment) — tabla por cliente y por mes con viajes y monto (solo EFECTIVO)
+router.get("/comparativo-efectivo", ReportesViajesDirecto.generarPDFComparativoEfectivo);
+router.get("/comparativo-efectivo/:ano", ReportesViajesDirecto.generarPDFComparativoEfectivo);
+
 // ✅ PDF 4: Consolidado anual (Imagen 4 - landscape) - MANTENER para compatibilidad
 router.get("/consolidado/:ano", ReportesViajesDirecto.generarPDFConsolidadoAnual);
 

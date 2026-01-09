@@ -15,25 +15,25 @@ const __dirname = dirname(__filename);
 
 // Función para convertir imagen a base64
 const convertirImagenABase64 = (rutaImagen) => {
-    try {
-        console.log('Intentando leer imagen desde:', rutaImagen);
-        
-        if (!fs.existsSync(rutaImagen)) {
-            console.error('La imagen no existe en la ruta:', rutaImagen);
-            return null;
-        }
-        
-        const imagen = fs.readFileSync(rutaImagen);
-        const base64 = imagen.toString('base64');
-        const ext = path.extname(rutaImagen).toLowerCase();
-        const mimeType = ext === '.png' ? 'image/png' : 'image/jpeg';
-        
-        console.log('Imagen convertida exitosamente a base64');
-        return `data:${mimeType};base64,${base64}`;
-    } catch (error) {
-        console.error('Error al convertir imagen:', error);
-        return null;
+  try {
+    console.log('Intentando leer imagen desde:', rutaImagen);
+
+    if (!fs.existsSync(rutaImagen)) {
+      console.error('La imagen no existe en la ruta:', rutaImagen);
+      return null;
     }
+
+    const imagen = fs.readFileSync(rutaImagen);
+    const base64 = imagen.toString('base64');
+    const ext = path.extname(rutaImagen).toLowerCase();
+    const mimeType = ext === '.png' ? 'image/png' : 'image/jpeg';
+
+    console.log('Imagen convertida exitosamente a base64');
+    return `data:${mimeType};base64,${base64}`;
+  } catch (error) {
+    console.error('Error al convertir imagen:', error);
+    return null;
+  }
 };
 
 // Ruta al logo
@@ -94,7 +94,7 @@ const obtenerFechaFinSemana = (ano, mes, semana) => {
   const fechaInicio = obtenerFechaInicioSemana(ano, mes, semana);
   const fechaFin = new Date(fechaInicio);
   fechaFin.setDate(fechaInicio.getDate() + 6);
-  
+
   const ultimoDiaMes = obtenerDiasDelMes(ano, mes);
   if (fechaFin.getDate() > ultimoDiaMes || fechaFin.getMonth() !== mes - 1) {
     return new Date(ano, mes - 1, ultimoDiaMes);
@@ -118,11 +118,11 @@ const generarColumnasMeses = (cantidad, mesInicio) => {
 const generarColumnasDias = (cantidad, fechaInicio) => {
   const columnas = [];
   const fecha = new Date(fechaInicio);
-  
+
   for (let i = 0; i < cantidad; i++) {
     const diaActual = new Date(fecha);
     diaActual.setDate(fecha.getDate() + i);
-    
+
     columnas.push({
       key: diaActual.getDate(),
       label: `${diaActual.getDate()}`,
@@ -137,13 +137,13 @@ const procesarDatosClientes = (datos, columnas) => {
   return datos.map(cliente => {
     const columnasArray = columnas.map(col => {
       let periodoData;
-      
+
       if (col.tipo === 'mes') {
         periodoData = cliente.periodos?.find(p => p.mes === col.key);
       } else if (col.tipo === 'dia') {
         periodoData = cliente.periodos?.find(p => p.dia === col.key);
       }
-      
+
       return {
         periodo: col.key,
         viajes: periodoData?.viajes || 0,
@@ -168,7 +168,7 @@ const generarHTMLConsolidado = (titulo, columnas, clientesData, landscape = true
   const fontSize = columnas.length > 20 ? '7px' : columnas.length > 15 ? '8px' : '10px';
   const cellPadding = columnas.length > 20 ? '3px' : columnas.length > 15 ? '4px' : '6px';
   const headerFontSize = columnas.length > 20 ? '7px' : columnas.length > 15 ? '8px' : '9px';
-  
+
   return `
 <!DOCTYPE html>
 <html lang="es">
@@ -309,9 +309,9 @@ const generarHTMLConsolidado = (titulo, columnas, clientesData, landscape = true
         <tr class="total-row">
           <td class="cliente-cell">TOTAL</td>
           ${columnas.map((_, colIndex) => {
-            const totalCol = clientesData.reduce((sum, c) => sum + c.columnas[colIndex].monto, 0);
-            return `<td class="text-right">$${totalCol > 0 ? totalCol.toFixed(0) : '-'}</td>`;
-          }).join('')}
+    const totalCol = clientesData.reduce((sum, c) => sum + c.columnas[colIndex].monto, 0);
+    return `<td class="text-right">$${totalCol > 0 ? totalCol.toFixed(0) : '-'}</td>`;
+  }).join('')}
           <td class="text-right total-cell">$${clientesData.reduce((sum, c) => sum + c.totalPeriodo, 0).toFixed(2)}</td>
         </tr>
       </tbody>
@@ -359,21 +359,21 @@ ReportesViajesDirecto.generarPDFConsolidadoPeriodo = async (req, res) => {
         }
         const mesNumSemanal = parseInt(mes);
         const semanaNum = parseInt(semana);
-        
+
         if (mesNumSemanal < 1 || mesNumSemanal > 12) {
           return res.status(400).json({
             success: false,
             message: "El mes debe estar entre 1 y 12",
           });
         }
-        
+
         if (semanaNum < 1 || semanaNum > 5) {
           return res.status(400).json({
             success: false,
             message: "La semana debe estar entre 1 y 5",
           });
         }
-        
+
         datos = await ViajesModel.obtenerConsolidadoSemanal(anoNum, mesNumSemanal, semanaNum);
         const fechaInicio = obtenerFechaInicioSemana(anoNum, mesNumSemanal, semanaNum);
         const fechaFin = obtenerFechaFinSemana(anoNum, mesNumSemanal, semanaNum);
@@ -390,14 +390,14 @@ ReportesViajesDirecto.generarPDFConsolidadoPeriodo = async (req, res) => {
           });
         }
         const mesNumMensual = parseInt(mes);
-        
+
         if (mesNumMensual < 1 || mesNumMensual > 12) {
           return res.status(400).json({
             success: false,
             message: "El mes debe estar entre 1 y 12",
           });
         }
-        
+
         datos = await ViajesModel.obtenerConsolidadoMensual(anoNum, mesNumMensual);
         titulo = `${obtenerNombreMes(mesNumMensual)} ${anoNum}`;
         const diasDelMes = obtenerDiasDelMes(anoNum, mesNumMensual);
@@ -413,14 +413,14 @@ ReportesViajesDirecto.generarPDFConsolidadoPeriodo = async (req, res) => {
           });
         }
         const trimestreNum = parseInt(trimestre);
-        
+
         if (trimestreNum < 1 || trimestreNum > 4) {
           return res.status(400).json({
             success: false,
             message: "El trimestre debe estar entre 1 y 4",
           });
         }
-        
+
         datos = await ViajesModel.obtenerConsolidadoTrimestral(anoNum, trimestreNum);
         const mesesTrimestre = obtenerMesesTrimestre(trimestreNum);
         titulo = `TRIMESTRE ${trimestreNum} (${mesesTrimestre.join('-')}) ${anoNum}`;
@@ -430,14 +430,14 @@ ReportesViajesDirecto.generarPDFConsolidadoPeriodo = async (req, res) => {
 
       case 'semestral':
         const semestreNum = parseInt(semestre || 1);
-        
+
         if (semestreNum < 1 || semestreNum > 2) {
           return res.status(400).json({
             success: false,
             message: "El semestre debe ser 1 o 2",
           });
         }
-        
+
         datos = await ViajesModel.obtenerConsolidadoSemestral(anoNum, semestreNum);
         titulo = `${semestreNum === 1 ? 'PRIMER' : 'SEGUNDO'} SEMESTRE ${anoNum}`;
         columnas = generarColumnasMeses(6, semestreNum === 1 ? 1 : 7);
@@ -624,9 +624,9 @@ ReportesViajesDirecto.generarPDFResumenMensualV2 = async (req, res) => {
 
     // Rango total a consultar: desde inicio del primer martes (00:00) hasta fin del último domingo (23:59:59.999)
     const overallStart = new Date(weeks[0].start);
-    overallStart.setHours(0,0,0,0);
+    overallStart.setHours(0, 0, 0, 0);
     const overallEnd = new Date(weeks[weeks.length - 1].end);
-    overallEnd.setHours(23,59,59,999);
+    overallEnd.setHours(23, 59, 59, 999);
 
     // Obtener viajes en el rango completo
     const viajes = await ViajesModel.find({
@@ -698,7 +698,7 @@ ReportesViajesDirecto.generarPDFResumenMensualV2 = async (req, res) => {
       if (s.getMonth() === e.getMonth() && s.getFullYear() === e.getFullYear()) {
         return `DEL ${s.getDate()} AL ${e.getDate()} DE ${obtenerNombreMes(s.getMonth() + 1)} ${s.getFullYear()}`;
       }
-      return `DEL ${s.getDate()}/${s.getMonth()+1} AL ${e.getDate()}/${e.getMonth()+1}`;
+      return `DEL ${s.getDate()}/${s.getMonth() + 1} AL ${e.getDate()}/${e.getMonth() + 1}`;
     };
 
     const weekHeadersTop = weeks.map(w => `<th colspan=\"2\">${formatWeekLabel(w.start, w.end)}</th>`).join('');
@@ -715,20 +715,22 @@ ReportesViajesDirecto.generarPDFResumenMensualV2 = async (req, res) => {
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; padding: 0; background: #FFFFFF; color: #34353A; }
-    .main-header { background: linear-gradient(135deg, #34353A 0%, #5F8EAD 100%); padding: 20px; text-align: center; border-bottom: 5px solid #5D9646; margin-bottom: 12px; }
-    .logo-container img { width: 140px; height: auto; background: white; padding: 6px; border-radius: 6px; }
-    .main-header h1 { color: #FFFFFF; font-size: 18px; font-weight: 600; text-transform: uppercase; }
-    .main-header .periodo { color: #5D9646; font-size: 12px; font-weight: 700; margin-top: 6px; }
+    /* Spreadsheet-like styling */
+    .main-header { background: #ffffff; padding: 20px; text-align: center; border-bottom: 2px solid #000; margin-bottom: 12px; }
+    .logo-container img { width: 140px; height: auto; background: white; padding: 4px; border-radius: 3px; border: 1px solid #000; }
+    .main-header h1 { color: #000; font-size: 18px; font-weight: 700; text-transform: uppercase; }
+    .main-header .periodo { color: #333; font-size: 12px; font-weight: 600; margin-top: 6px; }
     .content { padding: 0 12px 18px 12px; }
-    table { width: 100%; border-collapse: collapse; font-size: 10px; }
-    th, td { border: 1px solid #e5e7eb; padding: 6px; text-align: center; }
-    th.top { background: #34353A; color: #FFFFFF; font-weight: 700; font-size: 11px; }
-    th.sub { background: #5D9646; color: #FFFFFF; font-weight: 700; font-size: 10px; }
-    .cell-cliente { text-align: left; padding-left: 10px; font-weight: 700; min-width: 140px; }
+    table { width: 100%; border-collapse: collapse; font-size: 10px; border: 1px solid #000; }
+    th, td { border: 1px solid #000; padding: 6px; text-align: center; }
+    th.top { background: #f3f3f3; color: #000; font-weight: 700; font-size: 11px; }
+    th.sub { background: #fff; color: #000; font-weight: 700; font-size: 10px; }
+    tbody tr:nth-child(even) { background: #fafafa; }
+    .cell-cliente { text-align: left; padding-left: 10px; font-weight: 700; min-width: 140px; color: #111; }
     .cell-numero { text-align: center; font-weight: 700; width: 4%; }
-    .cell-total { text-align: right; font-weight: 700; padding-right: 10px; background: #f9fafb; color: #5D9646; }
-    .total-row { background: #34353A; color: #FFFFFF; font-weight: 700; }
-    .footer { margin-top: 10px; padding: 10px; border-top: 3px solid #34353A; text-align: center; font-size: 11px; color: #6b7280; }
+    .cell-total { text-align: right; font-weight: 700; padding-right: 10px; background: #f3f3f3; color: #000; }
+    .total-row { background: #e6e6e6; color: #000; font-weight: 700; }
+    .footer { margin-top: 10px; padding: 10px; border-top: 2px solid #000; text-align: center; font-size: 11px; color: #6b7280; }
   </style>
 </head>
 <body>
@@ -758,10 +760,10 @@ ReportesViajesDirecto.generarPDFResumenMensualV2 = async (req, res) => {
         <tr class="total-row">
           <td colspan="2">TOTAL</td>
           ${weeks.map((_, i) => {
-            const totalV = [...clientesMap.values()].reduce((s, c) => s + (c.semanas[i]?.viajes || 0), 0);
-            const totalM = [...clientesMap.values()].reduce((s, c) => s + (c.semanas[i]?.monto || 0), 0);
-            return `<td style=\"text-align:center\">${totalV}</td><td style=\"text-align:right\">$${totalM.toFixed(2)}</td>`;
-          }).join('')}
+      const totalV = [...clientesMap.values()].reduce((s, c) => s + (c.semanas[i]?.viajes || 0), 0);
+      const totalM = [...clientesMap.values()].reduce((s, c) => s + (c.semanas[i]?.monto || 0), 0);
+      return `<td style=\"text-align:center\">${totalV}</td><td style=\"text-align:right\">$${totalM.toFixed(2)}</td>`;
+    }).join('')}
           <td style=\"text-align:right\">$ ${totalMontoGeneral.toFixed(2)}</td>
         </tr>
       </tbody>
@@ -832,11 +834,11 @@ ReportesViajesDirecto.generarPDFResumenMensual = async (req, res) => {
     const clientesMap = new Map();
 
     viajes.forEach((viaje) => {
-      const clienteNombre = viaje.clienteNombre || 
-                           viaje.clienteOperativo?.nombreComercial || 
-                           viaje.clienteOperativo?.nombreEmpresa || 
-                           'CLIENTE SIN NOMBRE';
-      
+      const clienteNombre = viaje.clienteNombre ||
+        viaje.clienteOperativo?.nombreComercial ||
+        viaje.clienteOperativo?.nombreEmpresa ||
+        'CLIENTE SIN NOMBRE';
+
       const rutaCompleta = viaje.rutaDirecta?.rutaCompleta || 'RUTA NO ESPECIFICADA';
 
       if (!clientesMap.has(clienteNombre)) {
@@ -1286,6 +1288,223 @@ ReportesViajesDirecto.generarPDFResumenPorMetodoPago = async (req, res) => {
 };
 
 // =====================================================
+// 📄 PDF X2: COMPARATIVO ANUAL POR CLIENTE — SOLO EFECTIVO
+// =====================================================
+ReportesViajesDirecto.generarPDFComparativoEfectivo = async (req, res) => {
+  let browser;
+  try {
+    const { ano } = req.params;
+    const anoNum = ano ? parseInt(ano) : new Date().getFullYear();
+    if (isNaN(anoNum) || anoNum < 2000) {
+      return res.status(400).json({ success: false, message: 'Año inválido' });
+    }
+
+    console.log(`📊 Generando PDF Comparativo Efectivo - Año: ${anoNum}`);
+
+    // Rango de fechas: desde 1ero de enero hasta 31 de diciembre (o hasta hoy si el año es el actual)
+    const start = new Date(anoNum, 0, 1, 0, 0, 0, 0);
+    let end = new Date(anoNum, 11, 31, 23, 59, 59, 999);
+    const now = new Date();
+    if (anoNum === now.getFullYear()) {
+      end = now;
+    }
+
+    // Buscar viajes completados del año (por departureTime o periodoContable)
+    const viajes = await ViajesModel.find({
+      tipoViaje: 'operativo',
+      'estado.actual': 'completado',
+      $or: [
+        { departureTime: { $gte: start, $lte: end } },
+        { 'periodoContable.año': anoNum }
+      ]
+    }).lean();
+
+    if (!viajes || viajes.length === 0) {
+      return res.status(404).json({ success: false, message: 'No se encontraron viajes para el año especificado' });
+    }
+
+    // Normalizador método de pago
+    const normalizarMetodo = (m) => {
+      if (!m) return 'efectivo';
+      const mm = m.toString().toLowerCase();
+      if (mm.includes('efect')) return 'efectivo';
+      if (mm.includes('cheq')) return 'cheque';
+      if (mm.includes('transf')) return 'transferencia';
+      return 'otro';
+    };
+
+    // Preparar estructura por cliente y por mes
+    const clientesMap = new Map();
+
+    // Totales por mes (1..12)
+    const totalesMes = Array.from({ length: 12 }, () => ({ viajes: 0, monto: 0 }));
+
+    const mesesNombres = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+
+    viajes.forEach(v => {
+      const metodo = normalizarMetodo(v.facturacion && v.facturacion.metodoPago);
+      if (metodo !== 'efectivo') return; // solo efectivo
+
+      // Determinar mes del viaje: prefer departureTime, si no, periodoContable.mes
+      let mes = null;
+      if (v.departureTime) {
+        const d = new Date(v.departureTime);
+        if (!isNaN(d)) mes = d.getMonth() + 1;
+      }
+      if (!mes && v.periodoContable && v.periodoContable.mes) mes = v.periodoContable.mes;
+      if (!mes) return; // sin mes
+      if (mes < 1 || mes > 12) return;
+
+      const cliente = v.clienteNombre || (v.clienteOperativo && v.clienteOperativo.nombreComercial) || 'SIN CLIENTE';
+      const monto = v.montoAcordado || v.facturacion?.montoTotal || 0;
+
+      if (!clientesMap.has(cliente)) {
+        clientesMap.set(cliente, {
+          meses: Array.from({ length: 12 }, () => ({ viajes: 0, monto: 0 })),
+          totalViajes: 0,
+          totalMonto: 0
+        });
+      }
+
+      const data = clientesMap.get(cliente);
+      data.meses[mes - 1].viajes += 1;
+      data.meses[mes - 1].monto += monto;
+      data.totalViajes += 1;
+      data.totalMonto += monto;
+
+      totalesMes[mes - 1].viajes += 1;
+      totalesMes[mes - 1].monto += monto;
+    });
+
+    // Si no hay clientes con efectivo
+    if ([...clientesMap.values()].every(c => c.totalViajes === 0)) {
+      return res.status(404).json({ success: false, message: 'No se encontraron viajes en efectivo para el año especificado' });
+    }
+
+    // Ordenar clientes por monto total descendente
+    const clientes = [...clientesMap.entries()].sort((a, b) => b[1].totalMonto - a[1].totalMonto);
+
+    // Mostrar solo meses que tengan registros (efectivo)
+    const displayedMonthIndices = totalesMes
+      .map((t, i) => (t.viajes > 0 ? i : -1))
+      .filter(i => i >= 0);
+
+    if (displayedMonthIndices.length === 0) {
+      return res.status(404).json({ success: false, message: 'No hay meses con registros de efectivo para el año especificado' });
+    }
+
+    // Generar filas HTML
+    let filasHTML = '';
+    let idx = 1;
+    const formatoMonto = (m) => `$ ${m.toFixed(2)}`;
+
+    clientes.forEach(([clienteNombre, data]) => {
+      filasHTML += `<tr>`;
+      filasHTML += `<td style="text-align:center">${idx}</td>`;
+      filasHTML += `<td style="text-align:left; padding-left:12px; font-weight:600">${clienteNombre}</td>`;
+      // Mostrar solo meses que tengan datos (displayedMonthIndices)
+      for (const mi of displayedMonthIndices) {
+        const v = data.meses[mi]?.viajes || 0;
+        const mo = data.meses[mi]?.monto || 0;
+        filasHTML += `<td style="text-align:center">${v}</td>`;
+        filasHTML += `<td style="text-align:right">${mo > 0 ? formatoMonto(mo) : '$ 0.00'}</td>`;
+      }
+      filasHTML += `<td style="text-align:center; font-weight:700">${data.totalViajes}</td>`;
+      filasHTML += `<td style="text-align:right; font-weight:700">${formatoMonto(data.totalMonto)}</td>`;
+      filasHTML += `</tr>`;
+      idx += 1;
+    });
+
+    // Construir header dinámico para meses (mostrar solo meses con datos)
+    let headerMonthsTop = `<th rowspan="2">#</th><th rowspan="2">CLIENTE</th>`;
+    for (const mi of displayedMonthIndices) {
+      const monthName = mesesNombres[mi].toUpperCase();
+      headerMonthsTop += `<th colspan="2">${monthName}</th>`;
+    }
+    headerMonthsTop += `<th rowspan="2">TOTAL VIAJES</th><th rowspan="2">TOTAL MONTO</th>`;
+
+    let headerMonthsSub = '';
+    for (const _ of displayedMonthIndices) {
+      headerMonthsSub += `<th>VIAJES</th><th>MONTO</th>`;
+    }
+
+    // Totales generales (solo meses mostrados)
+    let totalesRow = `<tr style="background:#e8f4e8; font-weight:700">`;
+    totalesRow += `<td colspan="2" style="text-align:left; padding-left:12px">TOTAL</td>`;
+    for (const mi of displayedMonthIndices) {
+      totalesRow += `<td style="text-align:center">${totalesMes[mi].viajes}</td>`;
+      totalesRow += `<td style="text-align:right">${totalesMes[mi].monto > 0 ? formatoMonto(totalesMes[mi].monto) : '$ 0.00'}</td>`;
+    }
+    const totalViajesGeneral = totalesMes.reduce((s, t) => s + t.viajes, 0);
+    const totalMontoGeneral = totalesMes.reduce((s, t) => s + t.monto, 0);
+    totalesRow += `<td style="text-align:center">${totalViajesGeneral}</td>`;
+    totalesRow += `<td style="text-align:right">${formatoMonto(totalMontoGeneral)}</td>`;
+    totalesRow += `</tr>`;
+
+    const logoBase64 = convertirImagenABase64(RUTA_LOGO);
+
+    const htmlContent = `
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; padding: 20px; background: #FFFFFF; color: #34353A; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+    table { width: 100%; border-collapse: collapse; font-size:10px; }
+    th { background: #34353A; color: #fff; padding: 8px; border: 1px solid #000; }
+    td { padding: 6px; border: 1px solid #000; }
+    thead th { background: #d9d9d9; color: #000; }
+    .header { text-align:center; margin-bottom:12px; }
+    .logo { margin-bottom:8px; }
+    .small { font-size:9px; color:#666; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="logo">${logoBase64 ? `<img src="${logoBase64}" style="max-width:140px"/>` : ''}</div>
+    <h2>CUADRO COMPARATIVO - VIAJES EN EFECTIVO (${anoNum})</h2>
+    <div class="small">Periodo: ${formatearFecha(start)} — ${formatearFecha(end)}</div>
+  </div>
+
+  <table>
+    <thead>
+      <tr>${headerMonthsTop}</tr>
+      <tr>${headerMonthsSub}</tr>
+    </thead>
+    <tbody>
+      ${filasHTML}
+      ${totalesRow}
+    </tbody>
+  </table>
+
+  <div style="margin-top:12px; text-align:center; font-size:9px; color:#888">Generado: ${formatearFecha(new Date())} - Rivera Distribuidora y Transportes</div>
+</body>
+</html>
+`;
+
+    browser = await puppeteer.launch({ headless: 'new', args: ['--no-sandbox', '--disable-setuid-sandbox'] });
+    const page = await browser.newPage();
+    await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
+
+    const pdfBuffer = await page.pdf({ format: 'A4', landscape: true, printBackground: true, margin: { top: '15px', right: '15px', bottom: '15px', left: '15px' } });
+
+    await browser.close();
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename=comparativo-efectivo-${anoNum}.pdf`);
+    res.send(pdfBuffer);
+
+    console.log('✅ PDF Comparativo Efectivo generado exitosamente');
+
+  } catch (error) {
+    if (browser) await browser.close();
+    console.error('❌ Error al generar PDF Comparativo Efectivo:', error);
+    res.status(500).json({ success: false, message: 'Error al generar el PDF comparativo', error: error.message });
+  }
+};
+
+// =====================================================
 // 📄 PDF 2: INDIVIDUAL POR CLIENTE (Detallado)
 // =====================================================
 ReportesViajesDirecto.generarPDFClienteIndividual = async (req, res) => {
@@ -1668,10 +1887,10 @@ ReportesViajesDirecto.generarPDFCreditoFiscal = async (req, res) => {
     const clientesMap = new Map();
 
     viajes.forEach((viaje) => {
-      const clienteNombre = viaje.clienteNombre || 
-                           viaje.clienteOperativo?.nombreComercial || 
-                           'CLIENTE';
-      
+      const clienteNombre = viaje.clienteNombre ||
+        viaje.clienteOperativo?.nombreComercial ||
+        'CLIENTE';
+
       if (!clientesMap.has(clienteNombre)) {
         clientesMap.set(clienteNombre, {
           cliente: clienteNombre,
@@ -1691,7 +1910,7 @@ ReportesViajesDirecto.generarPDFCreditoFiscal = async (req, res) => {
     });
 
     const clientesArray = Array.from(clientesMap.values());
-    
+
     const contribuyentes = clientesArray.filter(c => c.tipoConsumidor === 'contribuyente');
     const consumidoresFinales = clientesArray.filter(c => c.tipoConsumidor === 'consumidor_final');
 
@@ -2124,9 +2343,9 @@ ReportesViajesDirecto.generarPDFConsolidadoAnual = async (req, res) => {
         <tr class="total-row">
           <td>TOTAL</td>
           ${Array(12).fill(0).map((_, mesIndex) => {
-            const totalMes = clientesData.reduce((sum, c) => sum + c.meses[mesIndex].monto, 0);
-            return `<td class="text-right">$${totalMes.toFixed(0)}</td>`;
-          }).join('')}
+      const totalMes = clientesData.reduce((sum, c) => sum + c.meses[mesIndex].monto, 0);
+      return `<td class="text-right">$${totalMes.toFixed(0)}</td>`;
+    }).join('')}
           <td class="text-right">$${clientesData.reduce((sum, c) => sum + c.totalAnual, 0).toFixed(2)}</td>
         </tr>
       </tbody>
