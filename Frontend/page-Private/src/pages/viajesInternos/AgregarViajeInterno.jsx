@@ -231,6 +231,12 @@ export default function AgregarViajeOperativo() {
       setLoadingCamiones(false);
     }
   };
+const getMotoristaTruckId = (m) =>
+  m?.truckId ||
+  m?.camionId ||
+  m?.truck ||
+  m?.camion?._id ||
+  "";
 
   const camionesOptions = useMemo(() => {
     return (camiones || [])
@@ -310,8 +316,9 @@ export default function AgregarViajeOperativo() {
         tripDescription:
           formData.tripDescription ||
           `${formData.rutaCompleta} - ${formData.clienteNombre}`,
-        departureTime: formData.departureTime,
-        arrivalTime: formData.arrivalTime,
+       departureTime: new Date(formData.departureTime).toISOString(),
+arrivalTime: new Date(formData.arrivalTime).toISOString(),
+
         rutaOrigen: formData.rutaOrigen,
         rutaDestino: formData.rutaDestino,
         rutaCompleta: formData.rutaCompleta,
@@ -326,6 +333,7 @@ export default function AgregarViajeOperativo() {
         observaciones: formData.observaciones || "",
       };
 
+      
       const res = await fetch(VIAJES_OPERATIVOS_ENDPOINT, {
         method: "POST",
         headers: { "Content-Type": "application/json" },

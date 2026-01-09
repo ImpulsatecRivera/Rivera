@@ -32,6 +32,13 @@ const AgregarDiesel = () => {
     return `${yyyy}-${mm}-${dd}`;
   };
 
+  const normalizeDate = (dateStr) => {
+  if (!dateStr) return null;
+  // Fuerza hora segura para evitar desfase UTC
+  return new Date(dateStr + "T12:00:00.000Z").toISOString();
+};
+
+
   useEffect(() => {
     fetchCamiones();
   }, []);
@@ -98,12 +105,13 @@ const AgregarDiesel = () => {
       setError(null);
 
       const payload = {
-        fecha: formData.fecha,
-        Galones: toNumber(formData.Galones),
-        Total: totalCalculado,
-        CicurlationCard: formData.CicurlationCard,
-        estado: ESTADOS.PENDIENTE,
-      };
+  fecha: normalizeDate(formData.fecha),
+  Galones: toNumber(formData.Galones),
+  Total: totalCalculado,
+  CicurlationCard: formData.CicurlationCard,
+  estado: ESTADOS.PENDIENTE,
+};
+
 
       const response = await fetch(`${config.api.API_URL}/resumen`, {
         method: "POST",

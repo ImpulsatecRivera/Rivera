@@ -350,9 +350,9 @@ export default function CajaChicaModern() {
             'Authorization': `Bearer ${token}`
           },
           body: JSON.stringify({
-            nombreBeneficiario: formValues,
-            cantidadLetras: 'PENDIENTE'
-          })
+  nombreBeneficiario: formValues
+})
+
         }
       );
 
