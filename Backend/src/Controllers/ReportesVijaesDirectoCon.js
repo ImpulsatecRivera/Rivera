@@ -578,8 +578,220 @@ ReportesViajesDirecto.obtenerClientesMes = async (req, res) => {
 };
 
 // =====================================================
-// 📄 PDF 1: RESUMEN MENSUAL
+// 📄 PDF 1: RESUMEN MENSUAL (nuevo: semanas Tue-Sun)
 // =====================================================
+ReportesViajesDirecto.generarPDFResumenMensualV2 = async (req, res) => {
+  let browser;
+  try {
+    const { mes, ano } = req.params;
+    const mesNum = parseInt(mes);
+    const anoNum = parseInt(ano);
+
+    // Validación de parámetros
+    if (!mes || !ano || isNaN(mesNum) || isNaN(anoNum)) {
+      return res.status(400).json({ success: false, message: 'Parámetros inválidos. Usa /resumen-mes/:mes/:ano (ej: /resumen-mes/10/2025)' });
+    }
+
+    console.log(`📊 Generando PDF Resumen Mensual V2 (semanas Tue-Sun): ${obtenerNombreMes(mesNum)} ${anoNum}`);
+
+    // Encontrar primer martes del mes
+    const firstOfMonth = new Date(anoNum, mesNum - 1, 1);
+    let firstTuesday = new Date(firstOfMonth);
+    let attempts = 0;
+    while (firstTuesday.getDay() !== 2 && attempts < 10) {
+      firstTuesday.setDate(firstTuesday.getDate() + 1);
+      attempts++;
+    }
+    if (firstTuesday.getDay() !== 2) return res.status(500).json({ success: false, message: 'No se pudo determinar el primer martes del mes' });
+
+    // Último día del mes (límite en la hora final)
+    const lastDayOfMonthDate = new Date(anoNum, mesNum - 1, new Date(anoNum, mesNum, 0).getDate(), 23, 59, 59, 999);
+
+    // Construir semanas (Tuesday -> Sunday). Incluir semanas cuya fecha de inicio (martes) esté dentro del mes
+    const weeks = [];
+    let start = new Date(firstTuesday);
+    while (start <= lastDayOfMonthDate) {
+      const end = new Date(start);
+      end.setDate(start.getDate() + 5); // Tue..Sun
+      weeks.push({ start: new Date(start), end: new Date(end) });
+      start = new Date(start);
+      start.setDate(start.getDate() + 7);
+    }
+
+    if (weeks.length === 0) {
+      return res.status(404).json({ success: false, message: 'No se pudieron construir las semanas para el mes indicado' });
+    }
+
+    // Rango total a consultar: desde inicio del primer martes (00:00) hasta fin del último domingo (23:59:59.999)
+    const overallStart = new Date(weeks[0].start);
+    overallStart.setHours(0,0,0,0);
+    const overallEnd = new Date(weeks[weeks.length - 1].end);
+    overallEnd.setHours(23,59,59,999);
+
+    // Obtener viajes en el rango completo
+    const viajes = await ViajesModel.find({
+      tipoViaje: 'operativo',
+      'estado.actual': 'completado',
+      departureTime: { $gte: overallStart, $lte: overallEnd }
+    })
+      .populate('clienteOperativo', 'nombreComercial nombreEmpresa')
+      .populate('truckId', 'licensePlate placa')
+      .sort({ clienteNombre: 1, departureTime: 1 })
+      .lean();
+
+    if (!viajes || viajes.length === 0) {
+      return res.status(404).json({ success: false, message: 'No hay viajes en el periodo indicado' });
+    }
+
+    const clientesMap = new Map();
+    let totalViajesGeneral = 0;
+    let totalMontoGeneral = 0;
+
+    viajes.forEach(v => {
+      const cliente = v.clienteNombre || v.clienteOperativo?.nombreComercial || 'SIN CLIENTE';
+      const fecha = new Date(v.departureTime);
+      const monto = v.montoAcordado || v.facturacion?.montoTotal || 0;
+
+      if (!clientesMap.has(cliente)) {
+        clientesMap.set(cliente, { semanas: weeks.map(() => ({ viajes: 0, monto: 0 })), totalViajes: 0, totalMonto: 0 });
+      }
+
+      const data = clientesMap.get(cliente);
+      // asignar a semana
+      for (let i = 0; i < weeks.length; i++) {
+        const w = weeks[i];
+        if (fecha >= w.start && fecha <= w.end) {
+          data.semanas[i].viajes += 1;
+          data.semanas[i].monto += monto;
+          break;
+        }
+      }
+      data.totalViajes += 1;
+      data.totalMonto += monto;
+      totalViajesGeneral += 1;
+      totalMontoGeneral += monto;
+    });
+
+    // filas
+    let filasHTML = '';
+    let idx = 1;
+    clientesMap.forEach((data, cliente) => {
+      let cols = '';
+      for (let i = 0; i < weeks.length; i++) {
+        const s = data.semanas[i];
+        // mostrar 0 y $0.00 en lugar de '-'
+        cols += `<td style=\"text-align:center\">${s.viajes}</td>`;
+        cols += `<td style=\"text-align:right\">$${s.monto.toFixed(2)}</td>`;
+      }
+      filasHTML += `
+        <tr>
+          <td class="cell-numero">${idx}</td>
+          <td class="cell-cliente">${cliente}</td>
+          ${cols}
+          <td class="cell-total">$ ${data.totalMonto.toFixed(2)}</td>
+        </tr>
+      `;
+      idx++;
+    });
+
+    const formatWeekLabel = (s, e) => {
+      if (s.getMonth() === e.getMonth() && s.getFullYear() === e.getFullYear()) {
+        return `DEL ${s.getDate()} AL ${e.getDate()} DE ${obtenerNombreMes(s.getMonth() + 1)} ${s.getFullYear()}`;
+      }
+      return `DEL ${s.getDate()}/${s.getMonth()+1} AL ${e.getDate()}/${e.getMonth()+1}`;
+    };
+
+    const weekHeadersTop = weeks.map(w => `<th colspan=\"2\">${formatWeekLabel(w.start, w.end)}</th>`).join('');
+
+    const weekHeadersBottom = weeks.map(() => `<th>VIAJES</th><th>MONTO</th>`).join('');
+
+    const logoBase64 = convertirImagenABase64(RUTA_LOGO);
+
+    const htmlContent = `
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; padding: 0; background: #FFFFFF; color: #34353A; }
+    .main-header { background: linear-gradient(135deg, #34353A 0%, #5F8EAD 100%); padding: 20px; text-align: center; border-bottom: 5px solid #5D9646; margin-bottom: 12px; }
+    .logo-container img { width: 140px; height: auto; background: white; padding: 6px; border-radius: 6px; }
+    .main-header h1 { color: #FFFFFF; font-size: 18px; font-weight: 600; text-transform: uppercase; }
+    .main-header .periodo { color: #5D9646; font-size: 12px; font-weight: 700; margin-top: 6px; }
+    .content { padding: 0 12px 18px 12px; }
+    table { width: 100%; border-collapse: collapse; font-size: 10px; }
+    th, td { border: 1px solid #e5e7eb; padding: 6px; text-align: center; }
+    th.top { background: #34353A; color: #FFFFFF; font-weight: 700; font-size: 11px; }
+    th.sub { background: #5D9646; color: #FFFFFF; font-weight: 700; font-size: 10px; }
+    .cell-cliente { text-align: left; padding-left: 10px; font-weight: 700; min-width: 140px; }
+    .cell-numero { text-align: center; font-weight: 700; width: 4%; }
+    .cell-total { text-align: right; font-weight: 700; padding-right: 10px; background: #f9fafb; color: #5D9646; }
+    .total-row { background: #34353A; color: #FFFFFF; font-weight: 700; }
+    .footer { margin-top: 10px; padding: 10px; border-top: 3px solid #34353A; text-align: center; font-size: 11px; color: #6b7280; }
+  </style>
+</head>
+<body>
+  <div class="main-header">
+    <div class="logo-container">${logoBase64 ? `<img src=\"${logoBase64}\" alt=\"Rivera\" />` : '<p style=\"color:white\">RIVERA</p>'}</div>
+    <h1>CUADRO COMPARATIVO DE VIAJES DEL MES DE ${obtenerNombreMes(mesNum)} ${anoNum}</h1>
+    <div class="periodo">Periodo: ${formatearFecha(weeks[0].start)} — ${formatearFecha(weeks[weeks.length - 1].end)}</div>
+  </div>
+  <div class="content">
+    <table>
+      <thead>
+        <tr>
+          <th class="top">#</th>
+          <th class="top">CLIENTE</th>
+          ${weekHeadersTop}
+          <th class="top">TOTAL</th>
+        </tr>
+        <tr>
+          <th class="sub"></th>
+          <th class="sub"></th>
+          ${weekHeadersBottom}
+          <th class="sub"></th>
+        </tr>
+      </thead>
+      <tbody>
+        ${filasHTML}
+        <tr class="total-row">
+          <td colspan="2">TOTAL</td>
+          ${weeks.map((_, i) => {
+            const totalV = [...clientesMap.values()].reduce((s, c) => s + (c.semanas[i]?.viajes || 0), 0);
+            const totalM = [...clientesMap.values()].reduce((s, c) => s + (c.semanas[i]?.monto || 0), 0);
+            return `<td style=\"text-align:center\">${totalV}</td><td style=\"text-align:right\">$${totalM.toFixed(2)}</td>`;
+          }).join('')}
+          <td style=\"text-align:right\">$ ${totalMontoGeneral.toFixed(2)}</td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="footer">Generado: ${formatearFecha(new Date())} - Rivera Distribuidora y Transportes</div>
+  </div>
+</body>
+</html>
+`;
+
+    browser = await puppeteer.launch({ headless: "new", args: ["--no-sandbox", "--disable-setuid-sandbox"] });
+    const page = await browser.newPage();
+    await page.setContent(htmlContent, { waitUntil: "networkidle0" });
+
+    const pdfBuffer = await page.pdf({ format: "A4", printBackground: true, margin: { top: "0px", right: "0px", bottom: "0px", left: "0px" } });
+
+    await browser.close();
+
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `attachment; filename=resumen-viajes-${obtenerNombreMes(mesNum)}-${anoNum}.pdf`);
+    res.send(pdfBuffer);
+
+    console.log("✅ PDF Resumen Mensual V2 (semanas Tue-Sun) generado exitosamente");
+
+  } catch (error) {
+    if (browser) await browser.close();
+    console.error("❌ Error al generar PDF Resumen Mensual V2:", error);
+    res.status(500).json({ success: false, message: "Error al generar el PDF V2", error: error.message });
+  }
+};
 ReportesViajesDirecto.generarPDFResumenMensual = async (req, res) => {
   let browser;
   try {
@@ -889,6 +1101,187 @@ ReportesViajesDirecto.generarPDFResumenMensual = async (req, res) => {
       message: "Error al generar el PDF",
       error: error.message,
     });
+  }
+};
+
+// =====================================================
+// 📄 PDF X: RESUMEN POR MÉTODO DE PAGO (Efectivo | Cheque | Transferencia)
+// =====================================================
+ReportesViajesDirecto.generarPDFResumenPorMetodoPago = async (req, res) => {
+  let browser;
+  try {
+    const { mes, ano } = req.params;
+    const mesNum = parseInt(mes);
+    const anoNum = parseInt(ano);
+
+    console.log(`📊 Generando PDF Resumen por Método de Pago: ${obtenerNombreMes(mesNum)} ${anoNum}`);
+
+    if (mesNum < 1 || mesNum > 12) {
+      return res.status(400).json({ success: false, message: "Mes inválido" });
+    }
+
+    const viajes = await ViajesModel.find({
+      tipoViaje: 'operativo',
+      'estado.actual': 'completado',
+      'periodoContable.año': anoNum,
+      'periodoContable.mes': mesNum
+    }).lean();
+
+    if (!viajes || viajes.length === 0) {
+      return res.status(404).json({ success: false, message: 'No se encontraron viajes para el periodo especificado' });
+    }
+
+    // Agregar datos por cliente y por método
+    const clientesMap = new Map();
+
+    const normalizarMetodo = (m) => {
+      if (!m) return 'efectivo';
+      const mm = m.toString().toLowerCase();
+      if (mm.includes('efect')) return 'efectivo';
+      if (mm.includes('cheq')) return 'cheque';
+      if (mm.includes('transf')) return 'transferencia';
+      return 'otro';
+    };
+
+    let totalViajesGeneral = 0;
+    let totalMontoGeneral = 0;
+
+    viajes.forEach(viaje => {
+      const cliente = viaje.clienteNombre || (viaje.clienteOperativo && viaje.clienteOperativo.nombreComercial) || 'SIN CLIENTE';
+      const metodo = normalizarMetodo(viaje.facturacion && viaje.facturacion.metodoPago);
+      const monto = viaje.montoAcordado || viaje.facturacion?.montoTotal || 0;
+
+      if (!clientesMap.has(cliente)) {
+        clientesMap.set(cliente, {
+          efectivo: { viajes: 0, monto: 0 },
+          cheque: { viajes: 0, monto: 0 },
+          transferencia: { viajes: 0, monto: 0 },
+          otro: { viajes: 0, monto: 0 },
+          totalViajes: 0,
+          totalMonto: 0
+        });
+      }
+
+      const data = clientesMap.get(cliente);
+      data[metodo].viajes += 1;
+      data[metodo].monto += monto;
+      data.totalViajes += 1;
+      data.totalMonto += monto;
+
+      totalViajesGeneral += 1;
+      totalMontoGeneral += monto;
+    });
+
+    // Generar filas HTML
+    let filasHTML = '';
+    let numero = 1;
+
+    clientesMap.forEach((data, clienteNombre) => {
+      const formato = (v, m) => (v > 0 ? `${v} / $${m.toFixed(2)}` : '-');
+
+      filasHTML += `
+        <tr>
+          <td>#${numero}</td>
+          <td style="text-align:left; padding-left:15px; font-weight:600">${clienteNombre}</td>
+          <td style="text-align:center">${data.totalViajes}</td>
+          <td style="text-align:right">${formato(data.efectivo.viajes, data.efectivo.monto)}</td>
+          <td style="text-align:right">${formato(data.cheque.viajes, data.cheque.monto)}</td>
+          <td style="text-align:right">${formato(data.transferencia.viajes, data.transferencia.monto)}</td>
+          <td style="text-align:right">${formato(data.otro.viajes, data.otro.monto)}</td>
+          <td style="text-align:right; font-weight:600">$ ${data.totalMonto.toFixed(2)}</td>
+        </tr>
+      `;
+
+      numero += 1;
+    });
+
+    const logoBase64 = convertirImagenABase64(RUTA_LOGO);
+
+    const htmlContent = `
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; padding: 0; background: #FFFFFF; color: #34353A; }
+    .header { background: linear-gradient(135deg, #34353A 0%, #5F8EAD 100%); padding: 35px; text-align: center; border-bottom: 5px solid #5D9646; margin-bottom: 30px; }
+    .header .logo-container { margin-bottom: 20px; }
+    .header .logo-container img { width: 200px; height: auto; background: white; padding: 10px; border-radius: 8px; }
+    .header h1 { color: #FFFFFF; font-size: 22px; font-weight: 300; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 8px; }
+    .header .period { color: #5D9646; font-size: 18px; font-weight: 600; }
+    .content { padding: 0 30px 30px 30px; }
+    table { width: 100%; border-collapse: collapse; background: #FFFFFF; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin-bottom: 25px; }
+    th, td { border: 1px solid #e5e7eb; padding: 12px; text-align: center; }
+    th { background: #34353A; color: #FFFFFF; font-weight: 600; font-size: 12px; text-transform: uppercase; border-bottom: 3px solid #5D9646; }
+    .cell-cliente { text-align: left; padding-left: 15px; font-weight: 600; }
+    .cell-monto { text-align: right; color: #5F8EAD; font-weight: 600; }
+    .total-row { background: #34353A; color: #FFFFFF; font-weight: bold; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="logo-container">
+      ${logoBase64 ? `<img src="${logoBase64}" alt="Rivera Logo" />` : '<p style="color: white;">RIVERA</p>'}
+    </div>
+    <h1>Resumen de Viajes por Método de Pago</h1>
+    <div class="period">${obtenerNombreMes(mesNum)} ${anoNum}</div>
+  </div>
+
+  <div class="content">
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>CLIENTE</th>
+          <th>VIAJES</th>
+          <th>EFECTIVO<br>(viajes / monto)</th>
+          <th>CHEQUE<br>(viajes / monto)</th>
+          <th>TRANSFERENCIA<br>(viajes / monto)</th>
+          <th>OTRO<br>(viajes / monto)</th>
+          <th>MONTO TOTAL</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${filasHTML}
+        <tr class="total-row">
+          <td colspan="2">TOTAL</td>
+          <td>${totalViajesGeneral}</td>
+          <td class="cell-monto">$${[...clientesMap.values()].reduce((s, c) => s + c.efectivo.monto, 0).toFixed(2)}</td>
+          <td class="cell-monto">$${[...clientesMap.values()].reduce((s, c) => s + c.cheque.monto, 0).toFixed(2)}</td>
+          <td class="cell-monto">$${[...clientesMap.values()].reduce((s, c) => s + c.transferencia.monto, 0).toFixed(2)}</td>
+          <td class="cell-monto">$${[...clientesMap.values()].reduce((s, c) => s + c.otro.monto, 0).toFixed(2)}</td>
+          <td class="cell-monto">$ ${totalMontoGeneral.toFixed(2)}</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="footer">
+      <div class="detalle">Generado: ${formatearFecha(new Date())} - Rivera Distribuidora y Transportes</div>
+    </div>
+  </div>
+</body>
+</html>
+`;
+
+    browser = await puppeteer.launch({ headless: "new", args: ["--no-sandbox", "--disable-setuid-sandbox"] });
+    const page = await browser.newPage();
+    await page.setContent(htmlContent, { waitUntil: "networkidle0" });
+
+    const pdfBuffer = await page.pdf({ format: "A4", printBackground: true, margin: { top: "0px", right: "0px", bottom: "0px", left: "0px" } });
+
+    await browser.close();
+
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `attachment; filename=resumen-viajes-metodo-${obtenerNombreMes(mesNum)}-${anoNum}.pdf`);
+    res.send(pdfBuffer);
+
+    console.log("✅ PDF Resumen por Método de Pago generado exitosamente");
+
+  } catch (error) {
+    if (browser) await browser.close();
+    console.error("❌ Error al generar PDF Resumen por Método:", error);
+    res.status(500).json({ success: false, message: "Error al generar el PDF por método", error: error.message });
   }
 };
 

@@ -6,8 +6,20 @@ const router = express.Router();
 // ✅ Obtener clientes con viajes del mes
 router.get("/clientes/:mes/:ano", ReportesViajesDirecto.obtenerClientesMes);
 
-// ✅ PDF 1: Resumen mensual (Imagen 3)
-router.get("/resumen-mes/:mes/:ano", ReportesViajesDirecto.generarPDFResumenMensual);
+// ✅ PDF 1: Resumen mensual (Imagen 3) — ahora usa la versión que agrupa semanas Tue-Sun
+router.get("/resumen-mes/:mes/:ano", ReportesViajesDirecto.generarPDFResumenMensualV2);
+
+// ✅ PDF X: Resumen por método de pago (efectivo / cheque / transferencia)
+// Uso:
+//   GET /api/reportes-directos/resumen-mes-metodo/:mes/:ano
+//   - :mes  -> número del mes (1 - 12)
+//   - :ano  -> año en formato YYYY (ej: 2025)
+// Respuesta:
+//   - 200: application/pdf (disponible como attachment). El PDF contiene totales por cliente y columnas para EFECTIVO / CHEQUE / TRANSFERENCIA / OTRO.
+// Errores comunes:
+//   - 400: Mes inválido
+//   - 404: No se encontraron viajes para el periodo especificado
+router.get("/resumen-mes-metodo/:mes/:ano", ReportesViajesDirecto.generarPDFResumenPorMetodoPago);
 
 // ✅ PDF 2: Individual por cliente
 router.get("/individual/:clienteNombre/:mes/:ano", ReportesViajesDirecto.generarPDFClienteIndividual);

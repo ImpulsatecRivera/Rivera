@@ -175,7 +175,7 @@ const viajeSchema = new Schema({
     metodoPago: {
       type: String,
       enum: ['efectivo', 'transferencia', 'cheque', 'credito'],
-      default: 'credito'
+      default: 'efectivo'
     },
     
     fechaVencimiento: {
