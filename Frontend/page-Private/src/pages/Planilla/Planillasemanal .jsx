@@ -55,7 +55,7 @@ export default function PlanillaSemanal() {
         title: 'Error',
         text: 'No se pudo cargar la planilla'
       });
-      navigate('/planillas');
+      navigate('/planilla');
     } finally {
       setLoading(false);
     }
@@ -472,7 +472,7 @@ export default function PlanillaSemanal() {
           <AlertCircle className="w-20 h-20 text-gray-400 mx-auto mb-4" />
           <p className="text-gray-700 font-bold text-xl mb-4">Planilla no encontrada</p>
           <button
-            onClick={() => navigate('/planillas')}
+            onClick={() => navigate('/planilla')}
             className="px-6 py-3 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-colors"
           >
             Volver a Planillas
@@ -495,7 +495,7 @@ export default function PlanillaSemanal() {
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-4">
               <button
-                onClick={() => navigate('/planillas')}
+                onClick={() => navigate('/planilla')}
                 className="p-3 hover:bg-gray-100 rounded-xl transition-colors"
               >
                 <ArrowLeft size={24} className="text-gray-600" />
