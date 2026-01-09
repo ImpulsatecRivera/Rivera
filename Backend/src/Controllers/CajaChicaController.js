@@ -15,6 +15,45 @@ cloudinary.config({
   api_secret: config.cloudinary.cloudinary_api_secret,
 });
 
+const numeroALetras = (num) => {
+  const unidades = [
+    '', 'UNO', 'DOS', 'TRES', 'CUATRO', 'CINCO',
+    'SEIS', 'SIETE', 'OCHO', 'NUEVE'
+  ];
+
+  const decenas = [
+    '', 'DIEZ', 'VEINTE', 'TREINTA', 'CUARENTA',
+    'CINCUENTA', 'SESENTA', 'SETENTA', 'OCHENTA', 'NOVENTA'
+  ];
+
+  const especiales = {
+    11: 'ONCE',
+    12: 'DOCE',
+    13: 'TRECE',
+    14: 'CATORCE',
+    15: 'QUINCE'
+  };
+
+  const convertir = (n) => {
+    if (n < 10) return unidades[n];
+    if (n >= 11 && n <= 15) return especiales[n];
+    if (n < 20) return 'DIECI' + unidades[n - 10];
+    if (n < 30) return n === 20 ? 'VEINTE' : 'VEINTI' + unidades[n - 20];
+    if (n < 100)
+      return decenas[Math.floor(n / 10)] +
+        (n % 10 ? ' Y ' + unidades[n % 10] : '');
+    return '';
+  };
+
+  const entero = Math.floor(num);
+  const centavos = Math.round((num - entero) * 100);
+
+  let letras = convertir(entero);
+  if (!letras) letras = 'CERO';
+
+  return `${letras} DÓLARES CON ${centavos.toString().padStart(2, '0')}/100`;
+};
+
 // =====================================================
 // OBTENER TODOS LOS MOVIMIENTOS
 // =====================================================
@@ -502,7 +541,7 @@ cajaChicaController.generarVale = async (req, res) => {
 
   try {
     const { id } = req.params;
-    const { nombreBeneficiario, cantidadLetras } = req.body;
+const { nombreBeneficiario } = req.body;
 
     console.log('📄 Generando vale para movimiento:', id);
     console.log('👤 Beneficiario:', nombreBeneficiario);
@@ -558,7 +597,8 @@ cajaChicaController.generarVale = async (req, res) => {
     });
 
     const page = await browser.newPage();
-    
+    const cantidadEnLetras = numeroALetras(movement.amount);
+
     // ✅ HTML DEL VALE - FORMATO RIVERA TRANSPORTES
     const htmlContent = `
       <!DOCTYPE html>
@@ -827,7 +867,9 @@ cajaChicaController.generarVale = async (req, res) => {
           <!-- CANTIDAD EN LETRAS -->
           <div class="cantidad-letras-section">
             <div class="cantidad-letras-label">CANTIDAD EN LETRAS:</div>
-            <div class="cantidad-letras-value">${cantidadLetras || 'PENDIENTE'}</div>
+<div class="cantidad-letras-value">
+  ${cantidadEnLetras}
+</div>
           </div>
           
           <!-- FIRMA DEL BENEFICIARIO -->
