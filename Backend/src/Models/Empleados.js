@@ -9,99 +9,127 @@ import { Schema, model } from "mongoose";
  * Definición del esquema para la colección de Empleados
  * Contiene toda la información personal, laboral y de contacto de los empleados del sistema
  */
-const empleadoSchema = new Schema({
+const empleadoSchema = new Schema(
+  {
     // Información personal básica
     name: {
-        type: String,      // Nombre del empleado
-        required: true     // Campo obligatorio para identificación
+      type: String,
+      required: true,
+      trim: true,
     },
     lastName: {
-        type: String,      // Apellido del empleado
-        required: true     // Campo obligatorio para identificación completa
+      type: String,
+      required: true,
+      trim: true,
     },
-    
+
     // Información de contacto y acceso
     email: {
-        type: String,      // Correo electrónico del empleado (usado para login)
-        required: true,    // Campo obligatorio
-        unique: true       // Debe ser único en toda la colección (no puede haber duplicados)
+      type: String,
+      required: true,
+      unique: true,
+      trim: true,
+      lowercase: true, // ✅ recomendado para evitar duplicados por mayúsculas
     },
-    
+
     // Información de identificación legal
     dui: {
-        type: String,      // Documento Único de Identidad (específico de El Salvador)
-        required: true,    // Campo obligatorio para verificación legal
-        unique: true       // Debe ser único (no puede haber dos empleados con el mismo DUI)
+      type: String,
+      required: true,
+      unique: true,
+      trim: true,
     },
     birthDate: {
-        type: Date,        // Fecha de nacimiento del empleado
-        required: true     // Campo obligatorio para validar edad laboral
+      type: Date,
+      required: true,
     },
-    
+
     // Información de seguridad
     password: {
-        type: String,      // Contraseña hasheada para acceso al sistema
-        required: true     // Campo obligatorio para autenticación
+      type: String,
+      required: true,
     },
-    
+
     // Información de contacto
     phone: {
-        type: String,      // Número de teléfono del empleado
-        required: true     // Campo obligatorio para comunicación laboral
+      type: String,
+      required: true,
+      trim: true,
     },
     address: {
-        type: String,      // Dirección física completa del empleado
-        required: true     // Campo obligatorio para registros de recursos humanos
+      type: String,
+      required: true,
+      trim: true,
     },
-    
+
     // Información multimedia
     img: {
-        type: String,      // URL de la foto del empleado (generalmente desde Cloudinary)
-        required: true     // Campo obligatorio para identificación visual en el sistema
+      type: String,
+      required: true,
+      trim: true,
     },
-    salario:{
-        type:Number,
-        required:true
+
+    salario: {
+      type: Number,
+      required: true,
+      min: 0,
     },
-    planillaTipo:{
-        type:String,
-            enum:[
-                'Semanal',
-                'Quincenal'
-            ],
-        required:true    
+
+    planillaTipo: {
+      type: String,
+      enum: {
+        values: ["Semanal", "Quincenal"],
+        message: "PlanillaTipo inválido",
+      },
+      required: true,
+      trim: true,
     },
-    rol:{
-         type: String,
-        enum:[
-             'Operativo', 
-             'SUpervisor'
-        ],
-        required: true
-    }
-}, {
-    // Opciones del esquema
-    timestamps: true,        // Agrega automáticamente campos createdAt y updatedAt
-    strict: false,           // Permite campos adicionales no definidos en el esquema
-    collection: "Empleados"  // Fuerza el nombre exacto de la colección en MongoDB
+
+    rol: {
+      type: String,
+      enum: {
+        values: ["Operativo", "Supervisor"], // ✅ CORREGIDO
+        message: "Rol inválido",
+      },
+      required: true,
+      trim: true,
+    },
+  },
+  {
+    timestamps: true,
+    strict: false,
+    collection: "Empleados",
+  }
+);
+
+/**
+ * Normalizar valores para evitar errores por mayúsculas/minúsculas
+ * (Opcional recomendado)
+ */
+empleadoSchema.pre("validate", function (next) {
+  if (this.rol) {
+    const r = String(this.rol).trim().toLowerCase();
+    if (r === "supervisor") this.rol = "Supervisor";
+    if (r === "operativo") this.rol = "Operativo";
+  }
+
+  if (this.planillaTipo) {
+    const p = String(this.planillaTipo).trim().toLowerCase();
+    if (p === "semanal") this.planillaTipo = "Semanal";
+    if (p === "quincenal") this.planillaTipo = "Quincenal";
+  }
+
+  next();
 });
 
 /**
- * Middleware pre-save: Se ejecuta antes de guardar un documento
- * 
- * IMPORTANTE: Eliminar datos anteriores si hay conflictos
- * Este middleware previene conflictos entre el campo 'id' y '_id' de MongoDB
+ * Middleware pre-save: evitar conflicto id vs _id
  */
-empleadoSchema.pre('save', function() {
-    // Verificar si existe un campo 'id' que sea diferente al '_id' de MongoDB
-    if (this.id && this.id !== this._id) {
-        // Eliminar el campo 'id' conflictivo para evitar problemas de duplicación
-        delete this.id;
-    }
+empleadoSchema.pre("save", function (next) {
+  if (this.id && String(this.id) !== String(this._id)) {
+    delete this.id;
+  }
+  next();
 });
 
-/**
- * Exportar el modelo basado en el esquema
- * Este modelo se usará para realizar operaciones CRUD en la colección Empleados
- */
 export default model("Empleados", empleadoSchema);

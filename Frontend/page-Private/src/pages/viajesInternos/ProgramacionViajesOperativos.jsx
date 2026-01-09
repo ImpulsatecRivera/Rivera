@@ -40,10 +40,10 @@ const getEstadoConfig = (estado) => {
 };
 
 const getEstadoBadgeClass = (color) => {
-  if (color === "green") return "bg-green-50 text-green-700 border border-green-200";
-  if (color === "blue") return "bg-blue-50 text-blue-700 border border-blue-200";
-  if (color === "red") return "bg-red-50 text-red-700 border border-red-200";
-  return "bg-yellow-50 text-yellow-800 border border-yellow-200";
+  if (color === "green") return "bg-[#5D9646] bg-opacity-20 text-[#5D9646] border-2 border-[#5D9646]";
+  if (color === "blue") return "bg-[#5F8EAD] bg-opacity-20 text-[#5F8EAD] border-2 border-[#5F8EAD]";
+  if (color === "red") return "bg-red-50 text-red-700 border-2 border-red-200";
+  return "bg-yellow-50 text-yellow-800 border-2 border-yellow-200";
 };
 
 const formatearHora = (fecha) => {
@@ -76,10 +76,8 @@ export default function ProgramacionViajesOperativos() {
   const [totalViajes, setTotalViajes] = useState(0);
   const [totalClientes, setTotalClientes] = useState(0);
 
-  // Estado para el modal de cambio de estado
   const [editandoEstado, setEditandoEstado] = useState(null);
 
-  // ✅ HOY en formato YYYY-MM-DD
   const todayISO = useMemo(() => {
     const d = new Date();
     const pad = (n) => String(n).padStart(2, "0");
@@ -94,7 +92,6 @@ export default function ProgramacionViajesOperativos() {
     if (selectedDate) {
       fetchProgramacion(selectedDate);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedDate]);
 
   const fetchProgramacion = async (fecha) => {
@@ -136,104 +133,96 @@ export default function ProgramacionViajesOperativos() {
     setEditandoEstado({ viaje, clienteNombre });
   };
 
-const confirmarCambioEstado = async (nuevoEstado) => {
-  if (!editandoEstado) return;
+  const confirmarCambioEstado = async (nuevoEstado) => {
+    if (!editandoEstado) return;
 
-  const { viaje } = editandoEstado;
-  const viajeId = viaje?.id || viaje?._id;
+    const { viaje } = editandoEstado;
+    const viajeId = viaje?.id || viaje?._id;
 
-  if (!viajeId) {
-    Swal.fire({ icon: "error", title: "Error", text: "No se encontró el ID del viaje" });
-    setEditandoEstado(null);
-    return;
-  }
-
-  try {
-    // Si el nuevo estado es "completado", usar endpoint específico
-    if (nuevoEstado === "completado") {
-      const res = await fetch(`${COMPLETAR_UNO_ENDPOINT}/${viajeId}`, {
-        method: "PUT",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          observacion: "Viaje completado desde programación",
-        }),
-      });
-
-      const json = await res.json().catch(() => ({}));
-
-      if (!res.ok || json?.success === false)
-        throw new Error(json?.message || "Error al completar");
-
-      await Swal.fire({
-        title: "¡Completado!",
-        text: "Viaje marcado como completado",
-        icon: "success",
-        timer: 1500,
-      });
-    } else {
-      const res = await fetch(`${ACTUALIZAR_ESTADO_ENDPOINT}/${viajeId}`, {
-        method: "PATCH",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          estado: nuevoEstado,
-        }),
-      });
-
-      const json = await res.json().catch(() => ({}));
-
-      if (!res.ok || json?.success === false)
-        throw new Error(json?.message || "Error al actualizar estado");
-
-      await Swal.fire({
-        title: "¡Actualizado!",
-        text: `Estado cambiado a ${getEstadoConfig(nuevoEstado).label}`,
-        icon: "success",
-        timer: 1500,
-      });
+    if (!viajeId) {
+      Swal.fire({ icon: "error", title: "Error", text: "No se encontró el ID del viaje" });
+      setEditandoEstado(null);
+      return;
     }
 
-    setEditandoEstado(null);
-    handleRefresh();
-  } catch (err) {
-    Swal.fire({ title: "Error", text: err.message, icon: "error" });
-  }
-};
+    try {
+      if (nuevoEstado === "completado") {
+        const res = await fetch(`${COMPLETAR_UNO_ENDPOINT}/${viajeId}`, {
+          method: "PUT",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            observacion: "Viaje completado desde programación",
+          }),
+        });
 
-// ✅ NUEVA FUNCIÓN: Determinar estados permitidos según el estado actual
-const getEstadosPermitidos = (estadoActual) => {
-  const e = normalize(estadoActual);
+        const json = await res.json().catch(() => ({}));
 
-  // Pendiente → Puede ir a cualquiera
-  if (e === "pendiente") {
-    return ["en_curso", "completado", "cancelado"];
-  }
+        if (!res.ok || json?.success === false)
+          throw new Error(json?.message || "Error al completar");
 
-  // En Curso → Solo a Completado
-  if (e === "en_curso" || e === "en curso") {
-    return ["completado"];
-  }
+        await Swal.fire({
+          title: "¡Completado!",
+          text: "Viaje marcado como completado",
+          icon: "success",
+          timer: 1500,
+        });
+      } else {
+        const res = await fetch(`${ACTUALIZAR_ESTADO_ENDPOINT}/${viajeId}`, {
+          method: "PATCH",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            estado: nuevoEstado,
+          }),
+        });
 
-  // Completado → NO puede cambiar
-  if (e === "completado") {
-    return [];
-  }
+        const json = await res.json().catch(() => ({}));
 
-  // Cancelado → NO puede cambiar
-  if (e === "cancelado") {
-    return [];
-  }
+        if (!res.ok || json?.success === false)
+          throw new Error(json?.message || "Error al actualizar estado");
 
-  // Default: permitir todos
-  return ["pendiente", "en_curso", "completado", "cancelado"];
-};
+        await Swal.fire({
+          title: "¡Actualizado!",
+          text: `Estado cambiado a ${getEstadoConfig(nuevoEstado).label}`,
+          icon: "success",
+          timer: 1500,
+        });
+      }
+
+      setEditandoEstado(null);
+      handleRefresh();
+    } catch (err) {
+      Swal.fire({ title: "Error", text: err.message, icon: "error" });
+    }
+  };
+
+  const getEstadosPermitidos = (estadoActual) => {
+    const e = normalize(estadoActual);
+
+    if (e === "pendiente") {
+      return ["en_curso", "completado", "cancelado"];
+    }
+
+    if (e === "en_curso" || e === "en curso") {
+      return ["completado"];
+    }
+
+    if (e === "completado") {
+      return [];
+    }
+
+    if (e === "cancelado") {
+      return [];
+    }
+
+    return ["pendiente", "en_curso", "completado", "cancelado"];
+  };
 
   const cerrarModalEstado = () => {
     setEditandoEstado(null);
   };
 
-  // ✅ Agrupar viajes por rango horario para mejor visualización
   const viajesPorHora = useMemo(() => {
     const grupos = {};
 
@@ -242,7 +231,7 @@ const getEstadosPermitidos = (estadoActual) => {
 
       viajes.forEach((viaje) => {
         const hora = viaje?.hora || "00:00";
-        const horaKey = hora.substring(0, 2); // "05", "06", "07", etc.
+        const horaKey = hora.substring(0, 2);
 
         if (!grupos[horaKey]) {
           grupos[horaKey] = [];
@@ -265,22 +254,22 @@ const getEstadosPermitidos = (estadoActual) => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-8">
       <div className="max-w-7xl mx-auto">
-        {/* Header */}
+        {/* Header - COLORES CAMBIADOS */}
         <div className="mb-8">
           <button
             onClick={() => navigate("/viajesInternos")}
-            className="flex items-center gap-2 text-gray-600 hover:text-gray-900 font-semibold mb-4 transition-colors"
+            className="flex items-center gap-2 text-[#5F8EAD] hover:text-[#34353A] font-semibold mb-4 transition-colors"
           >
             <ArrowLeft size={20} />
             Volver a Viajes Operativos
           </button>
 
           <div className="flex items-center gap-4">
-            <div className="bg-gradient-to-br from-indigo-600 to-purple-600 p-4 rounded-2xl shadow-lg">
+            <div className="bg-gradient-to-br from-[#34353A] to-[#5F8EAD] p-4 rounded-2xl shadow-lg">
               <Calendar className="text-white" size={32} />
             </div>
             <div>
-              <h1 className="text-4xl font-bold text-gray-900 mb-1">
+              <h1 className="text-4xl font-bold text-[#34353A] mb-1">
                 Programación del Día
               </h1>
               <p className="text-gray-600">Vista tipo pizarra de viajes operativos</p>
@@ -288,26 +277,26 @@ const getEstadosPermitidos = (estadoActual) => {
           </div>
         </div>
 
-        {/* Selector de Fecha + Estadísticas */}
+        {/* Selector de Fecha + Estadísticas - COLORES CAMBIADOS */}
         <div className="bg-white rounded-2xl shadow-lg p-6 mb-6">
           <div className="flex items-center justify-between gap-4 flex-wrap">
             <div className="flex items-center gap-4">
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                <label className="block text-sm font-semibold text-[#34353A] mb-2">
                   Seleccionar Fecha
                 </label>
                 <input
                   type="date"
                   value={selectedDate}
                   onChange={(e) => setSelectedDate(e.target.value)}
-                  className="px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="px-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#5F8EAD] focus:border-[#5F8EAD]"
                 />
               </div>
 
               <button
                 onClick={handleRefresh}
                 disabled={loading}
-                className="mt-7 px-4 py-3 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 font-semibold disabled:opacity-50 flex items-center gap-2"
+                className="mt-7 px-4 py-3 bg-[#5F8EAD] text-white rounded-xl hover:opacity-90 font-semibold disabled:opacity-50 flex items-center gap-2"
               >
                 <RefreshCw size={18} className={loading ? "animate-spin" : ""} />
                 Actualizar
@@ -316,14 +305,14 @@ const getEstadosPermitidos = (estadoActual) => {
 
             <div className="flex items-center gap-6">
               <div className="text-center">
-                <p className="text-3xl font-bold text-indigo-600">{totalViajes}</p>
+                <p className="text-3xl font-bold text-[#5F8EAD]">{totalViajes}</p>
                 <p className="text-sm text-gray-600 font-medium">Viajes</p>
               </div>
 
               <div className="h-12 w-px bg-gray-300"></div>
 
               <div className="text-center">
-                <p className="text-3xl font-bold text-purple-600">{totalClientes}</p>
+                <p className="text-3xl font-bold text-[#5D9646]">{totalClientes}</p>
                 <p className="text-sm text-gray-600 font-medium">Clientes</p>
               </div>
             </div>
@@ -331,7 +320,7 @@ const getEstadosPermitidos = (estadoActual) => {
 
           {fechaInfo && (
             <div className="mt-4 pt-4 border-t border-gray-200">
-              <p className="text-gray-700 font-semibold">
+              <p className="text-[#34353A] font-semibold">
                 📅 {formatearFechaCompleta(selectedDate)}
               </p>
             </div>
@@ -340,7 +329,7 @@ const getEstadosPermitidos = (estadoActual) => {
 
         {/* Error */}
         {error && (
-          <div className="mb-6 bg-red-50 border border-red-200 rounded-xl p-4 flex items-start gap-3">
+          <div className="mb-6 bg-red-50 border-2 border-red-200 rounded-xl p-4 flex items-start gap-3">
             <AlertCircle className="text-red-600 flex-shrink-0 mt-0.5" size={20} />
             <div>
               <p className="text-red-800 font-semibold">Error</p>
@@ -352,12 +341,12 @@ const getEstadosPermitidos = (estadoActual) => {
         {/* Loading */}
         {loading && (
           <div className="bg-white rounded-2xl shadow-lg p-12 text-center">
-            <Loader2 className="w-12 h-12 animate-spin text-indigo-600 mx-auto mb-4" />
+            <Loader2 className="w-12 h-12 animate-spin text-[#5F8EAD] mx-auto mb-4" />
             <p className="text-gray-600 font-medium">Cargando programación...</p>
           </div>
         )}
 
-        {/* Programación - Vista Pizarra por Hora */}
+        {/* Programación - COLORES CAMBIADOS */}
         {!loading && !error && (
           <>
             {horasOrdenadas.length === 0 ? (
@@ -374,18 +363,16 @@ const getEstadosPermitidos = (estadoActual) => {
 
                   return (
                     <div key={horaKey} className="bg-white rounded-2xl shadow-lg p-6">
-                      {/* Header Hora */}
                       <div className="flex items-center gap-3 mb-4 pb-4 border-b border-gray-200">
-                        <Clock className="text-indigo-600" size={24} />
-                        <h3 className="text-2xl font-bold text-gray-900">
+                        <Clock className="text-[#5F8EAD]" size={24} />
+                        <h3 className="text-2xl font-bold text-[#34353A]">
                           {horaKey}:00 hrs
                         </h3>
-                        <span className="ml-auto bg-indigo-50 text-indigo-700 px-3 py-1 rounded-full text-sm font-semibold">
+                        <span className="ml-auto bg-[#5F8EAD] bg-opacity-20 text-[#5F8EAD] px-3 py-1 rounded-full text-sm font-semibold">
                           {viajesHora.length} viajes
                         </span>
                       </div>
 
-                      {/* Grid de Viajes */}
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                         {viajesHora.map((viaje, idx) => {
                           const estadoConfig = getEstadoConfig(viaje?.estado);
@@ -396,13 +383,12 @@ const getEstadosPermitidos = (estadoActual) => {
                               key={viaje?.id || idx}
                               className="bg-gradient-to-br from-gray-50 to-white border border-gray-200 rounded-xl p-4 hover:shadow-md transition-shadow"
                             >
-                              {/* Header Card */}
                               <div className="flex items-start justify-between mb-3">
                                 <div>
                                   <p className="text-xs font-semibold text-gray-500 uppercase">
                                     {viaje?.codigo || "N/A"}
                                   </p>
-                                  <h4 className="text-lg font-bold text-gray-900">
+                                  <h4 className="text-lg font-bold text-[#34353A]">
                                     {viaje?.clienteNombre}
                                   </h4>
                                 </div>
@@ -420,7 +406,6 @@ const getEstadosPermitidos = (estadoActual) => {
                                 </button>
                               </div>
 
-                              {/* Detalles */}
                               <div className="space-y-2">
                                 <div className="flex items-center gap-2 text-sm text-gray-700">
                                   <Clock size={16} className="text-gray-400" />
@@ -461,71 +446,69 @@ const getEstadosPermitidos = (estadoActual) => {
         )}
       </div>
 
-      {/* Modal Cambiar Estado */}
-      {/* Modal Cambiar Estado */}
-{editandoEstado && (
-  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-    <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6">
-      <h3 className="text-2xl font-bold text-gray-900 mb-2">Cambiar Estado</h3>
-      <p className="text-gray-600 mb-6">
-        {editandoEstado.clienteNombre} - {editandoEstado.viaje?.ruta}
-      </p>
+      {/* Modal Cambiar Estado - COLORES CAMBIADOS */}
+      {editandoEstado && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6">
+            <h3 className="text-2xl font-bold text-[#34353A] mb-2">Cambiar Estado</h3>
+            <p className="text-gray-600 mb-6">
+              {editandoEstado.clienteNombre} - {editandoEstado.viaje?.ruta}
+            </p>
 
-      {(() => {
-        const estadoActual = editandoEstado.viaje?.estado || "pendiente";
-        const estadosPermitidos = getEstadosPermitidos(estadoActual);
+            {(() => {
+              const estadoActual = editandoEstado.viaje?.estado || "pendiente";
+              const estadosPermitidos = getEstadosPermitidos(estadoActual);
 
-        // Si no puede cambiar de estado
-        if (estadosPermitidos.length === 0) {
-          return (
-            <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 mb-6">
-              <p className="text-gray-700 text-center font-semibold">
-                No se puede cambiar el estado actual: <span className="text-indigo-600">{getEstadoConfig(estadoActual).label}</span>
-              </p>
-            </div>
-          );
-        }
-
-        return (
-          <div className="space-y-3 mb-6">
-            {ESTADOS_DISPONIBLES.filter((estado) =>
-              estadosPermitidos.includes(estado.value)
-            ).map((estado) => {
-              const Icono = estado.icon;
-              const esActual = normalize(estado.value) === normalize(estadoActual);
+              if (estadosPermitidos.length === 0) {
+                return (
+                  <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 mb-6">
+                    <p className="text-gray-700 text-center font-semibold">
+                      No se puede cambiar el estado actual: <span className="text-[#5F8EAD]">{getEstadoConfig(estadoActual).label}</span>
+                    </p>
+                  </div>
+                );
+              }
 
               return (
-                <button
-                  key={estado.value}
-                  onClick={() => confirmarCambioEstado(estado.value)}
-                  disabled={esActual}
-                  className={`w-full flex items-center gap-3 p-4 rounded-xl font-semibold transition-all ${
-                    esActual
-                      ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                      : `${getEstadoBadgeClass(estado.color)} hover:shadow-md cursor-pointer`
-                  }`}
-                >
-                  <Icono size={20} />
-                  <span>{estado.label}</span>
-                  {esActual && (
-                    <span className="ml-auto text-xs">(Estado actual)</span>
-                  )}
-                </button>
-              );
-            })}
-          </div>
-        );
-      })()}
+                <div className="space-y-3 mb-6">
+                  {ESTADOS_DISPONIBLES.filter((estado) =>
+                    estadosPermitidos.includes(estado.value)
+                  ).map((estado) => {
+                    const Icono = estado.icon;
+                    const esActual = normalize(estado.value) === normalize(estadoActual);
 
-      <button
-        onClick={cerrarModalEstado}
-        className="w-full px-6 py-3 bg-gray-200 text-gray-700 rounded-xl font-semibold hover:bg-gray-300 transition-colors"
-      >
-        Cerrar
-      </button>
-    </div>
-  </div>
-)}
+                    return (
+                      <button
+                        key={estado.value}
+                        onClick={() => confirmarCambioEstado(estado.value)}
+                        disabled={esActual}
+                        className={`w-full flex items-center gap-3 p-4 rounded-xl font-semibold transition-all ${
+                          esActual
+                            ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                            : `${getEstadoBadgeClass(estado.color)} hover:shadow-md cursor-pointer`
+                        }`}
+                      >
+                        <Icono size={20} />
+                        <span>{estado.label}</span>
+                        {esActual && (
+                          <span className="ml-auto text-xs">(Estado actual)</span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              );
+            })()}
+
+            <button
+              onClick={cerrarModalEstado}
+              className="w-full px-6 py-3 bg-gray-200 text-gray-700 rounded-xl font-semibold hover:bg-gray-300 transition-colors"
+            >
+              Cerrar
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

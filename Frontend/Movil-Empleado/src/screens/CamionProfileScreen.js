@@ -10,6 +10,9 @@ import {
   Platform,
   TouchableOpacity,
   Alert,
+  Modal,
+  TextInput,
+  KeyboardAvoidingView,
 } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -45,7 +48,6 @@ const pedirPermisosGaleria = async () => {
   }
   return true;
 };
-
 
 const pick = (...vals) => {
   for (const v of vals) {
@@ -145,6 +147,12 @@ export default function CamionScreen() {
   const { profile, loading, fetchProfile } = useProfile();
   const insets = useSafeAreaInsets();
   const [uploading, setUploading] = useState(false);
+  const [modalVisible, setModalVisible] = useState(false);
+  
+  // Estados del formulario
+  const [galones, setGalones] = useState('');
+  const [total, setTotal] = useState('');
+  const [comprobante, setComprobante] = useState(null);
 
   let tabBarHeight = 0;
   try {
@@ -213,9 +221,27 @@ export default function CamionScreen() {
     };
   }, [profile]);
 
-  // ✅ FUNCIÓN PARA SUBIR COMPROBANTE
-  const subirComprobante = async (imageUri, imageType, imageName) => {
+  // ✅ LIMPIAR FORMULARIO
+  const limpiarFormulario = () => {
+    setGalones('');
+    setTotal('');
+    setComprobante(null);
+  };
+
+  // ✅ FUNCIÓN PARA SUBIR REGISTRO DE GAS
+  const registrarGas = async () => {
     try {
+      // Validaciones
+      if (!galones || !total) {
+        Alert.alert("Campos incompletos", "Por favor completa todos los campos");
+        return;
+      }
+
+      if (!comprobante) {
+        Alert.alert("Comprobante requerido", "Por favor agrega una foto del comprobante");
+        return;
+      }
+
       if (!camionData.camionId) {
         Alert.alert("Error", "No se encontró el ID del camión");
         return;
@@ -223,23 +249,31 @@ export default function CamionScreen() {
 
       setUploading(true);
 
+      // Obtener fecha actual
+      const fechaActual = new Date();
+      const mes = fechaActual.getMonth() + 1; // 1-12
+      const ano = fechaActual.getFullYear();
+
       // Crear FormData
       const formData = new FormData();
       
       // Agregar imagen
       formData.append('comprobante', {
-        uri: Platform.OS === 'ios' ? imageUri.replace('file://', '') : imageUri,
-        type: imageType || 'image/jpeg',
-        name: imageName || `comprobante_${Date.now()}.jpg`,
+        uri: Platform.OS === 'ios' ? comprobante.uri.replace('file://', '') : comprobante.uri,
+        type: comprobante.mimeType || 'image/jpeg',
+        name: comprobante.fileName || `comprobante_${Date.now()}.jpg`,
       });
 
-      // Agregar datos del resumen
+      // Agregar datos del formulario
       formData.append('CicurlationCard', camionData.camionId);
-      formData.append('Galones', '0'); // Puedes pedir estos datos al usuario
-      formData.append('Total', '0'); // Puedes pedir estos datos al usuario
-      formData.append('fecha', new Date().toISOString());
+      formData.append('Galones', galones);
+      formData.append('Total', total);
+      formData.append('fecha', fechaActual.toISOString());
+      formData.append('mes', mes.toString());
+      formData.append('ano', ano.toString());
+      formData.append('estado', 'pendiente'); // Estado por defecto
 
-      console.log('📤 Subiendo comprobante...');
+      console.log('📤 Registrando gas...');
 
       const response = await fetch(`${API_URL}/resumen`, {
         method: 'POST',
@@ -253,24 +287,28 @@ export default function CamionScreen() {
 
       if (response.ok && data.success) {
         Alert.alert(
-          "¡Éxito!",
-          "Comprobante subido correctamente",
+          "¡Registro exitoso! ⛽",
+          `Has agregado ${galones} galones por $${total}`,
           [
             {
               text: "OK",
-              onPress: () => fetchProfile?.(),
+              onPress: () => {
+                setModalVisible(false);
+                limpiarFormulario();
+                fetchProfile?.();
+              }
             }
           ]
         );
       } else {
-        throw new Error(data.message || 'Error al subir el comprobante');
+        throw new Error(data.message || 'Error al registrar el gas');
       }
 
     } catch (error) {
-      console.error('❌ Error subiendo comprobante:', error);
+      console.error('❌ Error registrando gas:', error);
       Alert.alert(
         "Error",
-        error.message || "No se pudo subir el comprobante"
+        error.message || "No se pudo registrar el gas"
       );
     } finally {
       setUploading(false);
@@ -279,37 +317,37 @@ export default function CamionScreen() {
 
   // ✅ FUNCIÓN PARA TOMAR FOTO
   const tomarFoto = async () => {
-  const permitido = await pedirPermisosCamara();
-  if (!permitido) return;
+    const permitido = await pedirPermisosCamara();
+    if (!permitido) return;
 
-  const result = await ImagePicker.launchCameraAsync({
-    mediaTypes: ImagePicker.MediaTypeOptions.Images,
-    quality: 0.8,
-  });
+    const result = await ImagePicker.launchCameraAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      quality: 0.8,
+      allowsEditing: true,
+      aspect: [4, 3],
+    });
 
-  if (!result.canceled) {
-    const asset = result.assets[0];
-    subirComprobante(asset.uri, asset.mimeType, 'foto.jpg');
-  }
-};
-
+    if (!result.canceled) {
+      setComprobante(result.assets[0]);
+    }
+  };
 
   // ✅ FUNCIÓN PARA SELECCIONAR ARCHIVO
-const seleccionarArchivo = async () => {
-  const permitido = await pedirPermisosGaleria();
-  if (!permitido) return;
+  const seleccionarArchivo = async () => {
+    const permitido = await pedirPermisosGaleria();
+    if (!permitido) return;
 
-  const result = await ImagePicker.launchImageLibraryAsync({
-    mediaTypes: ImagePicker.MediaTypeOptions.Images,
-    quality: 0.8,
-  });
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      quality: 0.8,
+      allowsEditing: true,
+      aspect: [4, 3],
+    });
 
-  if (!result.canceled) {
-    const asset = result.assets[0];
-    subirComprobante(asset.uri, asset.mimeType, 'galeria.jpg');
-  }
-};
-
+    if (!result.canceled) {
+      setComprobante(result.assets[0]);
+    }
+  };
 
   const bottomSpace = Math.max(insets.bottom || 0, 12) + tabBarHeight + 16;
 
@@ -393,51 +431,159 @@ const seleccionarArchivo = async () => {
 
                 <GasolineChart percentage={camionData.gasoline} />
 
-                {/* BOTÓN PARA AGREGAR COMPROBANTE */}
+                {/* BOTÓN PARA REGISTRAR GAS */}
                 <TouchableOpacity 
                   style={[
-                    styles.addReceiptButton,
-                    uploading && styles.addReceiptButtonDisabled
+                    styles.addGasButton,
+                    uploading && styles.addGasButtonDisabled
                   ]}
                   disabled={uploading}
-                  onPress={() => {
-                    Alert.alert(
-                      "Agregar comprobante",
-                      "¿Cómo deseas subir el comprobante?",
-                      [
-                        {
-                          text: "Cancelar",
-                          style: "cancel"
-                        },
-                        {
-                          text: "Tomar foto",
-                          onPress: tomarFoto
-                        },
-                        {
-                          text: "Elegir archivo",
-                          onPress: seleccionarArchivo
-                        }
-                      ]
-                    );
-                  }}
+                  onPress={() => setModalVisible(true)}
                 >
-                  {uploading ? (
-                    <>
-                      <ActivityIndicator color="#FFFFFF" size="small" />
-                      <Text style={styles.addReceiptText}>Subiendo...</Text>
-                    </>
-                  ) : (
-                    <>
-                      <Text style={styles.addReceiptIcon}>📸</Text>
-                      <Text style={styles.addReceiptText}>Agregar comprobante</Text>
-                    </>
-                  )}
+                  <Text style={styles.addGasIcon}>⛽</Text>
+                  <Text style={styles.addGasText}>¿Agregaste gas?</Text>
+                  <Text style={styles.addGasSubtext}>Toca para registrar</Text>
                 </TouchableOpacity>
               </View>
             )}
           </>
         )}
       </ScrollView>
+
+      {/* MODAL FORMULARIO */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={modalVisible}
+        onRequestClose={() => {
+          setModalVisible(false);
+          limpiarFormulario();
+        }}
+      >
+        <KeyboardAvoidingView 
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          style={styles.modalOverlay}
+        >
+          <View style={styles.modalContainer}>
+            <ScrollView 
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={styles.modalContent}
+            >
+              {/* Header del Modal */}
+              <View style={styles.modalHeader}>
+                <View>
+                  <Text style={styles.modalTitle}>Registrar carga de gas ⛽</Text>
+                  <Text style={styles.modalSubtitle}>
+                    Camión: {camionData.resumen}
+                  </Text>
+                </View>
+                <TouchableOpacity 
+                  onPress={() => {
+                    setModalVisible(false);
+                    limpiarFormulario();
+                  }}
+                  style={styles.closeButton}
+                >
+                  <Text style={styles.closeButtonText}>✕</Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* Formulario */}
+              <View style={styles.formContainer}>
+                
+                {/* Campo Galones */}
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>⛽ Galones cargados</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Ej: 15.5"
+                    keyboardType="decimal-pad"
+                    value={galones}
+                    onChangeText={setGalones}
+                  />
+                </View>
+
+                {/* Campo Total */}
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>💵 Total pagado (USD)</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Ej: 50.00"
+                    keyboardType="decimal-pad"
+                    value={total}
+                    onChangeText={setTotal}
+                  />
+                </View>
+
+                {/* Vista previa del comprobante */}
+                {comprobante && (
+                  <View style={styles.comprobantePreview}>
+                    <Text style={styles.comprobanteText}>
+                      ✓ Comprobante agregado
+                    </Text>
+                    <TouchableOpacity 
+                      onPress={() => setComprobante(null)}
+                      style={styles.removeComprobanteButton}
+                    >
+                      <Text style={styles.removeComprobanteText}>Cambiar</Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+
+                {/* Botón Subir Comprobante */}
+                {!comprobante && (
+                  <TouchableOpacity
+                    style={styles.uploadButton}
+                    onPress={() => {
+                      Alert.alert(
+                        "Subir comprobante",
+                        "¿Cómo deseas agregar el comprobante?",
+                        [
+                          { text: "Cancelar", style: "cancel" },
+                          { text: "Tomar foto", onPress: tomarFoto },
+                          { text: "Elegir archivo", onPress: seleccionarArchivo }
+                        ]
+                      );
+                    }}
+                  >
+                    <Text style={styles.uploadButtonIcon}>📸</Text>
+                    <Text style={styles.uploadButtonText}>Subir comprobante</Text>
+                  </TouchableOpacity>
+                )}
+
+                {/* Botón Registrar */}
+                <TouchableOpacity
+                  style={[
+                    styles.submitButton,
+                    uploading && styles.submitButtonDisabled
+                  ]}
+                  disabled={uploading}
+                  onPress={registrarGas}
+                >
+                  {uploading ? (
+                    <ActivityIndicator color="#FFFFFF" />
+                  ) : (
+                    <>
+                      <Text style={styles.submitButtonText}>
+                        Registrar carga
+                      </Text>
+                      <Text style={styles.submitButtonIcon}>✓</Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+
+                {/* Nota informativa */}
+                <View style={styles.infoBox}>
+                  <Text style={styles.infoIcon}>ℹ️</Text>
+                  <Text style={styles.infoText}>
+                    El registro quedará como "Pendiente" hasta que sea aprobado por administración.
+                  </Text>
+                </View>
+              </View>
+            </ScrollView>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </View>
   );
 }
@@ -631,19 +777,17 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
 
-  addReceiptButton: {
+  addGasButton: {
     marginTop: 20,
-    backgroundColor: "#3B82F6",
-    paddingVertical: 14,
+    backgroundColor: "#10B981",
+    paddingVertical: 16,
     paddingHorizontal: 20,
-    borderRadius: 12,
-    flexDirection: 'row',
+    borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 10,
     ...Platform.select({
       ios: {
-        shadowColor: "#3B82F6",
+        shadowColor: "#10B981",
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.3,
         shadowRadius: 8,
@@ -654,19 +798,232 @@ const styles = StyleSheet.create({
     }),
   },
 
-  addReceiptButtonDisabled: {
+  addGasButtonDisabled: {
     backgroundColor: "#9CA3AF",
     opacity: 0.7,
   },
 
-  addReceiptIcon: {
-    fontSize: 20,
+  addGasIcon: {
+    fontSize: 32,
+    marginBottom: 8,
   },
 
-  addReceiptText: {
+  addGasText: {
     color: "#FFFFFF",
+    fontSize: 18,
+    fontWeight: "800",
+    marginBottom: 4,
+  },
+
+  addGasSubtext: {
+    color: "#FFFFFF",
+    fontSize: 13,
+    fontWeight: "600",
+    opacity: 0.9,
+  },
+
+  // MODAL STYLES
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+
+  modalContainer: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    maxHeight: '90%',
+    ...Platform.select({
+      ios: {
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: -4 },
+        shadowOpacity: 0.1,
+        shadowRadius: 12,
+      },
+      android: { 
+        elevation: 8 
+      },
+    }),
+  },
+
+  modalContent: {
+    padding: 20,
+  },
+
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 24,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+
+  modalTitle: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: '#111',
+    marginBottom: 4,
+  },
+
+  modalSubtitle: {
+    fontSize: 14,
+    color: '#6B7280',
+    fontWeight: '600',
+  },
+
+  closeButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#F3F4F6',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  closeButtonText: {
+    fontSize: 20,
+    color: '#6B7280',
+    fontWeight: '600',
+  },
+
+  formContainer: {
+    gap: 16,
+  },
+
+  inputGroup: {
+    gap: 8,
+  },
+
+  inputLabel: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#111',
+  },
+
+  input: {
+    backgroundColor: '#F9FAFB',
+    borderWidth: 2,
+    borderColor: '#E5E7EB',
+    borderRadius: 12,
+    padding: 14,
     fontSize: 16,
-    fontWeight: "700",
+    color: '#111',
+    fontWeight: '600',
+  },
+
+  comprobantePreview: {
+    backgroundColor: '#D1FAE5',
+    borderWidth: 2,
+    borderColor: '#10B981',
+    borderRadius: 12,
+    padding: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+
+  comprobanteText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#065F46',
+  },
+
+  removeComprobanteButton: {
+    backgroundColor: '#059669',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+
+  removeComprobanteText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+
+  uploadButton: {
+    backgroundColor: '#F3F4F6',
+    borderWidth: 2,
+    borderColor: '#D1D5DB',
+    borderStyle: 'dashed',
+    borderRadius: 12,
+    padding: 20,
+    alignItems: 'center',
+    gap: 8,
+  },
+
+  uploadButtonIcon: {
+    fontSize: 32,
+  },
+
+  uploadButtonText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#6B7280',
+  },
+
+  submitButton: {
+    backgroundColor: '#10B981',
+    paddingVertical: 16,
+    borderRadius: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    marginTop: 8,
+    ...Platform.select({
+      ios: {
+        shadowColor: "#10B981",
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+      },
+      android: { 
+        elevation: 4 
+      },
+    }),
+  },
+
+  submitButtonDisabled: {
+    backgroundColor: '#9CA3AF',
+    opacity: 0.7,
+  },
+
+  submitButtonText: {
+    color: '#FFFFFF',
+    fontSize: 17,
+    fontWeight: '800',
+  },
+
+  submitButtonIcon: {
+    fontSize: 20,
+    color: '#FFFFFF',
+  },
+
+  infoBox: {
+    backgroundColor: '#EFF6FF',
+    borderWidth: 1,
+    borderColor: '#BFDBFE',
+    borderRadius: 12,
+    padding: 14,
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 8,
+  },
+
+  infoIcon: {
+    fontSize: 18,
+  },
+
+  infoText: {
+    flex: 1,
+    fontSize: 13,
+    color: '#1E40AF',
+    fontWeight: '600',
+    lineHeight: 18,
   },
 
   loadingText: { 

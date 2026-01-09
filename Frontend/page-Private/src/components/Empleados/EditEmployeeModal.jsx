@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react'; 
 import { Eye, EyeOff } from 'lucide-react';
 
 const EditEmployeeModal = ({ isOpen, onClose, onSave, employee, uploading }) => {
@@ -10,7 +10,10 @@ const EditEmployeeModal = ({ isOpen, onClose, onSave, employee, uploading }) => 
     password: '',
     salario: '',
     img: null,
-    email: ''
+    email: '',
+    // ✅ NUEVOS CAMPOS
+    rol: 'Operativo',
+    planillaTipo: 'Semanal',
   });
 
   const [showPassword, setShowPassword] = useState(false);
@@ -21,10 +24,10 @@ const EditEmployeeModal = ({ isOpen, onClose, onSave, employee, uploading }) => 
     const cleanLastName = (lastName || '').trim().toLowerCase().replace(/\s+/g, '');
     
     if (!cleanName && !cleanLastName) return '';
-    if (!cleanName) return `${cleanLastName}@empresa.com`;
-    if (!cleanLastName) return `${cleanName}@empresa.com`;
+    if (!cleanName) return `${cleanLastName}@rivera.com`;
+    if (!cleanLastName) return `${cleanName}@rivera.com`;
     
-    return `${cleanName}.${cleanLastName}@empresa.com`;
+    return `${cleanName}.${cleanLastName}@rivera.com`;
   };
 
   // USEEFFECT PRINCIPAL - Cargar datos del empleado
@@ -38,9 +41,12 @@ const EditEmployeeModal = ({ isOpen, onClose, onSave, employee, uploading }) => 
         phone: employee.phone || '',
         address: employee.address || '',
         password: '', // La contraseña siempre empieza vacía por seguridad
-        salario: employee.salario || '',
+        salario: employee.salario ?? '', // ✅ no perder 0
         img: null,    // Para nuevas imágenes
-        email: employee.email || ''
+        email: employee.email || '',
+        // ✅ cargar nuevos campos con defaults válidos
+        rol: employee.rol || 'Operativo',
+        planillaTipo: employee.planillaTipo || 'Semanal',
       });
       
       setShowPassword(false);
@@ -51,8 +57,10 @@ const EditEmployeeModal = ({ isOpen, onClose, onSave, employee, uploading }) => 
         lastName: employee.lastName || '',
         phone: employee.phone || '',
         address: employee.address || '',
-        salario: employee.salario || '',
-        email: employee.email || ''
+        salario: employee.salario ?? '',
+        email: employee.email || '',
+        rol: employee.rol || 'Operativo',
+        planillaTipo: employee.planillaTipo || 'Semanal',
       });
     }
   }, [employee, isOpen]);
@@ -69,9 +77,12 @@ const EditEmployeeModal = ({ isOpen, onClose, onSave, employee, uploading }) => 
         phone: employee.phone || '',
         address: employee.address || '',
         password: '',
-        salario: employee.salario || '',
+        salario: employee.salario ?? '',
         img: null,
-        email: employee.email || ''
+        email: employee.email || '',
+        // ✅ nuevos campos
+        rol: employee.rol || 'Operativo',
+        planillaTipo: employee.planillaTipo || 'Semanal',
       });
       
       setImagePreview(employee.img || null);
@@ -87,6 +98,7 @@ const EditEmployeeModal = ({ isOpen, onClose, onSave, employee, uploading }) => 
         [name]: value
       };
       
+      // Email auto-generado cuando cambian nombre/apellido
       if (name === 'name' || name === 'lastName') {
         const currentName = name === 'name' ? value : (prev.name || employee?.name || '');
         const currentLastName = name === 'lastName' ? value : (prev.lastName || employee?.lastName || '');
@@ -174,14 +186,24 @@ const EditEmployeeModal = ({ isOpen, onClose, onSave, employee, uploading }) => 
       formDataToSend.append('password', formData.password.trim());
       console.log('✅ Agregando contraseña: [OCULTA]');
     }
-    if (formData.salario && formData.salario !== '') {
+    if (formData.salario !== '' && formData.salario !== null && formData.salario !== undefined) {
       formDataToSend.append('salario', parseFloat(formData.salario));
       console.log('✅ Agregando salario:', parseFloat(formData.salario));
     }
-    if (formData.email && formData.email.trim()) {
-      formDataToSend.append('email', formData.email.trim());
-      console.log('✅ Agregando email:', formData.email.trim());
+
+    // ✅ NUEVOS CAMPOS: Rol y Planilla
+    if (formData.rol && formData.rol.trim()) {
+      formDataToSend.append('rol', formData.rol.trim());
+      console.log('✅ Agregando rol:', formData.rol.trim());
     }
+    if (formData.planillaTipo && formData.planillaTipo.trim()) {
+      formDataToSend.append('planillaTipo', formData.planillaTipo.trim());
+      console.log('✅ Agregando planillaTipo:', formData.planillaTipo.trim());
+    }
+
+    // ⚠️ Email: tu backend lo regenera cuando cambias name/lastName.
+    // Por eso solo lo mostramos, pero NO lo enviamos para evitar conflictos/duplicados.
+
     if (formData.img instanceof File) {
       formDataToSend.append('img', formData.img);
       console.log('✅ Agregando nueva imagen:', formData.img.name);
@@ -431,8 +453,37 @@ const EditEmployeeModal = ({ isOpen, onClose, onSave, employee, uploading }) => 
                   step="0.01"
                   min="0"
                   className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 text-base text-gray-900 bg-white"
-                  placeholder={employee?.salario || "0.00"}
+                  placeholder={employee?.salario ?? "0.00"}
                 />
+              </div>
+            </div>
+
+            {/* ✅ NUEVA FILA: Rol y Planilla */}
+            <div className="grid grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Rol</label>
+                <select
+                  name="rol"
+                  value={formData.rol}
+                  onChange={handleInputChange}
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 text-base text-gray-900 bg-white"
+                >
+                  <option value="Operativo">Operativo</option>
+                  <option value="Supervisor">Supervisor</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Tipo de planilla</label>
+                <select
+                  name="planillaTipo"
+                  value={formData.planillaTipo}
+                  onChange={handleInputChange}
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 text-base text-gray-900 bg-white"
+                >
+                  <option value="Semanal">Semanal</option>
+                  <option value="Quincenal">Quincenal</option>
+                </select>
               </div>
             </div>
 

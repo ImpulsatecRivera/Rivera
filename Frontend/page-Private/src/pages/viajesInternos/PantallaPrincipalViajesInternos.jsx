@@ -78,10 +78,10 @@ const canonEstado = (row) => {
 
 const estadoBadgeClass = (estado) => {
   const e = normalize(estado);
-  if (e === "completado") return "bg-green-50 text-green-700 border border-green-200";
-  if (e === "en curso") return "bg-blue-50 text-blue-700 border border-blue-200";
-  if (e === "cancelado") return "bg-red-50 text-red-700 border border-red-200";
-  return "bg-yellow-50 text-yellow-800 border border-yellow-200";
+  if (e === "completado") return "bg-[#5D9646] bg-opacity-20 text-[#5D9646] border-2 border-[#5D9646]";
+  if (e === "en curso") return "bg-[#5F8EAD] bg-opacity-20 text-[#5F8EAD] border-2 border-[#5F8EAD]";
+  if (e === "cancelado") return "bg-red-50 text-red-700 border-2 border-red-200";
+  return "bg-yellow-50 text-yellow-800 border-2 border-yellow-200";
 };
 
 export default function PantallaPrincipalViajesOperativos() {
@@ -134,7 +134,7 @@ export default function PantallaPrincipalViajesOperativos() {
       showCancelButton: true,
       confirmButtonText: "Sí, completar todos",
       cancelButtonText: "Cancelar",
-      confirmButtonColor: "#10b981",
+      confirmButtonColor: "#5D9646",
     });
 
     if (!result.isConfirmed) return;
@@ -176,7 +176,7 @@ export default function PantallaPrincipalViajesOperativos() {
       showCancelButton: true,
       confirmButtonText: "Sí, completar",
       cancelButtonText: "Cancelar",
-      confirmButtonColor: "#10b981",
+      confirmButtonColor: "#5D9646",
     });
 
     if (!result.isConfirmed) return;
@@ -223,7 +223,6 @@ export default function PantallaPrincipalViajesOperativos() {
       return;
     }
 
-    // Obtener mes y año del viaje
     const fechaSalida = new Date(row?.departureTime);
     const mes = fechaSalida.getMonth() + 1;
     const año = fechaSalida.getFullYear();
@@ -246,7 +245,6 @@ export default function PantallaPrincipalViajesOperativos() {
         throw new Error(json?.message || "Error al generar el PDF");
       }
 
-      // Descargar el PDF
       const blob = await res.blob();
       const downloadUrl = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
@@ -383,7 +381,7 @@ export default function PantallaPrincipalViajesOperativos() {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="text-center">
-          <Loader2 className="w-12 h-12 animate-spin text-indigo-600 mx-auto mb-4" />
+          <Loader2 className="w-12 h-12 animate-spin text-[#5F8EAD] mx-auto mb-4" />
           <p className="text-gray-600 font-medium">Cargando viajes operativos...</p>
         </div>
       </div>
@@ -398,7 +396,7 @@ export default function PantallaPrincipalViajesOperativos() {
           <p className="text-gray-600">{error}</p>
           <button
             onClick={fetchViajes}
-            className="mt-4 px-6 py-2 bg-indigo-600 text-white rounded-lg"
+            className="mt-4 px-6 py-2 bg-gradient-to-r from-[#34353A] to-[#5F8EAD] text-white rounded-lg hover:opacity-90"
           >
             Reintentar
           </button>
@@ -412,10 +410,10 @@ export default function PantallaPrincipalViajesOperativos() {
   return (
     <div className="min-h-screen bg-white p-8">
       <div className="max-w-7xl mx-auto">
-        {/* Header */}
+        {/* Header - COLORES CAMBIADOS */}
         <div className="mb-6 flex items-start justify-between flex-wrap gap-3">
           <div>
-            <h1 className="text-4xl font-bold text-gray-900 mb-1">Viajes Operativos</h1>
+            <h1 className="text-4xl font-bold text-[#34353A] mb-1">Viajes Operativos</h1>
             <p className="text-gray-500">Gestión de viajes operativos para clientes corporativos</p>
           </div>
 
@@ -423,7 +421,7 @@ export default function PantallaPrincipalViajesOperativos() {
             <button
               type="button"
               onClick={handleCompletarTodos}
-              className="flex items-center gap-2 px-5 py-3 bg-green-600 text-white rounded-xl hover:bg-green-700 font-semibold shadow-lg"
+              className="flex items-center gap-2 px-5 py-3 bg-[#5D9646] text-white rounded-xl hover:opacity-90 font-semibold shadow-lg"
             >
               <CheckCircle size={20} />
               Completar Todos
@@ -450,7 +448,7 @@ export default function PantallaPrincipalViajesOperativos() {
             <button
               type="button"
               onClick={() => navigate("/viajesInternos/agregar")}
-              className="flex items-center gap-2 px-5 py-3 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 font-semibold shadow-lg"
+              className="flex items-center gap-2 px-5 py-3 bg-gradient-to-r from-[#34353A] to-[#5F8EAD] text-white rounded-xl hover:opacity-90 font-semibold shadow-lg"
             >
               <Plus size={20} />
               Programar Viaje
@@ -458,16 +456,16 @@ export default function PantallaPrincipalViajesOperativos() {
           </div>
         </div>
 
-        {/* Tabs Estados */}
+        {/* Tabs Estados - COLORES CAMBIADOS */}
         <div className="mt-4 flex items-center gap-3 flex-wrap">
           {tabs.map((est) => (
             <button
               key={est}
               type="button"
               onClick={() => setEstadoFiltro(est)}
-              className={`px-4 py-2 rounded-xl font-semibold border transition-colors ${
+              className={`px-4 py-2 rounded-xl font-semibold border-2 transition-colors ${
                 estadoFiltro === est
-                  ? "bg-indigo-600 text-white border-indigo-600"
+                  ? "bg-gradient-to-r from-[#34353A] to-[#5F8EAD] text-white border-[#5F8EAD]"
                   : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50"
               }`}
             >
@@ -476,7 +474,7 @@ export default function PantallaPrincipalViajesOperativos() {
           ))}
         </div>
 
-        {/* Búsqueda y Ordenar */}
+        {/* Búsqueda y Ordenar - COLORES CAMBIADOS */}
         <div className="bg-white rounded-2xl shadow-md mb-6 mt-6 p-5 border border-gray-100">
           <div className="flex items-center justify-between gap-4 flex-wrap">
             <div className="relative flex-1 min-w-[300px]">
@@ -489,7 +487,7 @@ export default function PantallaPrincipalViajesOperativos() {
                 placeholder="Buscar por cliente, ruta, código..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#5F8EAD]"
               />
             </div>
 
@@ -498,7 +496,7 @@ export default function PantallaPrincipalViajesOperativos() {
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
-                className="border border-gray-200 rounded-xl px-4 py-3 text-sm font-medium focus:ring-2 focus:ring-indigo-500"
+                className="border border-gray-200 rounded-xl px-4 py-3 text-sm font-medium focus:ring-2 focus:ring-[#5F8EAD]"
               >
                 <option value="newest">Más reciente</option>
                 <option value="oldest">Más antiguo</option>
@@ -507,32 +505,32 @@ export default function PantallaPrincipalViajesOperativos() {
           </div>
         </div>
 
-        {/* Tabla */}
+        {/* Tabla - COLORES CAMBIADOS */}
         <div className="bg-white rounded-2xl shadow-md overflow-hidden border border-gray-100">
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="bg-white border-b border-gray-200">
-                  <th className="text-left py-5 px-6 text-gray-500 font-semibold text-sm">#</th>
-                  <th className="text-left py-5 px-6 text-gray-500 font-semibold text-sm">
+                <tr className="bg-gradient-to-r from-[#34353A] to-[#5F8EAD] border-b-2 border-[#5D9646]">
+                  <th className="text-left py-5 px-6 text-white font-semibold text-sm">#</th>
+                  <th className="text-left py-5 px-6 text-white font-semibold text-sm">
                     Código
                   </th>
-                  <th className="text-left py-5 px-6 text-gray-500 font-semibold text-sm">
+                  <th className="text-left py-5 px-6 text-white font-semibold text-sm">
                     Cliente
                   </th>
-                  <th className="text-left py-5 px-6 text-gray-500 font-semibold text-sm">
+                  <th className="text-left py-5 px-6 text-white font-semibold text-sm">
                     Ruta
                   </th>
-                  <th className="text-left py-5 px-6 text-gray-500 font-semibold text-sm">
+                  <th className="text-left py-5 px-6 text-white font-semibold text-sm">
                     Salida
                   </th>
-                  <th className="text-left py-5 px-6 text-gray-500 font-semibold text-sm">
+                  <th className="text-left py-5 px-6 text-white font-semibold text-sm">
                     Estado
                   </th>
-                  <th className="text-right py-5 px-6 text-gray-500 font-semibold text-sm">
+                  <th className="text-right py-5 px-6 text-white font-semibold text-sm">
                     Monto
                   </th>
-                  <th className="text-center py-5 px-6 text-gray-500 font-semibold text-sm">
+                  <th className="text-center py-5 px-6 text-white font-semibold text-sm">
                     Acciones
                   </th>
                 </tr>
@@ -549,9 +547,8 @@ export default function PantallaPrincipalViajesOperativos() {
                   const monto = row?.montoAcordado ?? 0;
 
                   const esCompletado = normalize(estado) === "completado";
-const esCancelado = normalize(estado) === "cancelado"; // ✅ Primero declarar
-const puedeCompletar = !esCompletado && !esCancelado; // ✅ Ahora sí existe
-
+                  const esCancelado = normalize(estado) === "cancelado";
+                  const puedeCompletar = !esCompletado && !esCancelado;
 
                   return (
                     <tr
@@ -562,12 +559,12 @@ const puedeCompletar = !esCompletado && !esCancelado; // ✅ Ahora sí existe
                         {startIndex + idx + 1}
                       </td>
 
-                      <td className="py-5 px-6 text-gray-900 font-semibold">{codigo}</td>
+                      <td className="py-5 px-6 text-[#34353A] font-semibold">{codigo}</td>
 
                       <td className="py-5 px-6 text-gray-700">{cliente}</td>
                       <td className="py-5 px-6 text-gray-700">{ruta}</td>
 
-                      <td className="py-5 px-6 text-gray-900 text-sm">
+                      <td className="py-5 px-6 text-[#34353A] text-sm">
                         {formatearFecha(salida)}
                       </td>
 
@@ -581,38 +578,33 @@ const puedeCompletar = !esCompletado && !esCancelado; // ✅ Ahora sí existe
                         </span>
                       </td>
 
-                      <td className="py-5 px-6 text-right font-bold text-gray-900">
+                      <td className="py-5 px-6 text-right font-bold text-[#34353A]">
                         {formatearMoneda(monto)}
                       </td>
 
                       <td className="py-5 px-6" onClick={(e) => e.stopPropagation()}>
-  <div className="flex items-center justify-center gap-2">
-    {/* ✅ Botón Descargar PDF */}
-    <button
-      type="button"
-      onClick={(e) => handleDescargarPDF(e, row)}
-      className="p-2 rounded-lg bg-purple-50 hover:bg-purple-100 text-purple-600 transition-colors"
-      title="Descargar Reporte PDF"
-    >
-      <Download size={18} />
-    </button>
+                        <div className="flex items-center justify-center gap-2">
+                          <button
+                            type="button"
+                            onClick={(e) => handleDescargarPDF(e, row)}
+                            className="p-2 rounded-lg bg-[#5F8EAD] bg-opacity-20 hover:bg-[#5F8EAD] hover:bg-opacity-30 text-[#5F8EAD] transition-colors"
+                            title="Descargar Reporte PDF"
+                          >
+                            <Download size={18} />
+                          </button>
 
-    {/* ✅ Botón Completar - SOLO si NO está Completado ni Cancelado */}
-   {puedeCompletar && (
-  <button
-    type="button"
-    onClick={(e) => handleCompletarUno(e, row)}
-    className="p-2 rounded-lg bg-green-50 hover:bg-green-100 text-green-600 transition-colors"
-    title="Completar"
-  >
-    <CheckCircle size={18} />
-  </button>
-)}
-
-    {/* ✅ Botón Eliminar - Siempre disponible */}
-   
-  </div>
-</td>
+                          {puedeCompletar && (
+                            <button
+                              type="button"
+                              onClick={(e) => handleCompletarUno(e, row)}
+                              className="p-2 rounded-lg bg-[#5D9646] bg-opacity-20 hover:bg-[#5D9646] hover:bg-opacity-30 text-[#5D9646] transition-colors"
+                              title="Completar"
+                            >
+                              <CheckCircle size={18} />
+                            </button>
+                          )}
+                        </div>
+                      </td>
                     </tr>
                   );
                 })}
@@ -628,7 +620,7 @@ const puedeCompletar = !esCompletado && !esCancelado; // ✅ Ahora sí existe
             </table>
           </div>
 
-          {/* Paginación */}
+          {/* Paginación - COLORES CAMBIADOS */}
           <div className="flex items-center justify-between px-6 py-5 border-t border-gray-200 bg-gray-50">
             <p className="text-sm text-gray-600 font-medium">
               Mostrando {sorted.length === 0 ? 0 : startIndex + 1} a{" "}
@@ -654,7 +646,7 @@ const puedeCompletar = !esCompletado && !esCancelado; // ✅ Ahora sí existe
                     onClick={() => setCurrentPage(page)}
                     className={`px-4 py-2 rounded-lg font-semibold transition-colors ${
                       currentPage === page
-                        ? "bg-indigo-600 text-white"
+                        ? "bg-gradient-to-r from-[#34353A] to-[#5F8EAD] text-white"
                         : "text-gray-700 hover:bg-gray-100"
                     }`}
                   >
@@ -689,7 +681,6 @@ const puedeCompletar = !esCompletado && !esCancelado; // ✅ Ahora sí existe
         </div>
       </div>
 
-      {/* Modal de Reportes */}
       <ReportesViajesOperativosModal
         isOpen={isReportesOpen}
         onClose={() => setIsReportesOpen(false)}
