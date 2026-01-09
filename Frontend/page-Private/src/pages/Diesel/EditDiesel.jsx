@@ -11,7 +11,6 @@ const ESTADOS = {
   COMPLETADO: "Completado",
 };
 
-// ✅ FECHA SIN DESFASE (para input type="date")
 const toISODate = (dateLike) => {
   if (!dateLike) return "";
 
@@ -49,8 +48,6 @@ export default function EditDiesel() {
   const [error, setError] = useState(null);
 
   const [camiones, setCamiones] = useState([]);
-
-  // ✅ si ya está COMPLETADO en BD, bloqueamos edición
   const [isLocked, setIsLocked] = useState(false);
 
   const [formData, setFormData] = useState({
@@ -61,7 +58,6 @@ export default function EditDiesel() {
     estado: ESTADOS.PENDIENTE,
   });
 
-  // ✅ Fecha de hoy (local) para bloquear futuras
   const getTodayISO = () => {
     const d = new Date();
     const yyyy = d.getFullYear();
@@ -79,13 +75,11 @@ export default function EditDiesel() {
         setLoading(true);
         setError(null);
 
-        // 1) Camiones
         const resCam = await fetch(CAMIONES_ENDPOINT);
         const jsonCam = await resCam.json().catch(() => ({}));
         const camRows = jsonCam.data || (Array.isArray(jsonCam) ? jsonCam : []);
         setCamiones(camRows);
 
-        // 2) Diesel
         const res = await fetch(DIESEL_ENDPOINT);
         const json = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error(json?.message || "Error al cargar diésel");
@@ -111,7 +105,6 @@ export default function EditDiesel() {
           estado: estadoBD,
         });
 
-        // ✅ si viene completado desde BD -> bloquear todo
         setIsLocked(estadoBD === ESTADOS.COMPLETADO);
       } catch (e) {
         console.error(e);
@@ -137,11 +130,10 @@ export default function EditDiesel() {
   };
 
   const handleChange = (e) => {
-    if (isLocked) return; // ⛔ no permitir cambios si está completado
+    if (isLocked) return;
 
     const { name, value } = e.target;
 
-    // ✅ validar fecha no futura
     if (name === "fecha") {
       const today = getTodayISO();
       if (value && value > today) {
@@ -173,8 +165,8 @@ export default function EditDiesel() {
         fecha: formData.fecha,
         Galones: toNumber(formData.Galones),
         Total: toNumber(formData.Total),
-        CicurlationCard: formData.CicurlationCard, // ✅ para que también pueda guardar cambio de camión
-        estado: formData.estado, // ✅ guardar estado
+        CicurlationCard: formData.CicurlationCard,
+        estado: formData.estado,
       };
 
       const res = await fetch(`${DIESEL_ENDPOINT}/${id}`, {
@@ -199,7 +191,7 @@ export default function EditDiesel() {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="text-center">
-          <div className="w-12 h-12 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <div className="w-12 h-12 border-2 border-[#5F8EAD] border-t-transparent rounded-full animate-spin mx-auto mb-4" />
           <p className="text-gray-600 font-medium">Cargando diésel...</p>
         </div>
       </div>
@@ -212,22 +204,22 @@ export default function EditDiesel() {
         <div className="mb-8">
           <button
             onClick={() => navigate("/diesel")}
-            className="flex items-center gap-2 text-gray-600 hover:text-gray-900 font-semibold mb-4 transition-colors"
+            className="flex items-center gap-2 text-[#5F8EAD] hover:text-[#34353A] font-semibold mb-4 transition-colors"
           >
             <ArrowLeft size={20} />
             Volver a Diésel
           </button>
 
           <div className="flex items-center gap-4">
-            <div className="bg-gradient-to-br from-indigo-600 to-purple-600 p-4 rounded-2xl shadow-lg">
+            <div className="bg-gradient-to-br from-[#34353A] to-[#5F8EAD] p-4 rounded-2xl shadow-lg">
               <Fuel className="text-white" size={32} />
             </div>
             <div>
-              <h1 className="text-3xl font-bold text-gray-900 mb-1">Editar Diésel</h1>
+              <h1 className="text-3xl font-bold text-[#34353A] mb-1">Editar Diésel</h1>
               <p className="text-gray-600">Actualiza los datos del registro</p>
 
               {isLocked && (
-                <p className="mt-2 text-sm font-semibold text-green-700 bg-green-50 border border-green-200 inline-block px-3 py-1 rounded-xl">
+                <p className="mt-2 text-sm font-semibold text-[#5D9646] bg-[#5D9646] bg-opacity-10 border-2 border-[#5D9646] inline-block px-3 py-1 rounded-xl">
                   ✅ Este registro está COMPLETADO y ya no se puede editar.
                 </p>
               )}
@@ -237,7 +229,7 @@ export default function EditDiesel() {
 
         <div className="bg-white rounded-3xl shadow-xl p-8">
           {error && (
-            <div className="mb-6 bg-red-50 border border-red-200 rounded-xl p-4 flex items-start gap-3">
+            <div className="mb-6 bg-red-50 border-2 border-red-200 rounded-xl p-4 flex items-start gap-3">
               <AlertCircle className="text-red-600 flex-shrink-0 mt-0.5" size={20} />
               <div>
                 <p className="text-red-800 font-semibold">Error</p>
@@ -248,7 +240,7 @@ export default function EditDiesel() {
 
           <div className="grid grid-cols-1 gap-4">
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">Fecha</label>
+              <label className="block text-sm font-semibold text-[#34353A] mb-2">Fecha</label>
               <input
                 type="date"
                 name="fecha"
@@ -256,20 +248,20 @@ export default function EditDiesel() {
                 onChange={handleChange}
                 max={getTodayISO()}
                 disabled={isLocked}
-                className={`w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
+                className={`w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#5F8EAD] focus:border-[#5F8EAD] ${
                   isLocked ? "bg-gray-100 cursor-not-allowed" : ""
                 }`}
               />
             </div>
 
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">Camión / Placa</label>
+              <label className="block text-sm font-semibold text-[#34353A] mb-2">Camión / Placa</label>
               <select
                 name="CicurlationCard"
                 value={formData.CicurlationCard}
                 onChange={handleChange}
                 disabled={isLocked}
-                className={`w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
+                className={`w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#5F8EAD] focus:border-[#5F8EAD] ${
                   isLocked ? "bg-gray-100 cursor-not-allowed" : ""
                 }`}
               >
@@ -282,15 +274,14 @@ export default function EditDiesel() {
               </select>
             </div>
 
-            {/* ✅ APARTADO ESTADO (como tu ejemplo de mantenimiento) */}
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">Estado del registro</label>
+              <label className="block text-sm font-semibold text-[#34353A] mb-2">Estado del registro</label>
               <select
                 name="estado"
                 value={formData.estado}
                 onChange={handleChange}
                 disabled={isLocked}
-                className={`w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
+                className={`w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#5F8EAD] focus:border-[#5F8EAD] ${
                   isLocked ? "bg-gray-100 cursor-not-allowed" : ""
                 }`}
               >
@@ -306,7 +297,7 @@ export default function EditDiesel() {
             </div>
 
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">Galones</label>
+              <label className="block text-sm font-semibold text-[#34353A] mb-2">Galones</label>
               <input
                 type="number"
                 name="Galones"
@@ -315,14 +306,14 @@ export default function EditDiesel() {
                 min="0"
                 step="0.01"
                 disabled={isLocked}
-                className={`w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
+                className={`w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#5F8EAD] focus:border-[#5F8EAD] ${
                   isLocked ? "bg-gray-100 cursor-not-allowed" : ""
                 }`}
               />
             </div>
 
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">Total (USD)</label>
+              <label className="block text-sm font-semibold text-[#34353A] mb-2">Total (USD)</label>
               <input
                 type="number"
                 name="Total"
@@ -331,7 +322,7 @@ export default function EditDiesel() {
                 min="0"
                 step="0.01"
                 disabled={isLocked}
-                className={`w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
+                className={`w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#5F8EAD] focus:border-[#5F8EAD] ${
                   isLocked ? "bg-gray-100 cursor-not-allowed" : ""
                 }`}
               />
@@ -352,7 +343,7 @@ export default function EditDiesel() {
               <button
                 onClick={handleSubmit}
                 disabled={saving || isLocked}
-                className="flex-1 px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl font-semibold hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                className="flex-1 px-6 py-3 bg-gradient-to-r from-[#34353A] to-[#5F8EAD] text-white rounded-xl font-semibold hover:opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg"
               >
                 {saving ? (
                   <>

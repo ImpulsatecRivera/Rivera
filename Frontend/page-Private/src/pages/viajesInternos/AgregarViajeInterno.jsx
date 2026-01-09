@@ -14,7 +14,6 @@ import {
 import { useNavigate } from "react-router-dom";
 import { config } from "../../config";
 
-// ✅ ENDPOINTS BACKEND
 const VIAJES_OPERATIVOS_ENDPOINT = `${config.api.API_URL}/viajes-operativos/crear`;
 const CLIENTES_ENDPOINT = `${config.api.API_URL}/clientes`;
 const MOTORISTAS_ENDPOINT = `${config.api.API_URL}/motoristas`;
@@ -28,7 +27,6 @@ const TIPO_CARGA = [
   { value: "otro", label: "Otro" },
 ];
 
-// ===== Helpers =====
 const getMotoristaNombre = (m) =>
   m?.nombre || m?.name || [m?.nombres, m?.apellidos].filter(Boolean).join(" ") || "Motorista";
 
@@ -44,7 +42,6 @@ export default function AgregarViajeOperativo() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // ✅ Clientes Corporativos
   const [loadingClientes, setLoadingClientes] = useState(false);
   const [creatingCliente, setCreatingCliente] = useState(false);
   const [clientes, setClientes] = useState([]);
@@ -57,56 +54,35 @@ export default function AgregarViajeOperativo() {
     address: "",
   });
 
-  // ✅ Motoristas
   const [motoristas, setMotoristas] = useState([]);
   const [loadingMotoristas, setLoadingMotoristas] = useState(false);
 
-  // ✅ Camiones
   const [camiones, setCamiones] = useState([]);
   const [loadingCamiones, setLoadingCamiones] = useState(false);
 
   const [formData, setFormData] = useState({
-    // Cliente
     clienteId: "",
     clienteNombre: "",
-
-    // Recursos
     truckId: "",
     conductorId: "",
-
-    // Código programación (opcional, se autogenera)
     codigoProgramacion: "",
-
-    // Descripción
     tripDescription: "",
-
-    // Fechas (salida y llegada)
     departureTime: "",
     arrivalTime: "",
-
-    // Ruta
     rutaOrigen: "",
     rutaDestino: "",
     rutaCompleta: "",
     distanciaTotal: "",
     tiempoEstimado: "",
-
-    // Carga
     cargaDescripcion: "",
     cargaPeso: "",
     cargaTipo: "general",
-
-    // Monto
     montoAcordado: "",
-
-    // Condiciones
     condiciones: {
       clima: "normal",
       trafico: "normal",
       carretera: "buena",
     },
-
-    // Observaciones
     observaciones: "",
   });
 
@@ -114,12 +90,8 @@ export default function AgregarViajeOperativo() {
     fetchClientes();
     fetchMotoristas();
     fetchCamiones();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // =========================
-  // Clientes Corporativos
-  // =========================
   const fetchClientes = async () => {
     try {
       setLoadingClientes(true);
@@ -127,7 +99,6 @@ export default function AgregarViajeOperativo() {
       const json = await res.json().catch(() => ({}));
       const rows = json?.data?.clientes || json?.data || (Array.isArray(json) ? json : []);
 
-      // Filtrar solo corporativos
       const corporativos = rows.filter((c) => c?.tipoCliente === "corporativo");
       setClientes(corporativos);
     } catch (e) {
@@ -216,9 +187,6 @@ export default function AgregarViajeOperativo() {
     }
   };
 
-  // =========================
-  // Motoristas
-  // =========================
   const fetchMotoristas = async () => {
     try {
       setLoadingMotoristas(true);
@@ -246,9 +214,6 @@ export default function AgregarViajeOperativo() {
       });
   }, [motoristas]);
 
-  // =========================
-  // Camiones
-  // =========================
   const fetchCamiones = async () => {
     try {
       setLoadingCamiones(true);
@@ -279,9 +244,6 @@ export default function AgregarViajeOperativo() {
       });
   }, [camiones]);
 
-  // =========================
-  // Handlers
-  // =========================
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
@@ -296,7 +258,6 @@ export default function AgregarViajeOperativo() {
     }));
   };
 
-  // ✅ Auto-generar rutaCompleta
   useEffect(() => {
     if (formData.rutaOrigen && formData.rutaDestino) {
       setFormData((p) => ({
@@ -306,9 +267,6 @@ export default function AgregarViajeOperativo() {
     }
   }, [formData.rutaOrigen, formData.rutaDestino]);
 
-  // =========================
-  // Validación
-  // =========================
   const validar = () => {
     if (!formData.clienteId) return "Selecciona un cliente corporativo";
     if (!formData.truckId) return "Selecciona un camión";
@@ -331,9 +289,6 @@ export default function AgregarViajeOperativo() {
     return null;
   };
 
-  // =========================
-  // Submit
-  // =========================
   const handleSubmit = async () => {
     const err = validar();
     if (err) {
@@ -348,31 +303,23 @@ export default function AgregarViajeOperativo() {
       const dataToSend = {
         clienteId: formData.clienteId,
         clienteNombre: formData.clienteNombre,
-
         truckId: formData.truckId,
         conductorId: formData.conductorId,
-
         codigoProgramacion: formData.codigoProgramacion || undefined,
-
         tripDescription:
           formData.tripDescription ||
           `${formData.rutaCompleta} - ${formData.clienteNombre}`,
-
         departureTime: formData.departureTime,
         arrivalTime: formData.arrivalTime,
-
         rutaOrigen: formData.rutaOrigen,
         rutaDestino: formData.rutaDestino,
         rutaCompleta: formData.rutaCompleta,
         distanciaTotal: Number(formData.distanciaTotal) || 0,
         tiempoEstimado: Number(formData.tiempoEstimado) || 0,
-
         cargaDescripcion: formData.cargaDescripcion || "Carga general",
         cargaPeso: Number(formData.cargaPeso) || 0,
         cargaTipo: formData.cargaTipo,
-
         montoAcordado: Number(formData.montoAcordado),
-
         condiciones: formData.condiciones,
         observaciones: formData.observaciones || "",
       };
@@ -401,22 +348,22 @@ export default function AgregarViajeOperativo() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-8">
       <div className="max-w-6xl mx-auto">
-        {/* Header */}
+        {/* Header - COLORES CAMBIADOS */}
         <div className="mb-8">
           <button
             onClick={() => navigate("/viajesInternos")}
-            className="flex items-center gap-2 text-gray-600 hover:text-gray-900 font-semibold mb-4 transition-colors"
+            className="flex items-center gap-2 text-[#5F8EAD] hover:text-[#34353A] font-semibold mb-4 transition-colors"
           >
             <ArrowLeft size={20} />
             Volver a Viajes Operativos
           </button>
 
           <div className="flex items-center gap-4">
-            <div className="bg-gradient-to-br from-indigo-600 to-purple-600 p-4 rounded-2xl shadow-lg">
+            <div className="bg-gradient-to-br from-[#34353A] to-[#5F8EAD] p-4 rounded-2xl shadow-lg">
               <Plus className="text-white" size={32} />
             </div>
             <div>
-              <h1 className="text-4xl font-bold text-gray-900 mb-1">
+              <h1 className="text-4xl font-bold text-[#34353A] mb-1">
                 Nuevo Viaje Operativo
               </h1>
               <p className="text-gray-600">Programar viaje para cliente corporativo</p>
@@ -424,11 +371,10 @@ export default function AgregarViajeOperativo() {
           </div>
         </div>
 
-        {/* Card */}
         <div className="bg-white rounded-3xl shadow-xl p-8">
           {/* Error */}
           {error && (
-            <div className="mb-6 bg-red-50 border border-red-200 rounded-xl p-4 flex items-start gap-3">
+            <div className="mb-6 bg-red-50 border-2 border-red-200 rounded-xl p-4 flex items-start gap-3">
               <AlertCircle className="text-red-600 flex-shrink-0 mt-0.5" size={20} />
               <div>
                 <p className="text-red-800 font-semibold">Error</p>
@@ -437,10 +383,10 @@ export default function AgregarViajeOperativo() {
             </div>
           )}
 
-          {/* Cliente Corporativo */}
+          {/* Cliente Corporativo - COLORES CAMBIADOS */}
           <div className="mb-8">
-            <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-              <User className="text-indigo-600" size={22} />
+            <h3 className="text-xl font-bold text-[#34353A] mb-4 flex items-center gap-2">
+              <User className="text-[#5F8EAD]" size={22} />
               Cliente Corporativo
             </h3>
 
@@ -451,7 +397,7 @@ export default function AgregarViajeOperativo() {
               <select
                 value={formData.clienteId}
                 onChange={(e) => handleClienteSelect(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
+                className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#5F8EAD] focus:border-[#5F8EAD] bg-white"
                 disabled={loadingClientes}
               >
                 <option value="">
@@ -464,7 +410,6 @@ export default function AgregarViajeOperativo() {
                 ))}
               </select>
 
-              {/* Agregar nuevo cliente corporativo */}
               <div className="mt-3 bg-white border border-gray-200 rounded-xl p-3">
                 <p className="text-xs font-bold text-gray-700 mb-2">
                   ¿No aparece? Agregar nuevo cliente corporativo
@@ -477,7 +422,7 @@ export default function AgregarViajeOperativo() {
                       setNuevoCliente((p) => ({ ...p, nombreEmpresa: e.target.value }))
                     }
                     placeholder="Nombre Empresa *"
-                    className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="px-3 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5F8EAD] focus:border-[#5F8EAD]"
                   />
                   <input
                     value={nuevoCliente.nombreComercial}
@@ -485,7 +430,7 @@ export default function AgregarViajeOperativo() {
                       setNuevoCliente((p) => ({ ...p, nombreComercial: e.target.value }))
                     }
                     placeholder="Nombre Comercial (Ej: DIANA)"
-                    className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="px-3 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5F8EAD] focus:border-[#5F8EAD]"
                   />
                   <input
                     value={nuevoCliente.ruc}
@@ -493,7 +438,7 @@ export default function AgregarViajeOperativo() {
                       setNuevoCliente((p) => ({ ...p, ruc: e.target.value }))
                     }
                     placeholder="RUC/NIT *"
-                    className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="px-3 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5F8EAD] focus:border-[#5F8EAD]"
                   />
                   <input
                     value={nuevoCliente.email}
@@ -501,7 +446,7 @@ export default function AgregarViajeOperativo() {
                       setNuevoCliente((p) => ({ ...p, email: e.target.value }))
                     }
                     placeholder="Email *"
-                    className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="px-3 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5F8EAD] focus:border-[#5F8EAD]"
                   />
                   <input
                     value={nuevoCliente.phone}
@@ -509,7 +454,7 @@ export default function AgregarViajeOperativo() {
                       setNuevoCliente((p) => ({ ...p, phone: e.target.value }))
                     }
                     placeholder="Teléfono *"
-                    className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="px-3 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5F8EAD] focus:border-[#5F8EAD]"
                   />
                   <input
                     value={nuevoCliente.address}
@@ -517,7 +462,7 @@ export default function AgregarViajeOperativo() {
                       setNuevoCliente((p) => ({ ...p, address: e.target.value }))
                     }
                     placeholder="Dirección *"
-                    className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="px-3 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5F8EAD] focus:border-[#5F8EAD]"
                   />
                 </div>
 
@@ -525,7 +470,7 @@ export default function AgregarViajeOperativo() {
                   type="button"
                   onClick={crearClienteYSeleccionar}
                   disabled={creatingCliente}
-                  className="w-full px-4 py-2 bg-indigo-600 text-white rounded-lg font-semibold disabled:opacity-50"
+                  className="w-full px-4 py-2 bg-[#5D9646] text-white rounded-lg font-semibold disabled:opacity-50 hover:opacity-90"
                 >
                   {creatingCliente ? "Creando..." : "Agregar Cliente"}
                 </button>
@@ -533,16 +478,16 @@ export default function AgregarViajeOperativo() {
             </div>
           </div>
 
-          {/* Fechas y Horarios */}
+          {/* Fechas y Horarios - COLORES CAMBIADOS */}
           <div className="mb-8">
-            <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-              <Calendar className="text-indigo-600" size={22} />
+            <h3 className="text-xl font-bold text-[#34353A] mb-4 flex items-center gap-2">
+              <Calendar className="text-[#5F8EAD]" size={22} />
               Fechas y Horarios
             </h3>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                <label className="block text-sm font-semibold text-[#34353A] mb-2">
                   Fecha/Hora Salida *
                 </label>
                 <input
@@ -550,12 +495,12 @@ export default function AgregarViajeOperativo() {
                   name="departureTime"
                   value={formData.departureTime}
                   onChange={handleInputChange}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#5F8EAD] focus:border-[#5F8EAD]"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                <label className="block text-sm font-semibold text-[#34353A] mb-2">
                   Fecha/Hora Llegada *
                 </label>
                 <input
@@ -563,22 +508,22 @@ export default function AgregarViajeOperativo() {
                   name="arrivalTime"
                   value={formData.arrivalTime}
                   onChange={handleInputChange}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#5F8EAD] focus:border-[#5F8EAD]"
                 />
               </div>
             </div>
           </div>
 
-          {/* Ruta */}
+          {/* Ruta - COLORES CAMBIADOS */}
           <div className="mb-8">
-            <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-              <MapPin className="text-indigo-600" size={22} />
+            <h3 className="text-xl font-bold text-[#34353A] mb-4 flex items-center gap-2">
+              <MapPin className="text-[#5D9646]" size={22} />
               Ruta
             </h3>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                <label className="block text-sm font-semibold text-[#34353A] mb-2">
                   Origen *
                 </label>
                 <input
@@ -587,12 +532,12 @@ export default function AgregarViajeOperativo() {
                   value={formData.rutaOrigen}
                   onChange={handleInputChange}
                   placeholder="Ej: JULIO"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#5F8EAD] focus:border-[#5F8EAD]"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                <label className="block text-sm font-semibold text-[#34353A] mb-2">
                   Destino *
                 </label>
                 <input
@@ -601,25 +546,25 @@ export default function AgregarViajeOperativo() {
                   value={formData.rutaDestino}
                   onChange={handleInputChange}
                   placeholder="Ej: RONALD"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#5F8EAD] focus:border-[#5F8EAD]"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                <label className="block text-sm font-semibold text-[#34353A] mb-2">
                   Ruta Completa (auto)
                 </label>
                 <input
                   type="text"
                   value={formData.rutaCompleta}
                   readOnly
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl bg-gray-50"
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl bg-gray-50"
                   placeholder="Ej: JULIO/RONALD"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                <label className="block text-sm font-semibold text-[#34353A] mb-2">
                   Distancia (km)
                 </label>
                 <input
@@ -628,12 +573,12 @@ export default function AgregarViajeOperativo() {
                   value={formData.distanciaTotal}
                   onChange={handleInputChange}
                   placeholder="Ej: 150"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#5F8EAD] focus:border-[#5F8EAD]"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                <label className="block text-sm font-semibold text-[#34353A] mb-2">
                   Tiempo Estimado (hrs)
                 </label>
                 <input
@@ -642,22 +587,22 @@ export default function AgregarViajeOperativo() {
                   value={formData.tiempoEstimado}
                   onChange={handleInputChange}
                   placeholder="Ej: 9"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#5F8EAD] focus:border-[#5F8EAD]"
                 />
               </div>
             </div>
           </div>
 
-          {/* Carga */}
+          {/* Carga - COLORES CAMBIADOS */}
           <div className="mb-8">
-            <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-              <Package className="text-indigo-600" size={22} />
+            <h3 className="text-xl font-bold text-[#34353A] mb-4 flex items-center gap-2">
+              <Package className="text-[#5F8EAD]" size={22} />
               Información de Carga
             </h3>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                <label className="block text-sm font-semibold text-[#34353A] mb-2">
                   Descripción
                 </label>
                 <input
@@ -666,12 +611,12 @@ export default function AgregarViajeOperativo() {
                   value={formData.cargaDescripcion}
                   onChange={handleInputChange}
                   placeholder="Ej: Carga general"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#5F8EAD] focus:border-[#5F8EAD]"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                <label className="block text-sm font-semibold text-[#34353A] mb-2">
                   Peso (kg)
                 </label>
                 <input
@@ -680,19 +625,19 @@ export default function AgregarViajeOperativo() {
                   value={formData.cargaPeso}
                   onChange={handleInputChange}
                   placeholder="Ej: 15000"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#5F8EAD] focus:border-[#5F8EAD]"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                <label className="block text-sm font-semibold text-[#34353A] mb-2">
                   Tipo de Carga
                 </label>
                 <select
                   name="cargaTipo"
                   value={formData.cargaTipo}
                   onChange={handleInputChange}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#5F8EAD] focus:border-[#5F8EAD]"
                 >
                   {TIPO_CARGA.map((op) => (
                     <option key={op.value} value={op.value}>
@@ -704,10 +649,10 @@ export default function AgregarViajeOperativo() {
             </div>
           </div>
 
-          {/* Monto */}
+          {/* Monto - COLORES CAMBIADOS */}
           <div className="mb-8">
-            <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-              <DollarSign className="text-indigo-600" size={22} />
+            <h3 className="text-xl font-bold text-[#34353A] mb-4 flex items-center gap-2">
+              <DollarSign className="text-[#5D9646]" size={22} />
               Monto Acordado
             </h3>
 
@@ -724,15 +669,15 @@ export default function AgregarViajeOperativo() {
                 value={formData.montoAcordado}
                 onChange={handleInputChange}
                 placeholder="Ej: 250.00"
-                className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="w-full pl-12 pr-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#5F8EAD] focus:border-[#5F8EAD]"
               />
             </div>
           </div>
 
-          {/* Conductor y Vehículo */}
+          {/* Conductor y Vehículo - COLORES CAMBIADOS */}
           <div className="mb-8">
-            <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-              <Truck className="text-indigo-600" size={22} />
+            <h3 className="text-xl font-bold text-[#34353A] mb-4 flex items-center gap-2">
+              <Truck className="text-[#5F8EAD]" size={22} />
               Conductor y Vehículo
             </h3>
 
@@ -747,7 +692,7 @@ export default function AgregarViajeOperativo() {
                     onChange={(e) =>
                       setFormData((p) => ({ ...p, conductorId: e.target.value }))
                     }
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
+                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#5F8EAD] focus:border-[#5F8EAD] bg-white"
                     disabled={loadingMotoristas}
                   >
                     <option value="">
@@ -768,7 +713,7 @@ export default function AgregarViajeOperativo() {
                   <select
                     value={formData.truckId}
                     onChange={(e) => setFormData((p) => ({ ...p, truckId: e.target.value }))}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
+                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#5F8EAD] focus:border-[#5F8EAD] bg-white"
                     disabled={loadingCamiones}
                   >
                     <option value="">
@@ -785,9 +730,9 @@ export default function AgregarViajeOperativo() {
             </div>
           </div>
 
-          {/* Código Programación (Opcional) */}
+          {/* Código Programación - COLORES CAMBIADOS */}
           <div className="mb-8">
-            <h3 className="text-xl font-bold text-gray-900 mb-4">
+            <h3 className="text-xl font-bold text-[#34353A] mb-4">
               Código de Programación (Opcional)
             </h3>
 
@@ -797,13 +742,13 @@ export default function AgregarViajeOperativo() {
               value={formData.codigoProgramacion}
               onChange={handleInputChange}
               placeholder="Ej: C-11375 (se autogenera si se deja vacío)"
-              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#5F8EAD] focus:border-[#5F8EAD]"
             />
           </div>
 
-          {/* Observaciones */}
+          {/* Observaciones - COLORES CAMBIADOS */}
           <div className="mb-8">
-            <h3 className="text-xl font-bold text-gray-900 mb-4">Observaciones</h3>
+            <h3 className="text-xl font-bold text-[#34353A] mb-4">Observaciones</h3>
 
             <textarea
               name="observaciones"
@@ -811,11 +756,11 @@ export default function AgregarViajeOperativo() {
               onChange={handleInputChange}
               rows={3}
               placeholder="Notas adicionales del viaje..."
-              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
+              className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#5F8EAD] focus:border-[#5F8EAD] resize-none"
             />
           </div>
 
-          {/* Botones */}
+          {/* Botones - COLORES CAMBIADOS */}
           <div className="flex items-center gap-4">
             <button
               onClick={() => navigate("/viajesOperativos")}
@@ -827,7 +772,7 @@ export default function AgregarViajeOperativo() {
             <button
               onClick={handleSubmit}
               disabled={loading}
-              className="flex-1 px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl font-semibold hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              className="flex-1 px-6 py-3 bg-gradient-to-r from-[#34353A] to-[#5F8EAD] text-white rounded-xl font-semibold hover:opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg"
             >
               {loading ? (
                 <>

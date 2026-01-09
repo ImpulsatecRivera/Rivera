@@ -34,9 +34,8 @@ const ModernDashboard = () => {
 
   useEffect(() => {
     cargarEstadisticas();
-  }, [selectedPeriod]); // 🔄 Recargar cuando cambie el período
+  }, [selectedPeriod]);
 
-  // 📅 Función para filtrar por fecha
   const filtrarPorPeriodo = (items, campoFecha) => {
     const diasAtras = parseInt(selectedPeriod);
     const fechaLimite = new Date();
@@ -52,12 +51,10 @@ const ModernDashboard = () => {
     try {
       setLoading(true);
 
-      // 🔹 VIAJES OPERATIVOS
       const viajesRes = await fetch(`${config.api.API_URL}/viajes-operativos/listar`);
       const viajesData = await viajesRes.json();
       let viajes = viajesData?.data || [];
       
-      // Filtrar por período
       viajes = filtrarPorPeriodo(viajes, 'departureTime');
       
       const viajesStats = {
@@ -73,12 +70,10 @@ const ModernDashboard = () => {
         ingresos: viajes.reduce((sum, v) => sum + (v?.montoAcordado || 0), 0)
       };
 
-      // 🔹 MANTENIMIENTOS
       const mantoRes = await fetch(`${config.api.API_URL}/mantenimientos`);
       const mantoData = await mantoRes.json();
       let mantenimientos = mantoData?.data || [];
       
-      // Filtrar por período
       mantenimientos = filtrarPorPeriodo(mantenimientos, 'fecha_mantenimiento');
       
       const mantoStats = {
@@ -91,12 +86,10 @@ const ModernDashboard = () => {
         }, 0)
       };
 
-      // 🔹 DIÉSEL
       const dieselRes = await fetch(`${config.api.API_URL}/resumen`);
       const dieselData = await dieselRes.json();
       let diesel = dieselData?.data || (Array.isArray(dieselData) ? dieselData : []);
       
-      // Filtrar por período
       diesel = filtrarPorPeriodo(diesel, 'fecha');
       
       const dieselStats = {
@@ -113,14 +106,12 @@ const ModernDashboard = () => {
         galones: diesel.reduce((sum, d) => sum + (d?.Galones || d?.galones || 0), 0)
       };
 
-      // 🔹 CAJA CHICA
       const cajaRes = await fetch(`${config.api.API_URL}/cajaChica`, {
         headers: { 'Authorization': `Bearer ${localStorage.getItem('authToken')}` }
       });
       const cajaData = await cajaRes.json();
       let transacciones = Array.isArray(cajaData) ? cajaData : [];
       
-      // Filtrar por período
       transacciones = filtrarPorPeriodo(transacciones, 'date');
 
       const cajaBalanceRes = await fetch(`${config.api.API_URL}/cajaChica/balance`, {
@@ -135,12 +126,10 @@ const ModernDashboard = () => {
         transacciones: transacciones.length
       };
 
-      // 🔹 PLANILLAS
       const planillasRes = await fetch(`${config.api.API_URL}/planillas/quincenal`);
       const planillasData = await planillasRes.json();
       let planillas = planillasData?.data || [];
       
-      // Filtrar por período
       planillas = filtrarPorPeriodo(planillas, 'createdAt');
       
       const planillasStats = {
@@ -157,7 +146,7 @@ const ModernDashboard = () => {
         diesel: dieselStats,
         cajaChica: cajaStats,
         planillas: planillasStats,
-        flota: { total: 25, operando: 23 } // Esto puedes ajustarlo según tu lógica
+        flota: { total: 25, operando: 23 }
       });
 
     } catch (error) {
@@ -175,7 +164,6 @@ const ModernDashboard = () => {
     return new Intl.NumberFormat('es-ES').format(num || 0);
   };
 
-  // 📊 CALCULAR TOTALES GENERALES
   const totales = {
     ingresos: estadisticas.viajesOperativos.ingresos + estadisticas.cajaChica.ingresos,
     gastos: estadisticas.mantenimientos.gastos + estadisticas.diesel.gastos + estadisticas.cajaChica.gastos + estadisticas.planillas.totalPagado,
@@ -292,8 +280,8 @@ const ModernDashboard = () => {
 
   const getColorClasses = (color) => {
     const colors = {
-      blue: { bg: 'bg-blue-100', text: 'text-blue-600', border: 'border-blue-200' },
-      green: { bg: 'bg-green-100', text: 'text-green-600', border: 'border-green-200' },
+      blue: { bg: 'bg-[#5F8EAD] bg-opacity-20', text: 'text-[#5F8EAD]', border: 'border-[#5F8EAD]' },
+      green: { bg: 'bg-[#5D9646] bg-opacity-20', text: 'text-[#5D9646]', border: 'border-[#5D9646]' },
       purple: { bg: 'bg-purple-100', text: 'text-purple-600', border: 'border-purple-200' },
       orange: { bg: 'bg-orange-100', text: 'text-orange-600', border: 'border-orange-200' }
     };
@@ -304,7 +292,7 @@ const ModernDashboard = () => {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="w-16 h-16 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <div className="w-16 h-16 border-4 border-[#5F8EAD] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
           <p className="text-gray-600 font-medium">Cargando dashboard...</p>
         </div>
       </div>
@@ -313,9 +301,8 @@ const ModernDashboard = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Hero Banner con Spline - VERSIÓN PRO */}
+      {/* Hero Banner con Spline */}
       <div className="relative h-[300px] overflow-hidden">
-        {/* Spline 3D Background */}
         <div className="absolute inset-0" style={{ pointerEvents: 'auto' }}>
           <Spline 
             scene="https://prod.spline.design/RPoeKCG7eSYlbZ4c/scene.splinecode"
@@ -323,22 +310,18 @@ const ModernDashboard = () => {
           />
         </div>
         
-        {/* Overlay mejorado con gradiente más oscuro arriba */}
         <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-gray-900/30 to-gray-50 pointer-events-none"></div>
         
-        {/* Header PREMIUM con stats inline */}
         <div className="relative z-10 h-full flex flex-col justify-between p-8 pointer-events-none">
           
-          {/* Top bar con mini stats */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3 backdrop-blur-md bg-white/10 rounded-full px-5 py-2.5 border border-white/20 shadow-lg">
-              <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+              <div className="w-2 h-2 bg-[#5D9646] rounded-full animate-pulse"></div>
               <Activity className="text-white" size={18} />
               <span className="text-white font-semibold text-sm">Sistema en vivo</span>
             </div>
             
             <div className="flex items-center gap-3">
-              {/* Flota activa */}
               <div className="backdrop-blur-md bg-white/10 rounded-full px-5 py-2.5 border border-white/20 shadow-lg pointer-events-auto cursor-pointer hover:bg-white/15 transition-all">
                 <div className="flex items-center gap-2">
                   <Truck className="text-white" size={16} />
@@ -346,10 +329,9 @@ const ModernDashboard = () => {
                 </div>
               </div>
               
-              {/* Balance */}
               <div className={`backdrop-blur-md rounded-full px-5 py-2.5 border shadow-lg pointer-events-auto cursor-pointer transition-all ${
                 totales.balance >= 0 
-                  ? 'bg-green-500/20 border-green-400/30 hover:bg-green-500/25' 
+                  ? 'bg-[#5D9646]/20 border-[#5D9646]/30 hover:bg-[#5D9646]/25' 
                   : 'bg-red-500/20 border-red-400/30 hover:bg-red-500/25'
               }`}>
                 <div className="flex items-center gap-2">
@@ -360,7 +342,6 @@ const ModernDashboard = () => {
             </div>
           </div>
 
-          {/* Bottom title con glassmorphism */}
           <div>
             <div className="backdrop-blur-xl bg-gradient-to-r from-black/40 via-black/30 to-transparent rounded-2xl px-8 py-5 border border-white/10 inline-block shadow-2xl">
               <h1 className="text-6xl font-bold text-white mb-2" style={{
@@ -383,12 +364,11 @@ const ModernDashboard = () => {
         </div>
       </div>
 
-      {/* Stats Grid - Flotando sobre el Spline */}
+      {/* Stats Grid */}
       <div className="container mx-auto px-8 -mt-20 relative z-20">
-        {/* Badge de período activo */}
         <div className="flex items-center justify-end mb-4">
-          <div className="bg-white/95 backdrop-blur-xl rounded-full px-4 py-2 shadow-lg border border-indigo-200">
-            <span className="text-xs font-semibold text-indigo-600">
+          <div className="bg-white/95 backdrop-blur-xl rounded-full px-4 py-2 shadow-lg border-2 border-[#5F8EAD]">
+            <span className="text-xs font-semibold text-[#5F8EAD]">
               📊 Mostrando datos de los últimos {selectedPeriod} días
             </span>
           </div>
@@ -409,13 +389,13 @@ const ModernDashboard = () => {
                     <Icon className={colors.text} size={24} />
                   </div>
                   {stat.trend === 'up' && (
-                    <div className="flex items-center gap-1 text-green-600 text-sm font-medium bg-green-50 px-3 py-1 rounded-full">
+                    <div className="flex items-center gap-1 text-[#5D9646] text-sm font-medium bg-[#5D9646] bg-opacity-20 px-3 py-1 rounded-full">
                       <TrendingUp size={14} />
                       {stat.change}
                     </div>
                   )}
                   {stat.trend === 'neutral' && (
-                    <div className="text-blue-600 text-sm font-medium bg-blue-50 px-3 py-1 rounded-full">
+                    <div className="text-[#5F8EAD] text-sm font-medium bg-[#5F8EAD] bg-opacity-20 px-3 py-1 rounded-full">
                       {stat.change}
                     </div>
                   )}
@@ -425,7 +405,7 @@ const ModernDashboard = () => {
                     </div>
                   )}
                 </div>
-                <div className="text-3xl font-bold text-gray-900 mb-1">{stat.value}</div>
+                <div className="text-3xl font-bold text-[#34353A] mb-1">{stat.value}</div>
                 <div className="text-gray-600 text-sm mb-2">{stat.title}</div>
                 {stat.extra && (
                   <div className="text-xs text-gray-500 bg-gray-50 px-2 py-1 rounded-md">
@@ -440,11 +420,10 @@ const ModernDashboard = () => {
         {/* Content Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
           
-          {/* Resumen financiero */}
           <div className="lg:col-span-2 bg-white rounded-2xl p-6 shadow-lg hover:shadow-xl transition-shadow">
             <div className="flex items-center justify-between mb-6">
               <div>
-                <h3 className="text-xl font-bold text-gray-900">Resumen Financiero</h3>
+                <h3 className="text-xl font-bold text-[#34353A]">Resumen Financiero</h3>
                 <p className="text-gray-500 text-sm mt-1">
                   {loading ? (
                     <span className="inline-flex items-center gap-2">
@@ -457,17 +436,16 @@ const ModernDashboard = () => {
                 </p>
               </div>
               
-              {/* Selector de período mejorado */}
               <div className="flex items-center gap-3">
                 <span className="text-sm font-medium text-gray-600">Período:</span>
                 <select 
                   value={selectedPeriod}
                   onChange={(e) => setSelectedPeriod(e.target.value)}
                   disabled={loading}
-                  className={`px-4 py-2 border-2 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white font-semibold transition-all ${
+                  className={`px-4 py-2 border-2 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#5F8EAD] focus:border-[#5F8EAD] bg-white font-semibold transition-all ${
                     loading 
                       ? 'opacity-50 cursor-not-allowed border-gray-200' 
-                      : 'border-gray-200 hover:border-indigo-300 cursor-pointer'
+                      : 'border-gray-200 hover:border-[#5F8EAD] cursor-pointer'
                   }`}
                 >
                   <option value="7">📅 Últimos 7 días</option>
@@ -477,11 +455,11 @@ const ModernDashboard = () => {
               </div>
             </div>
 
-            {/* Gráfico de barras comparativo - Microsoft Power BI Style */}
+            {/* Gráfico de barras */}
             <div className="mb-6 bg-gradient-to-br from-gray-50 to-white rounded-xl p-5 border border-gray-100">
               <div className="flex items-center justify-between mb-4">
-                <h4 className="text-sm font-bold text-gray-700 flex items-center gap-2">
-                  <TrendingUp size={16} className="text-indigo-600" />
+                <h4 className="text-sm font-bold text-[#34353A] flex items-center gap-2">
+                  <TrendingUp size={16} className="text-[#5F8EAD]" />
                   Ingresos vs Gastos
                 </h4>
                 <div className="text-xs text-gray-500 font-medium bg-gray-100 px-3 py-1.5 rounded-full">
@@ -490,17 +468,16 @@ const ModernDashboard = () => {
               </div>
               
               <div className="flex items-end justify-around gap-4 h-32">
-                {/* Barra de Ingresos */}
                 <div className="flex-1 flex flex-col items-center">
                   <div className="relative w-full flex items-end justify-center" style={{ height: '100px' }}>
                     <div 
-                      className="w-16 bg-gradient-to-t from-green-500 to-green-400 rounded-t-lg shadow-lg hover:shadow-xl transition-all relative group cursor-pointer"
+                      className="w-16 bg-gradient-to-t from-[#5D9646] to-[#5D9646] rounded-t-lg shadow-lg hover:shadow-xl transition-all relative group cursor-pointer"
                       style={{ 
                         height: `${Math.min((totales.ingresos / Math.max(totales.ingresos, totales.gastos, 1)) * 100, 100)}%`,
-                        minHeight: '20px'
+                        minHeight: '20px',
+                        opacity: 0.9
                       }}
                     >
-                      {/* Tooltip on hover */}
                       <div className="absolute -top-12 left-1/2 -translate-x-1/2 bg-gray-900 text-white px-3 py-1.5 rounded-lg text-xs font-bold opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap shadow-xl">
                         {formatearMoneda(totales.ingresos)}
                         <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-gray-900 rotate-45"></div>
@@ -508,12 +485,11 @@ const ModernDashboard = () => {
                     </div>
                   </div>
                   <div className="mt-2 text-center">
-                    <p className="text-xs font-semibold text-green-700">Ingresos</p>
-                    <p className="text-lg font-bold text-green-900">{formatearMoneda(totales.ingresos)}</p>
+                    <p className="text-xs font-semibold text-[#5D9646]">Ingresos</p>
+                    <p className="text-lg font-bold text-[#34353A]">{formatearMoneda(totales.ingresos)}</p>
                   </div>
                 </div>
 
-                {/* Barra de Gastos */}
                 <div className="flex-1 flex flex-col items-center">
                   <div className="relative w-full flex items-end justify-center" style={{ height: '100px' }}>
                     <div 
@@ -523,7 +499,6 @@ const ModernDashboard = () => {
                         minHeight: '20px'
                       }}
                     >
-                      {/* Tooltip on hover */}
                       <div className="absolute -top-12 left-1/2 -translate-x-1/2 bg-gray-900 text-white px-3 py-1.5 rounded-lg text-xs font-bold opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap shadow-xl">
                         {formatearMoneda(totales.gastos)}
                         <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-gray-900 rotate-45"></div>
@@ -532,25 +507,24 @@ const ModernDashboard = () => {
                   </div>
                   <div className="mt-2 text-center">
                     <p className="text-xs font-semibold text-red-700">Gastos</p>
-                    <p className="text-lg font-bold text-red-900">{formatearMoneda(totales.gastos)}</p>
+                    <p className="text-lg font-bold text-[#34353A]">{formatearMoneda(totales.gastos)}</p>
                   </div>
                 </div>
 
-                {/* Barra de Balance */}
                 <div className="flex-1 flex flex-col items-center">
                   <div className="relative w-full flex items-end justify-center" style={{ height: '100px' }}>
                     <div 
                       className={`w-16 bg-gradient-to-t rounded-t-lg shadow-lg hover:shadow-xl transition-all relative group cursor-pointer ${
                         totales.balance >= 0 
-                          ? 'from-blue-500 to-blue-400' 
+                          ? 'from-[#5F8EAD] to-[#5F8EAD]' 
                           : 'from-orange-500 to-orange-400'
                       }`}
                       style={{ 
                         height: `${Math.min((Math.abs(totales.balance) / Math.max(totales.ingresos, totales.gastos, 1)) * 100, 100)}%`,
-                        minHeight: '20px'
+                        minHeight: '20px',
+                        opacity: totales.balance >= 0 ? 0.9 : 1
                       }}
                     >
-                      {/* Tooltip on hover */}
                       <div className="absolute -top-12 left-1/2 -translate-x-1/2 bg-gray-900 text-white px-3 py-1.5 rounded-lg text-xs font-bold opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap shadow-xl">
                         {formatearMoneda(totales.balance)}
                         <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-gray-900 rotate-45"></div>
@@ -558,10 +532,10 @@ const ModernDashboard = () => {
                     </div>
                   </div>
                   <div className="mt-2 text-center">
-                    <p className={`text-xs font-semibold ${totales.balance >= 0 ? 'text-blue-700' : 'text-orange-700'}`}>
+                    <p className={`text-xs font-semibold ${totales.balance >= 0 ? 'text-[#5F8EAD]' : 'text-orange-700'}`}>
                       Balance
                     </p>
-                    <p className={`text-lg font-bold ${totales.balance >= 0 ? 'text-blue-900' : 'text-orange-900'}`}>
+                    <p className={`text-lg font-bold ${totales.balance >= 0 ? 'text-[#34353A]' : 'text-orange-900'}`}>
                       {formatearMoneda(totales.balance)}
                     </p>
                   </div>
@@ -569,17 +543,17 @@ const ModernDashboard = () => {
               </div>
             </div>
 
-            {/* Tarjetas de resumen */}
+            {/* Tarjetas de resumen - TEXTO BLANCO ACTUALIZADO */}
             <div className="grid grid-cols-3 gap-4 mb-6">
-              <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl p-4 border border-green-200 hover:shadow-lg transition-all">
+              <div className="bg-[#5D9646] rounded-xl p-4 border-2 border-[#5D9646] hover:shadow-lg transition-all">
                 <div className="flex items-center gap-2 mb-2">
-                  <TrendingUp className="text-green-600" size={20} />
-                  <span className="text-xs font-semibold text-green-700">INGRESOS</span>
+                  <TrendingUp className="text-white" size={20} />
+                  <span className="text-xs font-semibold text-white">INGRESOS</span>
                 </div>
-                <div className="text-2xl font-bold text-green-900 mb-1">{formatearMoneda(totales.ingresos)}</div>
-                <div className="text-xs text-green-600 mt-1">Viajes y otros ingresos</div>
-                <div className="mt-2 pt-2 border-t border-green-200">
-                  <div className="flex items-center gap-1 text-xs text-green-700">
+                <div className="text-2xl font-bold text-white mb-1">{formatearMoneda(totales.ingresos)}</div>
+                <div className="text-xs text-white opacity-90 mt-1">Viajes y otros ingresos</div>
+                <div className="mt-2 pt-2 border-t-2 border-white border-opacity-30">
+                  <div className="flex items-center gap-1 text-xs text-white">
                     <Calendar size={12} />
                     <span className="font-semibold">
                       {estadisticas.viajesOperativos.total + estadisticas.cajaChica.transacciones} transacciones
@@ -588,15 +562,15 @@ const ModernDashboard = () => {
                 </div>
               </div>
 
-              <div className="bg-gradient-to-br from-red-50 to-rose-50 rounded-xl p-4 border border-red-200 hover:shadow-lg transition-all">
+              <div className="bg-red-500 rounded-xl p-4 border-2 border-red-500 hover:shadow-lg transition-all">
                 <div className="flex items-center gap-2 mb-2">
-                  <TrendingUp className="text-red-600 rotate-180" size={20} />
-                  <span className="text-xs font-semibold text-red-700">GASTOS</span>
+                  <TrendingUp className="text-white rotate-180" size={20} />
+                  <span className="text-xs font-semibold text-white">GASTOS</span>
                 </div>
-                <div className="text-2xl font-bold text-red-900 mb-1">{formatearMoneda(totales.gastos)}</div>
-                <div className="text-xs text-red-600 mt-1">Operativos y planillas</div>
-                <div className="mt-2 pt-2 border-t border-red-200">
-                  <div className="flex items-center gap-1 text-xs text-red-700">
+                <div className="text-2xl font-bold text-white mb-1">{formatearMoneda(totales.gastos)}</div>
+                <div className="text-xs text-white opacity-90 mt-1">Operativos y planillas</div>
+                <div className="mt-2 pt-2 border-t-2 border-white border-opacity-30">
+                  <div className="flex items-center gap-1 text-xs text-white">
                     <Activity size={12} />
                     <span className="font-semibold">
                       {estadisticas.mantenimientos.total + estadisticas.diesel.total + estadisticas.planillas.total} registros
@@ -605,23 +579,23 @@ const ModernDashboard = () => {
                 </div>
               </div>
 
-              <div className={`bg-gradient-to-br rounded-xl p-4 border hover:shadow-lg transition-all ${
+              <div className={`rounded-xl p-4 border-2 hover:shadow-lg transition-all ${
                 totales.balance >= 0 
-                  ? 'from-blue-50 to-indigo-50 border-blue-200' 
-                  : 'from-orange-50 to-amber-50 border-orange-200'
+                  ? 'bg-[#5F8EAD] border-[#5F8EAD]' 
+                  : 'bg-orange-500 border-orange-500'
               }`}>
                 <div className="flex items-center gap-2 mb-2">
-                  <DollarSign className={totales.balance >= 0 ? 'text-blue-600' : 'text-orange-600'} size={20} />
-                  <span className={`text-xs font-semibold ${totales.balance >= 0 ? 'text-blue-700' : 'text-orange-700'}`}>BALANCE</span>
+                  <DollarSign className="text-white" size={20} />
+                  <span className="text-xs font-semibold text-white">BALANCE</span>
                 </div>
-                <div className={`text-2xl font-bold mb-1 ${totales.balance >= 0 ? 'text-blue-900' : 'text-orange-900'}`}>
+                <div className="text-2xl font-bold mb-1 text-white">
                   {formatearMoneda(totales.balance)}
                 </div>
-                <div className={`text-xs mt-1 ${totales.balance >= 0 ? 'text-blue-600' : 'text-orange-600'}`}>
+                <div className="text-xs mt-1 text-white opacity-90">
                   {totales.balance >= 0 ? 'Positivo' : 'Atención requerida'}
                 </div>
-                <div className="mt-2 pt-2 border-t border-blue-200">
-                  <div className={`flex items-center gap-1 text-xs ${totales.balance >= 0 ? 'text-blue-700' : 'text-orange-700'}`}>
+                <div className="mt-2 pt-2 border-t-2 border-white border-opacity-30">
+                  <div className="flex items-center gap-1 text-xs text-white">
                     <CheckCircle size={12} />
                     <span className="font-semibold">
                       {totales.ingresos > totales.gastos ? 'Rentable' : 'Revisar gastos'}
@@ -633,17 +607,16 @@ const ModernDashboard = () => {
 
             {/* Resumen por módulos */}
             <div className="space-y-3">
-              {/* Header con totales del período */}
-              <div className="bg-gradient-to-r from-indigo-50 to-blue-50 rounded-xl p-4 border border-indigo-200 mb-4">
+              <div className="bg-gradient-to-r from-[#5F8EAD] from-opacity-10 to-[#5F8EAD] to-opacity-5 rounded-xl p-4 border-2 border-[#5F8EAD] mb-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h4 className="text-sm font-bold text-gray-900">Resumen del Período</h4>
+                    <h4 className="text-sm font-bold text-[#34353A]">Resumen del Período</h4>
                     <p className="text-xs text-gray-600 mt-1">
                       Total de registros en los últimos {selectedPeriod} días
                     </p>
                   </div>
                   <div className="text-right">
-                    <div className="text-2xl font-bold text-indigo-600">
+                    <div className="text-2xl font-bold text-[#5F8EAD]">
                       {modulosResumen.reduce((sum, m) => sum + m.total, 0)}
                     </div>
                     <p className="text-xs text-gray-600">registros</p>
@@ -656,9 +629,9 @@ const ModernDashboard = () => {
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
-                        <span className="font-bold text-gray-900">{modulo.nombre}</span>
+                        <span className="font-bold text-[#34353A]">{modulo.nombre}</span>
                         {modulo.extra && (
-                          <span className="text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full font-semibold">
+                          <span className="text-xs bg-[#5F8EAD] bg-opacity-20 text-[#5F8EAD] px-2 py-0.5 rounded-full font-semibold">
                             {modulo.extra}
                           </span>
                         )}
@@ -677,20 +650,19 @@ const ModernDashboard = () => {
                       </div>
                     </div>
                     <div className="text-right">
-                      <div className={`text-lg font-bold ${modulo.tipo === 'ingreso' ? 'text-green-600' : 'text-red-600'}`}>
+                      <div className={`text-lg font-bold ${modulo.tipo === 'ingreso' ? 'text-[#5D9646]' : 'text-red-600'}`}>
                         {modulo.tipo === 'ingreso' ? '+' : '-'}{formatearMoneda(modulo.monto)}
                       </div>
                     </div>
                   </div>
                   
-                  {/* Barra de progreso */}
                   <div className="flex items-center gap-2 mt-2">
                     <div className="flex-1 bg-gray-200 rounded-full h-2 overflow-hidden">
                       <div 
                         className={`h-full rounded-full transition-all duration-700 ${
                           modulo.total === 0 
                             ? 'bg-gray-300' 
-                            : 'bg-gradient-to-r from-indigo-500 to-blue-600'
+                            : 'bg-gradient-to-r from-[#34353A] to-[#5F8EAD]'
                         }`}
                         style={{ width: `${modulo.total > 0 ? (modulo.completados / modulo.total) * 100 : 0}%` }}
                       ></div>
@@ -707,10 +679,9 @@ const ModernDashboard = () => {
           {/* Sidebar Stats */}
           <div className="space-y-6">
             
-            {/* Alertas compactas */}
             <div className="bg-white rounded-2xl p-5 shadow-lg hover:shadow-xl transition-shadow">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-bold text-gray-900">Alertas</h3>
+                <h3 className="text-lg font-bold text-[#34353A]">Alertas</h3>
                 <span className="bg-gradient-to-r from-red-500 to-red-600 text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg">
                   {alertas.length}
                 </span>
@@ -723,39 +694,31 @@ const ModernDashboard = () => {
                   return (
                     <div 
                       key={i} 
-                      className={`flex items-start gap-3 p-3 ${colors.bg} rounded-xl border ${colors.border} hover:shadow-md transition-all cursor-pointer`}
+                      className={`flex items-start gap-3 p-3 ${colors.bg} rounded-xl border-2 ${colors.border} hover:shadow-md transition-all cursor-pointer`}
                     >
                       <div className={`p-1.5 bg-white rounded-lg ${colors.text}`}>
                         <Icon size={16} />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <div className="font-semibold text-gray-900 text-xs">{alerta.titulo}</div>
+                        <div className="font-semibold text-[#34353A] text-xs">{alerta.titulo}</div>
                         <div className="text-gray-600 text-xs mt-0.5 truncate">{alerta.descripcion}</div>
                       </div>
                     </div>
                   );
                 })}
               </div>
-              
-              <button 
-                onClick={() => navigate('/alertas')}
-                className="w-full mt-4 py-2.5 text-sm text-indigo-600 font-semibold hover:bg-indigo-50 rounded-xl transition-colors"
-              >
-                Ver todas las alertas →
-              </button>
             </div>
 
-            {/* Stats rápidas */}
             <div className="bg-white rounded-2xl p-5 shadow-lg hover:shadow-xl transition-shadow">
-              <h3 className="text-lg font-bold text-gray-900 mb-4">Stats Rápidas</h3>
+              <h3 className="text-lg font-bold text-[#34353A] mb-4">Stats Rápidas</h3>
               
               <div className="space-y-3">
-                <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
+                <div className="flex items-center justify-between p-3 bg-[#5F8EAD] bg-opacity-10 rounded-lg">
                   <div className="flex items-center gap-2">
-                    <Calendar className="text-blue-600" size={18} />
+                    <Calendar className="text-[#5F8EAD]" size={18} />
                     <span className="text-sm font-semibold text-gray-700">Caja Chica</span>
                   </div>
-                  <span className="font-bold text-blue-900">{formatearMoneda(estadisticas.cajaChica.balance)}</span>
+                  <span className="font-bold text-[#34353A]">{formatearMoneda(estadisticas.cajaChica.balance)}</span>
                 </div>
 
                 <div className="flex items-center justify-between p-3 bg-purple-50 rounded-lg">
@@ -763,15 +726,15 @@ const ModernDashboard = () => {
                     <Fuel className="text-purple-600" size={18} />
                     <span className="text-sm font-semibold text-gray-700">Diésel</span>
                   </div>
-                  <span className="font-bold text-purple-900">{formatearNumero(estadisticas.diesel.galones)} gal</span>
+                  <span className="font-bold text-[#34353A]">{formatearNumero(estadisticas.diesel.galones)} gal</span>
                 </div>
 
-                <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
+                <div className="flex items-center justify-between p-3 bg-[#5D9646] bg-opacity-10 rounded-lg">
                   <div className="flex items-center gap-2">
-                    <Users className="text-green-600" size={18} />
+                    <Users className="text-[#5D9646]" size={18} />
                     <span className="text-sm font-semibold text-gray-700">Empleados</span>
                   </div>
-                  <span className="font-bold text-green-900">{estadisticas.planillas.empleados}</span>
+                  <span className="font-bold text-[#34353A]">{estadisticas.planillas.empleados}</span>
                 </div>
 
                 <div className="flex items-center justify-between p-3 bg-orange-50 rounded-lg">
@@ -779,48 +742,45 @@ const ModernDashboard = () => {
                     <Clock className="text-orange-600" size={18} />
                     <span className="text-sm font-semibold text-gray-700">Pendientes</span>
                   </div>
-                  <span className="font-bold text-orange-900">
+                  <span className="font-bold text-[#34353A]">
                     {estadisticas.viajesOperativos.pendientes + estadisticas.mantenimientos.pendientes + estadisticas.diesel.pendientes}
                   </span>
                 </div>
               </div>
             </div>
 
-            {/* 🆕 Feed de Actividad Reciente - Microsoft Teams Style */}
-            <div className="bg-white rounded-2xl p-5 shadow-lg hover:shadow-xl transition-shadow border-2 border-indigo-100">
+            <div className="bg-white rounded-2xl p-5 shadow-lg hover:shadow-xl transition-shadow border-2 border-[#5F8EAD]">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
-                  <Activity className="text-indigo-600" size={20} />
+                <h3 className="text-lg font-bold text-[#34353A] flex items-center gap-2">
+                  <Activity className="text-[#5F8EAD]" size={20} />
                   Actividad Reciente
                 </h3>
                 <span className="text-xs text-gray-500 font-medium">Últimas 24 horas</span>
               </div>
 
               <div className="space-y-3 max-h-64 overflow-y-auto custom-scrollbar">
-                {/* Viajes completados */}
                 {estadisticas.viajesOperativos.completados > 0 && (
-                  <div className="flex items-start gap-3 p-3 bg-green-50 rounded-lg hover:bg-green-100 transition-colors">
-                    <div className="p-2 bg-green-100 rounded-lg">
-                      <CheckCircle className="text-green-600" size={16} />
+                  <div className="flex items-start gap-3 p-3 bg-[#5D9646] bg-opacity-10 rounded-lg hover:bg-[#5D9646] hover:bg-opacity-15 transition-colors">
+                    <div className="p-2 bg-[#5D9646] bg-opacity-20 rounded-lg">
+                      <CheckCircle className="text-[#5D9646]" size={16} />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-gray-900">Viajes completados</p>
+                      <p className="text-sm font-semibold text-[#34353A]">Viajes completados</p>
                       <p className="text-xs text-gray-600 mt-0.5">
                         {estadisticas.viajesOperativos.completados} viajes finalizados exitosamente
                       </p>
-                      <p className="text-xs text-green-600 font-medium mt-1">hace 2 horas</p>
+                      <p className="text-xs text-[#5D9646] font-medium mt-1">hace 2 horas</p>
                     </div>
                   </div>
                 )}
 
-                {/* Mantenimientos pendientes */}
                 {estadisticas.mantenimientos.pendientes > 0 && (
                   <div className="flex items-start gap-3 p-3 bg-orange-50 rounded-lg hover:bg-orange-100 transition-colors">
                     <div className="p-2 bg-orange-100 rounded-lg">
                       <Wrench className="text-orange-600" size={16} />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-gray-900">Mantenimientos programados</p>
+                      <p className="text-sm font-semibold text-[#34353A]">Mantenimientos programados</p>
                       <p className="text-xs text-gray-600 mt-0.5">
                         {estadisticas.mantenimientos.pendientes} mantenimientos requieren atención
                       </p>
@@ -829,30 +789,28 @@ const ModernDashboard = () => {
                   </div>
                 )}
 
-                {/* Planillas procesadas */}
                 {estadisticas.planillas.pagadas > 0 && (
-                  <div className="flex items-start gap-3 p-3 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors">
-                    <div className="p-2 bg-blue-100 rounded-lg">
-                      <FileText className="text-blue-600" size={16} />
+                  <div className="flex items-start gap-3 p-3 bg-[#5F8EAD] bg-opacity-10 rounded-lg hover:bg-[#5F8EAD] hover:bg-opacity-15 transition-colors">
+                    <div className="p-2 bg-[#5F8EAD] bg-opacity-20 rounded-lg">
+                      <FileText className="text-[#5F8EAD]" size={16} />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-gray-900">Planillas pagadas</p>
+                      <p className="text-sm font-semibold text-[#34353A]">Planillas pagadas</p>
                       <p className="text-xs text-gray-600 mt-0.5">
                         {estadisticas.planillas.pagadas} planillas procesadas ({formatearMoneda(estadisticas.planillas.totalPagado)})
                       </p>
-                      <p className="text-xs text-blue-600 font-medium mt-1">hace 8 horas</p>
+                      <p className="text-xs text-[#5F8EAD] font-medium mt-1">hace 8 horas</p>
                     </div>
                   </div>
                 )}
 
-                {/* Diésel registrado */}
                 {estadisticas.diesel.completados > 0 && (
                   <div className="flex items-start gap-3 p-3 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors">
                     <div className="p-2 bg-purple-100 rounded-lg">
                       <Fuel className="text-purple-600" size={16} />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-gray-900">Registros de diésel</p>
+                      <p className="text-sm font-semibold text-[#34353A]">Registros de diésel</p>
                       <p className="text-xs text-gray-600 mt-0.5">
                         {formatearNumero(estadisticas.diesel.galones)} galones registrados
                       </p>
@@ -861,35 +819,27 @@ const ModernDashboard = () => {
                   </div>
                 )}
 
-                {/* Viajes programados */}
                 {estadisticas.viajesOperativos.pendientes > 0 && (
-                  <div className="flex items-start gap-3 p-3 bg-indigo-50 rounded-lg hover:bg-indigo-100 transition-colors">
-                    <div className="p-2 bg-indigo-100 rounded-lg">
-                      <Truck className="text-indigo-600" size={16} />
+                  <div className="flex items-start gap-3 p-3 bg-[#5F8EAD] bg-opacity-10 rounded-lg hover:bg-[#5F8EAD] hover:bg-opacity-15 transition-colors">
+                    <div className="p-2 bg-[#5F8EAD] bg-opacity-20 rounded-lg">
+                      <Truck className="text-[#5F8EAD]" size={16} />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-gray-900">Viajes programados</p>
+                      <p className="text-sm font-semibold text-[#34353A]">Viajes programados</p>
                       <p className="text-xs text-gray-600 mt-0.5">
                         {estadisticas.viajesOperativos.pendientes} viajes próximos a realizar
                       </p>
-                      <p className="text-xs text-indigo-600 font-medium mt-1">hace 18 horas</p>
+                      <p className="text-xs text-[#5F8EAD] font-medium mt-1">hace 18 horas</p>
                     </div>
                   </div>
                 )}
               </div>
-
-              <button 
-                className="w-full mt-4 py-2 text-sm text-indigo-600 font-semibold hover:bg-indigo-50 rounded-lg transition-colors"
-              >
-                Ver todo el historial →
-              </button>
             </div>
 
           </div>
         </div>
       </div>
 
-      {/* Estilos personalizados */}
       <style jsx>{`
         .custom-scrollbar::-webkit-scrollbar {
           width: 6px;
@@ -901,12 +851,12 @@ const ModernDashboard = () => {
         }
         
         .custom-scrollbar::-webkit-scrollbar-thumb {
-          background: linear-gradient(180deg, #6366f1 0%, #8b5cf6 100%);
+          background: linear-gradient(180deg, #34353A 0%, #5F8EAD 100%);
           border-radius: 10px;
         }
         
         .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-          background: linear-gradient(180deg, #4f46e5 0%, #7c3aed 100%);
+          background: linear-gradient(180deg, #5F8EAD 0%, #34353A 100%);
         }
       `}</style>
     </div>
