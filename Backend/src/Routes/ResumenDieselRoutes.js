@@ -15,7 +15,7 @@ const __dirname = path.dirname(__filename);
 // =====================================================
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, 'uploads/'); // Carpeta temporal
+    cb(null, 'public/'); // Carpeta temporal
   },
   filename: (req, file, cb) => {
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
