@@ -43,7 +43,6 @@ export default function VerPlanillaQuincenal() {
     }
   };
 
-  // ✅ NUEVA FUNCIÓN: Marcar como pagada
   const marcarComoPagada = async () => {
     const { value: fechaPago } = await Swal.fire({
       title: '¿Marcar como Pagada?',
@@ -52,7 +51,7 @@ export default function VerPlanillaQuincenal() {
       input: 'date',
       inputValue: new Date().toISOString().split('T')[0],
       showCancelButton: true,
-      confirmButtonColor: '#10b981',
+      confirmButtonColor: '#5D9646',
       cancelButtonColor: '#6b7280',
       confirmButtonText: 'Sí, marcar como pagada',
       cancelButtonText: 'Cancelar',
@@ -179,17 +178,17 @@ export default function VerPlanillaQuincenal() {
         label: 'Pendiente'
       },
       'aprobada': {
-        bg: 'bg-gradient-to-r from-blue-500 to-cyan-500',
+        bg: 'bg-gradient-to-r from-[#5F8EAD] to-[#5F8EAD]',
         icon: Check,
         label: 'Aprobada'
       },
       'pagada': {
-        bg: 'bg-gradient-to-r from-emerald-500 to-green-500',
+        bg: 'bg-gradient-to-r from-[#5D9646] to-[#5D9646]',
         icon: DollarSign,
         label: 'Pagada'
       },
       'cerrada': {
-        bg: 'bg-gradient-to-r from-gray-500 to-slate-600',
+        bg: 'bg-gradient-to-r from-[#34353A] to-[#34353A]',
         icon: X,
         label: 'Cerrada'
       }
@@ -202,10 +201,10 @@ export default function VerPlanillaQuincenal() {
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center">
         <div className="text-center">
           <div className="relative">
-            <div className="w-24 h-24 border-4 border-indigo-200 rounded-full animate-pulse"></div>
-            <div className="w-24 h-24 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin absolute top-0"></div>
+            <div className="w-24 h-24 border-4 border-[#5F8EAD] border-opacity-20 rounded-full animate-pulse"></div>
+            <div className="w-24 h-24 border-4 border-[#5F8EAD] border-t-transparent rounded-full animate-spin absolute top-0"></div>
           </div>
-          <p className="text-gray-700 font-semibold text-lg mt-6">Cargando planilla...</p>
+          <p className="text-[#34353A] font-semibold text-lg mt-6">Cargando planilla...</p>
         </div>
       </div>
     );
@@ -227,26 +226,26 @@ export default function VerPlanillaQuincenal() {
               onClick={() => navigate('/planillas')}
               className="group flex items-center gap-2 md:gap-3 px-3 md:px-5 py-2 md:py-2.5 rounded-xl bg-white/80 hover:bg-white border border-gray-200 hover:border-gray-300 transition-all shadow-sm hover:shadow-md"
             >
-              <ArrowLeft className="text-gray-600 group-hover:text-gray-900 transition-colors" size={20} />
-              <span className="font-medium text-gray-700 group-hover:text-gray-900 text-sm md:text-base">Volver</span>
+              <ArrowLeft className="text-gray-600 group-hover:text-[#34353A] transition-colors" size={20} />
+              <span className="font-medium text-gray-700 group-hover:text-[#34353A] text-sm md:text-base">Volver</span>
             </button>
 
             {/* Actions */}
             <div className="flex items-center gap-2 md:gap-3">
               <button
                 onClick={handleDescargarPDF}
-                className="flex items-center gap-2 px-3 md:px-5 py-2 md:py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white font-semibold shadow-lg hover:shadow-xl transition-all transform hover:scale-105 text-sm md:text-base"
+                className="flex items-center gap-2 px-3 md:px-5 py-2 md:py-2.5 rounded-xl bg-gradient-to-r from-[#5F8EAD] to-[#34353A] hover:opacity-90 text-white font-semibold shadow-lg hover:shadow-xl transition-all transform hover:scale-105 text-sm md:text-base"
               >
                 <Download size={18} />
                 <span className="hidden sm:inline">Descargar PDF</span>
                 <span className="sm:hidden">PDF</span>
               </button>
 
-              {/* ✅ BOTÓN PAGAR - Solo para aprobadas */}
+              {/* Botón Pagar */}
               {planilla.estado === 'aprobada' && !planilla.pagada && (
                 <button
                   onClick={marcarComoPagada}
-                  className="flex items-center gap-2 px-3 md:px-5 py-2 md:py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700 text-white font-semibold shadow-lg hover:shadow-xl transition-all transform hover:scale-105 text-sm md:text-base"
+                  className="flex items-center gap-2 px-3 md:px-5 py-2 md:py-2.5 rounded-xl bg-gradient-to-r from-[#5D9646] to-[#5D9646] hover:opacity-90 text-white font-semibold shadow-lg hover:shadow-xl transition-all transform hover:scale-105 text-sm md:text-base"
                 >
                   <DollarSign size={18} />
                   <span className="hidden sm:inline">Marcar como Pagada</span>
@@ -257,7 +256,7 @@ export default function VerPlanillaQuincenal() {
               {planilla.estado === 'pendiente' && (
                 <button
                   onClick={() => navigate(`/planilla/quincenal/editar/${id}`)}
-                  className="flex items-center gap-2 px-3 md:px-5 py-2 md:py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-semibold shadow-lg hover:shadow-xl transition-all transform hover:scale-105 text-sm md:text-base"
+                  className="flex items-center gap-2 px-3 md:px-5 py-2 md:py-2.5 rounded-xl bg-gradient-to-r from-[#34353A] to-[#5F8EAD] hover:opacity-90 text-white font-semibold shadow-lg hover:shadow-xl transition-all transform hover:scale-105 text-sm md:text-base"
                 >
                   <Edit size={18} />
                   <span className="hidden sm:inline">Editar</span>
@@ -270,20 +269,20 @@ export default function VerPlanillaQuincenal() {
 
       <div className="max-w-7xl mx-auto px-4 md:px-8 py-6 md:py-8 space-y-6 md:space-y-8">
         
-        {/* Hero Section con gradiente animado */}
-        <div className="relative overflow-hidden rounded-2xl md:rounded-3xl bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600 p-6 md:p-8 shadow-2xl">
+        {/* Hero Section con colores corporativos */}
+        <div className="relative overflow-hidden rounded-2xl md:rounded-3xl bg-gradient-to-br from-[#34353A] via-[#5F8EAD] to-[#5D9646] p-6 md:p-8 shadow-2xl">
           {/* Animated background */}
           <div className="absolute inset-0 opacity-20">
-            <div className="absolute top-0 -left-4 w-72 h-72 bg-purple-300 rounded-full mix-blend-multiply filter blur-xl animate-blob"></div>
-            <div className="absolute top-0 -right-4 w-72 h-72 bg-yellow-300 rounded-full mix-blend-multiply filter blur-xl animate-blob animation-delay-2000"></div>
-            <div className="absolute -bottom-8 left-20 w-72 h-72 bg-pink-300 rounded-full mix-blend-multiply filter blur-xl animate-blob animation-delay-4000"></div>
+            <div className="absolute top-0 -left-4 w-72 h-72 bg-[#5F8EAD] rounded-full mix-blend-multiply filter blur-xl animate-blob"></div>
+            <div className="absolute top-0 -right-4 w-72 h-72 bg-[#5D9646] rounded-full mix-blend-multiply filter blur-xl animate-blob animation-delay-2000"></div>
+            <div className="absolute -bottom-8 left-20 w-72 h-72 bg-[#34353A] rounded-full mix-blend-multiply filter blur-xl animate-blob animation-delay-4000"></div>
           </div>
 
           <div className="relative z-10">
             <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 mb-6">
               <div className="flex-1">
                 <div className="flex items-center gap-3 mb-3">
-                  <Sparkles className="text-yellow-300" size={20} />
+                  <Sparkles className="text-white" size={20} />
                   <span className="text-white/80 font-medium text-xs md:text-sm uppercase tracking-wider">
                     Planilla Quincenal
                   </span>
@@ -345,7 +344,7 @@ export default function VerPlanillaQuincenal() {
               onClick={() => setActiveTab('empleados')}
               className={`flex-1 flex items-center justify-center gap-2 px-4 md:px-6 py-2 md:py-3 rounded-lg md:rounded-xl font-semibold transition-all text-sm md:text-base whitespace-nowrap ${
                 activeTab === 'empleados'
-                  ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg'
+                  ? 'bg-gradient-to-r from-[#34353A] to-[#5F8EAD] text-white shadow-lg'
                   : 'text-gray-600 hover:bg-gray-50'
               }`}
             >
@@ -356,7 +355,7 @@ export default function VerPlanillaQuincenal() {
               onClick={() => setActiveTab('estadisticas')}
               className={`flex-1 flex items-center justify-center gap-2 px-4 md:px-6 py-2 md:py-3 rounded-lg md:rounded-xl font-semibold transition-all text-sm md:text-base whitespace-nowrap ${
                 activeTab === 'estadisticas'
-                  ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg'
+                  ? 'bg-gradient-to-r from-[#34353A] to-[#5F8EAD] text-white shadow-lg'
                   : 'text-gray-600 hover:bg-gray-50'
               }`}
             >
@@ -367,7 +366,7 @@ export default function VerPlanillaQuincenal() {
               onClick={() => setActiveTab('detalles')}
               className={`flex-1 flex items-center justify-center gap-2 px-4 md:px-6 py-2 md:py-3 rounded-lg md:rounded-xl font-semibold transition-all text-sm md:text-base whitespace-nowrap ${
                 activeTab === 'detalles'
-                  ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg'
+                  ? 'bg-gradient-to-r from-[#34353A] to-[#5F8EAD] text-white shadow-lg'
                   : 'text-gray-600 hover:bg-gray-50'
               }`}
             >
@@ -383,21 +382,21 @@ export default function VerPlanillaQuincenal() {
             {planilla.empleados?.map((emp, index) => (
               <div
                 key={index}
-                className="group bg-white rounded-xl md:rounded-2xl p-4 md:p-6 border-2 border-gray-100 hover:border-indigo-300 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1"
+                className="group bg-white rounded-xl md:rounded-2xl p-4 md:p-6 border-2 border-gray-100 hover:border-[#5F8EAD] hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1"
               >
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4 md:mb-6">
                   <div className="flex items-center gap-3 md:gap-4">
-                    <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold text-base md:text-lg shadow-lg flex-shrink-0">
+                    <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-gradient-to-br from-[#5F8EAD] to-[#5D9646] flex items-center justify-center text-white font-bold text-base md:text-lg shadow-lg flex-shrink-0">
                       {index + 1}
                     </div>
                     <div>
-                      <h3 className="text-lg md:text-xl font-bold text-gray-900">{emp.nombreCompleto}</h3>
+                      <h3 className="text-lg md:text-xl font-bold text-[#34353A]">{emp.nombreCompleto}</h3>
                       <p className="text-xs md:text-sm text-gray-500">{emp.tipoEmpleado}</p>
                     </div>
                   </div>
                   <div className="text-left sm:text-right">
                     <p className="text-xs md:text-sm text-gray-500 mb-1">Total a Pagar</p>
-                    <p className="text-2xl md:text-3xl font-black bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+                    <p className="text-2xl md:text-3xl font-black bg-gradient-to-r from-[#5F8EAD] to-[#5D9646] bg-clip-text text-transparent">
                       {formatearMoneda(emp.totalAPagar)}
                     </p>
                   </div>
@@ -405,15 +404,15 @@ export default function VerPlanillaQuincenal() {
 
                 {/* Grid de información */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
-                  <div className="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-lg md:rounded-xl p-3 md:p-4 border border-blue-100">
-                    <p className="text-xs text-blue-600 font-semibold mb-1">Salario Quincenal</p>
-                    <p className="text-base md:text-lg font-bold text-blue-900">{formatearMoneda(emp.salarioQuincenal)}</p>
+                  <div className="bg-gradient-to-br from-[#5F8EAD] from-opacity-10 to-[#5F8EAD] to-opacity-20 rounded-lg md:rounded-xl p-3 md:p-4 border border-[#5F8EAD]">
+                    <p className="text-xs text-[#5F8EAD] font-semibold mb-1">Salario Quincenal</p>
+                    <p className="text-base md:text-lg font-bold text-[#34353A]">{formatearMoneda(emp.salarioQuincenal)}</p>
                   </div>
 
                   {emp.viaticos > 0 && (
-                    <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg md:rounded-xl p-3 md:p-4 border border-green-100">
-                      <p className="text-xs text-green-600 font-semibold mb-1">Viáticos</p>
-                      <p className="text-base md:text-lg font-bold text-green-900">{formatearMoneda(emp.viaticos)}</p>
+                    <div className="bg-gradient-to-br from-[#5D9646] from-opacity-10 to-[#5D9646] to-opacity-20 rounded-lg md:rounded-xl p-3 md:p-4 border border-[#5D9646]">
+                      <p className="text-xs text-[#5D9646] font-semibold mb-1">Viáticos</p>
+                      <p className="text-base md:text-lg font-bold text-[#34353A]">{formatearMoneda(emp.viaticos)}</p>
                     </div>
                   )}
 
@@ -433,41 +432,41 @@ export default function VerPlanillaQuincenal() {
                 {/* Descuentos detallados - Colapsable */}
                 <details className="mt-4 group/details">
                   <summary className="cursor-pointer list-none flex items-center justify-between p-3 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors">
-                    <span className="font-semibold text-gray-700 text-sm md:text-base">Ver descuentos detallados</span>
+                    <span className="font-semibold text-[#34353A] text-sm md:text-base">Ver descuentos detallados</span>
                     <ChevronRight className="text-gray-400 group-open/details:rotate-90 transition-transform" size={20} />
                   </summary>
                   
                   <div className="mt-4 grid grid-cols-2 md:grid-cols-3 gap-3 p-4 bg-gray-50 rounded-xl">
                     <div>
                       <p className="text-xs text-gray-500 mb-1">ISSS (3%)</p>
-                      <p className="font-bold text-gray-900 text-sm md:text-base">{formatearMoneda(emp.descuentosLey?.isss?.monto)}</p>
+                      <p className="font-bold text-[#34353A] text-sm md:text-base">{formatearMoneda(emp.descuentosLey?.isss?.monto)}</p>
                     </div>
                     <div>
                       <p className="text-xs text-gray-500 mb-1">AFP (7.25%)</p>
-                      <p className="font-bold text-gray-900 text-sm md:text-base">{formatearMoneda(emp.descuentosLey?.afp?.monto)}</p>
+                      <p className="font-bold text-[#34353A] text-sm md:text-base">{formatearMoneda(emp.descuentosLey?.afp?.monto)}</p>
                     </div>
                     {emp.descuentosLey?.renta?.monto > 0 && (
                       <div>
                         <p className="text-xs text-gray-500 mb-1">Renta</p>
-                        <p className="font-bold text-gray-900 text-sm md:text-base">{formatearMoneda(emp.descuentosLey?.renta?.monto)}</p>
+                        <p className="font-bold text-[#34353A] text-sm md:text-base">{formatearMoneda(emp.descuentosLey?.renta?.monto)}</p>
                       </div>
                     )}
                     {emp.otrosDescuentos?.anticipos > 0 && (
                       <div>
                         <p className="text-xs text-gray-500 mb-1">Anticipos</p>
-                        <p className="font-bold text-gray-900 text-sm md:text-base">{formatearMoneda(emp.otrosDescuentos?.anticipos)}</p>
+                        <p className="font-bold text-[#34353A] text-sm md:text-base">{formatearMoneda(emp.otrosDescuentos?.anticipos)}</p>
                       </div>
                     )}
                     {emp.otrosDescuentos?.prestamos > 0 && (
                       <div>
                         <p className="text-xs text-gray-500 mb-1">Préstamos</p>
-                        <p className="font-bold text-gray-900 text-sm md:text-base">{formatearMoneda(emp.otrosDescuentos?.prestamos)}</p>
+                        <p className="font-bold text-[#34353A] text-sm md:text-base">{formatearMoneda(emp.otrosDescuentos?.prestamos)}</p>
                       </div>
                     )}
                     {emp.otrosDescuentos?.otros > 0 && (
                       <div>
                         <p className="text-xs text-gray-500 mb-1">Otros</p>
-                        <p className="font-bold text-gray-900 text-sm md:text-base">{formatearMoneda(emp.otrosDescuentos?.otros)}</p>
+                        <p className="font-bold text-[#34353A] text-sm md:text-base">{formatearMoneda(emp.otrosDescuentos?.otros)}</p>
                       </div>
                     )}
                   </div>
@@ -482,21 +481,21 @@ export default function VerPlanillaQuincenal() {
             {/* Gráfica de distribución de salarios */}
             <div className="bg-white rounded-2xl p-6 border-2 border-gray-100 shadow-lg">
               <div className="flex items-center gap-3 mb-6">
-                <PieChart className="text-indigo-600" size={28} />
-                <h3 className="text-lg md:text-xl font-bold text-gray-900">Distribución de Pagos</h3>
+                <PieChart className="text-[#5F8EAD]" size={28} />
+                <h3 className="text-lg md:text-xl font-bold text-[#34353A]">Distribución de Pagos</h3>
               </div>
               
               <div className="space-y-4">
                 <div>
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-xs md:text-sm font-semibold text-gray-700">Salarios Base</span>
-                    <span className="text-xs md:text-sm font-bold text-indigo-600">
+                    <span className="text-xs md:text-sm font-bold text-[#5F8EAD]">
                       {formatearMoneda(planilla.totales?.totalSalariosQuincenales)}
                     </span>
                   </div>
                   <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
                     <div 
-                      className="bg-gradient-to-r from-indigo-500 to-purple-600 h-3 rounded-full transition-all duration-500"
+                      className="bg-gradient-to-r from-[#5F8EAD] to-[#34353A] h-3 rounded-full transition-all duration-500"
                       style={{ 
                         width: `${Math.min(100, (planilla.totales?.totalSalariosQuincenales / planilla.totales?.totalSalariosMasViaticos) * 100)}%` 
                       }}
@@ -508,13 +507,13 @@ export default function VerPlanillaQuincenal() {
                   <div>
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-xs md:text-sm font-semibold text-gray-700">Viáticos</span>
-                      <span className="text-xs md:text-sm font-bold text-emerald-600">
+                      <span className="text-xs md:text-sm font-bold text-[#5D9646]">
                         {formatearMoneda(planilla.totales?.totalViaticos)}
                       </span>
                     </div>
                     <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
                       <div 
-                        className="bg-gradient-to-r from-emerald-500 to-green-600 h-3 rounded-full transition-all duration-500"
+                        className="bg-gradient-to-r from-[#5D9646] to-[#5D9646] h-3 rounded-full transition-all duration-500"
                         style={{ 
                           width: `${Math.min(100, (planilla.totales?.totalViaticos / planilla.totales?.totalSalariosMasViaticos) * 100)}%` 
                         }}
@@ -564,27 +563,27 @@ export default function VerPlanillaQuincenal() {
             {/* Resumen de descuentos */}
             <div className="bg-white rounded-2xl p-6 border-2 border-gray-100 shadow-lg">
               <div className="flex items-center gap-3 mb-6">
-                <Activity className="text-purple-600" size={28} />
-                <h3 className="text-lg md:text-xl font-bold text-gray-900">Descuentos de Ley</h3>
+                <Activity className="text-[#5D9646]" size={28} />
+                <h3 className="text-lg md:text-xl font-bold text-[#34353A]">Descuentos de Ley</h3>
               </div>
 
               <div className="space-y-4">
-                <div className="flex items-center justify-between p-4 bg-gradient-to-r from-blue-50 to-cyan-50 rounded-xl border border-blue-100">
+                <div className="flex items-center justify-between p-4 bg-gradient-to-r from-[#5F8EAD] from-opacity-10 to-[#5F8EAD] to-opacity-20 rounded-xl border border-[#5F8EAD]">
                   <div className="flex-1 min-w-0 pr-4">
-                    <p className="text-xs md:text-sm text-blue-600 font-semibold">ISSS (3%)</p>
-                    <p className="text-xs text-blue-500 mt-1">Seguro Social</p>
+                    <p className="text-xs md:text-sm text-[#5F8EAD] font-semibold">ISSS (3%)</p>
+                    <p className="text-xs text-[#5F8EAD] mt-1">Seguro Social</p>
                   </div>
-                  <p className="text-xl md:text-2xl font-black text-blue-900 whitespace-nowrap">
+                  <p className="text-xl md:text-2xl font-black text-[#34353A] whitespace-nowrap">
                     {formatearMoneda(planilla.totales?.totalISSS)}
                   </p>
                 </div>
 
-                <div className="flex items-center justify-between p-4 bg-gradient-to-r from-indigo-50 to-purple-50 rounded-xl border border-indigo-100">
+                <div className="flex items-center justify-between p-4 bg-gradient-to-r from-[#34353A] from-opacity-10 to-[#34353A] to-opacity-20 rounded-xl border border-[#34353A]">
                   <div className="flex-1 min-w-0 pr-4">
-                    <p className="text-xs md:text-sm text-indigo-600 font-semibold">AFP (7.25%)</p>
-                    <p className="text-xs text-indigo-500 mt-1">Pensiones</p>
+                    <p className="text-xs md:text-sm text-[#34353A] font-semibold">AFP (7.25%)</p>
+                    <p className="text-xs text-gray-600 mt-1">Pensiones</p>
                   </div>
-                  <p className="text-xl md:text-2xl font-black text-indigo-900 whitespace-nowrap">
+                  <p className="text-xl md:text-2xl font-black text-[#34353A] whitespace-nowrap">
                     {formatearMoneda(planilla.totales?.totalAFP)}
                   </p>
                 </div>
@@ -601,7 +600,7 @@ export default function VerPlanillaQuincenal() {
                   </div>
                 )}
 
-                <div className="mt-6 p-4 bg-gradient-to-r from-gray-800 to-gray-900 rounded-xl">
+                <div className="mt-6 p-4 bg-gradient-to-r from-[#34353A] to-[#34353A] rounded-xl">
                   <div className="flex items-center justify-between">
                     <span className="text-white font-semibold text-sm md:text-base">Total Descuentos</span>
                     <span className="text-xl md:text-2xl font-black text-white whitespace-nowrap">
@@ -613,7 +612,7 @@ export default function VerPlanillaQuincenal() {
             </div>
 
             {/* Promedio por empleado */}
-            <div className="lg:col-span-2 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-2xl p-6 md:p-8 text-white shadow-2xl">
+            <div className="lg:col-span-2 bg-gradient-to-br from-[#34353A] to-[#5F8EAD] rounded-2xl p-6 md:p-8 text-white shadow-2xl">
               <h3 className="text-xl md:text-2xl font-bold mb-6 flex items-center gap-3">
                 <TrendingUp size={24} className="md:w-7 md:h-7" />
                 Análisis Promedio por Empleado
@@ -656,56 +655,56 @@ export default function VerPlanillaQuincenal() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Información General */}
             <div className="bg-white rounded-2xl p-6 border-2 border-gray-100 shadow-lg">
-              <h3 className="text-lg md:text-xl font-bold text-gray-900 mb-6 flex items-center gap-3">
-                <FileText className="text-indigo-600" size={24} />
+              <h3 className="text-lg md:text-xl font-bold text-[#34353A] mb-6 flex items-center gap-3">
+                <FileText className="text-[#5F8EAD]" size={24} />
                 Información General
               </h3>
 
               <div className="space-y-4">
                 <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
                   <span className="text-gray-600 font-medium text-sm md:text-base">Año</span>
-                  <span className="text-gray-900 font-bold text-sm md:text-base">{planilla.año}</span>
+                  <span className="text-[#34353A] font-bold text-sm md:text-base">{planilla.año}</span>
                 </div>
                 <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
                   <span className="text-gray-600 font-medium text-sm md:text-base">Mes</span>
-                  <span className="text-gray-900 font-bold text-sm md:text-base">{planilla.mes}</span>
+                  <span className="text-[#34353A] font-bold text-sm md:text-base">{planilla.mes}</span>
                 </div>
                 <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
                   <span className="text-gray-600 font-medium text-sm md:text-base">Quincena</span>
-                  <span className="text-gray-900 font-bold text-sm md:text-base">
+                  <span className="text-[#34353A] font-bold text-sm md:text-base">
                     {planilla.quincena === 1 ? 'Primera' : 'Segunda'}
                   </span>
                 </div>
                 <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
                   <span className="text-gray-600 font-medium text-sm md:text-base">Fecha Inicio</span>
-                  <span className="text-gray-900 font-bold text-sm md:text-base">{formatearFecha(planilla.fechaInicio)}</span>
+                  <span className="text-[#34353A] font-bold text-sm md:text-base">{formatearFecha(planilla.fechaInicio)}</span>
                 </div>
                 <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
                   <span className="text-gray-600 font-medium text-sm md:text-base">Fecha Fin</span>
-                  <span className="text-gray-900 font-bold text-sm md:text-base">{formatearFecha(planilla.fechaFin)}</span>
+                  <span className="text-[#34353A] font-bold text-sm md:text-base">{formatearFecha(planilla.fechaFin)}</span>
                 </div>
               </div>
             </div>
 
             {/* Resumen Financiero */}
             <div className="bg-white rounded-2xl p-6 border-2 border-gray-100 shadow-lg">
-              <h3 className="text-lg md:text-xl font-bold text-gray-900 mb-6 flex items-center gap-3">
-                <DollarSign className="text-emerald-600" size={24} />
+              <h3 className="text-lg md:text-xl font-bold text-[#34353A] mb-6 flex items-center gap-3">
+                <DollarSign className="text-[#5D9646]" size={24} />
                 Resumen Financiero
               </h3>
 
               <div className="space-y-3">
-                <div className="flex items-center justify-between p-4 bg-gradient-to-r from-blue-50 to-cyan-50 rounded-xl">
-                  <span className="text-blue-700 font-semibold text-sm md:text-base">Salarios Quincenales</span>
-                  <span className="text-blue-900 font-bold text-base md:text-lg whitespace-nowrap">
+                <div className="flex items-center justify-between p-4 bg-gradient-to-r from-[#5F8EAD] from-opacity-10 to-[#5F8EAD] to-opacity-20 rounded-xl">
+                  <span className="text-[#5F8EAD] font-semibold text-sm md:text-base">Salarios Quincenales</span>
+                  <span className="text-[#34353A] font-bold text-base md:text-lg whitespace-nowrap">
                     {formatearMoneda(planilla.totales?.totalSalariosQuincenales)}
                   </span>
                 </div>
 
                 {planilla.totales?.totalViaticos > 0 && (
-                  <div className="flex items-center justify-between p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl">
-                    <span className="text-green-700 font-semibold text-sm md:text-base">Viáticos</span>
-                    <span className="text-green-900 font-bold text-base md:text-lg whitespace-nowrap">
+                  <div className="flex items-center justify-between p-4 bg-gradient-to-r from-[#5D9646] from-opacity-10 to-[#5D9646] to-opacity-20 rounded-xl">
+                    <span className="text-[#5D9646] font-semibold text-sm md:text-base">Viáticos</span>
+                    <span className="text-[#34353A] font-bold text-base md:text-lg whitespace-nowrap">
                       {formatearMoneda(planilla.totales?.totalViaticos)}
                     </span>
                   </div>
@@ -720,9 +719,9 @@ export default function VerPlanillaQuincenal() {
                   </div>
                 )}
 
-                <div className="flex items-center justify-between p-4 bg-gradient-to-r from-indigo-50 to-blue-50 rounded-xl border-2 border-indigo-200">
-                  <span className="text-indigo-700 font-bold text-sm md:text-base">Subtotal</span>
-                  <span className="text-indigo-900 font-black text-lg md:text-xl whitespace-nowrap">
+                <div className="flex items-center justify-between p-4 bg-gradient-to-r from-[#5F8EAD] from-opacity-10 to-[#5F8EAD] to-opacity-20 rounded-xl border-2 border-[#5F8EAD]">
+                  <span className="text-[#5F8EAD] font-bold text-sm md:text-base">Subtotal</span>
+                  <span className="text-[#34353A] font-black text-lg md:text-xl whitespace-nowrap">
                     {formatearMoneda(planilla.totales?.totalSalariosMasViaticos)}
                   </span>
                 </div>
@@ -734,7 +733,7 @@ export default function VerPlanillaQuincenal() {
                   </span>
                 </div>
 
-                <div className="flex items-center justify-between p-5 md:p-6 bg-gradient-to-r from-gray-800 to-gray-900 rounded-xl mt-4">
+                <div className="flex items-center justify-between p-5 md:p-6 bg-gradient-to-r from-[#34353A] to-[#5D9646] rounded-xl mt-4">
                   <span className="text-white font-bold text-base md:text-lg">TOTAL A PAGAR</span>
                   <span className="text-white font-black text-2xl md:text-3xl whitespace-nowrap">
                     {formatearMoneda(planilla.totales?.totalAPagar)}

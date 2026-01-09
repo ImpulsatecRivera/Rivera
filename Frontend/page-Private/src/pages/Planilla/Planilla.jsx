@@ -20,7 +20,7 @@ export default function Planillas() {
   const [showReporteMensual, setShowReporteMensual] = useState(false);
   const [showReporteMultiMes, setShowReporteMultiMes] = useState(false);
   const [showReporteAnual, setShowReporteAnual] = useState(false);
-  const [tipoReporte, setTipoReporte] = useState(''); // 'quincenal' o 'semanal'
+  const [tipoReporte, setTipoReporte] = useState('');
   
   const [mesSeleccionado, setMesSeleccionado] = useState('');
   const [añoSeleccionado, setAñoSeleccionado] = useState('');
@@ -99,23 +99,23 @@ export default function Planillas() {
     const configs = {
       'pendiente': {
         label: 'Pendiente',
-        bg: 'bg-amber-100',
+        bg: 'bg-amber-50',
         text: 'text-amber-800',
         border: 'border-amber-300',
         icon: Clock
       },
       'aprobada': {
         label: 'Aprobada',
-        bg: 'bg-blue-100',
-        text: 'text-blue-800',
-        border: 'border-blue-300',
+        bg: 'bg-blue-50',
+        text: 'text-[#5F8EAD]',
+        border: 'border-[#5F8EAD]',
         icon: CheckCircle
       },
       'pagada': {
         label: 'Pagada',
-        bg: 'bg-emerald-100',
-        text: 'text-emerald-800',
-        border: 'border-emerald-300',
+        bg: 'bg-green-50',
+        text: 'text-[#5D9646]',
+        border: 'border-[#5D9646]',
         icon: DollarSign
       }
     };
@@ -270,28 +270,24 @@ export default function Planillas() {
     }
   };
 
-  // Abrir modal de reporte mensual
   const handleAbrirReporteMensual = (tipo) => {
     setTipoReporte(tipo);
     setShowReportesMenu(false);
     setShowReporteMensual(true);
   };
 
-  // Abrir modal de reporte multi-mes
   const handleAbrirReporteMultiMes = (tipo) => {
     setTipoReporte(tipo);
     setShowReportesMenu(false);
     setShowReporteMultiMes(true);
   };
 
-  // Abrir modal de reporte anual
   const handleAbrirReporteAnual = (tipo) => {
     setTipoReporte(tipo);
     setShowReportesMenu(false);
     setShowReporteAnual(true);
   };
 
-  // Descargar reporte mensual
   const handleDescargarReporteMensual = async () => {
     if (!mesSeleccionado || !añoSeleccionado) {
       Swal.fire({
@@ -363,7 +359,6 @@ export default function Planillas() {
     }
   };
 
-  // Descargar reporte multi-mes
   const handleDescargarReporteMultiMes = async () => {
     if (!mesesSeleccionadosMulti.length || !añoMultiMes) {
       Swal.fire({
@@ -453,7 +448,6 @@ export default function Planillas() {
     }
   };
 
-  // Descargar reporte anual
   const handleDescargarReporteAnual = async () => {
     if (!añoAnual) {
       Swal.fire({
@@ -574,7 +568,7 @@ export default function Planillas() {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
         <div className="text-center">
-          <div className="w-20 h-20 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <div className="w-20 h-20 border-4 border-[#5F8EAD] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
           <p className="text-gray-700 font-bold text-xl">Cargando planillas...</p>
         </div>
       </div>
@@ -588,8 +582,8 @@ export default function Planillas() {
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
           <div>
-            <h1 className="text-4xl font-bold text-gray-900 mb-2">Dashboard de Planillas</h1>
-            <p className="text-indigo-600 text-base font-semibold">
+            <h1 className="text-4xl font-bold text-[#34353A] mb-2">Dashboard de Planillas</h1>
+            <p className="text-[#5F8EAD] text-base font-semibold">
               Gestión y análisis de nómina
             </p>
           </div>
@@ -599,7 +593,7 @@ export default function Planillas() {
             <div className="relative" ref={reportesRef}>
               <button
                 onClick={() => setShowReportesMenu(!showReportesMenu)}
-                className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-xl hover:from-emerald-700 hover:to-teal-700 font-bold shadow-lg hover:shadow-xl transition-all transform hover:scale-105"
+                className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-[#5D9646] to-[#5F8EAD] text-white rounded-xl hover:shadow-xl font-bold shadow-lg transition-all transform hover:scale-105"
               >
                 <BarChart3 size={22} />
                 <span>Reportes</span>
@@ -615,8 +609,8 @@ export default function Planillas() {
                   <div className="p-3">
                     {/* REPORTES QUINCENALES */}
                     <div className="mb-3">
-                      <div className="px-3 py-2 bg-indigo-50 rounded-lg mb-2">
-                        <h3 className="text-sm font-bold text-indigo-900 flex items-center gap-2">
+                      <div className="px-3 py-2 bg-[#5F8EAD] bg-opacity-10 rounded-lg mb-2">
+                        <h3 className="text-sm font-bold text-[#34353A] flex items-center gap-2">
                           <Calendar size={16} />
                           Reportes Quincenales
                         </h3>
@@ -624,10 +618,10 @@ export default function Planillas() {
                       
                       <button
                         onClick={() => handleAbrirReporteMensual('quincenal')}
-                        className="w-full flex items-center gap-3 px-4 py-2.5 text-left hover:bg-indigo-50 rounded-lg transition-colors group"
+                        className="w-full flex items-center gap-3 px-4 py-2.5 text-left hover:bg-[#5F8EAD] hover:bg-opacity-10 rounded-lg transition-colors group"
                       >
-                        <div className="p-2 bg-indigo-100 rounded-lg group-hover:bg-indigo-200 transition-colors">
-                          <FileText size={18} className="text-indigo-600" />
+                        <div className="p-2 bg-[#5F8EAD] bg-opacity-20 rounded-lg group-hover:bg-opacity-30 transition-colors">
+                          <FileText size={18} className="text-[#5F8EAD]" />
                         </div>
                         <div className="flex-1">
                           <p className="font-semibold text-gray-900 text-sm">Reporte Mensual</p>
@@ -637,10 +631,10 @@ export default function Planillas() {
 
                       <button
                         onClick={() => handleAbrirReporteMultiMes('quincenal')}
-                        className="w-full flex items-center gap-3 px-4 py-2.5 text-left hover:bg-blue-50 rounded-lg transition-colors group mt-1"
+                        className="w-full flex items-center gap-3 px-4 py-2.5 text-left hover:bg-[#5D9646] hover:bg-opacity-10 rounded-lg transition-colors group mt-1"
                       >
-                        <div className="p-2 bg-blue-100 rounded-lg group-hover:bg-blue-200 transition-colors">
-                          <BarChart3 size={18} className="text-blue-600" />
+                        <div className="p-2 bg-[#5D9646] bg-opacity-20 rounded-lg group-hover:bg-opacity-30 transition-colors">
+                          <BarChart3 size={18} className="text-[#5D9646]" />
                         </div>
                         <div className="flex-1">
                           <p className="font-semibold text-gray-900 text-sm">Reporte Multi-Mes</p>
@@ -650,10 +644,10 @@ export default function Planillas() {
 
                       <button
                         onClick={() => handleAbrirReporteAnual('quincenal')}
-                        className="w-full flex items-center gap-3 px-4 py-2.5 text-left hover:bg-purple-50 rounded-lg transition-colors group mt-1"
+                        className="w-full flex items-center gap-3 px-4 py-2.5 text-left hover:bg-[#34353A] hover:bg-opacity-10 rounded-lg transition-colors group mt-1"
                       >
-                        <div className="p-2 bg-purple-100 rounded-lg group-hover:bg-purple-200 transition-colors">
-                          <Calendar size={18} className="text-purple-600" />
+                        <div className="p-2 bg-[#34353A] bg-opacity-20 rounded-lg group-hover:bg-opacity-30 transition-colors">
+                          <Calendar size={18} className="text-[#34353A]" />
                         </div>
                         <div className="flex-1">
                           <p className="font-semibold text-gray-900 text-sm">Reporte Anual</p>
@@ -667,8 +661,8 @@ export default function Planillas() {
 
                     {/* REPORTES SEMANALES */}
                     <div>
-                      <div className="px-3 py-2 bg-purple-50 rounded-lg mb-2">
-                        <h3 className="text-sm font-bold text-purple-900 flex items-center gap-2">
+                      <div className="px-3 py-2 bg-[#34353A] bg-opacity-10 rounded-lg mb-2">
+                        <h3 className="text-sm font-bold text-[#34353A] flex items-center gap-2">
                           <Clock size={16} />
                           Reportes Semanales
                         </h3>
@@ -676,10 +670,10 @@ export default function Planillas() {
                       
                       <button
                         onClick={() => handleAbrirReporteMensual('semanal')}
-                        className="w-full flex items-center gap-3 px-4 py-2.5 text-left hover:bg-purple-50 rounded-lg transition-colors group"
+                        className="w-full flex items-center gap-3 px-4 py-2.5 text-left hover:bg-[#5F8EAD] hover:bg-opacity-10 rounded-lg transition-colors group"
                       >
-                        <div className="p-2 bg-purple-100 rounded-lg group-hover:bg-purple-200 transition-colors">
-                          <FileText size={18} className="text-purple-600" />
+                        <div className="p-2 bg-[#5F8EAD] bg-opacity-20 rounded-lg group-hover:bg-opacity-30 transition-colors">
+                          <FileText size={18} className="text-[#5F8EAD]" />
                         </div>
                         <div className="flex-1">
                           <p className="font-semibold text-gray-900 text-sm">Reporte Mensual</p>
@@ -689,10 +683,10 @@ export default function Planillas() {
 
                       <button
                         onClick={() => handleAbrirReporteMultiMes('semanal')}
-                        className="w-full flex items-center gap-3 px-4 py-2.5 text-left hover:bg-pink-50 rounded-lg transition-colors group mt-1"
+                        className="w-full flex items-center gap-3 px-4 py-2.5 text-left hover:bg-[#5D9646] hover:bg-opacity-10 rounded-lg transition-colors group mt-1"
                       >
-                        <div className="p-2 bg-pink-100 rounded-lg group-hover:bg-pink-200 transition-colors">
-                          <BarChart3 size={18} className="text-pink-600" />
+                        <div className="p-2 bg-[#5D9646] bg-opacity-20 rounded-lg group-hover:bg-opacity-30 transition-colors">
+                          <BarChart3 size={18} className="text-[#5D9646]" />
                         </div>
                         <div className="flex-1">
                           <p className="font-semibold text-gray-900 text-sm">Reporte Multi-Mes</p>
@@ -702,10 +696,10 @@ export default function Planillas() {
 
                       <button
                         onClick={() => handleAbrirReporteAnual('semanal')}
-                        className="w-full flex items-center gap-3 px-4 py-2.5 text-left hover:bg-indigo-50 rounded-lg transition-colors group mt-1"
+                        className="w-full flex items-center gap-3 px-4 py-2.5 text-left hover:bg-[#34353A] hover:bg-opacity-10 rounded-lg transition-colors group mt-1"
                       >
-                        <div className="p-2 bg-indigo-100 rounded-lg group-hover:bg-indigo-200 transition-colors">
-                          <Calendar size={18} className="text-indigo-600" />
+                        <div className="p-2 bg-[#34353A] bg-opacity-20 rounded-lg group-hover:bg-opacity-30 transition-colors">
+                          <Calendar size={18} className="text-[#34353A]" />
                         </div>
                         <div className="flex-1">
                           <p className="font-semibold text-gray-900 text-sm">Reporte Anual</p>
@@ -722,7 +716,7 @@ export default function Planillas() {
             <div className="relative" ref={dropdownRef}>
               <button
                 onClick={() => setShowDropdown(!showDropdown)}
-                className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl hover:from-indigo-700 hover:to-purple-700 font-bold shadow-lg hover:shadow-xl transition-all transform hover:scale-105"
+                className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-[#34353A] to-[#5F8EAD] text-white rounded-xl hover:shadow-xl font-bold shadow-lg transition-all transform hover:scale-105"
               >
                 <Plus size={22} />
                 <span>Nueva Planilla</span>
@@ -737,10 +731,10 @@ export default function Planillas() {
                   <div className="p-2">
                     <button
                       onClick={() => handleCrearPlanilla('quincenal')}
-                      className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-indigo-50 rounded-lg transition-colors group"
+                      className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-[#5F8EAD] hover:bg-opacity-10 rounded-lg transition-colors group"
                     >
-                      <div className="p-2 bg-indigo-100 rounded-lg group-hover:bg-indigo-200 transition-colors">
-                        <Calendar className="text-indigo-600" size={20} />
+                      <div className="p-2 bg-[#5F8EAD] bg-opacity-20 rounded-lg group-hover:bg-opacity-30 transition-colors">
+                        <Calendar className="text-[#5F8EAD]" size={20} />
                       </div>
                       <div>
                         <p className="font-bold text-gray-900">Planilla Quincenal</p>
@@ -750,10 +744,10 @@ export default function Planillas() {
 
                     <button
                       onClick={() => handleCrearPlanilla('semanal')}
-                      className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-purple-50 rounded-lg transition-colors group mt-1"
+                      className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-[#34353A] hover:bg-opacity-10 rounded-lg transition-colors group mt-1"
                     >
-                      <div className="p-2 bg-purple-100 rounded-lg group-hover:bg-purple-200 transition-colors">
-                        <Clock className="text-purple-600" size={20} />
+                      <div className="p-2 bg-[#34353A] bg-opacity-20 rounded-lg group-hover:bg-opacity-30 transition-colors">
+                        <Clock className="text-[#34353A]" size={20} />
                       </div>
                       <div>
                         <p className="font-bold text-gray-900">Planilla Semanal</p>
@@ -773,7 +767,7 @@ export default function Planillas() {
             <div className="bg-white rounded-2xl p-8 max-w-md w-full shadow-2xl animate-fadeIn">
               <div className="flex items-center justify-between mb-6">
                 <div>
-                  <h2 className="text-2xl font-bold text-gray-900">Reporte Mensual</h2>
+                  <h2 className="text-2xl font-bold text-[#34353A]">Reporte Mensual</h2>
                   <p className="text-sm text-gray-500 mt-1">
                     {tipoReporte === 'semanal' ? '📅 Planillas Semanales' : '📆 Planillas Quincenales'}
                   </p>
@@ -799,7 +793,7 @@ export default function Planillas() {
                   <select
                     value={mesSeleccionado}
                     onChange={(e) => setMesSeleccionado(e.target.value)}
-                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:outline-none transition-colors font-medium"
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-[#5F8EAD] focus:outline-none transition-colors font-medium"
                   >
                     <option value="">Seleccionar mes</option>
                     <option value="1">Enero</option>
@@ -824,7 +818,7 @@ export default function Planillas() {
                   <select
                     value={añoSeleccionado}
                     onChange={(e) => setAñoSeleccionado(e.target.value)}
-                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:outline-none transition-colors font-medium"
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-[#5F8EAD] focus:outline-none transition-colors font-medium"
                   >
                     <option value="">Seleccionar año</option>
                     {añosDisponibles.length > 0 ? (
@@ -857,7 +851,7 @@ export default function Planillas() {
                     disabled={!mesSeleccionado || !añoSeleccionado}
                     className={`flex-1 px-6 py-3 rounded-xl font-bold transition-all ${
                       mesSeleccionado && añoSeleccionado
-                        ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white hover:from-emerald-700 hover:to-teal-700 shadow-lg'
+                        ? 'bg-gradient-to-r from-[#5D9646] to-[#5F8EAD] text-white hover:shadow-lg'
                         : 'bg-gray-200 text-gray-400 cursor-not-allowed'
                     }`}
                   >
@@ -875,7 +869,7 @@ export default function Planillas() {
             <div className="bg-white rounded-2xl p-8 max-w-2xl w-full shadow-2xl animate-fadeIn max-h-[90vh] overflow-y-auto">
               <div className="flex items-center justify-between mb-6">
                 <div>
-                  <h2 className="text-2xl font-bold text-gray-900">Reporte Multi-Mes</h2>
+                  <h2 className="text-2xl font-bold text-[#34353A]">Reporte Multi-Mes</h2>
                   <p className="text-sm text-gray-500 mt-1">
                     {tipoReporte === 'semanal' ? '📅 Planillas Semanales' : '📆 Planillas Quincenales'}
                   </p>
@@ -901,7 +895,7 @@ export default function Planillas() {
                   <select
                     value={añoMultiMes}
                     onChange={(e) => setAñoMultiMes(e.target.value)}
-                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:outline-none transition-colors font-medium"
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-[#5F8EAD] focus:outline-none transition-colors font-medium"
                   >
                     <option value="">Seleccionar año</option>
                     {añosDisponibles.length > 0 ? (
@@ -933,7 +927,7 @@ export default function Planillas() {
                           onClick={() => toggleMesSeleccionado(mesNum)}
                           className={`px-4 py-3 rounded-xl font-bold transition-all ${
                             isSelected
-                              ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg transform scale-105'
+                              ? 'bg-gradient-to-r from-[#34353A] to-[#5F8EAD] text-white shadow-lg transform scale-105'
                               : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                           }`}
                         >
@@ -944,11 +938,11 @@ export default function Planillas() {
                   </div>
                   
                   {mesesSeleccionadosMulti.length > 0 && (
-                    <div className="mt-3 p-3 bg-blue-50 rounded-lg border-2 border-blue-200">
-                      <p className="text-sm font-semibold text-blue-900">
+                    <div className="mt-3 p-3 bg-[#5F8EAD] bg-opacity-10 rounded-lg border-2 border-[#5F8EAD]">
+                      <p className="text-sm font-semibold text-[#34353A]">
                         {mesesSeleccionadosMulti.length} mes(es) seleccionado(s)
                       </p>
-                      <p className="text-xs text-blue-700 mt-1">
+                      <p className="text-xs text-[#5F8EAD] mt-1">
                         {mesesSeleccionadosMulti.length === 3 && '📊 Reporte Trimestral'}
                         {mesesSeleccionadosMulti.length === 6 && '📊 Reporte Semestral'}
                         {mesesSeleccionadosMulti.length === 9 && '📊 Reporte 9 Meses'}
@@ -978,7 +972,7 @@ export default function Planillas() {
                     disabled={!mesesSeleccionadosMulti.length || !añoMultiMes}
                     className={`flex-1 px-6 py-3 rounded-xl font-bold transition-all ${
                       mesesSeleccionadosMulti.length && añoMultiMes
-                        ? 'bg-gradient-to-r from-blue-600 to-cyan-600 text-white hover:from-blue-700 hover:to-cyan-700 shadow-lg'
+                        ? 'bg-gradient-to-r from-[#5F8EAD] to-[#5D9646] text-white hover:shadow-lg'
                         : 'bg-gray-200 text-gray-400 cursor-not-allowed'
                     }`}
                   >
@@ -996,7 +990,7 @@ export default function Planillas() {
             <div className="bg-white rounded-2xl p-8 max-w-md w-full shadow-2xl animate-fadeIn">
               <div className="flex items-center justify-between mb-6">
                 <div>
-                  <h2 className="text-2xl font-bold text-gray-900">Reporte Anual</h2>
+                  <h2 className="text-2xl font-bold text-[#34353A]">Reporte Anual</h2>
                   <p className="text-sm text-gray-500 mt-1">
                     {tipoReporte === 'semanal' ? '📅 Planillas Semanales' : '📆 Planillas Quincenales'}
                   </p>
@@ -1021,7 +1015,7 @@ export default function Planillas() {
                   <select
                     value={añoAnual}
                     onChange={(e) => setAñoAnual(e.target.value)}
-                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:outline-none transition-colors font-medium"
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-[#5F8EAD] focus:outline-none transition-colors font-medium"
                   >
                     <option value="">Seleccionar año</option>
                     {añosDisponibles.length > 0 ? (
@@ -1037,11 +1031,11 @@ export default function Planillas() {
                   </select>
                 </div>
 
-                <div className="p-4 bg-purple-50 rounded-xl border-2 border-purple-200">
-                  <p className="text-sm font-semibold text-purple-900 mb-2">
+                <div className="p-4 bg-[#34353A] bg-opacity-10 rounded-xl border-2 border-[#34353A]">
+                  <p className="text-sm font-semibold text-[#34353A] mb-2">
                     📅 Reporte Completo del Año
                   </p>
-                  <p className="text-xs text-purple-700">
+                  <p className="text-xs text-gray-600">
                     Este reporte incluirá todos los meses del año seleccionado (Enero a Diciembre)
                   </p>
                 </div>
@@ -1062,7 +1056,7 @@ export default function Planillas() {
                     disabled={!añoAnual}
                     className={`flex-1 px-6 py-3 rounded-xl font-bold transition-all ${
                       añoAnual
-                        ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:from-purple-700 hover:to-pink-700 shadow-lg'
+                        ? 'bg-gradient-to-r from-[#34353A] to-[#5D9646] text-white hover:shadow-lg'
                         : 'bg-gray-200 text-gray-400 cursor-not-allowed'
                     }`}
                   >
@@ -1074,28 +1068,25 @@ export default function Planillas() {
           </div>
         )}
 
-        {/* Resto del código (estadísticas, filtros, tabla) permanece igual... */}
-        {/* Copio el resto del código desde aquí */}
-
         {/* 📊 TARJETAS DE ESTADÍSTICAS CON GRÁFICAS */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           {/* Total Planillas */}
           <div className="bg-white rounded-2xl p-6 border-2 border-gray-100 shadow-sm hover:shadow-lg transition-all">
             <div className="flex items-center justify-between mb-4">
-              <div className="p-3 bg-indigo-100 rounded-xl">
-                <FileText className="text-indigo-600" size={28} />
+              <div className="p-3 bg-[#5F8EAD] bg-opacity-20 rounded-xl">
+                <FileText className="text-[#5F8EAD]" size={28} />
               </div>
-              <div className="flex items-center gap-1 text-green-600 text-sm font-semibold">
+              <div className="flex items-center gap-1 text-[#5D9646] text-sm font-semibold">
                 <TrendingUp size={16} />
                 <span>+12%</span>
               </div>
             </div>
             <p className="text-gray-600 text-sm font-medium mb-1">Total Planillas</p>
-            <h3 className="text-4xl font-black text-gray-900 mb-2">{estadisticas.total}</h3>
+            <h3 className="text-4xl font-black text-[#34353A] mb-2">{estadisticas.total}</h3>
             <div className="flex items-center gap-2 text-xs text-gray-500">
               <div className="flex-1 bg-gray-200 rounded-full h-2 overflow-hidden">
                 <div 
-                  className="bg-gradient-to-r from-indigo-500 to-purple-600 h-full rounded-full transition-all"
+                  className="bg-gradient-to-r from-[#5F8EAD] to-[#5D9646] h-full rounded-full transition-all"
                   style={{ width: '75%' }}
                 ></div>
               </div>
@@ -1106,16 +1097,16 @@ export default function Planillas() {
           {/* Total Pagado */}
           <div className="bg-white rounded-2xl p-6 border-2 border-gray-100 shadow-sm hover:shadow-lg transition-all">
             <div className="flex items-center justify-between mb-4">
-              <div className="p-3 bg-emerald-100 rounded-xl">
-                <DollarSign className="text-emerald-600" size={28} />
+              <div className="p-3 bg-[#5D9646] bg-opacity-20 rounded-xl">
+                <DollarSign className="text-[#5D9646]" size={28} />
               </div>
-              <div className="flex items-center gap-1 text-green-600 text-sm font-semibold">
+              <div className="flex items-center gap-1 text-[#5D9646] text-sm font-semibold">
                 <TrendingUp size={16} />
                 <span>+8%</span>
               </div>
             </div>
             <p className="text-gray-600 text-sm font-medium mb-1">Total Pagado</p>
-            <h3 className="text-3xl font-black text-gray-900 mb-2">
+            <h3 className="text-3xl font-black text-[#34353A] mb-2">
               {formatearMoneda(estadisticas.totalPagado)}
             </h3>
             <p className="text-xs text-gray-500">En todas las planillas</p>
@@ -1133,7 +1124,7 @@ export default function Planillas() {
             </div>
             <p className="text-gray-600 text-sm font-medium mb-1">Pendientes</p>
             <div className="flex items-end gap-3">
-              <h3 className="text-4xl font-black text-gray-900">{estadisticas.pendientes}</h3>
+              <h3 className="text-4xl font-black text-[#34353A]">{estadisticas.pendientes}</h3>
               <div className="flex gap-1 mb-2">
                 <div className="w-1 bg-amber-200 rounded-full h-8"></div>
                 <div className="w-1 bg-amber-300 rounded-full h-10"></div>
@@ -1147,13 +1138,13 @@ export default function Planillas() {
           {/* Total Empleados */}
           <div className="bg-white rounded-2xl p-6 border-2 border-gray-100 shadow-sm hover:shadow-lg transition-all">
             <div className="flex items-center justify-between mb-4">
-              <div className="p-3 bg-blue-100 rounded-xl">
-                <Users className="text-blue-600" size={28} />
+              <div className="p-3 bg-[#34353A] bg-opacity-20 rounded-xl">
+                <Users className="text-[#34353A]" size={28} />
               </div>
-              <Activity className="text-blue-400" size={24} />
+              <Activity className="text-[#5F8EAD]" size={24} />
             </div>
             <p className="text-gray-600 text-sm font-medium mb-1">Total Empleados</p>
-            <h3 className="text-4xl font-black text-gray-900 mb-2">{estadisticas.totalEmpleados}</h3>
+            <h3 className="text-4xl font-black text-[#34353A] mb-2">{estadisticas.totalEmpleados}</h3>
             <p className="text-xs text-gray-500">
               Promedio: {estadisticas.promedioEmpleados} por planilla
             </p>
@@ -1166,10 +1157,10 @@ export default function Planillas() {
           <div className="lg:col-span-2 bg-white rounded-2xl p-6 border-2 border-gray-100 shadow-sm">
             <div className="flex items-center justify-between mb-6">
               <div>
-                <h3 className="text-xl font-bold text-gray-900">Distribución por Estado</h3>
+                <h3 className="text-xl font-bold text-[#34353A]">Distribución por Estado</h3>
                 <p className="text-sm text-gray-500 mt-1">Resumen de planillas activas</p>
               </div>
-              <BarChart3 className="text-indigo-600" size={28} />
+              <BarChart3 className="text-[#5F8EAD]" size={28} />
             </div>
 
             <div className="space-y-4">
@@ -1189,11 +1180,11 @@ export default function Planillas() {
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-sm font-semibold text-gray-700">Aprobadas</span>
-                  <span className="text-sm font-bold text-blue-600">{estadisticas.aprobadas}</span>
+                  <span className="text-sm font-bold text-[#5F8EAD]">{estadisticas.aprobadas}</span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
                   <div 
-                    className="bg-gradient-to-r from-blue-400 to-blue-600 h-full rounded-full transition-all"
+                    className="bg-gradient-to-r from-[#5F8EAD] to-[#34353A] h-full rounded-full transition-all"
                     style={{ width: `${estadisticas.total > 0 ? (estadisticas.aprobadas / estadisticas.total) * 100 : 0}%` }}
                   ></div>
                 </div>
@@ -1202,11 +1193,11 @@ export default function Planillas() {
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-sm font-semibold text-gray-700">Pagadas</span>
-                  <span className="text-sm font-bold text-emerald-600">{estadisticas.pagadas}</span>
+                  <span className="text-sm font-bold text-[#5D9646]">{estadisticas.pagadas}</span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
                   <div 
-                    className="bg-gradient-to-r from-emerald-400 to-emerald-600 h-full rounded-full transition-all"
+                    className="bg-gradient-to-r from-[#5D9646] to-[#5D9646] h-full rounded-full transition-all opacity-80"
                     style={{ width: `${estadisticas.total > 0 ? (estadisticas.pagadas / estadisticas.total) * 100 : 0}%` }}
                   ></div>
                 </div>
@@ -1217,8 +1208,8 @@ export default function Planillas() {
           {/* Gráfico de Pastel */}
           <div className="bg-white rounded-2xl p-6 border-2 border-gray-100 shadow-sm">
             <div className="flex items-center justify-between mb-6">
-              <h3 className="text-xl font-bold text-gray-900">Resumen</h3>
-              <PieChart className="text-purple-600" size={28} />
+              <h3 className="text-xl font-bold text-[#34353A]">Resumen</h3>
+              <PieChart className="text-[#5F8EAD]" size={28} />
             </div>
 
             <div className="relative w-48 h-48 mx-auto mb-6">
@@ -1245,7 +1236,7 @@ export default function Planillas() {
                         cx="96"
                         cy="96"
                         r="80"
-                        stroke="#3b82f6"
+                        stroke="#5F8EAD"
                         strokeWidth="20"
                         fill="transparent"
                         strokeDasharray={`${((estadisticas.aprobadas / estadisticas.total) * 502).toFixed(2)} 502`}
@@ -1260,7 +1251,7 @@ export default function Planillas() {
                         cx="96"
                         cy="96"
                         r="80"
-                        stroke="#10b981"
+                        stroke="#5D9646"
                         strokeWidth="20"
                         fill="transparent"
                         strokeDasharray={`${((estadisticas.pagadas / estadisticas.total) * 502).toFixed(2)} 502`}
@@ -1283,7 +1274,7 @@ export default function Planillas() {
               </svg>
               
               <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-4xl font-black text-gray-900">{estadisticas.total}</span>
+                <span className="text-4xl font-black text-[#34353A]">{estadisticas.total}</span>
                 <span className="text-sm text-gray-500 mt-1">Total</span>
               </div>
             </div>
@@ -1294,27 +1285,27 @@ export default function Planillas() {
                   <div className="w-3 h-3 rounded-full bg-amber-500"></div>
                   <span className="text-gray-600">Pendientes</span>
                 </div>
-                <span className="font-bold text-gray-900">
+                <span className="font-bold text-[#34353A]">
                   {estadisticas.total > 0 ? ((estadisticas.pendientes / estadisticas.total) * 100).toFixed(0) : 0}%
                 </span>
               </div>
               
               <div className="flex items-center justify-between text-sm">
                 <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full bg-blue-500"></div>
+                  <div className="w-3 h-3 rounded-full bg-[#5F8EAD]"></div>
                   <span className="text-gray-600">Aprobadas</span>
                 </div>
-                <span className="font-bold text-gray-900">
+                <span className="font-bold text-[#34353A]">
                   {estadisticas.total > 0 ? ((estadisticas.aprobadas / estadisticas.total) * 100).toFixed(0) : 0}%
                 </span>
               </div>
               
               <div className="flex items-center justify-between text-sm">
                 <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full bg-emerald-500"></div>
+                  <div className="w-3 h-3 rounded-full bg-[#5D9646]"></div>
                   <span className="text-gray-600">Pagadas</span>
                 </div>
-                <span className="font-bold text-gray-900">
+                <span className="font-bold text-[#34353A]">
                   {estadisticas.total > 0 ? ((estadisticas.pagadas / estadisticas.total) * 100).toFixed(0) : 0}%
                 </span>
               </div>
@@ -1331,7 +1322,7 @@ export default function Planillas() {
                 onClick={() => setFiltroTipo('todas')}
                 className={`px-6 py-2.5 rounded-xl font-bold transition-all ${
                   filtroTipo === 'todas'
-                    ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg'
+                    ? 'bg-gradient-to-r from-[#34353A] to-[#5F8EAD] text-white shadow-lg'
                     : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                 }`}
               >
@@ -1341,7 +1332,7 @@ export default function Planillas() {
                 onClick={() => setFiltroTipo('quincenal')}
                 className={`px-6 py-2.5 rounded-xl font-bold transition-all ${
                   filtroTipo === 'quincenal'
-                    ? 'bg-gradient-to-r from-indigo-600 to-blue-600 text-white shadow-lg'
+                    ? 'bg-gradient-to-r from-[#5F8EAD] to-[#5D9646] text-white shadow-lg'
                     : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                 }`}
               >
@@ -1351,7 +1342,7 @@ export default function Planillas() {
                 onClick={() => setFiltroTipo('semanal')}
                 className={`px-6 py-2.5 rounded-xl font-bold transition-all ${
                   filtroTipo === 'semanal'
-                    ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg'
+                    ? 'bg-gradient-to-r from-[#34353A] to-[#5F8EAD] text-white shadow-lg'
                     : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                 }`}
               >
@@ -1370,7 +1361,7 @@ export default function Planillas() {
               placeholder="Buscar planillas..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:outline-none transition-colors"
+              className="w-full pl-10 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:border-[#5F8EAD] focus:outline-none transition-colors"
             />
           </div>
         </div>
@@ -1379,15 +1370,15 @@ export default function Planillas() {
         <div className="bg-white rounded-2xl border-2 border-gray-100 shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-gradient-to-r from-gray-100 to-gray-200 border-b-4 border-gray-300">
+              <thead className="bg-gradient-to-r from-[#34353A] to-[#5F8EAD] border-b-4 border-[#5D9646]">
                 <tr>
-                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-800 uppercase tracking-wider">Tipo</th>
-                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-800 uppercase tracking-wider">Descripción</th>
-                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-800 uppercase tracking-wider">Período</th>
-                  <th className="px-6 py-4 text-center text-xs font-bold text-gray-800 uppercase tracking-wider">Empleados</th>
-                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-800 uppercase tracking-wider">Estado</th>
-                  <th className="px-6 py-4 text-right text-xs font-bold text-gray-800 uppercase tracking-wider">Total a Pagar</th>
-                  <th className="px-6 py-4 text-center text-xs font-bold text-gray-800 uppercase tracking-wider">Acciones</th>
+                  <th className="px-6 py-4 text-left text-xs font-bold text-white uppercase tracking-wider">Tipo</th>
+                  <th className="px-6 py-4 text-left text-xs font-bold text-white uppercase tracking-wider">Descripción</th>
+                  <th className="px-6 py-4 text-left text-xs font-bold text-white uppercase tracking-wider">Período</th>
+                  <th className="px-6 py-4 text-center text-xs font-bold text-white uppercase tracking-wider">Empleados</th>
+                  <th className="px-6 py-4 text-left text-xs font-bold text-white uppercase tracking-wider">Estado</th>
+                  <th className="px-6 py-4 text-right text-xs font-bold text-white uppercase tracking-wider">Total a Pagar</th>
+                  <th className="px-6 py-4 text-center text-xs font-bold text-white uppercase tracking-wider">Acciones</th>
                 </tr>
               </thead>
               <tbody className="divide-y-2 divide-gray-200">
@@ -1412,14 +1403,14 @@ export default function Planillas() {
                         <td className="px-6 py-4">
                           <span className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border-2 text-xs font-bold ${
                             planilla.tipo === 'semanal' 
-                              ? 'bg-purple-100 text-purple-800 border-purple-300'
-                              : 'bg-indigo-100 text-indigo-800 border-indigo-300'
+                              ? 'bg-[#34353A] bg-opacity-10 text-[#34353A] border-[#34353A]'
+                              : 'bg-[#5F8EAD] bg-opacity-10 text-[#5F8EAD] border-[#5F8EAD]'
                           }`}>
                             {planilla.tipo === 'semanal' ? '📅 Semanal' : '📆 Quincenal'}
                           </span>
                         </td>
                         <td className="px-6 py-4">
-                          <span className="font-bold text-gray-900">
+                          <span className="font-bold text-[#34353A]">
                             {planilla.descripcion || `Planilla ${planilla.tipo}`}
                           </span>
                         </td>
@@ -1429,7 +1420,7 @@ export default function Planillas() {
                             : new Date(planilla.fechaInicio).toLocaleDateString('es-ES')}
                         </td>
                         <td className="px-6 py-4 text-center">
-                          <span className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-indigo-100 text-indigo-700 font-bold">
+                          <span className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-[#5F8EAD] bg-opacity-20 text-[#5F8EAD] font-bold">
                             {planilla.empleados?.length || 0}
                           </span>
                         </td>
@@ -1439,7 +1430,7 @@ export default function Planillas() {
                             {estadoConfig.label}
                           </span>
                         </td>
-                        <td className="px-6 py-4 text-right font-bold text-gray-900 text-lg">
+                        <td className="px-6 py-4 text-right font-bold text-[#34353A] text-lg">
                           {formatearMoneda(planilla.totales?.totalAPagar)}
                         </td>
                         <td className="px-6 py-4">
@@ -1450,7 +1441,7 @@ export default function Planillas() {
                               className={`p-2.5 rounded-lg border-2 transition-all ${
                                 planilla.estado === 'pendiente'
                                   ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed opacity-50'
-                                  : 'bg-cyan-50 hover:bg-cyan-100 text-cyan-600 border-transparent hover:border-cyan-300'
+                                  : 'bg-[#5F8EAD] bg-opacity-10 hover:bg-opacity-20 text-[#5F8EAD] border-transparent hover:border-[#5F8EAD]'
                               }`}
                               title={planilla.estado === 'pendiente' ? 'Planilla en edición' : 'Ver Planilla'}
                             >
@@ -1459,7 +1450,7 @@ export default function Planillas() {
 
                             <button
                               onClick={() => handleDescargarPDF(planilla)}  
-                              className="p-2.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-600 border-2 border-transparent hover:border-blue-300 transition-all"
+                              className="p-2.5 rounded-lg bg-[#5D9646] bg-opacity-10 hover:bg-opacity-20 text-[#5D9646] border-2 border-transparent hover:border-[#5D9646] transition-all"
                               title="Descargar PDF"
                             >
                               <Download size={18} />
