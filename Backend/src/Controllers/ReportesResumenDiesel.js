@@ -1,7 +1,41 @@
 import puppeteer from 'puppeteer';
 import ResumenDiesel from '../Models/ResumenDiesel.js';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
 
 const ReportesRoutes = {};
+
+// Obtener __dirname en ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+// Función para convertir imagen a base64
+const convertirImagenABase64 = (rutaImagen) => {
+    try {
+        console.log('Intentando leer imagen desde:', rutaImagen);
+        
+        if (!fs.existsSync(rutaImagen)) {
+            console.error('La imagen no existe en la ruta:', rutaImagen);
+            return null;
+        }
+        
+        const imagen = fs.readFileSync(rutaImagen);
+        const base64 = imagen.toString('base64');
+        const ext = path.extname(rutaImagen).toLowerCase();
+        const mimeType = ext === '.png' ? 'image/png' : 'image/jpeg';
+        
+        console.log('Imagen convertida exitosamente a base64');
+        return `data:${mimeType};base64,${base64}`;
+    } catch (error) {
+        console.error('Error al convertir imagen:', error);
+        return null;
+    }
+};
+
+// Ruta al logo
+const RUTA_LOGO = path.join(process.cwd(), 'src', 'imagenes', 'imagen_15.png');
 
 // Función auxiliar para obtener nombre del mes
 const obtenerNombreMes = (mes) => {
@@ -31,6 +65,8 @@ ReportesRoutes.generarPDFIndividual = async (req, res) => {
             });
         }
 
+        const logoBase64 = convertirImagenABase64(RUTA_LOGO);
+
         const htmlContent = `
         <!DOCTYPE html>
         <html lang="es">
@@ -43,108 +79,221 @@ ReportesRoutes.generarPDFIndividual = async (req, res) => {
                     box-sizing: border-box;
                 }
                 body {
-                    font-family: Arial, sans-serif;
-                    padding: 40px;
-                    color: #000;
-                    background: #fff;
+                    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+                    padding: 0;
+                    color: #34353A;
+                    background: #FFFFFF;
                 }
+                .page-wrapper {
+                    padding: 50px;
+                }
+                
+                /* HEADER */
                 .header {
+                    background: linear-gradient(135deg, #34353A 0%, #5F8EAD 100%);
+                    padding: 40px;
+                    margin: -50px -50px 40px -50px;
                     text-align: center;
-                    margin-bottom: 30px;
-                    padding-bottom: 20px;
-                    border-bottom: 3px solid #000;
+                    border-bottom: 5px solid #5D9646;
                 }
+                .header .logo-container {
+                    margin-bottom: 25px;
+                }
+                .header .logo-container img {
+    width: 220px !important;
+    height: auto !important;
+    max-width: 220px !important;
+    display: block !important;
+    margin: 0 auto !important;
+}
                 .header h1 {
-                    font-size: 22px;
-                    font-weight: bold;
+                    color: #FFFFFF;
+                    font-size: 30px;
+                    font-weight: 300;
                     text-transform: uppercase;
+                    letter-spacing: 3px;
                     margin-bottom: 10px;
                 }
+                .header .subtitle {
+                    color: rgba(255, 255, 255, 0.9);
+                    font-size: 16px;
+                    letter-spacing: 1px;
+                }
+                
+                /* INFO SECTION */
                 .info-section {
-                    margin-bottom: 30px;
+                    margin-bottom: 40px;
+                    background: #FFFFFF;
+                    border: 2px solid #e5e7eb;
+                    border-left: 5px solid #5F8EAD;
+                }
+                .info-grid {
+                    display: grid;
+                    grid-template-columns: repeat(2, 1fr);
+                    gap: 0;
+                }
+                .info-item {
                     padding: 20px;
-                    background: #f5f5f5;
-                    border: 2px solid #000;
+                    border-bottom: 1px solid #e5e7eb;
+                    border-right: 1px solid #e5e7eb;
                 }
-                .info-row {
-                    margin: 10px 0;
-                    font-size: 14px;
+                .info-item:nth-child(2n) {
+                    border-right: none;
                 }
-                .info-row strong {
-                    font-weight: bold;
+                .info-item:nth-last-child(-n+2) {
+                    border-bottom: none;
                 }
+                .info-item label {
+                    display: block;
+                    font-size: 11px;
+                    color: #5F8EAD;
+                    font-weight: 600;
+                    text-transform: uppercase;
+                    letter-spacing: 1px;
+                    margin-bottom: 8px;
+                }
+                .info-item .value {
+                    font-size: 16px;
+                    font-weight: 500;
+                    color: #34353A;
+                }
+                
+                /* DETAIL BOX */
                 .detail-box {
-                    width: 100%;
                     max-width: 600px;
-                    margin: 20px auto;
-                    border: 2px solid #000;
-                    padding: 20px;
+                    margin: 40px auto;
+                    background: #FFFFFF;
+                    border: 2px solid #e5e7eb;
+                    overflow: hidden;
+                }
+                .detail-header {
+                    background: #34353A;
+                    color: #FFFFFF;
+                    padding: 15px 25px;
+                    border-bottom: 3px solid #5D9646;
+                }
+                .detail-header h3 {
+                    font-size: 16px;
+                    font-weight: 600;
+                    text-transform: uppercase;
+                    letter-spacing: 1px;
+                }
+                .detail-content {
+                    padding: 30px;
                 }
                 .detail-row {
                     display: flex;
                     justify-content: space-between;
-                    padding: 10px 0;
-                    border-bottom: 1px solid #ccc;
-                    font-size: 14px;
+                    padding: 15px 0;
+                    border-bottom: 1px solid #e5e7eb;
+                    font-size: 15px;
                 }
                 .detail-row:last-child {
                     border-bottom: none;
-                    font-weight: bold;
-                    font-size: 16px;
-                    background: #e8e8e8;
-                    padding: 15px;
-                    margin-top: 10px;
+                    margin-top: 20px;
+                    padding: 25px;
+                    background: #34353A;
+                    color: #FFFFFF;
+                    font-weight: 700;
+                    font-size: 20px;
+                    margin: 20px -30px -30px -30px;
                 }
+                .detail-row label {
+                    font-weight: 600;
+                    color: #5F8EAD;
+                }
+                .detail-row .value {
+                    font-weight: 600;
+                    color: #34353A;
+                }
+                .detail-row:last-child label,
+                .detail-row:last-child .value {
+                    color: #FFFFFF;
+                }
+                .detail-row:last-child .value {
+                    color: #5D9646;
+                    font-size: 24px;
+                }
+                
+                /* FOOTER */
                 .footer {
-                    margin-top: 40px;
+                    margin-top: 60px;
+                    padding-top: 30px;
+                    border-top: 3px solid #34353A;
                     text-align: center;
+                }
+                .footer p {
+                    color: #6b7280;
                     font-size: 11px;
-                    color: #666;
+                    margin: 5px 0;
+                    line-height: 1.6;
+                }
+                .footer .company {
+                    color: #34353A;
+                    font-weight: 600;
                 }
             </style>
         </head>
         <body>
-            <div class="header">
-                <h1>COMPROBANTE DE DIESEL</h1>
-            </div>
+            <div class="page-wrapper">
+                <div class="header">
+                    <div class="logo-container">
+                        ${logoBase64 ? `<img src="${logoBase64}" alt="Rivera Logo" />` : '<p style="color: white; font-size: 24px;">RIVERA</p>'}
+                    </div>
+                    <h1>Comprobante de Diesel</h1>
+                    <p class="subtitle">Registro de Consumo de Combustible</p>
+                </div>
 
-            <div class="info-section">
-                <div class="info-row">
-                    <strong>Vehículo:</strong> ${resumen.CicurlationCard.name}
+                <div class="info-section">
+                    <div class="info-grid">
+                        <div class="info-item">
+                            <label>Vehículo</label>
+                            <div class="value">${resumen.CicurlationCard.name}</div>
+                        </div>
+                        <div class="info-item">
+                            <label>Placa</label>
+                            <div class="value">${resumen.CicurlationCard.licensePlate}</div>
+                        </div>
+                        <div class="info-item">
+                            <label>Fecha</label>
+                            <div class="value">${new Date(resumen.fecha).toLocaleDateString('es-ES', {
+                                year: 'numeric',
+                                month: 'long',
+                                day: 'numeric'
+                            })}</div>
+                        </div>
+                        <div class="info-item">
+                            <label>Período</label>
+                            <div class="value">${obtenerNombreMes(resumen.mes)} ${resumen.ano}</div>
+                        </div>
+                    </div>
                 </div>
-                <div class="info-row">
-                    <strong>Placa:</strong> ${resumen.CicurlationCard.licensePlate}
-                </div>
-                <div class="info-row">
-                    <strong>Fecha:</strong> ${new Date(resumen.fecha).toLocaleDateString('es-ES', {
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric'
-                    })}
-                </div>
-                <div class="info-row">
-                    <strong>Período:</strong> ${obtenerNombreMes(resumen.mes)} ${resumen.ano}
-                </div>
-            </div>
 
-            <div class="detail-box">
-                <div class="detail-row">
-                    <span><strong>Galones:</strong></span>
-                    <span>${resumen.Galones.toFixed(2)}</span>
+                <div class="detail-box">
+                    <div class="detail-header">
+                        <h3>Detalles del Consumo</h3>
+                    </div>
+                    <div class="detail-content">
+                        <div class="detail-row">
+                            <label>Galones</label>
+                            <span class="value">${resumen.Galones.toFixed(2)} gal</span>
+                        </div>
+                        <div class="detail-row">
+                            <label>Costo por Galón</label>
+                            <span class="value">$ ${(resumen.Total / resumen.Galones).toFixed(2)}</span>
+                        </div>
+                        <div class="detail-row">
+                            <label>TOTAL A PAGAR</label>
+                            <span class="value">$ ${resumen.Total.toFixed(2)}</span>
+                        </div>
+                    </div>
                 </div>
-                <div class="detail-row">
-                    <span><strong>Total a Pagar:</strong></span>
-                    <span>$ ${resumen.Total.toFixed(2)}</span>
-                </div>
-                <div class="detail-row">
-                    <span><strong>TOTAL:</strong></span>
-                    <span>$ ${resumen.Total.toFixed(2)}</span>
-                </div>
-            </div>
 
-            <div class="footer">
-                <p>Documento generado el ${new Date().toLocaleDateString('es-ES')} a las ${new Date().toLocaleTimeString('es-ES')}</p>
-                <p>Sistema de Gestión Riverar © ${new Date().getFullYear()}</p>
+                <div class="footer">
+                    <p>Documento generado el ${new Date().toLocaleDateString('es-ES')} a las ${new Date().toLocaleTimeString('es-ES')}</p>
+                    <p class="company">Rivera Distribuidora y Transportes</p>
+                    <p>Sistema de Gestión de Combustible</p>
+                </div>
             </div>
         </body>
         </html>
@@ -162,10 +311,10 @@ ReportesRoutes.generarPDFIndividual = async (req, res) => {
             format: 'A4',
             printBackground: true,
             margin: {
-                top: '20px',
-                right: '20px',
-                bottom: '20px',
-                left: '20px'
+                top: '0px',
+                right: '0px',
+                bottom: '0px',
+                left: '0px'
             }
         });
 
@@ -188,7 +337,7 @@ ReportesRoutes.generarPDFIndividual = async (req, res) => {
     }
 };
 
-// 2. PDF MENSUAL SIMPLE - Resumen por placa del mes (COMO LA IMAGEN)
+// 2. PDF MENSUAL SIMPLE - Resumen por placa del mes
 ReportesRoutes.generarPDFMensualSimple = async (req, res) => {
     let browser;
     try {
@@ -203,7 +352,6 @@ ReportesRoutes.generarPDFMensualSimple = async (req, res) => {
             });
         }
 
-        // Buscar todos los registros del mes
         const registros = await ResumenDiesel.find({
             mes: mesNum,
             ano: anoNum
@@ -217,6 +365,8 @@ ReportesRoutes.generarPDFMensualSimple = async (req, res) => {
                 message: `No hay registros para ${obtenerNombreMes(mesNum)} ${anoNum}`
             });
         }
+
+        const logoBase64 = convertirImagenABase64(RUTA_LOGO);
 
         // Agrupar por placa y sumar totales
         const porPlaca = {};
@@ -233,7 +383,6 @@ ReportesRoutes.generarPDFMensualSimple = async (req, res) => {
             porPlaca[placa].monto += r.Total;
         });
 
-        // Convertir a array y ordenar por placa
         const datosTabla = Object.entries(porPlaca)
             .sort((a, b) => a[0].localeCompare(b[0]))
             .map(([placa, datos]) => ({
@@ -257,102 +406,186 @@ ReportesRoutes.generarPDFMensualSimple = async (req, res) => {
                     box-sizing: border-box;
                 }
                 body {
-                    font-family: Arial, sans-serif;
-                    padding: 40px;
-                    color: #000;
-                    background: #fff;
+                    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+                    padding: 0;
+                    color: #34353A;
+                    background: #FFFFFF;
                 }
+                .page-wrapper {
+                    padding: 50px;
+                }
+                
+                /* HEADER */
                 .header {
+                    background: linear-gradient(135deg, #34353A 0%, #5F8EAD 100%);
+                    padding: 40px;
+                    margin: -50px -50px 50px -50px;
                     text-align: center;
-                    margin-bottom: 30px;
-                    padding-bottom: 20px;
-                    border-bottom: 3px solid #000;
+                    border-bottom: 5px solid #5D9646;
                 }
+                .header .logo-container {
+                    margin-bottom: 25px;
+                }
+               .header .logo-container img {
+    width: 220px !important;
+    height: auto !important;
+    max-width: 220px !important;
+    display: block !important;
+    margin: 0 auto !important;
+}
                 .header h1 {
-                    font-size: 18px;
-                    font-weight: bold;
+                    color: #FFFFFF;
+                    font-size: 28px;
+                    font-weight: 300;
                     text-transform: uppercase;
+                    letter-spacing: 3px;
                     margin-bottom: 5px;
+                }
+                .header .period {
+                    color: #5D9646;
+                    font-size: 20px;
+                    font-weight: 600;
+                    margin-top: 15px;
+                    letter-spacing: 2px;
+                }
+                
+                /* TABLA */
+                .table-container {
+                    max-width: 800px;
+                    margin: 0 auto;
                 }
                 table {
                     width: 100%;
-                    max-width: 700px;
-                    margin: 0 auto;
                     border-collapse: collapse;
-                    border: 2px solid #000;
+                    background: #FFFFFF;
+                    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
                 }
-                th, td {
-                    border: 1px solid #000;
-                    padding: 12px 8px;
-                    text-align: center;
+                thead {
+                    background: #34353A;
+                    color: #FFFFFF;
                 }
                 th {
-                    background: #d3d3d3;
-                    font-weight: bold;
+                    padding: 18px;
+                    text-align: center;
+                    font-weight: 600;
                     font-size: 13px;
                     text-transform: uppercase;
+                    letter-spacing: 1.5px;
+                    border-bottom: 4px solid #5D9646;
                 }
                 td {
-                    font-size: 12px;
+                    padding: 16px 18px;
+                    text-align: center;
+                    font-size: 15px;
+                    border-bottom: 1px solid #e5e7eb;
+                }
+                tbody tr:hover {
+                    background: #f9fafb;
                 }
                 .col-numero {
-                    width: 8%;
+                    width: 10%;
+                    color: #6b7280;
+                    font-weight: 500;
                 }
                 .col-placa {
                     width: 35%;
-                    font-weight: bold;
+                    font-weight: 600;
+                    color: #34353A;
+                    letter-spacing: 1px;
                 }
                 .col-galones {
-                    width: 27%;
+                    width: 25%;
+                    font-weight: 600;
+                    color: #5F8EAD;
                 }
                 .col-total {
                     width: 30%;
                     text-align: right;
-                    padding-right: 15px;
+                    font-weight: 600;
+                    color: #5F8EAD;
                 }
                 .total-row {
-                    font-weight: bold;
-                    font-size: 14px;
-                    background: #e8e8e8;
+                    background: #34353A;
+                    color: #FFFFFF;
+                    font-weight: 700;
+                    font-size: 17px;
                 }
                 .total-row td {
-                    padding: 15px 12px;
+                    padding: 20px 18px;
+                    border-bottom: none;
                 }
-                thead th.col-total {
+                .total-row .col-galones {
+                    color: #FFFFFF;
+                }
+                .total-row .col-total {
+                    color: #5D9646;
+                    font-size: 20px;
+                }
+                
+                /* FOOTER */
+                .footer {
+                    margin-top: 60px;
+                    padding-top: 30px;
+                    border-top: 3px solid #34353A;
                     text-align: center;
+                }
+                .footer p {
+                    color: #6b7280;
+                    font-size: 11px;
+                    margin: 5px 0;
+                    line-height: 1.6;
+                }
+                .footer .company {
+                    color: #34353A;
+                    font-weight: 600;
+                    font-size: 12px;
                 }
             </style>
         </head>
         <body>
-            <div class="header">
-                <h1>RESUMEN DE DIESEL DEL MES DE ${obtenerNombreMes(mesNum).toUpperCase()} ${anoNum}</h1>
-            </div>
+            <div class="page-wrapper">
+                <div class="header">
+                    <div class="logo-container">
+                        ${logoBase64 ? `<img src="${logoBase64}" alt="Rivera Logo" />` : '<p style="color: white; font-size: 24px;">RIVERA</p>'}
+                    </div>
+                    <h1>Resumen de Diesel</h1>
+                    <div class="period">${obtenerNombreMes(mesNum).toUpperCase()} ${anoNum}</div>
+                </div>
 
-            <table>
-                <thead>
-                    <tr>
-                        <th class="col-numero">#</th>
-                        <th class="col-placa">PLACA</th>
-                        <th class="col-galones">GALONES</th>
-                        <th class="col-total">TOTAL</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${datosTabla.map((item, index) => `
-                        <tr>
-                            <td class="col-numero">${index + 1}</td>
-                            <td class="col-placa">${item.placa}</td>
-                            <td class="col-galones">${item.galones.toFixed(2)}</td>
-                            <td class="col-total">$${item.monto.toFixed(2)}</td>
-                        </tr>
-                    `).join('')}
-                    <tr class="total-row">
-                        <td colspan="2">TOTAL</td>
-                        <td class="col-galones">${totalGalones.toFixed(2)}</td>
-                        <td class="col-total">$${totalMonto.toFixed(2)}</td>
-                    </tr>
-                </tbody>
-            </table>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="col-numero">#</th>
+                                <th class="col-placa">PLACA</th>
+                                <th class="col-galones">GALONES</th>
+                                <th class="col-total">TOTAL</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${datosTabla.map((item, index) => `
+                                <tr>
+                                    <td class="col-numero">${index + 1}</td>
+                                    <td class="col-placa">${item.placa}</td>
+                                    <td class="col-galones">${item.galones.toFixed(2)}</td>
+                                    <td class="col-total">$ ${item.monto.toFixed(2)}</td>
+                                </tr>
+                            `).join('')}
+                            <tr class="total-row">
+                                <td colspan="2">TOTAL</td>
+                                <td class="col-galones">${totalGalones.toFixed(2)}</td>
+                                <td class="col-total">$ ${totalMonto.toFixed(2)}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="footer">
+                    <p>Documento generado el ${new Date().toLocaleDateString('es-ES')} a las ${new Date().toLocaleTimeString('es-ES')}</p>
+                    <p class="company">Rivera Distribuidora y Transportes</p>
+                    <p>Sistema de Gestión de Combustible</p>
+                </div>
+            </div>
         </body>
         </html>
         `;
@@ -368,7 +601,7 @@ ReportesRoutes.generarPDFMensualSimple = async (req, res) => {
         const pdfBuffer = await page.pdf({
             format: 'A4',
             printBackground: true,
-            margin: { top: '20px', right: '20px', bottom: '20px', left: '20px' }
+            margin: { top: '0px', right: '0px', bottom: '0px', left: '0px' }
         });
 
         await browser.close();
@@ -388,7 +621,7 @@ ReportesRoutes.generarPDFMensualSimple = async (req, res) => {
     }
 };
 
-// 3. PDF DETALLADO DEL MES - Con todos los registros individuales
+// 3. PDF DETALLADO DEL MES - Con todos los registros individuales (COMPACTO)
 ReportesRoutes.generarPDFMensualDetallado = async (req, res) => {
     let browser;
     try {
@@ -417,6 +650,7 @@ ReportesRoutes.generarPDFMensualDetallado = async (req, res) => {
             });
         }
 
+        const logoBase64 = convertirImagenABase64(RUTA_LOGO);
         const totalGalones = registros.reduce((sum, r) => sum + r.Galones, 0);
         const totalMonto = registros.reduce((sum, r) => sum + r.Total, 0);
 
@@ -432,82 +666,182 @@ ReportesRoutes.generarPDFMensualDetallado = async (req, res) => {
                     box-sizing: border-box;
                 }
                 body {
-                    font-family: Arial, sans-serif;
-                    padding: 30px;
-                    color: #000;
+                    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+                    padding: 0;
+                    color: #34353A;
+                    background: #FFFFFF;
                 }
+                .page-wrapper {
+                    padding: 35px;
+                }
+                
+                /* HEADER COMPACTO */
                 .header {
+                    background: linear-gradient(135deg, #34353A 0%, #5F8EAD 100%);
+                    padding: 30px;
+                    margin: -35px -35px 35px -35px;
                     text-align: center;
-                    margin-bottom: 30px;
-                    padding-bottom: 15px;
-                    border-bottom: 3px solid #000;
+                    border-bottom: 5px solid #5D9646;
                 }
+                .header .logo-container {
+                    margin-bottom: 20px;
+                }
+               .header .logo-container img {
+    width: 220px !important;
+    height: auto !important;
+    max-width: 220px !important;
+    display: block !important;
+    margin: 0 auto !important;
+}
                 .header h1 {
-                    font-size: 20px;
-                    font-weight: bold;
+                    color: #FFFFFF;
+                    font-size: 24px;
+                    font-weight: 300;
                     text-transform: uppercase;
+                    letter-spacing: 2px;
                 }
+                .header .period {
+                    color: #5D9646;
+                    font-size: 16px;
+                    font-weight: 600;
+                    margin-top: 10px;
+                }
+                
+                /* TABLA COMPACTA */
                 table {
                     width: 100%;
                     border-collapse: collapse;
-                    border: 2px solid #000;
+                    background: #FFFFFF;
+                    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
                     font-size: 11px;
                 }
-                th, td {
-                    border: 1px solid #000;
-                    padding: 8px 6px;
-                    text-align: center;
+                thead {
+                    background: #34353A;
+                    color: #FFFFFF;
                 }
                 th {
-                    background: #d3d3d3;
-                    font-weight: bold;
+                    padding: 12px 8px;
+                    text-align: center;
+                    font-weight: 600;
+                    font-size: 10px;
                     text-transform: uppercase;
-                    font-size: 11px;
+                    letter-spacing: 1px;
+                    border-bottom: 3px solid #5D9646;
                 }
-                .col-fecha { width: 15%; }
-                .col-placa { width: 20%; }
-                .col-galones { width: 15%; }
-                .col-total { width: 20%; text-align: right; }
+                td {
+                    padding: 10px 8px;
+                    text-align: center;
+                    border-bottom: 1px solid #e5e7eb;
+                }
+                tbody tr:hover {
+                    background: #f9fafb;
+                }
+                tbody tr:last-child td {
+                    border-bottom: none;
+                }
+                .col-numero {
+                    width: 6%;
+                    color: #6b7280;
+                    font-weight: 500;
+                }
+                .col-fecha {
+                    width: 18%;
+                    font-weight: 500;
+                }
+                .col-placa {
+                    width: 20%;
+                    font-weight: 600;
+                    color: #34353A;
+                }
+                .col-galones {
+                    width: 18%;
+                    font-weight: 600;
+                    color: #5F8EAD;
+                }
+                .col-total {
+                    width: 20%;
+                    text-align: right;
+                    font-weight: 600;
+                    color: #5F8EAD;
+                }
                 .total-row {
-                    font-weight: bold;
-                    background: #e8e8e8;
-                    font-size: 13px;
+                    background: #34353A;
+                    color: #FFFFFF;
+                    font-weight: 700;
+                    font-size: 12px;
+                }
+                .total-row td {
+                    padding: 15px 8px;
+                }
+                .total-row .col-galones {
+                    color: #FFFFFF;
+                }
+                .total-row .col-total {
+                    color: #5D9646;
+                    font-size: 14px;
+                }
+                
+                /* FOOTER */
+                .footer {
+                    margin-top: 30px;
+                    padding-top: 20px;
+                    border-top: 2px solid #34353A;
+                    text-align: center;
+                }
+                .footer p {
+                    color: #6b7280;
+                    font-size: 9px;
+                    margin: 3px 0;
+                }
+                .footer .company {
+                    color: #34353A;
+                    font-weight: 600;
                 }
             </style>
         </head>
         <body>
-            <div class="header">
-                <h1>RESUMEN DE DIESEL DEL MES DE ${obtenerNombreMes(mesNum).toUpperCase()} ${anoNum}</h1>
-            </div>
+            <div class="page-wrapper">
+                <div class="header">
+                    <div class="logo-container">
+                        ${logoBase64 ? `<img src="${logoBase64}" alt="Rivera Logo" />` : '<p style="color: white; font-size: 20px;">RIVERA</p>'}
+                    </div>
+                    <h1>Resumen Detallado de Diesel</h1>
+                    <div class="period">${obtenerNombreMes(mesNum).toUpperCase()} ${anoNum}</div>
+                </div>
 
-            <table>
-                <thead>
-                    <tr>
-                        <th>#</th>
-                        <th class="col-fecha">FECHA</th>
-                        <th class="col-galones">GALONES</th>
-                        <th class="col-total">TOTAL</th>
-                        <th class="col-placa">PLACA</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${registros.map((r, index) => `
+                <table>
+                    <thead>
                         <tr>
-                            <td>${index + 1}</td>
-                            <td class="col-fecha">${new Date(r.fecha).toLocaleDateString('es-ES')}</td>
-                            <td class="col-galones">${r.Galones.toFixed(2)}</td>
-                            <td class="col-total">$${r.Total.toFixed(2)}</td>
-                            <td class="col-placa">${r.CicurlationCard.licensePlate}</td>
+                            <th class="col-numero">#</th>
+                            <th class="col-fecha">FECHA</th>
+                            <th class="col-placa">PLACA</th>
+                            <th class="col-galones">GALONES</th>
+                            <th class="col-total">TOTAL</th>
                         </tr>
-                    `).join('')}
-                    <tr class="total-row">
-                        <td colspan="2">TOTAL</td>
-                        <td>${totalGalones.toFixed(2)}</td>
-                        <td class="col-total">$${totalMonto.toFixed(2)}</td>
-                        <td></td>
-                    </tr>
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody>
+                        ${registros.map((r, index) => `
+                            <tr>
+                                <td class="col-numero">${index + 1}</td>
+                                <td class="col-fecha">${new Date(r.fecha).toLocaleDateString('es-ES')}</td>
+                                <td class="col-placa">${r.CicurlationCard.licensePlate}</td>
+                                <td class="col-galones">${r.Galones.toFixed(2)}</td>
+                                <td class="col-total">$ ${r.Total.toFixed(2)}</td>
+                            </tr>
+                        `).join('')}
+                        <tr class="total-row">
+                            <td colspan="3">TOTAL</td>
+                            <td class="col-galones">${totalGalones.toFixed(2)}</td>
+                            <td class="col-total">$ ${totalMonto.toFixed(2)}</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div class="footer">
+                    <p>Documento generado el ${new Date().toLocaleDateString('es-ES')} a las ${new Date().toLocaleTimeString('es-ES')}</p>
+                    <p class="company">Rivera Distribuidora y Transportes</p>
+                </div>
+            </div>
         </body>
         </html>
         `;
@@ -523,7 +857,7 @@ ReportesRoutes.generarPDFMensualDetallado = async (req, res) => {
         const pdfBuffer = await page.pdf({
             format: 'A4',
             printBackground: true,
-            margin: { top: '15px', right: '15px', bottom: '15px', left: '15px' }
+            margin: { top: '0px', right: '0px', bottom: '0px', left: '0px' }
         });
 
         await browser.close();
@@ -543,7 +877,7 @@ ReportesRoutes.generarPDFMensualDetallado = async (req, res) => {
     }
 };
 
-// 4. PDF COMPARATIVO MÚLTIPLES MESES
+// 4. PDF COMPARATIVO MÚLTIPLES MESES (COMPACTO)
 ReportesRoutes.generarPDFMultiplesMeses = async (req, res) => {
     let browser;
     try {
@@ -580,6 +914,8 @@ ReportesRoutes.generarPDFMultiplesMeses = async (req, res) => {
             });
         }
 
+        const logoBase64 = convertirImagenABase64(RUTA_LOGO);
+
         // Agrupar por mes
         const porMes = {};
         mesesValidos.forEach(m => {
@@ -614,26 +950,26 @@ ReportesRoutes.generarPDFMultiplesMeses = async (req, res) => {
                     <table>
                         <thead>
                             <tr>
-                                <th>#</th>
-                                <th>PLACA</th>
-                                <th>GALONES</th>
-                                <th>TOTAL</th>
+                                <th class="col-numero">#</th>
+                                <th class="col-placa">PLACA</th>
+                                <th class="col-galones">GALONES</th>
+                                <th class="col-total">TOTAL</th>
                             </tr>
                         </thead>
                         <tbody>
                             ${datosTabla.length > 0 ? datosTabla.map((item, i) => `
                                 <tr>
-                                    <td>${i + 1}</td>
-                                    <td>${item.placa}</td>
-                                    <td>${item.galones.toFixed(2)}</td>
-                                    <td>$${item.monto.toFixed(2)}</td>
+                                    <td class="col-numero">${i + 1}</td>
+                                    <td class="col-placa">${item.placa}</td>
+                                    <td class="col-galones">${item.galones.toFixed(2)}</td>
+                                    <td class="col-total">$ ${item.monto.toFixed(2)}</td>
                                 </tr>
-                            `).join('') : '<tr><td colspan="4">Sin registros</td></tr>'}
+                            `).join('') : '<tr><td colspan="4" style="text-align: center;">Sin registros</td></tr>'}
                             ${datosTabla.length > 0 ? `
                             <tr class="total-row">
                                 <td colspan="2">TOTAL</td>
-                                <td>${totalGalones.toFixed(2)}</td>
-                                <td>$${totalMonto.toFixed(2)}</td>
+                                <td class="col-galones">${totalGalones.toFixed(2)}</td>
+                                <td class="col-total">$ ${totalMonto.toFixed(2)}</td>
                             </tr>
                             ` : ''}
                         </tbody>
@@ -650,87 +986,252 @@ ReportesRoutes.generarPDFMultiplesMeses = async (req, res) => {
         <html lang="es">
         <head>
             <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <style>
-                * { margin: 0; padding: 0; box-sizing: border-box; }
-                body { font-family: Arial, sans-serif; padding: 30px; }
+                * {
+                    margin: 0;
+                    padding: 0;
+                    box-sizing: border-box;
+                }
+                body {
+                    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+                    color: #34353A;
+                    background: #FFFFFF;
+                }
+                
+                /* HEADER */
                 .main-header {
+                    background: linear-gradient(135deg, #34353A 0%, #5F8EAD 100%);
+                    padding: 40px;
                     text-align: center;
-                    margin-bottom: 40px;
-                    padding-bottom: 15px;
-                    border-bottom: 3px solid #000;
+                    border-bottom: 5px solid #5D9646;
+                }
+                .logo-container {
+                    margin-bottom: 25px;
+                }
+                .logo-container img {
+                    width: 200px;
+                    height: auto;
+                    filter: brightness(0) invert(1);
                 }
                 .main-header h1 {
-                    font-size: 22px;
-                    font-weight: bold;
+                    color: #FFFFFF;
+                    font-size: 26px;
+                    font-weight: 300;
                     text-transform: uppercase;
+                    letter-spacing: 2px;
+                    margin-bottom: 10px;
                 }
+                .main-header .subtitle {
+                    color: rgba(255, 255, 255, 0.9);
+                    font-size: 16px;
+                    font-weight: 600;
+                    letter-spacing: 1px;
+                }
+                
+                .page-content {
+                    padding: 35px;
+                }
+                
+                /* SECCIONES DE MES */
                 .mes-section {
-                    margin-bottom: 40px;
+                    margin-bottom: 45px;
                     page-break-inside: avoid;
                 }
                 .mes-header {
+                    background: #5F8EAD;
+                    padding: 15px;
+                    margin-bottom: 20px;
                     text-align: center;
-                    margin-bottom: 15px;
-                    padding: 12px;
-                    background: #f0f0f0;
-                    border: 2px solid #000;
+                    border-left: 5px solid #5D9646;
                 }
-                .mes-header h2 { font-size: 16px; font-weight: bold; }
+                .mes-header h2 {
+                    color: #FFFFFF;
+                    font-size: 18px;
+                    font-weight: 600;
+                    letter-spacing: 2px;
+                    margin: 0;
+                }
+                
+                /* TABLAS */
                 table {
                     width: 100%;
                     max-width: 700px;
                     margin: 0 auto;
                     border-collapse: collapse;
-                    border: 2px solid #000;
-                }
-                th, td {
-                    border: 1px solid #000;
-                    padding: 10px;
-                    text-align: center;
+                    background: #FFFFFF;
+                    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
                     font-size: 12px;
                 }
+                thead {
+                    background: #34353A;
+                }
                 th {
-                    background: #d3d3d3;
-                    font-weight: bold;
+                    padding: 14px;
+                    text-align: center;
+                    font-weight: 600;
+                    font-size: 11px;
                     text-transform: uppercase;
+                    letter-spacing: 1.5px;
+                    color: #FFFFFF;
+                    border-bottom: 3px solid #5D9646;
+                }
+                td {
+                    padding: 12px 14px;
+                    text-align: center;
+                    border-bottom: 1px solid #e5e7eb;
+                }
+                tbody tr:hover {
+                    background: #f9fafb;
+                }
+                tbody tr:last-child td {
+                    border-bottom: none;
+                }
+                .col-numero {
+                    width: 10%;
+                    color: #6b7280;
+                    font-weight: 500;
+                }
+                .col-placa {
+                    width: 40%;
+                    font-weight: 600;
+                    color: #34353A;
+                    letter-spacing: 1px;
+                }
+                .col-galones {
+                    width: 25%;
+                    font-weight: 600;
+                    color: #5F8EAD;
+                }
+                .col-total {
+                    width: 25%;
+                    text-align: right;
+                    font-weight: 600;
+                    color: #5F8EAD;
                 }
                 .total-row {
-                    font-weight: bold;
-                    background: #e8e8e8;
-                    font-size: 13px;
+                    background: #34353A;
                 }
+                .total-row td {
+                    padding: 16px 14px;
+                    color: #FFFFFF;
+                    font-weight: 700;
+                    font-size: 14px;
+                }
+                .total-row .col-galones {
+                    color: #FFFFFF;
+                }
+                .total-row .col-total {
+                    color: #5D9646;
+                    font-size: 16px;
+                }
+                
+                /* RESUMEN FINAL */
                 .resumen-final {
-                    margin-top: 40px;
-                    padding: 25px;
-                    background: #f5f5f5;
-                    border: 3px solid #000;
+                    margin-top: 45px;
+                    padding: 30px;
+                    background: #34353A;
+                    border-top: 5px solid #5D9646;
                     text-align: center;
                     page-break-inside: avoid;
                 }
                 .resumen-final h3 {
                     font-size: 18px;
-                    margin-bottom: 15px;
+                    font-weight: 600;
                     text-transform: uppercase;
+                    letter-spacing: 2px;
+                    margin-bottom: 20px;
+                    color: rgba(255, 255, 255, 0.9);
                 }
-                .resumen-final .total-final {
-                    font-size: 24px;
-                    font-weight: bold;
-                    margin-top: 10px;
+                .resumen-stats {
+                    display: grid;
+                    grid-template-columns: repeat(3, 1fr);
+                    gap: 20px;
+                    margin-bottom: 20px;
+                }
+                .resumen-stat {
+                    padding: 15px;
+                    background: rgba(95, 142, 173, 0.15);
+                    border-radius: 4px;
+                }
+                .resumen-stat label {
+                    display: block;
+                    font-size: 11px;
+                    color: rgba(255, 255, 255, 0.7);
+                    margin-bottom: 8px;
+                    text-transform: uppercase;
+                    letter-spacing: 1px;
+                }
+                .resumen-stat .value {
+                    font-size: 20px;
+                    font-weight: 600;
+                    color: #FFFFFF;
+                }
+                .total-final {
+                    font-size: 36px;
+                    font-weight: 700;
+                    color: #5D9646;
+                    margin-top: 20px;
+                    padding-top: 20px;
+                    border-top: 2px solid rgba(93, 150, 70, 0.3);
+                }
+                
+                /* FOOTER */
+                .footer {
+                    margin-top: 45px;
+                    padding: 25px 35px;
+                    border-top: 3px solid #34353A;
+                    text-align: center;
+                }
+                .footer p {
+                    color: #6b7280;
+                    font-size: 10px;
+                    margin: 4px 0;
+                    line-height: 1.6;
+                }
+                .footer .company {
+                    color: #34353A;
+                    font-weight: 600;
+                    font-size: 11px;
                 }
             </style>
         </head>
         <body>
             <div class="main-header">
-                <h1>REPORTE COMPARATIVO DE DIESEL</h1>
-                <div>Período: ${mesesValidos.map(m => obtenerNombreMes(m)).join(', ')} ${anoNum}</div>
+                <div class="logo-container">
+                    <img src="${logoBase64}" alt="Rivera Logo" />
+                </div>
+                <h1>Reporte Comparativo de Diesel</h1>
+                <div class="subtitle">Período: ${mesesValidos.map(m => obtenerNombreMes(m)).join(', ')} ${anoNum}</div>
             </div>
-            ${mesesHTML}
-            <div class="resumen-final">
-                <h3>RESUMEN GENERAL</h3>
-                <div>Meses: ${mesesValidos.length}</div>
-                <div>Registros: ${registros.length}</div>
-                <div>Galones Totales: ${galonesGenerales.toFixed(2)}</div>
-                <div class="total-final">Total: $${totalGeneral.toFixed(2)}</div>
+            
+            <div class="page-content">
+                ${mesesHTML}
+                
+                <div class="resumen-final">
+                    <h3>Resumen General del Período</h3>
+                    <div class="resumen-stats">
+                        <div class="resumen-stat">
+                            <label>Meses Incluidos</label>
+                            <div class="value">${mesesValidos.length}</div>
+                        </div>
+                        <div class="resumen-stat">
+                            <label>Total Registros</label>
+                            <div class="value">${registros.length}</div>
+                        </div>
+                        <div class="resumen-stat">
+                            <label>Galones Totales</label>
+                            <div class="value">${galonesGenerales.toFixed(2)}</div>
+                        </div>
+                    </div>
+                    <div class="total-final">$ ${totalGeneral.toFixed(2)}</div>
+                </div>
+                
+                <div class="footer">
+                    <p>Documento generado el ${new Date().toLocaleDateString('es-ES')} a las ${new Date().toLocaleTimeString('es-ES')}</p>
+                    <p class="company">Rivera Distribuidora y Transportes</p>
+                    <p>Sistema de Gestión de Combustible</p>
+                </div>
             </div>
         </body>
         </html>
@@ -738,16 +1239,17 @@ ReportesRoutes.generarPDFMultiplesMeses = async (req, res) => {
 
         browser = await puppeteer.launch({
             headless: 'new',
-            args: ['--no-sandbox', '--disable-setuid-sandbox']
+            args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
         });
 
         const page = await browser.newPage();
-        await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
+        await page.setContent(htmlContent, { waitUntil: ['networkidle0', 'load', 'domcontentloaded'] });
 
         const pdfBuffer = await page.pdf({
             format: 'A4',
             printBackground: true,
-            margin: { top: '20px', right: '20px', bottom: '20px', left: '20px' }
+            preferCSSPageSize: false,
+            margin: { top: '0px', right: '0px', bottom: '0px', left: '0px' }
         });
 
         await browser.close();

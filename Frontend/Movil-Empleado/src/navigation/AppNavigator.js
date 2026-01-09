@@ -1,343 +1,267 @@
 // src/navigation/AppNavigator.js
-import React, { useState, useEffect } from 'react';
-import { Text } from 'react-native'; // 👈 Agrega esta línea
-import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { createStackNavigator } from '@react-navigation/stack';
-import Icon from 'react-native-vector-icons/MaterialIcons';
-import { useAuth } from '../Context/authContext';
+import React, { useState, useEffect, useMemo } from "react";
+import { Text, Platform, useWindowDimensions } from "react-native";
+import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
+import { createStackNavigator } from "@react-navigation/stack";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useAuth } from "../Context/authContext";
 
-import InicioScreen from '../screens/InicioScreen';
-import ViajesScreen from '../screens/ViajesScreen';
-import PerfilScreen from '../screens/PerfilScreen';
-import InfoViajeScreen from '../screens/InfoViajeScreen';
-import InicioSesionScreen from '../screens/InicioSesionScreen';
+import InicioScreen from "../screens/InicioScreen";
+import ViajesScreen from "../screens/ViajesScreen";
+import PerfilScreen from "../screens/PerfilScreen";
+import InfoViajeScreen from "../screens/InfoViajeScreen";
+import InicioSesionScreen from "../screens/InicioSesionScreen";
 
-// IMPORTAR PANTALLAS DE CARGA
-import PremiumLoadingScreen from '../screens/splashScreens'; // Pantalla inicial
-import SplashScreen2 from '../screens/SplashScreen2'; // 🆕 Tu nueva pantalla después del login
+// ✅ NUEVA PANTALLA (apartado del menú)
+import CamionProfileScreen from "../screens/CamionProfileScreen";
 
-// Pantallas de recuperación
-import elegirMetodoRecuperacionScreen from '../screens/elegirMetodoRecuperacionScreen';
-import RecuperacionTelefonoScreen from '../screens/RecuperacionTelefonoScreens';
-import RecuperacionScreen from '../screens/RecuperacionScreen';
-import Recuperacion2Scereen from '../screens/Recuepracion2Screen';
-import Recuperacion3 from '../screens/Recuperacion3';
-import Recuperacion4 from '../screens/Recuperacion4';
-import Recuperacion5 from '../screens/Recuperacion5';
+// Splash / loading
+import PremiumLoadingScreen from "../screens/splashScreens";
+import SplashScreen2 from "../screens/SplashScreen2";
 
-// Pantallas de onboarding
-import OnboardingScreen1 from '../screens/pantallacarga1';
-import OnboardingScreen2 from '../screens/pantallacarga2';
-import OnboardingScreen3 from '../screens/pantallacarga3';
+// Recuperación
+import elegirMetodoRecuperacionScreen from "../screens/elegirMetodoRecuperacionScreen";
+import RecuperacionTelefonoScreen from "../screens/RecuperacionTelefonoScreens";
+import RecuperacionScreen from "../screens/RecuperacionScreen";
+import Recuperacion2Scereen from "../screens/Recuepracion2Screen";
+import Recuperacion3 from "../screens/Recuperacion3";
+import Recuperacion4 from "../screens/Recuperacion4";
+import Recuperacion5 from "../screens/Recuperacion5";
 
-// ✨ NUEVO: importar EditProfileScreen (único import añadido)
-import EditProfileScreen from '../screens/EditProfileScreen';
+// Onboarding
+import OnboardingScreen1 from "../screens/pantallacarga1";
+import OnboardingScreen2 from "../screens/pantallacarga2";
+import OnboardingScreen3 from "../screens/pantallacarga3";
+
+// Edit profile
+import EditProfileScreen from "../screens/EditProfileScreen";
 
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
 
-// Navegador de pestañas principal mejorado
+/* =========================
+   Tab Navigator RESPONSIVE
+========================= */
 const TabNavigator = () => {
+  const insets = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
+
+  const scale = useMemo(() => {
+    if (width <= 340) return 0.9;
+    if (width <= 380) return 0.95;
+    if (width >= 430) return 1.05;
+    return 1;
+  }, [width]);
+
+  const metrics = useMemo(() => {
+    const side = Math.max(8, Math.round(10 * scale));
+    const bottom = Platform.OS === "android" ? 0 : Math.max(8, Math.round(12 * scale));
+    const paddingTop = Math.round(10 * scale);
+
+    const paddingBottom =
+      Platform.OS === "android"
+        ? Math.round(8 * scale)
+        : Math.max(insets.bottom, Math.round(8 * scale));
+
+    const baseHeight = Math.round(62 * scale);
+    const height = baseHeight + paddingBottom;
+
+    const icon = Math.round(24 * scale);
+    const iconFocused = Math.round(28 * scale);
+    const labelSize = Math.max(10, Math.round(12 * scale));
+
+    // ✅ como ahora son 4 tabs, reducimos un poquito márgenes
+    const itemMarginX = Math.max(4, Math.round(6 * scale));
+    const itemPaddingY = Math.max(4, Math.round(6 * scale));
+
+    return {
+      side,
+      bottom,
+      paddingTop,
+      paddingBottom,
+      height,
+      icon,
+      iconFocused,
+      labelSize,
+      itemMarginX,
+      itemPaddingY,
+    };
+  }, [scale, insets.bottom]);
+
+  const iconForRoute = (routeName) => {
+    switch (routeName) {
+      case "Inicio":
+        return "🏠";
+      case "Viajes":
+        return "🚚";
+      case "Camion":
+        return "🚛";
+      case "Perfil":
+        return "👤";
+      default:
+        return "❓";
+    }
+  };
+
   return (
     <Tab.Navigator
+      initialRouteName="Inicio"
+      safeAreaInsets={{ bottom: 0 }}
+      sceneContainerStyle={{ backgroundColor: "#f8f9fa" }}
       screenOptions={({ route }) => ({
-        tabBarIcon: ({ focused }) => {
-          switch (route.name) {
-            case 'Inicio':
-              return focused
-                ? <Text style={{ fontSize: 28 }}>🏠</Text>
-                : <Text style={{ fontSize: 24 }}>🏠</Text>;
-            case 'Viajes':
-              return focused
-                ? <Text style={{ fontSize: 28 }}>🚚</Text>
-                : <Text style={{ fontSize: 24 }}>🚚</Text>;
-            case 'Perfil':
-              return focused
-                ? <Text style={{ fontSize: 28 }}>👤</Text>
-                : <Text style={{ fontSize: 24 }}>👤</Text>;
-            default:
-              return <Text style={{ fontSize: 24 }}>❓</Text>;
-          }
-        },
-        tabBarActiveTintColor: '#4CAF50',
-        tabBarInactiveTintColor: '#9E9E9E',
         headerShown: false,
+        tabBarHideOnKeyboard: true,
+
+        tabBarIcon: ({ focused }) => {
+          const size = focused ? metrics.iconFocused : metrics.icon;
+          const glyph = iconForRoute(route.name);
+          return <Text style={{ fontSize: size, lineHeight: size + 2 }}>{glyph}</Text>;
+        },
+
+        tabBarActiveTintColor: "#4CAF50",
+        tabBarInactiveTintColor: "#9E9E9E",
+
         tabBarStyle: {
-          backgroundColor: '#FFFFFF',
+          backgroundColor: "#FFFFFF",
           borderTopWidth: 0,
-          paddingBottom: 20,
-          paddingTop: 12,
-          height: 85,
+
+          paddingTop: metrics.paddingTop,
+          paddingBottom: metrics.paddingBottom,
+          height: metrics.height,
+
           elevation: 25,
           shadowOffset: { width: 0, height: -6 },
           shadowOpacity: 0.2,
           shadowRadius: 12,
-          shadowColor: '#000000',
+          shadowColor: "#000000",
+
+          position: "absolute",
+          bottom: metrics.bottom,
+          left: metrics.side,
+          right: metrics.side,
+
           borderTopLeftRadius: 25,
           borderTopRightRadius: 25,
-          position: 'absolute',
-          bottom: 15,
-          left: 10,
-          right: 10,
           borderWidth: 1,
-          borderColor: 'rgba(0,0,0,0.05)',
+          borderColor: "rgba(0,0,0,0.05)",
+
+          overflow: Platform.OS === "android" ? "hidden" : "visible",
         },
+
         tabBarLabelStyle: {
-          fontSize: 12,
-          fontWeight: '700',
+          fontSize: metrics.labelSize,
+          fontWeight: "700",
           letterSpacing: 0.3,
           marginTop: 4,
-          textShadowColor: 'rgba(0,0,0,0.1)',
-          textShadowOffset: { width: 0, height: 1 },
-          textShadowRadius: 2,
         },
+
         tabBarItemStyle: {
-          paddingVertical: 6,
+          paddingVertical: metrics.itemPaddingY,
           borderRadius: 12,
-          marginHorizontal: 8,
-          backgroundColor: 'transparent',
+          marginHorizontal: metrics.itemMarginX,
+          backgroundColor: "transparent",
         },
-        tabBarIconStyle: {
-          marginBottom: 0,
-        },
+
         tabBarAllowFontScaling: false,
         tabBarAccessibilityLabel: route.name,
       })}
-      initialRouteName="Inicio"
     >
-      <Tab.Screen 
-        name="Inicio" 
-        component={InicioScreen}
-        options={{
-          tabBarLabel: 'Inicio',
-          tabBarAccessibilityLabel: 'Pantalla de inicio',
-        }}
+      <Tab.Screen name="Inicio" component={InicioScreen} />
+      <Tab.Screen name="Viajes" component={ViajesScreen} />
+
+      {/* ✅ NUEVO APARTADO DEL MENÚ */}
+      <Tab.Screen
+        name="Camion"
+        component={CamionProfileScreen}
+        options={{ tabBarLabel: "Camión" }} // si querés que se vea con acento
       />
-      <Tab.Screen 
-        name="Viajes" 
-        component={ViajesScreen}
-        options={{
-          tabBarLabel: 'Viajes',
-          tabBarAccessibilityLabel: 'Historial de viajes',
-          tabBarBadge: null,
-        }}
-      />
-      <Tab.Screen 
-        name="Perfil" 
-        component={PerfilScreen}
-        options={{
-          tabBarLabel: 'Perfil',
-          tabBarAccessibilityLabel: 'Perfil de usuario',
-        }}
-      />
+
+      <Tab.Screen name="Perfil" component={PerfilScreen} />
     </Tab.Navigator>
   );
 };
 
-// Componente principal del navegador
+/* =========================
+   App Navigator (auth flow)
+========================= */
 const AppNavigator = () => {
-  const { isAuthenticated, hasCompletedOnboarding, isLoading, showPostLoginSplash, setShowPostLoginSplash } = useAuth();
-  
-  // ESTADO PARA CONTROLAR LA PANTALLA DE CARGA INICIAL
-  const [showInitialLoading, setShowInitialLoading] = useState(true);
-  
-  console.log('🔄 AppNavigator render:', { 
-    isAuthenticated, 
-    hasCompletedOnboarding, 
+  const {
+    isAuthenticated,
+    hasCompletedOnboarding,
     isLoading,
-    showInitialLoading,
-    showPostLoginSplash
-  });
+    showPostLoginSplash,
+    setShowPostLoginSplash,
+  } = useAuth();
 
-  // EFECTO PARA OCULTAR LA PANTALLA DE CARGA INICIAL
+  const [showInitialLoading, setShowInitialLoading] = useState(true);
+
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setShowInitialLoading(false);
-    }, 3000); // 3 segundos
-
+    const timer = setTimeout(() => setShowInitialLoading(false), 3000);
     return () => clearTimeout(timer);
   }, []);
 
-  // 1️⃣ MOSTRAR PANTALLA DE CARGA INICIAL PRIMERO
   if (showInitialLoading) {
-    console.log('🚚 Mostrando pantalla de carga inicial...');
     return (
-      <PremiumLoadingScreen 
+      <PremiumLoadingScreen
         message="Carga patita"
         subtitle="Iniciando tu experiencia..."
       />
     );
   }
-  
-  // 2️⃣ MOSTRAR LOADING DEL CONTEXTO SI ESTÁ CARGANDO
+
   if (isLoading) {
-    console.log('⏳ Mostrando loading del contexto...');
     return (
-      <PremiumLoadingScreen 
+      <PremiumLoadingScreen
         message="Carga patita"
         subtitle="Verificando sesión..."
       />
     );
   }
-  
-  // 3️⃣ SI NO ESTÁ AUTENTICADO: Mostrar pantallas de login
+
   if (!isAuthenticated) {
-    console.log('🔐 Mostrando navegador de autenticación');
     return (
-      <Stack.Navigator 
-        screenOptions={{ 
-          headerShown: false,
-          cardStyle: { backgroundColor: '#fff' }
-        }}
-        initialRouteName="InicioSesion"
-      >
-        <Stack.Screen 
-          name="InicioSesion" 
-          component={InicioSesionScreen}
-          options={{
-            animationTypeForReplace: 'push',
-          }}
-        />
-        
-        <Stack.Screen 
-          name="elegirMetodoRecuperacion" 
-          component={elegirMetodoRecuperacionScreen}
-          options={{
-            presentation: 'card',
-            gestureEnabled: true,
-            cardStyleInterpolator: ({ current, layouts }) => {
-              return {
-                cardStyle: {
-                  transform: [
-                    {
-                      translateX: current.progress.interpolate({
-                        inputRange: [0, 1],
-                        outputRange: [layouts.screen.width, 0],
-                      }),
-                    },
-                  ],
-                },
-              };
-            },
-          }}
-        />
-        
-        <Stack.Screen name="Recuperacion" component={RecuperacionScreen} options={{ presentation: 'card', gestureEnabled: true }} />
-        <Stack.Screen name="RecuperacionTelefono" component={RecuperacionTelefonoScreen} options={{ presentation: 'card', gestureEnabled: true }} />
-        <Stack.Screen name="Recuperacion2" component={Recuperacion2Scereen} options={{ presentation: 'card', gestureEnabled: true }} />
-        <Stack.Screen name="Recuperacion3" component={Recuperacion3} options={{ presentation: 'card', gestureEnabled: true }} />
-        <Stack.Screen name="Recuperacion4" component={Recuperacion4} options={{ presentation: 'card', gestureEnabled: true }} />
-        <Stack.Screen name="Recuperacion5" component={Recuperacion5} options={{ presentation: 'card', gestureEnabled: true }} />
+      <Stack.Navigator screenOptions={{ headerShown: false, cardStyle: { backgroundColor: "#fff" } }}>
+        <Stack.Screen name="InicioSesion" component={InicioSesionScreen} />
+
+        <Stack.Screen name="elegirMetodoRecuperacion" component={elegirMetodoRecuperacionScreen} />
+        <Stack.Screen name="Recuperacion" component={RecuperacionScreen} />
+        <Stack.Screen name="RecuperacionTelefono" component={RecuperacionTelefonoScreen} />
+        <Stack.Screen name="Recuperacion2" component={Recuperacion2Scereen} />
+        <Stack.Screen name="Recuperacion3" component={Recuperacion3} />
+        <Stack.Screen name="Recuperacion4" component={Recuperacion4} />
+        <Stack.Screen name="Recuperacion5" component={Recuperacion5} />
       </Stack.Navigator>
     );
   }
 
-  // 4️⃣ 🆕 SI ESTÁ AUTENTICADO Y DEBE MOSTRAR SPLASH POST-LOGIN
   if (isAuthenticated && showPostLoginSplash) {
-    console.log('✨ Mostrando SplashScreen2 después del login...');
-    return (
-      <SplashScreen2 
-        onAnimationFinish={() => {
-          console.log('✅ SplashScreen2 terminado, ocultando...');
-          setShowPostLoginSplash(false);
-        }}
-      />
-    );
+    return <SplashScreen2 onAnimationFinish={() => setShowPostLoginSplash(false)} />;
   }
 
-  // 5️⃣ SI ESTÁ AUTENTICADO PERO NO HA COMPLETADO ONBOARDING: Mostrar pantallas de carga
   if (isAuthenticated && !hasCompletedOnboarding) {
-    console.log('🎬 Mostrando navegador de onboarding (pantallas de carga)');
     return (
-      <Stack.Navigator 
-        screenOptions={{ 
-          headerShown: false,
-          cardStyle: { backgroundColor: '#fff' }
-        }}
-        initialRouteName="Onboarding1"
-      >
-        <Stack.Screen 
-          name="Onboarding1" 
-          component={OnboardingScreen1}
-          options={{
-            presentation: 'card',
-            gestureEnabled: false,
-          }}
-        />
-        <Stack.Screen 
-          name="Onboarding2" 
-          component={OnboardingScreen2}
-          options={{
-            presentation: 'card',
-            gestureEnabled: true,
-          }}
-        />
-        <Stack.Screen 
-          name="Onboarding3" 
-          component={OnboardingScreen3}
-          options={{
-            presentation: 'card',
-            gestureEnabled: true,
-          }}
-        />
+      <Stack.Navigator screenOptions={{ headerShown: false, cardStyle: { backgroundColor: "#fff" } }}>
+        <Stack.Screen name="Onboarding1" component={OnboardingScreen1} />
+        <Stack.Screen name="Onboarding2" component={OnboardingScreen2} />
+        <Stack.Screen name="Onboarding3" component={OnboardingScreen3} />
       </Stack.Navigator>
     );
   }
 
-  // 6️⃣ SI ESTÁ AUTENTICADO Y HA COMPLETADO ONBOARDING: Mostrar app principal
-  console.log('🏠 Mostrando navegador principal (TabNavigator con InicioScreen)');
   return (
-    <Stack.Navigator 
-      screenOptions={{ 
-        headerShown: false,
-        cardStyle: { backgroundColor: '#fff' }
-      }}
-      initialRouteName="Main"
-    >
-      <Stack.Screen 
-        name="Main" 
-        component={TabNavigator}
-        options={{
-          gestureEnabled: false,
-        }}
-      />
+    <Stack.Navigator screenOptions={{ headerShown: false, cardStyle: { backgroundColor: "#fff" } }}>
+      <Stack.Screen name="Main" component={TabNavigator} />
 
-      {/* ✨ NUEVO: EditarPerfil (única ruta añadida) */}
       <Stack.Screen
         name="EditarPerfil"
         component={EditProfileScreen}
-        options={{
-          headerShown: true,
-          title: 'Editar perfil',
-          presentation: 'card',
-        }}
+        options={{ headerShown: true, title: "Editar perfil", presentation: "card" }}
       />
 
-      <Stack.Screen 
-        name="InfoViaje" 
+      <Stack.Screen
+        name="InfoViaje"
         component={InfoViajeScreen}
-        options={{
-          presentation: 'modal',
-          gestureEnabled: true,
-          cardStyle: { backgroundColor: 'rgba(0,0,0,0.5)' },
-          cardStyleInterpolator: ({ current: { progress } }) => {
-            return {
-              cardStyle: {
-                opacity: progress.interpolate({
-                  inputRange: [0, 0.5, 0.9, 1],
-                  outputRange: [0, 0.25, 0.7, 1],
-                }),
-              },
-              overlayStyle: {
-                opacity: progress.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [0, 0.5],
-                  extrapolate: 'clamp',
-                }),
-              },
-            };
-          },
-        }}
+        options={{ presentation: "modal", gestureEnabled: true }}
       />
     </Stack.Navigator>
   );

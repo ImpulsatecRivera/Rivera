@@ -489,6 +489,229 @@ clienteCon.getClienteById = async (req, res) => {
   }
 };
 
+// =====================================================
+// POST: Crear cliente corporativo/operativo
+// =====================================================
+clienteCon.crearClienteCorporativo = async (req, res) => {
+  try {
+    console.log("🏢 === CREAR CLIENTE CORPORATIVO ===");
+    console.log("📝 Body recibido:", req.body);
+
+    const {
+      nombreEmpresa,
+      nombreComercial,
+      ruc,
+      giroNegocio,
+      email,
+      phone,
+      address,
+      direccionFacturacion,
+      contactoPrincipal,
+      contactosAdicionales,
+      terminosPago,
+      limiteCredito,
+      estadoCorporativo,
+      rutasFrecuentes,
+      notasInternas
+    } = req.body;
+
+    // ✅ VALIDACIONES BÁSICAS
+    if (!nombreEmpresa || !ruc || !email || !phone || !address) {
+      return res.status(400).json({
+        success: false,
+        message: "Campos obligatorios faltantes",
+        required: {
+          nombreEmpresa: "Nombre de la empresa",
+          ruc: "RUC/NIT",
+          email: "Correo electrónico",
+          phone: "Teléfono",
+          address: "Dirección"
+        },
+        received: {
+          nombreEmpresa: !!nombreEmpresa,
+          ruc: !!ruc,
+          email: !!email,
+          phone: !!phone,
+          address: !!address
+        }
+      });
+    }
+
+    // ✅ VALIDAR FORMATO DE EMAIL
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({
+        success: false,
+        message: "Formato de email inválido"
+      });
+    }
+
+    // ✅ VERIFICAR SI YA EXISTE EL RUC
+    const rucExistente = await clienteModel.findOne({ 
+      ruc: ruc,
+      tipoCliente: 'corporativo'
+    });
+
+    if (rucExistente) {
+      return res.status(400).json({
+        success: false,
+        message: "Ya existe un cliente corporativo con este RUC",
+        clienteExistente: {
+          id: rucExistente._id,
+          nombreComercial: rucExistente.nombreComercial,
+          nombreEmpresa: rucExistente.nombreEmpresa
+        }
+      });
+    }
+
+    // ✅ VERIFICAR SI YA EXISTE EL EMAIL
+    const emailExistente = await clienteModel.findOne({ email });
+
+    if (emailExistente) {
+      return res.status(400).json({
+        success: false,
+        message: "Ya existe un cliente con este email",
+        clienteExistente: {
+          id: emailExistente._id,
+          tipo: emailExistente.tipoCliente,
+          nombre: emailExistente.tipoCliente === 'corporativo' ? 
+                  emailExistente.nombreComercial : 
+                  `${emailExistente.firstName} ${emailExistente.lastName}`
+        }
+      });
+    }
+
+    // 📝 CREAR DATOS DEL CLIENTE CORPORATIVO
+    const datosCliente = {
+      // Tipo de cliente
+      tipoCliente: 'corporativo',
+
+      // Información empresarial
+      nombreEmpresa: nombreEmpresa.trim().toUpperCase(),
+      nombreComercial: (nombreComercial || nombreEmpresa).trim().toUpperCase(),
+      ruc: ruc.trim(),
+      giroNegocio: giroNegocio?.trim() || '',
+
+      // Contacto
+      email: email.trim().toLowerCase(),
+      phone: phone.trim(),
+      address: address.trim(),
+      direccionFacturacion: direccionFacturacion?.trim() || address.trim(),
+
+      // Contacto principal
+      contactoPrincipal: contactoPrincipal ? {
+        nombre: contactoPrincipal.nombre?.trim() || '',
+        cargo: contactoPrincipal.cargo?.trim() || '',
+        telefono: contactoPrincipal.telefono?.trim() || '',
+        email: contactoPrincipal.email?.trim().toLowerCase() || ''
+      } : undefined,
+
+      // Contactos adicionales
+      contactosAdicionales: contactosAdicionales || [],
+
+      // Términos comerciales
+      terminosPago: terminosPago || 'contado',
+      limiteCredito: limiteCredito || 0,
+      estadoCorporativo: estadoCorporativo || 'activo',
+
+      // Rutas frecuentes
+      rutasFrecuentes: rutasFrecuentes || [],
+
+      // Notas
+      notasInternas: notasInternas?.trim() || '',
+
+      // Profile completo para corporativos
+      profileCompleted: true,
+      emailVerified: true
+    };
+
+    console.log("💾 Creando cliente corporativo...");
+
+    // 💾 CREAR Y GUARDAR CLIENTE
+    const nuevoCliente = new clienteModel(datosCliente);
+    
+    // Validar antes de guardar
+    const erroresValidacion = nuevoCliente.validateSync();
+    if (erroresValidacion) {
+      console.error("❌ ERRORES DE VALIDACIÓN:", erroresValidacion.message);
+      
+      const detallesErrores = Object.keys(erroresValidacion.errors).map(campo => ({
+        campo,
+        mensaje: erroresValidacion.errors[campo].message,
+        tipo: erroresValidacion.errors[campo].kind,
+        valor: erroresValidacion.errors[campo].value
+      }));
+      
+      return res.status(400).json({
+        success: false,
+        message: "Errores de validación",
+        errores: detallesErrores
+      });
+    }
+
+    const clienteGuardado = await nuevoCliente.save();
+    console.log("✅ Cliente corporativo creado:", clienteGuardado._id);
+
+    // 🎯 RESPUESTA EXITOSA
+    res.status(201).json({
+      success: true,
+      data: {
+        cliente: clienteGuardado,
+        mensaje: "Cliente corporativo creado exitosamente",
+        detalles: {
+          id: clienteGuardado._id,
+          nombreComercial: clienteGuardado.nombreComercial,
+          nombreEmpresa: clienteGuardado.nombreEmpresa,
+          ruc: clienteGuardado.ruc,
+          email: clienteGuardado.email,
+          estadoCorporativo: clienteGuardado.estadoCorporativo,
+          terminosPago: clienteGuardado.terminosPago,
+          limiteCredito: clienteGuardado.limiteCredito
+        }
+      },
+      message: "Cliente corporativo registrado exitosamente"
+    });
+
+    console.log("🎉 === CLIENTE CORPORATIVO CREADO EXITOSAMENTE ===");
+
+  } catch (error) {
+    console.error("❌ ERROR GENERAL:", error);
+
+    // Error de duplicado (MongoDB)
+    if (error.code === 11000) {
+      const camposDuplicados = Object.keys(error.keyPattern || {});
+      return res.status(400).json({
+        success: false,
+        message: "Ya existe un cliente con datos duplicados",
+        campo: camposDuplicados[0],
+        valor: error.keyValue
+      });
+    }
+
+    // Error de validación de Mongoose
+    if (error.name === 'ValidationError') {
+      const errores = Object.keys(error.errors).map(campo => ({
+        campo,
+        mensaje: error.errors[campo].message,
+        tipo: error.errors[campo].kind
+      }));
+      
+      return res.status(400).json({
+        success: false,
+        message: "Error de validación al guardar",
+        errores
+      });
+    }
+
+    res.status(500).json({
+      success: false,
+      message: "Error al crear cliente corporativo",
+      error: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
+  }
+};
+
 /**
  * Actualizar cliente existente con soporte para imagen de perfil
  * PUT /clientes/:id

@@ -1,7 +1,41 @@
 import puppeteer from 'puppeteer';
 import MantenimientoCamiones from '../Models/MantenimientoCamiones.js';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
 
 const ReportesRoutes = {};
+
+// Obtener __dirname en ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+// Función para convertir imagen a base64
+const convertirImagenABase64 = (rutaImagen) => {
+    try {
+        console.log('Intentando leer imagen desde:', rutaImagen);
+        
+        if (!fs.existsSync(rutaImagen)) {
+            console.error('La imagen no existe en la ruta:', rutaImagen);
+            return null;
+        }
+        
+        const imagen = fs.readFileSync(rutaImagen);
+        const base64 = imagen.toString('base64');
+        const ext = path.extname(rutaImagen).toLowerCase();
+        const mimeType = ext === '.png' ? 'image/png' : 'image/jpeg';
+        
+        console.log('Imagen convertida exitosamente a base64');
+        return `data:${mimeType};base64,${base64}`;
+    } catch (error) {
+        console.error('Error al convertir imagen:', error);
+        return null;
+    }
+};
+
+// Ruta al logo
+const RUTA_LOGO = path.join(process.cwd(), 'src', 'imagenes', 'imagen_15.png');
 
 // Función auxiliar para obtener nombre del mes
 const obtenerNombreMes = (mes) => {
@@ -31,6 +65,9 @@ ReportesRoutes.generarPDFIndividual = async (req, res) => {
             });
         }
 
+        // Convertir imagen a base64
+        const logoBase64 = convertirImagenABase64(RUTA_LOGO);
+
         const totalDetalle = manto.detalles.reduce((sum, detalle) => sum + detalle.subTotal, 0);
 
         const htmlContent = `
@@ -45,254 +82,297 @@ ReportesRoutes.generarPDFIndividual = async (req, res) => {
                     box-sizing: border-box;
                 }
                 body {
-                    font-family: 'Segoe UI', Arial, sans-serif;
-                    padding: 40px;
-                    color: #1e293b;
-                    background: #f8fafc;
+                    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+                    padding: 0;
+                    color: #34353A;
+                    background: #FFFFFF;
                 }
-                .container {
-                    background: white;
-                    padding: 40px;
-                    border-radius: 12px;
-                    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+                .page-wrapper {
+                    padding: 50px;
                 }
+                
+                /* HEADER PRINCIPAL */
                 .header {
-                    text-align: center;
-                    margin-bottom: 40px;
-                    border-bottom: 4px solid #2563eb;
-                    padding-bottom: 25px;
+                    background: linear-gradient(135deg, #34353A 0%, #5F8EAD 100%);
+                    padding: 40px 50px;
+                    margin: -50px -50px 40px -50px;
+                    position: relative;
+                    overflow: hidden;
+                }
+                .header::before {
+                    content: '';
+                    position: absolute;
+                    top: 0;
+                    right: 0;
+                    width: 300px;
+                    height: 100%;
+                    background: linear-gradient(90deg, transparent, rgba(93, 150, 70, 0.1));
+                }
+                .header-content {
+                    position: relative;
+                    z-index: 1;
+                }
+                .header .logo-container {
+                    margin-bottom: 25px;
+                }
+                .header .logo-container img {
+                    max-width: 220px;
+                    height: auto;
+                    
                 }
                 .header h1 {
-                    color: #2563eb;
-                    font-size: 32px;
+                    color: #FFFFFF;
+                    font-size: 34px;
                     margin-bottom: 8px;
-                    font-weight: 700;
-                    text-transform: uppercase;
-                    letter-spacing: 1px;
+                    font-weight: 300;
+                    letter-spacing: 2px;
                 }
                 .header .subtitle {
-                    color: #64748b;
+                    color: rgba(255, 255, 255, 0.9);
                     font-size: 16px;
-                    font-weight: 500;
+                    font-weight: 300;
+                    letter-spacing: 1px;
                 }
                 .id-badge {
                     display: inline-block;
-                    background: #f1f5f9;
-                    padding: 8px 16px;
-                    border-radius: 8px;
-                    font-size: 12px;
-                    color: #475569;
-                    margin-top: 10px;
-                    font-family: monospace;
+                    background: rgba(93, 150, 70, 0.2);
+                    border: 1px solid #5D9646;
+                    padding: 8px 20px;
+                    border-radius: 4px;
+                    font-size: 11px;
+                    color: #FFFFFF;
+                    margin-top: 15px;
+                    font-family: 'Courier New', monospace;
+                    letter-spacing: 1px;
                 }
+                
+                /* SECCIONES */
                 .section {
-                    margin-bottom: 35px;
-                    background: #f8fafc;
-                    padding: 25px;
-                    border-radius: 10px;
-                    border-left: 5px solid #2563eb;
+                    margin-bottom: 40px;
+                    page-break-inside: avoid;
+                }
+                .section-header {
+                    background: #34353A;
+                    color: #FFFFFF;
+                    padding: 15px 25px;
+                    margin-bottom: 20px;
+                    border-left: 5px solid #5D9646;
                 }
                 .section-title {
-                    color: #2563eb;
-                    font-size: 20px;
-                    font-weight: 700;
-                    margin-bottom: 20px;
-                    display: flex;
-                    align-items: center;
-                    gap: 10px;
+                    font-size: 18px;
+                    font-weight: 600;
+                    letter-spacing: 1px;
+                    text-transform: uppercase;
                 }
-                .section-title::before {
-                    content: '';
-                    width: 8px;
-                    height: 8px;
-                    background: #2563eb;
-                    border-radius: 50%;
-                }
+                
+                /* GRID DE INFORMACIÓN */
                 .info-grid {
                     display: grid;
                     grid-template-columns: repeat(2, 1fr);
-                    gap: 20px;
-                    margin-top: 15px;
+                    gap: 15px;
+                    background: #FFFFFF;
                 }
                 .info-item {
-                    background: white;
-                    padding: 15px;
-                    border-radius: 8px;
-                    border: 1px solid #e2e8f0;
+                    padding: 20px;
+                    border: 1px solid #e5e7eb;
+                    background: #FFFFFF;
                 }
                 .info-item label {
                     display: block;
                     font-weight: 600;
-                    color: #64748b;
+                    color: #5F8EAD;
                     font-size: 11px;
                     margin-bottom: 8px;
                     text-transform: uppercase;
-                    letter-spacing: 0.5px;
+                    letter-spacing: 1px;
                 }
                 .info-item .value {
-                    color: #1e293b;
-                    font-size: 15px;
-                    font-weight: 500;
+                    color: #34353A;
+                    font-size: 16px;
+                    font-weight: 400;
                 }
                 .full-width {
                     grid-column: 1 / -1;
                 }
+                
+                /* BADGES */
                 .badge {
                     display: inline-block;
-                    padding: 6px 14px;
-                    border-radius: 20px;
-                    font-size: 13px;
+                    padding: 8px 16px;
+                    border-radius: 3px;
+                    font-size: 12px;
                     font-weight: 600;
                     text-transform: uppercase;
                     letter-spacing: 0.5px;
                 }
                 .badge-preventivo {
-                    background: #dcfce7;
-                    color: #166534;
+                    background: #5D9646;
+                    color: #FFFFFF;
                 }
                 .badge-correctivo {
-                    background: #fee2e2;
-                    color: #991b1b;
+                    background: #dc2626;
+                    color: #FFFFFF;
                 }
                 .badge-llantas {
-                    background: #fef3c7;
-                    color: #92400e;
+                    background: #d97706;
+                    color: #FFFFFF;
                 }
                 .badge-rines {
-                    background: #dbeafe;
-                    color: #1e40af;
+                    background: #5F8EAD;
+                    color: #FFFFFF;
                 }
                 .badge-furgo {
-                    background: #fce7f3;
-                    color: #831843;
+                    background: #be123c;
+                    color: #FFFFFF;
                 }
                 .badge-madera_furgo {
-                    background: #fed7aa;
-                    color: #7c2d12;
+                    background: #c2410c;
+                    color: #FFFFFF;
                 }
                 .badge-torno {
-                    background: #e9d5ff;
-                    color: #6b21a8;
+                    background: #7c3aed;
+                    color: #FFFFFF;
                 }
                 .badge-bomba {
-                    background: #bfdbfe;
-                    color: #1e3a8a;
+                    background: #5F8EAD;
+                    color: #FFFFFF;
                 }
                 .badge-reparacion_turbo {
-                    background: #fecaca;
-                    color: #7f1d1d;
+                    background: #991b1b;
+                    color: #FFFFFF;
                 }
                 .badge-otros {
-                    background: #e0e7ff;
-                    color: #3730a3;
+                    background: #4f46e5;
+                    color: #FFFFFF;
                 }
+                
+                /* TABLA */
                 table {
                     width: 100%;
                     border-collapse: collapse;
-                    margin-top: 20px;
-                    background: white;
-                    border-radius: 8px;
-                    overflow: hidden;
-                    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+                    background: #FFFFFF;
                 }
                 thead {
-                    background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
-                    color: white;
+                    background: #34353A;
+                    color: #FFFFFF;
                 }
                 th {
-                    padding: 15px;
+                    padding: 16px;
                     text-align: left;
                     font-weight: 600;
-                    font-size: 13px;
+                    font-size: 12px;
                     text-transform: uppercase;
-                    letter-spacing: 0.5px;
+                    letter-spacing: 1px;
+                    border-bottom: 3px solid #5D9646;
                 }
                 td {
-                    padding: 15px;
-                    border-bottom: 1px solid #e2e8f0;
+                    padding: 16px;
+                    border-bottom: 1px solid #e5e7eb;
                     font-size: 14px;
+                    color: #34353A;
+                }
+                tbody tr:hover {
+                    background: #f9fafb;
                 }
                 tbody tr:last-child td {
                     border-bottom: none;
                 }
-                tbody tr:hover {
-                    background: #f8fafc;
-                }
                 .text-right {
                     text-align: right;
                 }
+                
+                /* SECCIÓN DE TOTALES */
                 .total-section {
                     margin-top: 30px;
-                    background: linear-gradient(135deg, #1e40af 0%, #2563eb 100%);
-                    color: white;
-                    padding: 25px;
-                    border-radius: 10px;
-                    box-shadow: 0 4px 6px rgba(37, 99, 235, 0.2);
+                    background: #34353A;
+                    padding: 30px;
+                    border-top: 5px solid #5D9646;
                 }
                 .total-grid {
                     display: grid;
                     grid-template-columns: repeat(3, 1fr);
-                    gap: 20px;
-                    margin-bottom: 20px;
+                    gap: 25px;
+                    margin-bottom: 25px;
                 }
                 .total-item {
                     text-align: center;
+                    padding: 20px;
+                    background: rgba(95, 142, 173, 0.1);
+                    border-radius: 4px;
                 }
                 .total-item label {
                     display: block;
-                    font-size: 12px;
-                    opacity: 0.9;
-                    margin-bottom: 8px;
-                    text-transform: uppercase;
-                    letter-spacing: 0.5px;
-                }
-                .total-item .value {
-                    font-size: 20px;
-                    font-weight: 700;
-                }
-                .grand-total {
-                    border-top: 2px solid rgba(255,255,255,0.3);
-                    padding-top: 20px;
-                    text-align: center;
-                }
-                .grand-total label {
-                    font-size: 14px;
-                    opacity: 0.9;
+                    font-size: 11px;
+                    color: rgba(255, 255, 255, 0.7);
                     margin-bottom: 10px;
                     text-transform: uppercase;
                     letter-spacing: 1px;
                 }
-                .grand-total .amount {
-                    font-size: 36px;
-                    font-weight: 700;
+                .total-item .value {
+                    font-size: 24px;
+                    font-weight: 600;
+                    color: #FFFFFF;
                 }
-                .footer {
-                    margin-top: 50px;
+                .grand-total {
+                    border-top: 2px solid rgba(93, 150, 70, 0.3);
+                    padding-top: 25px;
                     text-align: center;
-                    color: #64748b;
-                    font-size: 11px;
-                    border-top: 2px solid #e2e8f0;
-                    padding-top: 20px;
                 }
-                .footer p {
+                .grand-total label {
+                    font-size: 13px;
+                    color: rgba(255, 255, 255, 0.8);
+                    margin-bottom: 10px;
+                    text-transform: uppercase;
+                    letter-spacing: 2px;
+                }
+                .grand-total .amount {
+                    font-size: 42px;
+                    font-weight: 700;
+                    color: #5D9646;
+                }
+                
+                /* FOOTER */
+                .footer {
+                    margin-top: 60px;
+                    padding-top: 30px;
+                    border-top: 3px solid #34353A;
+                    text-align: center;
+                }
+                .footer-content {
+                    color: #6b7280;
+                    font-size: 11px;
+                    line-height: 1.8;
+                }
+                .footer-content p {
                     margin: 5px 0;
                 }
                 .timestamp {
                     font-weight: 600;
-                    color: #475569;
+                    color: #5F8EAD;
+                }
+                .company-name {
+                    font-weight: 600;
+                    color: #34353A;
                 }
             </style>
         </head>
         <body>
-            <div class="container">
+            <div class="page-wrapper">
                 <div class="header">
-                    <h1>📋 Reporte de Mantenimiento</h1>
-                    <p class="subtitle">Registro Detallado de Servicio Vehicular</p>
-                    <div class="id-badge">ID: ${manto._id}</div>
+                    <div class="header-content">
+                        <div class="logo-container">
+                            ${logoBase64 ? `<img src="${logoBase64}" alt="Rivera Logo" />` : '<p style="color: white; font-size: 24px; font-weight: 300;">RIVERA</p>'}
+                        </div>
+                        <h1>REPORTE DE MANTENIMIENTO</h1>
+                        <p class="subtitle">Registro Detallado de Servicio Vehicular</p>
+                        <div class="id-badge">ID: ${manto._id}</div>
+                    </div>
                 </div>
 
                 <div class="section">
-                    <h2 class="section-title">🚚 Información del Vehículo</h2>
+                    <div class="section-header">
+                        <h2 class="section-title">Información del Vehículo</h2>
+                    </div>
                     <div class="info-grid">
                         <div class="info-item">
                             <label>Nombre del Vehículo</label>
@@ -328,12 +408,13 @@ ReportesRoutes.generarPDFIndividual = async (req, res) => {
                 </div>
 
                 <div class="section">
-                    <h2 class="section-title">🔧 Detalles del Mantenimiento</h2>
+                    <div class="section-header">
+                        <h2 class="section-title">Detalles del Mantenimiento</h2>
+                    </div>
                     <div class="info-grid">
                         <div class="info-item">
                             <label>Fecha de Mantenimiento</label>
                             <div class="value">${new Date(manto.fecha_mantenimiento).toLocaleDateString('es-ES', {
-                                weekday: 'long',
                                 year: 'numeric',
                                 month: 'long',
                                 day: 'numeric'
@@ -363,15 +444,17 @@ ReportesRoutes.generarPDFIndividual = async (req, res) => {
                 </div>
 
                 <div class="section">
-                    <h2 class="section-title">💰 Desglose de Costos</h2>
+                    <div class="section-header">
+                        <h2 class="section-title">Desglose de Costos</h2>
+                    </div>
                     <table>
                         <thead>
                             <tr>
-                                <th>#</th>
-                                <th>Concepto</th>
-                                <th class="text-right">Cantidad</th>
-                                <th class="text-right">Precio Unitario</th>
-                                <th class="text-right">Subtotal</th>
+                                <th style="width: 8%;">#</th>
+                                <th style="width: 42%;">Concepto</th>
+                                <th class="text-right" style="width: 15%;">Cantidad</th>
+                                <th class="text-right" style="width: 17.5%;">Precio Unit.</th>
+                                <th class="text-right" style="width: 17.5%;">Subtotal</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -403,20 +486,23 @@ ReportesRoutes.generarPDFIndividual = async (req, res) => {
                             </div>
                         </div>
                         <div class="grand-total">
-                            <label>💵 COSTO TOTAL</label>
+                            <label>COSTO TOTAL</label>
                             <div class="amount">$${totalDetalle.toFixed(2)}</div>
                         </div>
                     </div>
                 </div>
 
                 <div class="footer">
-                    <p class="timestamp">Documento generado el ${new Date().toLocaleDateString('es-ES', {
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric'
-                    })} a las ${new Date().toLocaleTimeString('es-ES')}</p>
-                    <p>Sistema de Gestión de Mantenimiento Vehicular</p>
-                    <p>© ${new Date().getFullYear()} - Todos los derechos reservados</p>
+                    <div class="footer-content">
+                        <p class="timestamp">Documento generado el ${new Date().toLocaleDateString('es-ES', {
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric'
+                        })} a las ${new Date().toLocaleTimeString('es-ES')}</p>
+                        <p class="company-name">Rivera Distribuidora y Transportes</p>
+                        <p>Sistema de Gestión de Mantenimiento Vehicular</p>
+                        <p>© ${new Date().getFullYear()} Todos los derechos reservados</p>
+                    </div>
                 </div>
             </div>
         </body>
@@ -435,10 +521,10 @@ ReportesRoutes.generarPDFIndividual = async (req, res) => {
             format: 'A4',
             printBackground: true,
             margin: {
-                top: '10px',
-                right: '10px',
-                bottom: '10px',
-                left: '10px'
+                top: '0px',
+                right: '0px',
+                bottom: '0px',
+                left: '0px'
             }
         });
 
@@ -476,6 +562,9 @@ ReportesRoutes.generarPDFTodosMantenimientos = async (req, res) => {
             });
         }
 
+        // Convertir imagen a base64
+        const logoBase64 = convertirImagenABase64(RUTA_LOGO);
+
         // Calcular estadísticas generales
         const totalGeneral = mantenimientos.reduce((sum, m) => {
             const total = m.detalles.reduce((s, d) => s + d.subTotal, 0);
@@ -502,194 +591,264 @@ ReportesRoutes.generarPDFTodosMantenimientos = async (req, res) => {
                     box-sizing: border-box;
                 }
                 body {
-                    font-family: 'Segoe UI', Arial, sans-serif;
-                    padding: 30px;
-                    color: #1e293b;
+                    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+                    padding: 0;
+                    color: #34353A;
+                    background: #FFFFFF;
                 }
+                .page-wrapper {
+                    padding: 40px;
+                }
+                
+                /* HEADER */
                 .header {
+                    background: linear-gradient(135deg, #34353A 0%, #5F8EAD 100%);
+                    padding: 40px 50px;
+                    margin: -40px -40px 40px -40px;
                     text-align: center;
-                    margin-bottom: 40px;
-                    background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
-                    color: white;
-                    padding: 30px;
-                    border-radius: 12px;
+                    position: relative;
+                    overflow: hidden;
+                }
+                .header::after {
+                    content: '';
+                    position: absolute;
+                    bottom: -2px;
+                    left: 0;
+                    right: 0;
+                    height: 5px;
+                    background: #5D9646;
+                }
+                .header .logo-container {
+                    margin-bottom: 20px;
+                }
+                .header .logo-container img {
+                    max-width: 200px;
+                    height: auto;
+                   
                 }
                 .header h1 {
+                    color: #FFFFFF;
                     font-size: 32px;
-                    margin-bottom: 10px;
+                    font-weight: 300;
+                    letter-spacing: 3px;
                     text-transform: uppercase;
-                    letter-spacing: 2px;
+                    margin-bottom: 10px;
                 }
                 .header .subtitle {
+                    color: rgba(255, 255, 255, 0.9);
                     font-size: 16px;
-                    opacity: 0.9;
+                    font-weight: 300;
+                    letter-spacing: 1px;
                 }
+                
+                /* STATS GRID */
                 .stats-grid {
                     display: grid;
                     grid-template-columns: repeat(4, 1fr);
-                    gap: 15px;
-                    margin-bottom: 30px;
+                    gap: 20px;
+                    margin-bottom: 40px;
                 }
                 .stat-card {
-                    background: #f8fafc;
-                    padding: 20px;
-                    border-radius: 10px;
+                    background: #FFFFFF;
+                    padding: 25px;
+                    border: 2px solid #e5e7eb;
+                    border-left: 5px solid #5F8EAD;
                     text-align: center;
-                    border-left: 4px solid #2563eb;
+                    transition: all 0.3s;
+                }
+                .stat-card:nth-child(2) {
+                    border-left-color: #5D9646;
+                }
+                .stat-card:nth-child(3) {
+                    border-left-color: #34353A;
+                }
+                .stat-card:nth-child(4) {
+                    border-left-color: #5F8EAD;
                 }
                 .stat-card label {
                     display: block;
                     font-size: 11px;
-                    color: #64748b;
+                    color: #6b7280;
                     text-transform: uppercase;
-                    margin-bottom: 10px;
+                    margin-bottom: 12px;
                     font-weight: 600;
-                    letter-spacing: 0.5px;
+                    letter-spacing: 1px;
                 }
                 .stat-card .value {
-                    font-size: 24px;
+                    font-size: 28px;
                     font-weight: 700;
-                    color: #2563eb;
+                    color: #34353A;
                 }
+                
+                /* TABLA */
                 table {
                     width: 100%;
                     border-collapse: collapse;
-                    margin-top: 20px;
-                    background: white;
-                    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                    background: #FFFFFF;
+                    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
                 }
                 thead {
-                    background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
-                    color: white;
+                    background: #34353A;
+                    color: #FFFFFF;
                 }
                 th {
-                    padding: 12px 10px;
+                    padding: 16px 12px;
                     text-align: left;
                     font-weight: 600;
                     font-size: 11px;
                     text-transform: uppercase;
+                    letter-spacing: 1px;
+                    border-bottom: 3px solid #5D9646;
                 }
                 td {
-                    padding: 12px 10px;
-                    border-bottom: 1px solid #e2e8f0;
+                    padding: 14px 12px;
+                    border-bottom: 1px solid #e5e7eb;
                     font-size: 12px;
+                    color: #34353A;
                 }
                 tbody tr:hover {
-                    background: #f8fafc;
+                    background: #f9fafb;
+                }
+                tbody tr:last-child td {
+                    border-bottom: none;
                 }
                 .text-right {
                     text-align: right;
                 }
+                
+                /* BADGES */
                 .badge {
                     display: inline-block;
-                    padding: 4px 10px;
-                    border-radius: 12px;
+                    padding: 6px 12px;
+                    border-radius: 3px;
                     font-size: 10px;
                     font-weight: 600;
                     text-transform: uppercase;
+                    letter-spacing: 0.5px;
                 }
-                .badge-preventivo { background: #dcfce7; color: #166534; }
-                .badge-correctivo { background: #fee2e2; color: #991b1b; }
-                .badge-llantas { background: #fef3c7; color: #92400e; }
-                .badge-rines { background: #dbeafe; color: #1e40af; }
-                .badge-furgo { background: #fce7f3; color: #831843; }
-                .badge-madera_furgo { background: #fed7aa; color: #7c2d12; }
-                .badge-torno { background: #e9d5ff; color: #6b21a8; }
-                .badge-bomba { background: #bfdbfe; color: #1e3a8a; }
-                .badge-reparacion_turbo { background: #fecaca; color: #7f1d1d; }
-                .badge-otros { background: #e0e7ff; color: #3730a3; }
+                .badge-preventivo { background: #5D9646; color: #FFFFFF; }
+                .badge-correctivo { background: #dc2626; color: #FFFFFF; }
+                .badge-llantas { background: #d97706; color: #FFFFFF; }
+                .badge-rines { background: #5F8EAD; color: #FFFFFF; }
+                .badge-furgo { background: #be123c; color: #FFFFFF; }
+                .badge-madera_furgo { background: #c2410c; color: #FFFFFF; }
+                .badge-torno { background: #7c3aed; color: #FFFFFF; }
+                .badge-bomba { background: #5F8EAD; color: #FFFFFF; }
+                .badge-reparacion_turbo { background: #991b1b; color: #FFFFFF; }
+                .badge-otros { background: #4f46e5; color: #FFFFFF; }
+                
+                /* SUMMARY */
                 .summary {
-                    margin-top: 30px;
-                    background: linear-gradient(135deg, #1e40af 0%, #2563eb 100%);
-                    color: white;
-                    padding: 25px;
-                    border-radius: 10px;
+                    margin-top: 40px;
+                    background: #34353A;
+                    padding: 35px;
                     text-align: center;
+                    border-top: 5px solid #5D9646;
                 }
                 .summary h3 {
-                    font-size: 16px;
+                    color: rgba(255, 255, 255, 0.8);
+                    font-size: 14px;
+                    font-weight: 600;
+                    text-transform: uppercase;
+                    letter-spacing: 2px;
                     margin-bottom: 15px;
-                    opacity: 0.9;
                 }
                 .summary .total {
-                    font-size: 40px;
+                    font-size: 48px;
                     font-weight: 700;
+                    color: #5D9646;
                 }
+                
+                /* FOOTER */
                 .footer {
-                    margin-top: 40px;
+                    margin-top: 50px;
+                    padding-top: 25px;
+                    border-top: 3px solid #34353A;
                     text-align: center;
-                    color: #64748b;
+                }
+                .footer p {
+                    color: #6b7280;
                     font-size: 11px;
-                    border-top: 2px solid #e2e8f0;
-                    padding-top: 20px;
+                    margin: 5px 0;
+                    line-height: 1.6;
+                }
+                .footer .company {
+                    color: #34353A;
+                    font-weight: 600;
                 }
             </style>
         </head>
         <body>
-            <div class="header">
-                <h1>📊 REPORTE CONSOLIDADO</h1>
-                <p class="subtitle">Todos los Mantenimientos Registrados</p>
-            </div>
-
-            <div class="stats-grid">
-                <div class="stat-card">
-                    <label>Total Mantenimientos</label>
-                    <div class="value">${mantenimientos.length}</div>
+            <div class="page-wrapper">
+                <div class="header">
+                    <div class="logo-container">
+                        ${logoBase64 ? `<img src="${logoBase64}" alt="Rivera Logo" />` : '<p style="color: white; font-size: 24px;">RIVERA</p>'}
+                    </div>
+                    <h1>REPORTE CONSOLIDADO</h1>
+                    <p class="subtitle">Historial Completo de Mantenimientos</p>
                 </div>
-                <div class="stat-card">
-                    <label>Costo Total</label>
-                    <div class="value">$${totalGeneral.toFixed(2)}</div>
-                </div>
-                <div class="stat-card">
-                    <label>Promedio</label>
-                    <div class="value">$${promedioMantenimiento.toFixed(2)}</div>
-                </div>
-                <div class="stat-card">
-                    <label>Tipos Diferentes</label>
-                    <div class="value">${Object.keys(porTipo).length}</div>
-                </div>
-            </div>
 
-            <table>
-                <thead>
-                    <tr>
-                        <th>#</th>
-                        <th>Fecha</th>
-                        <th>Vehículo</th>
-                        <th>Placas</th>
-                        <th>Tipo</th>
-                        <th>Descripción</th>
-                        <th class="text-right">Items</th>
-                        <th class="text-right">Costo Total</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${mantenimientos.map((m, index) => {
-                        const total = m.detalles.reduce((s, d) => s + d.subTotal, 0);
-                        return `
-                            <tr>
-                                <td><strong>${index + 1}</strong></td>
-                                <td>${new Date(m.fecha_mantenimiento).toLocaleDateString('es-ES')}</td>
-                                <td>${m.ciculatioCard.name}</td>
-                                <td>${m.ciculatioCard.licensePlate}</td>
-                                <td><span class="badge badge-${m.tipo_de_mantenimiento}">${m.tipo_de_mantenimiento}</span></td>
-                                <td>${m.descripcion.substring(0, 40)}${m.descripcion.length > 40 ? '...' : ''}</td>
-                                <td class="text-right">${m.detalles.length}</td>
-                                <td class="text-right"><strong>$${total.toFixed(2)}</strong></td>
-                            </tr>
-                        `;
-                    }).join('')}
-                </tbody>
-            </table>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <label>Total Mantenimientos</label>
+                        <div class="value">${mantenimientos.length}</div>
+                    </div>
+                    <div class="stat-card">
+                        <label>Inversión Total</label>
+                        <div class="value">$${totalGeneral.toFixed(2)}</div>
+                    </div>
+                    <div class="stat-card">
+                        <label>Costo Promedio</label>
+                        <div class="value">$${promedioMantenimiento.toFixed(2)}</div>
+                    </div>
+                    <div class="stat-card">
+                        <label>Tipos de Servicio</label>
+                        <div class="value">${Object.keys(porTipo).length}</div>
+                    </div>
+                </div>
 
-            <div class="summary">
-                <h3>💰 INVERSIÓN TOTAL EN MANTENIMIENTO</h3>
-                <div class="total">$${totalGeneral.toFixed(2)}</div>
-            </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width: 5%;">#</th>
+                            <th style="width: 12%;">Fecha</th>
+                            <th style="width: 18%;">Vehículo</th>
+                            <th style="width: 12%;">Placas</th>
+                            <th style="width: 15%;">Tipo</th>
+                            <th style="width: 23%;">Descripción</th>
+                            <th class="text-right" style="width: 8%;">Items</th>
+                            <th class="text-right" style="width: 12%;">Costo</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${mantenimientos.map((m, index) => {
+                            const total = m.detalles.reduce((s, d) => s + d.subTotal, 0);
+                            return `
+                                <tr>
+                                    <td><strong>${index + 1}</strong></td>
+                                    <td>${new Date(m.fecha_mantenimiento).toLocaleDateString('es-ES')}</td>
+                                    <td>${m.ciculatioCard.name}</td>
+                                    <td><strong>${m.ciculatioCard.licensePlate}</strong></td>
+                                    <td><span class="badge badge-${m.tipo_de_mantenimiento}">${m.tipo_de_mantenimiento}</span></td>
+                                    <td>${m.descripcion.substring(0, 35)}${m.descripcion.length > 35 ? '...' : ''}</td>
+                                    <td class="text-right">${m.detalles.length}</td>
+                                    <td class="text-right"><strong>$${total.toFixed(2)}</strong></td>
+                                </tr>
+                            `;
+                        }).join('')}
+                    </tbody>
+                </table>
 
-            <div class="footer">
-                <p>Documento generado el ${new Date().toLocaleDateString('es-ES')} a las ${new Date().toLocaleTimeString('es-ES')}</p>
-                <p>Sistema de Gestión de Mantenimiento Vehicular - Reporte Consolidado</p>
+                <div class="summary">
+                    <h3>Inversión Total en Mantenimiento</h3>
+                    <div class="total">$${totalGeneral.toFixed(2)}</div>
+                </div>
+
+                <div class="footer">
+                    <p>Documento generado el ${new Date().toLocaleDateString('es-ES')} a las ${new Date().toLocaleTimeString('es-ES')}</p>
+                    <p class="company">Rivera Distribuidora y Transportes</p>
+                    <p>Sistema de Gestión de Mantenimiento Vehicular</p>
+                </div>
             </div>
         </body>
         </html>
@@ -707,7 +866,7 @@ ReportesRoutes.generarPDFTodosMantenimientos = async (req, res) => {
             format: 'A4',
             landscape: true,
             printBackground: true,
-            margin: { top: '15px', right: '15px', bottom: '15px', left: '15px' }
+            margin: { top: '0px', right: '0px', bottom: '0px', left: '0px' }
         });
 
         await browser.close();
@@ -726,6 +885,7 @@ ReportesRoutes.generarPDFTodosMantenimientos = async (req, res) => {
         });
     }
 };
+
 // 3. PDF REPORTE MENSUAL SIMPLE - Solo placas y montos de un mes
 ReportesRoutes.generarPDFMensualSimple = async (req, res) => {
     let browser;
@@ -755,6 +915,9 @@ ReportesRoutes.generarPDFMensualSimple = async (req, res) => {
                 message: `No hay mantenimientos para ${obtenerNombreMes(mesNum)} ${anoNum}`
             });
         }
+
+        // Convertir imagen a base64
+        const logoBase64 = convertirImagenABase64(RUTA_LOGO);
 
         // Agrupar por placa y sumar totales
         const porPlaca = {};
@@ -787,98 +950,174 @@ ReportesRoutes.generarPDFMensualSimple = async (req, res) => {
                     box-sizing: border-box;
                 }
                 body {
-                    font-family: Arial, sans-serif;
-                    padding: 40px;
-                    color: #000;
-                    background: #fff;
+                    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+                    padding: 0;
+                    color: #34353A;
+                    background: #FFFFFF;
                 }
+                .page-wrapper {
+                    padding: 50px;
+                }
+                
+                /* HEADER */
                 .header {
+                    background: linear-gradient(135deg, #34353A 0%, #5F8EAD 100%);
+                    padding: 40px;
+                    margin: -50px -50px 50px -50px;
                     text-align: center;
-                    margin-bottom: 30px;
-                    padding-bottom: 20px;
-                    border-bottom: 3px solid #000;
+                    position: relative;
+                    border-bottom: 5px solid #5D9646;
+                }
+                .header .logo-container {
+                    margin-bottom: 25px;
+                }
+                .header .logo-container img {
+                    max-width: 220px;
+                    height: auto;
+                    
                 }
                 .header h1 {
-                    font-size: 24px;
-                    font-weight: bold;
+                    color: #FFFFFF;
+                    font-size: 28px;
+                    font-weight: 300;
                     text-transform: uppercase;
+                    letter-spacing: 3px;
                     margin-bottom: 5px;
                 }
                 .header .period {
-                    font-size: 20px;
-                    font-weight: bold;
-                    margin-top: 10px;
+                    color: #5D9646;
+                    font-size: 24px;
+                    font-weight: 600;
+                    margin-top: 15px;
+                    letter-spacing: 2px;
+                }
+                
+                /* TABLA */
+                .table-container {
+                    max-width: 700px;
+                    margin: 0 auto;
                 }
                 table {
                     width: 100%;
-                    max-width: 600px;
-                    margin: 0 auto;
                     border-collapse: collapse;
-                    border: 2px solid #000;
+                    background: #FFFFFF;
+                    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
                 }
-                th, td {
-                    border: 1px solid #000;
-                    padding: 12px;
-                    text-align: center;
+                thead {
+                    background: #34353A;
+                    color: #FFFFFF;
                 }
                 th {
-                    background: #d3d3d3;
-                    font-weight: bold;
-                    font-size: 16px;
+                    padding: 18px;
+                    text-align: center;
+                    font-weight: 600;
+                    font-size: 13px;
                     text-transform: uppercase;
+                    letter-spacing: 1.5px;
+                    border-bottom: 4px solid #5D9646;
                 }
                 td {
+                    padding: 16px 18px;
+                    text-align: center;
                     font-size: 15px;
+                    border-bottom: 1px solid #e5e7eb;
+                }
+                tbody tr:hover {
+                    background: #f9fafb;
                 }
                 .col-numero {
                     width: 15%;
+                    color: #6b7280;
+                    font-weight: 500;
                 }
                 .col-placa {
                     width: 45%;
-                    font-weight: bold;
+                    font-weight: 600;
+                    color: #34353A;
+                    letter-spacing: 1px;
                 }
                 .col-monto {
                     width: 40%;
                     text-align: right;
+                    font-weight: 600;
+                    color: #5F8EAD;
                 }
                 .total-row {
-                    font-weight: bold;
-                    font-size: 16px;
-                    background: #e8e8e8;
+                    background: #34353A;
+                    color: #FFFFFF;
+                    font-weight: 700;
+                    font-size: 17px;
                 }
                 .total-row td {
-                    padding: 15px 12px;
+                    padding: 20px 18px;
+                    border-bottom: none;
+                }
+                .total-row .col-monto {
+                    color: #5D9646;
+                    font-size: 20px;
+                }
+                
+                /* FOOTER */
+                .footer {
+                    margin-top: 60px;
+                    padding-top: 30px;
+                    border-top: 3px solid #34353A;
+                    text-align: center;
+                }
+                .footer p {
+                    color: #6b7280;
+                    font-size: 11px;
+                    margin: 5px 0;
+                    line-height: 1.6;
+                }
+                .footer .company {
+                    color: #34353A;
+                    font-weight: 600;
+                    font-size: 12px;
                 }
             </style>
         </head>
         <body>
-            <div class="header">
-                <h1>MANTENIMIENTO POR CAMION MES</h1>
-                <div class="period">${obtenerNombreMes(mesNum).toUpperCase()} ${anoNum}</div>
-            </div>
+            <div class="page-wrapper">
+                <div class="header">
+                    <div class="logo-container">
+                        ${logoBase64 ? `<img src="${logoBase64}" alt="Rivera Logo" />` : '<p style="color: white; font-size: 24px;">RIVERA</p>'}
+                    </div>
+                    <h1>Mantenimiento por Camión</h1>
+                    <div class="period">${obtenerNombreMes(mesNum).toUpperCase()} ${anoNum}</div>
+                </div>
 
-            <table>
-                <thead>
-                    <tr>
-                        <th class="col-numero">#</th>
-                        <th class="col-placa">PLACA</th>
-                        <th class="col-monto">MONTO</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${datosTabla.map((item, index) => `
-                        <tr>
-                            <td class="col-numero">${index + 1}</td>
-                            <td class="col-placa">${item.placa}</td>
-                            <td class="col-monto">$ ${item.monto.toFixed(2)}</td>
-                        </tr>
-                    `).join('')}
-                    <tr class="total-row">
-                        <td colspan="2">TOTAL</td>
-                        <td class="col-monto">$ ${totalGeneral.toFixed(2)}</td>
-                    </tr>
-                </tbody>
-            </table>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="col-numero">#</th>
+                                <th class="col-placa">PLACA</th>
+                                <th class="col-monto">MONTO</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${datosTabla.map((item, index) => `
+                                <tr>
+                                    <td class="col-numero">${index + 1}</td>
+                                    <td class="col-placa">${item.placa}</td>
+                                    <td class="col-monto">$ ${item.monto.toFixed(2)}</td>
+                                </tr>
+                            `).join('')}
+                            <tr class="total-row">
+                                <td colspan="2">TOTAL</td>
+                                <td class="col-monto">$ ${totalGeneral.toFixed(2)}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="footer">
+                    <p>Documento generado el ${new Date().toLocaleDateString('es-ES')} a las ${new Date().toLocaleTimeString('es-ES')}</p>
+                    <p class="company">Rivera Distribuidora y Transportes</p>
+                    <p>Sistema de Gestión de Mantenimiento Vehicular</p>
+                </div>
+            </div>
         </body>
         </html>
         `;
@@ -894,7 +1133,7 @@ ReportesRoutes.generarPDFMensualSimple = async (req, res) => {
         const pdfBuffer = await page.pdf({
             format: 'A4',
             printBackground: true,
-            margin: { top: '20px', right: '20px', bottom: '20px', left: '20px' }
+            margin: { top: '0px', right: '0px', bottom: '0px', left: '0px' }
         });
 
         await browser.close();
@@ -918,7 +1157,6 @@ ReportesRoutes.generarPDFMensualSimple = async (req, res) => {
 ReportesRoutes.generarPDFMultiplesMeses = async (req, res) => {
     let browser;
     try {
-        // Recibir array de meses en el body: { meses: [1, 3, 5], ano: 2025 }
         const { meses, ano } = req.body;
 
         if (!Array.isArray(meses) || meses.length === 0) {
@@ -929,9 +1167,8 @@ ReportesRoutes.generarPDFMultiplesMeses = async (req, res) => {
         }
 
         const anoNum = parseInt(ano);
-
-        // Validar meses
         const mesesValidos = meses.filter(m => m >= 1 && m <= 12);
+        
         if (mesesValidos.length === 0) {
             return res.status(400).json({
                 success: false,
@@ -939,7 +1176,6 @@ ReportesRoutes.generarPDFMultiplesMeses = async (req, res) => {
             });
         }
 
-        // Buscar mantenimientos de todos los meses seleccionados
         const mantenimientos = await MantenimientoCamiones.find({
             mes: { $in: mesesValidos },
             ano: anoNum
@@ -953,6 +1189,12 @@ ReportesRoutes.generarPDFMultiplesMeses = async (req, res) => {
                 message: 'No hay mantenimientos para los meses seleccionados'
             });
         }
+
+        // Convertir imagen a base64
+        const logoBase64 = convertirImagenABase64(RUTA_LOGO);
+        
+        // VERIFICACIÓN
+        console.log('🖼️ Logo para múltiples meses:', !!logoBase64);
 
         // Agrupar por mes
         const porMes = {};
@@ -985,7 +1227,6 @@ ReportesRoutes.generarPDFMultiplesMeses = async (req, res) => {
                     <div class="mes-header">
                         <h2>${obtenerNombreMes(mesNum).toUpperCase()} ${anoNum}</h2>
                     </div>
-
                     <table>
                         <thead>
                             <tr>
@@ -1001,7 +1242,7 @@ ReportesRoutes.generarPDFMultiplesMeses = async (req, res) => {
                                     <td class="col-placa">${item.placa}</td>
                                     <td class="col-monto">$ ${item.monto.toFixed(2)}</td>
                                 </tr>
-                            `).join('') : '<tr><td colspan="3">Sin registros</td></tr>'}
+                            `).join('') : '<tr><td colspan="3" style="text-align: center; color: #6b7280;">Sin registros</td></tr>'}
                             ${datosTabla.length > 0 ? `
                             <tr class="total-row">
                                 <td colspan="2">TOTAL</td>
@@ -1018,131 +1259,261 @@ ReportesRoutes.generarPDFMultiplesMeses = async (req, res) => {
             return sum + m.detalles.reduce((s, d) => s + d.subTotal, 0);
         }, 0);
 
-        const htmlContent = `
-        <!DOCTYPE html>
-        <html lang="es">
-        <head>
-            <meta charset="UTF-8">
-            <style>
-                * {
-                    margin: 0;
-                    padding: 0;
-                    box-sizing: border-box;
-                }
-                body {
-                    font-family: Arial, sans-serif;
-                    padding: 30px;
-                    color: #000;
-                    background: #fff;
-                }
-                .main-header {
-                    text-align: center;
-                    margin-bottom: 40px;
-                    padding-bottom: 20px;
-                    border-bottom: 3px solid #000;
-                }
-                .main-header h1 {
-                    font-size: 26px;
-                    font-weight: bold;
-                    text-transform: uppercase;
-                    margin-bottom: 10px;
-                }
-                .main-header .subtitle {
-                    font-size: 16px;
-                    margin-top: 10px;
-                }
-                .mes-section {
-                    margin-bottom: 50px;
-                    page-break-inside: avoid;
-                }
-                .mes-header {
-                    text-align: center;
-                    margin-bottom: 20px;
-                    padding: 15px;
-                    background: #f0f0f0;
-                    border: 2px solid #000;
-                }
-                .mes-header h2 {
-                    font-size: 20px;
-                    font-weight: bold;
-                }
-                table {
-                    width: 100%;
-                    max-width: 600px;
-                    margin: 0 auto;
-                    border-collapse: collapse;
-                    border: 2px solid #000;
-                }
-                th, td {
-                    border: 1px solid #000;
-                    padding: 12px;
-                    text-align: center;
-                }
-                th {
-                    background: #d3d3d3;
-                    font-weight: bold;
-                    font-size: 16px;
-                    text-transform: uppercase;
-                }
-                td {
-                    font-size: 15px;
-                }
-                .col-numero {
-                    width: 15%;
-                }
-                .col-placa {
-                    width: 45%;
-                    font-weight: bold;
-                }
-                .col-monto {
-                    width: 40%;
-                    text-align: right;
-                }
-                .total-row {
-                    font-weight: bold;
-                    font-size: 16px;
-                    background: #e8e8e8;
-                }
-                .total-row td {
-                    padding: 15px 12px;
-                }
-                .resumen-final {
-                    margin-top: 40px;
-                    padding: 25px;
-                    background: #f5f5f5;
-                    border: 3px solid #000;
-                    text-align: center;
-                    page-break-inside: avoid;
-                }
-                .resumen-final h3 {
-                    font-size: 20px;
-                    margin-bottom: 15px;
-                    text-transform: uppercase;
-                }
-                .resumen-final .total-final {
-                    font-size: 28px;
-                    font-weight: bold;
-                    margin-top: 10px;
-                }
-            </style>
-        </head>
-        <body>
-            <div class="main-header">
-                <h1>REPORTE DE MANTENIMIENTO</h1>
-                <div class="subtitle">Período: ${mesesValidos.map(m => obtenerNombreMes(m)).join(', ')} ${anoNum}</div>
-            </div>
+        // Preparar el logo para insertar directamente
+        const logoHTML = logoBase64 
+            ? `<img src="${logoBase64}" alt="Rivera Logo" />` 
+            : '<div style="color: white; font-size: 24px; font-weight: 300;">RIVERA - Distribuidora y Transportes</div>';
 
-            ${mesesHTML}
-
-            <div class="resumen-final">
-                <h3>TOTAL GENERAL</h3>
-                <div>Meses incluidos: ${mesesValidos.length}</div>
-                <div>Mantenimientos: ${mantenimientos.length}</div>
-                <div class="total-final">$ ${totalGeneral.toFixed(2)}</div>
+        const htmlContent = `<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            padding: 0;
+            color: #34353A;
+            background: #FFFFFF;
+        }
+        .page-wrapper {
+            padding: 40px;
+        }
+        .main-header {
+            background: linear-gradient(135deg, #34353A 0%, #5F8EAD 100%);
+            padding: 40px;
+            margin: -40px -40px 50px -40px;
+            text-align: center;
+            border-bottom: 5px solid #5D9646;
+            position: relative;
+            overflow: hidden;
+        }
+        .main-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 300px;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(93, 150, 70, 0.1));
+        }
+        .main-header .logo-container {
+            margin-bottom: 25px;
+            position: relative;
+            z-index: 1;
+        }
+        .main-header .logo-container img {
+            max-width: 220px;
+            max-height: 100px;
+            height: auto;
+            width: auto;
+            display: inline-block;
+            filter: brightness(0) invert(1);
+        }
+        .main-header h1 {
+            color: #FFFFFF;
+            font-size: 30px;
+            font-weight: 300;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            margin-bottom: 10px;
+            position: relative;
+            z-index: 1;
+        }
+        .main-header .subtitle {
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 16px;
+            margin-top: 10px;
+            letter-spacing: 1px;
+            position: relative;
+            z-index: 1;
+        }
+        .mes-section {
+            margin-bottom: 60px;
+            page-break-inside: avoid;
+        }
+        .mes-header {
+            background: #5F8EAD;
+            padding: 20px;
+            margin-bottom: 25px;
+            text-align: center;
+            border-left: 5px solid #5D9646;
+        }
+        .mes-header h2 {
+            color: #FFFFFF;
+            font-size: 22px;
+            font-weight: 600;
+            letter-spacing: 2px;
+        }
+        table {
+            width: 100%;
+            max-width: 700px;
+            margin: 0 auto;
+            border-collapse: collapse;
+            background: #FFFFFF;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        thead {
+            background: #34353A;
+            color: #FFFFFF;
+        }
+        th {
+            padding: 16px;
+            text-align: center;
+            font-weight: 600;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            border-bottom: 3px solid #5D9646;
+        }
+        td {
+            padding: 14px 16px;
+            text-align: center;
+            font-size: 14px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        tbody tr:hover {
+            background: #f9fafb;
+        }
+        .col-numero {
+            width: 15%;
+            color: #6b7280;
+            font-weight: 500;
+        }
+        .col-placa {
+            width: 45%;
+            font-weight: 600;
+            color: #34353A;
+            letter-spacing: 1px;
+        }
+        .col-monto {
+            width: 40%;
+            text-align: right;
+            font-weight: 600;
+            color: #5F8EAD;
+        }
+        .total-row {
+            background: #34353A;
+            color: #FFFFFF;
+            font-weight: 700;
+            font-size: 16px;
+        }
+        .total-row td {
+            padding: 18px 16px;
+            border-bottom: none;
+        }
+        .total-row .col-monto {
+            color: #5D9646;
+            font-size: 18px;
+        }
+        .resumen-final {
+            margin-top: 50px;
+            padding: 35px;
+            background: #34353A;
+            border-top: 5px solid #5D9646;
+            text-align: center;
+            page-break-inside: avoid;
+            color: #FFFFFF;
+        }
+        .resumen-final h3 {
+            font-size: 18px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 20px;
+            color: rgba(255, 255, 255, 0.9);
+        }
+        .resumen-stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 25px;
+            margin-bottom: 25px;
+        }
+        .resumen-stat {
+            padding: 15px;
+            background: rgba(95, 142, 173, 0.1);
+            border-radius: 4px;
+        }
+        .resumen-stat label {
+            display: block;
+            font-size: 11px;
+            color: rgba(255, 255, 255, 0.7);
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .resumen-stat .value {
+            font-size: 20px;
+            font-weight: 600;
+            color: #FFFFFF;
+        }
+        .total-final {
+            font-size: 40px;
+            font-weight: 700;
+            color: #5D9646;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 2px solid rgba(93, 150, 70, 0.3);
+        }
+        .footer {
+            margin-top: 60px;
+            padding-top: 30px;
+            border-top: 3px solid #34353A;
+            text-align: center;
+        }
+        .footer p {
+            color: #6b7280;
+            font-size: 11px;
+            margin: 5px 0;
+            line-height: 1.6;
+        }
+        .footer .company {
+            color: #34353A;
+            font-weight: 600;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="page-wrapper">
+        <div class="main-header">
+            <div class="logo-container">
+                ${logoHTML}
             </div>
-        </body>
-        </html>
-        `;
+            <h1>Reporte de Mantenimiento</h1>
+            <div class="subtitle">Período: ${mesesValidos.map(m => obtenerNombreMes(m)).join(', ')} ${anoNum}</div>
+        </div>
+        ${mesesHTML}
+        <div class="resumen-final">
+            <h3>Resumen General del Período</h3>
+            <div class="resumen-stats">
+                <div class="resumen-stat">
+                    <label>Meses Incluidos</label>
+                    <div class="value">${mesesValidos.length}</div>
+                </div>
+                <div class="resumen-stat">
+                    <label>Total Mantenimientos</label>
+                    <div class="value">${mantenimientos.length}</div>
+                </div>
+                <div class="resumen-stat">
+                    <label>Promedio/Mes</label>
+                    <div class="value">$${(totalGeneral / mesesValidos.length).toFixed(2)}</div>
+                </div>
+            </div>
+            <div class="total-final">$ ${totalGeneral.toFixed(2)}</div>
+        </div>
+        <div class="footer">
+            <p>Documento generado el ${new Date().toLocaleDateString('es-ES')} a las ${new Date().toLocaleTimeString('es-ES')}</p>
+            <p class="company">Rivera Distribuidora y Transportes</p>
+            <p>Sistema de Gestión de Mantenimiento Vehicular</p>
+        </div>
+    </div>
+</body>
+</html>`;
 
         browser = await puppeteer.launch({
             headless: 'new',
@@ -1155,7 +1526,7 @@ ReportesRoutes.generarPDFMultiplesMeses = async (req, res) => {
         const pdfBuffer = await page.pdf({
             format: 'A4',
             printBackground: true,
-            margin: { top: '20px', right: '20px', bottom: '20px', left: '20px' }
+            margin: { top: '0px', right: '0px', bottom: '0px', left: '0px' }
         });
 
         await browser.close();
@@ -1176,4 +1547,4 @@ ReportesRoutes.generarPDFMultiplesMeses = async (req, res) => {
     }
 };
 
-export default ReportesRoutes
+export default ReportesRoutes;

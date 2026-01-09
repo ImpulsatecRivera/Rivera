@@ -38,11 +38,20 @@ import EditMantenimiento from "./pages/MantenimientosCamiones/EditarMantos";
 import CajaChica from "./pages/CajaChica/CajaChica";
 import Planilla from "./pages/Planilla/Planilla";
 import PlanillaQuincenal from "./pages/Planilla/PlanillaQuincenal";
+import VerPlanillaQuincenal from "./pages/Planilla/VerPlanillasQuincenales";
+import PlanillaSemanal from "./pages/Planilla/Planillasemanal ";
+import PlanillaSemanalNueva from "./pages/Planilla/Planillasemanalnueva ";
+import ProgramacionViajesOperativos from "./pages/viajesInternos/ProgramacionViajesOperativos";
+import Nav from "./components/Nav/Nav";
 
 // ✅ Diesel
 import PantallaPrincipalDiesel from "./pages/Diesel/PantallaPrincipalDiesel";
 import AgregarDiesel from "./pages/Diesel/AgregarDiesel";
 import EditDiesel from "./pages/Diesel/EditDiesel";
+
+// ✅ Viajes internos
+import PantallaPrincipalViajesInternos from "./pages/viajesInternos/PantallaPrincipalViajesInternos";
+import AgregarViajeInterno from "./pages/viajesInternos/AgregarViajeInterno";
 
 // UI
 import SideNav from "./components/dashbordNav/sideNav";
@@ -64,6 +73,15 @@ function App() {
     "/mantenimientos/editar/:id",
     "/diesel/agregar",
     "/diesel/editar/:id",
+    "/viajesInternos/editar/:id",
+    "/planilla/quincenal",
+    "/planilla/quincenales/:id",
+    "/planilla/semanal/nueva",
+    "/planilla/semanal/:id",
+    "/viajesInternos/agregar",
+    "/viajesInternos/programacion",
+    
+
   ];
 
   useEffect(() => {
@@ -104,7 +122,7 @@ function App() {
         }
       />
 
-      {/* ===================== PRIVADAS CON SIDENAV ===================== */}
+      {/* ===================== RUTAS CON SIDENAV (Operaciones) ===================== */}
       <Route
         element={
           <PrivateRoute>
@@ -117,15 +135,16 @@ function App() {
           </PrivateRoute>
         }
       >
-        {/* Dashboard */}
         <Route path="/home" element={<Dashboards />} />
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/reports" element={<ReportsPage />} />
-        <Route path="/informes" element={<ReportsPage />} />
+
 
         {/* Planillas */}
         <Route path="/planilla" element={<Planilla />} />
         <Route path="/planilla/quincenal" element={<PlanillaQuincenal />} />
+        <Route path="/planilla/quincenales/:id" element={<VerPlanillaQuincenal />} />
+        <Route path="/planilla/semanal/nueva" element={<PlanillaSemanalNueva />} />        
+        <Route path="/planilla/semanal/:id" element={<PlanillaSemanal />} />
+
 
         {/* Caja Chica */}
         <Route path="/CajaChica" element={<CajaChica />} />
@@ -135,10 +154,34 @@ function App() {
         <Route path="/diesel/agregar" element={<AgregarDiesel />} />
         <Route path="/diesel/editar/:id" element={<EditDiesel />} />
 
+        {/* Viajes Internos */}
+        <Route path="/viajesInternos" element={<PantallaPrincipalViajesInternos />} />
+        <Route path="/viajesInternos/agregar" element={<AgregarViajeInterno />} />
+        <Route path="/viajesInternos/programacion" element={<ProgramacionViajesOperativos />} />
+
         {/* Mantenimientos */}
         <Route path="/mantenimientos" element={<MantenimientosTable />} />
         <Route path="/mantenimientos/agregar-mantenimiento" element={<CreateMantenimientoPage />} />
         <Route path="/mantenimientos/editar/:id" element={<EditMantenimiento />} />
+      </Route>
+
+      {/* ===================== RUTAS CON NAV (Administración) ===================== */}
+      <Route
+        element={
+          <PrivateRoute>
+            <div className="flex h-screen overflow-hidden">
+              <Nav />
+              <div className="flex-1 min-h-screen overflow-y-auto">
+                <Outlet />
+              </div>
+            </div>
+          </PrivateRoute>
+        }
+      >
+        {/* Dashboards */}
+        <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/reports" element={<ReportsPage />} />
+        <Route path="/informes" element={<ReportsPage />} />
 
         {/* Clientes */}
         <Route path="/clientes" element={<ClientManagementInterface />} />

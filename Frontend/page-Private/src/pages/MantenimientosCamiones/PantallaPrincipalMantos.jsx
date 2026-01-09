@@ -20,7 +20,6 @@ const MantenimientosTable = () => {
 
   const itemsPerPage = 8;
 
-  // Mapeo de tipos de mantenimiento
   const tipoMantenimientoLabels = {
     'preventivo': 'Preventivo',
     'correctivo': 'Correctivo',
@@ -34,7 +33,6 @@ const MantenimientosTable = () => {
     'otros': 'Otros'
   };
 
-  // Configuración de estados con colores
   const estadoConfig = {
     'pendiente': {
       label: 'Pendiente',
@@ -44,15 +42,15 @@ const MantenimientosTable = () => {
     },
     'en_proceso': {
       label: 'En Proceso',
-      bg: 'bg-blue-100',
-      text: 'text-blue-800',
-      border: 'border-blue-200'
+      bg: 'bg-[#5F8EAD] bg-opacity-20',
+      text: 'text-[#5F8EAD]',
+      border: 'border-[#5F8EAD]'
     },
     'completado': {
       label: 'Completado',
-      bg: 'bg-green-100',
-      text: 'text-green-800',
-      border: 'border-green-200'
+      bg: 'bg-[#5D9646] bg-opacity-20',
+      text: 'text-[#5D9646]',
+      border: 'border-[#5D9646]'
     },
     'cancelado': {
       label: 'Cancelado',
@@ -160,7 +158,7 @@ const MantenimientosTable = () => {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="text-center">
-          <Loader2 className="w-12 h-12 animate-spin text-indigo-600 mx-auto mb-4" />
+          <Loader2 className="w-12 h-12 animate-spin text-[#5F8EAD] mx-auto mb-4" />
           <p className="text-gray-600 font-medium">Cargando mantenimientos...</p>
         </div>
       </div>
@@ -173,7 +171,7 @@ const MantenimientosTable = () => {
         <div className="text-center">
           <p className="text-red-600 font-semibold mb-2">Error al cargar los datos</p>
           <p className="text-gray-600">{error}</p>
-          <button onClick={fetchMantenimientos} className="mt-4 px-6 py-2 bg-indigo-600 text-white rounded-lg">Reintentar</button>
+          <button onClick={fetchMantenimientos} className="mt-4 px-6 py-2 bg-gradient-to-r from-[#34353A] to-[#5F8EAD] text-white rounded-lg hover:opacity-90">Reintentar</button>
         </div>
       </div>
     );
@@ -183,8 +181,8 @@ const MantenimientosTable = () => {
     <div className="min-h-screen bg-white p-8">
       <div className="max-w-7xl mx-auto">
         <div className="mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">Mantenimientos</h1>
-          <p className="text-indigo-600 text-base font-semibold">Total: {mantenimientos.length} registros</p>
+          <h1 className="text-4xl font-bold text-[#34353A] mb-2">Mantenimientos</h1>
+          <p className="text-[#5F8EAD] text-base font-semibold">Total: {mantenimientos.length} registros</p>
         </div>
 
         <div className="bg-white rounded-2xl shadow-md mb-6 p-5 border border-gray-100">
@@ -196,14 +194,14 @@ const MantenimientosTable = () => {
                 placeholder="Buscar por descripción, tipo o placa..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#5F8EAD]"
               />
             </div>
 
             <div className="flex items-center gap-3 flex-wrap">
               <div className="flex items-center gap-2">
                 <span className="text-gray-600 text-sm font-medium">Ordenar por:</span>
-                <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className="border border-gray-200 rounded-xl px-4 py-3 text-sm font-medium focus:ring-2 focus:ring-indigo-500">
+                <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className="border border-gray-200 rounded-xl px-4 py-3 text-sm font-medium focus:ring-2 focus:ring-[#5F8EAD]">
                   <option value="newest">Más reciente</option>
                   <option value="oldest">Más antiguo</option>
                 </select>
@@ -211,7 +209,7 @@ const MantenimientosTable = () => {
 
               <button 
                 onClick={() => setIsReportesModalOpen(true)}
-                className="flex items-center gap-2 px-4 py-3 bg-gradient-to-r from-indigo-600 to-indigo-700 text-white rounded-xl hover:from-indigo-700 hover:to-indigo-800 font-semibold shadow-lg transition-all"
+                className="flex items-center gap-2 px-4 py-3 bg-gradient-to-r from-[#5F8EAD] to-[#34353A] text-white rounded-xl hover:opacity-90 font-semibold shadow-lg transition-all"
               >
                 <Download size={18} />
                 Generar Reportes
@@ -219,7 +217,7 @@ const MantenimientosTable = () => {
 
               <button 
                 onClick={() => navigate('/mantenimientos/agregar-mantenimiento')} 
-                className="flex items-center gap-2 px-5 py-3 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 font-semibold shadow-lg"
+                className="flex items-center gap-2 px-5 py-3 bg-[#5D9646] text-white rounded-xl hover:opacity-90 font-semibold shadow-lg"
               >
                 <Plus size={20} />
                 Agregar Mantenimiento
@@ -232,15 +230,15 @@ const MantenimientosTable = () => {
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="bg-white border-b border-gray-200">
-                  <th className="text-left py-5 px-6 text-gray-500 font-semibold text-sm">Fecha</th>
-                  <th className="text-left py-5 px-6 text-gray-500 font-semibold text-sm">Camión</th>
-                  <th className="text-left py-5 px-6 text-gray-500 font-semibold text-sm">Tipo</th>
-                  <th className="text-left py-5 px-6 text-gray-500 font-semibold text-sm">Estado</th>
-                  <th className="text-left py-5 px-6 text-gray-500 font-semibold text-sm">Descripción</th>
-                  <th className="text-left py-5 px-6 text-gray-500 font-semibold text-sm">Mes/Año</th>
-                  <th className="text-right py-5 px-6 text-gray-500 font-semibold text-sm">Total</th>
-                  <th className="text-center py-5 px-6 text-gray-500 font-semibold text-sm">Acciones</th>
+                <tr className="bg-gradient-to-r from-[#34353A] to-[#5F8EAD] border-b-2 border-[#5D9646]">
+                  <th className="text-left py-5 px-6 text-white font-semibold text-sm">Fecha</th>
+                  <th className="text-left py-5 px-6 text-white font-semibold text-sm">Camión</th>
+                  <th className="text-left py-5 px-6 text-white font-semibold text-sm">Tipo</th>
+                  <th className="text-left py-5 px-6 text-white font-semibold text-sm">Estado</th>
+                  <th className="text-left py-5 px-6 text-white font-semibold text-sm">Descripción</th>
+                  <th className="text-left py-5 px-6 text-white font-semibold text-sm">Mes/Año</th>
+                  <th className="text-right py-5 px-6 text-white font-semibold text-sm">Total</th>
+                  <th className="text-center py-5 px-6 text-white font-semibold text-sm">Acciones</th>
                 </tr>
               </thead>
               <tbody>
@@ -252,10 +250,10 @@ const MantenimientosTable = () => {
                       onClick={() => { setSelectedMantenimientoId(mant._id); setIsModalOpen(true); }} 
                       className="border-b border-gray-100 hover:bg-gray-50 cursor-pointer transition-colors"
                     >
-                      <td className="py-5 px-6 text-gray-900 font-semibold">{formatearFecha(mant.fecha_mantenimiento)}</td>
+                      <td className="py-5 px-6 text-[#34353A] font-semibold">{formatearFecha(mant.fecha_mantenimiento)}</td>
                       <td className="py-5 px-6 text-gray-600">{mant.ciculatioCard?.licensePlate || 'N/A'}</td>
                       <td className="py-5 px-6">
-                        <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-indigo-100 text-indigo-800">
+                        <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-[#5F8EAD] bg-opacity-20 text-[#5F8EAD]">
                           {tipoMantenimientoLabels[mant.tipo_de_mantenimiento] || 'N/A'}
                         </span>
                       </td>
@@ -268,18 +266,19 @@ const MantenimientosTable = () => {
                       <td className="py-5 px-6 text-gray-600">
                         {mant.mes && mant.ano ? `${mant.mes}/${mant.ano}` : mant.fecha_mantenimiento ? `${new Date(mant.fecha_mantenimiento).getMonth() + 1}/${new Date(mant.fecha_mantenimiento).getFullYear()}` : 'N/A'}
                       </td>
-                      <td className="py-5 px-6 text-right font-bold text-gray-900">{formatearMoneda(calcularTotal(mant.detalles))}</td>
+                      <td className="py-5 px-6 text-right font-bold text-[#34353A]">{formatearMoneda(calcularTotal(mant.detalles))}</td>
                       <td className="py-5 px-6" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center justify-center gap-2">
                           <button
                             onClick={() => window.open(`${config.api.API_URL}/reporte/individual/${mant._id}`, "_blank")}
-                            className="p-2 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-600 transition-colors"
+                            className="p-2 rounded-lg bg-[#5F8EAD] bg-opacity-20 hover:bg-[#5F8EAD] hover:bg-opacity-30 text-[#5F8EAD] transition-colors"
                             title="Descargar PDF"
                           >
                             <Download size={18} />
                           </button>
 
-{mant.estado !== 'completado' && mant.estado !== 'cancelado' && (                            <button
+                          {mant.estado !== 'completado' && mant.estado !== 'cancelado' && (
+                            <button
                               onClick={() => navigate(`/mantenimientos/editar/${mant._id}`)}
                               className="p-2 rounded-lg bg-yellow-50 hover:bg-yellow-100 text-yellow-600 transition-colors"
                               title="Editar"
@@ -322,7 +321,7 @@ const MantenimientosTable = () => {
                   onClick={() => setCurrentPage(idx + 1)} 
                   className={`px-4 py-2 rounded-lg font-semibold transition-colors ${
                     currentPage === idx + 1 
-                      ? 'bg-indigo-600 text-white' 
+                      ? 'bg-gradient-to-r from-[#34353A] to-[#5F8EAD] text-white' 
                       : 'text-gray-700 hover:bg-gray-100'
                   }`}
                 >
@@ -352,14 +351,12 @@ const MantenimientosTable = () => {
         </div>
       </div>
 
-      {/* Modal de Reportes */}
       <ReportesModal 
         isOpen={isReportesModalOpen}
         onClose={() => setIsReportesModalOpen(false)}
         apiUrl={config.api.API_URL}
       />
 
-      {/* Modal de Detalle */}
       <MantenimientoDetailModal 
         mantenimientoId={selectedMantenimientoId} 
         isOpen={isModalOpen} 

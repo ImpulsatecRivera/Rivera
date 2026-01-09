@@ -1,114 +1,127 @@
 import express from "express";
 import cookieParser from "cookie-parser";
 import cors from "cors";
-import ViajesRoutes from "./src/Routes/ViajesRoutes.js"
+
+import ViajesRoutes from "./src/Routes/ViajesRoutes.js";
 import LoginRoutes from "./src/Routes/LoginRoutes.js";
 import LogoutRoutes from "./src/Routes/Logout.js";
 import RegisterRoutes from "./src/Routes/RegisterRoute.js";
 import ClientesRoutes from "./src/Routes/clienteRoutes.js";
 import RecoveryRoutes from "./src/Routes/Recovery.js";
-import CotizacionesRoutes from "./src/Routes/cotizacionesRoutes.js";    
+import CotizacionesRoutes from "./src/Routes/cotizacionesRoutes.js";
 import RegisterClienteRoutes from "./src/Routes/RegisterClienteRouter.js";
+
 import camionesRoutes from "./src/Routes/camionesRoutes.js";
 import empleadoRoutes from "./src/Routes/empleadosRoutes.js";
 import motoristasRoutes from "./src/Routes/motoristaRoutes.js";
 import proveedoresRoutes from "./src/Routes/proveedoresRoutes.js";
+
 import autoUpdateRoutes from "./src/Routes/autoUpdateRoutes.js";
-import callRoutes from "./src/Routes/callRoutes.js"
-import MantoRouter from "./src/Routes/MantenimientoRoutes.js"
-import Reportesroutes from "./src/Routes/ReportesRoutes.js"
-import ResumenRoutes from "./src/Routes/ResumenDieselRoutes.js"
-import ResumenDieselReporte from "./src/Routes/ResumenReportesRoutes.js"
-import ViajesxClientesRoutes from "./src/Routes/ViajesxClientesRoutes.js"
-import RepoprteViajexCliente from "./src/Routes/ReportexClienteRoutes.js"
+import callRoutes from "./src/Routes/callRoutes.js";
+
+import MantoRouter from "./src/Routes/MantenimientoRoutes.js";
+import Reportesroutes from "./src/Routes/ReportesRoutes.js";
+import ResumenRoutes from "./src/Routes/ResumenDieselRoutes.js";
+import ResumenDieselReporte from "./src/Routes/ResumenReportesRoutes.js";
+
 import cajachicaRoutes from "./src/Routes/cajaChicaRoutes.js";
 import reportesCajaChicaRoutes from "./src/Routes/ReportesCajaChicaRoutes.js";
 import CajaChicaConfigRoutes from "./src/Routes/CajaChicaConfigRoutes.js";
-import ViajesInternos from "./src/Routes/ViajesInternosRoutes.js"
-import RutasRoutes from "./src/Routes/RutasRoutes.js"
+
 import PlanillaQuincenalRoutes from "./src/Routes/PlanillaQuincenalRoutes.js";
 import ReportesPlanillaQuincenalRoutes from "./src/Routes/ReportesPlanillaQuincenalRoutes.js";
+
+import PlanillaSemanalRoutes from "./src/Routes/PlanillaSemanalRoutes.js";
+import ReportesPlanillaSemanalRoutes from "./src/Routes/ReportesPlanillaSemanalRoutes.js";
+
+// ✅ Rutas nuevas que venían en master
+import viajesOperativosRoutes from "./src/Routes/ViajesOperativosRoutes.js";
+import reportesViajesDirectoRoutes from "./src/Routes/ReportesViajesDirectoRoutes.js";
+
+// (si luego usas swagger en tu proyecto)
 import swaggerUi from "swagger-ui-express";
 import fs from "fs";
-import path from "path";
-
-
-//Traemos el archivo json
-
+import path from "path";
 
 const app = express();
 
-//comentRIO PARA COMMI 
-//pruerba verce
-//djsjdjsj
-
 app.use(express.json());
 app.use(cookieParser());
-app.use(cors({
-  origin: [
-    "https://verdant-sunshine-da6504.netlify.app",
-    "http://localhost:5173",
-    /^exp:\/\/.*$/,
+
+app.use(
+  cors({
+    origin: [
+      "https://verdant-sunshine-da6504.netlify.app",
+      "http://localhost:5173",
+      /^exp:\/\/.*$/,
       /^http:\/\/.*\.exp\.direct.*$/,
       /^https:\/\/.*\.exp\.direct.*$/,
       /^http:\/\/localhost.*$/,
       /^http:\/\/192\.168\..*$/,
       /^http:\/\/10\.0\..*$/,
-  ],
-  credentials: true,
-  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-   allowedHeaders: [
-    "Content-Type",
-    "Authorization", 
-    "Accept",
-    "Origin",
-    "Cache-Control",
-    "cache-control", 
-    "Pragma",
-    "pragma"
-  ]
-}));
+    ],
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: [
+      "Content-Type",
+      "Authorization",
+      "Accept",
+      "Origin",
+      "Cache-Control",
+      "cache-control",
+      "Pragma",
+      "pragma",
+    ],
+  })
+);
 
 app.get("/test", (req, res) => {
   res.json({ message: "Test with cookieParser" });
 });
+
 app.get("/health", (req, res) => {
   res.status(200).json({
     status: "OK",
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
   });
 });
 
+// -------------------- ROUTES --------------------
 app.use("/api/viajes", ViajesRoutes);
 app.use("/api/login", LoginRoutes);
 app.use("/api/logout", LogoutRoutes);
 app.use("/api/register", RegisterRoutes);
+
 app.use("/api/clientes", ClientesRoutes);
 app.use("/api/recovery", RecoveryRoutes);
 app.use("/api/cotizaciones", CotizacionesRoutes);
 app.use("/api/register-cliente", RegisterClienteRoutes);
+
 app.use("/api/camiones", camionesRoutes);
 app.use("/api/empleados", empleadoRoutes);
 app.use("/api/motoristas", motoristasRoutes);
 app.use("/api/proveedores", proveedoresRoutes);
+
 app.use("/api/cajaChica", cajachicaRoutes);
 app.use("/api/cajaChicaConfig", CajaChicaConfigRoutes);
-app.use("/api/ViajesxClientes",ViajesxClientesRoutes)
-
+app.use("/api/reportesCajaChica", reportesCajaChicaRoutes);
 
 app.use("/api/planillas/quincenal", PlanillaQuincenalRoutes);
-app.use("/api/auto-update", autoUpdateRoutes);
-app.use("/api/call",callRoutes);
-app.use("/api/mantenimientos",MantoRouter)
-app.use("/api/reporte",Reportesroutes)
-app.use("/api/resumen",ResumenRoutes)
-app.use("/api/resumenReporte",ResumenDieselReporte)
-app.use("/api/ViajesxClientes",ViajesxClientesRoutes)
-app.use("/api/reporteviaje",RepoprteViajexCliente)
-app.use("/api/reportesCajaChica", reportesCajaChicaRoutes);
-app.use("/api/viajesinternos",ViajesInternos)
-app.use("/api/rutas",RutasRoutes)
-app.use("/api/reporteviaje",RepoprteViajexCliente)
 app.use("/api/reportes/planilla/quincenal", ReportesPlanillaQuincenalRoutes);
 
-export default app;
+app.use("/api/planillas/semanal", PlanillaSemanalRoutes);
+app.use("/api/reportes/planilla/semanal", ReportesPlanillaSemanalRoutes);
+
+app.use("/api/auto-update", autoUpdateRoutes);
+app.use("/api/call", callRoutes);
+
+app.use("/api/mantenimientos", MantoRouter);
+app.use("/api/reporte", Reportesroutes);
+app.use("/api/resumen", ResumenRoutes);
+app.use("/api/resumenReporte", ResumenDieselReporte);
+
+// ✅ nuevas
+app.use("/api/viajes-operativos", viajesOperativosRoutes);
+app.use("/api/reportes-directos", reportesViajesDirectoRoutes);
+
+export default app;

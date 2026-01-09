@@ -1,30 +1,111 @@
+/**
+ * Controlador para generar reportes PDF de planillas semanales
+ * Colores personalizados: #5F8EAD (azul), #5D9646 (verde), #34353A (gris oscuro)
+ */
+
 import puppeteer from 'puppeteer';
 import PlanillaSemanal from '../Models/PlanillaSemanal.js';
+import { isValidObjectId } from 'mongoose';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
 
 const ReportesPlanillaSemanalController = {};
 
-// ============================================
-// FUNCIÓN AUXILIAR - Formatear fecha
-// ============================================
+// Obtener __dirname en ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+// Función para convertir imagen a base64
+const convertirImagenABase64 = (rutaImagen) => {
+    try {
+        console.log('Intentando leer imagen desde:', rutaImagen);
+        
+        if (!fs.existsSync(rutaImagen)) {
+            console.error('La imagen no existe en la ruta:', rutaImagen);
+            console.log('Contenido del directorio padre:');
+            const dirPadre = path.dirname(rutaImagen);
+            if (fs.existsSync(dirPadre)) {
+                console.log(fs.readdirSync(dirPadre));
+            }
+            return null;
+        }
+        
+        const imagen = fs.readFileSync(rutaImagen);
+        const base64 = imagen.toString('base64');
+        const ext = path.extname(rutaImagen).toLowerCase();
+        const mimeType = ext === '.png' ? 'image/png' : 'image/jpeg';
+        
+        console.log('Imagen convertida exitosamente a base64');
+        return `data:${mimeType};base64,${base64}`;
+    } catch (error) {
+        console.error('Error al convertir imagen:', error);
+        return null;
+    }
+};
+
+// OPCIÓN 1: Desde la raíz del proyecto (RECOMENDADO)
+// Asumiendo que ejecutas el servidor desde C:\Users\djpoc\Desktop\Rivera\Backend
+const RUTA_LOGO = path.join(process.cwd(), 'src', 'imagenes', 'imagen_15.png');
+
+// OPCIÓN 2: Si no funciona la opción 1, usa ruta absoluta directa:
+// const RUTA_LOGO = 'C:\\Users\\djpoc\\Desktop\\Rivera\\Backend\\src\\imagenes\\imagen_15.png';
+
+// OPCIÓN 3: Si el controlador está en Backend/src/Controllers/
+// const RUTA_LOGO = path.join(__dirname, '..', 'imagenes', 'imagen_15.png');
+
+const redondearDinero = (valor) => {
+    return Math.round(valor * 100) / 100;
+};
+
 const formatearFecha = (fecha) => {
-    const opciones = { day: '2-digit', month: 'long', year: 'numeric' };
-    return new Date(fecha).toLocaleDateString('es-ES', opciones);
-};
-
-const formatearFechaCorta = (fecha) => {
+    const meses = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 
+                   'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
     const f = new Date(fecha);
-    return `${f.getDate()}/${f.getMonth() + 1}`;
+    return `${f.getDate()} de ${meses[f.getMonth()]} ${f.getFullYear()}`;
 };
 
-// ============================================
-// REPORTE SEMANAL DETALLADO (Día por día)
-// ============================================
+const formatearRangoFechas = (inicio, fin) => {
+    const meses = ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO', 
+                   'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
+    const fechaInicio = new Date(inicio);
+    const fechaFin = new Date(fin);
+    
+    return `DEL ${fechaInicio.getDate()} AL ${fechaFin.getDate()} DE ${meses[fechaInicio.getMonth()]} ${fechaInicio.getFullYear()}`;
+};
+
 ReportesPlanillaSemanalController.generarPDFSemanalDetallado = async (req, res) => {
     let browser;
     try {
+        // DEBUG: Imprime información útil
+        console.log('=== DEBUG RUTAS ===');
+        console.log('process.cwd():', process.cwd());
+        console.log('__dirname:', __dirname);
+        console.log('Ruta del logo:', RUTA_LOGO);
+        console.log('¿Existe el archivo?:', fs.existsSync(RUTA_LOGO));
+        
+        // Listar archivos en el directorio de imágenes
+        const dirImagenes = path.join(process.cwd(), 'src', 'imagenes');
+        console.log('Contenido de src/imagenes:');
+        if (fs.existsSync(dirImagenes)) {
+            console.log(fs.readdirSync(dirImagenes));
+        } else {
+            console.log('El directorio no existe');
+        }
+        console.log('==================');
+        
         const { id } = req.params;
 
+        if (!isValidObjectId(id)) {
+            return res.status(400).json({
+                success: false,
+                message: 'ID de planilla inválido'
+            });
+        }
+
         const planilla = await PlanillaSemanal.findById(id);
+
         if (!planilla) {
             return res.status(404).json({
                 success: false,
@@ -32,364 +113,102 @@ ReportesPlanillaSemanalController.generarPDFSemanalDetallado = async (req, res) 
             });
         }
 
-        // Generar HTML
-        const htmlContent = `
-        <!DOCTYPE html>
-        <html lang="es">
-        <head>
-            <meta charset="UTF-8">
-            <style>
-                * {
-                    margin: 0;
-                    padding: 0;
-                    box-sizing: border-box;
-                }
-                body {
-                    font-family: Arial, Courier, sans-serif;
-                    padding: 20px;
-                    color: #000;
-                    background: #fff;
-                    font-size: 10px;
-                }
-                .header {
-                    text-align: center;
-                    margin-bottom: 15px;
-                    padding-bottom: 10px;
-                    border-bottom: 2px solid #000;
-                }
-                .header h1 {
-                    font-size: 14px;
-                    font-weight: bold;
-                    margin-bottom: 5px;
-                }
-                .header .subtitle {
-                    font-size: 10px;
-                }
-                table {
-                    width: 100%;
-                    border-collapse: collapse;
-                    margin-top: 10px;
-                    font-size: 9px;
-                }
-                th, td {
-                    border: 1px solid #000;
-                    padding: 4px 2px;
-                    text-align: center;
-                }
-                th {
-                    background-color: #f0f0f0;
-                    font-weight: bold;
-                }
-                .nombre-col {
-                    text-align: left;
-                    max-width: 120px;
-                    font-size: 8px;
-                }
-                .dia-col {
-                    width: 40px;
-                }
-                .total-col {
-                    font-weight: bold;
-                    background-color: #f9f9f9;
-                }
-                .falta {
-                    background-color: #ffe0e0;
-                }
-                .totales-row {
-                    font-weight: bold;
-                    background-color: #e0e0e0;
-                }
-            </style>
-        </head>
-        <body>
-            <div class="header">
-                <h1>PLANILLA SEMANAL, VIÁTICOS Y ANTICIPO DEL ${formatearFechaCorta(planilla.fechaInicio)} AL ${formatearFechaCorta(planilla.fechaFin)} ${new Date(planilla.fechaFin).getFullYear()}</h1>
-            </div>
-
-            <table>
-                <thead>
-                    <tr>
-                        <th rowspan="2">#</th>
-                        <th rowspan="2" class="nombre-col">NOMBRE</th>
-                        <th colspan="2">LUNES ${formatearFechaCorta(planilla.empleados[0]?.dias[0]?.fecha)}</th>
-                        <th colspan="2">MARTES ${formatearFechaCorta(planilla.empleados[0]?.dias[1]?.fecha)}</th>
-                        <th colspan="2">MIÉRCOLES ${formatearFechaCorta(planilla.empleados[0]?.dias[2]?.fecha)}</th>
-                        <th colspan="2">JUEVES ${formatearFechaCorta(planilla.empleados[0]?.dias[3]?.fecha)}</th>
-                        <th colspan="2">VIERNES ${formatearFechaCorta(planilla.empleados[0]?.dias[4]?.fecha)}</th>
-                        <th colspan="2">SÁBADO ${formatearFechaCorta(planilla.empleados[0]?.dias[5]?.fecha)}</th>
-                        <th rowspan="2">SALARIO BASE</th>
-                        <th rowspan="2">VIÁTICOS</th>
-                        <th rowspan="2">ANTICIPO</th>
-                        <th rowspan="2">DESCUENTOS</th>
-                        <th rowspan="2">TOTAL A PAGAR</th>
-                    </tr>
-                    <tr>
-                        <th class="dia-col">BASE</th>
-                        <th class="dia-col">VIÁTICOS</th>
-                        <th class="dia-col">BASE</th>
-                        <th class="dia-col">VIÁTICOS</th>
-                        <th class="dia-col">BASE</th>
-                        <th class="dia-col">VIÁTICOS</th>
-                        <th class="dia-col">BASE</th>
-                        <th class="dia-col">VIÁTICOS</th>
-                        <th class="dia-col">BASE</th>
-                        <th class="dia-col">VIÁTICOS</th>
-                        <th class="dia-col">BASE</th>
-                        <th class="dia-col">VIÁTICOS</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${planilla.empleados.map((empleado, index) => `
-                        <tr>
-                            <td>${index + 1}</td>
-                            <td class="nombre-col">${empleado.nombreCompleto}</td>
-                            ${empleado.dias.map(dia => `
-                                <td class="${dia.faltaInjustificada ? 'falta' : ''}">${dia.base > 0 ? dia.base.toFixed(2) : '-'}</td>
-                                <td>${dia.viaticos > 0 ? dia.viaticos.toFixed(2) : '-'}</td>
-                            `).join('')}
-                            <td class="total-col">$ ${empleado.totalBase.toFixed(2)}</td>
-                            <td class="total-col">$ ${empleado.totalViaticos.toFixed(2)}</td>
-                            <td>$ ${empleado.anticipos.toFixed(2)}</td>
-                            <td>$ ${empleado.descuentos.toFixed(2)}</td>
-                            <td class="total-col">$ ${empleado.totalPagar.toFixed(2)}</td>
-                        </tr>
-                    `).join('')}
-                    <tr class="totales-row">
-                        <td colspan="2">TOTAL</td>
-                        ${Array(12).fill(0).map((_, i) => {
-                            const columna = Math.floor(i / 2);
-                            const esBase = i % 2 === 0;
-                            const total = planilla.empleados.reduce((sum, emp) => {
-                                const dia = emp.dias[columna];
-                                return sum + (esBase ? (dia?.base || 0) : (dia?.viaticos || 0));
-                            }, 0);
-                            return `<td>$ ${total.toFixed(2)}</td>`;
-                        }).join('')}
-                        <td>$ ${planilla.empleados.reduce((sum, emp) => sum + emp.totalBase, 0).toFixed(2)}</td>
-                        <td>$ ${planilla.empleados.reduce((sum, emp) => sum + emp.totalViaticos, 0).toFixed(2)}</td>
-                        <td>$ ${planilla.empleados.reduce((sum, emp) => sum + emp.anticipos, 0).toFixed(2)}</td>
-                        <td>$ ${planilla.empleados.reduce((sum, emp) => sum + emp.descuentos, 0).toFixed(2)}</td>
-                        <td>$ ${planilla.empleados.reduce((sum, emp) => sum + emp.totalPagar, 0).toFixed(2)}</td>
-                    </tr>
-                </tbody>
-            </table>
-
-            <div style="margin-top: 20px; font-size: 9px;">
-                <p>() DESCUENTOS</p>
-                <p>TOTAL: $ ${planilla.empleados.reduce((sum, emp) => sum + emp.totalPagar, 0).toFixed(2)}</p>
-            </div>
-        </body>
-        </html>
-        `;
+        const logoBase64 = convertirImagenABase64(RUTA_LOGO);
+        const html = generarHTMLSemanalDetallado(planilla, logoBase64);
 
         browser = await puppeteer.launch({
-            headless: 'new',
+            headless: true,
             args: ['--no-sandbox', '--disable-setuid-sandbox']
         });
 
         const page = await browser.newPage();
-        await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
+        await page.setContent(html, { waitUntil: 'networkidle0' });
 
         const pdfBuffer = await page.pdf({
             format: 'Legal',
             landscape: true,
             printBackground: true,
-            margin: { top: '10px', right: '10px', bottom: '10px', left: '10px' }
+            margin: {
+                top: '10mm',
+                right: '10mm',
+                bottom: '10mm',
+                left: '10mm'
+            }
         });
 
         await browser.close();
 
         res.setHeader('Content-Type', 'application/pdf');
-        res.setHeader('Content-Disposition', `attachment; filename=planilla-semanal-${formatearFechaCorta(planilla.fechaInicio)}-${Date.now()}.pdf`);
+        res.setHeader('Content-Disposition', `attachment; filename=planilla-semanal-${formatearFecha(planilla.fechaInicio)}.pdf`);
         res.send(pdfBuffer);
 
     } catch (error) {
         if (browser) await browser.close();
-        console.error('Error al generar PDF semanal:', error);
+        console.error('Error al generar PDF semanal detallado:', error);
         res.status(500).json({
             success: false,
-            message: 'Error al generar PDF',
+            message: 'Error al generar el reporte',
             error: error.message
         });
     }
 };
 
-// ============================================
-// REPORTE MENSUAL (estilo "extra")
-// Agrupa todas las semanas del mes
-// ============================================
 ReportesPlanillaSemanalController.generarPDFMensual = async (req, res) => {
     let browser;
     try {
         const { mes, ano } = req.params;
+
         const mesNum = parseInt(mes);
         const anoNum = parseInt(ano);
 
         if (mesNum < 1 || mesNum > 12) {
             return res.status(400).json({
                 success: false,
-                message: 'Mes inválido'
+                message: 'Mes inválido (debe ser entre 1 y 12)'
             });
         }
 
-        // Buscar todas las planillas del mes
-        const inicioMes = new Date(anoNum, mesNum - 1, 1);
-        const finMes = new Date(anoNum, mesNum, 0);
-
         const planillas = await PlanillaSemanal.find({
-            fechaInicio: { $gte: inicioMes },
-            fechaFin: { $lte: finMes },
-            estado: { $in: ['aprobada', 'pagada', 'cerrada'] }
+            fechaInicio: {
+                $gte: new Date(anoNum, mesNum - 1, 1),
+                $lt: new Date(anoNum, mesNum, 1)
+            }
         }).sort({ fechaInicio: 1 });
 
         if (!planillas || planillas.length === 0) {
             return res.status(404).json({
                 success: false,
-                message: `No hay planillas aprobadas para este mes`
+                message: 'No se encontraron planillas para este mes'
             });
         }
 
-        // Agrupar por empleado
-        const empleadosTotales = {};
-        
-        planillas.forEach(planilla => {
-            planilla.empleados.forEach(emp => {
-                const key = emp.empleadoId.toString();
-                if (!empleadosTotales[key]) {
-                    empleadosTotales[key] = {
-                        nombre: emp.nombreCompleto,
-                        semanas: [],
-                        totalGeneral: 0
-                    };
-                }
-                
-                // Agregar semana
-                empleadosTotales[key].semanas.push({
-                    periodo: `${formatearFechaCorta(planilla.fechaInicio)} AL ${formatearFechaCorta(planilla.fechaFin)}`,
-                    total: emp.totalPagar
-                });
-                empleadosTotales[key].totalGeneral += emp.totalPagar;
-            });
-        });
-
-        const empleadosArray = Object.values(empleadosTotales).sort((a, b) => 
-            a.nombre.localeCompare(b.nombre)
-        );
-
-        const nombreMes = ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO', 
-                          'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'][mesNum - 1];
-
-        // Generar HTML
-        const htmlContent = `
-        <!DOCTYPE html>
-        <html lang="es">
-        <head>
-            <meta charset="UTF-8">
-            <style>
-                * {
-                    margin: 0;
-                    padding: 0;
-                    box-sizing: border-box;
-                }
-                body {
-                    font-family: Arial, sans-serif;
-                    padding: 30px;
-                    color: #000;
-                    background: #fff;
-                }
-                .header {
-                    text-align: center;
-                    margin-bottom: 20px;
-                }
-                .header h1 {
-                    font-size: 16px;
-                    font-weight: bold;
-                    margin-bottom: 10px;
-                }
-                table {
-                    width: 100%;
-                    border-collapse: collapse;
-                    margin-top: 15px;
-                }
-                th, td {
-                    border: 1px solid #000;
-                    padding: 8px;
-                    text-align: left;
-                }
-                th {
-                    background-color: #f0f0f0;
-                    font-weight: bold;
-                    text-align: center;
-                }
-                .text-right {
-                    text-align: right;
-                }
-                .total-row {
-                    font-weight: bold;
-                    background-color: #e0e0e0;
-                }
-            </style>
-        </head>
-        <body>
-            <div class="header">
-                <h1>PLANILLA DE EXTRA ${nombreMes} ${anoNum}</h1>
-            </div>
-
-            <table>
-                <thead>
-                    <tr>
-                        <th>#</th>
-                        <th>NOMBRE</th>
-                        ${planillas.map(p => `
-                            <th>${formatearFechaCorta(p.fechaInicio)} AL ${formatearFechaCorta(p.fechaFin)}</th>
-                        `).join('')}
-                        <th>TOTAL</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${empleadosArray.map((empleado, index) => `
-                        <tr>
-                            <td>${index + 1}</td>
-                            <td>${empleado.nombre}</td>
-                            ${planillas.map(planilla => {
-                                const semana = empleado.semanas.find(s => 
-                                    s.periodo === `${formatearFechaCorta(planilla.fechaInicio)} AL ${formatearFechaCorta(planilla.fechaFin)}`
-                                );
-                                return `<td class="text-right">$ ${semana ? semana.total.toFixed(2) : '-'}</td>`;
-                            }).join('')}
-                            <td class="text-right"><strong>$ ${empleado.totalGeneral.toFixed(2)}</strong></td>
-                        </tr>
-                    `).join('')}
-                    <tr class="total-row">
-                        <td colspan="2">TOTAL</td>
-                        ${planillas.map(planilla => {
-                            const total = planilla.empleados.reduce((sum, emp) => sum + emp.totalPagar, 0);
-                            return `<td class="text-right">$ ${total.toFixed(2)}</td>`;
-                        }).join('')}
-                        <td class="text-right">$ ${empleadosArray.reduce((sum, emp) => sum + emp.totalGeneral, 0).toFixed(2)}</td>
-                    </tr>
-                </tbody>
-            </table>
-        </body>
-        </html>
-        `;
+        const logoBase64 = convertirImagenABase64(RUTA_LOGO);
+        const html = generarHTMLMensual(planillas, mesNum, anoNum, logoBase64);
 
         browser = await puppeteer.launch({
-            headless: 'new',
+            headless: true,
             args: ['--no-sandbox', '--disable-setuid-sandbox']
         });
 
         const page = await browser.newPage();
-        await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
+        await page.setContent(html, { waitUntil: 'networkidle0' });
 
         const pdfBuffer = await page.pdf({
-            format: 'A4',
-            landscape: planillas.length > 2,
+            format: 'Letter',
+            landscape: false,
             printBackground: true,
-            margin: { top: '15px', right: '15px', bottom: '15px', left: '15px' }
+            margin: {
+                top: '15mm',
+                right: '15mm',
+                bottom: '15mm',
+                left: '15mm'
+            }
         });
 
         await browser.close();
+
+        const nombreMes = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
+                          'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'][mesNum - 1];
 
         res.setHeader('Content-Type', 'application/pdf');
         res.setHeader('Content-Disposition', `attachment; filename=planilla-extra-${nombreMes}-${anoNum}.pdf`);
@@ -400,10 +219,933 @@ ReportesPlanillaSemanalController.generarPDFMensual = async (req, res) => {
         console.error('Error al generar PDF mensual:', error);
         res.status(500).json({
             success: false,
-            message: 'Error al generar PDF',
+            message: 'Error al generar el reporte mensual',
             error: error.message
         });
     }
 };
+
+ReportesPlanillaSemanalController.generarPDFMultiMes = async (req, res) => {
+    let browser;
+    try {
+        const { meses, ano } = req.body;
+
+        if (!Array.isArray(meses) || meses.length === 0 || meses.length > 9) {
+            return res.status(400).json({
+                success: false,
+                message: 'Debe proporcionar entre 1 y 9 meses'
+            });
+        }
+
+        const mesesValidos = meses.every(m => m >= 1 && m <= 12);
+        if (!mesesValidos) {
+            return res.status(400).json({
+                success: false,
+                message: 'Todos los meses deben estar entre 1 y 12'
+            });
+        }
+
+        const anoNum = parseInt(ano);
+        const planillasPorMes = [];
+
+        for (const mes of meses) {
+            const planillas = await PlanillaSemanal.find({
+                fechaInicio: {
+                    $gte: new Date(anoNum, mes - 1, 1),
+                    $lt: new Date(anoNum, mes, 1)
+                }
+            }).sort({ fechaInicio: 1 });
+
+            if (planillas.length > 0) {
+                planillasPorMes.push({
+                    mes,
+                    planillas
+                });
+            }
+        }
+
+        if (planillasPorMes.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'No se encontraron planillas para los meses seleccionados'
+            });
+        }
+
+        const logoBase64 = convertirImagenABase64(RUTA_LOGO);
+        const html = generarHTMLMultiMes(planillasPorMes, anoNum, logoBase64);
+
+        browser = await puppeteer.launch({
+            headless: true,
+            args: ['--no-sandbox', '--disable-setuid-sandbox']
+        });
+
+        const page = await browser.newPage();
+        await page.setContent(html, { waitUntil: 'networkidle0' });
+
+        const pdfBuffer = await page.pdf({
+            format: 'Letter',
+            landscape: false,
+            printBackground: true,
+            margin: {
+                top: '15mm',
+                right: '15mm',
+                bottom: '15mm',
+                left: '15mm'
+            }
+        });
+
+        await browser.close();
+
+        const periodo = meses.length === 3 ? 'trimestre' :
+                       meses.length === 6 ? 'semestre' :
+                       meses.length === 9 ? '9-meses' : `${meses.length}-meses`;
+
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename=planilla-consolidado-${periodo}-${anoNum}.pdf`);
+        res.send(pdfBuffer);
+
+    } catch (error) {
+        if (browser) await browser.close();
+        console.error('Error al generar PDF multi-mes:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error al generar el reporte',
+            error: error.message
+        });
+    }
+};
+
+ReportesPlanillaSemanalController.generarPDFAnual = async (req, res) => {
+    let browser;
+    try {
+        const { ano } = req.params;
+        const anoNum = parseInt(ano);
+
+        const planillasPorMes = [];
+
+        for (let mes = 1; mes <= 12; mes++) {
+            const planillas = await PlanillaSemanal.find({
+                fechaInicio: {
+                    $gte: new Date(anoNum, mes - 1, 1),
+                    $lt: new Date(anoNum, mes, 1)
+                }
+            }).sort({ fechaInicio: 1 });
+
+            if (planillas.length > 0) {
+                planillasPorMes.push({
+                    mes,
+                    planillas
+                });
+            }
+        }
+
+        if (planillasPorMes.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: `No se encontraron planillas para el año ${anoNum}`
+            });
+        }
+
+        const logoBase64 = convertirImagenABase64(RUTA_LOGO);
+        const html = generarHTMLAnual(planillasPorMes, anoNum, logoBase64);
+
+        browser = await puppeteer.launch({
+            headless: true,
+            args: ['--no-sandbox', '--disable-setuid-sandbox']
+        });
+
+        const page = await browser.newPage();
+        await page.setContent(html, { waitUntil: 'networkidle0' });
+
+        const pdfBuffer = await page.pdf({
+            format: 'Letter',
+            landscape: false,
+            printBackground: true,
+            margin: {
+                top: '15mm',
+                right: '15mm',
+                bottom: '15mm',
+                left: '15mm'
+            }
+        });
+
+        await browser.close();
+
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename=planilla-anual-${anoNum}.pdf`);
+        res.send(pdfBuffer);
+
+    } catch (error) {
+        if (browser) await browser.close();
+        console.error('Error al generar PDF anual:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error al generar el reporte anual',
+            error: error.message
+        });
+    }
+};
+
+function generarHTMLSemanalDetallado(planilla, logoBase64) {
+    const titulo = `PLANILLA SEMANAL, VIÁTICOS Y ANTICIPO ${formatearRangoFechas(planilla.fechaInicio, planilla.fechaFin)}`;
+    
+    const diasFechas = {};
+    if (planilla.empleados.length > 0 && planilla.empleados[0].dias.length > 0) {
+        planilla.empleados[0].dias.forEach(d => {
+            const fecha = new Date(d.fecha);
+            diasFechas[d.dia] = fecha.getDate();
+        });
+    }
+
+    let filasEmpleados = '';
+    let numeroEmpleado = 1;
+
+    planilla.empleados.forEach(emp => {
+        const dias = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado'];
+        
+        const datosDias = {};
+        emp.dias.forEach(d => {
+            datosDias[d.dia] = d;
+        });
+
+        filasEmpleados += `
+            <tr>
+                <td>${numeroEmpleado}</td>
+                <td style="text-align: left;">${emp.nombreCompleto}</td>
+        `;
+
+        dias.forEach(dia => {
+            const dato = datosDias[dia] || { base: 0, viaticos: 0 };
+            const base = dato.base || 0;
+            const viaticos = dato.viaticos || 0;
+
+            filasEmpleados += `
+                <td>$ ${base > 0 ? base.toFixed(2) : '-'}</td>
+                <td>$ ${viaticos > 0 ? viaticos.toFixed(2) : '-'}</td>
+            `;
+        });
+
+        filasEmpleados += `
+                <td style="background-color: #e8f4e8;">$ ${emp.totalBase.toFixed(2)}</td>
+                <td style="background-color: #e8f4e8;">$ ${emp.totalViaticos.toFixed(2)}</td>
+                <td>$ ${emp.anticipos > 0 ? emp.anticipos.toFixed(2) : '-'}</td>
+                <td>$ ${emp.totalDescuentos > 0 ? emp.totalDescuentos.toFixed(2) : '-'}</td>
+                <td style="background-color: #e8f4e8; font-weight: bold;">$ ${emp.totalAPagar.toFixed(2)}</td>
+            </tr>
+        `;
+
+        numeroEmpleado++;
+    });
+
+    const totales = planilla.totales;
+    const filaTotales = `
+        <tr style="font-weight: bold; background-color: #5D9646; color: white;">
+            <td colspan="2">TOTAL</td>
+            <td colspan="12"></td>
+            <td>$ ${totales.totalBase.toFixed(2)}</td>
+            <td>$ ${totales.totalViaticos.toFixed(2)}</td>
+            <td>$ ${totales.totalAnticipos.toFixed(2)}</td>
+            <td>$ ${totales.totalDescuentos.toFixed(2)}</td>
+            <td>$ ${totales.totalAPagar.toFixed(2)}</td>
+        </tr>
+    `;
+
+    return `
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <style>
+                * {
+                    margin: 0;
+                    padding: 0;
+                    box-sizing: border-box;
+                }
+                
+                body {
+                    font-family: Arial, sans-serif;
+                    font-size: 9px;
+                    padding: 10px;
+                    color: #34353A;
+                }
+                
+                .header {
+                    text-align: center;
+                    margin-bottom: 15px;
+                    padding-bottom: 10px;
+                    border-bottom: 3px solid #5F8EAD;
+                }
+                
+                .header .logo-container {
+                    margin-bottom: 10px;
+                }
+                
+                .header .logo-container img {
+                    max-width: 200px;
+                    height: auto;
+                }
+                
+                h1 {
+                    font-size: 11px;
+                    margin-bottom: 5px;
+                    font-weight: bold;
+                    color: #34353A;
+                }
+                
+                table {
+                    width: 100%;
+                    border-collapse: collapse;
+                    margin-bottom: 20px;
+                }
+                
+                th, td {
+                    border: 1px solid #5F8EAD;
+                    padding: 4px 2px;
+                    text-align: center;
+                    font-size: 8px;
+                }
+                
+                th {
+                    background-color: #34353A;
+                    color: white;
+                    font-weight: bold;
+                    font-size: 7px;
+                }
+                
+                .header-dia {
+                    background-color: #5F8EAD;
+                    color: white;
+                    font-size: 7px;
+                    font-weight: bold;
+                }
+                
+                .footer {
+                    margin-top: 20px;
+                    font-size: 8px;
+                    text-align: center;
+                    color: #5F8EAD;
+                    border-top: 2px solid #5D9646;
+                    padding-top: 10px;
+                }
+            </style>
+        </head>
+        <body>
+            <div class="header">
+                <div class="logo-container">
+                    ${logoBase64 ? `<img src="${logoBase64}" alt="Rivera Logo" />` : '<p>RIVERA - Distribuidora y Transportes</p>'}
+                </div>
+                <h1>${titulo}</h1>
+            </div>
+            
+            <table>
+                <thead>
+                    <tr>
+                        <th rowspan="2">#</th>
+                        <th rowspan="2">NOMBRE</th>
+                        <th colspan="2" class="header-dia">LUNES ${diasFechas['lunes'] || ''}</th>
+                        <th colspan="2" class="header-dia">MARTES ${diasFechas['martes'] || ''}</th>
+                        <th colspan="2" class="header-dia">MIÉRCOLES ${diasFechas['miercoles'] || ''}</th>
+                        <th colspan="2" class="header-dia">JUEVES ${diasFechas['jueves'] || ''}</th>
+                        <th colspan="2" class="header-dia">VIERNES ${diasFechas['viernes'] || ''}</th>
+                        <th colspan="2" class="header-dia">SÁBADO ${diasFechas['sabado'] || ''}</th>
+                        <th rowspan="2" style="background-color: #5D9646;">BASE</th>
+                        <th rowspan="2" style="background-color: #5D9646;">VIÁTICOS</th>
+                        <th rowspan="2">ANTICIPO</th>
+                        <th rowspan="2">DESCUENTO-<br/>FALTAS</th>
+                        <th rowspan="2" style="background-color: #5D9646;">TOTAL A PAGAR</th>
+                    </tr>
+                    <tr>
+                        <th>BASE</th>
+                        <th>VIÁTICOS</th>
+                        <th>BASE</th>
+                        <th>VIÁTICOS</th>
+                        <th>BASE</th>
+                        <th>VIÁTICOS</th>
+                        <th>BASE</th>
+                        <th>VIÁTICOS</th>
+                        <th>BASE</th>
+                        <th>VIÁTICOS</th>
+                        <th>BASE</th>
+                        <th>VIÁTICOS</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${filasEmpleados}
+                    ${filaTotales}
+                </tbody>
+            </table>
+            
+            <div class="footer">
+                <p>Documento generado el ${new Date().toLocaleDateString('es-ES')} a las ${new Date().toLocaleTimeString('es-ES')}</p>
+                <p><strong>Rivera Distribuidora y Transportes</strong> - Sistema de Gestión © ${new Date().getFullYear()}</p>
+            </div>
+        </body>
+        </html>
+    `;
+}
+
+function generarHTMLMensual(planillas, mes, ano, logoBase64) {
+    const meses = ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO',
+                   'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
+    
+    const titulo = `PLANILLA DE EXTRA ${meses[mes - 1]} ${ano}`;
+
+    const empleadosMap = new Map();
+
+    planillas.forEach(planilla => {
+        planilla.empleados.forEach(emp => {
+            const key = emp.empleadoId.toString();
+            
+            if (!empleadosMap.has(key)) {
+                empleadosMap.set(key, {
+                    nombreCompleto: emp.nombreCompleto,
+                    semanas: []
+                });
+            }
+
+            empleadosMap.get(key).semanas.push({
+                rango: formatearRangoFechas(planilla.fechaInicio, planilla.fechaFin),
+                total: emp.totalAPagar
+            });
+        });
+    });
+
+    let filasEmpleados = '';
+    let numeroEmpleado = 1;
+    const maxSemanas = planillas.length;
+
+    empleadosMap.forEach((data, empleadoId) => {
+        let totalEmpleado = 0;
+        let columnasSemanales = '';
+
+        for (let i = 0; i < maxSemanas; i++) {
+            if (i < data.semanas.length) {
+                const monto = data.semanas[i].total;
+                totalEmpleado += monto;
+                columnasSemanales += `<td>$ ${monto.toFixed(2)}</td>`;
+            } else {
+                columnasSemanales += `<td>$ -</td>`;
+            }
+        }
+
+        filasEmpleados += `
+            <tr>
+                <td>${numeroEmpleado}</td>
+                <td style="text-align: left;">${data.nombreCompleto}</td>
+                ${columnasSemanales}
+                <td style="font-weight: bold; background-color: #e8f4e8;">$ ${totalEmpleado.toFixed(2)}</td>
+            </tr>
+        `;
+
+        numeroEmpleado++;
+    });
+
+    let totalesPorSemana = '';
+    let totalGeneral = 0;
+    
+    for (let i = 0; i < maxSemanas; i++) {
+        let totalSemana = 0;
+        
+        empleadosMap.forEach((data) => {
+            if (i < data.semanas.length) {
+                totalSemana += data.semanas[i].total;
+            }
+        });
+
+        totalGeneral += totalSemana;
+        totalesPorSemana += `<td style="font-weight: bold;">$ ${totalSemana.toFixed(2)}</td>`;
+    }
+
+    let headersSemanales = '';
+    planillas.forEach((planilla, index) => {
+        headersSemanales += `<th style="background-color: #5F8EAD; color: white;">${formatearRangoFechas(planilla.fechaInicio, planilla.fechaFin)}</th>`;
+    });
+
+    const filaTotales = `
+        <tr style="font-weight: bold; background-color: #5D9646; color: white;">
+            <td colspan="2">TOTAL</td>
+            ${totalesPorSemana}
+            <td>$ ${totalGeneral.toFixed(2)}</td>
+        </tr>
+    `;
+
+    return `
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <style>
+                * {
+                    margin: 0;
+                    padding: 0;
+                    box-sizing: border-box;
+                }
+                
+                body {
+                    font-family: Arial, sans-serif;
+                    font-size: 11px;
+                    padding: 20px;
+                    color: #34353A;
+                }
+                
+                .header {
+                    text-align: center;
+                    margin-bottom: 20px;
+                    padding-bottom: 15px;
+                    border-bottom: 3px solid #5F8EAD;
+                }
+                
+                .header .logo-container {
+                    margin-bottom: 10px;
+                }
+                
+                .header .logo-container img {
+                    max-width: 250px;
+                    height: auto;
+                }
+                
+                h1 {
+                    text-align: center;
+                    font-size: 14px;
+                    margin-bottom: 5px;
+                    font-weight: bold;
+                    color: #34353A;
+                }
+                
+                table {
+                    width: 100%;
+                    border-collapse: collapse;
+                    margin-bottom: 20px;
+                }
+                
+                th, td {
+                    border: 1px solid #5F8EAD;
+                    padding: 6px 4px;
+                    text-align: center;
+                }
+                
+                th {
+                    background-color: #34353A;
+                    color: white;
+                    font-weight: bold;
+                    font-size: 10px;
+                }
+                
+                .footer {
+                    margin-top: 40px;
+                    font-size: 8px;
+                    text-align: center;
+                    color: #5F8EAD;
+                    border-top: 2px solid #5D9646;
+                    padding-top: 10px;
+                }
+            </style>
+        </head>
+        <body>
+            <div class="header">
+                <div class="logo-container">
+                    ${logoBase64 ? `<img src="${logoBase64}" alt="Rivera Logo" />` : '<p>RIVERA - Distribuidora y Transportes</p>'}
+                </div>
+                <h1>${titulo}</h1>
+            </div>
+            
+            <table>
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>NOMBRE</th>
+                        ${headersSemanales}
+                        <th style="background-color: #5D9646;">TOTAL</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${filasEmpleados}
+                    ${filaTotales}
+                </tbody>
+            </table>
+            
+            <div class="footer">
+                <p>Documento generado el ${new Date().toLocaleDateString('es-ES')} a las ${new Date().toLocaleTimeString('es-ES')}</p>
+                <p><strong>Rivera Distribuidora y Transportes</strong> - Sistema de Gestión © ${new Date().getFullYear()}</p>
+            </div>
+        </body>
+        </html>
+    `;
+}
+
+function generarHTMLMultiMes(planillasPorMes, ano, logoBase64) {
+    const meses = ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO',
+                   'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
+    
+    const mesesIncluidos = planillasPorMes.map(p => meses[p.mes - 1]).join(', ');
+    const titulo = `PLANILLA CONSOLIDADA ${mesesIncluidos} ${ano}`;
+
+    const empleadosMap = new Map();
+
+    planillasPorMes.forEach(({ mes, planillas }) => {
+        planillas.forEach(planilla => {
+            planilla.empleados.forEach(emp => {
+                const key = emp.empleadoId.toString();
+                
+                if (!empleadosMap.has(key)) {
+                    empleadosMap.set(key, {
+                        nombreCompleto: emp.nombreCompleto,
+                        meses: new Map()
+                    });
+                }
+
+                const empleadoData = empleadosMap.get(key);
+                if (!empleadoData.meses.has(mes)) {
+                    empleadoData.meses.set(mes, 0);
+                }
+
+                empleadoData.meses.set(mes, empleadoData.meses.get(mes) + emp.totalAPagar);
+            });
+        });
+    });
+
+    let filasEmpleados = '';
+    let numeroEmpleado = 1;
+    let totalesPorMes = new Map();
+
+    planillasPorMes.forEach(({ mes }) => {
+        totalesPorMes.set(mes, 0);
+    });
+
+    empleadosMap.forEach((data, empleadoId) => {
+        let totalEmpleado = 0;
+        let columnasMeses = '';
+
+        planillasPorMes.forEach(({ mes }) => {
+            const monto = data.meses.get(mes) || 0;
+            totalEmpleado += monto;
+            totalesPorMes.set(mes, totalesPorMes.get(mes) + monto);
+
+            columnasMeses += `<td>$ ${monto > 0 ? monto.toFixed(2) : '-'}</td>`;
+        });
+
+        filasEmpleados += `
+            <tr>
+                <td>${numeroEmpleado}</td>
+                <td style="text-align: left;">${data.nombreCompleto}</td>
+                ${columnasMeses}
+                <td style="font-weight: bold; background-color: #e8f4e8;">$ ${totalEmpleado.toFixed(2)}</td>
+            </tr>
+        `;
+
+        numeroEmpleado++;
+    });
+
+    let headersMeses = '';
+    planillasPorMes.forEach(({ mes }) => {
+        headersMeses += `<th style="background-color: #5F8EAD; color: white;">${meses[mes - 1]}</th>`;
+    });
+
+    let columnaTotales = '';
+    let granTotal = 0;
+
+    planillasPorMes.forEach(({ mes }) => {
+        const total = totalesPorMes.get(mes);
+        granTotal += total;
+        columnaTotales += `<td style="font-weight: bold;">$ ${total.toFixed(2)}</td>`;
+    });
+
+    const filaTotales = `
+        <tr style="font-weight: bold; background-color: #5D9646; color: white;">
+            <td colspan="2">TOTAL</td>
+            ${columnaTotales}
+            <td>$ ${granTotal.toFixed(2)}</td>
+        </tr>
+    `;
+
+    return `
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <style>
+                * {
+                    margin: 0;
+                    padding: 0;
+                    box-sizing: border-box;
+                }
+                
+                body {
+                    font-family: Arial, sans-serif;
+                    font-size: 11px;
+                    padding: 20px;
+                    color: #34353A;
+                }
+                
+                .header {
+                    text-align: center;
+                    margin-bottom: 20px;
+                    padding-bottom: 15px;
+                    border-bottom: 3px solid #5F8EAD;
+                }
+                
+                .header .logo-container {
+                    margin-bottom: 10px;
+                }
+                
+                .header .logo-container img {
+                    max-width: 250px;
+                    height: auto;
+                }
+                
+                h1 {
+                    text-align: center;
+                    font-size: 14px;
+                    margin-bottom: 5px;
+                    font-weight: bold;
+                    color: #34353A;
+                }
+                
+                table {
+                    width: 100%;
+                    border-collapse: collapse;
+                    margin-bottom: 20px;
+                }
+                
+                th, td {
+                    border: 1px solid #5F8EAD;
+                    padding: 6px 4px;
+                    text-align: center;
+                }
+                
+                th {
+                    background-color: #34353A;
+                    color: white;
+                    font-weight: bold;
+                }
+                
+                .footer {
+                    margin-top: 40px;
+                    font-size: 8px;
+                    text-align: center;
+                    color: #5F8EAD;
+                    border-top: 2px solid #5D9646;
+                    padding-top: 10px;
+                }
+            </style>
+        </head>
+        <body>
+            <div class="header">
+                <div class="logo-container">
+                    ${logoBase64 ? `<img src="${logoBase64}" alt="Rivera Logo" />` : '<p>RIVERA - Distribuidora y Transportes</p>'}
+                </div>
+                <h1>${titulo}</h1>
+            </div>
+            
+            <table>
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>NOMBRE</th>
+                        ${headersMeses}
+                        <th style="background-color: #5D9646;">TOTAL</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${filasEmpleados}
+                    ${filaTotales}
+                </tbody>
+            </table>
+            
+            <div class="footer">
+                <p>Documento generado el ${new Date().toLocaleDateString('es-ES')} a las ${new Date().toLocaleTimeString('es-ES')}</p>
+                <p><strong>Rivera Distribuidora y Transportes</strong> - Sistema de Gestión © ${new Date().getFullYear()}</p>
+            </div>
+        </body>
+        </html>
+    `;
+}
+
+function generarHTMLAnual(planillasPorMes, ano, logoBase64) {
+    const meses = ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO',
+                   'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
+    const titulo = `PLANILLA ANUAL ${ano}`;
+
+    const empleadosMap = new Map();
+
+    planillasPorMes.forEach(({ mes, planillas }) => {
+        planillas.forEach(planilla => {
+            planilla.empleados.forEach(emp => {
+                const key = emp.empleadoId.toString();
+                
+                if (!empleadosMap.has(key)) {
+                    empleadosMap.set(key, {
+                        nombreCompleto: emp.nombreCompleto,
+                        meses: new Map()
+                    });
+                }
+
+                const empleadoData = empleadosMap.get(key);
+                if (!empleadoData.meses.has(mes)) {
+                    empleadoData.meses.set(mes, 0);
+                }
+
+                empleadoData.meses.set(mes, empleadoData.meses.get(mes) + emp.totalAPagar);
+            });
+        });
+    });
+
+    let filasEmpleados = '';
+    let numeroEmpleado = 1;
+    let totalesPorMes = new Map();
+
+    for (let i = 1; i <= 12; i++) {
+        totalesPorMes.set(i, 0);
+    }
+
+    empleadosMap.forEach((data, empleadoId) => {
+        let totalEmpleado = 0;
+        let columnasMeses = '';
+
+        for (let mes = 1; mes <= 12; mes++) {
+            const monto = data.meses.get(mes) || 0;
+            totalEmpleado += monto;
+            totalesPorMes.set(mes, totalesPorMes.get(mes) + monto);
+
+            columnasMeses += `<td>$ ${monto > 0 ? monto.toFixed(2) : '-'}</td>`;
+        }
+
+        filasEmpleados += `
+            <tr>
+                <td>${numeroEmpleado}</td>
+                <td style="text-align: left;">${data.nombreCompleto}</td>
+                ${columnasMeses}
+                <td style="font-weight: bold; background-color: #e8f4e8;">$ ${totalEmpleado.toFixed(2)}</td>
+            </tr>
+        `;
+
+        numeroEmpleado++;
+    });
+
+    let headersMeses = '';
+    meses.forEach(mes => {
+        headersMeses += `<th style="background-color: #5F8EAD; color: white;">${mes.substring(0, 3)}</th>`;
+    });
+
+    let columnaTotales = '';
+    let granTotal = 0;
+
+    for (let mes = 1; mes <= 12; mes++) {
+        const total = totalesPorMes.get(mes);
+        granTotal += total;
+        columnaTotales += `<td style="font-weight: bold;">$ ${total.toFixed(2)}</td>`;
+    }
+
+    const filaTotales = `
+        <tr style="font-weight: bold; background-color: #5D9646; color: white;">
+            <td colspan="2">TOTAL</td>
+            ${columnaTotales}
+            <td>$ ${granTotal.toFixed(2)}</td>
+        </tr>
+    `;
+
+    return `
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <style>
+                * {
+                    margin: 0;
+                    padding: 0;
+                    box-sizing: border-box;
+                }
+                
+                body {
+                    font-family: Arial, sans-serif;
+                    font-size: 9px;
+                    padding: 15px;
+                    color: #34353A;
+                }
+                
+                .header {
+                    text-align: center;
+                    margin-bottom: 15px;
+                    padding-bottom: 10px;
+                    border-bottom: 3px solid #5F8EAD;
+                }
+                
+                .header .logo-container {
+                    margin-bottom: 10px;
+                }
+                
+                .header .logo-container img {
+                    max-width: 220px;
+                    height: auto;
+                }
+                
+                h1 {
+                    text-align: center;
+                    font-size: 12px;
+                    margin-bottom: 5px;
+                    font-weight: bold;
+                    color: #34353A;
+                }
+                
+                table {
+                    width: 100%;
+                    border-collapse: collapse;
+                    margin-bottom: 20px;
+                }
+                
+                th, td {
+                    border: 1px solid #5F8EAD;
+                    padding: 4px 2px;
+                    text-align: center;
+                    font-size: 8px;
+                }
+                
+                th {
+                    background-color: #34353A;
+                    color: white;
+                    font-weight: bold;
+                }
+                
+                .footer {
+                    margin-top: 40px;
+                    font-size: 8px;
+                    text-align: center;
+                    color: #5F8EAD;
+                    border-top: 2px solid #5D9646;
+                    padding-top: 10px;
+                }
+            </style>
+        </head>
+        <body>
+            <div class="header">
+                <div class="logo-container">
+                    ${logoBase64 ? `<img src="${logoBase64}" alt="Rivera Logo" />` : '<p>RIVERA - Distribuidora y Transportes</p>'}
+                </div>
+                <h1>${titulo}</h1>
+            </div>
+            
+            <table>
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>NOMBRE</th>
+                        ${headersMeses}
+                        <th style="background-color: #5D9646;">TOTAL</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${filasEmpleados}
+                    ${filaTotales}
+                </tbody>
+            </table>
+            
+            <div class="footer">
+                <p>Documento generado el ${new Date().toLocaleDateString('es-ES')} a las ${new Date().toLocaleTimeString('es-ES')}</p>
+                <p><strong>Rivera Distribuidora y Transportes</strong> - Sistema de Gestión © ${new Date().getFullYear()}</p>
+            </div>
+        </body>
+        </html>
+    `;
+}
 
 export default ReportesPlanillaSemanalController;

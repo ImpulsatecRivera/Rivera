@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { TrendingDown, Download, Search, FileText, Loader2, Plus, Settings } from 'lucide-react';
+import { TrendingDown, Download, Search, FileText, Loader2, Plus, Settings, Upload } from 'lucide-react';
 import { config } from '../../config';
 import Swal from 'sweetalert2';
 import './CajaChica.css';
@@ -20,15 +20,12 @@ export default function CajaChicaModern() {
   const [montoIngreso, setMontoIngreso] = useState('');
   const [descripcionIngreso, setDescripcionIngreso] = useState('');
   const [showReportesModal, setShowReportesModal] = useState(false);
-  const [showComprobanteModal, setShowComprobanteModal] = useState(false);
-  const [transaccionSeleccionada, setTransaccionSeleccionada] = useState(null);
 
   const [formData, setFormData] = useState({
     amount: '',
     operationType: 'egreso',
     reason: ''
   });
-  const [voucher, setVoucher] = useState(null);
 
   const [stats, setStats] = useState({
     totalIngresos: 0,
@@ -204,10 +201,120 @@ export default function CajaChicaModern() {
     }
   };
 
-  // 🆕 FUNCIÓN PARA GENERAR VALE - VERSIÓN FINAL CORREGIDA
+  const subirComprobante = async (transaccion) => {
+    const { value: file } = await Swal.fire({
+      title: 'Subir Comprobante',
+      html: `
+        <div class="px-4 py-2">
+          <p class="text-sm text-gray-600 mb-4">Selecciona una imagen o PDF del comprobante</p>
+          <label for="swal-input-file" class="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-indigo-500 hover:bg-gray-50 transition-all">
+            <div class="flex flex-col items-center justify-center pt-5 pb-6">
+              <svg class="w-10 h-10 mb-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+              </svg>
+              <p class="mb-2 text-sm text-gray-500">
+                <span class="font-semibold">Click para seleccionar</span> o arrastra
+              </p>
+              <p class="text-xs text-gray-400">Imágenes (JPG, PNG) o PDF (MAX. 10MB)</p>
+            </div>
+            <input type="file" id="swal-input-file" accept="image/*,.pdf" class="hidden" onchange="document.getElementById('file-name').textContent = this.files[0]?.name || 'Sin archivos seleccionados'; document.getElementById('file-name').className = this.files[0] ? 'text-base font-semibold text-center text-indigo-600 mt-3 break-all px-2' : 'text-sm text-center text-gray-500 mt-2';">
+          </label>
+          <p id="file-name" class="text-sm text-center text-gray-500 mt-2">Sin archivos seleccionados</p>
+        </div>
+      `,
+      showCancelButton: true,
+      confirmButtonText: 'Subir',
+      cancelButtonText: 'Cancelar',
+      confirmButtonColor: '#6366f1',
+      cancelButtonColor: '#64748b',
+      width: '90%',
+      maxWidth: '500px',
+      customClass: {
+        container: 'swal-responsive',
+        popup: 'rounded-2xl',
+        title: 'text-xl font-bold text-gray-800',
+        confirmButton: 'px-6 py-2.5 rounded-lg font-medium',
+        cancelButton: 'px-6 py-2.5 rounded-lg font-medium'
+      },
+      preConfirm: () => {
+        const fileInput = document.getElementById('swal-input-file');
+        if (!fileInput.files[0]) {
+          Swal.showValidationMessage('Debes seleccionar un archivo');
+          return false;
+        }
+        return fileInput.files[0];
+      }
+    });
+
+    if (!file) return;
+
+    Swal.fire({
+      title: 'Subiendo comprobante...',
+      text: 'Por favor espera',
+      allowOutsideClick: false,
+      didOpen: () => Swal.showLoading()
+    });
+
+    try {
+      const token = localStorage.getItem('authToken');
+      const formData = new FormData();
+      formData.append('voucher', file);
+
+      const response = await fetch(
+        `${config.api.API_URL}/cajaChica/movements/${transaccion._id}/voucher`,
+        {
+          method: 'PATCH',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          },
+          body: formData
+        }
+      );
+
+      const contentType = response.headers.get('content-type');
+      
+      if (!response.ok) {
+        let errorMessage = 'Error al subir el comprobante';
+        
+        if (contentType && contentType.includes('application/json')) {
+          const errorData = await response.json();
+          errorMessage = errorData.message || errorMessage;
+        } else {
+          const errorText = await response.text();
+          console.error('❌ Error:', errorText.substring(0, 300));
+          errorMessage = 'Error en el servidor. Verifica la consola.';
+        }
+        
+        throw new Error(errorMessage);
+      }
+
+      const data = await response.json();
+
+      Swal.fire({
+        title: '¡Comprobante subido!',
+        text: 'El comprobante se ha subido correctamente',
+        icon: 'success',
+        timer: 2000,
+        showConfirmButton: false
+      });
+
+      await cargarDatos();
+
+    } catch (error) {
+      console.error('💥 Error subiendo comprobante:', error);
+      Swal.fire({
+        title: 'Error',
+        text: error.message || 'No se pudo subir el comprobante',
+        icon: 'error',
+        confirmButtonText: 'OK'
+      });
+    }
+  };
+
+  // ✅ FUNCIÓN SIMPLIFICADA PARA GENERAR VALE - SOLO CONSUME LA API
   const generarVale = async (transaccion) => {
     const { value: formValues } = await Swal.fire({
-      title: '📄 Generar Vale',
+      title: 'Generar Vale',
       input: 'text',
       inputLabel: 'Nombre del beneficiario',
       inputPlaceholder: 'Ingresa el nombre completo',
@@ -251,8 +358,6 @@ export default function CajaChicaModern() {
       );
 
       const contentType = response.headers.get('content-type');
-      console.log('📋 Content-Type:', contentType);
-      console.log('📊 Status:', response.status);
       
       if (!response.ok) {
         let errorMessage = 'Error al generar el vale';
@@ -269,13 +374,9 @@ export default function CajaChicaModern() {
         throw new Error(errorMessage);
       }
 
-      // ✅ TU BACKEND DEVUELVE: { message, vale, voucher }
       const data = await response.json();
-      console.log('✅ Respuesta del backend:', data);
       
-      // Verificar que tenga el voucher (URL del PDF)
       if (data.voucher) {
-        // Abrir el PDF del vale
         window.open(data.voucher, '_blank', 'noopener,noreferrer');
 
         Swal.fire({
@@ -289,7 +390,6 @@ export default function CajaChicaModern() {
           showConfirmButton: false
         });
 
-        // Recargar datos para actualizar la UI
         await cargarDatos();
       } else {
         throw new Error('La respuesta no contiene la URL del vale');
@@ -563,10 +663,6 @@ export default function CajaChicaModern() {
       formDataToSend.append('amount', formData.amount);
       formDataToSend.append('reason', formData.reason);
 
-      if (voucher) {
-        formDataToSend.append('voucher', voucher);
-      }
-
       const token = localStorage.getItem('authToken');
       const response = await fetch(`${config.api.API_URL}/cajaChica/egreso`, {
         method: 'POST',
@@ -603,9 +699,6 @@ export default function CajaChicaModern() {
 
   const limpiarFormulario = () => {
     setFormData({ amount: '', operationType: 'egreso', reason: '' });
-    setVoucher(null);
-    const fileInput = document.getElementById('voucher');
-    if (fileInput) fileInput.value = '';
   };
 
   const formatearFecha = (fecha) => {
@@ -634,7 +727,7 @@ export default function CajaChicaModern() {
         </div>
       </div>
     );
-  }
+  };
 
   const abrirArchivo = (url) => {
     if (!url || typeof url !== 'string') {
@@ -740,7 +833,7 @@ export default function CajaChicaModern() {
         <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-200">
           <h3 className="text-lg font-semibold text-slate-800 mb-4">Registrar Transacción</h3>
           <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <input
                 type="number"
                 step="0.01"
@@ -756,22 +849,6 @@ export default function CajaChicaModern() {
                 onChange={(e) => setFormData({ ...formData, reason: e.target.value })}
                 className="px-4 py-3 border-2 border-slate-200 rounded-xl focus:border-indigo-500 focus:outline-none transition-colors"
               />
-              <div className="relative">
-                <input
-                  type="file"
-                  id="voucher"
-                  accept="image/*,.pdf"
-                  onChange={(e) => setVoucher(e.target.files[0])}
-                  className="hidden"
-                />
-                <label
-                  htmlFor="voucher"
-                  className="flex items-center justify-center gap-2 bg-slate-100 text-slate-700 px-6 py-3 rounded-xl font-medium hover:bg-slate-200 transition-all duration-200 cursor-pointer border-2 border-slate-200"
-                >
-                  <FileText size={18} />
-                  {voucher ? voucher.name.substring(0, 15) + '...' : 'Comprobante'}
-                </label>
-              </div>
             </div>
             <button
               onClick={registrarEgreso}
@@ -854,29 +931,43 @@ export default function CajaChicaModern() {
                           <button
                             onClick={() => abrirArchivo(tx.voucher)}
                             title="Ver comprobante"
-                            className="p-2 rounded-lg bg-slate-100 hover:bg-indigo-100 text-indigo-600 transition-all hover:scale-110"
+                            className="p-2 rounded-lg bg-indigo-100 hover:bg-indigo-200 text-indigo-600 transition-all hover:scale-110"
                           >
                             <Search size={18} />
                           </button>
                         ) : (
-                          <span className="text-xs text-slate-400 italic">Sin comprobante</span>
+                          <button
+                            onClick={() => subirComprobante(tx)}
+                            title="Subir comprobante"
+                            className="p-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 transition-all hover:scale-110"
+                          >
+                            <Upload size={18} />
+                          </button>
                         )}
                         
                         {tx.type === 'expense' && (
-                          <button
-                            onClick={() => generarVale(tx)}
-                            title={tx.vale ? "Vale generado - Regenerar" : "Generar vale"}
-                            className={`p-2 rounded-lg transition-all hover:scale-110 relative ${
-                              tx.vale
-                                ? 'bg-green-100 hover:bg-green-200 text-green-700'
-                                : 'bg-amber-100 hover:bg-amber-200 text-amber-700'
-                            }`}
-                          >
-                            <FileText size={18} />
-                            {tx.vale && (
-                              <span className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-white"></span>
+                          <>
+                            {tx.ticket && (
+                              <button
+                                onClick={() => abrirArchivo(tx.ticket)}
+                                title={`Ver vale ${tx.vale || 'generado'}`}
+                                className="p-2 rounded-lg transition-all hover:scale-110 bg-green-100 hover:bg-green-200 text-green-700 relative"
+                              >
+                                <FileText size={18} />
+                                <span className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-white"></span>
+                              </button>
                             )}
-                          </button>
+                            
+                            {!tx.ticket && (
+                              <button
+                                onClick={() => generarVale(tx)}
+                                title="Generar vale"
+                                className="p-2 rounded-lg transition-all hover:scale-110 bg-amber-100 hover:bg-amber-200 text-amber-700"
+                              >
+                                <FileText size={18} />
+                              </button>
+                            )}
+                          </>
                         )}
                         
                         <button
