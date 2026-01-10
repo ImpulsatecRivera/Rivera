@@ -36,6 +36,29 @@ const getCamionPlaca = (c) =>
 const getClienteNombre = (c) =>
   c?.nombreComercial || c?.nombreEmpresa || c?.nombre || c?.name || "";
 
+const getMotoristaTruckId = (m) => {
+  if (!m) return "";
+  if (m?.truckId) return String(m.truckId);
+  if (m?.camionId) return String(m.camionId);
+  if (typeof m?.truck === "string") return String(m.truck);
+  if (m?.truck?._id) return String(m.truck._id);
+  if (m?.camion?._id) return String(m.camion._id);
+
+  // Heuristic: look for keys that may contain truck info (prefer nested objects)
+  for (const k of Object.keys(m)) {
+    if (/(camion|truck|vehiculo|vehicle)/i.test(k)) {
+      const v = m[k];
+      if (!v) continue;
+      if (typeof v === "string" && v !== m._id && v !== m.id) return String(v);
+      if (v?._id && String(v._id) !== String(m._id)) return String(v._id);
+      if (v?.id && String(v.id) !== String(m._id)) return String(v.id);
+    }
+  }
+
+  // Do NOT return the motorista's own _id as a truck id
+  return "";
+};
+
 export default function AgregarViajeOperativo() {
   const navigate = useNavigate();
 
@@ -208,7 +231,7 @@ export default function AgregarViajeOperativo() {
       .map((m) => {
         const nombre = getMotoristaNombre(m);
         return {
-          id: m._id,
+          id: String(m._id),
           nombre,
           label: nombre,
         };
@@ -231,12 +254,7 @@ export default function AgregarViajeOperativo() {
       setLoadingCamiones(false);
     }
   };
-const getMotoristaTruckId = (m) =>
-  m?.truckId ||
-  m?.camionId ||
-  m?.truck ||
-  m?.camion?._id ||
-  "";
+
 
   const camionesOptions = useMemo(() => {
     return (camiones || [])
@@ -244,7 +262,7 @@ const getMotoristaTruckId = (m) =>
       .map((c) => {
         const placa = getCamionPlaca(c);
         return {
-          id: c._id,
+          id: String(c._id),
           placa,
           label: placa || `(Sin placa) ${String(c._id).slice(-6)}`,
         };
@@ -265,36 +283,6 @@ const getMotoristaTruckId = (m) =>
     }));
   };
 
-  useEffect(() => {
-    if (formData.rutaOrigen && formData.rutaDestino) {
-      setFormData((p) => ({
-        ...p,
-        rutaCompleta: `${p.rutaOrigen}/${p.rutaDestino}`,
-      }));
-    }
-  }, [formData.rutaOrigen, formData.rutaDestino]);
-
-  const validar = () => {
-    if (!formData.clienteId) return "Selecciona un cliente corporativo";
-    if (!formData.truckId) return "Selecciona un camión";
-    if (!formData.conductorId) return "Selecciona un conductor";
-    if (!formData.departureTime) return "La fecha/hora de salida es requerida";
-    if (!formData.arrivalTime) return "La fecha/hora de llegada es requerida";
-
-    const salida = new Date(formData.departureTime);
-    const llegada = new Date(formData.arrivalTime);
-
-    if (salida >= llegada) return "La salida debe ser anterior a la llegada";
-
-    if (!formData.rutaOrigen.trim()) return "El origen es requerido";
-    if (!formData.rutaDestino.trim()) return "El destino es requerido";
-
-    const montoNum = Number(formData.montoAcordado);
-    if (!formData.montoAcordado || Number.isNaN(montoNum) || montoNum <= 0)
-      return "El monto debe ser mayor a 0";
-
-    return null;
-  };
 
   const handleSubmit = async () => {
     const err = validar();
@@ -728,9 +716,95 @@ arrivalTime: new Date(formData.arrivalTime).toISOString(),
                   </label>
                   <select
                     value={formData.conductorId}
-                    onChange={(e) =>
-                      setFormData((p) => ({ ...p, conductorId: e.target.value }))
-                    }
+                    onChange={(e) => {
+                      const conductorId = String(e.target.value);
+                      const motorista = (motoristas || []).find((m) => String(m._id) === conductorId);
+                      const camionObj = motorista?.camion || motorista?.truck || null;
+
+                      // Try several heuristics to detect a truck id associated to the motorista
+                      let associatedTruckId = String(getMotoristaTruckId(motorista) || "") || (camionObj && (camionObj._id || camionObj.id) ? String(camionObj._id || camionObj.id) : "");
+
+                      // If not found, scan the loaded `camiones` for any truck that references this motorista
+                      if (!associatedTruckId && Array.isArray(camiones) && camiones.length > 0 && motorista) {
+                        const mid = String(motorista._id || motorista.id || "");
+                        for (const c of camiones) {
+                          try {
+                            // direct id match
+                            if (String(c._id || c.id || "") === mid) {
+                              associatedTruckId = String(c._id || c.id);
+                              break;
+                            }
+
+                            // check common driver fields on the camion object
+                            const candidateFields = ["driverId", "motoristaId", "conductorId", "assignedDriver", "motorista", "driver", "conductor"];
+                            for (const f of candidateFields) {
+                              const v = c[f];
+                              if (!v) continue;
+                              if (typeof v === "string" && String(v) === mid) {
+                                associatedTruckId = String(c._id || c.id);
+                                break;
+                              }
+                              if (typeof v === "object") {
+                                if (String(v._id || v.id || "") === mid) {
+                                  associatedTruckId = String(c._id || c.id);
+                                  break;
+                                }
+                              }
+                            }
+
+                            if (associatedTruckId) break;
+
+                            // deep scan: look for any field value equal to motorista id
+                            for (const key of Object.keys(c || {})) {
+                              const val = c[key];
+                              if (!val) continue;
+                              if (typeof val === "string" && (val === mid || val === motorista.id)) {
+                                associatedTruckId = String(c._id || c.id);
+                                break;
+                              }
+                              if (typeof val === "object") {
+                                if (String(val._id || val.id || "") === mid) {
+                                  associatedTruckId = String(c._id || c.id);
+                                  break;
+                                }
+                              }
+                            }
+
+                            if (associatedTruckId) break;
+                          } catch (xx) {
+                            // ignore malformed camion entries
+                          }
+                        }
+                      }
+
+                      // Fallback: if there is exactly one camion in the system, assume it's the one
+                      if (!associatedTruckId && Array.isArray(camiones) && camiones.length === 1) {
+                        associatedTruckId = String(camiones[0]._id || camiones[0].id || "");
+                      }
+
+                      console.log("[DEBUG] motorista select -> conductorId:", conductorId);
+                      console.log("[DEBUG] motorista object:", motorista);
+                      console.log("[DEBUG] camionObj:", camionObj);
+                      console.log("[DEBUG] associatedTruckId:", associatedTruckId);
+                      console.log("[DEBUG] camiones currently:", (camiones || []).map((c) => ({ _id: c._id, placa: c.placa || c.plate || c.placaCamion })));
+
+                      if (camionObj && (camionObj._id || camionObj.id || camionObj.placa || camionObj.plate)) {
+                        const newCamion = {
+                          ...camionObj,
+                          _id: camionObj._id || camionObj.id || associatedTruckId,
+                          placa: getCamionPlaca(camionObj) || camionObj.placa || camionObj.plate,
+                        };
+                        setCamiones((prev) => (prev.some((c) => String(c._id) === String(newCamion._id)) ? prev : [...prev, newCamion]));
+                      } else if (associatedTruckId) {
+                        setCamiones((prev) => (prev.some((c) => String(c._id) === associatedTruckId) ? prev : [...prev, { _id: associatedTruckId }]));
+                      }
+
+                      setFormData((p) => ({
+                        ...p,
+                        conductorId,
+                        truckId: associatedTruckId || p.truckId,
+                      }));
+                    }}
                     className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#5F8EAD] focus:border-[#5F8EAD] bg-white"
                     disabled={loadingMotoristas}
                   >
@@ -787,7 +861,7 @@ arrivalTime: new Date(formData.arrivalTime).toISOString(),
 
           {/* Observaciones - COLORES CAMBIADOS */}
           <div className="mb-8">
-            <h3 className="text-xl font-bold text-[#34353A] mb-4">Observaciones</h3>
+            <h3 className="text-xl font-bold text-[#34353A] mb-4">Direccion detallada del viaje</h3>
 
             <textarea
               name="observaciones"
