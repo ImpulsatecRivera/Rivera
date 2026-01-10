@@ -47,6 +47,7 @@ ViajesOperativosController.crearViajeOperativo = async (req, res) => {
       
       // Monto
       montoAcordado,
+      metodoPago,
       
       // Otros
       condiciones,
@@ -157,6 +158,7 @@ ViajesOperativosController.crearViajeOperativo = async (req, res) => {
       
       // ✅ MONTO
       montoAcordado: montoAcordado || 0,
+      metodoPago: metodoPago || 'credito', // 
       
       // Estado
       estado: {

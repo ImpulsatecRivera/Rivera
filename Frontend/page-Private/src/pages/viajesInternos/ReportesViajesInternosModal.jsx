@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import {
   X,
   FileText,
@@ -47,12 +47,26 @@ const TIPOS_REPORTE = [
     icono: FileText,
     requiere: ["mes", "año"],
   },
-  {
+  /* {
     id: "credito-fiscal",
     titulo: "Crédito Fiscal",
     descripcion: "Separación IVA",
     icono: TrendingUp,
     requiere: ["mes", "año"],
+  }, */
+  {
+    id: "comparativo-efectivo",
+    titulo: "Comparativo Efectivo (Anual)",
+    descripcion: "Resumen anual por clientes — solo efectivo",
+    icono: BarChart3,
+    requiere: ["año"],
+  },
+  {
+    id: "anual",
+    titulo: "Consolidado Anual",
+    descripcion: "Resumen anual por cliente",
+    icono: Calendar,
+    requiere: ["año"],
   },
 ];
 
@@ -62,12 +76,6 @@ const CONSOLIDADOS = [
     titulo: "Semanal",
     icono: Clock,
     requiere: ["mes", "año", "semana"],
-  },
-  {
-    id: "mensual",
-    titulo: "Mensual",
-    icono: CalendarDays,
-    requiere: ["mes", "año"],
   },
   {
     id: "trimestral",
@@ -87,12 +95,6 @@ const CONSOLIDADOS = [
     icono: TrendingUp,
     requiere: ["año"],
   },
-  {
-    id: "anual",
-    titulo: "Anual",
-    icono: Calendar,
-    requiere: ["año"],
-  },
 ];
 
 export default function ReportesViajesOperativosModal({ isOpen, onClose }) {
@@ -102,7 +104,7 @@ export default function ReportesViajesOperativosModal({ isOpen, onClose }) {
   const [semanaSeleccionada, setSemanaSeleccionada] = useState(1);
   const [trimestreSeleccionado, setTrimestreSeleccionado] = useState(1);
   const [semestreSeleccionado, setSemestreSeleccionado] = useState(1);
-  const [consolidadoSeleccionado, setConsolidadoSeleccionado] = useState("mensual");
+  const [consolidadoSeleccionado, setConsolidadoSeleccionado] = useState("semanal");
   const [generando, setGenerando] = useState(false);
 
   const descargarPDF = async (tipo) => {
@@ -118,10 +120,10 @@ export default function ReportesViajesOperativosModal({ isOpen, onClose }) {
           nombreArchivo = `resumen-${MESES.find((m) => m.value === mesSeleccionado)?.label}-${añoSeleccionado}.pdf`;
           break;
 
-        case "credito-fiscal":
+        /* case "credito-fiscal":
           url = `${REPORTES_BASE}/credito-fiscal/${mesSeleccionado}/${añoSeleccionado}`;
           nombreArchivo = `credito-fiscal-${mesSeleccionado}-${añoSeleccionado}.pdf`;
-          break;
+          break; */
 
         case "semanal":
           url = `${REPORTES_BASE}/consolidado-periodo?periodo=semanal&ano=${añoSeleccionado}&mes=${mesSeleccionado}&semana=${semanaSeleccionada}`;
@@ -129,8 +131,9 @@ export default function ReportesViajesOperativosModal({ isOpen, onClose }) {
           break;
 
         case "mensual":
-          url = `${REPORTES_BASE}/consolidado-periodo?periodo=mensual&ano=${añoSeleccionado}&mes=${mesSeleccionado}`;
-          nombreArchivo = `consolidado-mensual-${añoSeleccionado}-mes${mesSeleccionado}.pdf`;
+          // Use the same basic resumen-mes route for monthly consolidado (only for monthly)
+          url = `${REPORTES_BASE}/resumen-mes/${mesSeleccionado}/${añoSeleccionado}`;
+          nombreArchivo = `resumen-mes-${añoSeleccionado}-mes${mesSeleccionado}.pdf`;
           break;
 
         case "trimestral":
@@ -149,8 +152,13 @@ export default function ReportesViajesOperativosModal({ isOpen, onClose }) {
           break;
 
         case "anual":
-          url = `${REPORTES_BASE}/consolidado-periodo?periodo=anual&ano=${añoSeleccionado}`;
+          url = `${REPORTES_BASE}/consolidado/${añoSeleccionado}`;
           nombreArchivo = `consolidado-anual-${añoSeleccionado}.pdf`;
+          break;
+
+        case "comparativo-efectivo":
+          url = `${REPORTES_BASE}/comparativo-efectivo/${añoSeleccionado}`;
+          nombreArchivo = `comparativo-efectivo-${añoSeleccionado}.pdf`;
           break;
 
         default:
@@ -309,7 +317,7 @@ export default function ReportesViajesOperativosModal({ isOpen, onClose }) {
 
                       <div className="flex items-center gap-3">
                         <div className="text-xs bg-gray-100 px-3 py-1 rounded-full text-gray-600 font-medium">
-                          {MESES.find((m) => m.value === mesSeleccionado)?.label} {añoSeleccionado}
+                          {tipo.requiere.includes("mes") ? `${MESES.find((m) => m.value === mesSeleccionado)?.label} ${añoSeleccionado}` : `${añoSeleccionado}`}
                         </div>
                         {generando ? (
                           <Loader2 size={20} className="animate-spin text-[#5F8EAD]" />

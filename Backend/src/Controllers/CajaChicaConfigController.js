@@ -215,7 +215,7 @@ CajaChicaConfigController.verificarReintegro = async (req, res) => {
 // =====================================================
 CajaChicaConfigController.registrarReintegro = async (req, res) => {
     try {
-        const { password } = req.body;
+        const { password, monto } = req.body;
 
         // VALIDAR PASSWORD
         if (!password) {
@@ -249,13 +249,22 @@ CajaChicaConfigController.registrarReintegro = async (req, res) => {
         
         const balanceActual = ultimoMovimiento ? ultimoMovimiento.currentBalance : 0;
         
-        // Calcular reintegro (lo que se gastó)
-        const montoReintegro = configuracion.maximoPermitido - balanceActual;
+        // Determinar monto a reintegrar
+        let montoReintegro;
+        if (monto !== undefined && monto !== null) {
+            const parsed = Number(monto);
+            if (isNaN(parsed) || parsed <= 0) {
+                return res.status(400).json({ success: false, message: 'El monto proporcionado debe ser un número mayor a 0' });
+            }
+            montoReintegro = parsed;
+        } else {
+            montoReintegro = configuracion.maximoPermitido - balanceActual;
+        }
         
         if (montoReintegro <= 0) {
             return res.status(400).json({
                 success: false,
-                message: 'No se necesita reintegro. El balance actual ya está en el máximo o por encima.'
+                message: 'El monto calculado para reintegro es menor o igual que 0. Por favor indique un monto a reintegrar.'
             });
         }
         

@@ -487,7 +487,7 @@ ReportesPlanillasController.generarPDFMensual = async (req, res) => {
 
             ${planillas.map(p => `
             <div class="section">
-                <h2>📋 ${p.quincena === 1 ? 'PRIMERA' : 'SEGUNDA'} QUINCENA</h2>
+                <h2>${p.quincena === 1 ? 'PRIMERA' : 'SEGUNDA'} QUINCENA</h2>
                 <table>
                     <thead>
                         <tr>
@@ -514,7 +514,7 @@ ReportesPlanillasController.generarPDFMensual = async (req, res) => {
             `).join('')}
 
             <div class="summary">
-                <h3>💰 RESUMEN GENERAL DEL MES</h3>
+                <h3>RESUMEN GENERAL DEL MES</h3>
                 <div class="summary-row">
                     <span>Total Planillas Quincenales:</span>
                     <span><strong>${planillas.length}</strong></span>
@@ -669,6 +669,9 @@ ReportesPlanillasController.generarPDFMultiMes = async (req, res) => {
         else if (mesesValidos.length === 6) tipoReporte = 'SEMESTRAL';
         else if (mesesValidos.length === 9) tipoReporte = '9 MESES';
 
+        // Convertir imagen a base64
+        const logoBase64 = convertirImagenABase64(RUTA_LOGO);
+
         // Generar filas de tabla para cada mes
         const filasHTML = mesesValidos.map(mesNum => {
             const datos = porMes[mesNum];
@@ -707,57 +710,47 @@ ReportesPlanillasController.generarPDFMultiMes = async (req, res) => {
                     text-align: center;
                     margin-bottom: 25px;
                     padding-bottom: 15px;
-                    border-bottom: 3px solid #34353A;
+                    border-bottom: 4px solid #5F8EAD;
                 }
                 .header .logo-container {
                     margin-bottom: 15px;
-                    display: flex;
-                    justify-content: center;
                 }
-                .header .logo-svg {
-                    width: 200px;
+                .header .logo-container img {
+                    max-width: 200px;
                     height: auto;
                 }
                 .header h1 {
-                    font-size: 22px;
+                    font-size: 20px;
                     font-weight: bold;
-                    margin-bottom: 8px;
-                    color: #5F8EAD;
-                    letter-spacing: 2px;
+                    margin-bottom: 10px;
+                    color: #34353A;
                 }
                 .header .subtitle {
                     font-size: 14px;
-                    color: #34353A;
-                    font-weight: bold;
+                    color: #5F8EAD;
                 }
                 table {
                     width: 100%;
                     border-collapse: collapse;
                     margin-bottom: 20px;
                     font-size: 12px;
-                    border: 2px solid #34353A;
-                }
-                thead {
-                    background: linear-gradient(135deg, #5F8EAD 0%, #34353A 100%);
-                    color: white;
                 }
                 th {
+                    background: #34353A;
+                    color: white;
                     padding: 12px 10px;
                     text-align: center;
                     font-weight: bold;
                     border: 1px solid #34353A;
-                    text-transform: uppercase;
-                    font-size: 11px;
                 }
                 td {
                     padding: 10px;
-                    border: 1px solid #34353A;
+                    border: 1px solid #5F8EAD;
                 }
                 .mes-nombre {
                     font-weight: bold;
                     text-align: left;
                     padding-left: 15px;
-                    background: #f8f9fa;
                 }
                 .text-center {
                     text-align: center;
@@ -768,24 +761,21 @@ ReportesPlanillasController.generarPDFMultiMes = async (req, res) => {
                 }
                 .total-destacado {
                     font-weight: bold;
-                    color: #5F8EAD;
                 }
                 .totals-row {
-                    background: linear-gradient(135deg, #5F8EAD 0%, #34353A 100%);
-                    color: white;
+                    background: #e8f4e8;
                     font-weight: bold;
                     font-size: 13px;
                 }
                 .totals-row td {
-                    padding: 12px 10px;
-                    border-color: #34353A;
+                    border: 2px solid #5D9646;
                 }
                 .footer {
                     margin-top: 30px;
                     text-align: center;
                     font-size: 10px;
-                    color: #666;
-                    border-top: 1px solid #ccc;
+                    color: #5F8EAD;
+                    border-top: 2px solid #5D9646;
                     padding-top: 10px;
                 }
             </style>
@@ -793,17 +783,7 @@ ReportesPlanillasController.generarPDFMultiMes = async (req, res) => {
         <body>
             <div class="header">
                 <div class="logo-container">
-                    <svg class="logo-svg" viewBox="0 0 350 120" xmlns="http://www.w3.org/2000/svg">
-                        <g>
-                            <path d="M 25 55 L 45 35 L 65 55 L 65 85 L 25 85 Z" fill="#5F8EAD" stroke="#34353A" stroke-width="2"/>
-                            <rect x="32" y="62" width="10" height="14" fill="#FFFFFF"/>
-                            <rect x="48" y="62" width="10" height="14" fill="#FFFFFF"/>
-                            <path d="M 30 50 L 45 35 L 60 50" fill="none" stroke="#34353A" stroke-width="2"/>
-                            <path d="M 15 90 Q 45 70 75 90" fill="none" stroke="#5D9646" stroke-width="4" stroke-linecap="round"/>
-                            <text x="90" y="65" font-family="Arial, sans-serif" font-size="42" font-weight="bold" fill="#5F8EAD" letter-spacing="2">RIVERA</text>
-                            <text x="90" y="90" font-family="Arial, sans-serif" font-size="16" fill="#34353A">Distribuidora y Transportes</text>
-                        </g>
-                    </svg>
+                    ${logoBase64 ? `<img src="${logoBase64}" alt="Rivera Logo" />` : '<p>RIVERA - Distribuidora y Transportes</p>'}
                 </div>
                 <h1>REPORTE ${tipoReporte} DE PLANILLAS QUINCENALES</h1>
                 <div class="subtitle">${mesesValidos.map(m => obtenerNombreMes(m)).join(', ')} ${anoNum}</div>
@@ -823,19 +803,19 @@ ReportesPlanillasController.generarPDFMultiMes = async (req, res) => {
                 <tbody>
                     ${filasHTML}
                     <tr class="totals-row">
-                        <td class="text-right" style="padding-right: 15px;">TOTAL GENERAL:</td>
-                        <td class="text-center">${totalQuincenasConDatos}</td>
-                        <td class="text-center">-</td>
-                        <td class="text-right" style="padding-right: 15px;">$ ${totalGeneralBruto.toFixed(2)}</td>
-                        <td class="text-right" style="padding-right: 15px;">$ ${totalGeneralDescuentos.toFixed(2)}</td>
-                        <td class="text-right" style="padding-right: 15px;">$ ${totalGeneralLiquido.toFixed(2)}</td>
+                        <td class="text-right" style="padding-right: 15px;"><strong>TOTAL GENERAL:</strong></td>
+                        <td class="text-center"><strong>${totalQuincenasConDatos}</strong></td>
+                        <td class="text-center"><strong>-</strong></td>
+                        <td class="text-right" style="padding-right: 15px;"><strong>$ ${totalGeneralBruto.toFixed(2)}</strong></td>
+                        <td class="text-right" style="padding-right: 15px;"><strong>$ ${totalGeneralDescuentos.toFixed(2)}</strong></td>
+                        <td class="text-right" style="padding-right: 15px;"><strong>$ ${totalGeneralLiquido.toFixed(2)}</strong></td>
                     </tr>
                 </tbody>
             </table>
 
             <div class="footer">
                 <p>Documento generado el ${new Date().toLocaleDateString('es-ES')} a las ${new Date().toLocaleTimeString('es-ES')}</p>
-                <p>Rivera Distribuidora y Transportes © ${new Date().getFullYear()}</p>
+                <p><strong>Rivera Distribuidora y Transportes</strong> - Sistema de Gestión © ${new Date().getFullYear()}</p>
             </div>
         </body>
         </html>
@@ -964,6 +944,9 @@ ReportesPlanillasController.generarPDFAnual = async (req, res) => {
 
         const promedioMensual = totalAnualLiquido / mesesConDatos;
 
+        // Convertir imagen a base64
+        const logoBase64 = convertirImagenABase64(RUTA_LOGO);
+
         // Generar filas de la tabla para cada mes
         const filasHTML = Object.keys(porMes).map(mesNum => {
             const datos = porMes[mesNum];
@@ -993,94 +976,87 @@ ReportesPlanillasController.generarPDFAnual = async (req, res) => {
                     box-sizing: border-box;
                 }
                 body {
-                    font-family: Arial, 'Courier New', monospace;
-                    padding: 30px;
+                    font-family: Arial, sans-serif;
+                    padding: 20px;
                     color: #34353A;
                     background: #fff;
                 }
                 .header {
                     text-align: center;
-                    margin-bottom: 30px;
-                    border-bottom: 3px solid #34353A;
-                    padding-bottom: 15px;
+                    margin-bottom: 15px;
+                    border-bottom: 3px solid #5F8EAD;
+                    padding-bottom: 10px;
                 }
                 .header .logo-container {
-                    margin-bottom: 15px;
-                    display: flex;
-                    justify-content: center;
+                    margin-bottom: 8px;
                 }
-                .header .logo-svg {
-                    width: 200px;
+                .header .logo-container img {
+                    max-width: 160px;
                     height: auto;
                 }
                 .header h1 {
-                    font-size: 28px;
-                    font-weight: bold;
-                    letter-spacing: 6px;
-                    margin-bottom: 5px;
-                    color: #5F8EAD;
-                }
-                .header .subtitle {
                     font-size: 16px;
                     font-weight: bold;
-                    margin-top: 8px;
+                    margin-bottom: 3px;
                     color: #34353A;
                 }
+                .header .subtitle {
+                    font-size: 12px;
+                    font-weight: bold;
+                    margin-top: 5px;
+                    color: #5F8EAD;
+                }
                 .stats-summary {
-                    margin-bottom: 20px;
-                    padding: 15px;
-                    background: #f5f5f5;
-                    border: 2px solid #34353A;
+                    margin-bottom: 12px;
+                    padding: 10px;
+                    background: #f5f9fc;
+                    border: 2px solid #5F8EAD;
                     display: grid;
                     grid-template-columns: repeat(4, 1fr);
-                    gap: 15px;
+                    gap: 10px;
                 }
                 .stat-card {
                     text-align: center;
-                    padding: 10px;
+                    padding: 6px;
                     background: #fff;
-                    border: 1px solid #34353A;
+                    border: 1px solid #5F8EAD;
                 }
                 .stat-card .label {
-                    font-size: 9px;
+                    font-size: 7px;
                     font-weight: bold;
                     color: #34353A;
-                    margin-bottom: 5px;
+                    margin-bottom: 3px;
                     text-transform: uppercase;
                 }
                 .stat-card .value {
-                    font-size: 15px;
+                    font-size: 11px;
                     font-weight: bold;
                     color: #5F8EAD;
                 }
                 table {
                     width: 100%;
                     border-collapse: collapse;
-                    margin-bottom: 20px;
-                    border: 3px solid #34353A;
-                }
-                thead {
-                    background: linear-gradient(135deg, #5F8EAD 0%, #34353A 100%);
-                    color: #fff;
+                    margin-bottom: 12px;
                 }
                 th {
-                    padding: 12px 8px;
+                    background: #34353A;
+                    color: #fff;
+                    padding: 6px 4px;
                     text-align: center;
-                    font-size: 10px;
+                    font-size: 8px;
                     font-weight: bold;
-                    border: 2px solid #34353A;
-                    text-transform: uppercase;
+                    border: 1px solid #34353A;
                 }
                 td {
-                    padding: 10px 8px;
-                    border: 1px solid #34353A;
-                    font-size: 10px;
+                    padding: 5px 4px;
+                    border: 1px solid #5F8EAD;
+                    font-size: 8px;
                     background: #fff;
                 }
                 .col-mes {
                     width: 100px;
                     text-align: left;
-                    padding-left: 15px;
+                    padding-left: 10px;
                     font-weight: bold;
                 }
                 .col-numero {
@@ -1089,84 +1065,71 @@ ReportesPlanillasController.generarPDFAnual = async (req, res) => {
                 }
                 .col-monto {
                     text-align: right;
-                    padding-right: 15px;
+                    padding-right: 10px;
                 }
                 .total-row {
-                    background: linear-gradient(135deg, #5F8EAD 0%, #34353A 100%) !important;
-                    color: #fff !important;
+                    background: #e8f4e8;
                     font-weight: bold;
-                    font-size: 12px;
+                    font-size: 9px;
                 }
                 .total-row td {
-                    background: transparent;
-                    color: #fff;
-                    border-color: #34353A;
+                    border: 2px solid #5D9646;
                 }
                 .resumen-final {
-                    background: #f5f5f5;
-                    padding: 20px;
-                    border: 3px solid #34353A;
-                    margin-top: 20px;
+                    background: #f5f9fc;
+                    padding: 12px;
+                    border: 3px solid #5D9646;
+                    margin-top: 12px;
                 }
                 .resumen-final h3 {
-                    font-size: 16px;
+                    font-size: 12px;
                     font-weight: bold;
-                    margin-bottom: 15px;
-                    color: #5F8EAD;
+                    margin-bottom: 10px;
+                    color: #5D9646;
                     text-transform: uppercase;
                     text-align: center;
-                    border-bottom: 2px solid #5F8EAD;
-                    padding-bottom: 10px;
+                    border-bottom: 2px solid #5D9646;
+                    padding-bottom: 6px;
                 }
                 .resumen-grid {
                     display: grid;
                     grid-template-columns: repeat(2, 1fr);
-                    gap: 15px;
+                    gap: 10px;
                 }
                 .resumen-item {
                     background: #fff;
-                    padding: 12px;
-                    border: 2px solid #34353A;
+                    padding: 8px;
+                    border: 2px solid #5F8EAD;
                 }
                 .resumen-item .label {
-                    font-size: 10px;
+                    font-size: 8px;
                     font-weight: bold;
                     color: #34353A;
-                    margin-bottom: 5px;
+                    margin-bottom: 3px;
                     text-transform: uppercase;
                 }
                 .resumen-item .value {
-                    font-size: 14px;
+                    font-size: 10px;
                     font-weight: bold;
                     color: #5F8EAD;
                 }
                 .footer-info {
-                    margin-top: 30px;
+                    margin-top: 15px;
                     text-align: center;
-                    font-size: 10px;
-                    color: #34353A;
-                    border-top: 1px solid #ccc;
-                    padding-top: 15px;
+                    font-size: 8px;
+                    color: #5F8EAD;
+                    border-top: 2px solid #5D9646;
+                    padding-top: 10px;
                 }
             </style>
         </head>
         <body>
             <div class="header">
                 <div class="logo-container">
-                    <svg class="logo-svg" viewBox="0 0 350 120" xmlns="http://www.w3.org/2000/svg">
-                        <g>
-                            <path d="M 25 55 L 45 35 L 65 55 L 65 85 L 25 85 Z" fill="#5F8EAD" stroke="#34353A" stroke-width="2"/>
-                            <rect x="32" y="62" width="10" height="14" fill="#FFFFFF"/>
-                            <rect x="48" y="62" width="10" height="14" fill="#FFFFFF"/>
-                            <path d="M 30 50 L 45 35 L 60 50" fill="none" stroke="#34353A" stroke-width="2"/>
-                            <path d="M 15 90 Q 45 70 75 90" fill="none" stroke="#5D9646" stroke-width="4" stroke-linecap="round"/>
-                            <text x="90" y="65" font-family="Arial, sans-serif" font-size="42" font-weight="bold" fill="#5F8EAD" letter-spacing="2">RIVERA</text>
-                            <text x="90" y="90" font-family="Arial, sans-serif" font-size="16" fill="#34353A">Distribuidora y Transportes</text>
-                        </g>
-                    </svg>
+                    ${logoBase64 ? `<img src="${logoBase64}" alt="Rivera Logo" />` : '<p>RIVERA - Distribuidora y Transportes</p>'}
                 </div>
-                <h1>PLANILLA QUINCENAL</h1>
-                <div class="subtitle">REPORTE ANUAL ${anoNum}</div>
+                <h1>REPORTE ANUAL DE PLANILLAS QUINCENALES</h1>
+                <div class="subtitle">${anoNum}</div>
             </div>
 
             <div class="stats-summary">
@@ -1202,12 +1165,12 @@ ReportesPlanillasController.generarPDFAnual = async (req, res) => {
                 <tbody>
                     ${filasHTML}
                     <tr class="total-row">
-                        <td class="col-mes">TOTAL ANUAL</td>
-                        <td class="col-numero">${totalQuincenasAnual}</td>
-                        <td class="col-numero">-</td>
-                        <td class="col-monto">$ ${totalAnualBruto.toFixed(2)}</td>
-                        <td class="col-monto">$ ${totalAnualDescuentos.toFixed(2)}</td>
-                        <td class="col-monto">$ ${totalAnualLiquido.toFixed(2)}</td>
+                        <td class="col-mes"><strong>TOTAL ANUAL</strong></td>
+                        <td class="col-numero"><strong>${totalQuincenasAnual}</strong></td>
+                        <td class="col-numero"><strong>-</strong></td>
+                        <td class="col-monto"><strong>$ ${totalAnualBruto.toFixed(2)}</strong></td>
+                        <td class="col-monto"><strong>$ ${totalAnualDescuentos.toFixed(2)}</strong></td>
+                        <td class="col-monto"><strong>$ ${totalAnualLiquido.toFixed(2)}</strong></td>
                     </tr>
                 </tbody>
             </table>
@@ -1236,7 +1199,7 @@ ReportesPlanillasController.generarPDFAnual = async (req, res) => {
 
             <div class="footer-info">
                 <p>Documento generado el ${new Date().toLocaleDateString('es-ES')} a las ${new Date().toLocaleTimeString('es-ES')}</p>
-                <p>Rivera Distribuidora y Transportes © ${new Date().getFullYear()}</p>
+                <p><strong>Rivera Distribuidora y Transportes</strong> - Sistema de Gestión © ${new Date().getFullYear()}</p>
             </div>
         </body>
         </html>

@@ -78,6 +78,7 @@ export default function AgregarViajeOperativo() {
     cargaPeso: "",
     cargaTipo: "general",
     montoAcordado: "",
+    metodoPago: "credito",
     condiciones: {
       clima: "normal",
       trafico: "normal",
@@ -230,6 +231,12 @@ export default function AgregarViajeOperativo() {
       setLoadingCamiones(false);
     }
   };
+const getMotoristaTruckId = (m) =>
+  m?.truckId ||
+  m?.camionId ||
+  m?.truck ||
+  m?.camion?._id ||
+  "";
 
   const camionesOptions = useMemo(() => {
     return (camiones || [])
@@ -309,8 +316,9 @@ export default function AgregarViajeOperativo() {
         tripDescription:
           formData.tripDescription ||
           `${formData.rutaCompleta} - ${formData.clienteNombre}`,
-        departureTime: formData.departureTime,
-        arrivalTime: formData.arrivalTime,
+       departureTime: new Date(formData.departureTime).toISOString(),
+arrivalTime: new Date(formData.arrivalTime).toISOString(),
+
         rutaOrigen: formData.rutaOrigen,
         rutaDestino: formData.rutaDestino,
         rutaCompleta: formData.rutaCompleta,
@@ -320,10 +328,12 @@ export default function AgregarViajeOperativo() {
         cargaPeso: Number(formData.cargaPeso) || 0,
         cargaTipo: formData.cargaTipo,
         montoAcordado: Number(formData.montoAcordado),
+         metodoPago: formData.metodoPago, //
         condiciones: formData.condiciones,
         observaciones: formData.observaciones || "",
       };
 
+      
       const res = await fetch(VIAJES_OPERATIVOS_ENDPOINT, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -673,6 +683,35 @@ export default function AgregarViajeOperativo() {
               />
             </div>
           </div>
+
+          {/* Método de Pago */}
+<div className="mb-8">
+  <h3 className="text-xl font-bold text-[#34353A] mb-4 flex items-center gap-2">
+    <DollarSign className="text-[#5F8EAD]" size={22} />
+    Método de Pago
+  </h3>
+
+  <div className="max-w-md">
+    <label className="block text-sm font-semibold text-[#34353A] mb-2">
+      Seleccionar tipo de pago *
+    </label>
+
+    <select
+      name="metodoPago"
+      value={formData.metodoPago}
+      onChange={handleInputChange}
+      className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl
+                 focus:outline-none focus:ring-2 focus:ring-[#5F8EAD]
+                 focus:border-[#5F8EAD] bg-white"
+    >
+      <option value="credito">Crédito</option>
+      <option value="efectivo">Efectivo</option>
+      <option value="transferencia">Transferencia</option>
+      <option value="cheque">Cheque</option>
+    </select>
+  </div>
+</div>
+
 
           {/* Conductor y Vehículo - COLORES CAMBIADOS */}
           <div className="mb-8">

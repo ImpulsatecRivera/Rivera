@@ -5,8 +5,34 @@ import { config } from "../config.js";
 import fs from 'fs/promises';
 import puppeteer from 'puppeteer';
 import streamifier from 'streamifier';
+import fsSync from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
 
-const cajaChicaController = {};
+// Obtener __dirname en ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+// Función para convertir imagen a base64 (sincrónica para uso simple)
+const convertirImagenABase64 = (rutaImagen) => {
+  try {
+    if (!fsSync.existsSync(rutaImagen)) return null;
+    const imagen = fsSync.readFileSync(rutaImagen);
+    const base64 = imagen.toString('base64');
+    const ext = path.extname(rutaImagen).toLowerCase();
+    const mimeType = ext === '.png' ? 'image/png' : 'image/jpeg';
+    return `data:${mimeType};base64,${base64}`;
+  } catch (error) {
+    console.error('Error al convertir imagen:', error);
+    return null;
+  }
+};
+
+// Ruta al logo
+const RUTA_LOGO = path.join(process.cwd(), 'src', 'imagenes', 'imagen_15.png');
+
+const cajaChicaController = {}; 
 
 // Configurar Cloudinary
 cloudinary.config({
@@ -14,6 +40,36 @@ cloudinary.config({
   api_key: config.cloudinary.cloudinary_api_key,
   api_secret: config.cloudinary.cloudinary_api_secret,
 });
+
+const numeroALetras = (num) => {
+  const unidades = ['', 'UNO', 'DOS', 'TRES', 'CUATRO', 'CINCO', 'SEIS', 'SIETE', 'OCHO', 'NUEVE'];
+  const decenas = ['', 'DIEZ', 'VEINTE', 'TREINTA', 'CUARENTA', 'CINCUENTA', 'SESENTA', 'SETENTA', 'OCHENTA', 'NOVENTA'];
+  const especiales = { 11: 'ONCE', 12: 'DOCE', 13: 'TRECE', 14: 'CATORCE', 15: 'QUINCE' };
+  const centenas = ['', 'CIENTO', 'DOSCIENTOS', 'TRESCIENTOS', 'CUATROCIENTOS', 'QUINIENTOS', 'SEISCIENTOS', 'SETECIENTOS', 'OCHOCIENTOS', 'NOVECIENTOS'];
+
+  const convertir = (n) => {
+    if (n === 0) return 'CERO';
+    if (n === 100) return 'CIEN';
+    if (n < 10) return unidades[n];
+    if (n >= 11 && n <= 15) return especiales[n];
+    if (n < 20) return 'DIECI' + unidades[n - 10];
+    if (n < 30) return n === 20 ? 'VEINTE' : 'VEINTI' + unidades[n - 20];
+    if (n < 100) return decenas[Math.floor(n / 10)] + (n % 10 ? ' Y ' + unidades[n % 10] : '');
+    if (n < 1000) return centenas[Math.floor(n / 100)] + (n % 100 ? ' ' + convertir(n % 100) : '');
+    if (n < 10000) {
+      const mil = Math.floor(n / 1000);
+      const resto = n % 1000;
+      const milTexto = mil === 1 ? 'MIL' : unidades[mil] + ' MIL';
+      return milTexto + (resto ? ' ' + convertir(resto) : '');
+    }
+    return 'VALOR MUY ALTO';
+  };
+
+  const entero = Math.floor(num);
+  const centavos = Math.round((num - entero) * 100);
+
+  return `${convertir(entero)} DÓLARES CON ${centavos.toString().padStart(2, '0')}/100`;
+};
 
 // =====================================================
 // OBTENER TODOS LOS MOVIMIENTOS
@@ -502,7 +558,7 @@ cajaChicaController.generarVale = async (req, res) => {
 
   try {
     const { id } = req.params;
-    const { nombreBeneficiario, cantidadLetras } = req.body;
+const { nombreBeneficiario } = req.body;
 
     console.log('📄 Generando vale para movimiento:', id);
     console.log('👤 Beneficiario:', nombreBeneficiario);
@@ -558,7 +614,9 @@ cajaChicaController.generarVale = async (req, res) => {
     });
 
     const page = await browser.newPage();
-    
+    const cantidadEnLetras = numeroALetras(movement.amount);
+    const logoBase64 = convertirImagenABase64(RUTA_LOGO);
+
     // ✅ HTML DEL VALE - FORMATO RIVERA TRANSPORTES
     const htmlContent = `
       <!DOCTYPE html>
@@ -827,16 +885,18 @@ cajaChicaController.generarVale = async (req, res) => {
           <!-- CANTIDAD EN LETRAS -->
           <div class="cantidad-letras-section">
             <div class="cantidad-letras-label">CANTIDAD EN LETRAS:</div>
-            <div class="cantidad-letras-value">${cantidadLetras || 'PENDIENTE'}</div>
+<div class="cantidad-letras-value">
+  ${cantidadEnLetras}
+</div>
           </div>
           
           <!-- FIRMA DEL BENEFICIARIO -->
           <div class="firma-section">
             <div class="logo-container">
-              <div class="logo-text">
+              ${logoBase64 ? `<img src="${logoBase64}" alt="Rivera Logo" style="max-width:160px;height:auto;"/>` : `<div class="logo-text">
                 <div class="logo-name">RIVERA</div>
                 <div class="logo-subtitle">Combustibles y Transportes</div>
-              </div>
+              </div>`}
             </div>
             <div class="firma-beneficiario">
               <div class="firma-label">FIRMA DEL BENEFICIARIO:</div>

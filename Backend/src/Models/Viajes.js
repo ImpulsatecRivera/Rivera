@@ -175,7 +175,7 @@ const viajeSchema = new Schema({
     metodoPago: {
       type: String,
       enum: ['efectivo', 'transferencia', 'cheque', 'credito'],
-      default: 'credito'
+      default: 'efectivo'
     },
     
     fechaVencimiento: {
@@ -813,7 +813,7 @@ viajeSchema.index({ tipoViaje: 1 });
 viajeSchema.index({ clienteOperativo: 1 });
 viajeSchema.index({ 'periodoContable.año': 1, 'periodoContable.mes': 1 });
 viajeSchema.index({ 'facturacion.estadoPago': 1 });
-viajeSchema.index({ numeroViajeGlobal: 1 });
+// `numeroViajeGlobal` is indexed via the field definition (sparse: true, unique: true) — removed duplicate schema.index to avoid warning
 viajeSchema.index({ 'configuracion.autoInicio': 1, 'estado.actual': 1 });
 viajeSchema.index({ 'configuracion.estrategiaProgreso': 1 });
 viajeSchema.index({ 'flags.skipAutoProcessing': 1, 'flags.expira': 1 });
