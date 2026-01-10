@@ -56,6 +56,11 @@ const ReportesCajaChicaModal = ({ isOpen, onClose, apiUrl }) => {
     return localStorage.getItem('authToken');
   };
 
+  const parseDate = (dateString) => {
+    const [year, month, day] = dateString.split('-');
+    return new Date(year, month - 1, day);
+  };
+
   const generarReporte = async () => {
     const token = getAuthToken();
     if (!token) {
@@ -79,7 +84,7 @@ const ReportesCajaChicaModal = ({ isOpen, onClose, apiUrl }) => {
       showCustomAlert('warning', 'Rango incompleto', 'Por favor selecciona fecha de inicio y fin.');
       return;
     }
-    if (tipoReporte === 'rango' && new Date(fechaInicio) > new Date(fechaFin)) {
+    if (tipoReporte === 'rango' && parseDate(fechaInicio) > parseDate(fechaFin)) {
       showCustomAlert('warning', 'Rango inválido', 'La fecha de inicio debe ser anterior a la fecha de fin.');
       return;
     }
@@ -202,7 +207,7 @@ const ReportesCajaChicaModal = ({ isOpen, onClose, apiUrl }) => {
             window.open(reporteUrl, '_blank');
             setTimeout(() => {
               setGenerando(false);
-              const fecha = new Date(fechaSeleccionada);
+              const fecha = parseDate(fechaSeleccionada);
               showCustomAlert('success', '¡Reporte generado!', `Reporte diario del ${fecha.toLocaleDateString('es-ES')} está listo.`);
             }, 1000);
           } else if (response.status === 404) {
@@ -568,8 +573,8 @@ const ReportesCajaChicaModal = ({ isOpen, onClose, apiUrl }) => {
                   <div className="bg-blue-50 rounded-lg p-4 border border-blue-100">
                     <p className="text-sm text-blue-700">
                       <span className="font-semibold">Período seleccionado:</span> {' '}
-                      {Math.ceil((new Date(fechaFin) - new Date(fechaInicio)) / (1000 * 60 * 60 * 24)) + 1} días
-                      {' '}({new Date(fechaInicio).toLocaleDateString('es-ES')} - {new Date(fechaFin).toLocaleDateString('es-ES')})
+                      {Math.ceil((parseDate(fechaFin) - parseDate(fechaInicio)) / (1000 * 60 * 60 * 24)) + 1} días
+                      {' '}({parseDate(fechaInicio).toLocaleDateString('es-ES')} - {parseDate(fechaFin).toLocaleDateString('es-ES')})
                     </p>
                   </div>
                 )}
