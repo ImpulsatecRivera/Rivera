@@ -46,17 +46,25 @@ const getEstadoBadgeClass = (color) => {
   return "bg-yellow-50 text-yellow-800 border-2 border-yellow-200";
 };
 
+const parseDateLocal = (dateString) => {
+  // Parsea fecha en formato YYYY-MM-DD o ISO como fecha local, no UTC
+  if (!dateString) return null;
+  const [year, month, day] = dateString.split("T")[0].split("-");
+  if (!year || !month || !day) return null;
+  return new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+};
+
 const formatearHora = (fecha) => {
   if (!fecha) return "N/A";
-  const d = new Date(fecha);
-  if (Number.isNaN(d.getTime())) return "N/A";
+  const d = typeof fecha === "string" ? parseDateLocal(fecha) : new Date(fecha);
+  if (!d || Number.isNaN(d.getTime())) return "N/A";
   return d.toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" });
 };
 
 const formatearFechaCompleta = (fecha) => {
   if (!fecha) return "N/A";
-  const d = new Date(fecha);
-  if (Number.isNaN(d.getTime())) return "N/A";
+  const d = typeof fecha === "string" ? parseDateLocal(fecha) : new Date(fecha);
+  if (!d || Number.isNaN(d.getTime())) return "N/A";
   return d.toLocaleDateString("es-ES", {
     weekday: "long",
     year: "numeric",

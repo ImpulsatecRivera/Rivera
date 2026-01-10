@@ -16,42 +16,33 @@ cloudinary.config({
 });
 
 const numeroALetras = (num) => {
-  const unidades = [
-    '', 'UNO', 'DOS', 'TRES', 'CUATRO', 'CINCO',
-    'SEIS', 'SIETE', 'OCHO', 'NUEVE'
-  ];
-
-  const decenas = [
-    '', 'DIEZ', 'VEINTE', 'TREINTA', 'CUARENTA',
-    'CINCUENTA', 'SESENTA', 'SETENTA', 'OCHENTA', 'NOVENTA'
-  ];
-
-  const especiales = {
-    11: 'ONCE',
-    12: 'DOCE',
-    13: 'TRECE',
-    14: 'CATORCE',
-    15: 'QUINCE'
-  };
+  const unidades = ['', 'UNO', 'DOS', 'TRES', 'CUATRO', 'CINCO', 'SEIS', 'SIETE', 'OCHO', 'NUEVE'];
+  const decenas = ['', 'DIEZ', 'VEINTE', 'TREINTA', 'CUARENTA', 'CINCUENTA', 'SESENTA', 'SETENTA', 'OCHENTA', 'NOVENTA'];
+  const especiales = { 11: 'ONCE', 12: 'DOCE', 13: 'TRECE', 14: 'CATORCE', 15: 'QUINCE' };
+  const centenas = ['', 'CIENTO', 'DOSCIENTOS', 'TRESCIENTOS', 'CUATROCIENTOS', 'QUINIENTOS', 'SEISCIENTOS', 'SETECIENTOS', 'OCHOCIENTOS', 'NOVECIENTOS'];
 
   const convertir = (n) => {
+    if (n === 0) return 'CERO';
+    if (n === 100) return 'CIEN';
     if (n < 10) return unidades[n];
     if (n >= 11 && n <= 15) return especiales[n];
     if (n < 20) return 'DIECI' + unidades[n - 10];
     if (n < 30) return n === 20 ? 'VEINTE' : 'VEINTI' + unidades[n - 20];
-    if (n < 100)
-      return decenas[Math.floor(n / 10)] +
-        (n % 10 ? ' Y ' + unidades[n % 10] : '');
-    return '';
+    if (n < 100) return decenas[Math.floor(n / 10)] + (n % 10 ? ' Y ' + unidades[n % 10] : '');
+    if (n < 1000) return centenas[Math.floor(n / 100)] + (n % 100 ? ' ' + convertir(n % 100) : '');
+    if (n < 10000) {
+      const mil = Math.floor(n / 1000);
+      const resto = n % 1000;
+      const milTexto = mil === 1 ? 'MIL' : unidades[mil] + ' MIL';
+      return milTexto + (resto ? ' ' + convertir(resto) : '');
+    }
+    return 'VALOR MUY ALTO';
   };
 
   const entero = Math.floor(num);
   const centavos = Math.round((num - entero) * 100);
 
-  let letras = convertir(entero);
-  if (!letras) letras = 'CERO';
-
-  return `${letras} DÓLARES CON ${centavos.toString().padStart(2, '0')}/100`;
+  return `${convertir(entero)} DÓLARES CON ${centavos.toString().padStart(2, '0')}/100`;
 };
 
 // =====================================================
