@@ -30,6 +30,36 @@
 
 import CajaChica from '../Models/CajaChica.js';
 import puppeteer from 'puppeteer';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+
+// Obtener __dirname en ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const RUTA_LOGO = path.join(__dirname, '..', 'imagenes', 'imagen_15.png');
+
+// Función para convertir imagen a base64 (reutilizable en reportes)
+const convertirImagenABase64 = (rutaImagen) => {
+    try {
+        if (!fs.existsSync(rutaImagen)) {
+            console.error('La imagen no existe en la ruta:', rutaImagen);
+            return null;
+        }
+        const imagen = fs.readFileSync(rutaImagen);
+        const base64 = imagen.toString('base64');
+        const ext = path.extname(rutaImagen).toLowerCase();
+        const mimeType = ext === '.png' ? 'image/png' : 'image/jpeg';
+        return `data:${mimeType};base64,${base64}`;
+    } catch (error) {
+        console.error('Error al convertir imagen a base64:', error);
+        return null;
+    }
+};
+
+// Cargar logo una vez
+const logoBase64 = convertirImagenABase64(RUTA_LOGO);
 
 const ReportesCajaChicaController = {};
 
@@ -101,46 +131,50 @@ ReportesCajaChicaController.generarPDFIndividual = async (req, res) => {
                     padding-bottom: 15px;
                 }
                 .header .logo-container {
-                    margin-bottom: 15px;
+                    margin-bottom: 8px;
                     display: flex;
                     justify-content: center;
                 }
-                .header .logo-svg {
-                    width: 200px;
+                .header .logo-container img {
+                    max-width: 120px;
                     height: auto;
+                    background: white;
+                    padding: 2px;
+                    border-radius: 4px;
+                    border: 1px solid #ddd;
                 }
                 .header h1 {
-                    font-size: 32px;
+                    font-size: 16px;
                     font-weight: bold;
-                    letter-spacing: 8px;
-                    margin-bottom: 5px;
-                    color: #5F8EAD;
+                    letter-spacing: 3px;
+                    margin-bottom: 4px;
+                    color: #34353A;
                 }
                 .header .subtitle {
-                    font-size: 14px;
+                    font-size: 10px;
                     font-weight: bold;
-                    margin-top: 8px;
-                    color: #34353A;
+                    margin-top: 4px;
+                    color: #5F8EAD;
                 }
                 .header .balance-info {
                     text-align: right;
-                    font-size: 18px;
+                    font-size: 12px;
                     font-weight: bold;
-                    margin-top: 10px;
+                    margin-top: 6px;
                     color: #5F8EAD;
                 }
                 .stats-summary {
-                    margin-bottom: 15px;
-                    padding: 10px;
-                    background: #f5f5f5;
-                    border: 2px solid #34353A;
+                    margin-bottom: 10px;
+                    padding: 6px;
+                    background: #f5f9fc;
+                    border: 2px solid #5F8EAD;
                 }
                 .stats-row {
                     display: flex;
                     justify-content: space-between;
-                    padding: 5px 0;
-                    border-bottom: 1px solid #ccc;
-                    font-size: 11px;
+                    padding: 3px 0;
+                    border-bottom: 1px solid #e2e8f0;
+                    font-size: 9px;
                     color: #34353A;
                 }
                 .stats-row:last-child {
@@ -157,17 +191,17 @@ ReportesCajaChicaController.generarPDFIndividual = async (req, res) => {
                     color: #fff;
                 }
                 th {
-                    padding: 12px 8px;
+                    padding: 6px 4px;
                     text-align: center;
-                    font-size: 12px;
+                    font-size: 9px;
                     font-weight: bold;
                     border: 2px solid #34353A;
                     text-transform: uppercase;
                 }
                 td {
-                    padding: 10px 8px;
+                    padding: 4px 4px;
                     border: 1px solid #34353A;
-                    font-size: 11px;
+                    font-size: 8px;
                     background: #fff;
                     color: #34353A;
                 }
@@ -212,17 +246,7 @@ ReportesCajaChicaController.generarPDFIndividual = async (req, res) => {
         <body>
             <div class="header">
                 <div class="logo-container">
-                    <svg class="logo-svg" viewBox="0 0 350 120" xmlns="http://www.w3.org/2000/svg">
-                        <g>
-                            <path d="M 25 55 L 45 35 L 65 55 L 65 85 L 25 85 Z" fill="#5F8EAD" stroke="#34353A" stroke-width="2"/>
-                            <rect x="32" y="62" width="10" height="14" fill="#FFFFFF"/>
-                            <rect x="48" y="62" width="10" height="14" fill="#FFFFFF"/>
-                            <path d="M 30 50 L 45 35 L 60 50" fill="none" stroke="#34353A" stroke-width="2"/>
-                            <path d="M 15 90 Q 45 70 75 90" fill="none" stroke="#5D9646" stroke-width="4" stroke-linecap="round"/>
-                            <text x="90" y="65" font-family="Arial, sans-serif" font-size="42" font-weight="bold" fill="#5F8EAD" letter-spacing="2">RIVERA</text>
-                            <text x="90" y="90" font-family="Arial, sans-serif" font-size="16" fill="#34353A">Distribuidora y Transportes</text>
-                        </g>
-                    </svg>
+                    ${logoBase64 ? `<img src="${logoBase64}" alt="Rivera Logo" style="max-width:100px;height:auto;"/>` : '<p style="color:#34353A">RIVERA</p>'}
                 </div>
                 <h1>CAJA CHICA</h1>
                 <div class="subtitle">COMPROBANTE DE ${tipoOperacion}</div>
@@ -400,50 +424,53 @@ ReportesCajaChicaController.generarPDFTodosMovimientos = async (req, res) => {
                 }
                 .header {
                     text-align: center;
-                    margin-bottom: 30px;
-                    border-bottom: 3px solid #34353A;
-                    padding-bottom: 15px;
+                    margin-bottom: 20px;
+                    border-bottom: 3px solid #5F8EAD;
+                    padding-bottom: 12px;
                 }
                 .header .logo-container {
-                    margin-bottom: 15px;
+                    margin-bottom: 8px;
                     display: flex;
                     justify-content: center;
                 }
-                .header .logo-svg {
-                    width: 180px;
+                .header .logo-container img {
+                    max-width: 120px;
                     height: auto;
+                    background: white;
+                    padding: 4px;
+                    border-radius: 4px;
                 }
                 .header h1 {
-                    font-size: 32px;
+                    font-size: 14px;
                     font-weight: bold;
-                    letter-spacing: 8px;
-                    margin-bottom: 5px;
-                    color: #5F8EAD;
+                    letter-spacing: 1px;
+                    margin-bottom: 4px;
+                    color: #34353A;
                 }
                 .header .balance-info {
                     text-align: right;
-                    font-size: 18px;
+                    font-size: 12px;
                     font-weight: bold;
-                    margin-top: 10px;
+                    margin-top: 6px;
                     color: #5F8EAD;
                 }
                 .stats-summary {
-                    margin-bottom: 15px;
-                    padding: 10px;
-                    background: #f5f5f5;
-                    border: 2px solid #34353A;
+                    margin-bottom: 10px;
+                    padding: 6px;
+                    background: #f5f9fc;
+                    border: 2px solid #5F8EAD;
                 }
                 .stats-row {
                     display: flex;
                     justify-content: space-between;
-                    padding: 5px 0;
-                    border-bottom: 1px solid #ccc;
-                    font-size: 11px;
+                    padding: 3px 0;
+                    border-bottom: 1px solid #e2e8f0;
+                    font-size: 9px;
                 }
                 .stats-row:last-child {
                     border-bottom: none;
                     font-weight: bold;
-                    font-size: 12px;
+                    font-size: 10px;
                 }
                 table {
                     width: 100%;
@@ -534,17 +561,7 @@ ReportesCajaChicaController.generarPDFTodosMovimientos = async (req, res) => {
         <body>
             <div class="header">
                 <div class="logo-container">
-                    <svg class="logo-svg" viewBox="0 0 350 120" xmlns="http://www.w3.org/2000/svg">
-                        <g>
-                            <path d="M 25 55 L 45 35 L 65 55 L 65 85 L 25 85 Z" fill="#5F8EAD" stroke="#34353A" stroke-width="2"/>
-                            <rect x="32" y="62" width="10" height="14" fill="#FFFFFF"/>
-                            <rect x="48" y="62" width="10" height="14" fill="#FFFFFF"/>
-                            <path d="M 30 50 L 45 35 L 60 50" fill="none" stroke="#34353A" stroke-width="2"/>
-                            <path d="M 15 90 Q 45 70 75 90" fill="none" stroke="#5D9646" stroke-width="4" stroke-linecap="round"/>
-                            <text x="90" y="65" font-family="Arial, sans-serif" font-size="42" font-weight="bold" fill="#5F8EAD" letter-spacing="2">RIVERA</text>
-                            <text x="90" y="90" font-family="Arial, sans-serif" font-size="16" fill="#34353A">Distribuidora y Transportes</text>
-                        </g>
-                    </svg>
+                    ${logoBase64 ? `<img src="${logoBase64}" alt="Rivera Logo" style="max-width:100px;height:auto;"/>` : '<p style="color:#34353A">RIVERA</p>'}
                 </div>
                 <h1>CAJA CHICA</h1>
                 <div class="balance-info">$ ${balanceFinal.toFixed(2)}</div>
@@ -595,7 +612,7 @@ ReportesCajaChicaController.generarPDFTodosMovimientos = async (req, res) => {
                         `;
                     }).join('')}
                     <tr class="total-row">
-                        <td colspan="4" style="text-align: right; padding-right: 20px;">TOTAL:</td>
+                        <td colspan="4" style="text-align: right; padding-right: 20px;">TOTAL EGRESOS:</td>
                         <td class="col-monto">$ ${totalEgresos.toFixed(2)}</td>
                     </tr>
                 </tbody>
@@ -879,17 +896,7 @@ ReportesCajaChicaController.generarPDFMensualSimple = async (req, res) => {
         <body>
             <div class="header">
                 <div class="logo-container">
-                    <svg class="logo-svg" viewBox="0 0 350 120" xmlns="http://www.w3.org/2000/svg">
-                        <g>
-                            <path d="M 25 55 L 45 35 L 65 55 L 65 85 L 25 85 Z" fill="#5F8EAD" stroke="#34353A" stroke-width="2"/>
-                            <rect x="32" y="62" width="10" height="14" fill="#FFFFFF"/>
-                            <rect x="48" y="62" width="10" height="14" fill="#FFFFFF"/>
-                            <path d="M 30 50 L 45 35 L 60 50" fill="none" stroke="#34353A" stroke-width="2"/>
-                            <path d="M 15 90 Q 45 70 75 90" fill="none" stroke="#5D9646" stroke-width="4" stroke-linecap="round"/>
-                            <text x="90" y="65" font-family="Arial, sans-serif" font-size="42" font-weight="bold" fill="#5F8EAD" letter-spacing="2">RIVERA</text>
-                            <text x="90" y="90" font-family="Arial, sans-serif" font-size="16" fill="#34353A">Distribuidora y Transportes</text>
-                        </g>
-                    </svg>
+                    ${logoBase64 ? `<img src="${logoBase64}" alt="Rivera Logo" style="max-width:100px;height:auto;"/>` : '<p style="color:#34353A">RIVERA</p>'}
                 </div>
                 <h1>CAJA CHICA</h1>
                 <div class="subtitle">${obtenerNombreMes(mesNum).toUpperCase()} ${anoNum}</div>
@@ -1116,52 +1123,52 @@ ReportesCajaChicaController.generarPDFMultiplesMeses = async (req, res) => {
                 }
                 body {
                     font-family: Arial, 'Courier New', monospace;
-                    padding: 30px;
+                    padding: 20px;
                     color: #34353A;
                     background: #fff;
                 }
                 .header {
                     text-align: center;
-                    margin-bottom: 30px;
+                    margin-bottom: 20px;
                     border-bottom: 3px solid #34353A;
-                    padding-bottom: 15px;
+                    padding-bottom: 10px;
                 }
                 .header .logo-container {
-                    margin-bottom: 15px;
+                    margin-bottom: 12px;
                     display: flex;
                     justify-content: center;
                 }
                 .header .logo-svg {
-                    width: 200px;
+                    width: 120px;
                     height: auto;
                 }
                 .header h1 {
-                    font-size: 32px;
+                    font-size: 22px;
                     font-weight: bold;
-                    letter-spacing: 8px;
+                    letter-spacing: 4px;
                     margin-bottom: 5px;
                     color: #5F8EAD;
                 }
                 .header .subtitle {
-                    font-size: 14px;
+                    font-size: 12px;
                     font-weight: bold;
-                    margin-top: 8px;
+                    margin-top: 6px;
                     color: #34353A;
                 }
                 .mes-section {
-                    margin-bottom: 25px;
+                    margin-bottom: 20px;
                     background: #f5f5f5;
-                    padding: 20px;
+                    padding: 12px;
                     border: 2px solid #34353A;
                 }
                 .mes-header {
-                    margin-bottom: 15px;
-                    padding-bottom: 10px;
+                    margin-bottom: 12px;
+                    padding-bottom: 8px;
                     border-bottom: 2px solid #5F8EAD;
                     text-align: center;
                 }
                 .mes-header h2 {
-                    font-size: 18px;
+                    font-size: 16px;
                     font-weight: bold;
                     color: #5F8EAD;
                 }
@@ -1172,9 +1179,9 @@ ReportesCajaChicaController.generarPDFMultiplesMeses = async (req, res) => {
                     border: 2px solid #34353A;
                 }
                 .mes-table td {
-                    padding: 10px 15px;
+                    padding: 6px 8px;
                     border: 1px solid #34353A;
-                    font-size: 12px;
+                    font-size: 10px;
                 }
                 .mes-table .label {
                     font-weight: bold;
@@ -1235,17 +1242,7 @@ ReportesCajaChicaController.generarPDFMultiplesMeses = async (req, res) => {
         <body>
             <div class="header">
                 <div class="logo-container">
-                    <svg class="logo-svg" viewBox="0 0 350 120" xmlns="http://www.w3.org/2000/svg">
-                        <g>
-                            <path d="M 25 55 L 45 35 L 65 55 L 65 85 L 25 85 Z" fill="#5F8EAD" stroke="#34353A" stroke-width="2"/>
-                            <rect x="32" y="62" width="10" height="14" fill="#FFFFFF"/>
-                            <rect x="48" y="62" width="10" height="14" fill="#FFFFFF"/>
-                            <path d="M 30 50 L 45 35 L 60 50" fill="none" stroke="#34353A" stroke-width="2"/>
-                            <path d="M 15 90 Q 45 70 75 90" fill="none" stroke="#5D9646" stroke-width="4" stroke-linecap="round"/>
-                            <text x="90" y="65" font-family="Arial, sans-serif" font-size="42" font-weight="bold" fill="#5F8EAD" letter-spacing="2">RIVERA</text>
-                            <text x="90" y="90" font-family="Arial, sans-serif" font-size="16" fill="#34353A">Distribuidora y Transportes</text>
-                        </g>
-                    </svg>
+                    ${logoBase64 ? `<img src="${logoBase64}" alt="Rivera Logo" style="max-width:100px;height:auto;"/>` : '<p style="color:#34353A">RIVERA</p>'}
                 </div>
                 <h1>CAJA CHICA</h1>
                 <div class="subtitle">REPORTE COMPARATIVO - ${mesesValidos.map(m => obtenerNombreMes(m)).join(', ').toUpperCase()} ${anoNum}</div>
@@ -1325,7 +1322,13 @@ ReportesCajaChicaController.generarPDFDiario = async (req, res) => {
     try {
         const { fecha } = req.params;
 
-        const fechaObj = new Date(fecha);
+        // Función para parsear fechas correctamente sin dependencia de zona horaria
+        const parseDate = (dateString) => {
+            const [year, month, day] = dateString.split('-');
+            return new Date(year, month - 1, day);
+        };
+
+        const fechaObj = parseDate(fecha);
         if (isNaN(fechaObj.getTime())) {
             return res.status(400).json({
                 success: false,
@@ -1333,10 +1336,10 @@ ReportesCajaChicaController.generarPDFDiario = async (req, res) => {
             });
         }
 
-        const fechaInicio = new Date(fecha);
+        const fechaInicio = parseDate(fecha);
         fechaInicio.setHours(0, 0, 0, 0);
         
-        const fechaFin = new Date(fecha);
+        const fechaFin = parseDate(fecha);
         fechaFin.setHours(23, 59, 59, 999);
 
         const movimientos = await CajaChica.find({
@@ -1551,17 +1554,7 @@ ReportesCajaChicaController.generarPDFDiario = async (req, res) => {
         <body>
             <div class="header">
                 <div class="logo-container">
-                    <svg class="logo-svg" viewBox="0 0 350 120" xmlns="http://www.w3.org/2000/svg">
-                        <g>
-                            <path d="M 25 55 L 45 35 L 65 55 L 65 85 L 25 85 Z" fill="#5F8EAD" stroke="#34353A" stroke-width="2"/>
-                            <rect x="32" y="62" width="10" height="14" fill="#FFFFFF"/>
-                            <rect x="48" y="62" width="10" height="14" fill="#FFFFFF"/>
-                            <path d="M 30 50 L 45 35 L 60 50" fill="none" stroke="#34353A" stroke-width="2"/>
-                            <path d="M 15 90 Q 45 70 75 90" fill="none" stroke="#5D9646" stroke-width="4" stroke-linecap="round"/>
-                            <text x="90" y="65" font-family="Arial, sans-serif" font-size="42" font-weight="bold" fill="#5F8EAD" letter-spacing="2">RIVERA</text>
-                            <text x="90" y="90" font-family="Arial, sans-serif" font-size="16" fill="#34353A">Distribuidora y Transportes</text>
-                        </g>
-                    </svg>
+                    ${logoBase64 ? `<img src="${logoBase64}" alt="Rivera Logo" style="max-width:100px;height:auto;"/>` : '<p style="color:#34353A">RIVERA</p>'}
                 </div>
                 <h1>CAJA CHICA</h1>
                 <div class="subtitle">REPORTE DIARIO - ${fechaObj.toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }).toUpperCase()}</div>
@@ -1685,8 +1678,14 @@ ReportesCajaChicaController.generarPDFRangoFechas = async (req, res) => {
             });
         }
 
-        const inicio = new Date(fechaInicio);
-        const fin = new Date(fechaFin);
+        // Función para parsear fechas correctamente sin dependencia de zona horaria
+        const parseDate = (dateString) => {
+            const [year, month, day] = dateString.split('-');
+            return new Date(year, month - 1, day);
+        };
+
+        const inicio = parseDate(fechaInicio);
+        const fin = parseDate(fechaFin);
 
         if (isNaN(inicio.getTime()) || isNaN(fin.getTime())) {
             return res.status(400).json({
@@ -1927,17 +1926,7 @@ ReportesCajaChicaController.generarPDFRangoFechas = async (req, res) => {
         <body>
             <div class="header">
                 <div class="logo-container">
-                    <svg class="logo-svg" viewBox="0 0 350 120" xmlns="http://www.w3.org/2000/svg">
-                        <g>
-                            <path d="M 25 55 L 45 35 L 65 55 L 65 85 L 25 85 Z" fill="#5F8EAD" stroke="#34353A" stroke-width="2"/>
-                            <rect x="32" y="62" width="10" height="14" fill="#FFFFFF"/>
-                            <rect x="48" y="62" width="10" height="14" fill="#FFFFFF"/>
-                            <path d="M 30 50 L 45 35 L 60 50" fill="none" stroke="#34353A" stroke-width="2"/>
-                            <path d="M 15 90 Q 45 70 75 90" fill="none" stroke="#5D9646" stroke-width="4" stroke-linecap="round"/>
-                            <text x="90" y="65" font-family="Arial, sans-serif" font-size="42" font-weight="bold" fill="#5F8EAD" letter-spacing="2">RIVERA</text>
-                            <text x="90" y="90" font-family="Arial, sans-serif" font-size="16" fill="#34353A">Distribuidora y Transportes</text>
-                        </g>
-                    </svg>
+                    ${logoBase64 ? `<img src="${logoBase64}" alt="Rivera Logo" style="max-width:100px;height:auto;"/>` : '<p style="color:#34353A">RIVERA</p>'}
                 </div>
                 <h1>CAJA CHICA</h1>
                 <div class="subtitle">REPORTE ${tipoReporte}</div>

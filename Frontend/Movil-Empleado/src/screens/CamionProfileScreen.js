@@ -17,13 +17,13 @@ import {
 import { useFocusEffect } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
-import Svg, { Circle, Text as SvgText } from 'react-native-svg';
+import LottieView from 'lottie-react-native';
 import * as ImagePicker from 'expo-image-picker';
 import Header from "../components/Header";
 import { useProfile } from "../hooks/useProfile";
 
 // ✅ CONFIGURAR TU API URL
-const API_URL = "http://192.168.1.100:4000/api";
+const API_URL = "https://rivera-test-629395560179.us-west1.run.app/api";
 
 const textSafe = (v, fb = "—") => {
   if (v === null || v === undefined) return fb;
@@ -74,74 +74,7 @@ const SmallInfoCard = ({ icon, label, value }) => (
   </View>
 );
 
-// ✅ GRÁFICA DE PASTEL PARA GASOLINA
-const GasolineChart = ({ percentage }) => {
-  const numericPercentage = parseInt(percentage) || 0;
-  const radius = 70;
-  const strokeWidth = 15;
-  const center = radius + strokeWidth;
-  const circumference = 2 * Math.PI * radius;
-  
-  const dashOffset = circumference - (circumference * numericPercentage) / 100;
 
-  let fillColor = '#10B981'; // Verde
-  if (numericPercentage < 20) {
-    fillColor = '#EF4444'; // Rojo
-  } else if (numericPercentage < 50) {
-    fillColor = '#F59E0B'; // Naranja
-  }
-
-  const size = (radius + strokeWidth) * 2;
-
-  return (
-    <View style={styles.chartContainer}>
-      <Svg width={size} height={size}>
-        <Circle
-          cx={center}
-          cy={center}
-          r={radius}
-          stroke="#E5E7EB"
-          strokeWidth={strokeWidth}
-          fill="none"
-        />
-        <Circle
-          cx={center}
-          cy={center}
-          r={radius}
-          stroke={fillColor}
-          strokeWidth={strokeWidth}
-          fill="none"
-          strokeDasharray={circumference}
-          strokeDashoffset={dashOffset}
-          strokeLinecap="round"
-          transform={`rotate(-90 ${center} ${center})`}
-        />
-        <SvgText
-          x={center}
-          y={center}
-          textAnchor="middle"
-          fontSize="32"
-          fontWeight="bold"
-          fill="#111827"
-          dy="10"
-        >
-          {numericPercentage}%
-        </SvgText>
-      </Svg>
-      
-      <View style={styles.chartLegend}>
-        <View style={styles.legendItem}>
-          <View style={[styles.legendDot, { backgroundColor: fillColor }]} />
-          <Text style={styles.legendText}>Nivel actual</Text>
-        </View>
-        <View style={styles.legendItem}>
-          <View style={[styles.legendDot, { backgroundColor: '#E5E7EB' }]} />
-          <Text style={styles.legendText}>Vacío</Text>
-        </View>
-      </View>
-    </View>
-  );
-};
 
 export default function CamionScreen() {
   const { profile, loading, fetchProfile } = useProfile();
@@ -419,32 +352,25 @@ export default function CamionScreen() {
               <SmallInfoCard icon="✅" label="Estado" value={camionData.state} />
             </View>
 
-            {/* GRÁFICA DE GASOLINA */}
+            {/* BOTÓN PARA REGISTRAR GAS */}
             {!!camionData.gasoline && (
-              <View style={styles.gasolineCard}>
-                <View style={styles.gasolineHeader}>
-                  <View style={styles.gasolineTitleContainer}>
-                    <Text style={styles.gasolineEmoji}>⛽</Text>
-                    <Text style={styles.gasolineTitle}>Nivel de gasolina</Text>
-                  </View>
-                </View>
-
-                <GasolineChart percentage={camionData.gasoline} />
-
-                {/* BOTÓN PARA REGISTRAR GAS */}
-                <TouchableOpacity 
-                  style={[
-                    styles.addGasButton,
-                    uploading && styles.addGasButtonDisabled
-                  ]}
-                  disabled={uploading}
-                  onPress={() => setModalVisible(true)}
-                >
-                  <Text style={styles.addGasIcon}>⛽</Text>
-                  <Text style={styles.addGasText}>¿Agregaste gas?</Text>
-                  <Text style={styles.addGasSubtext}>Toca para registrar</Text>
-                </TouchableOpacity>
-              </View>
+              <TouchableOpacity 
+                style={[
+                  styles.addGasButton,
+                  uploading && styles.addGasButtonDisabled
+                ]}
+                disabled={uploading}
+                onPress={() => setModalVisible(true)}
+              >
+                <LottieView
+                  source={require('../../assets/lottie/gasoline.json')}
+                  autoPlay
+                  loop
+                  style={styles.addGasLottie}
+                />
+                <Text style={styles.addGasText}>¿Agregaste gas?</Text>
+                <Text style={styles.addGasSubtext}>Toca para registrar</Text>
+              </TouchableOpacity>
             )}
           </>
         )}
@@ -779,7 +705,7 @@ const styles = StyleSheet.create({
 
   addGasButton: {
     marginTop: 20,
-    backgroundColor: "#10B981",
+    backgroundColor: "#1F2937",
     paddingVertical: 16,
     paddingHorizontal: 20,
     borderRadius: 16,
@@ -787,7 +713,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     ...Platform.select({
       ios: {
-        shadowColor: "#10B981",
+        shadowColor: "#000",
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.3,
         shadowRadius: 8,
@@ -805,6 +731,12 @@ const styles = StyleSheet.create({
 
   addGasIcon: {
     fontSize: 32,
+    marginBottom: 8,
+  },
+
+  addGasLottie: {
+    width: 60,
+    height: 60,
     marginBottom: 8,
   },
 

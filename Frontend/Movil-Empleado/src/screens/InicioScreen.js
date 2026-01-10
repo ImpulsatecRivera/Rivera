@@ -1,5 +1,5 @@
 // src/screens/InicioScreen.js
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useMemo } from "react";
 import {
   View,
   StyleSheet,
@@ -30,6 +30,7 @@ const InicioScreen = ({ navigation }) => {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [weather, setWeather] = useState(null);
   const [weatherLoading, setWeatherLoading] = useState(false);
+  const [selectedDay, setSelectedDay] = useState(0); // 0 = hoy, 1 = mañana, etc.
 
   // Animaciones
   const pulseAnim = useRef(new Animated.Value(1)).current;
@@ -171,20 +172,89 @@ const InicioScreen = ({ navigation }) => {
     return fullName.split(" ")[0];
   };
 
-  const formatearFechaAmigable = (fechaString) => {
-    const fecha = new Date(fechaString + "T00:00:00");
+  // Formatea la hora de un viaje de forma segura
+  const formatearHoraViaje = (viaje) => {
+    try {
+      if (!viaje) return "—";
+      // Intenta con las diferentes propiedades posibles
+      const fecha = viaje._fechaSalidaISO || viaje.horaSalida || viaje.fechaSalida;
+      if (!fecha) return "—";
+      
+      const fechaObj = new Date(fecha);
+      if (isNaN(fechaObj.getTime())) return "—"; // Invalid Date
+      
+      return fechaObj.toLocaleTimeString("es-ES", {
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    } catch {
+      return "—";
+    }
+  };
+
+  // Genera lista de 7 días desde hoy
+  const getDiasSemana = () => {
+    const dias = [];
     const hoy = new Date();
-    const mañana = new Date();
-    mañana.setDate(hoy.getDate() + 1);
+    const diasSemana = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sab"];
 
-    hoy.setHours(0, 0, 0, 0);
-    mañana.setHours(0, 0, 0, 0);
-    fecha.setHours(0, 0, 0, 0);
+    for (let i = 0; i < 7; i++) {
+      const fecha = new Date(hoy);
+      fecha.setDate(hoy.getDate() + i);
+      const pad = (n) => String(n).padStart(2, "0");
+      const fechaISO = `${fecha.getFullYear()}-${pad(fecha.getMonth() + 1)}-${pad(fecha.getDate())}`;
+      
+      dias.push({
+        label: diasSemana[fecha.getDay()],
+        day: fecha.getDate(),
+        fecha: fechaISO,
+        isToday: i === 0,
+        fullDate: fecha,
+      });
+    }
+    return dias;
+  };
 
-    if (fecha.getTime() === hoy.getTime()) return "🔥 ¡HOY!";
-    if (fecha.getTime() === mañana.getTime()) return "⭐ Mañana";
+  const diasSemana = useMemo(() => getDiasSemana(), []);
+  const diaSeleccionado = diasSemana[selectedDay];
+  
+  // Buscar viajes del día seleccionado
+  const viajesDelDia = useMemo(() => {
+    if (!diaSeleccionado || !viajesPorDia) {
+      console.log("❌ Sin data:", { diaSeleccionado, viajesPorDia });
+      return [];
+    }
+    
+    const diaFecha = diaSeleccionado.fecha;
+    console.log("🔍 Buscando viajes para:", diaFecha);
+    console.log("📋 Total días con viajes:", viajesPorDia.length);
+    
+    if (Array.isArray(viajesPorDia)) {
+      const diaEncontrado = viajesPorDia.find((d) => d.fecha === diaFecha);
+      console.log("✅ Día encontrado:", diaEncontrado);
+      
+      if (diaEncontrado && Array.isArray(diaEncontrado.viajes)) {
+        console.log("✈️ Viajes del día:", diaEncontrado.viajes.length);
+        return diaEncontrado.viajes;
+      }
+    }
+    
+    console.log("⚠️ No hay viajes para:", diaFecha);
+    return [];
+  }, [viajesPorDia, diaSeleccionado]);
 
-    return fecha.toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "long" });
+  const getEstadoColor = (estado) => {
+    if (estado === "completado") return "#5D9646";
+    if (estado === "en_curso" || estado === "en curso") return "#5F8EAD";
+    if (estado === "cancelado") return "#E74C3C";
+    return "#F39C12"; // pendiente
+  };
+
+  const getEstadoLabel = (estado) => {
+    if (estado === "completado") return "✓ Completado";
+    if (estado === "en_curso" || estado === "en curso") return "▶ En Curso";
+    if (estado === "cancelado") return "✗ Cancelado";
+    return "○ Pendiente";
   };
 
   // ===== HANDLERS =====
@@ -197,35 +267,6 @@ const InicioScreen = ({ navigation }) => {
 
   const handleButtonPress = (action) => action?.();
 
-  // ===== DATOS =====
-  const estadisticas = getEstadisticas?.() || { pendientes: 0 };
-  const viajesHoy = getViajesHoy?.() || [];
-
-  const viajesUrgentes =
-    viajesPorDia?.filter((dia) => {
-      const fecha = new Date(dia.fecha + "T00:00:00");
-      const hoy = new Date();
-      hoy.setHours(0, 0, 0, 0);
-      fecha.setHours(0, 0, 0, 0);
-      return fecha.getTime() <= hoy.getTime();
-    }) || [];
-
-  const viajesProximos =
-    (viajesPorDia || [])
-      .filter((dia) => {
-        const fecha = new Date(dia.fecha + "T00:00:00");
-        const hoy = new Date();
-        hoy.setHours(0, 0, 0, 0);
-        fecha.setHours(0, 0, 0, 0);
-        return fecha.getTime() > hoy.getTime();
-      })
-      .slice(0, 3) || [];
-
-  const getMensajeMotivacion = () => {
-    const mensajes = ["¡Vas excelente! 🚀", "¡Sigue así, campeón! 💪", "¡Eres el mejor! ⭐", "¡Imparable hoy! 🔥", "¡Rumbo al éxito! 🎯"];
-    return mensajes[Math.floor(Math.random() * mensajes.length)];
-  };
-
   // ===== UI =====
   return (
     <View style={styles.container}>
@@ -234,12 +275,12 @@ const InicioScreen = ({ navigation }) => {
       <ScrollView
         style={styles.scrollView}
         showsVerticalScrollIndicator={false}
-        scrollIndicatorInsets={{ bottom: bottomSpace }} // ✅ iOS: indicador no tapa abajo
+        scrollIndicatorInsets={{ bottom: bottomSpace }}
         contentContainerStyle={[
           styles.content,
           {
-            paddingTop: Math.max(10, insets.top), // ✅ evita choque con status bar/notch
-            paddingBottom: bottomSpace,           // ✅ CLAVE: deja espacio real para el tab flotante
+            paddingTop: Math.max(10, insets.top),
+            paddingBottom: bottomSpace,
           },
         ]}
         refreshControl={
@@ -253,11 +294,10 @@ const InicioScreen = ({ navigation }) => {
       >
         <LogoHeader />
 
-        {/* HEADER */}
+        {/* HEADER CON CLIMA */}
         <Animated.View
           style={[
-            styles.headerCard,
-            weather?.bg && { backgroundColor: weather.bg },
+            styles.headerPizarra,
             {
               transform: [
                 {
@@ -270,209 +310,145 @@ const InicioScreen = ({ navigation }) => {
             },
           ]}
         >
-          <View style={styles.timeWeatherRow}>
-            <View style={styles.timeSection}>
-              <View style={styles.timeWithWelcome}>
-                <LottieView
-                  source={require("../../assets/lottie/Robot Says Hi.json")}
-                  autoPlay
-                  loop={false}
-                  style={styles.welcomeLottie}
-                  resizeMode="contain"
-                />
-                <View>
-                  <Text style={styles.timeText}>{formatearHora(currentTime)}</Text>
-                  <Text style={styles.dateText}>
-                    {currentTime.toLocaleDateString("es-ES", { weekday: "short", day: "numeric", month: "short" })}
-                  </Text>
-                </View>
-              </View>
+          <View style={styles.headerRow}>
+            <View>
+              <Text style={styles.timeTextBig}>{formatearHora(currentTime)}</Text>
+              <Text style={styles.nameTextHeader}>{getFirstName(profile?.name || profile?.nombre)}</Text>
             </View>
 
             <TouchableOpacity
-              style={[styles.weatherSection, { backgroundColor: weather?.color ? weather.color + "20" : "#f0f0f0" }]}
+              style={styles.weatherSectionPizarra}
               onPress={() => handleButtonPress(obtenerClima)}
               activeOpacity={0.7}
             >
               {weatherLoading ? (
-                <Text style={styles.weatherIcon}>🔄</Text>
+                <Text style={styles.weatherIconBig}>🔄</Text>
               ) : weather ? (
                 <>
-                  <Text style={styles.weatherIcon}>{weather.icono}</Text>
-                  <Text style={[styles.tempText, { color: weather.color }]}>{weather.temp}°</Text>
-                  <Text style={styles.weatherDesc}>{weather.descripcion}</Text>
+                  <Text style={styles.weatherIconBig}>{weather.icono}</Text>
+                  <Text style={styles.tempTextBig}>{weather.temp}°</Text>
                 </>
               ) : null}
             </TouchableOpacity>
           </View>
-
-          <View style={styles.greetingSection}>
-            <View style={styles.avatarSection}>
-              <Animated.View style={[styles.avatarContainer, { transform: [{ scale: pulseAnim }] }]}>
-                <View style={[styles.avatar, { backgroundColor: weather?.color || "#4CAF50" }]}>
-                  <Text style={styles.avatarText}>{getInitials(profile?.name || profile?.nombre)}</Text>
-                </View>
-              </Animated.View>
-
-              <View style={styles.greetingTextSection}>
-                <Text style={styles.greetingText}>{obtenerSaludo(currentTime)}</Text>
-                <Text style={styles.nameText}>{getFirstName(profile?.name || profile?.nombre)}</Text>
-                <Text style={styles.motivationText}>{getMensajeMotivacion()}</Text>
-              </View>
-            </View>
-          </View>
         </Animated.View>
 
-        {/* ESTADÍSTICAS */}
-        {totalTrips > 0 && (
-          <Animated.View
-            style={[
-              styles.quickStatsContainer,
-              {
-                transform: [
-                  {
-                    translateY: slideAnim.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: [30, 0],
-                    }),
-                  },
-                ],
-              },
-            ]}
+        {/* PIZARRA - DÍAS DE LA SEMANA */}
+        <View style={styles.pizarraContainer}>
+          {/* Selector de días */}
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.diasScroll}
+            contentContainerStyle={styles.diasContent}
           >
-            <TouchableOpacity style={[styles.statCard, styles.todayCard]} activeOpacity={0.8}>
+            {diasSemana.map((dia, idx) => (
+              <TouchableOpacity
+                key={idx}
+                style={[
+                  styles.diaButton,
+                  selectedDay === idx && styles.diaButtonActive,
+                ]}
+                onPress={() => setSelectedDay(idx)}
+                activeOpacity={0.7}
+              >
+                <Text style={[styles.diaLabel, selectedDay === idx && styles.diaLabelActive]}>
+                  {dia.label}
+                </Text>
+                <Text style={[styles.dayNumber, selectedDay === idx && styles.dayNumberActive]}>
+                  {dia.day}
+                </Text>
+                {dia.isToday && (
+                  <View style={styles.todayBadge}>
+                    <Text style={styles.todayDot}>●</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+
+          {/* Programación del día seleccionado */}
+          <View style={styles.programacionDia}>
+            <View style={styles.programacionHeader}>
+              <View style={styles.programacionTitleContainer}>
+                <LottieView
+                  source={require('../../assets/lottie/Calendar Animation.json')}
+                  autoPlay
+                  loop
+                  style={styles.programacionLottie}
+                />
+                <Text style={styles.programacionTitle}>
+                  {diaSeleccionado.isToday ? "HOY" : diaSeleccionado.label.toUpperCase()}
+                </Text>
+              </View>
+              <View style={styles.viajesBadge}>
+                <Text style={styles.viajesBadgeText}>{viajesDelDia.length}</Text>
+              </View>
+            </View>
+
+            {viajesDelDia.length === 0 ? (
+              <View style={styles.noViajesContainer}>
+                <Text style={styles.noViajesIcon}>🚛</Text>
+                <Text style={styles.noViajesText}>Sin viajes este día</Text>
+              </View>
+            ) : (
+              <View style={styles.viajesList}>
+                {viajesDelDia.map((viaje, idx) => {
+                  const horaFormato = formatearHoraViaje(viaje);
+                  const estadoColor = getEstadoColor(viaje.estado);
+
+                  return (
+                    <TouchableOpacity
+                      key={viaje._id || idx}
+                      style={[styles.viajeCard, { borderLeftColor: estadoColor }]}
+                      onPress={() => handleTripPress(viaje)}
+                      activeOpacity={0.7}
+                    >
+                      <View style={styles.viajeCardHeader}>
+                        <View style={styles.viajeTimeIcon}>
+                          <Text style={styles.viajeTimeText}>{horaFormato}</Text>
+                        </View>
+                        <View style={styles.viajeInfo}>
+                          <Text style={styles.viajeTipo} numberOfLines={1}>
+                            {viaje.origen} → {viaje.destino}
+                          </Text>
+                          <Text style={styles.viajeDescripcion} numberOfLines={1}>
+                            {viaje.descripcion || "Transporte de carga"}
+                          </Text>
+                        </View>
+                        <View style={[styles.estadoBadge, { backgroundColor: estadoColor }]}>
+                          <Text style={styles.estadoLabel}>{getEstadoLabel(viaje.estado)}</Text>
+                        </View>
+                      </View>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            )}
+          </View>
+        </View>
+
+        {/* ESTADÍSTICAS RÁPIDAS */}
+        {totalTrips > 0 && (
+          <View style={styles.quickStatsContainer}>
+            <View style={[styles.statCard, styles.todayCard]}>
               <Text style={styles.statIcon}>🔥</Text>
               <Text style={styles.statNumber}>{viajesHoy.length}</Text>
               <Text style={styles.statLabel}>Hoy</Text>
-            </TouchableOpacity>
+            </View>
 
-            <TouchableOpacity style={[styles.statCard, styles.pendingCard]} activeOpacity={0.8}>
-              <Text style={styles.statIcon}>⏰</Text>
-              <Text style={styles.statNumber}>{estadisticas.pendientes || 0}</Text>
-              <Text style={styles.statLabel}>Pendientes</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity style={[styles.statCard, styles.totalCard]} activeOpacity={0.8}>
+            <View style={[styles.statCard, styles.totalCard]}>
               <Text style={styles.statIcon}>🎯</Text>
               <Text style={styles.statNumber}>{totalTrips}</Text>
               <Text style={styles.statLabel}>Total</Text>
-            </TouchableOpacity>
-          </Animated.View>
-        )}
-
-        {/* URGENTES */}
-        {viajesUrgentes?.length > 0 && (
-          <View style={styles.section}>
-            <View style={styles.urgentHeader}>
-              <Text style={styles.urgentTitle}>🚨 ¡Atención Inmediata!</Text>
-              <View style={styles.urgentBadge}>
-                <Text style={styles.urgentBadgeText}>URGENTE</Text>
-              </View>
             </View>
 
-            {viajesUrgentes.map((dia, index) => (
-              <Animated.View key={index} style={[styles.urgentContainer, { transform: [{ scale: pulseAnim }] }]}>
-                {dia.viajes?.map((viaje, viajeIndex) => {
-                  const viajeCard = {
-                    id: viaje._id || `urgente-${index}-${viajeIndex}`,
-                    tipo: `${viaje.origen} → ${viaje.destino}`,
-                    subtitulo: viaje.descripcion || "Transporte de carga",
-                    fecha: formatearFechaAmigable(dia.fecha),
-                    hora: new Date(viaje.fechaSalida).toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" }),
-                    estado: viaje.estado,
-                    urgente: true,
-                    ...viaje,
-                  };
-                  return (
-                    <ServiceCard
-                      key={viajeCard.id}
-                      trip={viajeCard}
-                      onPress={handleTripPress}
-                      style={styles.urgentCard}
-                    />
-                  );
-                })}
-              </Animated.View>
-            ))}
-          </View>
-        )}
-
-        {/* PRÓXIMOS */}
-        {viajesProximos?.length > 0 && (
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>🗓️ Próximas Aventuras</Text>
-              <TouchableOpacity
-                onPress={() => handleButtonPress(() => navigation.navigate("Viajes"))}
-                style={styles.viewAllButton}
-                activeOpacity={0.7}
-              >
-                <Text style={styles.viewAllText}>Ver todas</Text>
-                <Text style={styles.viewAllArrow}>→</Text>
-              </TouchableOpacity>
+            <View style={[styles.statCard, styles.nextCard]}>
+              <Text style={styles.statIcon}>📅</Text>
+              <Text style={styles.statNumber}>{viajesPorDia?.length || 0}</Text>
+              <Text style={styles.statLabel}>Días</Text>
             </View>
-
-            {viajesProximos.map((dia, index) => (
-              <View key={index} style={[styles.dayGroup, styles[`dayColor${index % 3}`]]}>
-                <View style={styles.dayHeader}>
-                  <Text style={styles.dayLabel}>{formatearFechaAmigable(dia.fecha)}</Text>
-                  <View style={styles.tripCount}>
-                    <Text style={styles.tripCountText}>{dia.viajes?.length || 0}</Text>
-                  </View>
-                </View>
-
-                {dia.viajes?.slice(0, 2).map((viaje, viajeIndex) => {
-                  const viajeCard = {
-                    id: viaje._id || `proximo-${index}-${viajeIndex}`,
-                    tipo: `${viaje.origen} → ${viaje.destino}`,
-                    subtitulo: viaje.descripcion || "Transporte de carga",
-                    fecha: formatearFechaAmigable(dia.fecha),
-                    hora: new Date(viaje.fechaSalida).toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" }),
-                    estado: viaje.estado,
-                    ...viaje,
-                  };
-                  return <ServiceCard key={viajeCard.id} trip={viajeCard} onPress={handleTripPress} />;
-                })}
-
-                {dia.viajes?.length > 2 && (
-                  <TouchableOpacity
-                    style={styles.showMoreButton}
-                    onPress={() => handleButtonPress(() => navigation.navigate("Viajes"))}
-                    activeOpacity={0.8}
-                  >
-                    <Text style={styles.showMoreIcon}>✨</Text>
-                    <Text style={styles.showMoreText}>+{dia.viajes.length - 2} viajes más esperándote</Text>
-                  </TouchableOpacity>
-                )}
-              </View>
-            ))}
           </View>
-        )}
-
-        {/* ESTADO VACÍO */}
-        {(!viajesPorDia || viajesPorDia.length === 0) && (
-          <Animated.View
-            style={[
-              styles.emptyState,
-              {
-                transform: [
-                  {
-                    scale: slideAnim.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: [0.8, 1],
-                    }),
-                  },
-                ],
-              },
-            ]}
-          >
-            <Text style={styles.emptyIcon}>🎯</Text>
-            <Text style={styles.emptyTitle}>¡Todo listo para la acción!</Text>
-            <Text style={styles.emptySubtext}>Pronto tendrás nuevas rutas emocionantes 🚛✨</Text>
-            <TouchableOpacity style={styles.refreshButton} onPress={() => handleButtonPress(onRefresh)} activeOpacity={0.8}>
-              <Text style={styles.refreshButtonText}>🔄 ¡Actualizar ahora!</Text>
-            </TouchableOpacity>
-          </Animated.View>
         )}
 
         {/* ACCIONES RÁPIDAS */}
@@ -482,15 +458,8 @@ const InicioScreen = ({ navigation }) => {
             onPress={() => handleButtonPress(() => navigation.navigate("Viajes"))}
             activeOpacity={0.8}
           >
-            <LottieView
-              source={require("../../assets/lottie/Statistics.json")}
-              autoPlay
-              loop
-              style={styles.actionLottie}
-              resizeMode="contain"
-            />
+            <Text style={styles.actionIcon}>📊</Text>
             <Text style={styles.actionText}>Mi Historial</Text>
-            <Text style={styles.actionSubtext}>Ver todo</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -500,21 +469,13 @@ const InicioScreen = ({ navigation }) => {
           >
             <Text style={styles.actionIcon}>🔄</Text>
             <Text style={styles.actionText}>Actualizar</Text>
-            <Text style={styles.actionSubtext}>Sincronizar</Text>
           </TouchableOpacity>
         </View>
 
-        {/* ✅ ÚLTIMO CUADRO (ya no lo tapa el tabBar) */}
+        {/* MOTIVACIÓN */}
         <View style={styles.motivationFooter}>
-          <LottieView
-            source={require("../../assets/lottie/Celebration balloon confetti animation.json")}
-            autoPlay
-            loop
-            style={styles.lottieAnimation}
-            resizeMode="contain"
-          />
           <Text style={styles.motivationFooterText}>
-            ¡Cada viaje es una nueva oportunidad de brillar!
+            ¡Cada viaje es una nueva oportunidad! 🚀
           </Text>
         </View>
       </ScrollView>
@@ -527,124 +488,332 @@ const styles = StyleSheet.create({
   scrollView: { flex: 1 },
   content: { flexGrow: 1 },
 
-  headerCard: {
-    backgroundColor: "#ffffff",
+  // HEADER PIZARRA
+  headerPizarra: {
+    backgroundColor: "#2c3e50",
+    marginHorizontal: 20,
+    marginBottom: 20,
+    borderRadius: 20,
+    padding: 20,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+
+  headerRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+
+  timeTextBig: {
+    fontSize: 42,
+    fontWeight: "800",
+    color: "#fff",
+    marginBottom: 5,
+  },
+
+  nameTextHeader: {
+    fontSize: 16,
+    color: "#ecf0f1",
+    fontWeight: "600",
+  },
+
+  weatherSectionPizarra: {
+    alignItems: "center",
+    backgroundColor: "rgba(255, 255, 255, 0.15)",
+    padding: 15,
+    borderRadius: 20,
+    minWidth: 100,
+  },
+
+  weatherIconBig: {
+    fontSize: 40,
+    marginBottom: 5,
+  },
+
+  tempTextBig: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: "#fff",
+  },
+
+  // PIZARRA CONTAINER
+  pizarraContainer: {
     marginHorizontal: 20,
     marginBottom: 25,
-    borderRadius: 25,
-    padding: 25,
+    borderRadius: 20,
+    backgroundColor: "#fff",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.15,
     shadowRadius: 12,
-    elevation: 8,
-    borderWidth: 1,
-    borderColor: "rgba(76, 175, 80, 0.1)",
+    elevation: 6,
+    overflow: "hidden",
   },
 
-  timeWeatherRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 25 },
-  timeSection: { flex: 1 },
-  timeWithWelcome: { flexDirection: "row", alignItems: "center" },
-  welcomeLottie: { width: 55, height: 55, marginRight: 15 },
-  timeText: { fontSize: 36, fontWeight: "800", color: "#2c3e50", marginBottom: 2 },
-  dateText: { fontSize: 16, color: "#7f8c8d", textTransform: "capitalize", fontWeight: "500" },
+  diasScroll: {
+    borderBottomWidth: 2,
+    borderBottomColor: "#ecf0f1",
+  },
 
-  weatherSection: { alignItems: "center", padding: 15, borderRadius: 20, minWidth: 100 },
-  weatherIcon: { fontSize: 32, marginBottom: 5 },
-  tempText: { fontSize: 22, fontWeight: "700", marginBottom: 3 },
-  weatherDesc: { fontSize: 11, color: "#5d6d7e", textAlign: "center", fontWeight: "500" },
+  diasContent: {
+    paddingHorizontal: 10,
+    paddingVertical: 12,
+    gap: 8,
+  },
 
-  greetingSection: { borderTopWidth: 1, borderTopColor: "rgba(76, 175, 80, 0.1)", paddingTop: 20 },
-  avatarSection: { flexDirection: "row", alignItems: "center" },
-  avatarContainer: { marginRight: 20 },
-  avatar: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: "#4CAF50",
-    justifyContent: "center",
+  diaButton: {
     alignItems: "center",
-    shadowColor: "#4CAF50",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 12,
+    backgroundColor: "#f8f9fa",
+    borderWidth: 2,
+    borderColor: "#ddd",
+    minWidth: 70,
   },
-  avatarText: { color: "#fff", fontSize: 20, fontWeight: "bold" },
-  greetingTextSection: { flex: 1 },
-  greetingText: { fontSize: 22, fontWeight: "700", color: "#2c3e50", marginBottom: 3 },
-  nameText: { fontSize: 18, fontWeight: "600", color: "#4CAF50", marginBottom: 5 },
-  motivationText: { fontSize: 14, color: "#e74c3c", fontWeight: "600", fontStyle: "italic" },
 
-  quickStatsContainer: { flexDirection: "row", paddingHorizontal: 20, justifyContent: "space-between", marginBottom: 25 },
+  diaButtonActive: {
+    backgroundColor: "#34353A",
+    borderColor: "#34353A",
+  },
+
+  diaLabel: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#7f8c8d",
+    marginBottom: 4,
+  },
+
+  diaLabelActive: {
+    color: "#fff",
+  },
+
+  dayNumber: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#2c3e50",
+  },
+
+  dayNumberActive: {
+    color: "#fff",
+  },
+
+  todayBadge: {
+    marginTop: 4,
+  },
+
+  todayDot: {
+    color: "#e74c3c",
+    fontSize: 8,
+  },
+
+  // PROGRAMACIÓN DEL DÍA
+  programacionDia: {
+    padding: 20,
+  },
+
+  programacionHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 16,
+    paddingBottom: 12,
+    borderBottomWidth: 2,
+    borderBottomColor: "#ecf0f1",
+  },
+
+  programacionTitleContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+
+  programacionLottie: {
+    width: 56,
+    height: 56,
+  },
+
+  programacionTitle: {
+    fontSize: 18,
+    fontWeight: "800",
+    color: "#2c3e50",
+  },
+
+  viajesBadge: {
+    backgroundColor: "#34353A",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+  },
+
+  viajesBadgeText: {
+    color: "#fff",
+    fontSize: 14,
+    fontWeight: "700",
+  },
+
+  noViajesContainer: {
+    alignItems: "center",
+    paddingVertical: 40,
+  },
+
+  noViajesIcon: {
+    fontSize: 48,
+    marginBottom: 12,
+  },
+
+  noViajesText: {
+    fontSize: 16,
+    color: "#95a5a6",
+    fontWeight: "600",
+  },
+
+  viajesList: {
+    gap: 12,
+  },
+
+  viajeCard: {
+    backgroundColor: "#f8f9fa",
+    borderRadius: 12,
+    padding: 16,
+    borderLeftWidth: 5,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+
+  viajeCardHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+
+  viajeTimeIcon: {
+    backgroundColor: "#34353A",
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderRadius: 8,
+    minWidth: 55,
+    alignItems: "center",
+  },
+
+  viajeTimeText: {
+    color: "#fff",
+    fontWeight: "700",
+    fontSize: 14,
+  },
+
+  viajeInfo: {
+    flex: 1,
+  },
+
+  viajeTipo: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#2c3e50",
+    marginBottom: 4,
+  },
+
+  viajeDescripcion: {
+    fontSize: 12,
+    color: "#7f8c8d",
+    fontWeight: "500",
+  },
+
+  estadoBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+
+  estadoLabel: {
+    color: "#fff",
+    fontSize: 11,
+    fontWeight: "700",
+  },
+
+  // ESTADÍSTICAS
+  quickStatsContainer: {
+    flexDirection: "row",
+    paddingHorizontal: 20,
+    justifyContent: "space-between",
+    marginBottom: 25,
+    gap: 12,
+  },
+
   statCard: {
     flex: 1,
     alignItems: "center",
-    padding: 20,
-    borderRadius: 20,
-    marginHorizontal: 5,
+    padding: 18,
+    borderRadius: 16,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
     shadowRadius: 8,
     elevation: 4,
   },
-  todayCard: { backgroundColor: "#ff6b35", transform: [{ rotate: "-1deg" }] },
-  pendingCard: { backgroundColor: "#ffa726", transform: [{ rotate: "1deg" }] },
-  totalCard: { backgroundColor: "#66bb6a", transform: [{ rotate: "-0.5deg" }] },
+
+  todayCard: { backgroundColor: "#ff6b35" },
+  totalCard: { backgroundColor: "#66bb6a" },
+  nextCard: { backgroundColor: "#5F8EAD" },
+
   statIcon: { fontSize: 24, marginBottom: 8 },
-  statNumber: { fontSize: 28, fontWeight: "800", color: "#fff", marginBottom: 4 },
-  statLabel: { fontSize: 12, color: "#fff", fontWeight: "600", opacity: 0.9 },
+  statNumber: { fontSize: 24, fontWeight: "800", color: "#fff", marginBottom: 4 },
+  statLabel: { fontSize: 11, color: "#fff", fontWeight: "600", opacity: 0.9 },
 
-  section: { marginBottom: 30, paddingHorizontal: 20 },
+  // ACCIONES RÁPIDAS
+  quickActions: {
+    flexDirection: "row",
+    paddingHorizontal: 20,
+    justifyContent: "space-between",
+    marginBottom: 25,
+    gap: 12,
+  },
 
-  urgentHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 15 },
-  urgentTitle: { fontSize: 20, fontWeight: "800", color: "#e74c3c" },
-  urgentBadge: { backgroundColor: "#e74c3c", paddingHorizontal: 12, paddingVertical: 4, borderRadius: 20 },
-  urgentBadgeText: { color: "#fff", fontSize: 10, fontWeight: "700" },
-  urgentContainer: { backgroundColor: "#ffebee", borderRadius: 15, padding: 5, borderWidth: 2, borderColor: "#ffcdd2" },
-  urgentCard: { borderLeftWidth: 5, borderLeftColor: "#e74c3c" },
+  actionButton: {
+    flex: 1,
+    alignItems: "center",
+    paddingVertical: 18,
+    borderRadius: 16,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+    elevation: 4,
+  },
 
-  sectionHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 20 },
-  sectionTitle: { fontSize: 20, fontWeight: "800", color: "#2c3e50" },
-  viewAllButton: { flexDirection: "row", alignItems: "center", backgroundColor: "#4CAF50", paddingHorizontal: 15, paddingVertical: 8, borderRadius: 20 },
-  viewAllText: { color: "#fff", fontSize: 14, fontWeight: "600", marginRight: 5 },
-  viewAllArrow: { color: "#fff", fontSize: 16, fontWeight: "bold" },
+  historyAction: { backgroundColor: "#3498db" },
+  refreshAction: { backgroundColor: "#e67e22" },
 
-  dayGroup: { marginBottom: 25, borderRadius: 20, padding: 20, shadowColor: "#000", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 6, elevation: 3 },
-  dayColor0: { backgroundColor: "#e8f5e8" },
-  dayColor1: { backgroundColor: "#fff3e0" },
-  dayColor2: { backgroundColor: "#e3f2fd" },
+  actionIcon: { fontSize: 28, marginBottom: 6 },
+  actionText: { fontSize: 14, fontWeight: "700", color: "#fff" },
 
-  dayHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 15 },
-  dayLabel: { fontSize: 16, fontWeight: "700", color: "#2c3e50", textTransform: "capitalize" },
-  tripCount: { backgroundColor: "#4CAF50", borderRadius: 15, width: 30, height: 30, justifyContent: "center", alignItems: "center" },
-  tripCountText: { color: "#fff", fontSize: 14, fontWeight: "700" },
+  // MOTIVACIÓN
+  motivationFooter: {
+    alignItems: "center",
+    paddingVertical: 20,
+    paddingHorizontal: 20,
+    marginHorizontal: 20,
+    marginBottom: 24,
+    backgroundColor: "rgba(155, 89, 182, 0.1)",
+    borderRadius: 16,
+    borderWidth: 2,
+    borderColor: "rgba(155, 89, 182, 0.2)",
+  },
 
-  showMoreButton: { flexDirection: "row", alignItems: "center", justifyContent: "center", padding: 20, backgroundColor: "rgba(76, 175, 80, 0.1)", borderRadius: 15, borderWidth: 2, borderColor: "rgba(76, 175, 80, 0.3)", borderStyle: "dashed" },
-  showMoreIcon: { fontSize: 18, marginRight: 8 },
-  showMoreText: { color: "#4CAF50", fontSize: 16, fontWeight: "600" },
-
-  emptyState: { alignItems: "center", padding: 40, marginHorizontal: 20, backgroundColor: "#fff", borderRadius: 25, marginBottom: 25, shadowColor: "#4CAF50", shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.2, shadowRadius: 12, elevation: 6, borderWidth: 3, borderColor: "rgba(76, 175, 80, 0.2)" },
-  emptyIcon: { fontSize: 64, marginBottom: 20 },
-  emptyTitle: { fontSize: 22, fontWeight: "800", color: "#2c3e50", textAlign: "center", marginBottom: 10 },
-  emptySubtext: { fontSize: 16, color: "#7f8c8d", textAlign: "center", marginBottom: 30, lineHeight: 22 },
-
-  refreshButton: { backgroundColor: "#4CAF50", paddingHorizontal: 35, paddingVertical: 18, borderRadius: 25, shadowColor: "#4CAF50", shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.3, shadowRadius: 10, elevation: 5, transform: [{ rotate: "-1deg" }] },
-  refreshButtonText: { color: "#fff", fontSize: 18, fontWeight: "700" },
-
-  quickActions: { flexDirection: "row", paddingHorizontal: 20, justifyContent: "space-between", marginBottom: 25 },
-  actionButton: { alignItems: "center", padding: 25, borderRadius: 20, flex: 1, marginHorizontal: 8, shadowColor: "#000", shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.15, shadowRadius: 10, elevation: 5 },
-  historyAction: { backgroundColor: "#3498db", transform: [{ rotate: "1deg" }] },
-  refreshAction: { backgroundColor: "#e67e22", transform: [{ rotate: "-1deg" }] },
-  actionIcon: { fontSize: 28, marginBottom: 10 },
-  actionLottie: { width: 35, height: 35, marginBottom: 8 },
-  actionText: { fontSize: 16, fontWeight: "700", color: "#fff", marginBottom: 4 },
-  actionSubtext: { fontSize: 12, color: "#fff", opacity: 0.8, fontWeight: "500" },
-
-  motivationFooter: { alignItems: "center", padding: 25, marginHorizontal: 20, marginBottom: 24, backgroundColor: "rgba(155, 89, 182, 0.1)", borderRadius: 20, borderWidth: 2, borderColor: "rgba(155, 89, 182, 0.2)" },
-  lottieAnimation: { width: 85, height: 85, marginBottom: 15 },
-  motivationFooterText: { fontSize: 16, fontWeight: "600", color: "#8e44ad", textAlign: "center", fontStyle: "italic", lineHeight: 22 },
+  motivationFooterText: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#8e44ad",
+    textAlign: "center",
+    fontStyle: "italic",
+  },
 });
 
 export default InicioScreen;
