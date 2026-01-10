@@ -163,11 +163,12 @@ const procesarDatosClientes = (datos, columnas) => {
   });
 };
 
-const generarHTMLConsolidado = (titulo, columnas, clientesData, landscape = true) => {
+const generarHTMLConsolidado = (titulo, columnas, clientesData, landscape = true, comparativo = false) => {
   const logoBase64 = convertirImagenABase64(RUTA_LOGO);
   const fontSize = columnas.length > 20 ? '7px' : columnas.length > 15 ? '8px' : '10px';
   const cellPadding = columnas.length > 20 ? '3px' : columnas.length > 15 ? '4px' : '6px';
   const headerFontSize = columnas.length > 20 ? '7px' : columnas.length > 15 ? '8px' : '9px';
+  const bodyClass = comparativo ? 'comparativo' : '';
 
   return `
 <!DOCTYPE html>
@@ -182,6 +183,14 @@ const generarHTMLConsolidado = (titulo, columnas, clientesData, landscape = true
       background: #FFFFFF;
       color: #34353A;
     }
+    /* Estilos especiales para diseño tipo "cuadro comparativo" (semanal) */
+    body.comparativo table { border: 1px solid #000; }
+    body.comparativo th, body.comparativo td { border: 1px solid #000 !important; }
+    body.comparativo th { background: #f0f0f0; color: #000; }
+    body.comparativo .periodo-header { background: #e9ecef !important; color: #000 !important; }
+    body.comparativo .total-row { background: #e8f4e8 !important; color: #000 !important; }
+    body.comparativo td { background: #fff; }
+    body.comparativo .cliente-cell { background: #f9fafb; font-weight:700; }
     
     /* HEADER */
     .main-header {
@@ -291,9 +300,13 @@ const generarHTMLConsolidado = (titulo, columnas, clientesData, landscape = true
     <table>
       <thead>
         <tr>
-          <th class="cliente-cell">CLIENTE</th>
-          ${columnas.map(col => `<th class="periodo-header">${col.label}</th>`).join('')}
-          <th class="total-cell">TOTAL</th>
+          <th rowspan="2" class="cliente-cell">CLIENTE</th>
+          ${columnas.map(col => `<th colspan="2" class="periodo-header">${col.label}</th>`).join('')}
+          <th rowspan="2" class="total-cell">TOTAL VIAJES</th>
+          <th rowspan="2" class="total-cell">TOTAL MONTO</th>
+        </tr>
+        <tr>
+          ${columnas.map(col => `<th>VIAJES</th><th>MONTO</th>`).join('')}
         </tr>
       </thead>
       <tbody>
@@ -301,17 +314,21 @@ const generarHTMLConsolidado = (titulo, columnas, clientesData, landscape = true
           <tr>
             <td class="cliente-cell">${cliente.cliente}</td>
             ${cliente.columnas.map(col => `
-              <td class="text-right">${col.monto > 0 ? `$${col.monto.toFixed(0)}` : '-'}</td>
+              <td style="text-align:center">${col.viajes || 0}</td>
+              <td class="text-right">${col.monto > 0 ? `$${col.monto.toFixed(2)}` : '$ 0.00'}</td>
             `).join('')}
+            <td class="text-center total-cell">${cliente.totalViajes}</td>
             <td class="text-right total-cell">$${cliente.totalPeriodo.toFixed(2)}</td>
           </tr>
         `).join('')}
         <tr class="total-row">
           <td class="cliente-cell">TOTAL</td>
           ${columnas.map((_, colIndex) => {
-    const totalCol = clientesData.reduce((sum, c) => sum + c.columnas[colIndex].monto, 0);
-    return `<td class="text-right">$${totalCol > 0 ? totalCol.toFixed(0) : '-'}</td>`;
+    const totalViajesCol = clientesData.reduce((sum, c) => sum + (c.columnas[colIndex]?.viajes || 0), 0);
+    const totalMontoCol = clientesData.reduce((sum, c) => sum + (c.columnas[colIndex]?.monto || 0), 0);
+    return `<td style="text-align:center">${totalViajesCol}</td><td class="text-right">$${totalMontoCol > 0 ? totalMontoCol.toFixed(2) : '$ 0.00'}</td>`;
   }).join('')}
+          <td class="text-center total-cell">${clientesData.reduce((sum, c) => sum + c.totalViajes, 0)}</td>
           <td class="text-right total-cell">$${clientesData.reduce((sum, c) => sum + c.totalPeriodo, 0).toFixed(2)}</td>
         </tr>
       </tbody>
@@ -473,7 +490,8 @@ ReportesViajesDirecto.generarPDFConsolidadoPeriodo = async (req, res) => {
     }
 
     const clientesData = procesarDatosClientes(datos, columnas);
-    const htmlContent = generarHTMLConsolidado(titulo, columnas, clientesData, landscape);
+    const comparativo = periodo.toLowerCase() === 'semanal';
+    const htmlContent = generarHTMLConsolidado(titulo, columnas, clientesData, landscape, comparativo);
 
     browser = await puppeteer.launch({
       headless: "new",
@@ -2325,9 +2343,13 @@ ReportesViajesDirecto.generarPDFConsolidadoAnual = async (req, res) => {
     <table>
       <thead>
         <tr>
-          <th class="cliente-cell">CLIENTE</th>
-          ${Array(12).fill(0).map((_, i) => `<th class="mes-header">${obtenerNombreMes(i + 1).substring(0, 3)}</th>`).join('')}
-          <th>TOTAL</th>
+          <th rowspan="2" class="cliente-cell">CLIENTE</th>
+          ${Array(12).fill(0).map((_, i) => `<th colspan="2" class="mes-header">${obtenerNombreMes(i + 1).substring(0, 3)}</th>`).join('')}
+          <th rowspan="2">TOTAL VIAJES</th>
+          <th rowspan="2">TOTAL MONTO</th>
+        </tr>
+        <tr>
+          ${Array(12).fill(0).map(() => `<th>VIAJES</th><th>MONTO</th>`).join('')}
         </tr>
       </thead>
       <tbody>
@@ -2335,24 +2357,28 @@ ReportesViajesDirecto.generarPDFConsolidadoAnual = async (req, res) => {
           <tr>
             <td class="cliente-cell">${cliente.cliente}</td>
             ${cliente.meses.map(mes => `
-              <td class="text-right">${mes.monto > 0 ? `$${mes.monto.toFixed(0)}` : '-'}</td>
+              <td style="text-align:center">${mes.viajes}</td>
+              <td class="text-right">${mes.monto > 0 ? `$${mes.monto.toFixed(2)}` : '$ 0.00'}</td>
             `).join('')}
+            <td class="text-center">${cliente.totalViajes}</td>
             <td class="text-right"><strong>$${cliente.totalAnual.toFixed(2)}</strong></td>
           </tr>
         `).join('')}
         <tr class="total-row">
           <td>TOTAL</td>
           ${Array(12).fill(0).map((_, mesIndex) => {
-      const totalMes = clientesData.reduce((sum, c) => sum + c.meses[mesIndex].monto, 0);
-      return `<td class="text-right">$${totalMes.toFixed(0)}</td>`;
+      const totalViajesMes = clientesData.reduce((sum, c) => sum + (c.meses[mesIndex].viajes || 0), 0);
+      const totalMontoMes = clientesData.reduce((sum, c) => sum + (c.meses[mesIndex].monto || 0), 0);
+      return `<td style="text-align:center">${totalViajesMes}</td><td class="text-right">$${totalMontoMes.toFixed(2)}</td>`;
     }).join('')}
+          <td class="text-center">${clientesData.reduce((sum, c) => sum + c.totalViajes, 0)}</td>
           <td class="text-right">$${clientesData.reduce((sum, c) => sum + c.totalAnual, 0).toFixed(2)}</td>
         </tr>
       </tbody>
     </table>
 
     <div class="footer">
-      <p><strong>Generado:</strong> ${formatearFecha(new Date())} - Total clientes: ${clientesData.length}</p>
+      <p><strong>Generado:</strong> ${formatearFecha(new Date())} - Total clientes: ${clientesData.length} | Total viajes: ${clientesData.reduce((s, c) => s + c.totalViajes, 0)}</p>
       <p class="company">Rivera Distribuidora y Transportes</p>
     </div>
   </div>

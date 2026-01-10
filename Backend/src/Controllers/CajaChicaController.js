@@ -5,8 +5,34 @@ import { config } from "../config.js";
 import fs from 'fs/promises';
 import puppeteer from 'puppeteer';
 import streamifier from 'streamifier';
+import fsSync from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
 
-const cajaChicaController = {};
+// Obtener __dirname en ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+// Función para convertir imagen a base64 (sincrónica para uso simple)
+const convertirImagenABase64 = (rutaImagen) => {
+  try {
+    if (!fsSync.existsSync(rutaImagen)) return null;
+    const imagen = fsSync.readFileSync(rutaImagen);
+    const base64 = imagen.toString('base64');
+    const ext = path.extname(rutaImagen).toLowerCase();
+    const mimeType = ext === '.png' ? 'image/png' : 'image/jpeg';
+    return `data:${mimeType};base64,${base64}`;
+  } catch (error) {
+    console.error('Error al convertir imagen:', error);
+    return null;
+  }
+};
+
+// Ruta al logo
+const RUTA_LOGO = path.join(process.cwd(), 'src', 'imagenes', 'imagen_15.png');
+
+const cajaChicaController = {}; 
 
 // Configurar Cloudinary
 cloudinary.config({
@@ -589,6 +615,7 @@ const { nombreBeneficiario } = req.body;
 
     const page = await browser.newPage();
     const cantidadEnLetras = numeroALetras(movement.amount);
+    const logoBase64 = convertirImagenABase64(RUTA_LOGO);
 
     // ✅ HTML DEL VALE - FORMATO RIVERA TRANSPORTES
     const htmlContent = `
@@ -866,10 +893,10 @@ const { nombreBeneficiario } = req.body;
           <!-- FIRMA DEL BENEFICIARIO -->
           <div class="firma-section">
             <div class="logo-container">
-              <div class="logo-text">
+              ${logoBase64 ? `<img src="${logoBase64}" alt="Rivera Logo" style="max-width:160px;height:auto;"/>` : `<div class="logo-text">
                 <div class="logo-name">RIVERA</div>
                 <div class="logo-subtitle">Combustibles y Transportes</div>
-              </div>
+              </div>`}
             </div>
             <div class="firma-beneficiario">
               <div class="firma-label">FIRMA DEL BENEFICIARIO:</div>

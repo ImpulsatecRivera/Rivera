@@ -570,80 +570,59 @@ export default function CajaChicaModern() {
   };
 
   const registrarReintegro = async () => {
+    // Calcular el monto automático hasta el máximo permitido
+    if (!configuracion) {
+      Swal.fire({ title: 'Configuración faltante', text: 'Debes configurar el máximo permitido antes de realizar reintegros.', icon: 'warning' });
+      return;
+    }
+
+    const montoSugerido = (configuracion?.maximoPermitido || 0) - balance;
+
+    if (!montoSugerido || montoSugerido <= 0) {
+      Swal.fire({ title: 'No es necesario', text: 'El balance ya alcanza o supera el máximo permitido. No se registrará ningún reintegro.', icon: 'info' });
+      return;
+    }
+
     const { value: password } = await Swal.fire({
       title: '🔒 Código de Seguridad',
-      text: 'Ingresa el código de seguridad de Caja Chica',
+      html: `Se generará un reintegro automático por <strong>$${montoSugerido.toFixed(2)}</strong> (no superará el máximo permitido). Ingresa el código de seguridad para confirmar.`,
       input: 'password',
       inputPlaceholder: 'Ingresa tu código',
-      inputAttributes: {
-        autocapitalize: 'off',
-        autocorrect: 'off'
-      },
+      inputAttributes: { autocapitalize: 'off', autocorrect: 'off' },
       showCancelButton: true,
-      confirmButtonText: 'Continuar',
+      confirmButtonText: 'Confirmar',
       cancelButtonText: 'Cancelar',
       confirmButtonColor: '#5D9646',
       cancelButtonColor: '#64748b',
       inputValidator: (value) => {
-        if (!value) {
-          return 'Debes ingresar el código de seguridad';
-        }
+        if (!value) return 'Debes ingresar el código de seguridad';
       }
     });
 
-    if (!password) {
-      return;
-    }
+    if (!password) return;
 
-    const result = await Swal.fire({
-      title: '¿Registrar Reintegro?',
-      html: `
-        <p>Se registrará un ingreso de <strong>${estadoReintegro?.reintegroNecesario?.toFixed(2)}</strong></p>
-        <p>Balance actual: ${balance.toFixed(2)}</p>
-        <p>Balance después: ${configuracion?.maximoPermitido?.toFixed(2)}</p>
-      `,
-      icon: 'question',
-      showCancelButton: true,
-      confirmButtonText: 'Sí, registrar',
-      cancelButtonText: 'Cancelar',
-      confirmButtonColor: '#5D9646'
-    });
+    try {
+      const response = await fetch(`${config.api.API_URL}/cajaChicaConfig/registrar-reintegro`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+        body: JSON.stringify({ password }) // no enviamos monto -> backend calcula hasta el máximo
+      });
 
-    if (result.isConfirmed) {
-      try {
-        const response = await fetch(`${config.api.API_URL}/cajaChicaConfig/registrar-reintegro`, {
-          method: 'POST',
-          headers: { 
-            'Content-Type': 'application/json',
-            ...getAuthHeaders()
-          },
-          body: JSON.stringify({ password })
-        });
-        const data = await response.json();
-        
-        if (response.status === 401) {
-          Swal.fire({ 
-            title: 'Código Incorrecto', 
-            text: data.message || 'El código de seguridad es incorrecto.', 
-            icon: 'error' 
-          });
-          return;
-        }
-        
-        if (response.ok && data.success) {
-          await Swal.fire({
-            title: '¡Reintegro Registrado!',
-            text: data.message,
-            icon: 'success',
-            timer: 2000
-          });
-          await cargarDatos();
-        } else {
-          throw new Error(data.message || 'Error al registrar reintegro');
-        }
-      } catch (error) {
-        Swal.fire({ title: 'Error', text: error.message, icon: 'error' });
+      const data = await response.json();
+
+      if (response.status === 401) {
+        Swal.fire({ title: 'Código Incorrecto', text: data.message || 'El código de seguridad es incorrecto.', icon: 'error' });
+        return;
       }
+
+      if (response.ok && data.success) {
+        await Swal.fire({ title: '¡Reintegro Registrado!', text: data.message, icon: 'success', timer: 2000 });
+        await cargarDatos();
+      } else {
+        throw new Error(data.message || 'Error al registrar reintegro');
+      }
+    } catch (error) {
+      Swal.fire({ title: 'Error', text: error.message, icon: 'error' });
     }
   };
 
@@ -691,9 +670,25 @@ export default function CajaChicaModern() {
   };
 
   const calcularEstadisticas = (movimientos) => {
-    const ingresos = movimientos.filter(m => m.type === 'income').reduce((sum, m) => sum + m.amount, 0);
-    const gastos = movimientos.filter(m => m.type === 'expense').reduce((sum, m) => sum + m.amount, 0);
-    setStats({ totalIngresos: ingresos, totalGastos: gastos, totalTransacciones: movimientos.length });
+    // Calcular totales solo para la semana actual (Lunes a Domingo)
+    const now = new Date();
+    const day = now.getDay(); // 0 (Dom) .. 6 (Sáb)
+    const diffToMonday = (day === 0 ? -6 : 1 - day); // ajustar para obtener el lunes
+    const monday = new Date(now);
+    monday.setDate(now.getDate() + diffToMonday);
+    monday.setHours(0,0,0,0);
+    const sunday = new Date(monday);
+    sunday.setDate(monday.getDate() + 6);
+    sunday.setHours(23,59,59,999);
+
+    const movimientosSemana = movimientos.filter(m => {
+      const d = new Date(m.date);
+      return d >= monday && d <= sunday;
+    });
+
+    const ingresos = movimientosSemana.filter(m => m.type === 'income').reduce((sum, m) => sum + m.amount, 0);
+    const gastos = movimientosSemana.filter(m => m.type === 'expense').reduce((sum, m) => sum + m.amount, 0);
+    setStats({ totalIngresos: ingresos, totalGastos: gastos, totalTransacciones: movimientosSemana.length });
   };
 
   const limpiarFormulario = () => {
@@ -784,7 +779,7 @@ export default function CajaChicaModern() {
             className="bg-white rounded-2xl p-6 shadow-sm border border-slate-200 hover:shadow-lg hover:scale-105 transition-all cursor-pointer"
           >
             <div className="flex items-center justify-between mb-3">
-              <p className="text-slate-600 text-sm font-medium">Total Ingresos</p>
+              <p className="text-slate-600 text-sm font-medium">Ingresos (Semana)</p>
               <div className="bg-[#5D9646] bg-opacity-20 p-2 rounded-lg">
                 <Plus className="text-[#5D9646]" size={18} />
               </div>
@@ -794,27 +789,13 @@ export default function CajaChicaModern() {
           </div>
 
           <div
-            onClick={() => {
-              if (estadoReintegro?.necesitaReintegro) {
-                registrarReintegro();
-              } else {
-                Swal.fire({
-                  title: 'Sin reintegro',
-                  text: 'No es necesario realizar un reintegro en este momento',
-                  icon: 'info'
-                });
-              }
-            }}
-            className={`bg-white rounded-2xl p-6 shadow-sm border transition-all cursor-pointer ${
-              estadoReintegro?.necesitaReintegro
-                ? 'border-amber-300 hover:shadow-lg hover:scale-105'
-                : 'border-slate-200 hover:shadow-md'
-            }`}
+            onClick={() => registrarReintegro()}
+            className={`bg-white rounded-2xl p-6 shadow-sm border border-slate-200 transition-all cursor-pointer hover:shadow-lg hover:scale-105`}
           >
             <div className="flex items-center justify-between mb-3">
-              <p className="text-slate-600 text-sm font-medium">Total Gastos</p>
+              <p className="text-slate-600 text-sm font-medium">Gastos (Semana)</p>
               <TrendingDown
-                className={estadoReintegro?.necesitaReintegro ? 'text-amber-600' : 'text-rose-500'}
+                className={'text-amber-600'}
                 size={18}
               />
             </div>
@@ -823,10 +804,8 @@ export default function CajaChicaModern() {
               {formatearMoneda(stats.totalGastos)}
             </h3>
 
-            <p className={`text-sm font-medium ${
-              estadoReintegro?.necesitaReintegro ? 'text-amber-600' : 'text-rose-600'
-            }`}>
-              {estadoReintegro?.necesitaReintegro ? 'Click para reintegrar' : 'Acumulado'}
+            <p className={`text-sm font-medium text-amber-600`}>
+              Click para reintegrar
             </p>
           </div>
         </div>
@@ -997,30 +976,30 @@ export default function CajaChicaModern() {
               <div className="space-y-6">
                 <div>
                   <label className="block text-sm font-semibold text-[#34353A] mb-3">
-                    Máximo Permitido: ${tempMaximo.toFixed(2)}
+                    Máximo Permitido: {'$' + tempMaximo.toFixed(2)}
                   </label>
                   <input
-                    type="range" min="100" max="10000" step="50"
+                    type="number" min="100" max="10000" step="0.01"
                     value={tempMaximo}
                     onChange={(e) => setTempMaximo(Number(e.target.value))}
-                    className="w-full h-3 bg-[#5F8EAD] bg-opacity-30 rounded-lg appearance-none cursor-pointer accent-[#5F8EAD]"
+                    className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:border-[#5F8EAD] focus:outline-none transition-colors"
                   />
                   <div className="flex justify-between text-xs text-slate-500 mt-1">
-                    <span>$100</span><span>$10,000</span>
+                    <span className="text-xs">mín 100</span><span className="text-xs">máx 10000</span>
                   </div>
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-[#34353A] mb-3">
-                    Mínimo para Reintegro: ${tempMinimo.toFixed(2)}
+                    Mínimo para Reintegro: {'$' + tempMinimo.toFixed(2)}
                   </label>
                   <input
-                    type="range" min="10" max="1000" step="10"
+                    type="number" min="0" max="10000" step="0.01"
                     value={tempMinimo}
                     onChange={(e) => setTempMinimo(Number(e.target.value))}
-                    className="w-full h-3 bg-amber-200 rounded-lg appearance-none cursor-pointer accent-amber-600"
+                    className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:border-amber-500 focus:outline-none transition-colors"
                   />
                   <div className="flex justify-between text-xs text-slate-500 mt-1">
-                    <span>$10</span><span>$1,000</span>
+                    <span className="text-xs">mín 0</span><span className="text-xs">máx 10000</span>
                   </div>
                 </div>
               </div>
