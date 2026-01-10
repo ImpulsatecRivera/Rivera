@@ -131,50 +131,50 @@ ReportesCajaChicaController.generarPDFIndividual = async (req, res) => {
                     padding-bottom: 15px;
                 }
                 .header .logo-container {
-                    margin-bottom: 10px;
+                    margin-bottom: 8px;
                     display: flex;
                     justify-content: center;
                 }
                 .header .logo-container img {
-                    max-width: 160px;
+                    max-width: 120px;
                     height: auto;
                     background: white;
-                    padding: 4px;
+                    padding: 2px;
                     border-radius: 4px;
                     border: 1px solid #ddd;
                 }
                 .header h1 {
-                    font-size: 18px;
+                    font-size: 16px;
                     font-weight: bold;
-                    letter-spacing: 4px;
-                    margin-bottom: 5px;
+                    letter-spacing: 3px;
+                    margin-bottom: 4px;
                     color: #34353A;
                 }
                 .header .subtitle {
-                    font-size: 11px;
+                    font-size: 10px;
                     font-weight: bold;
-                    margin-top: 6px;
+                    margin-top: 4px;
                     color: #5F8EAD;
                 }
                 .header .balance-info {
                     text-align: right;
-                    font-size: 14px;
+                    font-size: 12px;
                     font-weight: bold;
-                    margin-top: 8px;
+                    margin-top: 6px;
                     color: #5F8EAD;
                 }
                 .stats-summary {
-                    margin-bottom: 12px;
-                    padding: 8px;
+                    margin-bottom: 10px;
+                    padding: 6px;
                     background: #f5f9fc;
                     border: 2px solid #5F8EAD;
                 }
                 .stats-row {
                     display: flex;
                     justify-content: space-between;
-                    padding: 4px 0;
+                    padding: 3px 0;
                     border-bottom: 1px solid #e2e8f0;
-                    font-size: 10px;
+                    font-size: 9px;
                     color: #34353A;
                 }
                 .stats-row:last-child {
@@ -191,17 +191,17 @@ ReportesCajaChicaController.generarPDFIndividual = async (req, res) => {
                     color: #fff;
                 }
                 th {
-                    padding: 8px 6px;
+                    padding: 6px 4px;
                     text-align: center;
-                    font-size: 10px;
+                    font-size: 9px;
                     font-weight: bold;
                     border: 2px solid #34353A;
                     text-transform: uppercase;
                 }
                 td {
-                    padding: 6px 6px;
+                    padding: 4px 4px;
                     border: 1px solid #34353A;
-                    font-size: 9px;
+                    font-size: 8px;
                     background: #fff;
                     color: #34353A;
                 }
@@ -246,7 +246,7 @@ ReportesCajaChicaController.generarPDFIndividual = async (req, res) => {
         <body>
             <div class="header">
                 <div class="logo-container">
-                    ${logoBase64 ? `<img src="${logoBase64}" alt="Rivera Logo" style="max-width:140px;height:auto;"/>` : '<p style="color:#34353A">RIVERA</p>'}
+                    ${logoBase64 ? `<img src="${logoBase64}" alt="Rivera Logo" style="max-width:100px;height:auto;"/>` : '<p style="color:#34353A">RIVERA</p>'}
                 </div>
                 <h1>CAJA CHICA</h1>
                 <div class="subtitle">COMPROBANTE DE ${tipoOperacion}</div>
@@ -429,48 +429,48 @@ ReportesCajaChicaController.generarPDFTodosMovimientos = async (req, res) => {
                     padding-bottom: 12px;
                 }
                 .header .logo-container {
-                    margin-bottom: 10px;
+                    margin-bottom: 8px;
                     display: flex;
                     justify-content: center;
                 }
                 .header .logo-container img {
-                    max-width: 160px;
+                    max-width: 120px;
                     height: auto;
                     background: white;
-                    padding: 6px;
+                    padding: 4px;
                     border-radius: 4px;
                 }
                 .header h1 {
-                    font-size: 16px;
+                    font-size: 14px;
                     font-weight: bold;
-                    letter-spacing: 2px;
+                    letter-spacing: 1px;
                     margin-bottom: 4px;
                     color: #34353A;
                 }
                 .header .balance-info {
                     text-align: right;
-                    font-size: 13px;
+                    font-size: 12px;
                     font-weight: bold;
                     margin-top: 6px;
                     color: #5F8EAD;
                 }
                 .stats-summary {
-                    margin-bottom: 12px;
-                    padding: 8px;
+                    margin-bottom: 10px;
+                    padding: 6px;
                     background: #f5f9fc;
                     border: 2px solid #5F8EAD;
                 }
                 .stats-row {
                     display: flex;
                     justify-content: space-between;
-                    padding: 4px 0;
+                    padding: 3px 0;
                     border-bottom: 1px solid #e2e8f0;
-                    font-size: 10px;
+                    font-size: 9px;
                 }
                 .stats-row:last-child {
                     border-bottom: none;
                     font-weight: bold;
-                    font-size: 12px;
+                    font-size: 10px;
                 }
                 table {
                     width: 100%;
@@ -561,7 +561,7 @@ ReportesCajaChicaController.generarPDFTodosMovimientos = async (req, res) => {
         <body>
             <div class="header">
                 <div class="logo-container">
-                    ${logoBase64 ? `<img src="${logoBase64}" alt="Rivera Logo" style="max-width:140px;height:auto;"/>` : '<p style="color:#34353A">RIVERA</p>'}
+                    ${logoBase64 ? `<img src="${logoBase64}" alt="Rivera Logo" style="max-width:100px;height:auto;"/>` : '<p style="color:#34353A">RIVERA</p>'}
                 </div>
                 <h1>CAJA CHICA</h1>
                 <div class="balance-info">$ ${balanceFinal.toFixed(2)}</div>
@@ -896,7 +896,7 @@ ReportesCajaChicaController.generarPDFMensualSimple = async (req, res) => {
         <body>
             <div class="header">
                 <div class="logo-container">
-                    ${logoBase64 ? `<img src="${logoBase64}" alt="Rivera Logo" style="max-width:140px;height:auto;"/>` : '<p style="color:#34353A">RIVERA</p>'}
+                    ${logoBase64 ? `<img src="${logoBase64}" alt="Rivera Logo" style="max-width:100px;height:auto;"/>` : '<p style="color:#34353A">RIVERA</p>'}
                 </div>
                 <h1>CAJA CHICA</h1>
                 <div class="subtitle">${obtenerNombreMes(mesNum).toUpperCase()} ${anoNum}</div>
@@ -1123,52 +1123,52 @@ ReportesCajaChicaController.generarPDFMultiplesMeses = async (req, res) => {
                 }
                 body {
                     font-family: Arial, 'Courier New', monospace;
-                    padding: 30px;
+                    padding: 20px;
                     color: #34353A;
                     background: #fff;
                 }
                 .header {
                     text-align: center;
-                    margin-bottom: 30px;
+                    margin-bottom: 20px;
                     border-bottom: 3px solid #34353A;
-                    padding-bottom: 15px;
+                    padding-bottom: 10px;
                 }
                 .header .logo-container {
-                    margin-bottom: 15px;
+                    margin-bottom: 12px;
                     display: flex;
                     justify-content: center;
                 }
                 .header .logo-svg {
-                    width: 200px;
+                    width: 120px;
                     height: auto;
                 }
                 .header h1 {
-                    font-size: 32px;
+                    font-size: 22px;
                     font-weight: bold;
-                    letter-spacing: 8px;
+                    letter-spacing: 4px;
                     margin-bottom: 5px;
                     color: #5F8EAD;
                 }
                 .header .subtitle {
-                    font-size: 14px;
+                    font-size: 12px;
                     font-weight: bold;
-                    margin-top: 8px;
+                    margin-top: 6px;
                     color: #34353A;
                 }
                 .mes-section {
-                    margin-bottom: 25px;
+                    margin-bottom: 20px;
                     background: #f5f5f5;
-                    padding: 20px;
+                    padding: 12px;
                     border: 2px solid #34353A;
                 }
                 .mes-header {
-                    margin-bottom: 15px;
-                    padding-bottom: 10px;
+                    margin-bottom: 12px;
+                    padding-bottom: 8px;
                     border-bottom: 2px solid #5F8EAD;
                     text-align: center;
                 }
                 .mes-header h2 {
-                    font-size: 18px;
+                    font-size: 16px;
                     font-weight: bold;
                     color: #5F8EAD;
                 }
@@ -1179,9 +1179,9 @@ ReportesCajaChicaController.generarPDFMultiplesMeses = async (req, res) => {
                     border: 2px solid #34353A;
                 }
                 .mes-table td {
-                    padding: 10px 15px;
+                    padding: 6px 8px;
                     border: 1px solid #34353A;
-                    font-size: 12px;
+                    font-size: 10px;
                 }
                 .mes-table .label {
                     font-weight: bold;
@@ -1242,7 +1242,7 @@ ReportesCajaChicaController.generarPDFMultiplesMeses = async (req, res) => {
         <body>
             <div class="header">
                 <div class="logo-container">
-                    ${logoBase64 ? `<img src="${logoBase64}" alt="Rivera Logo" style="max-width:140px;height:auto;"/>` : '<p style="color:#34353A">RIVERA</p>'}
+                    ${logoBase64 ? `<img src="${logoBase64}" alt="Rivera Logo" style="max-width:100px;height:auto;"/>` : '<p style="color:#34353A">RIVERA</p>'}
                 </div>
                 <h1>CAJA CHICA</h1>
                 <div class="subtitle">REPORTE COMPARATIVO - ${mesesValidos.map(m => obtenerNombreMes(m)).join(', ').toUpperCase()} ${anoNum}</div>
@@ -1554,7 +1554,7 @@ ReportesCajaChicaController.generarPDFDiario = async (req, res) => {
         <body>
             <div class="header">
                 <div class="logo-container">
-                    ${logoBase64 ? `<img src="${logoBase64}" alt="Rivera Logo" style="max-width:140px;height:auto;"/>` : '<p style="color:#34353A">RIVERA</p>'}
+                    ${logoBase64 ? `<img src="${logoBase64}" alt="Rivera Logo" style="max-width:100px;height:auto;"/>` : '<p style="color:#34353A">RIVERA</p>'}
                 </div>
                 <h1>CAJA CHICA</h1>
                 <div class="subtitle">REPORTE DIARIO - ${fechaObj.toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }).toUpperCase()}</div>
@@ -1926,7 +1926,7 @@ ReportesCajaChicaController.generarPDFRangoFechas = async (req, res) => {
         <body>
             <div class="header">
                 <div class="logo-container">
-                    ${logoBase64 ? `<img src="${logoBase64}" alt="Rivera Logo" style="max-width:140px;height:auto;"/>` : '<p style="color:#34353A">RIVERA</p>'}
+                    ${logoBase64 ? `<img src="${logoBase64}" alt="Rivera Logo" style="max-width:100px;height:auto;"/>` : '<p style="color:#34353A">RIVERA</p>'}
                 </div>
                 <h1>CAJA CHICA</h1>
                 <div class="subtitle">REPORTE ${tipoReporte}</div>
