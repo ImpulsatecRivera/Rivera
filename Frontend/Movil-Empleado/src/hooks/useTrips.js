@@ -2,6 +2,34 @@
 import { useState, useEffect, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+/* ============= Función para convertir UTC a zona local ============= */
+const getLocalDateKey = (isoString) => {
+  try {
+    if (!isoString) return null;
+    console.log("🔄 Procesando fecha:", isoString);
+    
+    // Crear fecha desde string ISO
+    const fecha = new Date(isoString);
+    console.log("📅 Fecha parseada:", fecha);
+    
+    if (isNaN(fecha.getTime())) {
+      console.error("❌ Fecha inválida después de parse:", isoString);
+      return null;
+    }
+    
+    // Obtener la fecha en zona local (no UTC)
+    const year = fecha.getFullYear();
+    const month = String(fecha.getMonth() + 1).padStart(2, '0');
+    const day = String(fecha.getDate()).padStart(2, '0');
+    const resultado = `${year}-${month}-${day}`;
+    console.log("✅ Fecha convertida a local:", resultado);
+    return resultado;
+  } catch (err) {
+    console.error("❌ Error en getLocalDateKey:", err);
+    return null;
+  }
+};
+
 /* ====================== Base URL ====================== */
 const RAW_BASE = (process.env.EXPO_PUBLIC_API_URL || '').replace(/\/+$/, '');
 const CLEAN_BASE = RAW_BASE.replace(/\/api$/i, '');
@@ -544,6 +572,10 @@ export const useTrips = (motoristaId = null, tipoConsulta = 'programados') => {
 
       const url = `${API_BASE_URL}/motoristas/${encodeURIComponent(id)}/viajes-programados`;
       const data = await hacerPeticion(url);
+      
+      console.log("📡 RESPUESTA DEL BACKEND (viajes-programados):", data);
+      console.log("📡 Payload extraído:", getPayload(data));
+      
       if (!data) return;
 
       const payload = getPayload(data) || {};
@@ -566,10 +598,42 @@ export const useTrips = (motoristaId = null, tipoConsulta = 'programados') => {
         hora: t.hora,
       }));
 
+      console.log("📦 viajesPorDia antes de setear:", payload?.viajesPorDia);
+      console.log("📦 Todos los viajes normalizados:", todos);
+
+      // 📋 AGRUPAR VIAJES POR FECHA (Frontend) si el backend no lo hace
+      let viajesPorDiaFinal = payload?.viajesPorDia || [];
+      if (viajesPorDiaFinal.length === 0 && todos.length > 0) {
+        const viajesPorFecha = {};
+        todos.forEach((viaje) => {
+          const fechaISO = viaje._fechaSalidaISO;
+          if (!fechaISO) return;
+          
+          // Usar función helper para convertir correctamente a zona local
+          const fechaKey = getLocalDateKey(fechaISO);
+          if (!fechaKey) {
+            console.warn("⚠️ No se pudo procesar fecha:", fechaISO);
+            return;
+          }
+          
+          if (!viajesPorFecha[fechaKey]) {
+            viajesPorFecha[fechaKey] = [];
+          }
+          viajesPorFecha[fechaKey].push(viaje);
+        });
+        viajesPorDiaFinal = Object.keys(viajesPorFecha)
+          .sort()
+          .map((fecha) => ({
+            fecha,
+            viajes: viajesPorFecha[fecha],
+          }));
+        console.log("📦 viajesPorDia AGRUPADO EN FRONTEND (CON ZONA LOCAL):", viajesPorDiaFinal);
+      }
+
       if (DEBUG_TRIPS && todos[0]) console.log('NORMALIZADO:', todos[0], '\nRAW:', todos[0].raw);
 
       setTrips(todos);
-      setViajesPorDia(payload?.viajesPorDia || []);
+      setViajesPorDia(viajesPorDiaFinal);
       setProximosDestinos(prox);
       setTotalTrips(getTotalViajes(data, todos));
       setHistorialViajes(todos.slice(-5));

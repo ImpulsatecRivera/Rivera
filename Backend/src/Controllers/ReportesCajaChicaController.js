@@ -1322,7 +1322,13 @@ ReportesCajaChicaController.generarPDFDiario = async (req, res) => {
     try {
         const { fecha } = req.params;
 
-        const fechaObj = new Date(fecha);
+        // Función para parsear fechas correctamente sin dependencia de zona horaria
+        const parseDate = (dateString) => {
+            const [year, month, day] = dateString.split('-');
+            return new Date(year, month - 1, day);
+        };
+
+        const fechaObj = parseDate(fecha);
         if (isNaN(fechaObj.getTime())) {
             return res.status(400).json({
                 success: false,
@@ -1330,10 +1336,10 @@ ReportesCajaChicaController.generarPDFDiario = async (req, res) => {
             });
         }
 
-        const fechaInicio = new Date(fecha);
+        const fechaInicio = parseDate(fecha);
         fechaInicio.setHours(0, 0, 0, 0);
         
-        const fechaFin = new Date(fecha);
+        const fechaFin = parseDate(fecha);
         fechaFin.setHours(23, 59, 59, 999);
 
         const movimientos = await CajaChica.find({
@@ -1672,8 +1678,14 @@ ReportesCajaChicaController.generarPDFRangoFechas = async (req, res) => {
             });
         }
 
-        const inicio = new Date(fechaInicio);
-        const fin = new Date(fechaFin);
+        // Función para parsear fechas correctamente sin dependencia de zona horaria
+        const parseDate = (dateString) => {
+            const [year, month, day] = dateString.split('-');
+            return new Date(year, month - 1, day);
+        };
+
+        const inicio = parseDate(fechaInicio);
+        const fin = parseDate(fechaFin);
 
         if (isNaN(inicio.getTime()) || isNaN(fin.getTime())) {
             return res.status(400).json({
