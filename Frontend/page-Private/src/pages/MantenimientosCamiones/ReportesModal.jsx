@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { X, Calendar, FileText, Download, ChevronDown, AlertCircle, CheckCircle } from 'lucide-react';
 
 const ReportesModal = ({ isOpen, onClose, apiUrl }) => {
-  const [tipoReporte, setTipoReporte] = useState('todos');
+  const [tipoReporte, setTipoReporte] = useState('mensual');
   const [mesSeleccionado, setMesSeleccionado] = useState('');
   const [anoSeleccionado, setAnoSeleccionado] = useState(new Date().getFullYear());
   const [mesesSeleccionados, setMesesSeleccionados] = useState([]);
@@ -60,28 +60,59 @@ const ReportesModal = ({ isOpen, onClose, apiUrl }) => {
     setGenerando(true);
     
     try {
-      if (tipoReporte === 'todos') {
-        window.open(`${apiUrl}/reporte/todos`, '_blank');
-        setTimeout(() => {
+      if (tipoReporte === 'anual') {
+        const reporteUrl = `${apiUrl}/reporte/anual/${anoSeleccionado}`;
+        
+        try {
+          const response = await fetch(reporteUrl);
+          
+          if (response.ok) {
+            window.open(reporteUrl, '_blank');
+            setTimeout(() => {
+              setGenerando(false);
+              showCustomAlert('success', '¡Reporte generado!', 'El reporte anual está listo para visualizar.');
+            }, 1000);
+          } else if (response.status === 404) {
+            setGenerando(false);
+            const errorData = await response.json();
+            showCustomAlert(
+              'info',
+              'Sin datos disponibles',
+              errorData.message || `No hay registros de mantenimiento para el año ${anoSeleccionado}.`,
+              ['Verifica que existan mantenimientos registrados en ese año', 'Intenta con otro año']
+            );
+          } else {
+            setGenerando(false);
+            const errorData = await response.json().catch(() => ({}));
+            showCustomAlert(
+              'error',
+              'Error al generar reporte',
+              errorData.message || 'No se pudo generar el reporte.',
+              ['Verifica tu conexión a internet', 'Si el problema persiste, contacta al administrador']
+            );
+          }
+        } catch (error) {
           setGenerando(false);
-          showCustomAlert('success', '¡Reporte generado!', 'El reporte consolidado se ha abierto en una nueva pestaña.');
-        }, 1000);
+          showCustomAlert(
+            'error',
+            'Error de conexión',
+            'No se pudo conectar con el servidor.',
+            ['Verifica tu conexión a internet', 'Intenta nuevamente']
+          );
+        }
       } else if (tipoReporte === 'mensual') {
-        // Intentar generar el reporte directamente
         const reporteUrl = `${apiUrl}/reporte/mensual-simple/${mesSeleccionado}/${anoSeleccionado}`;
         
         try {
           const response = await fetch(reporteUrl);
           
           if (response.ok) {
-            // Si la respuesta es exitosa, abrir en nueva pestaña
             window.open(reporteUrl, '_blank');
             setTimeout(() => {
               setGenerando(false);
               showCustomAlert('success', '¡Reporte generado!', 'El reporte mensual está listo para visualizar.');
             }, 1000);
           } else if (response.status === 404) {
-            // Si es 404, significa que no hay datos
             setGenerando(false);
             const errorData = await response.json();
             const mesNombre = meses.find(m => m.value === parseInt(mesSeleccionado))?.label;
@@ -92,7 +123,6 @@ const ReportesModal = ({ isOpen, onClose, apiUrl }) => {
               ['Verifica que existan mantenimientos registrados en ese período', 'Intenta con otro mes']
             );
           } else {
-            // Otro tipo de error
             setGenerando(false);
             const errorData = await response.json().catch(() => ({}));
             showCustomAlert(
@@ -124,7 +154,6 @@ const ReportesModal = ({ isOpen, onClose, apiUrl }) => {
         if (!response.ok) {
           setGenerando(false);
           
-          // Si es 404, significa que no hay datos en ningún mes
           if (response.status === 404) {
             const errorData = await response.json().catch(() => ({}));
             const mesesSinDatosNombres = mesesSeleccionados.map(m => 
@@ -139,7 +168,6 @@ const ReportesModal = ({ isOpen, onClose, apiUrl }) => {
             return;
           }
           
-          // Si es 400, error de validación
           if (response.status === 400) {
             const errorData = await response.json().catch(() => ({}));
             showCustomAlert(
@@ -151,7 +179,6 @@ const ReportesModal = ({ isOpen, onClose, apiUrl }) => {
             return;
           }
           
-          // Otros errores del servidor
           const errorData = await response.json().catch(() => ({}));
           showCustomAlert(
             'error',
@@ -162,7 +189,6 @@ const ReportesModal = ({ isOpen, onClose, apiUrl }) => {
           return;
         }
         
-        // Si la respuesta es exitosa, descargar el PDF
         const blob = await response.blob();
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -219,19 +245,6 @@ const ReportesModal = ({ isOpen, onClose, apiUrl }) => {
               <label className="block text-sm font-semibold text-gray-700 mb-3">Tipo de Reporte</label>
               <div className="grid grid-cols-3 gap-3">
                 <button
-                  onClick={() => setTipoReporte('todos')}
-                  className={`p-4 rounded-xl border-2 transition-all ${
-                    tipoReporte === 'todos'
-                      ? 'border-indigo-600 bg-indigo-50 text-indigo-700'
-                      : 'border-gray-200 hover:border-gray-300 text-gray-700'
-                  }`}
-                >
-                  <FileText className="mx-auto mb-2" size={24} />
-                  <div className="text-sm font-semibold">Todos</div>
-                  <div className="text-xs text-gray-500 mt-1">Consolidado</div>
-                </button>
-
-                <button
                   onClick={() => setTipoReporte('mensual')}
                   className={`p-4 rounded-xl border-2 transition-all ${
                     tipoReporte === 'mensual'
@@ -256,19 +269,50 @@ const ReportesModal = ({ isOpen, onClose, apiUrl }) => {
                   <div className="text-sm font-semibold">Múltiples</div>
                   <div className="text-xs text-gray-500 mt-1">Personalizado</div>
                 </button>
+
+                <button
+                  onClick={() => setTipoReporte('anual')}
+                  className={`p-4 rounded-xl border-2 transition-all ${
+                    tipoReporte === 'anual'
+                      ? 'border-indigo-600 bg-indigo-50 text-indigo-700'
+                      : 'border-gray-200 hover:border-gray-300 text-gray-700'
+                  }`}
+                >
+                  <FileText className="mx-auto mb-2" size={24} />
+                  <div className="text-sm font-semibold">Anual</div>
+                  <div className="text-xs text-gray-500 mt-1">Completo</div>
+                </button>
               </div>
             </div>
 
             {/* Opciones según tipo seleccionado */}
-            {tipoReporte === 'todos' && (
-              <div className="bg-indigo-50 rounded-xl p-5 border border-indigo-100">
-                <div className="flex items-start gap-3">
-                  <FileText className="text-indigo-600 mt-1" size={20} />
-                  <div>
-                    <h3 className="font-semibold text-indigo-900 mb-1">Reporte Consolidado</h3>
-                    <p className="text-sm text-indigo-700">
-                      Se generará un PDF con todos los mantenimientos registrados en el sistema.
-                    </p>
+            {tipoReporte === 'anual' && (
+              <div className="space-y-4">
+                <div className="bg-indigo-50 rounded-xl p-5 border border-indigo-100 mb-4">
+                  <div className="flex items-start gap-3">
+                    <FileText className="text-indigo-600 mt-1" size={20} />
+                    <div>
+                      <h3 className="font-semibold text-indigo-900 mb-1">Reporte Anual por Camión</h3>
+                      <p className="text-sm text-indigo-700">
+                        Genera un reporte horizontal con tabla de todas las placas y sus montos por mes del año seleccionado.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Año</label>
+                  <div className="relative">
+                    <select
+                      value={anoSeleccionado}
+                      onChange={(e) => setAnoSeleccionado(Number(e.target.value))}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 appearance-none bg-white"
+                    >
+                      {anos.map(ano => (
+                        <option key={ano} value={ano}>{ano}</option>
+                      ))}
+                    </select>
+                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={20} />
                   </div>
                 </div>
               </div>
