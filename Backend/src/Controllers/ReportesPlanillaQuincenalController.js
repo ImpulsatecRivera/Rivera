@@ -115,6 +115,12 @@ ReportesPlanillasController.generarPDFQuincenal = async (req, res) => {
                     padding: 20px;
                     color: #34353A;
                     background: #fff;
+                    -webkit-print-color-adjust: exact !important;
+                    print-color-adjust: exact !important;
+                }
+                table, th, td {
+                    -webkit-print-color-adjust: exact !important;
+                    print-color-adjust: exact !important;
                 }
                 .header {
                     text-align: center;
@@ -390,6 +396,12 @@ ReportesPlanillasController.generarPDFMensual = async (req, res) => {
                     padding: 30px;
                     color: #34353A;
                     background: #fff;
+                    -webkit-print-color-adjust: exact !important;
+                    print-color-adjust: exact !important;
+                }
+                table, th, td {
+                    -webkit-print-color-adjust: exact !important;
+                    print-color-adjust: exact !important;
                 }
                 .header {
                     text-align: center;
@@ -705,6 +717,12 @@ ReportesPlanillasController.generarPDFMultiMes = async (req, res) => {
                     padding: 30px;
                     color: #34353A;
                     background: #fff;
+                    -webkit-print-color-adjust: exact !important;
+                    print-color-adjust: exact !important;
+                }
+                table, th, td {
+                    -webkit-print-color-adjust: exact !important;
+                    print-color-adjust: exact !important;
                 }
                 .header {
                     text-align: center;
@@ -980,6 +998,12 @@ ReportesPlanillasController.generarPDFAnual = async (req, res) => {
                     padding: 20px;
                     color: #34353A;
                     background: #fff;
+                    -webkit-print-color-adjust: exact !important;
+                    print-color-adjust: exact !important;
+                }
+                table, th, td {
+                    -webkit-print-color-adjust: exact !important;
+                    print-color-adjust: exact !important;
                 }
                 .header {
                     text-align: center;
