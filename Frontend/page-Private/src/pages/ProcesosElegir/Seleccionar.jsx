@@ -1,6 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import Spline from '@splinetool/react-spline';
+import { useAuth } from '../../Context/AuthContext';
 
 import characterImage from '../../images/Avatar.png';
 import gearsIcon from '../../images/procesos.png';
@@ -8,6 +9,7 @@ import peopleIcon from '../../images/usuarios.png';
 
 const Seleccionar = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   return (
     <div className="relative min-h-screen py-12 px-4 overflow-hidden">
@@ -27,7 +29,7 @@ const Seleccionar = () => {
         {/* Header */}
         <div className="text-center mb-16">
           <h1 className="text-2xl md:text-3xl font-normal text-white mb-6 drop-shadow-lg">
-            Hola fitin que deseas realizar este dia
+            Hola {user?.name || user?.nombre || 'Usuario'}, ¿qué deseas realizar este día?
           </h1>
           <div className="flex justify-center">
             <img src={characterImage} alt="Character" className="w-32 h-auto drop-shadow-2xl" />
@@ -57,7 +59,7 @@ const Seleccionar = () => {
               
               {/* Button */}
               <button 
-              onClick={() => navigate('/home')}
+                onClick={() => navigate('/home')}
                 className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-6 rounded-lg transition-colors duration-200 shadow-lg hover:shadow-xl"
               >
                 Ingresar
