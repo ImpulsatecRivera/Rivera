@@ -1,15 +1,15 @@
 import React, { useMemo, useState } from "react";
 import { X, Calendar, FileText, Download, ChevronDown } from "lucide-react";
+import Swal from "sweetalert2";
 
 const ReportesDieselModal = ({ isOpen, onClose, apiUrl }) => {
-  const [tipoReporte, setTipoReporte] = useState("todos"); // 'todos', 'mensual', 'multiple'
+  const [tipoReporte, setTipoReporte] = useState("todos");
   const [mesSeleccionado, setMesSeleccionado] = useState("");
+  const [semanaSeleccionada, setSemanaSeleccionada] = useState("");
   const [anoSeleccionado, setAnoSeleccionado] = useState(new Date().getFullYear());
   const [mesesSeleccionados, setMesesSeleccionados] = useState([]);
   const [generando, setGenerando] = useState(false);
 
-  // ✅ Tu backend está montado así:
-  // app.use("/api/resumenReporte", ResumenDieselReporte)
   const reporteBase = useMemo(() => `${apiUrl}/resumenReporte`, [apiUrl]);
 
   const meses = [
@@ -25,6 +25,14 @@ const ReportesDieselModal = ({ isOpen, onClose, apiUrl }) => {
     { value: 10, label: "Octubre" },
     { value: 11, label: "Noviembre" },
     { value: 12, label: "Diciembre" },
+  ];
+
+  const semanas = [
+    { value: 1, label: "Semana 1 (1-7)" },
+    { value: 2, label: "Semana 2 (8-14)" },
+    { value: 3, label: "Semana 3 (15-21)" },
+    { value: 4, label: "Semana 4 (22-28)" },
+    { value: 5, label: "Semana 5 (29-31)" },
   ];
 
   const anos = Array.from({ length: 10 }, (_, i) => new Date().getFullYear() - i);
@@ -47,71 +55,250 @@ const ReportesDieselModal = ({ isOpen, onClose, apiUrl }) => {
     window.URL.revokeObjectURL(url);
   };
 
+  // Función para verificar si hay registros
+  const verificarRegistros = async (url) => {
+    try {
+      const response = await fetch(url);
+      if (!response.ok) {
+        if (response.status === 404) {
+          return false; // No hay registros
+        }
+        throw new Error(`Error del servidor: ${response.status}`);
+      }
+      return true; // Hay registros
+    } catch (error) {
+      throw error;
+    }
+  };
+
   const generarReporte = async () => {
-    // Validaciones
+    // Validaciones de campos requeridos
     if (tipoReporte === "mensual" && !mesSeleccionado) {
-      alert("Por favor selecciona un mes");
+      Swal.fire({
+        icon: "warning",
+        title: "Mes requerido",
+        text: "Por favor selecciona un mes para generar el reporte",
+        confirmButtonColor: "#4F46E5",
+        confirmButtonText: "Entendido",
+      });
       return;
     }
+
+    if (tipoReporte === "semanal") {
+      if (!mesSeleccionado) {
+        Swal.fire({
+          icon: "warning",
+          title: "Mes requerido",
+          text: "Por favor selecciona un mes",
+          confirmButtonColor: "#4F46E5",
+          confirmButtonText: "Entendido",
+        });
+        return;
+      }
+      if (!semanaSeleccionada) {
+        Swal.fire({
+          icon: "warning",
+          title: "Semana requerida",
+          text: "Por favor selecciona una semana",
+          confirmButtonColor: "#4F46E5",
+          confirmButtonText: "Entendido",
+        });
+        return;
+      }
+    }
+
     if (tipoReporte === "multiple" && mesesSeleccionados.length === 0) {
-      alert("Por favor selecciona al menos un mes");
+      Swal.fire({
+        icon: "warning",
+        title: "Meses requeridos",
+        text: "Por favor selecciona al menos un mes para el reporte comparativo",
+        confirmButtonColor: "#4F46E5",
+        confirmButtonText: "Entendido",
+      });
       return;
     }
 
     setGenerando(true);
 
+    // Mensaje de procesamiento
+    Swal.fire({
+      title: "Procesando...",
+      html: "Verificando datos y generando reporte",
+      allowOutsideClick: false,
+      allowEscapeKey: false,
+      didOpen: () => {
+        Swal.showLoading();
+      },
+    });
+
     try {
       if (tipoReporte === "todos") {
-        // ✅ Tu backend NO tiene /general
-        // ✅ Entonces hacemos "general del año" usando comparativo con los 12 meses
-        const response = await fetch(`${reporteBase}/reportes/diesel/comparativo`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            meses: [1,2,3,4,5,6,7,8,9,10,11,12],
-            ano: anoSeleccionado,
-          }),
-        });
+        const url = `${reporteBase}/reportes/diesel/anual/${anoSeleccionado}`;
+        
+        try {
+          const hayRegistros = await verificarRegistros(url);
+          
+          if (!hayRegistros) {
+            Swal.fire({
+              icon: "info",
+              title: "Sin registros",
+              text: `No hay registros de diésel para el año ${anoSeleccionado}`,
+              confirmButtonColor: "#4F46E5",
+              confirmButtonText: "Entendido",
+            });
+            setGenerando(false);
+            return;
+          }
 
-        if (!response.ok) throw new Error("Error al generar reporte general del año");
+          window.open(url, "_blank");
 
-        await descargarBlobComoPDF(response, `reporte-diesel-general-${anoSeleccionado}.pdf`);
+          Swal.fire({
+            icon: "success",
+            title: "¡Reporte generado!",
+            html: `<strong>Reporte Anual ${anoSeleccionado}</strong><br/>El PDF se ha abierto en una nueva pestaña`,
+            confirmButtonColor: "#4F46E5",
+            timer: 3000,
+            timerProgressBar: true,
+          });
+        } catch (error) {
+          throw new Error(`Error al generar reporte anual: ${error.message}`);
+        }
       }
 
       if (tipoReporte === "mensual") {
-        // ✅ Mensual SIMPLE (GET)
-        window.open(
-          `${reporteBase}/reportes/diesel/mes/${mesSeleccionado}/${anoSeleccionado}`,
-          "_blank"
-        );
+        const mesNombre = meses.find(m => m.value === parseInt(mesSeleccionado))?.label;
+        const url = `${reporteBase}/reportes/diesel/mes/${mesSeleccionado}/${anoSeleccionado}`;
+        
+        try {
+          const hayRegistros = await verificarRegistros(url);
+          
+          if (!hayRegistros) {
+            Swal.fire({
+              icon: "info",
+              title: "Sin registros",
+              text: `No hay registros de diésel para ${mesNombre} ${anoSeleccionado}`,
+              confirmButtonColor: "#4F46E5",
+              confirmButtonText: "Entendido",
+            });
+            setGenerando(false);
+            return;
+          }
+
+          window.open(url, "_blank");
+
+          Swal.fire({
+            icon: "success",
+            title: "¡Reporte generado!",
+            html: `<strong>${mesNombre} ${anoSeleccionado}</strong><br/>El PDF se ha abierto en una nueva pestaña`,
+            confirmButtonColor: "#4F46E5",
+            timer: 3000,
+            timerProgressBar: true,
+          });
+        } catch (error) {
+          throw new Error(`Error al generar reporte mensual: ${error.message}`);
+        }
+      }
+
+      if (tipoReporte === "semanal") {
+        const mesNombre = meses.find(m => m.value === parseInt(mesSeleccionado))?.label;
+        const url = `${reporteBase}/reportes/diesel/semanal/${mesSeleccionado}/${anoSeleccionado}/${semanaSeleccionada}`;
+        
+        try {
+          const hayRegistros = await verificarRegistros(url);
+          
+          if (!hayRegistros) {
+            Swal.fire({
+              icon: "info",
+              title: "Sin registros",
+              text: `No hay registros de diésel para la semana ${semanaSeleccionada} de ${mesNombre} ${anoSeleccionado}`,
+              confirmButtonColor: "#4F46E5",
+              confirmButtonText: "Entendido",
+            });
+            setGenerando(false);
+            return;
+          }
+
+          window.open(url, "_blank");
+
+          Swal.fire({
+            icon: "success",
+            title: "¡Reporte generado!",
+            html: `<strong>${mesNombre} ${anoSeleccionado}</strong><br/>Semana ${semanaSeleccionada}<br/>El PDF se ha abierto en una nueva pestaña`,
+            confirmButtonColor: "#4F46E5",
+            timer: 3000,
+            timerProgressBar: true,
+          });
+        } catch (error) {
+          throw new Error(`Error al generar reporte semanal: ${error.message}`);
+        }
       }
 
       if (tipoReporte === "multiple") {
-        // ✅ Comparativo (POST)
-        const response = await fetch(`${reporteBase}/reportes/diesel/comparativo`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            meses: [...mesesSeleccionados].sort((a, b) => a - b),
-            ano: anoSeleccionado,
-          }),
-        });
+        try {
+          const response = await fetch(`${reporteBase}/reportes/diesel/comparativo`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              meses: [...mesesSeleccionados].sort((a, b) => a - b),
+              ano: anoSeleccionado,
+            }),
+          });
 
-        if (!response.ok) throw new Error("Error al generar reporte");
+          if (response.status === 404) {
+            Swal.fire({
+              icon: "info",
+              title: "Sin registros",
+              text: `No hay registros de diésel para los meses seleccionados en ${anoSeleccionado}`,
+              confirmButtonColor: "#4F46E5",
+              confirmButtonText: "Entendido",
+            });
+            setGenerando(false);
+            return;
+          }
 
-        await descargarBlobComoPDF(
-          response,
-          `reporte-diesel-comparativo-${anoSeleccionado}.pdf`
-        );
+          if (!response.ok) {
+            throw new Error(`Error del servidor: ${response.status}`);
+          }
+
+          await descargarBlobComoPDF(
+            response,
+            `reporte-diesel-comparativo-${anoSeleccionado}.pdf`
+          );
+
+          const mesesNombres = mesesSeleccionados
+            .sort((a, b) => a - b)
+            .map(m => meses.find(mes => mes.value === m)?.label)
+            .join(", ");
+
+          Swal.fire({
+            icon: "success",
+            title: "¡Reporte descargado!",
+            html: `<strong>Reporte Comparativo ${anoSeleccionado}</strong><br/>${mesesNombres}<br/>El PDF se ha descargado correctamente`,
+            confirmButtonColor: "#4F46E5",
+            timer: 3000,
+            timerProgressBar: true,
+          });
+        } catch (error) {
+          throw new Error(`Error al generar reporte comparativo: ${error.message}`);
+        }
       }
 
       setTimeout(() => {
         setGenerando(false);
         onClose();
-      }, 700);
+      }, 3000);
+
     } catch (error) {
-      console.error("Error:", error);
-      alert(error.message || "Error al generar el reporte");
+      console.error("Error al generar reporte:", error);
+      
+      Swal.fire({
+        icon: "error",
+        title: "Error al generar reporte",
+        html: `<strong>No se pudo generar el PDF</strong><br/>${error.message}<br/><br/>Por favor verifica tu conexión e intenta de nuevo`,
+        confirmButtonColor: "#4F46E5",
+        confirmButtonText: "Entendido",
+      });
+
       setGenerando(false);
     }
   };
@@ -144,7 +331,7 @@ const ReportesDieselModal = ({ isOpen, onClose, apiUrl }) => {
           {/* Tipo */}
           <div className="mb-6">
             <label className="block text-sm font-semibold text-gray-700 mb-3">Tipo de Reporte</label>
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-4 gap-3">
               <button
                 onClick={() => setTipoReporte("todos")}
                 className={`p-4 rounded-xl border-2 transition-all ${
@@ -154,8 +341,8 @@ const ReportesDieselModal = ({ isOpen, onClose, apiUrl }) => {
                 }`}
               >
                 <FileText className="mx-auto mb-2" size={24} />
-                <div className="text-sm font-semibold">General</div>
-                <div className="text-xs text-gray-500 mt-1">Año completo</div>
+                <div className="text-sm font-semibold">Anual</div>
+                <div className="text-xs text-gray-500 mt-1">12 meses</div>
               </button>
 
               <button
@@ -167,8 +354,21 @@ const ReportesDieselModal = ({ isOpen, onClose, apiUrl }) => {
                 }`}
               >
                 <Calendar className="mx-auto mb-2" size={24} />
-                <div className="text-sm font-semibold">Un Mes</div>
-                <div className="text-xs text-gray-500 mt-1">Simple</div>
+                <div className="text-sm font-semibold">Mensual</div>
+                <div className="text-xs text-gray-500 mt-1">1 mes</div>
+              </button>
+
+              <button
+                onClick={() => setTipoReporte("semanal")}
+                className={`p-4 rounded-xl border-2 transition-all ${
+                  tipoReporte === "semanal"
+                    ? "border-indigo-600 bg-indigo-50 text-indigo-700"
+                    : "border-gray-200 hover:border-gray-300 text-gray-700"
+                }`}
+              >
+                <Calendar className="mx-auto mb-2" size={24} />
+                <div className="text-sm font-semibold">Semanal</div>
+                <div className="text-xs text-gray-500 mt-1">Por semana</div>
               </button>
 
               <button
@@ -186,16 +386,16 @@ const ReportesDieselModal = ({ isOpen, onClose, apiUrl }) => {
             </div>
           </div>
 
-          {/* Año para General */}
+          {/* Anual */}
           {tipoReporte === "todos" && (
             <div className="space-y-4">
               <div className="bg-indigo-50 rounded-xl p-5 border border-indigo-100">
                 <div className="flex items-start gap-3">
                   <FileText className="text-indigo-600 mt-1" size={20} />
                   <div>
-                    <h3 className="font-semibold text-indigo-900 mb-1">Reporte General (por año)</h3>
+                    <h3 className="font-semibold text-indigo-900 mb-1">Reporte Anual</h3>
                     <p className="text-sm text-indigo-700">
-                      Se descargará un PDF consolidado del año seleccionado.
+                      PDF con los 12 meses del año dividido en 2 semestres.
                     </p>
                   </div>
                 </div>
@@ -231,15 +431,17 @@ const ReportesDieselModal = ({ isOpen, onClose, apiUrl }) => {
                 <div className="flex items-start gap-3">
                   <Calendar className="text-indigo-600 mt-1" size={20} />
                   <div>
-                    <h3 className="font-semibold text-indigo-900 mb-1">Reporte Mensual (Simple)</h3>
-                    <p className="text-sm text-indigo-700">Genera un reporte del mes seleccionado.</p>
+                    <h3 className="font-semibold text-indigo-900 mb-1">Reporte Mensual</h3>
+                    <p className="text-sm text-indigo-700">Genera un reporte de un mes específico.</p>
                   </div>
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Mes</label>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Mes <span className="text-red-500">*</span>
+                  </label>
                   <div className="relative">
                     <select
                       value={mesSeleccionado}
@@ -250,6 +452,92 @@ const ReportesDieselModal = ({ isOpen, onClose, apiUrl }) => {
                       {meses.map((m) => (
                         <option key={m.value} value={m.value}>
                           {m.label}
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDown
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
+                      size={20}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Año</label>
+                  <div className="relative">
+                    <select
+                      value={anoSeleccionado}
+                      onChange={(e) => setAnoSeleccionado(Number(e.target.value))}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 appearance-none bg-white"
+                    >
+                      {anos.map((ano) => (
+                        <option key={ano} value={ano}>
+                          {ano}
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDown
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
+                      size={20}
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Semanal */}
+          {tipoReporte === "semanal" && (
+            <div className="space-y-4">
+              <div className="bg-indigo-50 rounded-xl p-5 border border-indigo-100 mb-4">
+                <div className="flex items-start gap-3">
+                  <Calendar className="text-indigo-600 mt-1" size={20} />
+                  <div>
+                    <h3 className="font-semibold text-indigo-900 mb-1">Reporte Semanal</h3>
+                    <p className="text-sm text-indigo-700">Genera un reporte por semana del mes.</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Mes <span className="text-red-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <select
+                      value={mesSeleccionado}
+                      onChange={(e) => setMesSeleccionado(e.target.value)}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 appearance-none bg-white"
+                    >
+                      <option value="">Seleccionar</option>
+                      {meses.map((m) => (
+                        <option key={m.value} value={m.value}>
+                          {m.label}
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDown
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
+                      size={20}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Semana <span className="text-red-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <select
+                      value={semanaSeleccionada}
+                      onChange={(e) => setSemanaSeleccionada(e.target.value)}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 appearance-none bg-white"
+                    >
+                      <option value="">Seleccionar</option>
+                      {semanas.map((s) => (
+                        <option key={s.value} value={s.value}>
+                          {s.label}
                         </option>
                       ))}
                     </select>
@@ -322,7 +610,7 @@ const ReportesDieselModal = ({ isOpen, onClose, apiUrl }) => {
 
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-3">
-                  Seleccionar Meses{" "}
+                  Seleccionar Meses <span className="text-red-500">*</span>{" "}
                   {mesesSeleccionados.length > 0 && (
                     <span className="text-indigo-600">({mesesSeleccionados.length} seleccionados)</span>
                   )}
