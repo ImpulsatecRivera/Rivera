@@ -4,6 +4,7 @@ import { X, Calendar, FileText, Download, ChevronDown, AlertCircle, CheckCircle 
 const ReportesModal = ({ isOpen, onClose, apiUrl }) => {
   const [tipoReporte, setTipoReporte] = useState('mensual');
   const [mesSeleccionado, setMesSeleccionado] = useState('');
+  const [semanaSeleccionada, setSemanaSeleccionada] = useState('');
   const [anoSeleccionado, setAnoSeleccionado] = useState(new Date().getFullYear());
   const [mesesSeleccionados, setMesesSeleccionados] = useState([]);
   const [generando, setGenerando] = useState(false);
@@ -25,6 +26,14 @@ const ReportesModal = ({ isOpen, onClose, apiUrl }) => {
     { value: 12, label: 'Diciembre' }
   ];
 
+  const semanas = [
+    { value: 1, label: 'Semana 1 (1-7)' },
+    { value: 2, label: 'Semana 2 (8-14)' },
+    { value: 3, label: 'Semana 3 (15-21)' },
+    { value: 4, label: 'Semana 4 (22-28)' },
+    { value: 5, label: 'Semana 5 (29-31)' },
+  ];
+
   const anos = Array.from({ length: 10 }, (_, i) => new Date().getFullYear() - i);
 
   const toggleMes = (mes) => {
@@ -38,6 +47,7 @@ const ReportesModal = ({ isOpen, onClose, apiUrl }) => {
   const isButtonDisabled = () => {
     if (generando) return true;
     if (tipoReporte === 'mensual' && !mesSeleccionado) return true;
+    if (tipoReporte === 'semanal' && (!mesSeleccionado || !semanaSeleccionada)) return true;
     if (tipoReporte === 'multiple' && mesesSeleccionados.length === 0) return true;
     return false;
   };
@@ -48,9 +58,20 @@ const ReportesModal = ({ isOpen, onClose, apiUrl }) => {
   };
 
   const generarReporte = async () => {
+    // Validaciones
     if (tipoReporte === 'mensual' && !mesSeleccionado) {
       showCustomAlert('warning', 'Mes no seleccionado', 'Por favor selecciona un mes para generar el reporte.');
       return;
+    }
+    if (tipoReporte === 'semanal') {
+      if (!mesSeleccionado) {
+        showCustomAlert('warning', 'Mes no seleccionado', 'Por favor selecciona un mes.');
+        return;
+      }
+      if (!semanaSeleccionada) {
+        showCustomAlert('warning', 'Semana no seleccionada', 'Por favor selecciona una semana.');
+        return;
+      }
     }
     if (tipoReporte === 'multiple' && mesesSeleccionados.length === 0) {
       showCustomAlert('warning', 'Meses no seleccionados', 'Por favor selecciona al menos un mes para continuar.');
@@ -64,33 +85,28 @@ const ReportesModal = ({ isOpen, onClose, apiUrl }) => {
         const reporteUrl = `${apiUrl}/reporte/anual/${anoSeleccionado}`;
         
         try {
-          const response = await fetch(reporteUrl);
+          const checkResponse = await fetch(reporteUrl, { method: 'HEAD' });
           
-          if (response.ok) {
-            window.open(reporteUrl, '_blank');
-            setTimeout(() => {
-              setGenerando(false);
-              showCustomAlert('success', '¡Reporte generado!', 'El reporte anual está listo para visualizar.');
-            }, 1000);
-          } else if (response.status === 404) {
+          if (checkResponse.status === 404) {
             setGenerando(false);
-            const errorData = await response.json();
             showCustomAlert(
               'info',
               'Sin datos disponibles',
-              errorData.message || `No hay registros de mantenimiento para el año ${anoSeleccionado}.`,
+              `No hay registros de mantenimiento para el año ${anoSeleccionado}.`,
               ['Verifica que existan mantenimientos registrados en ese año', 'Intenta con otro año']
             );
-          } else {
-            setGenerando(false);
-            const errorData = await response.json().catch(() => ({}));
-            showCustomAlert(
-              'error',
-              'Error al generar reporte',
-              errorData.message || 'No se pudo generar el reporte.',
-              ['Verifica tu conexión a internet', 'Si el problema persiste, contacta al administrador']
-            );
+            return;
           }
+
+          if (!checkResponse.ok) {
+            throw new Error('Error al verificar datos');
+          }
+
+          window.open(reporteUrl, '_blank');
+          setTimeout(() => {
+            setGenerando(false);
+            showCustomAlert('success', '¡Reporte generado!', 'El reporte anual está listo para visualizar.');
+          }, 1000);
         } catch (error) {
           setGenerando(false);
           showCustomAlert(
@@ -104,34 +120,66 @@ const ReportesModal = ({ isOpen, onClose, apiUrl }) => {
         const reporteUrl = `${apiUrl}/reporte/mensual-simple/${mesSeleccionado}/${anoSeleccionado}`;
         
         try {
-          const response = await fetch(reporteUrl);
+          const checkResponse = await fetch(reporteUrl, { method: 'HEAD' });
           
-          if (response.ok) {
-            window.open(reporteUrl, '_blank');
-            setTimeout(() => {
-              setGenerando(false);
-              showCustomAlert('success', '¡Reporte generado!', 'El reporte mensual está listo para visualizar.');
-            }, 1000);
-          } else if (response.status === 404) {
+          if (checkResponse.status === 404) {
             setGenerando(false);
-            const errorData = await response.json();
             const mesNombre = meses.find(m => m.value === parseInt(mesSeleccionado))?.label;
             showCustomAlert(
               'info',
               'Sin datos disponibles',
-              errorData.message || `No hay registros de mantenimiento para ${mesNombre} ${anoSeleccionado}.`,
+              `No hay registros de mantenimiento para ${mesNombre} ${anoSeleccionado}.`,
               ['Verifica que existan mantenimientos registrados en ese período', 'Intenta con otro mes']
             );
-          } else {
-            setGenerando(false);
-            const errorData = await response.json().catch(() => ({}));
-            showCustomAlert(
-              'error',
-              'Error al generar reporte',
-              errorData.message || 'No se pudo generar el reporte.',
-              ['Verifica tu conexión a internet', 'Si el problema persiste, contacta al administrador']
-            );
+            return;
           }
+
+          if (!checkResponse.ok) {
+            throw new Error('Error al verificar datos');
+          }
+
+          window.open(reporteUrl, '_blank');
+          setTimeout(() => {
+            setGenerando(false);
+            showCustomAlert('success', '¡Reporte generado!', 'El reporte mensual está listo para visualizar.');
+          }, 1000);
+        } catch (error) {
+          setGenerando(false);
+          showCustomAlert(
+            'error',
+            'Error de conexión',
+            'No se pudo conectar con el servidor.',
+            ['Verifica tu conexión a internet', 'Intenta nuevamente']
+          );
+        }
+      } else if (tipoReporte === 'semanal') {
+        const reporteUrl = `${apiUrl}/reporte/semanal/${mesSeleccionado}/${anoSeleccionado}/${semanaSeleccionada}`;
+        
+        try {
+          const checkResponse = await fetch(reporteUrl, { method: 'HEAD' });
+          
+          if (checkResponse.status === 404) {
+            setGenerando(false);
+            const mesNombre = meses.find(m => m.value === parseInt(mesSeleccionado))?.label;
+            showCustomAlert(
+              'info',
+              'Sin datos disponibles',
+              `No hay registros de mantenimiento para la semana ${semanaSeleccionada} de ${mesNombre} ${anoSeleccionado}.`,
+              ['Verifica que existan mantenimientos registrados en ese período', 'Intenta con otra semana']
+            );
+            return;
+          }
+
+          if (!checkResponse.ok) {
+            throw new Error('Error al verificar datos');
+          }
+
+          window.open(reporteUrl, '_blank');
+          setTimeout(() => {
+            setGenerando(false);
+            const mesNombre = meses.find(m => m.value === parseInt(mesSeleccionado))?.label;
+            showCustomAlert('success', '¡Reporte generado!', `El reporte semanal de ${mesNombre} está listo para visualizar.`);
+          }, 1000);
         } catch (error) {
           setGenerando(false);
           showCustomAlert(
@@ -243,7 +291,7 @@ const ReportesModal = ({ isOpen, onClose, apiUrl }) => {
             {/* Selector de Tipo de Reporte */}
             <div className="mb-6">
               <label className="block text-sm font-semibold text-gray-700 mb-3">Tipo de Reporte</label>
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-4 gap-3">
                 <button
                   onClick={() => setTipoReporte('mensual')}
                   className={`p-4 rounded-xl border-2 transition-all ${
@@ -253,8 +301,21 @@ const ReportesModal = ({ isOpen, onClose, apiUrl }) => {
                   }`}
                 >
                   <Calendar className="mx-auto mb-2" size={24} />
-                  <div className="text-sm font-semibold">Un Mes</div>
-                  <div className="text-xs text-gray-500 mt-1">Individual</div>
+                  <div className="text-sm font-semibold">Mensual</div>
+                  <div className="text-xs text-gray-500 mt-1">1 mes</div>
+                </button>
+
+                <button
+                  onClick={() => setTipoReporte('semanal')}
+                  className={`p-4 rounded-xl border-2 transition-all ${
+                    tipoReporte === 'semanal'
+                      ? 'border-indigo-600 bg-indigo-50 text-indigo-700'
+                      : 'border-gray-200 hover:border-gray-300 text-gray-700'
+                  }`}
+                >
+                  <Calendar className="mx-auto mb-2" size={24} />
+                  <div className="text-sm font-semibold">Semanal</div>
+                  <div className="text-xs text-gray-500 mt-1">Por semana</div>
                 </button>
 
                 <button
@@ -267,7 +328,7 @@ const ReportesModal = ({ isOpen, onClose, apiUrl }) => {
                 >
                   <Calendar className="mx-auto mb-2" size={24} />
                   <div className="text-sm font-semibold">Múltiples</div>
-                  <div className="text-xs text-gray-500 mt-1">Personalizado</div>
+                  <div className="text-xs text-gray-500 mt-1">Varios meses</div>
                 </button>
 
                 <button
@@ -280,7 +341,7 @@ const ReportesModal = ({ isOpen, onClose, apiUrl }) => {
                 >
                   <FileText className="mx-auto mb-2" size={24} />
                   <div className="text-sm font-semibold">Anual</div>
-                  <div className="text-xs text-gray-500 mt-1">Completo</div>
+                  <div className="text-xs text-gray-500 mt-1">12 meses</div>
                 </button>
               </div>
             </div>
@@ -334,7 +395,9 @@ const ReportesModal = ({ isOpen, onClose, apiUrl }) => {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">Mes</label>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Mes <span className="text-red-500">*</span>
+                    </label>
                     <div className="relative">
                       <select
                         value={mesSeleccionado}
@@ -344,6 +407,78 @@ const ReportesModal = ({ isOpen, onClose, apiUrl }) => {
                         <option value="">Seleccionar mes</option>
                         {meses.map(m => (
                           <option key={m.value} value={m.value}>{m.label}</option>
+                        ))}
+                      </select>
+                      <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={20} />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">Año</label>
+                    <div className="relative">
+                      <select
+                        value={anoSeleccionado}
+                        onChange={(e) => setAnoSeleccionado(Number(e.target.value))}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 appearance-none bg-white"
+                      >
+                        {anos.map(ano => (
+                          <option key={ano} value={ano}>{ano}</option>
+                        ))}
+                      </select>
+                      <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={20} />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {tipoReporte === 'semanal' && (
+              <div className="space-y-4">
+                <div className="bg-indigo-50 rounded-xl p-5 border border-indigo-100 mb-4">
+                  <div className="flex items-start gap-3">
+                    <Calendar className="text-indigo-600 mt-1" size={20} />
+                    <div>
+                      <h3 className="font-semibold text-indigo-900 mb-1">Reporte Semanal</h3>
+                      <p className="text-sm text-indigo-700">
+                        Genera un reporte de mantenimientos por semana del mes.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Mes <span className="text-red-500">*</span>
+                    </label>
+                    <div className="relative">
+                      <select
+                        value={mesSeleccionado}
+                        onChange={(e) => setMesSeleccionado(e.target.value)}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 appearance-none bg-white"
+                      >
+                        <option value="">Seleccionar</option>
+                        {meses.map(m => (
+                          <option key={m.value} value={m.value}>{m.label}</option>
+                        ))}
+                      </select>
+                      <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={20} />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Semana <span className="text-red-500">*</span>
+                    </label>
+                    <div className="relative">
+                      <select
+                        value={semanaSeleccionada}
+                        onChange={(e) => setSemanaSeleccionada(e.target.value)}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 appearance-none bg-white"
+                      >
+                        <option value="">Seleccionar</option>
+                        {semanas.map(s => (
+                          <option key={s.value} value={s.value}>{s.label}</option>
                         ))}
                       </select>
                       <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={20} />
@@ -401,7 +536,8 @@ const ReportesModal = ({ isOpen, onClose, apiUrl }) => {
 
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-3">
-                    Seleccionar Meses {mesesSeleccionados.length > 0 && (
+                    Seleccionar Meses <span className="text-red-500">*</span>{" "}
+                    {mesesSeleccionados.length > 0 && (
                       <span className="text-indigo-600">({mesesSeleccionados.length} seleccionados)</span>
                     )}
                   </label>
