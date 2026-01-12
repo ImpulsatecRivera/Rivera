@@ -1374,4 +1374,372 @@ ReportesRoutes.generarPDFMultiplesMeses = async (req, res) => {
     }
 };
 
+// 5. PDF SEMANAL - Reporte por semana del mes
+// 5. PDF SEMANAL - Reporte DETALLADO por semana del mes
+ReportesRoutes.generarPDFSemanal = async (req, res) => {
+    let browser;
+    try {
+        const { mes, ano, semana } = req.params;
+        const mesNum = parseInt(mes);
+        const anoNum = parseInt(ano);
+        const semanaNum = parseInt(semana);
+
+        if (mesNum < 1 || mesNum > 12) {
+            return res.status(400).json({
+                success: false,
+                message: 'Mes inválido'
+            });
+        }
+
+        if (semanaNum < 1 || semanaNum > 5) {
+            return res.status(400).json({
+                success: false,
+                message: 'Semana inválida. Debe estar entre 1 y 5'
+            });
+        }
+
+        // Calcular rango de fechas de la semana
+        const inicioSemana = new Date(anoNum, mesNum - 1, ((semanaNum - 1) * 7) + 1);
+        const ultimoDiaMes = new Date(anoNum, mesNum, 0).getDate();
+        const finSemana = new Date(anoNum, mesNum - 1, Math.min(semanaNum * 7, ultimoDiaMes));
+
+        // ✅ VERIFICACIÓN PARA HEAD REQUEST
+        const mantenimientos = await MantenimientoCamiones.find({
+            mes: mesNum,
+            ano: anoNum,
+            fecha_mantenimiento: {
+                $gte: inicioSemana,
+                $lte: finSemana
+            }
+        })
+            .populate('ciculatioCard', 'licensePlate')
+            .sort({ fecha_mantenimiento: 1, 'ciculatioCard.licensePlate': 1 });
+
+        if (req.method === 'HEAD') {
+            if (!mantenimientos || mantenimientos.length === 0) {
+                return res.status(404).end();
+            }
+            return res.status(200).end();
+        }
+
+        if (!mantenimientos || mantenimientos.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: `No hay mantenimientos para la semana ${semanaNum} de ${obtenerNombreMes(mesNum)} ${anoNum}`
+            });
+        }
+
+        const logoBase64 = convertirImagenABase64(RUTA_LOGO);
+
+        // Generar tabla DETALLADA (cada mantenimiento una fila)
+        let totalGeneral = 0;
+        const filasHTML = mantenimientos.map((m, index) => {
+            const total = m.detalles.reduce((s, d) => s + d.subTotal, 0);
+            totalGeneral += total;
+            
+            return `
+                <tr>
+                    <td class="col-numero">${index + 1}</td>
+                    <td class="col-placa">${m.ciculatioCard.licensePlate}</td>
+                    <td class="col-fecha">${new Date(m.fecha_mantenimiento).toLocaleDateString('es-ES')}</td>
+                    <td class="col-tipo"><span class="badge badge-${m.tipo_de_mantenimiento}">${m.tipo_de_mantenimiento}</span></td>
+                    <td class="col-descripcion">${m.descripcion}</td>
+                    <td class="col-monto">$ ${total.toFixed(2)}</td>
+                </tr>
+            `;
+        }).join('');
+
+        const htmlContent = `
+        <!DOCTYPE html>
+        <html lang="es">
+        <head>
+            <meta charset="UTF-8">
+            <style>
+                * {
+                    margin: 0;
+                    padding: 0;
+                    box-sizing: border-box;
+                }
+                body {
+                    font-family: Arial, sans-serif;
+                    padding: 20px;
+                    color: #34353A;
+                    background: #fff;
+                }
+                .header {
+                    text-align: center;
+                    margin-bottom: 20px;
+                    padding-bottom: 15px;
+                    border-bottom: 3px solid #5F8EAD;
+                }
+                .header .logo-container {
+                    margin-bottom: 10px;
+                }
+                .header .logo-container img {
+                    max-width: 180px;
+                    height: auto;
+                }
+                .header h1 {
+                    font-size: 16px;
+                    font-weight: bold;
+                    margin-bottom: 5px;
+                    color: #34353A;
+                }
+                .header .subtitle {
+                    font-size: 13px;
+                    font-weight: bold;
+                    color: #5F8EAD;
+                }
+                .header .period {
+                    font-size: 11px;
+                    color: #6b7280;
+                    margin-top: 5px;
+                }
+                .info-box {
+                    background: #f0f9ff;
+                    border: 2px solid #5F8EAD;
+                    border-radius: 8px;
+                    padding: 15px;
+                    margin-bottom: 20px;
+                }
+                .info-box h3 {
+                    font-size: 12px;
+                    color: #5F8EAD;
+                    margin-bottom: 10px;
+                }
+                .info-grid {
+                    display: grid;
+                    grid-template-columns: repeat(4, 1fr);
+                    gap: 10px;
+                }
+                .info-item {
+                    font-size: 10px;
+                    text-align: center;
+                }
+                .info-item label {
+                    font-weight: bold;
+                    color: #34353A;
+                    display: block;
+                    margin-bottom: 3px;
+                }
+                .info-item span {
+                    color: #5F8EAD;
+                    font-size: 14px;
+                    font-weight: bold;
+                }
+                table {
+                    width: 100%;
+                    border-collapse: collapse;
+                    margin-bottom: 20px;
+                }
+                th {
+                    background: #34353A;
+                    color: white;
+                    padding: 12px 8px;
+                    text-align: left;
+                    font-weight: bold;
+                    font-size: 10px;
+                    border: 1px solid #34353A;
+                }
+                td {
+                    padding: 10px 8px;
+                    text-align: left;
+                    font-size: 9px;
+                    border: 1px solid #5F8EAD;
+                }
+                .col-numero {
+                    width: 5%;
+                    color: #6b7280;
+                    font-weight: 500;
+                    text-align: center;
+                }
+                .col-placa {
+                    width: 12%;
+                    font-weight: 600;
+                    color: #34353A;
+                }
+                .col-fecha {
+                    width: 12%;
+                    color: #6b7280;
+                }
+                .col-tipo {
+                    width: 15%;
+                    text-align: center;
+                }
+                .col-descripcion {
+                    width: 40%;
+                    color: #34353A;
+                }
+                .col-monto {
+                    width: 16%;
+                    font-weight: 600;
+                    color: #5F8EAD;
+                    text-align: right;
+                }
+                th.col-numero,
+                th.col-placa,
+                th.col-fecha,
+                th.col-tipo,
+                th.col-descripcion,
+                th.col-monto {
+                    color: white;
+                }
+                .badge {
+                    display: inline-block;
+                    padding: 4px 8px;
+                    border-radius: 3px;
+                    font-size: 8px;
+                    font-weight: 600;
+                    text-transform: uppercase;
+                    letter-spacing: 0.5px;
+                }
+                .badge-preventivo {
+                    background: #5D9646;
+                    color: #FFFFFF;
+                }
+                .badge-correctivo {
+                    background: #dc2626;
+                    color: #FFFFFF;
+                }
+                .badge-llantas {
+                    background: #d97706;
+                    color: #FFFFFF;
+                }
+                .badge-rines {
+                    background: #5F8EAD;
+                    color: #FFFFFF;
+                }
+                .badge-furgo {
+                    background: #be123c;
+                    color: #FFFFFF;
+                }
+                .badge-madera_furgo {
+                    background: #c2410c;
+                    color: #FFFFFF;
+                }
+                .badge-torno {
+                    background: #7c3aed;
+                    color: #FFFFFF;
+                }
+                .badge-bomba {
+                    background: #5F8EAD;
+                    color: #FFFFFF;
+                }
+                .badge-reparacion_turbo {
+                    background: #991b1b;
+                    color: #FFFFFF;
+                }
+                .badge-otros {
+                    background: #4f46e5;
+                    color: #FFFFFF;
+                }
+                .total-row {
+                    background: #e8f4e8;
+                    font-weight: bold;
+                }
+                .total-row td {
+                    border: 2px solid #5D9646;
+                    font-size: 11px;
+                }
+                .footer {
+                    margin-top: 30px;
+                    text-align: center;
+                    font-size: 8px;
+                    color: #5F8EAD;
+                    border-top: 2px solid #5D9646;
+                    padding-top: 10px;
+                }
+            </style>
+        </head>
+        <body>
+            <div class="header">
+                <div class="logo-container">
+                    ${logoBase64 ? `<img src="${logoBase64}" alt="Rivera Logo" />` : '<p>RIVERA - Distribuidora y Transportes</p>'}
+                </div>
+                <h1>MANTENIMIENTO SEMANAL</h1>
+                <div class="subtitle">${obtenerNombreMes(mesNum).toUpperCase()} ${anoNum} - SEMANA ${semanaNum}</div>
+                <div class="period">${inicioSemana.toLocaleDateString('es-ES')} - ${finSemana.toLocaleDateString('es-ES')}</div>
+            </div>
+
+            <div class="info-box">
+                <h3>Resumen de la Semana</h3>
+                <div class="info-grid">
+                    <div class="info-item">
+                        <label>Mantenimientos</label>
+                        <span>${mantenimientos.length}</span>
+                    </div>
+                    <div class="info-item">
+                        <label>Vehículos</label>
+                        <span>${new Set(mantenimientos.map(m => m.ciculatioCard.licensePlate)).size}</span>
+                    </div>
+                    <div class="info-item">
+                        <label>Días</label>
+                        <span>${inicioSemana.getDate()} al ${finSemana.getDate()}</span>
+                    </div>
+                    <div class="info-item">
+                        <label>Promedio</label>
+                        <span>$${(totalGeneral / mantenimientos.length).toFixed(2)}</span>
+                    </div>
+                </div>
+            </div>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th class="col-numero">#</th>
+                        <th class="col-placa">PLACA</th>
+                        <th class="col-fecha">FECHA</th>
+                        <th class="col-tipo">TIPO</th>
+                        <th class="col-descripcion">DESCRIPCIÓN</th>
+                        <th class="col-monto">MONTO</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${filasHTML}
+                    <tr class="total-row">
+                        <td colspan="5" style="text-align: left; padding-left: 15px;"><strong>TOTAL TALLER</strong></td>
+                        <td class="col-monto"><strong>$ ${totalGeneral.toFixed(2)}</strong></td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="footer">
+                <p>Documento generado el ${new Date().toLocaleDateString('es-ES')} a las ${new Date().toLocaleTimeString('es-ES')}</p>
+                <p><strong>Rivera Distribuidora y Transportes</strong> - Sistema de Gestión © ${new Date().getFullYear()}</p>
+            </div>
+        </body>
+        </html>
+        `;
+
+        browser = await puppeteer.launch({
+            headless: 'new',
+            args: ['--no-sandbox', '--disable-setuid-sandbox']
+        });
+
+        const page = await browser.newPage();
+        await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
+
+        const pdfBuffer = await page.pdf({
+            format: 'A4',
+            printBackground: true,
+            margin: { top: '0px', right: '0px', bottom: '0px', left: '0px' }
+        });
+
+        await browser.close();
+
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename=mantenimiento-${obtenerNombreMes(mesNum)}-sem${semanaNum}-${anoNum}.pdf`);
+        res.send(pdfBuffer);
+
+    } catch (error) {
+        if (browser) await browser.close();
+        console.error('Error al generar PDF semanal:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error al generar el PDF',
+            error: error.message
+        });
+    }
+};
+
 export default ReportesRoutes;

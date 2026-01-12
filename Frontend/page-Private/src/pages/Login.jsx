@@ -1,13 +1,12 @@
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import Swal from 'sweetalert2';
- 
+import Lottie from 'lottie-react'
 import Avatar from "../components/Login/Avatar";
-import Input from "../components/Login/Input";
 import Button from "../components/Login/Button";
 import SideImage from "../components/Login/SideImage";
 import Title from "../components/RecoverPassword/Title";
- 
+ import animationData from '../assets/lotties/Winter Snow.json';
 import useLogin from "../components/Login/hooks/useLogin";
 import { useAuth } from "../Context/AuthContext";
  
@@ -22,7 +21,6 @@ const Login = () => {
   const [attemptsRemaining, setAttemptsRemaining] = useState(4);
   const [blockTimeRemaining, setBlockTimeRemaining] = useState(0);
  
-  // ... (todo tu código de lógica permanece igual)
   useEffect(() => {
     if (isLoggedIn) {
       navigate("/SeleccionarProceso");
@@ -183,17 +181,25 @@ const Login = () => {
  
   return (
     <div className="min-h-screen flex relative overflow-hidden">
-      {/* 🎨 LADO IZQUIERDO - Formulario (40% en desktop) */}
-      <div className="w-full lg:w-[40%] flex flex-col justify-center items-center p-8 relative z-20 bg-white">
+      
+      {/* 🎬 Lottie Background de pantalla completa */}
+      <div className="absolute inset-0 z-0">
+      <Lottie 
+  animationData={animationData} 
+  loop={true}
+  style={{ width: '100%', height: '100%', position: 'absolute', top: 0, left: 0 }}
+/>
+        {/* Overlay oscuro para legibilidad */}
+        <div className="absolute inset-0 bg-black/20"></div>
+      </div>
+      
+      {/* 🎨 LADO IZQUIERDO - Formulario */}
+      <div className="w-full lg:w-[50%] flex flex-col justify-center items-center px-6 lg:px-12 relative z-20">
         
-        {/* ✨ Efecto de fondo muy sutil */}
-        <div className="absolute inset-0 bg-gradient-to-br from-blue-50/20 via-transparent to-purple-50/10"></div>
-        
-        <div className="relative z-10 w-full max-w-md">
+        <div className="relative z-10 w-full max-w-md bg-white/95 backdrop-blur-sm rounded-xl shadow-2xl p-10 border border-gray-200">
           <Avatar />
-          <Title className="text-gray-800 mb-8">¡Bienvenido de vuelta!</Title>
+          <Title className="text-gray-800 mb-6">¡Bienvenido de vuelta!</Title>
 
-          {/* Indicadores de estado */}
           {isBlocked && (
             <div className="w-full mb-4 p-4 bg-red-50 border border-red-200 rounded-lg animate-pulse">
               <div className="text-center">
@@ -213,37 +219,44 @@ const Login = () => {
             </div>
           )}
    
-          <form className="w-full space-y-4" onSubmit={onSubmit}>
-            <Input
-              label="Correo"
-              type="email"
-              placeholder="ejemplo@email.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              disabled={isBlocked}
-              className={isBlocked ? "opacity-50 cursor-not-allowed" : ""}
-            />
-            <Input
-              label="Contraseña"
-              type="password"
-              placeholder="Al menos 8 caracteres"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              disabled={isBlocked}
-              className={isBlocked ? "opacity-50 cursor-not-allowed" : ""}
-            />
+          <form className="w-full space-y-5" onSubmit={onSubmit}>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Correo</label>
+              <input
+                type="email"
+                placeholder="ejemplo@email.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                disabled={isBlocked}
+                className={`w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${isBlocked ? "opacity-50 cursor-not-allowed bg-gray-100" : "bg-white hover:border-blue-400"}`}
+              />
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Contraseña</label>
+              <input
+                type="password"
+                placeholder="Al menos 8 caracteres"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                disabled={isBlocked}
+                className={`w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${isBlocked ? "opacity-50 cursor-not-allowed bg-gray-100" : "bg-white hover:border-blue-400"}`}
+              />
+            </div>
+
             <div className="text-right text-sm">
               <Link 
                 to="/recuperar" 
-                className={`text-blue-600 hover:underline transition-colors ${isBlocked ? 'pointer-events-none opacity-50' : ''}`}
+                className={`text-blue-600 hover:text-blue-700 hover:underline transition-colors ${isBlocked ? 'pointer-events-none opacity-50' : ''}`}
               >
                 ¿Olvidaste tu contraseña?
               </Link>
             </div>
+
             <Button 
               type="submit" 
               disabled={loading || isBlocked}
-              className={`w-full transition-all duration-300 ${isBlocked ? 'bg-red-400 cursor-not-allowed' : 'hover:shadow-lg hover:scale-[1.02]'}`}
+              className={`w-full py-3 rounded-lg font-semibold transition-all duration-300 ${isBlocked ? 'bg-red-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700 text-white hover:shadow-lg hover:scale-[1.02]'}`}
             >
               {getButtonText()}
             </Button>
@@ -259,32 +272,13 @@ const Login = () => {
         </div>
       </div>
  
-      {/* 🚛 LADO DERECHO - Lottie Animation (60% en desktop) - ¡MÁS ÉPICO! */}
-      <div className="hidden lg:block lg:w-[60%] relative">
+      {/* 🚛 LADO DERECHO - Imagen del camión */}
+      <div className="hidden lg:flex lg:w-[50%] relative items-center justify-center z-10">
         <SideImage />
-        
-        {/* 🌟 Efecto de transición más suave y elegante */}
-        <div className="absolute left-0 top-0 w-16 h-full bg-gradient-to-r from-white via-white/80 via-white/40 to-transparent z-30"></div>
-        
-        {/* ✨ Partículas flotantes opcionales */}
-        <div className="absolute inset-0 pointer-events-none z-25">
-          {[...Array(8)].map((_, i) => (
-            <div
-              key={i}
-              className="absolute w-2 h-2 bg-white/20 rounded-full animate-bounce"
-              style={{
-                left: Math.random() * 100 + '%',
-                top: Math.random() * 100 + '%',
-                animationDelay: Math.random() * 4 + 's',
-                animationDuration: (Math.random() * 2 + 3) + 's'
-              }}
-            />
-          ))}
-        </div>
       </div>
 
-      {/* 📱 Versión móvil del Lottie */}
-      <div className="lg:hidden w-full h-48 mt-8">
+      {/* 📱 Versión móvil */}
+      <div className="lg:hidden w-full h-48 mt-8 relative z-10">
         <SideImage />
       </div>
     </div>

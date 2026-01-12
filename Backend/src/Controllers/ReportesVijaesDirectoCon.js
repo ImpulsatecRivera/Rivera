@@ -176,57 +176,49 @@ const generarHTMLConsolidado = (titulo, columnas, clientesData, landscape = true
 <head>
   <meta charset="UTF-8">
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
+    * { 
+      margin: 0; 
+      padding: 0; 
+      box-sizing: border-box; 
+    }
     body { 
-      font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; 
-      padding: 0;
+      font-family: Arial, sans-serif; 
+      padding: 10px;
       background: #FFFFFF;
       color: #34353A;
     }
-    /* Estilos especiales para diseño tipo "cuadro comparativo" (semanal) */
-    body.comparativo table { border: 1px solid #000; }
-    body.comparativo th, body.comparativo td { border: 1px solid #000 !important; }
-    body.comparativo th { background: #f0f0f0; color: #000; }
-    body.comparativo .periodo-header { background: #e9ecef !important; color: #000 !important; }
-    body.comparativo .total-row { background: #e8f4e8 !important; color: #000 !important; }
-    body.comparativo td { background: #fff; }
-    body.comparativo .cliente-cell { background: #f9fafb; font-weight:700; }
     
     /* HEADER */
     .main-header {
-      background: linear-gradient(135deg, #34353A 0%, #5F8EAD 100%);
-      padding: 30px;
       text-align: center;
-      border-bottom: 5px solid #5D9646;
-      margin-bottom: 25px;
+      margin-bottom: 15px;
+      padding-bottom: 10px;
+      border-bottom: 3px solid #5F8EAD;
     }
     .logo-container {
-      margin-bottom: 20px;
+      margin-bottom: 8px;
     }
     .logo-container img {
-      width: 180px;
+      max-width: 180px;
       height: auto;
-      background: white;
-      padding: 10px;
-      border-radius: 8px;
     }
     .main-header h1 {
-      color: #FFFFFF;
-      font-size: 22px;
-      font-weight: 300;
+      color: #34353A;
+      font-size: 12px;
+      font-weight: bold;
       text-transform: uppercase;
-      letter-spacing: 2px;
-      margin-bottom: 10px;
+      letter-spacing: 1px;
+      margin-bottom: 5px;
     }
     .main-header .periodo {
-      color: #5D9646;
-      font-size: 18px;
+      color: #34353A;
+      font-size: 10px;
       font-weight: 600;
-      letter-spacing: 1px;
+      margin-top: 6px;
     }
     
     .content {
-      padding: 0 20px 20px 20px;
+      padding: 0 10px 10px 10px;
     }
     
     table { 
@@ -234,10 +226,10 @@ const generarHTMLConsolidado = (titulo, columnas, clientesData, landscape = true
       border-collapse: collapse; 
       font-size: ${fontSize}; 
       background: #FFFFFF;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      margin-bottom: 15px;
     }
     th, td { 
-      border: 1px solid #e5e7eb; 
+      border: 1px solid #5F8EAD; 
       padding: ${cellPadding}; 
       text-align: center; 
     }
@@ -245,7 +237,11 @@ const generarHTMLConsolidado = (titulo, columnas, clientesData, landscape = true
       background: #34353A; 
       color: #FFFFFF;
       font-weight: 600; 
-      border-bottom: 3px solid #5D9646;
+      border-bottom: 1px solid #5F8EAD;
+      font-size: ${headerFontSize};
+    }
+    th.cliente-cell {
+      color: white;
     }
     .cliente-cell { 
       text-align: left; 
@@ -254,15 +250,21 @@ const generarHTMLConsolidado = (titulo, columnas, clientesData, landscape = true
       max-width: ${landscape ? '150px' : '180px'};
       font-size: ${landscape ? '9px' : '10px'};
       background: #f9fafb;
+      color: #111;
     }
     .text-right { text-align: right; }
+    .text-center { text-align: center; }
     .total-row { 
-      background: #34353A; 
+      background: #5D9646; 
       color: #FFFFFF;
       font-weight: bold; 
     }
     .total-row .text-right {
-      color: #5D9646;
+      color: #FFFFFF;
+    }
+    .total-row .cliente-cell {
+      background: #5D9646;
+      color: white;
     }
     .periodo-header { font-size: ${headerFontSize}; }
     .total-cell { 
@@ -272,13 +274,13 @@ const generarHTMLConsolidado = (titulo, columnas, clientesData, landscape = true
     
     .footer {
       margin-top: 20px;
-      padding: 20px;
-      border-top: 3px solid #34353A;
+      padding: 10px;
+      border-top: 2px solid #5D9646;
       text-align: center;
+      font-size: 8px;
     }
     .footer p {
-      color: #6b7280;
-      font-size: 10px;
+      color: #5F8EAD;
       margin: 3px 0;
     }
     .footer .company {
@@ -290,7 +292,7 @@ const generarHTMLConsolidado = (titulo, columnas, clientesData, landscape = true
 <body>
   <div class="main-header">
     <div class="logo-container">
-      ${logoBase64 ? `<img src="${logoBase64}" alt="Rivera Logo" />` : '<p style="color: white;">RIVERA</p>'}
+      ${logoBase64 ? `<img src="${logoBase64}" alt="Rivera Logo" />` : '<p>RIVERA - Distribuidora y Transportes</p>'}
     </div>
     <h1>Consolidado de Viajes</h1>
     <div class="periodo">${titulo}</div>
@@ -731,29 +733,96 @@ ReportesViajesDirecto.generarPDFResumenMensualV2 = async (req, res) => {
 <head>
   <meta charset="UTF-8">
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; padding: 0; background: #FFFFFF; color: #34353A; }
-    /* Spreadsheet-like styling */
-    .main-header { background: #ffffff; padding: 20px; text-align: center; border-bottom: 2px solid #000; margin-bottom: 12px; }
-    .logo-container img { width: 140px; height: auto; background: white; padding: 4px; border-radius: 3px; border: 1px solid #000; }
-    .main-header h1 { color: #000; font-size: 18px; font-weight: 700; text-transform: uppercase; }
-    .main-header .periodo { color: #333; font-size: 12px; font-weight: 600; margin-top: 6px; }
-    .content { padding: 0 12px 18px 12px; }
-    table { width: 100%; border-collapse: collapse; font-size: 10px; border: 1px solid #000; }
-    th, td { border: 1px solid #000; padding: 6px; text-align: center; }
-    th.top { background: #f3f3f3; color: #000; font-weight: 700; font-size: 11px; }
-    th.sub { background: #fff; color: #000; font-weight: 700; font-size: 10px; }
-    tbody tr:nth-child(even) { background: #fafafa; }
-    .cell-cliente { text-align: left; padding-left: 10px; font-weight: 700; min-width: 140px; color: #111; }
-    .cell-numero { text-align: center; font-weight: 700; width: 4%; }
-    .cell-total { text-align: right; font-weight: 700; padding-right: 10px; background: #f3f3f3; color: #000; }
-    .total-row { background: #e6e6e6; color: #000; font-weight: 700; }
-    .footer { margin-top: 10px; padding: 10px; border-top: 2px solid #000; text-align: center; font-size: 11px; color: #6b7280; }
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: Arial, sans-serif;
+      font-size: 10px;
+      padding: 10px;
+      color: #34353A;
+    }
+    
+    .main-header {
+      text-align: center;
+      margin-bottom: 15px;
+      padding-bottom: 10px;
+      border-bottom: 3px solid #5F8EAD;
+    }
+    
+    .main-header .logo-container {
+      margin-bottom: 8px;
+    }
+    
+    .main-header .logo-container img {
+      max-width: 180px;
+      height: auto;
+    }
+    
+    h1 {
+      text-align: center;
+      font-size: 12px;
+      margin-bottom: 5px;
+      font-weight: bold;
+      color: #34353A;
+    }
+    
+    .main-header .periodo {
+      font-size: 10px;
+      color: #34353A;
+      margin-top: 6px;
+    }
+    
+    .content { 
+      padding: 0 10px 10px 10px; 
+    }
+    
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 15px;
+    }
+    
+    th, td {
+      border: 1px solid #5F8EAD;
+      padding: 5px 3px;
+      text-align: center;
+      font-size: 9px;
+    }
+    
+    th {
+      background-color: #34353A;
+      color: white;
+      font-weight: bold;
+      font-size: 8px;
+    }
+    
+    th.top { font-size: 9px; }
+    th.sub { font-size: 8px; }
+    
+    .cell-cliente { text-align: left; padding-left: 10px; font-weight: 700; color: #111; }
+    .cell-numero { text-align: center; font-weight: 700; }
+    .cell-total { text-align: right; font-weight: 700; padding-right: 10px; color: #5D9646; }
+    .total-row { background: #5D9646; color: white; font-weight: bold; }
+    
+    .footer {
+      margin-top: 20px;
+      font-size: 8px;
+      text-align: center;
+      color: #5F8EAD;
+      border-top: 2px solid #5D9646;
+      padding-top: 10px;
+    }
   </style>
 </head>
 <body>
   <div class="main-header">
-    <div class="logo-container">${logoBase64 ? `<img src=\"${logoBase64}\" alt=\"Rivera\" />` : '<p style=\"color:white\">RIVERA</p>'}</div>
+    <div class="logo-container">
+      ${logoBase64 ? `<img src=\"${logoBase64}\" alt=\"Rivera Logo\" />` : '<p>RIVERA - Distribuidora y Transportes</p>'}
+    </div>
     <h1>CUADRO COMPARATIVO DE VIAJES DEL MES DE ${obtenerNombreMes(mesNum)} ${anoNum}</h1>
     <div class="periodo">Periodo: ${formatearFecha(weeks[0].start)} — ${formatearFecha(weeks[weeks.length - 1].end)}</div>
   </div>
@@ -761,16 +830,16 @@ ReportesViajesDirecto.generarPDFResumenMensualV2 = async (req, res) => {
     <table>
       <thead>
         <tr>
-          <th class="top">#</th>
-          <th class="top">CLIENTE</th>
+          <th>#</th>
+          <th>CLIENTE</th>
           ${weekHeadersTop}
-          <th class="top">TOTAL</th>
+          <th>TOTAL</th>
         </tr>
         <tr>
-          <th class="sub"></th>
-          <th class="sub"></th>
+          <th></th>
+          <th></th>
           ${weekHeadersBottom}
-          <th class="sub"></th>
+          <th></th>
         </tr>
       </thead>
       <tbody>
@@ -786,7 +855,10 @@ ReportesViajesDirecto.generarPDFResumenMensualV2 = async (req, res) => {
         </tr>
       </tbody>
     </table>
-    <div class="footer">Generado: ${formatearFecha(new Date())} - Rivera Distribuidora y Transportes</div>
+    <div class="footer">
+      <p>Documento generado el ${new Date().toLocaleDateString('es-ES')} a las ${new Date().toLocaleTimeString('es-ES')}</p>
+      <p><strong>Rivera Distribuidora y Transportes</strong> - Sistema de Gestión © ${new Date().getFullYear()}</p>
+    </div>
   </div>
 </body>
 </html>
@@ -1467,22 +1539,90 @@ ReportesViajesDirecto.generarPDFComparativoEfectivo = async (req, res) => {
 <head>
   <meta charset="UTF-8">
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; padding: 20px; background: #FFFFFF; color: #34353A; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-    table { width: 100%; border-collapse: collapse; font-size:10px; }
-    th { background: #34353A; color: #fff; padding: 8px; border: 1px solid #000; }
-    td { padding: 6px; border: 1px solid #000; }
-    thead th { background: #d9d9d9; color: #000; }
-    .header { text-align:center; margin-bottom:12px; }
-    .logo { margin-bottom:8px; }
-    .small { font-size:9px; color:#666; }
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: Arial, sans-serif;
+      font-size: 10px;
+      padding: 10px;
+      color: #34353A;
+    }
+    
+    .main-header {
+      text-align: center;
+      margin-bottom: 15px;
+      padding-bottom: 10px;
+      border-bottom: 3px solid #5F8EAD;
+    }
+    
+    .main-header .logo-container {
+      margin-bottom: 8px;
+    }
+    
+    .main-header .logo-container img {
+      max-width: 180px;
+      height: auto;
+    }
+    
+    h2 {
+      text-align: center;
+      font-size: 12px;
+      margin-bottom: 5px;
+      font-weight: bold;
+      color: #34353A;
+    }
+    
+    .main-header .periodo {
+      font-size: 10px;
+      color: #34353A;
+      margin-top: 6px;
+    }
+    
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 15px;
+    }
+    
+    th, td {
+      border: 1px solid #5F8EAD;
+      padding: 5px 3px;
+      text-align: center;
+      font-size: 9px;
+    }
+    
+    th {
+      background-color: #34353A;
+      color: white;
+      font-weight: bold;
+      font-size: 8px;
+    }
+    
+    tbody tr:nth-child(even) { background: #fafafa; }
+    
+    .total-row { background: #5D9646; color: white; font-weight: bold; }
+    
+    .footer {
+      margin-top: 20px;
+      font-size: 8px;
+      text-align: center;
+      color: #5F8EAD;
+      border-top: 2px solid #5D9646;
+      padding-top: 10px;
+    }
   </style>
 </head>
 <body>
-  <div class="header">
-    <div class="logo">${logoBase64 ? `<img src="${logoBase64}" style="max-width:140px"/>` : ''}</div>
+  <div class="main-header">
+    <div class="logo-container">
+      ${logoBase64 ? `<img src="${logoBase64}" alt="Rivera Logo" />` : '<p>RIVERA - Distribuidora y Transportes</p>'}
+    </div>
     <h2>CUADRO COMPARATIVO - VIAJES EN EFECTIVO (${anoNum})</h2>
-    <div class="small">Periodo: ${formatearFecha(start)} — ${formatearFecha(end)}</div>
+    <div class="periodo">Periodo: ${formatearFecha(start)} — ${formatearFecha(end)}</div>
   </div>
 
   <table>
@@ -1496,7 +1636,10 @@ ReportesViajesDirecto.generarPDFComparativoEfectivo = async (req, res) => {
     </tbody>
   </table>
 
-  <div style="margin-top:12px; text-align:center; font-size:9px; color:#888">Generado: ${formatearFecha(new Date())} - Rivera Distribuidora y Transportes</div>
+  <div class="footer">
+    <p>Documento generado el ${new Date().toLocaleDateString('es-ES')} a las ${new Date().toLocaleTimeString('es-ES')}</p>
+    <p><strong>Rivera Distribuidora y Transportes</strong> - Sistema de Gestión © ${new Date().getFullYear()}</p>
+  </div>
 </body>
 </html>
 `;
@@ -1598,41 +1741,40 @@ ReportesViajesDirecto.generarPDFClienteIndividual = async (req, res) => {
   <style>
     * { margin:0; padding:0; box-sizing:border-box; }
     body { 
-      font-family:'Helvetica Neue', Helvetica, Arial, sans-serif; 
+      font-family: Arial, sans-serif; 
       padding:0; 
       color:#34353A; 
       background:#FFFFFF; 
     }
     
     .header {
-      background: linear-gradient(135deg, #34353A 0%, #5F8EAD 100%);
       padding: 40px;
       text-align: center;
-      border-bottom: 5px solid #5D9646;
+      border-bottom: 3px solid #5F8EAD;
       margin-bottom: 35px;
     }
     .header .logo-container {
       margin-bottom: 20px;
     }
     .header .logo-container img {
-      width: 200px;
+      max-width: 180px;
       height: auto;
       background: white;
       padding: 10px;
       border-radius: 8px;
     }
     .header h1 { 
-      color: #FFFFFF; 
+      color: #34353A; 
       font-size: 28px; 
       margin-bottom: 8px; 
-      font-weight: 300; 
+      font-weight: bold; 
       text-transform: uppercase; 
       letter-spacing: 2px;
     }
     .header .subtitle { 
-      color: rgba(255, 255, 255, 0.9); 
+      color: #34353A; 
       font-size: 16px; 
-      font-weight: 300; 
+      font-weight: normal; 
     }
     
     .container { 
@@ -1664,7 +1806,7 @@ ReportesViajesDirecto.generarPDFClienteIndividual = async (req, res) => {
       background:white; 
       padding:15px; 
       border-radius:6px; 
-      border:1px solid #e2e8f0; 
+      border:1px solid #5F8EAD; 
     }
     .info-item label { 
       display:block; 
@@ -1697,11 +1839,12 @@ ReportesViajesDirecto.generarPDFClienteIndividual = async (req, res) => {
       font-weight:600; 
       font-size:12px; 
       text-transform:uppercase; 
+      border: 1px solid #5F8EAD;
       border-bottom: 3px solid #5D9646;
     }
     td { 
       padding:14px; 
-      border-bottom:1px solid #e2e8f0; 
+      border: 1px solid #5F8EAD; 
       font-size:13px; 
     }
     tbody tr:hover {
@@ -1710,11 +1853,11 @@ ReportesViajesDirecto.generarPDFClienteIndividual = async (req, res) => {
     .text-right { text-align:right; }
     .total-section { 
       margin-top:25px; 
-      background:#34353A; 
+      background:#5D9646; 
       color:white; 
       padding:25px; 
       border-radius:8px; 
-      border-top: 5px solid #5D9646;
+      border-top: 2px solid #5D9646;
     }
     .total-grid { 
       display:grid; 
@@ -1724,7 +1867,7 @@ ReportesViajesDirecto.generarPDFClienteIndividual = async (req, res) => {
     .total-item { 
       text-align:center; 
       padding: 15px;
-      background: rgba(95, 142, 173, 0.15);
+      background: rgba(255, 255, 255, 0.1);
       border-radius: 4px;
     }
     .total-item label { 
@@ -1740,14 +1883,14 @@ ReportesViajesDirecto.generarPDFClienteIndividual = async (req, res) => {
       font-weight:700; 
     }
     .total-item:last-child .value {
-      color: #5D9646;
+      color: white;
     }
     .footer { 
       margin-top:35px; 
       text-align:center; 
-      color:#6b7280; 
+      color:#5F8EAD; 
       font-size:11px; 
-      border-top:3px solid #34353A; 
+      border-top: 2px solid #5D9646; 
       padding-top:20px; 
     }
     .footer p {
@@ -1943,39 +2086,38 @@ ReportesViajesDirecto.generarPDFCreditoFiscal = async (req, res) => {
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { 
-      font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+      font-family: Arial, sans-serif;
       padding: 0; 
       background: #FFFFFF; 
       color: #34353A;
     }
     
     .header {
-      background: linear-gradient(135deg, #34353A 0%, #5F8EAD 100%);
       padding: 35px;
       text-align: center;
-      border-bottom: 5px solid #5D9646;
+      border-bottom: 3px solid #5F8EAD;
       margin-bottom: 30px;
     }
     .header .logo-container {
       margin-bottom: 20px;
     }
     .header .logo-container img {
-      width: 200px;
+      max-width: 180px;
       height: auto;
       background: white;
       padding: 10px;
       border-radius: 8px;
     }
     .header h1 { 
-      color: #FFFFFF;
+      color: #34353A;
       font-size: 24px; 
-      font-weight: 300; 
+      font-weight: bold; 
       text-transform: uppercase;
       letter-spacing: 2px;
       margin-bottom: 8px; 
     }
     .header .period { 
-      color: #5D9646; 
+      color: #34353A; 
       font-size: 20px; 
       font-weight: 600; 
     }
@@ -2006,7 +2148,7 @@ ReportesViajesDirecto.generarPDFCreditoFiscal = async (req, res) => {
       box-shadow: 0 2px 8px rgba(0,0,0,0.1);
     }
     th, td { 
-      border: 1px solid #e5e7eb; 
+      border: 1px solid #5F8EAD; 
       padding: 12px; 
       text-align: left; 
       font-size: 13px; 
@@ -2021,33 +2163,34 @@ ReportesViajesDirecto.generarPDFCreditoFiscal = async (req, res) => {
     .text-right { text-align: right; }
     .text-center { text-align: center; }
     .total-row { 
-      background: #34353A; 
+      background: #5D9646; 
       color: #FFFFFF;
       font-weight: bold; 
     }
     .total-row .text-right {
-      color: #5D9646;
+      color: white;
     }
     .grand-total { 
-      background: #34353A; 
+      background: #5D9646; 
       color: white; 
       font-size: 15px; 
       font-weight: bold; 
-      border-top: 3px solid #5D9646;
+      border-top: 2px solid #5D9646;
     }
     .grand-total td {
       padding: 18px;
+      border: 1px solid #5F8EAD;
     }
     .grand-total .text-right {
-      color: #5D9646;
+      color: white;
     }
     .footer { 
       margin-top: 25px; 
       font-size: 11px; 
       text-align: center;
       padding-top: 20px;
-      border-top: 3px solid #34353A;
-      color: #6b7280;
+      border-top: 2px solid #5D9646;
+      color: #5F8EAD;
     }
     .footer .company {
       color: #34353A;
@@ -2232,155 +2375,153 @@ ReportesViajesDirecto.generarPDFConsolidadoAnual = async (req, res) => {
 <head>
   <meta charset="UTF-8">
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { 
-      font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-      padding: 0; 
-      background: #FFFFFF; 
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: Arial, sans-serif;
+      font-size: 10px;
+      padding: 10px;
       color: #34353A;
     }
     
     .header {
-      background: linear-gradient(135deg, #34353A 0%, #5F8EAD 100%);
-      padding: 30px;
       text-align: center;
-      border-bottom: 5px solid #5D9646;
-      margin-bottom: 25px;
+      margin-bottom: 15px;
+      padding-bottom: 10px;
+      border-bottom: 3px solid #5F8EAD;
     }
+    
     .header .logo-container {
-      margin-bottom: 20px;
+      margin-bottom: 8px;
     }
+    
     .header .logo-container img {
-      width: 180px;
+      max-width: 180px;
       height: auto;
-      background: white;
-      padding: 10px;
-      border-radius: 8px;
-    }
-    .header h1 { 
-      color: #FFFFFF;
-      font-size: 22px; 
-      font-weight: 300; 
-      text-transform: uppercase;
-      letter-spacing: 2px;
-    }
-    .header .year { 
-      color: #5D9646; 
-      font-size: 18px; 
-      font-weight: 600; 
-      margin-top: 8px;
     }
     
-    .content {
-      padding: 0 20px 20px 20px;
+    h1 {
+      text-align: center;
+      font-size: 12px;
+      margin-bottom: 5px;
+      font-weight: bold;
+      color: #34353A;
     }
     
-    table { 
-      width: 100%; 
-      border-collapse: collapse; 
-      font-size: 10px; 
-      background: white;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    .header .year {
+      font-size: 10px;
+      color: #34353A;
+      margin-top: 6px;
     }
-    th, td { 
-      border: 1px solid #e5e7eb; 
-      padding: 8px; 
-      text-align: center; 
+    
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 15px;
     }
-    th { 
-      background: #34353A; 
-      color: #FFFFFF;
-      font-weight: 600; 
-      border-bottom: 3px solid #5D9646;
+    
+    th, td {
+      border: 1px solid #5F8EAD;
+      padding: 5px 3px;
+      text-align: center;
+      font-size: 9px;
     }
-    .cliente-cell { 
-      text-align: left; 
-      font-weight: bold; 
-      min-width: 120px; 
-      background: #f9fafb;
+    
+    th {
+      background-color: #34353A;
+      color: white;
+      font-weight: bold;
+      font-size: 8px;
     }
+    
+    .cliente-cell {
+      text-align: left;
+      padding-left: 10px;
+      font-weight: 700;
+      color: #111;
+    }
+    
+    th.cliente-cell {
+      color: white;
+    }
+    
+    .mes-header {
+      writing-mode: horizontal-tb;
+      font-size: 9px;
+    }
+    
     .text-right { text-align: right; }
-    .total-row { 
-      background: #34353A; 
-      color: #FFFFFF;
-      font-weight: bold; 
-    }
-    .total-row .text-right {
-      color: #5D9646;
-    }
-    .mes-header { 
-      writing-mode: horizontal-tb; 
-      font-size: 9px; 
+    .text-center { text-align: center; }
+    
+    .total-row {
+      background: #5D9646;
+      color: white;
+      font-weight: bold;
     }
     
     .footer {
       margin-top: 20px;
-      padding: 15px 20px;
-      border-top: 3px solid #34353A;
+      font-size: 8px;
       text-align: center;
-    }
-    .footer p {
-      color: #6b7280;
-      font-size: 10px;
-      margin: 3px 0;
-    }
-    .footer .company {
-      color: #34353A;
-      font-weight: 600;
+      color: #5F8EAD;
+      border-top: 2px solid #5D9646;
+      padding-top: 10px;
     }
   </style>
 </head>
 <body>
   <div class="header">
     <div class="logo-container">
-      ${logoBase64 ? `<img src="${logoBase64}" alt="Rivera Logo" />` : '<p style="color: white;">RIVERA</p>'}
+      ${logoBase64 ? `<img src="${logoBase64}" alt="Rivera Logo" />` : '<p>RIVERA - Distribuidora y Transportes</p>'}
     </div>
-    <h1>Consolidado Anual de Viajes</h1>
+    <h1>CONSOLIDADO ANUAL DE VIAJES</h1>
     <div class="year">AÑO ${anoNum}</div>
   </div>
 
-  <div class="content">
-    <table>
-      <thead>
+  <table>
+    <thead>
+      <tr>
+        <th rowspan="2" class="cliente-cell">CLIENTE</th>
+        ${Array(12).fill(0).map((_, i) => `<th colspan="2" class="mes-header">${obtenerNombreMes(i + 1).substring(0, 3)}</th>`).join('')}
+        <th rowspan="2">TOTAL VIAJES</th>
+        <th rowspan="2">TOTAL MONTO</th>
+      </tr>
+      <tr>
+        ${Array(12).fill(0).map(() => `<th>VIAJES</th><th>MONTO</th>`).join('')}
+      </tr>
+    </thead>
+    <tbody>
+      ${clientesData.map(cliente => `
         <tr>
-          <th rowspan="2" class="cliente-cell">CLIENTE</th>
-          ${Array(12).fill(0).map((_, i) => `<th colspan="2" class="mes-header">${obtenerNombreMes(i + 1).substring(0, 3)}</th>`).join('')}
-          <th rowspan="2">TOTAL VIAJES</th>
-          <th rowspan="2">TOTAL MONTO</th>
+          <td class="cliente-cell">${cliente.cliente}</td>
+          ${cliente.meses.map(mes => `
+            <td style="text-align:center">${mes.viajes}</td>
+            <td class="text-right">${mes.monto > 0 ? `$${mes.monto.toFixed(2)}` : '$ 0.00'}</td>
+          `).join('')}
+          <td class="text-center">${cliente.totalViajes}</td>
+          <td class="text-right"><strong>$${cliente.totalAnual.toFixed(2)}</strong></td>
         </tr>
-        <tr>
-          ${Array(12).fill(0).map(() => `<th>VIAJES</th><th>MONTO</th>`).join('')}
-        </tr>
-      </thead>
-      <tbody>
-        ${clientesData.map(cliente => `
-          <tr>
-            <td class="cliente-cell">${cliente.cliente}</td>
-            ${cliente.meses.map(mes => `
-              <td style="text-align:center">${mes.viajes}</td>
-              <td class="text-right">${mes.monto > 0 ? `$${mes.monto.toFixed(2)}` : '$ 0.00'}</td>
-            `).join('')}
-            <td class="text-center">${cliente.totalViajes}</td>
-            <td class="text-right"><strong>$${cliente.totalAnual.toFixed(2)}</strong></td>
-          </tr>
-        `).join('')}
-        <tr class="total-row">
-          <td>TOTAL</td>
-          ${Array(12).fill(0).map((_, mesIndex) => {
+      `).join('')}
+      <tr class="total-row">
+        <td>TOTAL</td>
+        ${Array(12).fill(0).map((_, mesIndex) => {
       const totalViajesMes = clientesData.reduce((sum, c) => sum + (c.meses[mesIndex].viajes || 0), 0);
       const totalMontoMes = clientesData.reduce((sum, c) => sum + (c.meses[mesIndex].monto || 0), 0);
       return `<td style="text-align:center">${totalViajesMes}</td><td class="text-right">$${totalMontoMes.toFixed(2)}</td>`;
     }).join('')}
-          <td class="text-center">${clientesData.reduce((sum, c) => sum + c.totalViajes, 0)}</td>
-          <td class="text-right">$${clientesData.reduce((sum, c) => sum + c.totalAnual, 0).toFixed(2)}</td>
-        </tr>
-      </tbody>
-    </table>
+        <td class="text-center">${clientesData.reduce((sum, c) => sum + c.totalViajes, 0)}</td>
+        <td class="text-right">$${clientesData.reduce((sum, c) => sum + c.totalAnual, 0).toFixed(2)}</td>
+      </tr>
+    </tbody>
+  </table>
 
-    <div class="footer">
-      <p><strong>Generado:</strong> ${formatearFecha(new Date())} - Total clientes: ${clientesData.length} | Total viajes: ${clientesData.reduce((s, c) => s + c.totalViajes, 0)}</p>
-      <p class="company">Rivera Distribuidora y Transportes</p>
-    </div>
+  <div class="footer">
+    <p>Documento generado el ${new Date().toLocaleDateString('es-ES')} a las ${new Date().toLocaleTimeString('es-ES')}</p>
+    <p><strong>Rivera Distribuidora y Transportes</strong> - Sistema de Gestión © ${new Date().getFullYear()}</p>
   </div>
 </body>
 </html>

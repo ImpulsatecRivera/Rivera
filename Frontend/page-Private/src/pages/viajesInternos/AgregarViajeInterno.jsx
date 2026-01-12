@@ -36,6 +36,29 @@ const getCamionPlaca = (c) =>
 const getClienteNombre = (c) =>
   c?.nombreComercial || c?.nombreEmpresa || c?.nombre || c?.name || "";
 
+const getMotoristaTruckId = (m) => {
+  if (!m) return "";
+  if (m?.truckId) return String(m.truckId);
+  if (m?.camionId) return String(m.camionId);
+  if (typeof m?.truck === "string") return String(m.truck);
+  if (m?.truck?._id) return String(m.truck._id);
+  if (m?.camion?._id) return String(m.camion._id);
+
+  // Heuristic: look for keys that may contain truck info (prefer nested objects)
+  for (const k of Object.keys(m)) {
+    if (/(camion|truck|vehiculo|vehicle)/i.test(k)) {
+      const v = m[k];
+      if (!v) continue;
+      if (typeof v === "string" && v !== m._id && v !== m.id) return String(v);
+      if (v?._id && String(v._id) !== String(m._id)) return String(v._id);
+      if (v?.id && String(v.id) !== String(m._id)) return String(v.id);
+    }
+  }
+
+  // Do NOT return the motorista's own _id as a truck id
+  return "";
+};
+
 export default function AgregarViajeOperativo() {
   const navigate = useNavigate();
 
@@ -93,6 +116,15 @@ export default function AgregarViajeOperativo() {
     fetchCamiones();
   }, []);
 
+  useEffect(() => {
+  if (formData.rutaOrigen && formData.rutaDestino) {
+    setFormData((p) => ({
+      ...p,
+      rutaCompleta: `${formData.rutaOrigen}/${formData.rutaDestino}`,
+    }));
+  }
+}, [formData.rutaOrigen, formData.rutaDestino]);
+
   const fetchClientes = async () => {
     try {
       setLoadingClientes(true);
@@ -123,70 +155,77 @@ export default function AgregarViajeOperativo() {
   }, [clientes]);
 
   const crearClienteYSeleccionar = async () => {
-    const nombreEmpresa = (nuevoCliente.nombreEmpresa || "").trim();
-    const nombreComercial = (nuevoCliente.nombreComercial || nombreEmpresa).trim();
-    const ruc = (nuevoCliente.ruc || "").trim();
-    const email = (nuevoCliente.email || "").trim();
-    const phone = (nuevoCliente.phone || "").trim();
-    const address = (nuevoCliente.address || "").trim();
+  const nombreEmpresa = (nuevoCliente.nombreEmpresa || "").trim();
+  const nombreComercial = (nuevoCliente.nombreComercial || nombreEmpresa).trim();
+  const ruc = (nuevoCliente.ruc || "").trim();
+  const email = (nuevoCliente.email || "").trim();
+  const phone = (nuevoCliente.phone || "").trim();
+  const address = (nuevoCliente.address || "").trim();
 
-    if (!nombreEmpresa || !ruc || !email || !phone || !address) {
-      setError("Completa todos los campos obligatorios del cliente");
-      return;
-    }
+  if (!nombreEmpresa || !ruc || !email || !phone || !address) {
+    setError("Completa todos los campos obligatorios del cliente");
+    return;
+  }
 
-    setCreatingCliente(true);
+  setCreatingCliente(true);
+  setError(null);
+
+  try {
+    const payload = {
+      tipoCliente: "corporativo",
+      nombreEmpresa,
+      nombreComercial,
+      ruc,
+      email,
+      phone,
+      address,
+      terminosPago: "contado",
+      limiteCredito: 0,
+      estadoCorporativo: "activo",
+    };
+
+    const res = await fetch(CLIENTES_ENDPOINT, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok || json?.success === false)
+      throw new Error(json?.message || "Error al crear cliente");
+
+    const created = json?.data?.cliente || json?.data || json;
+    const newId = String(created?._id || created?.id || "");
+
+    if (!newId) throw new Error("No se pudo obtener el ID del cliente creado");
+
+    // Recargar clientes
+    await fetchClientes();
+
+    // Seleccionar el nuevo cliente
+    setFormData((p) => ({
+      ...p,
+      clienteId: newId,
+      clienteNombre: nombreComercial,
+    }));
+
+    // Limpiar formulario
+    setNuevoCliente({
+      nombreEmpresa: "",
+      nombreComercial: "",
+      ruc: "",
+      email: "",
+      phone: "",
+      address: "",
+    });
+
     setError(null);
-
-    try {
-      const payload = {
-        tipoCliente: "corporativo",
-        nombreEmpresa,
-        nombreComercial,
-        ruc,
-        email,
-        phone,
-        address,
-        terminosPago: "contado",
-        limiteCredito: 0,
-        estadoCorporativo: "activo",
-      };
-
-      const res = await fetch(CLIENTES_ENDPOINT, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-
-      const json = await res.json().catch(() => ({}));
-      if (!res.ok || json?.success === false)
-        throw new Error(json?.message || "Error al crear cliente");
-
-      const created = json?.data?.cliente || json?.data || json;
-      const newId = created?._id || created?.id;
-
-      await fetchClientes();
-
-      setFormData((p) => ({
-        ...p,
-        clienteId: newId || "",
-        clienteNombre: nombreComercial,
-      }));
-
-      setNuevoCliente({
-        nombreEmpresa: "",
-        nombreComercial: "",
-        ruc: "",
-        email: "",
-        phone: "",
-        address: "",
-      });
-    } catch (e) {
-      setError(e.message || "Error creando cliente");
-    } finally {
-      setCreatingCliente(false);
-    }
-  };
+  } catch (e) {
+    setError(e.message || "Error creando cliente");
+  } finally {
+    setCreatingCliente(false);
+  }
+};
 
   const fetchMotoristas = async () => {
     try {
@@ -208,7 +247,7 @@ export default function AgregarViajeOperativo() {
       .map((m) => {
         const nombre = getMotoristaNombre(m);
         return {
-          id: m._id,
+          id: String(m._id),
           nombre,
           label: nombre,
         };
@@ -231,12 +270,7 @@ export default function AgregarViajeOperativo() {
       setLoadingCamiones(false);
     }
   };
-const getMotoristaTruckId = (m) =>
-  m?.truckId ||
-  m?.camionId ||
-  m?.truck ||
-  m?.camion?._id ||
-  "";
+
 
   const camionesOptions = useMemo(() => {
     return (camiones || [])
@@ -244,7 +278,7 @@ const getMotoristaTruckId = (m) =>
       .map((c) => {
         const placa = getCamionPlaca(c);
         return {
-          id: c._id,
+          id: String(c._id),
           placa,
           label: placa || `(Sin placa) ${String(c._id).slice(-6)}`,
         };
@@ -264,37 +298,18 @@ const getMotoristaTruckId = (m) =>
       clienteNombre: found?.nombre || p.clienteNombre,
     }));
   };
-
-  useEffect(() => {
-    if (formData.rutaOrigen && formData.rutaDestino) {
-      setFormData((p) => ({
-        ...p,
-        rutaCompleta: `${p.rutaOrigen}/${p.rutaDestino}`,
-      }));
-    }
-  }, [formData.rutaOrigen, formData.rutaDestino]);
-
-  const validar = () => {
-    if (!formData.clienteId) return "Selecciona un cliente corporativo";
-    if (!formData.truckId) return "Selecciona un camión";
-    if (!formData.conductorId) return "Selecciona un conductor";
-    if (!formData.departureTime) return "La fecha/hora de salida es requerida";
-    if (!formData.arrivalTime) return "La fecha/hora de llegada es requerida";
-
-    const salida = new Date(formData.departureTime);
-    const llegada = new Date(formData.arrivalTime);
-
-    if (salida >= llegada) return "La salida debe ser anterior a la llegada";
-
-    if (!formData.rutaOrigen.trim()) return "El origen es requerido";
-    if (!formData.rutaDestino.trim()) return "El destino es requerido";
-
-    const montoNum = Number(formData.montoAcordado);
-    if (!formData.montoAcordado || Number.isNaN(montoNum) || montoNum <= 0)
-      return "El monto debe ser mayor a 0";
-
-    return null;
-  };
+const validar = () => {
+  if (!formData.clienteId) return "Selecciona un cliente";
+  if (!formData.conductorId) return "Selecciona un motorista";
+  if (!formData.truckId) return "Selecciona un camión";
+  if (!formData.departureTime) return "Ingresa fecha/hora de salida";
+  if (!formData.arrivalTime) return "Ingresa fecha/hora de llegada";
+  if (!formData.rutaOrigen) return "Ingresa origen";
+  if (!formData.rutaDestino) return "Ingresa destino";
+  if (!formData.montoAcordado || Number(formData.montoAcordado) <= 0)
+    return "Ingresa un monto válido";
+  return null;
+};
 
   const handleSubmit = async () => {
     const err = validar();
@@ -587,19 +602,41 @@ arrivalTime: new Date(formData.arrivalTime).toISOString(),
                 />
               </div>
 
-              <div>
-                <label className="block text-sm font-semibold text-[#34353A] mb-2">
-                  Tiempo Estimado (hrs)
-                </label>
-                <input
-                  type="number"
-                  name="tiempoEstimado"
-                  value={formData.tiempoEstimado}
-                  onChange={handleInputChange}
-                  placeholder="Ej: 9"
-                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#5F8EAD] focus:border-[#5F8EAD]"
-                />
-              </div>
+            <div>
+  <label className="block text-sm font-semibold text-[#34353A] mb-2">
+    Tiempo Estimado (HH:MM)
+  </label>
+  <input
+    type="text"
+    name="tiempoEstimado"
+    value={formData.tiempoEstimado}
+    onChange={(e) => {
+      let val = e.target.value.replace(/[^\d:]/g, '');
+      
+      // Auto-agregar ":" después de 2 dígitos
+      if (val.length === 2 && !val.includes(':')) {
+        val = val + ':';
+      }
+      
+      // Limitar formato HH:MM (máx 5 caracteres)
+      if (val.length <= 5) {
+        const parts = val.split(':');
+        if (parts.length <= 2) {
+          const horas = parts[0] ? parseInt(parts[0]) : 0;
+          const minutos = parts[1] ? parseInt(parts[1]) : 0;
+          
+          // Validar rangos: horas 0-99, minutos 0-59
+          if (horas <= 99 && (!parts[1] || minutos <= 59)) {
+            setFormData(prev => ({ ...prev, tiempoEstimado: val }));
+          }
+        }
+      }
+    }}
+    placeholder="Ej: 09:30"
+    maxLength="5"
+    className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#5F8EAD] focus:border-[#5F8EAD]"
+  />
+</div>
             </div>
           </div>
 
@@ -625,19 +662,26 @@ arrivalTime: new Date(formData.arrivalTime).toISOString(),
                 />
               </div>
 
-              <div>
-                <label className="block text-sm font-semibold text-[#34353A] mb-2">
-                  Peso (kg)
-                </label>
-                <input
-                  type="number"
-                  name="cargaPeso"
-                  value={formData.cargaPeso}
-                  onChange={handleInputChange}
-                  placeholder="Ej: 15000"
-                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#5F8EAD] focus:border-[#5F8EAD]"
-                />
-              </div>
+            <div>
+  <label className="block text-sm font-semibold text-[#34353A] mb-2">
+    Peso (kg) - Máx: 6 digitos
+  </label>
+  <input
+    type="number"
+    name="cargaPeso"
+    value={formData.cargaPeso}
+    onChange={(e) => {
+      const val = e.target.value;
+      if (val === '' || (Number(val) >= 0 && val.length <= 6)) {
+        handleInputChange(e);
+      }
+    }}
+    placeholder="Ej: 15000"
+    max="999999"
+    min="0"
+    className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#5F8EAD] focus:border-[#5F8EAD]"
+  />
+</div>
 
               <div>
                 <label className="block text-sm font-semibold text-[#34353A] mb-2">
@@ -660,29 +704,34 @@ arrivalTime: new Date(formData.arrivalTime).toISOString(),
           </div>
 
           {/* Monto - COLORES CAMBIADOS */}
-          <div className="mb-8">
-            <h3 className="text-xl font-bold text-[#34353A] mb-4 flex items-center gap-2">
-              <DollarSign className="text-[#5D9646]" size={22} />
-              Monto Acordado
-            </h3>
-
-            <div className="relative max-w-md">
-              <DollarSign
-                className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
-                size={18}
-              />
-              <input
-                type="number"
-                name="montoAcordado"
-                min="0"
-                step="0.01"
-                value={formData.montoAcordado}
-                onChange={handleInputChange}
-                placeholder="Ej: 250.00"
-                className="w-full pl-12 pr-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#5F8EAD] focus:border-[#5F8EAD]"
-              />
-            </div>
-          </div>
+          <div className="relative max-w-md">
+              <label className="block text-sm font-semibold text-[#34353A] mb-2">
+                  Monto acordado
+                </label>
+  <DollarSign
+    className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
+    size={18}
+  />
+  <input
+    type="number"
+    name="montoAcordado"
+    min="0"
+    step="0.01"
+    value={formData.montoAcordado}
+    onChange={(e) => {
+      const val = e.target.value;
+      // Permitir hasta 8 dígitos antes del decimal (99,999,999.99)
+      const partes = val.split('.');
+      if (val === '' || (Number(val) >= 0 && partes[0].length <= 6)) {
+        handleInputChange(e);
+      }
+    }}
+    placeholder="Ej: 250.00"
+    max="99999999.99"
+    className="w-full pl-12 pr-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#5F8EAD] focus:border-[#5F8EAD]"
+  />
+</div>
+<br></br>
 
           {/* Método de Pago */}
 <div className="mb-8">
@@ -728,9 +777,95 @@ arrivalTime: new Date(formData.arrivalTime).toISOString(),
                   </label>
                   <select
                     value={formData.conductorId}
-                    onChange={(e) =>
-                      setFormData((p) => ({ ...p, conductorId: e.target.value }))
-                    }
+                    onChange={(e) => {
+                      const conductorId = String(e.target.value);
+                      const motorista = (motoristas || []).find((m) => String(m._id) === conductorId);
+                      const camionObj = motorista?.camion || motorista?.truck || null;
+
+                      // Try several heuristics to detect a truck id associated to the motorista
+                      let associatedTruckId = String(getMotoristaTruckId(motorista) || "") || (camionObj && (camionObj._id || camionObj.id) ? String(camionObj._id || camionObj.id) : "");
+
+                      // If not found, scan the loaded `camiones` for any truck that references this motorista
+                      if (!associatedTruckId && Array.isArray(camiones) && camiones.length > 0 && motorista) {
+                        const mid = String(motorista._id || motorista.id || "");
+                        for (const c of camiones) {
+                          try {
+                            // direct id match
+                            if (String(c._id || c.id || "") === mid) {
+                              associatedTruckId = String(c._id || c.id);
+                              break;
+                            }
+
+                            // check common driver fields on the camion object
+                            const candidateFields = ["driverId", "motoristaId", "conductorId", "assignedDriver", "motorista", "driver", "conductor"];
+                            for (const f of candidateFields) {
+                              const v = c[f];
+                              if (!v) continue;
+                              if (typeof v === "string" && String(v) === mid) {
+                                associatedTruckId = String(c._id || c.id);
+                                break;
+                              }
+                              if (typeof v === "object") {
+                                if (String(v._id || v.id || "") === mid) {
+                                  associatedTruckId = String(c._id || c.id);
+                                  break;
+                                }
+                              }
+                            }
+
+                            if (associatedTruckId) break;
+
+                            // deep scan: look for any field value equal to motorista id
+                            for (const key of Object.keys(c || {})) {
+                              const val = c[key];
+                              if (!val) continue;
+                              if (typeof val === "string" && (val === mid || val === motorista.id)) {
+                                associatedTruckId = String(c._id || c.id);
+                                break;
+                              }
+                              if (typeof val === "object") {
+                                if (String(val._id || val.id || "") === mid) {
+                                  associatedTruckId = String(c._id || c.id);
+                                  break;
+                                }
+                              }
+                            }
+
+                            if (associatedTruckId) break;
+                          } catch (xx) {
+                            // ignore malformed camion entries
+                          }
+                        }
+                      }
+
+                      // Fallback: if there is exactly one camion in the system, assume it's the one
+                      if (!associatedTruckId && Array.isArray(camiones) && camiones.length === 1) {
+                        associatedTruckId = String(camiones[0]._id || camiones[0].id || "");
+                      }
+
+                      console.log("[DEBUG] motorista select -> conductorId:", conductorId);
+                      console.log("[DEBUG] motorista object:", motorista);
+                      console.log("[DEBUG] camionObj:", camionObj);
+                      console.log("[DEBUG] associatedTruckId:", associatedTruckId);
+                      console.log("[DEBUG] camiones currently:", (camiones || []).map((c) => ({ _id: c._id, placa: c.placa || c.plate || c.placaCamion })));
+
+                      if (camionObj && (camionObj._id || camionObj.id || camionObj.placa || camionObj.plate)) {
+                        const newCamion = {
+                          ...camionObj,
+                          _id: camionObj._id || camionObj.id || associatedTruckId,
+                          placa: getCamionPlaca(camionObj) || camionObj.placa || camionObj.plate,
+                        };
+                        setCamiones((prev) => (prev.some((c) => String(c._id) === String(newCamion._id)) ? prev : [...prev, newCamion]));
+                      } else if (associatedTruckId) {
+                        setCamiones((prev) => (prev.some((c) => String(c._id) === associatedTruckId) ? prev : [...prev, { _id: associatedTruckId }]));
+                      }
+
+                      setFormData((p) => ({
+                        ...p,
+                        conductorId,
+                        truckId: associatedTruckId || p.truckId,
+                      }));
+                    }}
                     className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#5F8EAD] focus:border-[#5F8EAD] bg-white"
                     disabled={loadingMotoristas}
                   >
@@ -746,25 +881,25 @@ arrivalTime: new Date(formData.arrivalTime).toISOString(),
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-gray-600 mb-1">
-                    Camión *
-                  </label>
-                  <select
-                    value={formData.truckId}
-                    onChange={(e) => setFormData((p) => ({ ...p, truckId: e.target.value }))}
-                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#5F8EAD] focus:border-[#5F8EAD] bg-white"
-                    disabled={loadingCamiones}
-                  >
-                    <option value="">
-                      {loadingCamiones ? "Cargando camiones..." : "Seleccionar camión..."}
-                    </option>
-                    {camionesOptions.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+  <label className="block text-xs font-semibold text-gray-600 mb-1">
+    Camión * (asignado automáticamente)
+  </label>
+  <select
+    value={formData.truckId}
+    onChange={(e) => setFormData((p) => ({ ...p, truckId: e.target.value }))}
+    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl bg-gray-100 cursor-not-allowed text-gray-600"
+    disabled={true}
+  >
+    <option value="">
+      {loadingCamiones ? "Cargando camiones..." : formData.truckId ? "Camión asignado" : "Selecciona un motorista primero"}
+    </option>
+    {camionesOptions.map((c) => (
+      <option key={c.id} value={c.id}>
+        {c.label}
+      </option>
+    ))}
+  </select>
+</div>
               </div>
             </div>
           </div>
@@ -787,7 +922,7 @@ arrivalTime: new Date(formData.arrivalTime).toISOString(),
 
           {/* Observaciones - COLORES CAMBIADOS */}
           <div className="mb-8">
-            <h3 className="text-xl font-bold text-[#34353A] mb-4">Observaciones</h3>
+            <h3 className="text-xl font-bold text-[#34353A] mb-4">Direccion detallada del viaje</h3>
 
             <textarea
               name="observaciones"
