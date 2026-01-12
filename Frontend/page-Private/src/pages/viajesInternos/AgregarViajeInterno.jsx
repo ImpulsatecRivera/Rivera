@@ -704,29 +704,34 @@ arrivalTime: new Date(formData.arrivalTime).toISOString(),
           </div>
 
           {/* Monto - COLORES CAMBIADOS */}
-          <div className="mb-8">
-            <h3 className="text-xl font-bold text-[#34353A] mb-4 flex items-center gap-2">
-              <DollarSign className="text-[#5D9646]" size={22} />
-              Monto Acordado
-            </h3>
-
-            <div className="relative max-w-md">
-              <DollarSign
-                className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
-                size={18}
-              />
-              <input
-                type="number"
-                name="montoAcordado"
-                min="0"
-                step="0.01"
-                value={formData.montoAcordado}
-                onChange={handleInputChange}
-                placeholder="Ej: 250.00"
-                className="w-full pl-12 pr-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#5F8EAD] focus:border-[#5F8EAD]"
-              />
-            </div>
-          </div>
+          <div className="relative max-w-md">
+              <label className="block text-sm font-semibold text-[#34353A] mb-2">
+                  Monto acordado
+                </label>
+  <DollarSign
+    className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
+    size={18}
+  />
+  <input
+    type="number"
+    name="montoAcordado"
+    min="0"
+    step="0.01"
+    value={formData.montoAcordado}
+    onChange={(e) => {
+      const val = e.target.value;
+      // Permitir hasta 8 dígitos antes del decimal (99,999,999.99)
+      const partes = val.split('.');
+      if (val === '' || (Number(val) >= 0 && partes[0].length <= 6)) {
+        handleInputChange(e);
+      }
+    }}
+    placeholder="Ej: 250.00"
+    max="99999999.99"
+    className="w-full pl-12 pr-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#5F8EAD] focus:border-[#5F8EAD]"
+  />
+</div>
+<br></br>
 
           {/* Método de Pago */}
 <div className="mb-8">
