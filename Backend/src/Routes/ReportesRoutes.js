@@ -12,7 +12,10 @@ router.get('/anual/:ano', ReportesRoutes.generarPDFAnual);
 // 3. Reporte mensual simple (un solo mes)
 router.get('/mensual-simple/:mes/:ano', ReportesRoutes.generarPDFMensualSimple);
 
-// 4. Reporte de múltiples meses
+// 4. Reporte semanal
+router.get('/semanal/:mes/:ano/:semana', ReportesRoutes.generarPDFSemanal);
+
+// 5. Reporte de múltiples meses
 router.post('/mensual-multiple', ReportesRoutes.generarPDFMultiplesMeses);
 
 export default router;

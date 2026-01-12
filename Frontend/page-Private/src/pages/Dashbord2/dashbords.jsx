@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect,useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Truck, 
@@ -17,12 +17,23 @@ import {
   Clock
 } from 'lucide-react';
 import Spline from '@splinetool/react-spline';
+import Lottie from 'lottie-react';
 import { config } from '../../config';
+
+// 🎨 Importar animaciones Lottie
+import loadingTruckAnimation from '../../assets/lotties/ready, set, go!.json';
+import emptyBoxAnimation from '../../assets/lotties/empty.json';
+import successAnimation from '../../assets/lotties/Success (1).json';
+import warningAnimation from '../../assets/lotties/Alert Notification Character.json';
+import moneyAnimation from '../../assets/lotties/Coins blow effect.json';
+import truckIconAnimation from '../../assets/lotties/ecommerce order fulfillment automation.json';
+import checkmarkAnimation from '../../assets/lotties/Success (1).json';
 
 const ModernDashboard = () => {
   const navigate = useNavigate();
   const [selectedPeriod, setSelectedPeriod] = useState('30');
   const [loading, setLoading] = useState(true);
+  const [hoveredCard, setHoveredCard] = useState(null);
   const [estadisticas, setEstadisticas] = useState({
     viajesOperativos: { total: 0, pendientes: 0, completados: 0, ingresos: 0 },
     mantenimientos: { total: 0, pendientes: 0, completados: 0, gastos: 0 },
@@ -31,10 +42,20 @@ const ModernDashboard = () => {
     planillas: { total: 0, pendientes: 0, pagadas: 0, totalPagado: 0, empleados: 0 },
     flota: { total: 25, operando: 23 }
   });
+  const lottieRef = useRef();
+
+  
 
   useEffect(() => {
     cargarEstadisticas();
   }, [selectedPeriod]);
+
+  useEffect(() => {
+  if (lottieRef.current) {
+    lottieRef.current.setSpeed(1); // ⏱ más lento
+  }
+}, []);
+
 
   const filtrarPorPeriodo = (items, campoFecha) => {
     const diasAtras = parseInt(selectedPeriod);
@@ -48,8 +69,11 @@ const ModernDashboard = () => {
   };
 
   const cargarEstadisticas = async () => {
-    try {
-      setLoading(true);
+  const startTime = Date.now(); // ⏱ empieza a contar
+
+  try {
+    setLoading(true);
+
 
       const viajesRes = await fetch(`${config.api.API_URL}/viajes-operativos/listar`);
       const viajesData = await viajesRes.json();
@@ -152,8 +176,16 @@ const ModernDashboard = () => {
     } catch (error) {
       console.error('Error cargando estadísticas:', error);
     } finally {
-      setLoading(false);
-    }
+  const elapsed = Date.now() - startTime;
+  const minDuration = 6000; // ⏱ 6 segundos
+
+  const remaining = Math.max(minDuration - elapsed, 0);
+
+  setTimeout(() => {
+    setLoading(false);
+  }, remaining);
+}
+
   };
 
   const formatearMoneda = (cantidad) => {
@@ -179,7 +211,8 @@ const ModernDashboard = () => {
       trend: 'neutral',
       icon: Truck,
       color: 'blue',
-      extra: `${estadisticas.viajesOperativos.completados} completados`
+      extra: `${estadisticas.viajesOperativos.completados} completados`,
+      lottie: truckIconAnimation
     },
     {
       title: 'Ingresos Totales',
@@ -188,7 +221,8 @@ const ModernDashboard = () => {
       trend: 'up',
       icon: DollarSign,
       color: 'green',
-      extra: `Período de ${selectedPeriod} días`
+      extra: `Período de ${selectedPeriod} días`,
+      lottie: moneyAnimation
     },
     {
       title: 'Flota Operando',
@@ -197,7 +231,8 @@ const ModernDashboard = () => {
       trend: 'neutral',
       icon: Package,
       color: 'purple',
-      extra: `${estadisticas.flota.total - estadisticas.flota.operando} en mantenimiento`
+      extra: `${estadisticas.flota.total - estadisticas.flota.operando} en mantenimiento`,
+      lottie: null
     },
     {
       title: 'Mantenimientos',
@@ -206,7 +241,8 @@ const ModernDashboard = () => {
       trend: 'warning',
       icon: Wrench,
       color: 'orange',
-      extra: `${estadisticas.mantenimientos.completados} realizados`
+      extra: `${estadisticas.mantenimientos.completados} realizados`,
+      lottie: null
     }
   ];
 
@@ -288,12 +324,21 @@ const ModernDashboard = () => {
     return colors[color];
   };
 
+  // 🎨 LOADING STATE CON LOTTIE
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="w-16 h-16 border-4 border-[#5F8EAD] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-600 font-medium">Cargando dashboard...</p>
+         <Lottie
+  lottieRef={lottieRef}
+  animationData={loadingTruckAnimation}
+  loop={true}
+  autoplay={true}
+  style={{ width: 250, height: 250, margin: '0 auto' }}
+/>
+
+          <p className="text-gray-600 font-medium text-lg mt-4">Cargando dashboard...</p>
+          <p className="text-gray-400 text-sm mt-2">Obteniendo datos del sistema</p>
         </div>
       </div>
     );
@@ -364,7 +409,7 @@ const ModernDashboard = () => {
         </div>
       </div>
 
-      {/* Stats Grid */}
+      {/* Stats Grid CON LOTTIE EN HOVER */}
       <div className="container mx-auto px-8 -mt-20 relative z-20">
         <div className="flex items-center justify-end mb-4">
           <div className="bg-white/95 backdrop-blur-xl rounded-full px-4 py-2 shadow-lg border-2 border-[#5F8EAD]">
@@ -382,9 +427,22 @@ const ModernDashboard = () => {
             return (
               <div 
                 key={index}
-                className="bg-white/95 backdrop-blur-xl rounded-2xl p-6 shadow-xl border border-gray-200 hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 cursor-pointer"
+                onMouseEnter={() => setHoveredCard(index)}
+                onMouseLeave={() => setHoveredCard(null)}
+                className="bg-white/95 backdrop-blur-xl rounded-2xl p-6 shadow-xl border border-gray-200 hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 cursor-pointer relative overflow-hidden"
               >
-                <div className="flex items-center justify-between mb-4">
+                {/* Lottie de fondo en hover */}
+                {stat.lottie && hoveredCard === index && (
+                  <div className="absolute top-0 right-0 opacity-10 pointer-events-none">
+                    <Lottie 
+                      animationData={stat.lottie}
+                      loop={true}
+                      style={{ width: 120, height: 120 }}
+                    />
+                  </div>
+                )}
+
+                <div className="flex items-center justify-between mb-4 relative z-10">
                   <div className={`p-3 ${colors.bg} rounded-xl shadow-sm`}>
                     <Icon className={colors.text} size={24} />
                   </div>
@@ -405,10 +463,10 @@ const ModernDashboard = () => {
                     </div>
                   )}
                 </div>
-                <div className="text-3xl font-bold text-[#34353A] mb-1">{stat.value}</div>
-                <div className="text-gray-600 text-sm mb-2">{stat.title}</div>
+                <div className="text-3xl font-bold text-[#34353A] mb-1 relative z-10">{stat.value}</div>
+                <div className="text-gray-600 text-sm mb-2 relative z-10">{stat.title}</div>
                 {stat.extra && (
-                  <div className="text-xs text-gray-500 bg-gray-50 px-2 py-1 rounded-md">
+                  <div className="text-xs text-gray-500 bg-gray-50 px-2 py-1 rounded-md relative z-10">
                     {stat.extra}
                   </div>
                 )}
@@ -525,6 +583,14 @@ const ModernDashboard = () => {
                         opacity: totales.balance >= 0 ? 0.9 : 1
                       }}
                     >
+                      {/* Lottie en balance */}
+                      <div className="absolute -top-8 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Lottie 
+                          animationData={totales.balance >= 0 ? successAnimation : warningAnimation}
+                          loop={totales.balance >= 0 ? false : true}
+                          style={{ width: 40, height: 40 }}
+                        />
+                      </div>
                       <div className="absolute -top-12 left-1/2 -translate-x-1/2 bg-gray-900 text-white px-3 py-1.5 rounded-lg text-xs font-bold opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap shadow-xl">
                         {formatearMoneda(totales.balance)}
                         <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-gray-900 rotate-45"></div>
@@ -543,16 +609,23 @@ const ModernDashboard = () => {
               </div>
             </div>
 
-            {/* Tarjetas de resumen - TEXTO BLANCO ACTUALIZADO */}
+            {/* Tarjetas de resumen */}
             <div className="grid grid-cols-3 gap-4 mb-6">
-              <div className="bg-[#5D9646] rounded-xl p-4 border-2 border-[#5D9646] hover:shadow-lg transition-all">
-                <div className="flex items-center gap-2 mb-2">
+              <div className="bg-[#5D9646] rounded-xl p-4 border-2 border-[#5D9646] hover:shadow-lg transition-all relative overflow-hidden group">
+                <div className="absolute top-0 right-0 opacity-0 group-hover:opacity-20 transition-opacity">
+                  <Lottie 
+                    animationData={moneyAnimation}
+                    loop={true}
+                    style={{ width: 80, height: 80 }}
+                  />
+                </div>
+                <div className="flex items-center gap-2 mb-2 relative z-10">
                   <TrendingUp className="text-white" size={20} />
                   <span className="text-xs font-semibold text-white">INGRESOS</span>
                 </div>
-                <div className="text-2xl font-bold text-white mb-1">{formatearMoneda(totales.ingresos)}</div>
-                <div className="text-xs text-white opacity-90 mt-1">Viajes y otros ingresos</div>
-                <div className="mt-2 pt-2 border-t-2 border-white border-opacity-30">
+                <div className="text-2xl font-bold text-white mb-1 relative z-10">{formatearMoneda(totales.ingresos)}</div>
+                <div className="text-xs text-white opacity-90 mt-1 relative z-10">Viajes y otros ingresos</div>
+                <div className="mt-2 pt-2 border-t-2 border-white border-opacity-30 relative z-10">
                   <div className="flex items-center gap-1 text-xs text-white">
                     <Calendar size={12} />
                     <span className="font-semibold">
@@ -605,7 +678,7 @@ const ModernDashboard = () => {
               </div>
             </div>
 
-            {/* Resumen por módulos */}
+            {/* Resumen por módulos CON ESTADO VACÍO */}
             <div className="space-y-3">
               <div className="bg-gradient-to-r from-[#5F8EAD] from-opacity-10 to-[#5F8EAD] to-opacity-5 rounded-xl p-4 border-2 border-[#5F8EAD] mb-4">
                 <div className="flex items-center justify-between">
@@ -624,55 +697,67 @@ const ModernDashboard = () => {
                 </div>
               </div>
 
-              {modulosResumen.map((modulo, idx) => (
-                <div key={idx} className="bg-gray-50 rounded-xl p-4 hover:bg-gray-100 transition-colors">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2">
-                        <span className="font-bold text-[#34353A]">{modulo.nombre}</span>
-                        {modulo.extra && (
-                          <span className="text-xs bg-[#5F8EAD] bg-opacity-20 text-[#5F8EAD] px-2 py-0.5 rounded-full font-semibold">
-                            {modulo.extra}
-                          </span>
-                        )}
-                        {modulo.total === 0 && (
-                          <span className="text-xs bg-gray-200 text-gray-600 px-2 py-0.5 rounded-full font-semibold">
-                            Sin registros
-                          </span>
-                        )}
-                      </div>
-                      <div className="text-xs text-gray-500 mt-1">
-                        {modulo.total === 0 ? (
-                          `Sin datos en los últimos ${selectedPeriod} días`
-                        ) : (
-                          `${modulo.completados} completados · ${modulo.pendientes} pendientes de ${modulo.total} total`
-                        )}
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <div className={`text-lg font-bold ${modulo.tipo === 'ingreso' ? 'text-[#5D9646]' : 'text-red-600'}`}>
-                        {modulo.tipo === 'ingreso' ? '+' : '-'}{formatearMoneda(modulo.monto)}
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center gap-2 mt-2">
-                    <div className="flex-1 bg-gray-200 rounded-full h-2 overflow-hidden">
-                      <div 
-                        className={`h-full rounded-full transition-all duration-700 ${
-                          modulo.total === 0 
-                            ? 'bg-gray-300' 
-                            : 'bg-gradient-to-r from-[#34353A] to-[#5F8EAD]'
-                        }`}
-                        style={{ width: `${modulo.total > 0 ? (modulo.completados / modulo.total) * 100 : 0}%` }}
-                      ></div>
-                    </div>
-                    <span className="text-xs font-bold text-gray-600">
-                      {modulo.total > 0 ? Math.round((modulo.completados / modulo.total) * 100) : 0}%
-                    </span>
-                  </div>
+              {modulosResumen.length === 0 ? (
+                <div className="text-center py-12">
+                  <Lottie 
+                    animationData={emptyBoxAnimation}
+                    loop={false}
+                    style={{ width: 150, height: 150, margin: '0 auto' }}
+                  />
+                  <p className="text-gray-600 mt-4 font-medium">No hay datos en este período</p>
+                  <p className="text-gray-400 text-sm mt-2">Intenta seleccionar un período diferente</p>
                 </div>
-              ))}
+              ) : (
+                modulosResumen.map((modulo, idx) => (
+                  <div key={idx} className="bg-gray-50 rounded-xl p-4 hover:bg-gray-100 transition-colors">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-[#34353A]">{modulo.nombre}</span>
+                          {modulo.extra && (
+                            <span className="text-xs bg-[#5F8EAD] bg-opacity-20 text-[#5F8EAD] px-2 py-0.5 rounded-full font-semibold">
+                              {modulo.extra}
+                            </span>
+                          )}
+                          {modulo.total === 0 && (
+                            <span className="text-xs bg-gray-200 text-gray-600 px-2 py-0.5 rounded-full font-semibold">
+                              Sin registros
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-xs text-gray-500 mt-1">
+                          {modulo.total === 0 ? (
+                            `Sin datos en los últimos ${selectedPeriod} días`
+                          ) : (
+                            `${modulo.completados} completados · ${modulo.pendientes} pendientes de ${modulo.total} total`
+                          )}
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className={`text-lg font-bold ${modulo.tipo === 'ingreso' ? 'text-[#5D9646]' : 'text-red-600'}`}>
+                          {modulo.tipo === 'ingreso' ? '+' : '-'}{formatearMoneda(modulo.monto)}
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center gap-2 mt-2">
+                      <div className="flex-1 bg-gray-200 rounded-full h-2 overflow-hidden">
+                        <div 
+                          className={`h-full rounded-full transition-all duration-700 ${
+                            modulo.total === 0 
+                              ? 'bg-gray-300' 
+                              : 'bg-gradient-to-r from-[#34353A] to-[#5F8EAD]'
+                          }`}
+                          style={{ width: `${modulo.total > 0 ? (modulo.completados / modulo.total) * 100 : 0}%` }}
+                        ></div>
+                      </div>
+                      <span className="text-xs font-bold text-gray-600">
+                        {modulo.total > 0 ? Math.round((modulo.completados / modulo.total) * 100) : 0}%
+                      </span>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           </div>
 
@@ -749,6 +834,7 @@ const ModernDashboard = () => {
               </div>
             </div>
 
+            {/* Actividad Reciente CON LOTTIE CHECKMARK */}
             <div className="bg-white rounded-2xl p-5 shadow-lg hover:shadow-xl transition-shadow border-2 border-[#5F8EAD]">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-bold text-[#34353A] flex items-center gap-2">
@@ -760,9 +846,17 @@ const ModernDashboard = () => {
 
               <div className="space-y-3 max-h-64 overflow-y-auto custom-scrollbar">
                 {estadisticas.viajesOperativos.completados > 0 && (
-                  <div className="flex items-start gap-3 p-3 bg-[#5D9646] bg-opacity-10 rounded-lg hover:bg-[#5D9646] hover:bg-opacity-15 transition-colors">
-                    <div className="p-2 bg-[#5D9646] bg-opacity-20 rounded-lg">
+                  <div className="flex items-start gap-3 p-3 bg-[#5D9646] bg-opacity-10 rounded-lg hover:bg-[#5D9646] hover:bg-opacity-15 transition-colors relative group">
+                    <div className="p-2 bg-[#5D9646] bg-opacity-20 rounded-lg relative">
                       <CheckCircle className="text-[#5D9646]" size={16} />
+                      {/* Lottie checkmark en hover */}
+                      <div className="absolute -top-2 -right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Lottie 
+                          animationData={checkmarkAnimation}
+                          loop={false}
+                          style={{ width: 24, height: 24 }}
+                        />
+                      </div>
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-semibold text-[#34353A]">Viajes completados</p>

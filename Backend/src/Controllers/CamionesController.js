@@ -449,12 +449,17 @@ camionesController.post = async (req, res) => {
       });
     }
 
-    if (!validateLicensePlate(licensePlate)) {
-      return res.status(400).json({
-        message: "Placa de circulación inválida",
-        error: "La placa debe tener entre 6 y 8 caracteres alfanuméricos"
-      });
-    }
+  function validateLicensePlate(plate) {
+  if (!plate) return false;
+
+  const normalized = plate.trim().toUpperCase();
+
+  // Acepta letras, números y guiones, entre 6 y 12 caracteres
+  const regex = /^[A-Z0-9-]{6,12}$/;
+
+  return regex.test(normalized);
+}
+
 
     const currentYear = new Date().getFullYear();
     if (age && (age < 1990 || age > currentYear)) {
