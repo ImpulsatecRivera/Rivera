@@ -116,6 +116,15 @@ export default function AgregarViajeOperativo() {
     fetchCamiones();
   }, []);
 
+  useEffect(() => {
+  if (formData.rutaOrigen && formData.rutaDestino) {
+    setFormData((p) => ({
+      ...p,
+      rutaCompleta: `${formData.rutaOrigen}/${formData.rutaDestino}`,
+    }));
+  }
+}, [formData.rutaOrigen, formData.rutaDestino]);
+
   const fetchClientes = async () => {
     try {
       setLoadingClientes(true);
@@ -146,70 +155,77 @@ export default function AgregarViajeOperativo() {
   }, [clientes]);
 
   const crearClienteYSeleccionar = async () => {
-    const nombreEmpresa = (nuevoCliente.nombreEmpresa || "").trim();
-    const nombreComercial = (nuevoCliente.nombreComercial || nombreEmpresa).trim();
-    const ruc = (nuevoCliente.ruc || "").trim();
-    const email = (nuevoCliente.email || "").trim();
-    const phone = (nuevoCliente.phone || "").trim();
-    const address = (nuevoCliente.address || "").trim();
+  const nombreEmpresa = (nuevoCliente.nombreEmpresa || "").trim();
+  const nombreComercial = (nuevoCliente.nombreComercial || nombreEmpresa).trim();
+  const ruc = (nuevoCliente.ruc || "").trim();
+  const email = (nuevoCliente.email || "").trim();
+  const phone = (nuevoCliente.phone || "").trim();
+  const address = (nuevoCliente.address || "").trim();
 
-    if (!nombreEmpresa || !ruc || !email || !phone || !address) {
-      setError("Completa todos los campos obligatorios del cliente");
-      return;
-    }
+  if (!nombreEmpresa || !ruc || !email || !phone || !address) {
+    setError("Completa todos los campos obligatorios del cliente");
+    return;
+  }
 
-    setCreatingCliente(true);
+  setCreatingCliente(true);
+  setError(null);
+
+  try {
+    const payload = {
+      tipoCliente: "corporativo",
+      nombreEmpresa,
+      nombreComercial,
+      ruc,
+      email,
+      phone,
+      address,
+      terminosPago: "contado",
+      limiteCredito: 0,
+      estadoCorporativo: "activo",
+    };
+
+    const res = await fetch(CLIENTES_ENDPOINT, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok || json?.success === false)
+      throw new Error(json?.message || "Error al crear cliente");
+
+    const created = json?.data?.cliente || json?.data || json;
+    const newId = String(created?._id || created?.id || "");
+
+    if (!newId) throw new Error("No se pudo obtener el ID del cliente creado");
+
+    // Recargar clientes
+    await fetchClientes();
+
+    // Seleccionar el nuevo cliente
+    setFormData((p) => ({
+      ...p,
+      clienteId: newId,
+      clienteNombre: nombreComercial,
+    }));
+
+    // Limpiar formulario
+    setNuevoCliente({
+      nombreEmpresa: "",
+      nombreComercial: "",
+      ruc: "",
+      email: "",
+      phone: "",
+      address: "",
+    });
+
     setError(null);
-
-    try {
-      const payload = {
-        tipoCliente: "corporativo",
-        nombreEmpresa,
-        nombreComercial,
-        ruc,
-        email,
-        phone,
-        address,
-        terminosPago: "contado",
-        limiteCredito: 0,
-        estadoCorporativo: "activo",
-      };
-
-      const res = await fetch(CLIENTES_ENDPOINT, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-
-      const json = await res.json().catch(() => ({}));
-      if (!res.ok || json?.success === false)
-        throw new Error(json?.message || "Error al crear cliente");
-
-      const created = json?.data?.cliente || json?.data || json;
-      const newId = created?._id || created?.id;
-
-      await fetchClientes();
-
-      setFormData((p) => ({
-        ...p,
-        clienteId: newId || "",
-        clienteNombre: nombreComercial,
-      }));
-
-      setNuevoCliente({
-        nombreEmpresa: "",
-        nombreComercial: "",
-        ruc: "",
-        email: "",
-        phone: "",
-        address: "",
-      });
-    } catch (e) {
-      setError(e.message || "Error creando cliente");
-    } finally {
-      setCreatingCliente(false);
-    }
-  };
+  } catch (e) {
+    setError(e.message || "Error creando cliente");
+  } finally {
+    setCreatingCliente(false);
+  }
+};
 
   const fetchMotoristas = async () => {
     try {
@@ -282,7 +298,18 @@ export default function AgregarViajeOperativo() {
       clienteNombre: found?.nombre || p.clienteNombre,
     }));
   };
-
+const validar = () => {
+  if (!formData.clienteId) return "Selecciona un cliente";
+  if (!formData.conductorId) return "Selecciona un motorista";
+  if (!formData.truckId) return "Selecciona un camión";
+  if (!formData.departureTime) return "Ingresa fecha/hora de salida";
+  if (!formData.arrivalTime) return "Ingresa fecha/hora de llegada";
+  if (!formData.rutaOrigen) return "Ingresa origen";
+  if (!formData.rutaDestino) return "Ingresa destino";
+  if (!formData.montoAcordado || Number(formData.montoAcordado) <= 0)
+    return "Ingresa un monto válido";
+  return null;
+};
 
   const handleSubmit = async () => {
     const err = validar();
@@ -575,19 +602,41 @@ arrivalTime: new Date(formData.arrivalTime).toISOString(),
                 />
               </div>
 
-              <div>
-                <label className="block text-sm font-semibold text-[#34353A] mb-2">
-                  Tiempo Estimado (hrs)
-                </label>
-                <input
-                  type="number"
-                  name="tiempoEstimado"
-                  value={formData.tiempoEstimado}
-                  onChange={handleInputChange}
-                  placeholder="Ej: 9"
-                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#5F8EAD] focus:border-[#5F8EAD]"
-                />
-              </div>
+            <div>
+  <label className="block text-sm font-semibold text-[#34353A] mb-2">
+    Tiempo Estimado (HH:MM)
+  </label>
+  <input
+    type="text"
+    name="tiempoEstimado"
+    value={formData.tiempoEstimado}
+    onChange={(e) => {
+      let val = e.target.value.replace(/[^\d:]/g, '');
+      
+      // Auto-agregar ":" después de 2 dígitos
+      if (val.length === 2 && !val.includes(':')) {
+        val = val + ':';
+      }
+      
+      // Limitar formato HH:MM (máx 5 caracteres)
+      if (val.length <= 5) {
+        const parts = val.split(':');
+        if (parts.length <= 2) {
+          const horas = parts[0] ? parseInt(parts[0]) : 0;
+          const minutos = parts[1] ? parseInt(parts[1]) : 0;
+          
+          // Validar rangos: horas 0-99, minutos 0-59
+          if (horas <= 99 && (!parts[1] || minutos <= 59)) {
+            setFormData(prev => ({ ...prev, tiempoEstimado: val }));
+          }
+        }
+      }
+    }}
+    placeholder="Ej: 09:30"
+    maxLength="5"
+    className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#5F8EAD] focus:border-[#5F8EAD]"
+  />
+</div>
             </div>
           </div>
 
@@ -613,19 +662,26 @@ arrivalTime: new Date(formData.arrivalTime).toISOString(),
                 />
               </div>
 
-              <div>
-                <label className="block text-sm font-semibold text-[#34353A] mb-2">
-                  Peso (kg)
-                </label>
-                <input
-                  type="number"
-                  name="cargaPeso"
-                  value={formData.cargaPeso}
-                  onChange={handleInputChange}
-                  placeholder="Ej: 15000"
-                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#5F8EAD] focus:border-[#5F8EAD]"
-                />
-              </div>
+            <div>
+  <label className="block text-sm font-semibold text-[#34353A] mb-2">
+    Peso (kg) - Máx: 6 digitos
+  </label>
+  <input
+    type="number"
+    name="cargaPeso"
+    value={formData.cargaPeso}
+    onChange={(e) => {
+      const val = e.target.value;
+      if (val === '' || (Number(val) >= 0 && val.length <= 6)) {
+        handleInputChange(e);
+      }
+    }}
+    placeholder="Ej: 15000"
+    max="999999"
+    min="0"
+    className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#5F8EAD] focus:border-[#5F8EAD]"
+  />
+</div>
 
               <div>
                 <label className="block text-sm font-semibold text-[#34353A] mb-2">
@@ -820,25 +876,25 @@ arrivalTime: new Date(formData.arrivalTime).toISOString(),
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-gray-600 mb-1">
-                    Camión *
-                  </label>
-                  <select
-                    value={formData.truckId}
-                    onChange={(e) => setFormData((p) => ({ ...p, truckId: e.target.value }))}
-                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#5F8EAD] focus:border-[#5F8EAD] bg-white"
-                    disabled={loadingCamiones}
-                  >
-                    <option value="">
-                      {loadingCamiones ? "Cargando camiones..." : "Seleccionar camión..."}
-                    </option>
-                    {camionesOptions.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+  <label className="block text-xs font-semibold text-gray-600 mb-1">
+    Camión * (asignado automáticamente)
+  </label>
+  <select
+    value={formData.truckId}
+    onChange={(e) => setFormData((p) => ({ ...p, truckId: e.target.value }))}
+    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl bg-gray-100 cursor-not-allowed text-gray-600"
+    disabled={true}
+  >
+    <option value="">
+      {loadingCamiones ? "Cargando camiones..." : formData.truckId ? "Camión asignado" : "Selecciona un motorista primero"}
+    </option>
+    {camionesOptions.map((c) => (
+      <option key={c.id} value={c.id}>
+        {c.label}
+      </option>
+    ))}
+  </select>
+</div>
               </div>
             </div>
           </div>
