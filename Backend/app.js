@@ -43,6 +43,9 @@ import ReportesPlanillaSemanalRoutes from "./src/Routes/ReportesPlanillaSemanalR
 import viajesOperativosRoutes from "./src/Routes/ViajesOperativosRoutes.js";
 import reportesViajesDirectoRoutes from "./src/Routes/ReportesViajesDirectoRoutes.js";
 
+//Nuevo: reporte consolidado
+import ReporteConsolidadoRoutes from "./src/Routes/Reporteconsolidadoroutes.js";
+
 // (si luego usas swagger en tu proyecto)
 
 
@@ -131,5 +134,8 @@ app.use("/api/resumenReporte", ResumenDieselReporte);
 // ✅ nuevas
 app.use("/api/viajes-operativos", viajesOperativosRoutes);
 app.use("/api/reportes-directos", reportesViajesDirectoRoutes);
+
+// Nuevo: reporte consolidado
+app.use("/api/reporte-consolidado", ReporteConsolidadoRoutes);
 
 export default app;
