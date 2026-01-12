@@ -1,10 +1,10 @@
-import React, { useState, useEffect,useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  Truck, 
-  DollarSign, 
-  Package, 
-  AlertCircle, 
+import {
+  Truck,
+  DollarSign,
+  Package,
+  AlertCircle,
   TrendingUp,
   CheckCircle,
   Wrench,
@@ -14,7 +14,9 @@ import {
   Fuel,
   FileText,
   Calendar,
-  Clock
+  Clock,
+  MoreVertical,
+  ChevronRight
 } from 'lucide-react';
 import Spline from '@splinetool/react-spline';
 import Lottie from 'lottie-react';
@@ -29,7 +31,14 @@ import moneyAnimation from '../../assets/lotties/Coins blow effect.json';
 import truckIconAnimation from '../../assets/lotties/ecommerce order fulfillment automation.json';
 import checkmarkAnimation from '../../assets/lotties/Success (1).json';
 
+//Nuevo: componente Modal del reporte consolidado
+import ModalResumenConsolidado from "./ModalResumenConsolidado";
+
 const ModernDashboard = () => {
+
+  //nuevo estado para el modal
+  const [modalResumenOpen, setModalResumenOpen] = useState(false);
+
   const navigate = useNavigate();
   const [selectedPeriod, setSelectedPeriod] = useState('30');
   const [loading, setLoading] = useState(true);
@@ -44,17 +53,17 @@ const ModernDashboard = () => {
   });
   const lottieRef = useRef();
 
-  
+
 
   useEffect(() => {
     cargarEstadisticas();
   }, [selectedPeriod]);
 
   useEffect(() => {
-  if (lottieRef.current) {
-    lottieRef.current.setSpeed(1); // ⏱ más lento
-  }
-}, []);
+    if (lottieRef.current) {
+      lottieRef.current.setSpeed(1); // ⏱ más lento
+    }
+  }, []);
 
 
   const filtrarPorPeriodo = (items, campoFecha) => {
@@ -69,18 +78,18 @@ const ModernDashboard = () => {
   };
 
   const cargarEstadisticas = async () => {
-  const startTime = Date.now(); // ⏱ empieza a contar
+    const startTime = Date.now(); // ⏱ empieza a contar
 
-  try {
-    setLoading(true);
+    try {
+      setLoading(true);
 
 
       const viajesRes = await fetch(`${config.api.API_URL}/viajes-operativos/listar`);
       const viajesData = await viajesRes.json();
       let viajes = viajesData?.data || [];
-      
+
       viajes = filtrarPorPeriodo(viajes, 'departureTime');
-      
+
       const viajesStats = {
         total: viajes.length,
         pendientes: viajes.filter(v => {
@@ -97,9 +106,9 @@ const ModernDashboard = () => {
       const mantoRes = await fetch(`${config.api.API_URL}/mantenimientos`);
       const mantoData = await mantoRes.json();
       let mantenimientos = mantoData?.data || [];
-      
+
       mantenimientos = filtrarPorPeriodo(mantenimientos, 'fecha_mantenimiento');
-      
+
       const mantoStats = {
         total: mantenimientos.length,
         pendientes: mantenimientos.filter(m => m?.estado === 'pendiente').length,
@@ -113,9 +122,9 @@ const ModernDashboard = () => {
       const dieselRes = await fetch(`${config.api.API_URL}/resumen`);
       const dieselData = await dieselRes.json();
       let diesel = dieselData?.data || (Array.isArray(dieselData) ? dieselData : []);
-      
+
       diesel = filtrarPorPeriodo(diesel, 'fecha');
-      
+
       const dieselStats = {
         total: diesel.length,
         pendientes: diesel.filter(d => {
@@ -135,14 +144,14 @@ const ModernDashboard = () => {
       });
       const cajaData = await cajaRes.json();
       let transacciones = Array.isArray(cajaData) ? cajaData : [];
-      
+
       transacciones = filtrarPorPeriodo(transacciones, 'date');
 
       const cajaBalanceRes = await fetch(`${config.api.API_URL}/cajaChica/balance`, {
         headers: { 'Authorization': `Bearer ${localStorage.getItem('authToken')}` }
       });
       const cajaBalanceData = await cajaBalanceRes.json();
-      
+
       const cajaStats = {
         balance: cajaBalanceData?.currentBalance || 0,
         ingresos: transacciones.filter(t => t?.type === 'income').reduce((s, t) => s + (t?.amount || 0), 0),
@@ -153,9 +162,9 @@ const ModernDashboard = () => {
       const planillasRes = await fetch(`${config.api.API_URL}/planillas/quincenal`);
       const planillasData = await planillasRes.json();
       let planillas = planillasData?.data || [];
-      
+
       planillas = filtrarPorPeriodo(planillas, 'createdAt');
-      
+
       const planillasStats = {
         total: planillas.length,
         pendientes: planillas.filter(p => p?.estado === 'pendiente').length,
@@ -176,15 +185,15 @@ const ModernDashboard = () => {
     } catch (error) {
       console.error('Error cargando estadísticas:', error);
     } finally {
-  const elapsed = Date.now() - startTime;
-  const minDuration = 6000; // ⏱ 6 segundos
+      const elapsed = Date.now() - startTime;
+      const minDuration = 6000; // ⏱ 6 segundos
 
-  const remaining = Math.max(minDuration - elapsed, 0);
+      const remaining = Math.max(minDuration - elapsed, 0);
 
-  setTimeout(() => {
-    setLoading(false);
-  }, remaining);
-}
+      setTimeout(() => {
+        setLoading(false);
+      }, remaining);
+    }
 
   };
 
@@ -199,8 +208,8 @@ const ModernDashboard = () => {
   const totales = {
     ingresos: estadisticas.viajesOperativos.ingresos + estadisticas.cajaChica.ingresos,
     gastos: estadisticas.mantenimientos.gastos + estadisticas.diesel.gastos + estadisticas.cajaChica.gastos + estadisticas.planillas.totalPagado,
-    balance: (estadisticas.viajesOperativos.ingresos + estadisticas.cajaChica.ingresos) - 
-             (estadisticas.mantenimientos.gastos + estadisticas.diesel.gastos + estadisticas.cajaChica.gastos + estadisticas.planillas.totalPagado)
+    balance: (estadisticas.viajesOperativos.ingresos + estadisticas.cajaChica.ingresos) -
+      (estadisticas.mantenimientos.gastos + estadisticas.diesel.gastos + estadisticas.cajaChica.gastos + estadisticas.planillas.totalPagado)
   };
 
   const statsCards = [
@@ -329,13 +338,13 @@ const ModernDashboard = () => {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-         <Lottie
-  lottieRef={lottieRef}
-  animationData={loadingTruckAnimation}
-  loop={true}
-  autoplay={true}
-  style={{ width: 250, height: 250, margin: '0 auto' }}
-/>
+          <Lottie
+            lottieRef={lottieRef}
+            animationData={loadingTruckAnimation}
+            loop={true}
+            autoplay={true}
+            style={{ width: 250, height: 250, margin: '0 auto' }}
+          />
 
           <p className="text-gray-600 font-medium text-lg mt-4">Cargando dashboard...</p>
           <p className="text-gray-400 text-sm mt-2">Obteniendo datos del sistema</p>
@@ -349,23 +358,23 @@ const ModernDashboard = () => {
       {/* Hero Banner con Spline */}
       <div className="relative h-[300px] overflow-hidden">
         <div className="absolute inset-0" style={{ pointerEvents: 'auto' }}>
-          <Spline 
+          <Spline
             scene="https://prod.spline.design/RPoeKCG7eSYlbZ4c/scene.splinecode"
             style={{ width: '100%', height: '100%', pointerEvents: 'auto' }}
           />
         </div>
-        
+
         <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-gray-900/30 to-gray-50 pointer-events-none"></div>
-        
+
         <div className="relative z-10 h-full flex flex-col justify-between p-8 pointer-events-none">
-          
+
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3 backdrop-blur-md bg-white/10 rounded-full px-5 py-2.5 border border-white/20 shadow-lg">
               <div className="w-2 h-2 bg-[#5D9646] rounded-full animate-pulse"></div>
               <Activity className="text-white" size={18} />
               <span className="text-white font-semibold text-sm">Sistema en vivo</span>
             </div>
-            
+
             <div className="flex items-center gap-3">
               <div className="backdrop-blur-md bg-white/10 rounded-full px-5 py-2.5 border border-white/20 shadow-lg pointer-events-auto cursor-pointer hover:bg-white/15 transition-all">
                 <div className="flex items-center gap-2">
@@ -373,12 +382,11 @@ const ModernDashboard = () => {
                   <span className="text-white font-bold text-sm">{estadisticas.flota.operando}/{estadisticas.flota.total}</span>
                 </div>
               </div>
-              
-              <div className={`backdrop-blur-md rounded-full px-5 py-2.5 border shadow-lg pointer-events-auto cursor-pointer transition-all ${
-                totales.balance >= 0 
-                  ? 'bg-[#5D9646]/20 border-[#5D9646]/30 hover:bg-[#5D9646]/25' 
+
+              <div className={`backdrop-blur-md rounded-full px-5 py-2.5 border shadow-lg pointer-events-auto cursor-pointer transition-all ${totales.balance >= 0
+                  ? 'bg-[#5D9646]/20 border-[#5D9646]/30 hover:bg-[#5D9646]/25'
                   : 'bg-red-500/20 border-red-400/30 hover:bg-red-500/25'
-              }`}>
+                }`}>
                 <div className="flex items-center gap-2">
                   <TrendingUp className={totales.balance >= 0 ? 'text-green-300' : 'text-red-300'} size={16} />
                   <span className="text-white font-bold text-sm">{formatearMoneda(totales.balance)}</span>
@@ -397,8 +405,8 @@ const ModernDashboard = () => {
               <p className="text-white/95 text-base font-medium" style={{
                 textShadow: '0 2px 10px rgba(0,0,0,0.4)'
               }}>
-                {new Date().toLocaleDateString('es-ES', { 
-                  weekday: 'long', 
+                {new Date().toLocaleDateString('es-ES', {
+                  weekday: 'long',
                   day: 'numeric',
                   month: 'long',
                   year: 'numeric'
@@ -423,9 +431,9 @@ const ModernDashboard = () => {
           {statsCards.map((stat, index) => {
             const colors = getColorClasses(stat.color);
             const Icon = stat.icon;
-            
+
             return (
-              <div 
+              <div
                 key={index}
                 onMouseEnter={() => setHoveredCard(index)}
                 onMouseLeave={() => setHoveredCard(null)}
@@ -434,7 +442,7 @@ const ModernDashboard = () => {
                 {/* Lottie de fondo en hover */}
                 {stat.lottie && hoveredCard === index && (
                   <div className="absolute top-0 right-0 opacity-10 pointer-events-none">
-                    <Lottie 
+                    <Lottie
                       animationData={stat.lottie}
                       loop={true}
                       style={{ width: 120, height: 120 }}
@@ -477,7 +485,7 @@ const ModernDashboard = () => {
 
         {/* Content Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-          
+
           <div className="lg:col-span-2 bg-white rounded-2xl p-6 shadow-lg hover:shadow-xl transition-shadow">
             <div className="flex items-center justify-between mb-6">
               <div>
@@ -493,18 +501,17 @@ const ModernDashboard = () => {
                   )}
                 </p>
               </div>
-              
+
               <div className="flex items-center gap-3">
                 <span className="text-sm font-medium text-gray-600">Período:</span>
-                <select 
+                <select
                   value={selectedPeriod}
                   onChange={(e) => setSelectedPeriod(e.target.value)}
                   disabled={loading}
-                  className={`px-4 py-2 border-2 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#5F8EAD] focus:border-[#5F8EAD] bg-white font-semibold transition-all ${
-                    loading 
-                      ? 'opacity-50 cursor-not-allowed border-gray-200' 
+                  className={`px-4 py-2 border-2 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#5F8EAD] focus:border-[#5F8EAD] bg-white font-semibold transition-all ${loading
+                      ? 'opacity-50 cursor-not-allowed border-gray-200'
                       : 'border-gray-200 hover:border-[#5F8EAD] cursor-pointer'
-                  }`}
+                    }`}
                 >
                   <option value="7">📅 Últimos 7 días</option>
                   <option value="30">📅 Últimos 30 días</option>
@@ -524,13 +531,13 @@ const ModernDashboard = () => {
                   Últimos {selectedPeriod} días
                 </div>
               </div>
-              
+
               <div className="flex items-end justify-around gap-4 h-32">
                 <div className="flex-1 flex flex-col items-center">
                   <div className="relative w-full flex items-end justify-center" style={{ height: '100px' }}>
-                    <div 
+                    <div
                       className="w-16 bg-gradient-to-t from-[#5D9646] to-[#5D9646] rounded-t-lg shadow-lg hover:shadow-xl transition-all relative group cursor-pointer"
-                      style={{ 
+                      style={{
                         height: `${Math.min((totales.ingresos / Math.max(totales.ingresos, totales.gastos, 1)) * 100, 100)}%`,
                         minHeight: '20px',
                         opacity: 0.9
@@ -550,9 +557,9 @@ const ModernDashboard = () => {
 
                 <div className="flex-1 flex flex-col items-center">
                   <div className="relative w-full flex items-end justify-center" style={{ height: '100px' }}>
-                    <div 
+                    <div
                       className="w-16 bg-gradient-to-t from-red-500 to-red-400 rounded-t-lg shadow-lg hover:shadow-xl transition-all relative group cursor-pointer"
-                      style={{ 
+                      style={{
                         height: `${Math.min((totales.gastos / Math.max(totales.ingresos, totales.gastos, 1)) * 100, 100)}%`,
                         minHeight: '20px'
                       }}
@@ -571,13 +578,12 @@ const ModernDashboard = () => {
 
                 <div className="flex-1 flex flex-col items-center">
                   <div className="relative w-full flex items-end justify-center" style={{ height: '100px' }}>
-                    <div 
-                      className={`w-16 bg-gradient-to-t rounded-t-lg shadow-lg hover:shadow-xl transition-all relative group cursor-pointer ${
-                        totales.balance >= 0 
-                          ? 'from-[#5F8EAD] to-[#5F8EAD]' 
+                    <div
+                      className={`w-16 bg-gradient-to-t rounded-t-lg shadow-lg hover:shadow-xl transition-all relative group cursor-pointer ${totales.balance >= 0
+                          ? 'from-[#5F8EAD] to-[#5F8EAD]'
                           : 'from-orange-500 to-orange-400'
-                      }`}
-                      style={{ 
+                        }`}
+                      style={{
                         height: `${Math.min((Math.abs(totales.balance) / Math.max(totales.ingresos, totales.gastos, 1)) * 100, 100)}%`,
                         minHeight: '20px',
                         opacity: totales.balance >= 0 ? 0.9 : 1
@@ -585,7 +591,7 @@ const ModernDashboard = () => {
                     >
                       {/* Lottie en balance */}
                       <div className="absolute -top-8 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Lottie 
+                        <Lottie
                           animationData={totales.balance >= 0 ? successAnimation : warningAnimation}
                           loop={totales.balance >= 0 ? false : true}
                           style={{ width: 40, height: 40 }}
@@ -613,7 +619,7 @@ const ModernDashboard = () => {
             <div className="grid grid-cols-3 gap-4 mb-6">
               <div className="bg-[#5D9646] rounded-xl p-4 border-2 border-[#5D9646] hover:shadow-lg transition-all relative overflow-hidden group">
                 <div className="absolute top-0 right-0 opacity-0 group-hover:opacity-20 transition-opacity">
-                  <Lottie 
+                  <Lottie
                     animationData={moneyAnimation}
                     loop={true}
                     style={{ width: 80, height: 80 }}
@@ -652,11 +658,10 @@ const ModernDashboard = () => {
                 </div>
               </div>
 
-              <div className={`rounded-xl p-4 border-2 hover:shadow-lg transition-all ${
-                totales.balance >= 0 
-                  ? 'bg-[#5F8EAD] border-[#5F8EAD]' 
+              <div className={`rounded-xl p-4 border-2 hover:shadow-lg transition-all ${totales.balance >= 0
+                  ? 'bg-[#5F8EAD] border-[#5F8EAD]'
                   : 'bg-orange-500 border-orange-500'
-              }`}>
+                }`}>
                 <div className="flex items-center gap-2 mb-2">
                   <DollarSign className="text-white" size={20} />
                   <span className="text-xs font-semibold text-white">BALANCE</span>
@@ -699,7 +704,7 @@ const ModernDashboard = () => {
 
               {modulosResumen.length === 0 ? (
                 <div className="text-center py-12">
-                  <Lottie 
+                  <Lottie
                     animationData={emptyBoxAnimation}
                     loop={false}
                     style={{ width: 150, height: 150, margin: '0 auto' }}
@@ -739,15 +744,14 @@ const ModernDashboard = () => {
                         </div>
                       </div>
                     </div>
-                    
+
                     <div className="flex items-center gap-2 mt-2">
                       <div className="flex-1 bg-gray-200 rounded-full h-2 overflow-hidden">
-                        <div 
-                          className={`h-full rounded-full transition-all duration-700 ${
-                            modulo.total === 0 
-                              ? 'bg-gray-300' 
+                        <div
+                          className={`h-full rounded-full transition-all duration-700 ${modulo.total === 0
+                              ? 'bg-gray-300'
                               : 'bg-gradient-to-r from-[#34353A] to-[#5F8EAD]'
-                          }`}
+                            }`}
                           style={{ width: `${modulo.total > 0 ? (modulo.completados / modulo.total) * 100 : 0}%` }}
                         ></div>
                       </div>
@@ -763,7 +767,7 @@ const ModernDashboard = () => {
 
           {/* Sidebar Stats */}
           <div className="space-y-6">
-            
+
             <div className="bg-white rounded-2xl p-5 shadow-lg hover:shadow-xl transition-shadow">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-bold text-[#34353A]">Alertas</h3>
@@ -775,10 +779,10 @@ const ModernDashboard = () => {
                 {alertas.map((alerta, i) => {
                   const Icon = alerta.icon;
                   const colors = getColorClasses(alerta.color);
-                  
+
                   return (
-                    <div 
-                      key={i} 
+                    <div
+                      key={i}
                       className={`flex items-start gap-3 p-3 ${colors.bg} rounded-xl border-2 ${colors.border} hover:shadow-md transition-all cursor-pointer`}
                     >
                       <div className={`p-1.5 bg-white rounded-lg ${colors.text}`}>
@@ -795,44 +799,35 @@ const ModernDashboard = () => {
             </div>
 
             <div className="bg-white rounded-2xl p-5 shadow-lg hover:shadow-xl transition-shadow">
-              <h3 className="text-lg font-bold text-[#34353A] mb-4">Stats Rápidas</h3>
-              
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-bold text-[#34353A]">Resúmenes</h3>
+                <button
+                  onClick={() => setModalResumenOpen(true)}
+                  className="text-[#5F8EAD] hover:text-[#5D9646] transition-colors"
+                >
+                  <MoreVertical size={20} />
+                </button>
+              </div>
               <div className="space-y-3">
-                <div className="flex items-center justify-between p-3 bg-[#5F8EAD] bg-opacity-10 rounded-lg">
+                <div
+                  onClick={() => setModalResumenOpen(true)}
+                  className="flex items-center justify-between p-3 bg-[#5F8EAD] bg-opacity-10 rounded-lg cursor-pointer hover:bg-[#5F8EAD] hover:bg-opacity-20 transition-all"
+                >
                   <div className="flex items-center gap-2">
-                    <Calendar className="text-[#5F8EAD]" size={18} />
-                    <span className="text-sm font-semibold text-gray-700">Caja Chica</span>
+                    <FileText className="text-[#5F8EAD]" size={18} />
+                    <span className="text-sm font-semibold text-gray-700">Resumen Consolidado</span>
                   </div>
-                  <span className="font-bold text-[#34353A]">{formatearMoneda(estadisticas.cajaChica.balance)}</span>
-                </div>
-
-                <div className="flex items-center justify-between p-3 bg-purple-50 rounded-lg">
-                  <div className="flex items-center gap-2">
-                    <Fuel className="text-purple-600" size={18} />
-                    <span className="text-sm font-semibold text-gray-700">Diésel</span>
-                  </div>
-                  <span className="font-bold text-[#34353A]">{formatearNumero(estadisticas.diesel.galones)} gal</span>
-                </div>
-
-                <div className="flex items-center justify-between p-3 bg-[#5D9646] bg-opacity-10 rounded-lg">
-                  <div className="flex items-center gap-2">
-                    <Users className="text-[#5D9646]" size={18} />
-                    <span className="text-sm font-semibold text-gray-700">Empleados</span>
-                  </div>
-                  <span className="font-bold text-[#34353A]">{estadisticas.planillas.empleados}</span>
-                </div>
-
-                <div className="flex items-center justify-between p-3 bg-orange-50 rounded-lg">
-                  <div className="flex items-center gap-2">
-                    <Clock className="text-orange-600" size={18} />
-                    <span className="text-sm font-semibold text-gray-700">Pendientes</span>
-                  </div>
-                  <span className="font-bold text-[#34353A]">
-                    {estadisticas.viajesOperativos.pendientes + estadisticas.mantenimientos.pendientes + estadisticas.diesel.pendientes}
-                  </span>
+                  <ChevronRight className="text-[#5F8EAD]" size={18} />
                 </div>
               </div>
             </div>
+
+
+            <ModalResumenConsolidado
+              isOpen={modalResumenOpen}
+              onClose={() => setModalResumenOpen(false)}
+              apiUrl={config.api.API_URL}
+            />
 
             {/* Actividad Reciente CON LOTTIE CHECKMARK */}
             <div className="bg-white rounded-2xl p-5 shadow-lg hover:shadow-xl transition-shadow border-2 border-[#5F8EAD]">
@@ -851,7 +846,7 @@ const ModernDashboard = () => {
                       <CheckCircle className="text-[#5D9646]" size={16} />
                       {/* Lottie checkmark en hover */}
                       <div className="absolute -top-2 -right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Lottie 
+                        <Lottie
                           animationData={checkmarkAnimation}
                           loop={false}
                           style={{ width: 24, height: 24 }}
