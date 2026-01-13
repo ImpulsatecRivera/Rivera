@@ -3,6 +3,8 @@ import { Search, Phone, Mail, User, ArrowLeft, ChevronDown, ChevronLeft, Chevron
 import Lottie from 'lottie-react';
 import sandyLoadingAnimation from '../assets/lotties/Sandy Loading.json';
 import useClients from '../components/Clientes/hooks/useDataCliente'; // Ajusta la ruta según tu estructura
+import { usePermissions } from '../hooks/usePermissions';
+import { ProtectedAction, RoleBadge } from '../components/Auth';
 
 const Clientes= () => {
   const {
@@ -19,6 +21,8 @@ const Clientes= () => {
     closeDetailView,
     stats
   } = useClients();
+
+  const { canCreate, canEdit, canDelete } = usePermissions();
 
   // Estados para paginación
   const [currentPage, setCurrentPage] = useState(1);
@@ -110,8 +114,11 @@ const Clientes= () => {
                   <h1 className="text-3xl font-bold text-white mb-2">Gestión de Clientes</h1>
                   <p className="text-blue-100 text-lg">Administra tu cartera de clientes</p>
                 </div>
-                <div className="bg-white bg-opacity-20 rounded-xl p-4 backdrop-blur-sm">
-                  <Users className="w-8 h-8 text-white" />
+                <div className="flex items-center space-x-4">
+                  <RoleBadge />
+                  <div className="bg-white bg-opacity-20 rounded-xl p-4 backdrop-blur-sm">
+                    <Users className="w-8 h-8 text-white" />
+                  </div>
                 </div>
               </div>
               
@@ -465,10 +472,10 @@ const Clientes= () => {
                       </h3>
                       
                       <div className="flex justify-center space-x-3">
-                        <button className="p-3 rounded-xl transition-all duration-200 hover:scale-110 shadow-md" style={{backgroundColor: '#5D9646'}}>
+                        <button className="p-3 rounded-xl transition-all duration-200 hover:scale-110 shadow-md" style={{backgroundColor: '#5D9646'}} title="Llamar">
                           <Phone className="w-5 h-5 text-white" />
                         </button>
-                        <button className="p-3 rounded-xl transition-all duration-200 hover:scale-110 shadow-md" style={{backgroundColor: '#5F8EAD'}}>
+                        <button className="p-3 rounded-xl transition-all duration-200 hover:scale-110 shadow-md" style={{backgroundColor: '#5F8EAD'}} title="Email">
                           <Mail className="w-5 h-5 text-white" />
                         </button>
                       </div>

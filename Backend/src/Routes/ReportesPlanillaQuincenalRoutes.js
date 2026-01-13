@@ -10,6 +10,8 @@
 
 import express from 'express';
 import ReportesPlanillasController from '../Controllers/ReportesPlanillaQuincenalController.js';
+import { authMiddleware } from '../Middleware/auth.js';
+import { requireAdmin } from '../Middleware/roleMiddleware.js';
 
 const router = express.Router();
 
@@ -17,13 +19,13 @@ const router = express.Router();
  * GET /api/reportes/planilla/quincenal/:id
  * Generar y descargar PDF de una planilla quincenal específica
  */
-router.get('/:id', ReportesPlanillasController.generarPDFQuincenal);
+router.get('/:id', authMiddleware, requireAdmin, ReportesPlanillasController.generarPDFQuincenal);
 
 /**
  * GET /api/reportes/planilla/mensual/:mes/:año
  * Generar reporte mensual consolidado con todas las quincenas del mes
  */
-router.get('/mensual/:mes/:año', ReportesPlanillasController.generarPDFMensual);
+router.get('/mensual/:mes/:año', authMiddleware, requireAdmin, ReportesPlanillasController.generarPDFMensual);
 
 /**
  * POST /api/reportes/planilla/quincenal/multiMes
@@ -40,7 +42,7 @@ router.get('/mensual/:mes/:año', ReportesPlanillasController.generarPDFMensual)
  * - 9 meses: { "meses": [1, 2, 3, 4, 5, 6, 7, 8, 9], "ano": 2025 }
  * - Custom: { "meses": [1, 3, 5, 7], "ano": 2025 } // Meses no consecutivos
  */
-router.post('/multiMes', ReportesPlanillasController.generarPDFMultiMes);
+router.post('/multiMes', authMiddleware, requireAdmin, ReportesPlanillasController.generarPDFMultiMes);
 
 /**
  * GET /api/reportes/planilla/quincenal/anual/:ano
@@ -48,6 +50,6 @@ router.post('/multiMes', ReportesPlanillasController.generarPDFMultiMes);
  * Params:
  * - ano: Año (ej: 2025)
  */
-router.get('/anual/:ano', ReportesPlanillasController.generarPDFAnual);
+router.get('/anual/:ano', authMiddleware, requireAdmin, ReportesPlanillasController.generarPDFAnual);
 
 export default router;
