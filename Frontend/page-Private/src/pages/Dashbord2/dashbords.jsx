@@ -33,11 +33,15 @@ import checkmarkAnimation from '../../assets/lotties/Success (1).json';
 
 //Nuevo: componente Modal del reporte consolidado
 import ModalResumenConsolidado from "./ModalResumenConsolidado";
+// Modal para generar reporte semanal (PDF)
+import ReportsPdfModal from '../../components/Dashboard/ReportsPdfModal';
 
 const ModernDashboard = () => {
 
   //nuevo estado para el modal
   const [modalResumenOpen, setModalResumenOpen] = useState(false);
+  // nuevo estado para el modal PDF
+  const [modalPdfOpen, setModalPdfOpen] = useState(false);
 
   const navigate = useNavigate();
   const [selectedPeriod, setSelectedPeriod] = useState('30');
@@ -819,6 +823,17 @@ const ModernDashboard = () => {
                   </div>
                   <ChevronRight className="text-[#5F8EAD]" size={18} />
                 </div>
+
+                <div
+                  onClick={() => setModalPdfOpen(true)}
+                  className="flex items-center justify-between p-3 bg-green-50 rounded-lg cursor-pointer hover:bg-green-100 transition-all"
+                >
+                  <div className="flex items-center gap-2">
+                    <Calendar className="text-green-600" size={18} />
+                    <span className="text-sm font-semibold text-gray-700">Reporte Semanal (PDF)</span>
+                  </div>
+                  <ChevronRight className="text-green-600" size={18} />
+                </div>
               </div>
             </div>
 
@@ -827,6 +842,11 @@ const ModernDashboard = () => {
               isOpen={modalResumenOpen}
               onClose={() => setModalResumenOpen(false)}
               apiUrl={config.api.API_URL}
+            />
+
+            <ReportsPdfModal
+              isOpen={modalPdfOpen}
+              onClose={() => setModalPdfOpen(false)}
             />
 
             {/* Actividad Reciente CON LOTTIE CHECKMARK */}
