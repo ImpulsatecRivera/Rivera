@@ -1,5 +1,6 @@
 import Viajes from '../Models/Viajes.js';
 import CajaChica from '../Models/CajaChica.js';
+import CajaChicaConfig from '../Models/CajaChicaConfig.js';
 import PlanillaSemanal from '../Models/PlanillaSemanal.js';
 import MantenimientoCamiones from '../Models/MantenimientoCamiones.js';
 import puppeteer from 'puppeteer';
@@ -111,7 +112,7 @@ const ReporteViajesYGastosSemanalesController = {};
 ReporteViajesYGastosSemanalesController.generarPDFSemanal = async (req, res) => {
     let browser;
     try {
-        const { date, startDate, pettyCashAmount = 250, manualEntries = [] } = req.body || {};
+        const { date, startDate, pettyCashAmount, manualEntries = [] } = req.body || {};
         const target = date ? new Date(date) : (startDate ? new Date(startDate) : new Date());
 
         const { monday: weekStart, saturday: weekEnd } = getWeekRange(target);
@@ -219,7 +220,18 @@ ReporteViajesYGastosSemanalesController.generarPDFSemanal = async (req, res) => 
         const totalEfectivoViaje = efectivoViaje + maintenanceTotal + totalManualEntries;
         
         const sobranteEfectivo = totalViajes - totalEfectivoViaje;
-        const cajaDefinedAmount = Number(pettyCashAmount || 250);
+        // Determinar monto objetivo de caja chica: preferir valor enviado por cliente, si no existe usar configuración en DB
+        let cajaDefinedAmount;
+        try {
+            const cfg = await CajaChicaConfig.obtenerConfiguracion();
+            const cfgMax = cfg && !isNaN(Number(cfg.maximoPermitido)) ? Number(cfg.maximoPermitido) : 250;
+            cajaDefinedAmount = Number(pettyCashAmount ?? cfgMax);
+        } catch (err) {
+            // En caso de error leyendo la configuración, caer a valor por defecto
+            console.error('No se pudo leer CajaChicaConfig, usando valor por defecto 250:', err);
+            cajaDefinedAmount = Number(pettyCashAmount ?? 250);
+        }
+
         const reponerCajaChica = Math.max(0, cajaDefinedAmount - lastCurrentBalance);
         const bancos = sobranteEfectivo - reponerCajaChica;
 
