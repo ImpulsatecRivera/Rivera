@@ -14,6 +14,8 @@ router.get('/mensual-simple/:mes/:ano', ReportesRoutes.generarPDFMensualSimple);
 
 // 4. Reporte semanal
 router.get('/semanal/:mes/:ano/:semana', ReportesRoutes.generarPDFSemanal);
+router.get('/rango-fechas/:fechaInicio/:fechaFin', ReportesRoutes.generarPDFRangoFechas); // NUEVA RUTA
+
 
 // 5. Reporte de múltiples meses
 router.post('/mensual-multiple', ReportesRoutes.generarPDFMultiplesMeses);

@@ -351,63 +351,147 @@ const generarHTMLConsolidado = (titulo, columnas, clientesData, landscape = true
 // 📊 NUEVO: PDF CONSOLIDADO POR PERÍODO (UNIVERSAL)
 // Soporta: semanal, mensual, trimestral, semestral, 9meses, anual
 // =====================================================
+// =====================================================
+// 📄 MÉTODO PRINCIPAL - REEMPLAZAR COMPLETO
+// =====================================================
+
 ReportesViajesDirecto.generarPDFConsolidadoPeriodo = async (req, res) => {
   let browser;
   try {
-    const { periodo, ano, mes, trimestre, semana, semestre } = req.query;
+    const { periodo, ano, mes, trimestre, semana, semestre, fechaInicio, fechaFin } = req.query;
 
-    if (!periodo || !ano) {
+    if (!periodo) {
       return res.status(400).json({
         success: false,
-        message: "Se requieren los parámetros: periodo y ano",
+        message: "Se requiere el parámetro: periodo",
       });
     }
 
-    const anoNum = parseInt(ano);
-    console.log(`📊 Generando PDF Consolidado: ${periodo.toUpperCase()} - ${ano}`);
+    console.log(`📊 Generando PDF Consolidado: ${periodo.toUpperCase()}`);
 
     let datos, titulo, columnas, landscape = true;
+    let usaRangoPersonalizado = false;
 
     switch (periodo.toLowerCase()) {
       case 'semanal':
-        if (!mes || !semana) {
-          return res.status(400).json({
-            success: false,
-            message: "Para reporte semanal se requieren: ano, mes, semana",
-          });
-        }
-        const mesNumSemanal = parseInt(mes);
-        const semanaNum = parseInt(semana);
+        // ✅ NUEVO: Soporte para rango de fechas personalizado
+        if (fechaInicio && fechaFin) {
+          // Validar formato de fechas
+          if (!/^\d{4}-\d{2}-\d{2}$/.test(fechaInicio) || !/^\d{4}-\d{2}-\d{2}$/.test(fechaFin)) {
+            return res.status(400).json({
+              success: false,
+              message: "Las fechas deben tener formato YYYY-MM-DD",
+            });
+          }
 
-        if (mesNumSemanal < 1 || mesNumSemanal > 12) {
-          return res.status(400).json({
-            success: false,
-            message: "El mes debe estar entre 1 y 12",
-          });
-        }
+          // Crear fechas en zona horaria local (NO UTC)
+          const [yInicio, mInicio, dInicio] = fechaInicio.split('-');
+          const [yFin, mFin, dFin] = fechaFin.split('-');
 
-        if (semanaNum < 1 || semanaNum > 5) {
-          return res.status(400).json({
-            success: false,
-            message: "La semana debe estar entre 1 y 5",
-          });
-        }
+          const inicio = new Date(parseInt(yInicio), parseInt(mInicio) - 1, parseInt(dInicio), 0, 0, 0, 0);
+          const fin = new Date(parseInt(yFin), parseInt(mFin) - 1, parseInt(dFin), 23, 59, 59, 999);
 
-        datos = await ViajesModel.obtenerConsolidadoSemanal(anoNum, mesNumSemanal, semanaNum);
-        const fechaInicio = obtenerFechaInicioSemana(anoNum, mesNumSemanal, semanaNum);
-        const fechaFin = obtenerFechaFinSemana(anoNum, mesNumSemanal, semanaNum);
-        titulo = `SEMANA ${semanaNum} - ${obtenerNombreMes(mesNumSemanal)} ${anoNum}<br><span style="font-size: 14px;">(${formatearFecha(fechaInicio)} al ${formatearFecha(fechaFin)})</span>`;
-        columnas = generarColumnasDias(7, fechaInicio);
-        landscape = false;
+          console.log('🔍 DEBUG - Fechas de búsqueda:');
+          console.log('   📅 Inicio:', inicio.toLocaleString('es-ES', { timeZone: 'America/El_Salvador' }));
+          console.log('   📅 Fin:', fin.toLocaleString('es-ES', { timeZone: 'America/El_Salvador' }));
+
+          // Validar que fechaFin >= fechaInicio
+          if (fin < inicio) {
+            return res.status(400).json({
+              success: false,
+              message: "La fecha de fin debe ser mayor o igual a la fecha de inicio",
+            });
+          }
+
+          // Obtener datos por rango de fechas
+          datos = await ViajesModel.obtenerConsolidadoPorRango(inicio, fin);
+          
+          console.log('📊 DEBUG - Datos obtenidos:');
+          console.log('   Total clientes:', datos.length);
+          if (datos.length > 0) {
+            console.log('   Ejemplo primer cliente:', datos[0]._id);
+            console.log('   Períodos del primer cliente:', datos[0].periodos?.length || 0);
+            if (datos[0].periodos && datos[0].periodos.length > 0) {
+              console.log('   Ejemplo período:', datos[0].periodos[0]);
+            }
+          }
+          
+          // Calcular días entre fechas
+// Normalizar a medianoche para evitar errores por horas
+const inicioDia = new Date(inicio);
+inicioDia.setHours(0,0,0,0);
+
+const finDia = new Date(fin);
+finDia.setHours(0,0,0,0);
+
+// Diferencia real de días inclusiva
+const diasDiferencia =
+  Math.round((finDia - inicioDia) / (1000 * 60 * 60 * 24)) + 1;
+          
+          const anoNum = parseInt(yInicio);
+          
+          // Formatear fechas para el título
+          const formatoTitulo = (f) => {
+            const [y, m, d] = f.split('-');
+            return `${d}/${m}/${y}`;
+          };
+          
+          titulo = `REPORTE SEMANAL PERSONALIZADO ${anoNum}<br><span style="font-size: 14px;">(${formatoTitulo(fechaInicio)} al ${formatoTitulo(fechaFin)})</span>`;
+          columnas = generarColumnasDiasRango(diasDiferencia, inicio);
+          
+          console.log('📅 DEBUG - Columnas generadas:');
+          console.log('   Total columnas:', columnas.length);
+          if (columnas.length > 0) {
+            console.log('   Primera columna:', columnas[0]);
+            console.log('   Última columna:', columnas[columnas.length - 1]);
+          }
+          
+          landscape = diasDiferencia > 7;
+          usaRangoPersonalizado = true;
+        } else {
+          // Sistema original por número de semana
+          if (!ano || !mes || !semana) {
+            return res.status(400).json({
+              success: false,
+              message: "Para reporte semanal se requieren: ano, mes, semana O fechaInicio y fechaFin (formato YYYY-MM-DD)",
+            });
+          }
+          
+          const anoNum = parseInt(ano);
+          const mesNumSemanal = parseInt(mes);
+          const semanaNum = parseInt(semana);
+
+          if (mesNumSemanal < 1 || mesNumSemanal > 12) {
+            return res.status(400).json({
+              success: false,
+              message: "El mes debe estar entre 1 y 12",
+            });
+          }
+
+          if (semanaNum < 1 || semanaNum > 5) {
+            return res.status(400).json({
+              success: false,
+              message: "La semana debe estar entre 1 y 5",
+            });
+          }
+
+          datos = await ViajesModel.obtenerConsolidadoSemanal(anoNum, mesNumSemanal, semanaNum);
+          const fechaInicioSemana = obtenerFechaInicioSemana(anoNum, mesNumSemanal, semanaNum);
+          const fechaFinSemana = obtenerFechaFinSemana(anoNum, mesNumSemanal, semanaNum);
+          titulo = `SEMANA ${semanaNum} - ${obtenerNombreMes(mesNumSemanal)} ${anoNum}<br><span style="font-size: 14px;">(${formatearFecha(fechaInicioSemana)} al ${formatearFecha(fechaFinSemana)})</span>`;
+          columnas = generarColumnasDias(7, fechaInicioSemana);
+          landscape = false;
+        }
         break;
 
       case 'mensual':
-        if (!mes) {
+        if (!ano || !mes) {
           return res.status(400).json({
             success: false,
             message: "Para reporte mensual se requieren: ano, mes",
           });
         }
+        const anoNum = parseInt(ano);
         const mesNumMensual = parseInt(mes);
 
         if (mesNumMensual < 1 || mesNumMensual > 12) {
@@ -425,12 +509,13 @@ ReportesViajesDirecto.generarPDFConsolidadoPeriodo = async (req, res) => {
         break;
 
       case 'trimestral':
-        if (!trimestre) {
+        if (!ano || !trimestre) {
           return res.status(400).json({
             success: false,
             message: "Para reporte trimestral se requieren: ano, trimestre (1-4)",
           });
         }
+        const anoTrim = parseInt(ano);
         const trimestreNum = parseInt(trimestre);
 
         if (trimestreNum < 1 || trimestreNum > 4) {
@@ -440,14 +525,21 @@ ReportesViajesDirecto.generarPDFConsolidadoPeriodo = async (req, res) => {
           });
         }
 
-        datos = await ViajesModel.obtenerConsolidadoTrimestral(anoNum, trimestreNum);
+        datos = await ViajesModel.obtenerConsolidadoTrimestral(anoTrim, trimestreNum);
         const mesesTrimestre = obtenerMesesTrimestre(trimestreNum);
-        titulo = `TRIMESTRE ${trimestreNum} (${mesesTrimestre.join('-')}) ${anoNum}`;
+        titulo = `TRIMESTRE ${trimestreNum} (${mesesTrimestre.join('-')}) ${anoTrim}`;
         columnas = generarColumnasMeses(3, (trimestreNum - 1) * 3 + 1);
         landscape = false;
         break;
 
       case 'semestral':
+        if (!ano) {
+          return res.status(400).json({
+            success: false,
+            message: "Para reporte semestral se requiere: ano",
+          });
+        }
+        const anoSem = parseInt(ano);
         const semestreNum = parseInt(semestre || 1);
 
         if (semestreNum < 1 || semestreNum > 2) {
@@ -457,22 +549,36 @@ ReportesViajesDirecto.generarPDFConsolidadoPeriodo = async (req, res) => {
           });
         }
 
-        datos = await ViajesModel.obtenerConsolidadoSemestral(anoNum, semestreNum);
-        titulo = `${semestreNum === 1 ? 'PRIMER' : 'SEGUNDO'} SEMESTRE ${anoNum}`;
+        datos = await ViajesModel.obtenerConsolidadoSemestral(anoSem, semestreNum);
+        titulo = `${semestreNum === 1 ? 'PRIMER' : 'SEGUNDO'} SEMESTRE ${anoSem}`;
         columnas = generarColumnasMeses(6, semestreNum === 1 ? 1 : 7);
         landscape = true;
         break;
 
       case '9meses':
-        datos = await ViajesModel.obtenerConsolidado9Meses(anoNum);
-        titulo = `PRIMEROS 9 MESES - ${anoNum}`;
+        if (!ano) {
+          return res.status(400).json({
+            success: false,
+            message: "Para reporte de 9 meses se requiere: ano",
+          });
+        }
+        const ano9m = parseInt(ano);
+        datos = await ViajesModel.obtenerConsolidado9Meses(ano9m);
+        titulo = `PRIMEROS 9 MESES - ${ano9m}`;
         columnas = generarColumnasMeses(9, 1);
         landscape = true;
         break;
 
       case 'anual':
-        datos = await ViajesModel.obtenerConsolidadoAnual(anoNum);
-        titulo = `AÑO ${anoNum}`;
+        if (!ano) {
+          return res.status(400).json({
+            success: false,
+            message: "Para reporte anual se requiere: ano",
+          });
+        }
+        const anoAnual = parseInt(ano);
+        datos = await ViajesModel.obtenerConsolidadoAnual(anoAnual);
+        titulo = `AÑO ${anoAnual}`;
         columnas = generarColumnasMeses(12, 1);
         landscape = true;
         break;
@@ -491,7 +597,24 @@ ReportesViajesDirecto.generarPDFConsolidadoPeriodo = async (req, res) => {
       });
     }
 
-    const clientesData = procesarDatosClientes(datos, columnas);
+    console.log('🔄 DEBUG - Procesando datos de clientes...');
+    
+    // Procesar datos según el tipo de agrupación
+    const clientesData = usaRangoPersonalizado 
+      ? procesarDatosClientesRango(datos, columnas)
+      : procesarDatosClientes(datos, columnas);
+    
+    console.log('✅ DEBUG - Datos procesados:');
+    console.log('   Total clientes procesados:', clientesData.length);
+    if (clientesData.length > 0) {
+      console.log('   Ejemplo cliente:', {
+        nombre: clientesData[0].cliente,
+        columnas: clientesData[0].columnas?.length,
+        totalViajes: clientesData[0].totalViajes,
+        totalMonto: clientesData[0].totalPeriodo
+      });
+    }
+    
     const comparativo = periodo.toLowerCase() === 'semanal';
     const htmlContent = generarHTMLConsolidado(titulo, columnas, clientesData, landscape, comparativo);
 
@@ -512,11 +635,16 @@ ReportesViajesDirecto.generarPDFConsolidadoPeriodo = async (req, res) => {
 
     await browser.close();
 
-    let filename = `consolidado-${periodo}-${anoNum}`;
-    if (mes) filename += `-mes${mes}`;
-    if (semana) filename += `-sem${semana}`;
-    if (trimestre) filename += `-t${trimestre}`;
-    if (semestre) filename += `-s${semestre}`;
+    let filename = `consolidado-${periodo}`;
+    if (fechaInicio && fechaFin) {
+      filename += `-${fechaInicio}_${fechaFin}`;
+    } else {
+      if (ano) filename += `-${ano}`;
+      if (mes) filename += `-mes${mes}`;
+      if (semana) filename += `-sem${semana}`;
+      if (trimestre) filename += `-t${trimestre}`;
+      if (semestre) filename += `-s${semestre}`;
+    }
     filename += '.pdf';
 
     res.setHeader("Content-Type", "application/pdf");
@@ -535,6 +663,168 @@ ReportesViajesDirecto.generarPDFConsolidadoPeriodo = async (req, res) => {
     });
   }
 };
+
+// =====================================================
+// 🆕 FUNCIONES AUXILIARES - AGREGAR AL FINAL DEL ARCHIVO
+// (Antes de: export default ReportesViajesDirecto;)
+// =====================================================
+
+/**
+ * Genera columnas para un rango de fechas personalizado
+ * ✅ VERSIÓN CORREGIDA CON DEBUG
+ */
+function generarColumnasDiasRango(dias, fechaInicio) {
+  console.log('📅 Generando columnas para rango personalizado...');
+  console.log('   Días a generar:', dias);
+  console.log('   Fecha inicio:', fechaInicio);
+  
+  const columnas = [];
+  const diasSemana = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+  
+  for (let i = 0; i < dias; i++) {
+    const fecha = new Date(fechaInicio);
+    fecha.setDate(fecha.getDate() + i);
+    
+    const año = fecha.getFullYear();
+    const mes = fecha.getMonth() + 1;
+    const dia = fecha.getDate();
+    const diaSemana = fecha.getDay();
+    
+    // ✅ Formato: "2026-1-12" (sin ceros, igual que MongoDB)
+    const fechaKey = `${año}-${mes}-${dia}`;
+    
+    columnas.push({
+      key: fechaKey,
+      id: fechaKey,
+      label: `${diasSemana[diaSemana]} ${dia}`,
+      sublabel: `${dia}/${mes}`,
+      tipo: 'dia',
+      fecha: new Date(fecha)
+    });
+    
+    if (i < 3 || i >= dias - 3) {
+      console.log(`   Columna ${i + 1}: ${fechaKey} -> ${diasSemana[diaSemana]} ${dia}`);
+    } else if (i === 3) {
+      console.log('   ... (columnas intermedias) ...');
+    }
+  }
+  
+  return columnas;
+}
+
+/**
+ * Procesa datos de clientes para rangos personalizados
+ * ✅ VERSIÓN CORREGIDA CON DEBUG
+ */
+function procesarDatosClientesRango(datos, columnas) {
+  console.log('🔄 Procesando datos de clientes para rango personalizado...');
+  console.log('   Total clientes recibidos:', datos.length);
+  console.log('   Total columnas:', columnas.length);
+  
+  const clientesMap = new Map();
+  
+  datos.forEach((item, index) => {
+    const cliente = item._id;
+    
+    if (index === 0) {
+      console.log(`\n   📋 Procesando cliente ejemplo: ${cliente}`);
+    }
+    
+    if (!clientesMap.has(cliente)) {
+      clientesMap.set(cliente, {
+        nombre: cliente,
+        periodos: new Map(),
+        totales: { viajes: 0, monto: 0 }
+      });
+    }
+    
+    const clienteData = clientesMap.get(cliente);
+    
+    if (item.periodos && Array.isArray(item.periodos)) {
+      item.periodos.forEach((p, idx) => {
+        // ✅ p.fecha viene como "2026-1-12" directamente de MongoDB
+        const fechaKey = p.fecha;
+        
+        if (index === 0 && idx < 3) {
+          console.log(`      Período ${idx + 1}: ${fechaKey} -> ${p.viajes} viajes, $${p.monto}`);
+        }
+        
+        clienteData.periodos.set(fechaKey, {
+          viajes: p.viajes,
+          monto: p.monto
+        });
+        
+        clienteData.totales.viajes += p.viajes;
+        clienteData.totales.monto += p.monto;
+      });
+    }
+  });
+  
+  // Convertir a array y mapear con columnas
+  const resultado = [];
+  
+  clientesMap.forEach((clienteData, nombreCliente) => {
+    const columnasArray = [];
+    let encontrados = 0;
+    
+    columnas.forEach((col, idx) => {
+      const key = col.id;
+      const datos = clienteData.periodos.get(key);
+      
+      if (datos && datos.viajes > 0) {
+        encontrados++;
+        if (encontrados <= 3) {
+          console.log(`      ✓ Columna ${idx + 1} (${key}): ${datos.viajes} viajes`);
+        }
+      }
+      
+      columnasArray.push({
+        periodo: col.key || col.id,
+        viajes: datos?.viajes || 0,
+        monto: datos?.monto || 0
+      });
+    });
+    
+    resultado.push({
+      cliente: nombreCliente,
+      columnas: columnasArray,
+      totalPeriodo: clienteData.totales.monto,
+      totalViajes: clienteData.totales.viajes
+    });
+    
+    console.log(`   Cliente: ${nombreCliente} -> Total: ${clienteData.totales.viajes} viajes, $${clienteData.totales.monto.toFixed(2)}`);
+  });
+  
+  console.log(`\n✅ Procesamiento completado: ${resultado.length} clientes`);
+  
+  return resultado.sort((a, b) => a.cliente.localeCompare(b.cliente));
+}
+// =====================================================
+// 🆕 FUNCIONES AUXILIARES PARA RANGO PERSONALIZADO
+// =====================================================
+
+/**
+ * Genera columnas para un rango de fechas personalizado
+ 
+// =====================================================
+// 🆕 FUNCIONES AUXILIARES PARA RANGO PERSONALIZADO
+// =====================================================
+
+/**
+ * Genera columnas para un rango de fechas personalizado
+ */
+
+
+/**
+ * Procesa datos de clientes para rangos personalizados
+ * Convierte el formato de fecha "YYYY-M-D" a estructura procesable
+ */
+
+
+/**
+ * Formatea una fecha desde string YYYY-MM-DD a DD/MM/YYYY
+ */
+
 
 // =====================================================
 // 📊 GET: OBTENER CLIENTES CON VIAJES DEL MES

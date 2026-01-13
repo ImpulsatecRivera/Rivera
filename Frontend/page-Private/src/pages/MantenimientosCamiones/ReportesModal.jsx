@@ -4,9 +4,10 @@ import { X, Calendar, FileText, Download, ChevronDown, AlertCircle, CheckCircle 
 const ReportesModal = ({ isOpen, onClose, apiUrl }) => {
   const [tipoReporte, setTipoReporte] = useState('mensual');
   const [mesSeleccionado, setMesSeleccionado] = useState('');
-  const [semanaSeleccionada, setSemanaSeleccionada] = useState('');
   const [anoSeleccionado, setAnoSeleccionado] = useState(new Date().getFullYear());
   const [mesesSeleccionados, setMesesSeleccionados] = useState([]);
+  const [fechaInicio, setFechaInicio] = useState('');
+  const [fechaFin, setFechaFin] = useState('');
   const [generando, setGenerando] = useState(false);
   const [showAlert, setShowAlert] = useState(false);
   const [alertData, setAlertData] = useState({ type: '', title: '', message: '', details: [] });
@@ -26,14 +27,6 @@ const ReportesModal = ({ isOpen, onClose, apiUrl }) => {
     { value: 12, label: 'Diciembre' }
   ];
 
-  const semanas = [
-    { value: 1, label: 'Semana 1 (1-7)' },
-    { value: 2, label: 'Semana 2 (8-14)' },
-    { value: 3, label: 'Semana 3 (15-21)' },
-    { value: 4, label: 'Semana 4 (22-28)' },
-    { value: 5, label: 'Semana 5 (29-31)' },
-  ];
-
   const anos = Array.from({ length: 10 }, (_, i) => new Date().getFullYear() - i);
 
   const toggleMes = (mes) => {
@@ -44,10 +37,23 @@ const ReportesModal = ({ isOpen, onClose, apiUrl }) => {
     }
   };
 
+  const parseDate = (dateString) => {
+    const [year, month, day] = dateString.split('-');
+    return new Date(year, month - 1, day);
+  };
+
+  // Función para formatear fecha de forma consistente
+ // Función para formatear fecha de forma consistente (SIN crear objeto Date)
+const formatearFecha = (fechaString) => {
+  // Si la fecha viene en formato YYYY-MM-DD del input
+  const [year, month, day] = fechaString.split('-');
+  return `${day}/${month}/${year}`;
+};
+
   const isButtonDisabled = () => {
     if (generando) return true;
     if (tipoReporte === 'mensual' && !mesSeleccionado) return true;
-    if (tipoReporte === 'semanal' && (!mesSeleccionado || !semanaSeleccionada)) return true;
+    if (tipoReporte === 'semanal' && (!fechaInicio || !fechaFin)) return true;
     if (tipoReporte === 'multiple' && mesesSeleccionados.length === 0) return true;
     return false;
   };
@@ -64,12 +70,16 @@ const ReportesModal = ({ isOpen, onClose, apiUrl }) => {
       return;
     }
     if (tipoReporte === 'semanal') {
-      if (!mesSeleccionado) {
-        showCustomAlert('warning', 'Mes no seleccionado', 'Por favor selecciona un mes.');
+      if (!fechaInicio) {
+        showCustomAlert('warning', 'Fecha no seleccionada', 'Por favor selecciona una fecha de inicio.');
         return;
       }
-      if (!semanaSeleccionada) {
-        showCustomAlert('warning', 'Semana no seleccionada', 'Por favor selecciona una semana.');
+      if (!fechaFin) {
+        showCustomAlert('warning', 'Fecha no seleccionada', 'Por favor selecciona una fecha de fin.');
+        return;
+      }
+      if (parseDate(fechaInicio) > parseDate(fechaFin)) {
+        showCustomAlert('warning', 'Rango inválido', 'La fecha de inicio debe ser anterior a la fecha de fin.');
         return;
       }
     }
@@ -153,19 +163,23 @@ const ReportesModal = ({ isOpen, onClose, apiUrl }) => {
           );
         }
       } else if (tipoReporte === 'semanal') {
-        const reporteUrl = `${apiUrl}/reporte/semanal/${mesSeleccionado}/${anoSeleccionado}/${semanaSeleccionada}`;
+        console.log('=== DEBUG FECHAS ===');
+  console.log('fechaInicio (raw):', fechaInicio);
+  console.log('fechaFin (raw):', fechaFin);
+  console.log('URL que se enviará:', `${apiUrl}/reporte/rango-fechas/${fechaInicio}/${fechaFin}`);
+  console.log('==================');
+        const reporteUrl = `${apiUrl}/reporte/rango-fechas/${fechaInicio}/${fechaFin}`;
         
         try {
           const checkResponse = await fetch(reporteUrl, { method: 'HEAD' });
           
           if (checkResponse.status === 404) {
             setGenerando(false);
-            const mesNombre = meses.find(m => m.value === parseInt(mesSeleccionado))?.label;
             showCustomAlert(
               'info',
               'Sin datos disponibles',
-              `No hay registros de mantenimiento para la semana ${semanaSeleccionada} de ${mesNombre} ${anoSeleccionado}.`,
-              ['Verifica que existan mantenimientos registrados en ese período', 'Intenta con otra semana']
+              'No hay registros de mantenimiento en el rango de fechas seleccionado.',
+              ['Verifica que existan mantenimientos registrados en ese período']
             );
             return;
           }
@@ -177,8 +191,11 @@ const ReportesModal = ({ isOpen, onClose, apiUrl }) => {
           window.open(reporteUrl, '_blank');
           setTimeout(() => {
             setGenerando(false);
-            const mesNombre = meses.find(m => m.value === parseInt(mesSeleccionado))?.label;
-            showCustomAlert('success', '¡Reporte generado!', `El reporte semanal de ${mesNombre} está listo para visualizar.`);
+            showCustomAlert(
+              'success', 
+              '¡Reporte generado!', 
+              `Reporte del ${formatearFecha(fechaInicio)} al ${formatearFecha(fechaFin)} está listo.`
+            );
           }, 1000);
         } catch (error) {
           setGenerando(false);
@@ -314,8 +331,8 @@ const ReportesModal = ({ isOpen, onClose, apiUrl }) => {
                   }`}
                 >
                   <Calendar className="mx-auto mb-2" size={24} />
-                  <div className="text-sm font-semibold">Semanal</div>
-                  <div className="text-xs text-gray-500 mt-1">Por semana</div>
+                  <div className="text-sm font-semibold">Rango</div>
+                  <div className="text-xs text-gray-500 mt-1">Personalizado</div>
                 </button>
 
                 <button
@@ -438,69 +455,48 @@ const ReportesModal = ({ isOpen, onClose, apiUrl }) => {
                   <div className="flex items-start gap-3">
                     <Calendar className="text-indigo-600 mt-1" size={20} />
                     <div>
-                      <h3 className="font-semibold text-indigo-900 mb-1">Reporte Semanal</h3>
+                      <h3 className="font-semibold text-indigo-900 mb-1">Reporte por Rango de Fechas</h3>
                       <p className="text-sm text-indigo-700">
-                        Genera un reporte de mantenimientos por semana del mes.
+                        Genera un reporte personalizado para cualquier período (semanal, quincenal, mensual, etc).
                       </p>
                     </div>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Mes <span className="text-red-500">*</span>
-                    </label>
-                    <div className="relative">
-                      <select
-                        value={mesSeleccionado}
-                        onChange={(e) => setMesSeleccionado(e.target.value)}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 appearance-none bg-white"
-                      >
-                        <option value="">Seleccionar</option>
-                        {meses.map(m => (
-                          <option key={m.value} value={m.value}>{m.label}</option>
-                        ))}
-                      </select>
-                      <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={20} />
-                    </div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">Fecha de Inicio</label>
+                    <input
+                      type="date"
+                      value={fechaInicio}
+                      onChange={(e) => setFechaInicio(e.target.value)}
+                      max={fechaFin || new Date().toISOString().split('T')[0]}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white"
+                    />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Semana <span className="text-red-500">*</span>
-                    </label>
-                    <div className="relative">
-                      <select
-                        value={semanaSeleccionada}
-                        onChange={(e) => setSemanaSeleccionada(e.target.value)}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 appearance-none bg-white"
-                      >
-                        <option value="">Seleccionar</option>
-                        {semanas.map(s => (
-                          <option key={s.value} value={s.value}>{s.label}</option>
-                        ))}
-                      </select>
-                      <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={20} />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">Año</label>
-                    <div className="relative">
-                      <select
-                        value={anoSeleccionado}
-                        onChange={(e) => setAnoSeleccionado(Number(e.target.value))}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 appearance-none bg-white"
-                      >
-                        {anos.map(ano => (
-                          <option key={ano} value={ano}>{ano}</option>
-                        ))}
-                      </select>
-                      <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={20} />
-                    </div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">Fecha de Fin</label>
+                    <input
+                      type="date"
+                      value={fechaFin}
+                      onChange={(e) => setFechaFin(e.target.value)}
+                      min={fechaInicio}
+                      max={new Date().toISOString().split('T')[0]}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white"
+                    />
                   </div>
                 </div>
+
+                {fechaInicio && fechaFin && (
+                  <div className="bg-blue-50 rounded-lg p-4 border border-blue-100">
+                    <p className="text-sm text-blue-700">
+                      <span className="font-semibold">Período seleccionado:</span> {' '}
+                      {Math.ceil((parseDate(fechaFin) - parseDate(fechaInicio)) / (1000 * 60 * 60 * 24)) + 1} días
+                      {' '}({formatearFecha(fechaInicio)} - {formatearFecha(fechaFin)})
+                    </p>
+                  </div>
+                )}
               </div>
             )}
 
