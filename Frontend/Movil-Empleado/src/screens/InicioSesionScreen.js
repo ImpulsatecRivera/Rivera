@@ -1,37 +1,58 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
-  SafeAreaView,
-  ScrollView,
-  TouchableOpacity,
   Text,
   TextInput,
-  Alert,
+  TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
+  Alert,
+  Dimensions,
+  Animated,
+  Image,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
+import LottieView from 'lottie-react-native';
+import { BlurView } from 'expo-blur';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../Context/authContext';
+
+const { width, height } = Dimensions.get('window');
 
 const InicioSesionScreen = ({ navigation }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  
+
   const { login } = useAuth();
+
+  // Animación de entrada
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const translateAnim = useRef(new Animated.Value(30)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 700,
+        useNativeDriver: true,
+      }),
+      Animated.timing(translateAnim, {
+        toValue: 0,
+        duration: 700,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, []);
 
   const validateForm = () => {
     if (!email.trim()) {
-      Alert.alert('Error', 'Por favor ingresa tu email');
+      Alert.alert('Error', 'Ingresa tu email');
       return false;
     }
     if (!password.trim()) {
-      Alert.alert('Error', 'Por favor ingresa tu contraseña');
-      return false;
-    }
-    if (password.length < 6) {
-      Alert.alert('Error', 'La contraseña debe tener al menos 6 caracteres');
+      Alert.alert('Error', 'Ingresa tu contraseña');
       return false;
     }
     return true;
@@ -42,17 +63,13 @@ const InicioSesionScreen = ({ navigation }) => {
 
     setLoading(true);
     try {
-      console.log('🔐 Iniciando sesión...', { email });
-      
-      // ✅ IP CONFIGURADA CORRECTAMENTE
       const API_URL = 'https://rivera-test-629395560179.us-west1.run.app/api/login';
-      
-      console.log('🌐 Conectando a:', API_URL);
+
       const response = await fetch(API_URL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Accept': 'application/json',
+          Accept: 'application/json',
         },
         body: JSON.stringify({
           email: email.trim(),
@@ -67,248 +84,214 @@ const InicioSesionScreen = ({ navigation }) => {
         return;
       }
 
-      console.log('✅ Login exitoso:', data);
-
-      // Verificar que solo motoristas puedan acceder a esta app
       if (data.userType !== 'Motorista') {
-        Alert.alert(
-          'Acceso Denegado', 
-          'Esta aplicación es exclusiva para motoristas. Tu tipo de usuario no tiene acceso.',
-          [{ text: 'Entendido', style: 'cancel' }]
-        );
+        Alert.alert('Acceso denegado', 'Solo motoristas pueden usar esta app');
         return;
       }
 
-      // Guardar información en el contexto
       await login({
         user: data.user,
         userType: data.userType,
-        token: data.token || null, // Si el token viene en la respuesta
+        token: data.token || null,
       });
-
-      console.log('🚀 Navegando a onboarding...');
-      
     } catch (error) {
-      console.error('❌ Error en login:', error);
-      
-      // Manejo específico de errores de red
-      if (error.message === 'Network request failed') {
-        Alert.alert(
-          'Error de Conexión', 
-          '🔴 No se pudo conectar al servidor.\n\n' +
-          'Pasos para solucionarlo:\n' +
-          '1. Verifica que tu servidor esté corriendo en puerto 4000\n' +
-          '2. Cambia "192.168.1.XXX" por la IP real de tu PC\n' +
-          '3. Asegúrate de estar en la misma red WiFi\n\n' +
-          'IP actual configurada: 192.168.1.100:4000'
-        );
-      } else if (error.name === 'TypeError') {
-        Alert.alert(
-          'Error de Red', 
-          'Problema de conectividad. Verifica tu conexión a internet.'
-        );
-      } else {
-        Alert.alert('Error', 'No se pudo iniciar sesión. Intenta de nuevo.');
-      }
+      Alert.alert('Error', 'No se pudo conectar al servidor');
     } finally {
       setLoading(false);
     }
   };
 
- const handleForgotPassword = () => {
-  navigation.navigate('elegirMetodoRecuperacion'); // ✅ Ahora SÍ existe
-};
-
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView 
-        contentContainerStyle={styles.scrollContainer}
-        showsVerticalScrollIndicator={false}
+    <View style={styles.container}>
+      {/* Lottie fondo full screen */}
+      <LottieView
+        source={require('../../assets/lottie/Background Full Screen-Train.json')}
+        autoPlay
+        loop
+        resizeMode="cover"
+        style={styles.lottie}
+      />
+
+      {/* Card glassmorphism */}
+      <Animated.View
+        style={{
+          opacity: fadeAnim,
+          transform: [{ translateY: translateAnim }],
+        }}
       >
-        <View style={styles.authContainer}>
-          <Text style={styles.title}>¡Bienvenido de{'\n'}vuelta!</Text>
-          
-          {/* Mensaje informativo */}
-          <View style={styles.infoContainer}>
-            <Icon name="information-circle" size={20} color="#4CAF50" />
-            <Text style={styles.infoText}>
-              Esta aplicación es exclusiva para motoristas
-            </Text>
-          </View>
-          
-          {/* Campo Email */}
+        <BlurView intensity={45} tint="light" style={styles.card}>
+          {/* Logo opcional */}
+          <Image source={require('../images/logo.png')} style={styles.logo} /> 
+
+          <Text style={styles.title}>Rivera</Text>
+          <Text style={styles.subtitle}>Inicia sesión para continuar</Text>
+
           <View style={styles.inputContainer}>
-            <Icon name="person-outline" size={20} color="#666" style={styles.inputIcon} />
+            <View style={styles.iconBox}>
+              <Icon name="mail-outline" size={16} color="#555" />
+            </View>
             <TextInput
-              style={styles.textInput}
-              placeholder="Email del motorista"
+              style={styles.input}
+              placeholder="Email"
+              placeholderTextColor="#777"
               value={email}
               onChangeText={setEmail}
-              keyboardType="email-address"
               autoCapitalize="none"
-              placeholderTextColor="#999"
               editable={!loading}
             />
           </View>
 
-          {/* Campo Contraseña */}
           <View style={styles.inputContainer}>
-            <Icon name="key-outline" size={20} color="#666" style={styles.inputIcon} />
+            <View style={styles.iconBox}>
+              <Icon name="lock-closed-outline" size={16} color="#555" />
+            </View>
             <TextInput
-              style={[styles.textInput, { flex: 1 }]}
+              style={styles.input}
               placeholder="Contraseña"
+              placeholderTextColor="#777"
               value={password}
               onChangeText={setPassword}
               secureTextEntry={!showPassword}
-              placeholderTextColor="#999"
               editable={!loading}
             />
-            <TouchableOpacity 
-              onPress={() => setShowPassword(!showPassword)}
-              style={styles.eyeIcon}
-              disabled={loading}
-            >
-              <Icon 
-                name={showPassword ? "eye-off-outline" : "eye-outline"} 
-                size={20} 
-                color="#666" 
+            <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+              <Icon
+                name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                size={18}
+                color="#555"
               />
             </TouchableOpacity>
           </View>
 
-          {/* Enlace olvidar contraseña */}
-          <TouchableOpacity 
-            onPress={handleForgotPassword} 
-            style={styles.forgotPassword}
+          {/* Forgot password mejorado */}
+          <TouchableOpacity
+            style={styles.forgotPill}
+            onPress={() => navigation.navigate('elegirMetodoRecuperacion')}
             disabled={loading}
           >
-            <Text style={styles.forgotPasswordText}>
-              ¿Olvidaste tu contraseña?
-            </Text>
+            <Icon name="help-circle-outline" size={14} color="#2ecc71" />
+            <Text style={styles.forgotText}>¿Olvidaste tu contraseña?</Text>
           </TouchableOpacity>
 
-          {/* Botón de login */}
-          <TouchableOpacity 
-            style={[styles.primaryButton, loading && styles.buttonDisabled]}
-            onPress={handleLogin}
-            disabled={loading}
-          >
-            {loading ? (
-              <View style={styles.loadingContainer}>
-                <ActivityIndicator color="#fff" size="small" />
-                <Text style={styles.loadingText}>Verificando credenciales...</Text>
-              </View>
-            ) : (
-              <Text style={styles.primaryButtonText}>Iniciar Sesión</Text>
-            )}
+          {/* Botón pro con degradado */}
+          <TouchableOpacity onPress={handleLogin} disabled={loading}>
+            <LinearGradient
+              colors={['#4CAF50', '#2ecc71']}
+              style={styles.button}
+            >
+              {loading ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={styles.buttonText}>Entrar</Text>
+              )}
+            </LinearGradient>
           </TouchableOpacity>
-        </View>
-      </ScrollView>
-    </SafeAreaView>
+
+          {/* Indicador seguridad */}
+         
+        </BlurView>
+      </Animated.View>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f9fafb',
+    backgroundColor: 'transparent',
   },
-  scrollContainer: {
-    flexGrow: 1,
-    paddingHorizontal: 24,
-    paddingVertical: 32,
+  lottie: {
+    position: 'absolute',
+    width,
+    height,
   },
-  authContainer: {
-    flex: 1,
-    justifyContent: 'center',
+  card: {
+    width: '85%',
+    alignSelf: 'center',
+    marginTop: height * 0.22,
+    padding: 24,
+    borderRadius: 26,
+    overflow: 'hidden',
+  },
+  logo: {
+    width: 64,
+    height: 64,
+    alignSelf: 'center',
+    marginBottom: 10,
   },
   title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#1f2937',
+    fontSize: 26,
+    fontWeight: '700',
     textAlign: 'center',
-    marginBottom: 20,
+    color: '#111',
   },
-  infoContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#f0f9ff',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    marginBottom: 30,
-    borderWidth: 1,
-    borderColor: '#e0f2fe',
-  },
-  infoText: {
+  subtitle: {
     fontSize: 14,
-    color: '#0369a1',
-    marginLeft: 8,
-    fontWeight: '500',
+    color: '#555',
+    textAlign: 'center',
+    marginBottom: 24,
+    marginTop: 4,
   },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
+    backgroundColor: 'rgba(255,255,255,0.85)',
+    borderRadius: 14,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    marginBottom: 14,
   },
-  inputIcon: {
-    marginRight: 12,
-  },
-  textInput: {
-    flex: 1,
-    fontSize: 16,
-    color: '#1f2937',
-  },
-  eyeIcon: {
-    padding: 4,
-  },
-  forgotPassword: {
-    alignItems: 'flex-end',
-    marginBottom: 32,
-  },
-  forgotPasswordText: {
-    color: '#3b82f6',
-    fontSize: 14,
-  },
-  primaryButton: {
-    backgroundColor: '#4CAF50',
-    borderRadius: 12,
-    paddingVertical: 16,
+  iconBox: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: 'rgba(0,0,0,0.05)',
+    justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
+    marginRight: 8,
   },
-  buttonDisabled: {
-    opacity: 0.7,
+  input: {
+    flex: 1,
+    fontSize: 15,
+    color: '#111',
   },
-  primaryButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  loadingContainer: {
+  forgotPill: {
     flexDirection: 'row',
     alignItems: 'center',
+    alignSelf: 'center',
+    marginVertical: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.75)',
   },
-  loadingText: {
+  forgotText: {
+    fontSize: 13,
+    color: '#2ecc71',
+    marginLeft: 6,
+    fontWeight: '600',
+  },
+  button: {
+    paddingVertical: 14,
+    borderRadius: 14,
+    alignItems: 'center',
+    marginTop: 6,
+  },
+  buttonText: {
     color: '#fff',
-    fontSize: 14,
-    marginLeft: 8,
+    fontWeight: '700',
+    fontSize: 16,
+  },
+  secureRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 12,
+  },
+  secureText: {
+    fontSize: 12,
+    color: '#2ecc71',
+    marginLeft: 6,
   },
 });
 
