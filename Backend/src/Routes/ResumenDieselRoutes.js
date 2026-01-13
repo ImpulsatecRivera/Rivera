@@ -3,8 +3,6 @@ import ResumenCon from "../Controllers/ResumenDieselController.js";
 import multer from 'multer';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { authMiddleware } from "../Middleware/auth.js";
-import { requireRole, requireAdmin } from "../Middleware/roleMiddleware.js";
 
 const router = express.Router();
 
@@ -49,15 +47,15 @@ const upload = multer({
 // =====================================================
 
 // Obtener todos los resúmenes
-router.get("/", authMiddleware, ResumenCon.getResumen);
+router.get("/", ResumenCon.getResumen);
 
 // Agregar resumen con comprobante opcional
-router.post("/", authMiddleware, requireRole("Operativo", "Supervisor"), upload.single('comprobante'), ResumenCon.AgregarDiesel);
+router.post("/",  upload.single('comprobante'), ResumenCon.AgregarDiesel);
 
 // Actualizar resumen con comprobante opcional
-router.put("/:id", authMiddleware, requireRole("Supervisor"), upload.single('comprobante'), ResumenCon.PutDiesel);
+router.put("/:id", upload.single('comprobante'), ResumenCon.PutDiesel);
 
 // Eliminar resumen
-router.delete("/:id", authMiddleware, requireAdmin, ResumenCon.DeleteResumen);
+router.delete("/:id",  ResumenCon.DeleteResumen);
 
 export default router;

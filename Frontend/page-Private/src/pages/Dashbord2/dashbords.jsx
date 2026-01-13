@@ -148,6 +148,7 @@ const ModernDashboard = () => {
       };
 
       const cajaRes = await fetch(`${config.api.API_URL}/cajaChica`, {
+        credentials: 'include',
         headers: { 'Authorization': `Bearer ${localStorage.getItem('authToken')}` }
       });
       const cajaData = await cajaRes.json();
@@ -156,6 +157,7 @@ const ModernDashboard = () => {
       transacciones = filtrarPorPeriodo(transacciones, 'date');
 
       const cajaBalanceRes = await fetch(`${config.api.API_URL}/cajaChica/balance`, {
+        credentials: 'include',
         headers: { 'Authorization': `Bearer ${localStorage.getItem('authToken')}` }
       });
       const cajaBalanceData = await cajaBalanceRes.json();
@@ -167,7 +169,7 @@ const ModernDashboard = () => {
         transacciones: transacciones.length
       };
 
-      const planillasRes = await fetch(`${config.api.API_URL}/planillas/quincenal`);
+      const planillasRes = await fetch(`${config.api.API_URL}/planillas/quincenal`, { credentials: 'include' });
       const planillasData = await planillasRes.json();
       let planillas = planillasData?.data || [];
 

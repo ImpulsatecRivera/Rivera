@@ -1,8 +1,6 @@
 // src/Routes/ViajesRoutes.js - NUEVO DESDE CERO
 import express from "express";
 import ViajesController from "../Controllers/Viajes.js";
-import { authMiddleware } from "../Middleware/auth.js";
-import { requireRole, requireAdmin } from "../Middleware/roleMiddleware.js";
 
 const router = express.Router();
 
@@ -11,38 +9,38 @@ const router = express.Router();
 // =====================================================
 
 // Datos del mapa - RUTA PRINCIPAL DEL FRONTEND
-router.get("/map-data", authMiddleware, ViajesController.getMapData);
+router.get("/map-data",ViajesController.getMapData);
 
 // Estadísticas y métricas
-router.get("/trip-stats", authMiddleware, ViajesController.getTripStats);
-router.get("/carga-distribution", authMiddleware, ViajesController.getCargaDistribution);
-router.get("/real-time-metrics", authMiddleware, ViajesController.getRealTimeMetrics);
-router.get("/dashboard/data", authMiddleware, ViajesController.getDashboardData);
-router.get("/efficiency-metrics", authMiddleware, ViajesController.getEfficiencyMetrics);
+router.get("/trip-stats", ViajesController.getTripStats);
+router.get("/carga-distribution", ViajesController.getCargaDistribution);
+router.get("/real-time-metrics", ViajesController.getRealTimeMetrics);
+router.get("/dashboard/data", ViajesController.getDashboardData);
+router.get("/efficiency-metrics", ViajesController.getEfficiencyMetrics);
 
 // Análisis de cargas
-router.get("/cargo-stats", authMiddleware, ViajesController.getCargaStats);
-router.get("/tipos-cargas", authMiddleware, ViajesController.getTiposDeCargas);
-router.get("/subcategorias", authMiddleware, ViajesController.getTopSubcategorias);
+router.get("/cargo-stats", ViajesController.getCargaStats);
+router.get("/tipos-cargas", ViajesController.getTiposDeCargas);
+router.get("/subcategorias", ViajesController.getTopSubcategorias);
 
 // Tiempo y capacidad
-router.get("/tiempo-promedio", authMiddleware, ViajesController.getTiempoPromedioViaje);
-router.get("/capacidad-carga", authMiddleware, ViajesController.getCapacidadCarga);
+router.get("/tiempo-promedio",  ViajesController.getTiempoPromedioViaje);
+router.get("/capacidad-carga", ViajesController.getCapacidadCarga);
 
 // Organización temporal
-router.get("/por-dias", authMiddleware, ViajesController.getViajesPorDias);
-router.get("/completed", authMiddleware, ViajesController.getCompletedTrips);
+router.get("/por-dias",  ViajesController.getViajesPorDias);
+router.get("/completed", ViajesController.getCompletedTrips);
 
 // Búsqueda y filtros
-router.get("/search", authMiddleware, ViajesController.searchViajes);
-router.get("/quick-stats", authMiddleware, ViajesController.getQuickStats);
+router.get("/search",  ViajesController.searchViajes);
+router.get("/quick-stats", ViajesController.getQuickStats);
 
 // =====================================================
 // RUTAS DE DEBUGGING (SOLO DESARROLLO)
 // =====================================================
 if (process.env.NODE_ENV === 'development') {
-  router.get("/debug/cargo", authMiddleware, ViajesController.debugCargas);
-  router.get("/debug/estados", authMiddleware, ViajesController.debugEstados);
+  router.get("/debug/cargo", ViajesController.debugCargas);
+  router.get("/debug/estados", ViajesController.debugEstados);
 }
 
 // =====================================================
@@ -50,35 +48,35 @@ if (process.env.NODE_ENV === 'development') {
 // =====================================================
 
 // Crear viaje
-router.post("/", authMiddleware, requireRole("Operativo", "Supervisor"), ViajesController.addViaje);
+router.post("/", ViajesController.addViaje);
 
 // =====================================================
 // RUTAS CON PARÁMETROS (AL FINAL)
 // =====================================================
 
 // Análisis por categoría específica
-router.get("/cargo/category/:categoria", authMiddleware, ViajesController.getCargaDetailsByCategory);
+router.get("/cargo/category/:categoria", ViajesController.getCargaDetailsByCategory);
 
 // Viajes por recursos específicos
-router.get("/conductor/:conductorId", authMiddleware, ViajesController.getViajesByConductor);
-router.get("/truck/:truckId", authMiddleware, ViajesController.getViajesByTruck);
+router.get("/conductor/:conductorId", ViajesController.getViajesByConductor);
+router.get("/truck/:truckId", ViajesController.getViajesByTruck);
 
 // Operaciones sobre viajes específicos
-router.put("/:viajeId", authMiddleware, requireRole("Supervisor"), ViajesController.editViaje);
-router.delete("/:viajeId", authMiddleware, requireAdmin, ViajesController.deleteViaje);
+router.put("/:viajeId", ViajesController.editViaje);
+router.delete("/:viajeId", ViajesController.deleteViaje);
 
 // Actualizaciones específicas
-router.patch("/:viajeId/location", authMiddleware, requireRole("Operativo", "Supervisor"), ViajesController.updateLocation);
-router.patch("/:viajeId/progress", authMiddleware, requireRole("Operativo", "Supervisor"), ViajesController.updateTripProgress);
-router.patch("/:viajeId/complete", authMiddleware, requireRole("Operativo", "Supervisor"), ViajesController.completeTrip);
-router.patch("/:viajeId/cancel", authMiddleware, requireRole("Supervisor"), ViajesController.cancelTrip);
-router.patch("/:viajeId/reactivate", authMiddleware, requireRole("Supervisor"), ViajesController.reactivateTrip);
+router.patch("/:viajeId/location",  ViajesController.updateLocation);
+router.patch("/:viajeId/progress", ViajesController.updateTripProgress);
+router.patch("/:viajeId/complete", ViajesController.completeTrip);
+router.patch("/:viajeId/cancel",  ViajesController.cancelTrip);
+router.patch("/:viajeId/reactivate", ViajesController.reactivateTrip);
 
 // Información específica del viaje
-router.get("/:viajeId/history", authMiddleware, ViajesController.getTripHistory);
-router.get("/:viajeId", authMiddleware, ViajesController.getTripDetails);
+router.get("/:viajeId/history", ViajesController.getTripHistory);
+router.get("/:viajeId", ViajesController.getTripDetails);
 
 // Ruta general (DEBE IR AL FINAL)
-router.get("/", authMiddleware, ViajesController.getAllViajes);
+router.get("/", ViajesController.getAllViajes);
 
 export default router;

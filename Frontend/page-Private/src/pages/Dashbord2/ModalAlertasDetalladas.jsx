@@ -32,13 +32,14 @@ const ModalAlertasDetalladas = ({ isOpen, onClose }) => {
     try {
       // 🔹 Obtener datos de todos los módulos
       const [viajesRes, mantoRes, dieselRes, cajaRes, planillasRes] = await Promise.all([
-        fetch(`${config.api.API_URL}/viajes-operativos/listar`),
-        fetch(`${config.api.API_URL}/mantenimientos`),
-        fetch(`${config.api.API_URL}/resumen`),
+        fetch(`${config.api.API_URL}/viajes-operativos/listar`, { credentials: 'include' }),
+        fetch(`${config.api.API_URL}/mantenimientos`, { credentials: 'include' }),
+        fetch(`${config.api.API_URL}/resumen`, { credentials: 'include' }),
         fetch(`${config.api.API_URL}/cajaChica`, {
+          credentials: 'include',
           headers: { 'Authorization': `Bearer ${localStorage.getItem('authToken')}` }
         }),
-        fetch(`${config.api.API_URL}/planillas/quincenal`)
+        fetch(`${config.api.API_URL}/planillas/quincenal`, { credentials: 'include' })
       ]);
 
       const [viajesData, mantoData, dieselData, cajaData, planillasData] = await Promise.all([

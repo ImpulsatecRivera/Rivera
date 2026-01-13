@@ -41,6 +41,7 @@ import PlanillaQuincenal from "./pages/Planilla/PlanillaQuincenal";
 import VerPlanillaQuincenal from "./pages/Planilla/VerPlanillasQuincenales";
 import PlanillaSemanal from "./pages/Planilla/Planillasemanal ";
 import PlanillaSemanalNueva from "./pages/Planilla/Planillasemanalnueva ";
+import NoAccess from "./pages/NoAccess";
 import ProgramacionViajesOperativos from "./pages/viajesInternos/ProgramacionViajesOperativos";
 import Nav from "./components/Nav/Nav";
 
@@ -144,6 +145,7 @@ function App() {
         <Route path="/planilla/quincenales/:id" element={<VerPlanillaQuincenal />} />
         <Route path="/planilla/semanal/nueva" element={<PlanillaSemanalNueva />} />        
         <Route path="/planilla/semanal/:id" element={<PlanillaSemanal />} />
+        <Route path="/no-access" element={<NoAccess />} />
 
 
         {/* Caja Chica */}
@@ -182,6 +184,7 @@ function App() {
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/reports" element={<ReportsPage />} />
         <Route path="/informes" element={<ReportsPage />} />
+        <Route path="/no-access" element={<NoAccess />} />
 
         {/* Clientes */}
         <Route path="/clientes" element={<ClientManagementInterface />} />
