@@ -47,13 +47,6 @@ const TIPOS_REPORTE = [
     icono: FileText,
     requiere: ["mes", "año"],
   },
-  /* {
-    id: "credito-fiscal",
-    titulo: "Crédito Fiscal",
-    descripcion: "Separación IVA",
-    icono: TrendingUp,
-    requiere: ["mes", "año"],
-  }, */
   {
     id: "comparativo-efectivo",
     titulo: "Comparativo Efectivo (Anual)",
@@ -75,7 +68,7 @@ const CONSOLIDADOS = [
     id: "semanal",
     titulo: "Semanal",
     icono: Clock,
-    requiere: ["mes", "año", "semana"],
+    requiere: ["fechaInicio", "fechaFin"],
   },
   {
     id: "trimestral",
@@ -101,11 +94,14 @@ export default function ReportesViajesOperativosModal({ isOpen, onClose }) {
   const [tabActiva, setTabActiva] = useState("basicos");
   const [mesSeleccionado, setMesSeleccionado] = useState(new Date().getMonth() + 1);
   const [añoSeleccionado, setAñoSeleccionado] = useState(new Date().getFullYear());
-  const [semanaSeleccionada, setSemanaSeleccionada] = useState(1);
   const [trimestreSeleccionado, setTrimestreSeleccionado] = useState(1);
   const [semestreSeleccionado, setSemestreSeleccionado] = useState(1);
   const [consolidadoSeleccionado, setConsolidadoSeleccionado] = useState("semanal");
   const [generando, setGenerando] = useState(false);
+  
+  // ✅ NUEVO: Estados para rango de fechas
+  const [fechaInicio, setFechaInicio] = useState("");
+  const [fechaFin, setFechaFin] = useState("");
 
   const descargarPDF = async (tipo) => {
     let url = "";
@@ -120,18 +116,16 @@ export default function ReportesViajesOperativosModal({ isOpen, onClose }) {
           nombreArchivo = `resumen-${MESES.find((m) => m.value === mesSeleccionado)?.label}-${añoSeleccionado}.pdf`;
           break;
 
-        /* case "credito-fiscal":
-          url = `${REPORTES_BASE}/credito-fiscal/${mesSeleccionado}/${añoSeleccionado}`;
-          nombreArchivo = `credito-fiscal-${mesSeleccionado}-${añoSeleccionado}.pdf`;
-          break; */
-
         case "semanal":
-          url = `${REPORTES_BASE}/consolidado-periodo?periodo=semanal&ano=${añoSeleccionado}&mes=${mesSeleccionado}&semana=${semanaSeleccionada}`;
-          nombreArchivo = `consolidado-semanal-${añoSeleccionado}-mes${mesSeleccionado}-sem${semanaSeleccionada}.pdf`;
+          // ✅ NUEVO: Usar rango de fechas
+          if (!fechaInicio || !fechaFin) {
+            throw new Error("Debe seleccionar fecha de inicio y fecha de fin");
+          }
+          url = `${REPORTES_BASE}/consolidado-periodo?periodo=semanal&ano=${añoSeleccionado}&fechaInicio=${fechaInicio}&fechaFin=${fechaFin}`;
+          nombreArchivo = `consolidado-semanal-${fechaInicio}_${fechaFin}.pdf`;
           break;
 
         case "mensual":
-          // Use the same basic resumen-mes route for monthly consolidado (only for monthly)
           url = `${REPORTES_BASE}/resumen-mes/${mesSeleccionado}/${añoSeleccionado}`;
           nombreArchivo = `resumen-mes-${añoSeleccionado}-mes${mesSeleccionado}.pdf`;
           break;
@@ -212,7 +206,7 @@ export default function ReportesViajesOperativosModal({ isOpen, onClose }) {
     <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-2xl shadow-2xl max-w-5xl w-full max-h-[90vh] overflow-hidden flex flex-col">
         
-        {/* Header - COLORES CAMBIADOS */}
+        {/* Header */}
         <div className="bg-gradient-to-r from-[#34353A] to-[#5F8EAD] text-white p-6">
           <div className="flex items-center justify-between">
             <div>
@@ -227,7 +221,7 @@ export default function ReportesViajesOperativosModal({ isOpen, onClose }) {
             </button>
           </div>
 
-          {/* Tabs - COLORES CAMBIADOS */}
+          {/* Tabs */}
           <div className="flex gap-2 mt-6">
             {TABS.map((tab) => {
               const Icon = tab.icon;
@@ -293,7 +287,7 @@ export default function ReportesViajesOperativosModal({ isOpen, onClose }) {
             </div>
           </div>
 
-          {/* TAB: REPORTES BÁSICOS - COLORES CAMBIADOS */}
+          {/* TAB: REPORTES BÁSICOS */}
           {tabActiva === "basicos" && (
             <div className="space-y-3">
               {TIPOS_REPORTE.map((tipo) => {
@@ -332,7 +326,7 @@ export default function ReportesViajesOperativosModal({ isOpen, onClose }) {
             </div>
           )}
 
-          {/* TAB: CONSOLIDADOS - COLORES CAMBIADOS */}
+          {/* TAB: CONSOLIDADOS */}
           {tabActiva === "consolidados" && (
             <div className="grid grid-cols-2 gap-6">
               
@@ -388,23 +382,34 @@ export default function ReportesViajesOperativosModal({ isOpen, onClose }) {
                   {/* Filtros específicos */}
                   <div className="space-y-3">
                     
-                    {consolidadoActual?.requiere.includes("semana") && (
-                      <div>
-                        <label className="block text-xs font-medium text-[#34353A] mb-1.5">
-                          Semana del Mes
-                        </label>
-                        <select
-                          value={semanaSeleccionada}
-                          onChange={(e) => setSemanaSeleccionada(Number(e.target.value))}
-                          className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5F8EAD] focus:border-[#5F8EAD] bg-white text-sm"
-                        >
-                          <option value={1}>Semana 1 (Días 1-7)</option>
-                          <option value={2}>Semana 2 (Días 8-14)</option>
-                          <option value={3}>Semana 3 (Días 15-21)</option>
-                          <option value={4}>Semana 4 (Días 22-28)</option>
-                          <option value={5}>Semana 5 (Días 29+)</option>
-                        </select>
-                      </div>
+                    {/* ✅ NUEVO: Selector de rango de fechas para SEMANAL */}
+                    {consolidadoActual?.id === "semanal" && (
+                      <>
+                        <div>
+                          <label className="block text-xs font-medium text-[#34353A] mb-1.5">
+                            Fecha de Inicio
+                          </label>
+                          <input
+                            type="date"
+                            value={fechaInicio}
+                            onChange={(e) => setFechaInicio(e.target.value)}
+                            className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5F8EAD] focus:border-[#5F8EAD] bg-white text-sm"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-medium text-[#34353A] mb-1.5">
+                            Fecha de Fin
+                          </label>
+                          <input
+                            type="date"
+                            value={fechaFin}
+                            onChange={(e) => setFechaFin(e.target.value)}
+                            min={fechaInicio}
+                            className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5F8EAD] focus:border-[#5F8EAD] bg-white text-sm"
+                          />
+                        </div>
+                      </>
                     )}
 
                     {consolidadoActual?.requiere.includes("trimestre") && (
@@ -442,44 +447,50 @@ export default function ReportesViajesOperativosModal({ isOpen, onClose }) {
                     )}
 
                     {/* Preview */}
-                    {/* Preview - COLORES MÁS CLAROS */}
-<div className="mt-4 pt-3 border-t-2 border-[#5F8EAD] border-opacity-30">
-  <p className="text-xs text-[#34353A] font-semibold mb-2">Vista previa:</p>
-  <div className="flex flex-wrap gap-2">
-    {consolidadoActual?.requiere.includes("mes") && (
-      <span className="text-xs bg-white px-2 py-1 rounded-md text-[#34353A] font-semibold border-2 border-gray-300">
-        {MESES.find((m) => m.value === mesSeleccionado)?.label}
-      </span>
-    )}
-    {consolidadoActual?.requiere.includes("año") && (
-      <span className="text-xs bg-white px-2 py-1 rounded-md text-[#34353A] font-semibold border-2 border-gray-300">
-        {añoSeleccionado}
-      </span>
-    )}
-    {consolidadoActual?.requiere.includes("semana") && (
-      <span className="text-xs bg-white px-2 py-1 rounded-md text-[#34353A] font-semibold border-2 border-gray-300">
-        Sem {semanaSeleccionada}
-      </span>
-    )}
-    {consolidadoActual?.requiere.includes("trimestre") && (
-      <span className="text-xs bg-white px-2 py-1 rounded-md text-[#34353A] font-semibold border-2 border-gray-300">
-        Q{trimestreSeleccionado}
-      </span>
-    )}
-    {consolidadoActual?.requiere.includes("semestre") && (
-      <span className="text-xs bg-white px-2 py-1 rounded-md text-[#34353A] font-semibold border-2 border-gray-300">
-        S{semestreSeleccionado}
-      </span>
-    )}
-  </div>
-</div>
+                    <div className="mt-4 pt-3 border-t-2 border-[#5F8EAD] border-opacity-30">
+                      <p className="text-xs text-[#34353A] font-semibold mb-2">Vista previa:</p>
+                      <div className="flex flex-wrap gap-2">
+                        {consolidadoActual?.id === "semanal" ? (
+                          <>
+                            {fechaInicio && (
+                              <span className="text-xs bg-white px-2 py-1 rounded-md text-[#34353A] font-semibold border-2 border-gray-300">
+                                {new Date(fechaInicio + 'T00:00:00').toLocaleDateString('es-ES', { day: '2-digit', month: 'short' })}
+                              </span>
+                            )}
+                            {fechaFin && (
+                              <span className="text-xs bg-white px-2 py-1 rounded-md text-[#34353A] font-semibold border-2 border-gray-300">
+                                {new Date(fechaFin + 'T00:00:00').toLocaleDateString('es-ES', { day: '2-digit', month: 'short' })}
+                              </span>
+                            )}
+                          </>
+                        ) : (
+                          <>
+                            {consolidadoActual?.requiere.includes("año") && (
+                              <span className="text-xs bg-white px-2 py-1 rounded-md text-[#34353A] font-semibold border-2 border-gray-300">
+                                {añoSeleccionado}
+                              </span>
+                            )}
+                            {consolidadoActual?.requiere.includes("trimestre") && (
+                              <span className="text-xs bg-white px-2 py-1 rounded-md text-[#34353A] font-semibold border-2 border-gray-300">
+                                Q{trimestreSeleccionado}
+                              </span>
+                            )}
+                            {consolidadoActual?.requiere.includes("semestre") && (
+                              <span className="text-xs bg-white px-2 py-1 rounded-md text-[#34353A] font-semibold border-2 border-gray-300">
+                                S{semestreSeleccionado}
+                              </span>
+                            )}
+                          </>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 </div>
 
-                {/* Botón de descarga - COLORES CAMBIADOS */}
+                {/* Botón de descarga */}
                 <button
                   onClick={() => descargarPDF(consolidadoActual)}
-                  disabled={generando}
+                  disabled={generando || (consolidadoActual?.id === "semanal" && (!fechaInicio || !fechaFin))}
                   className="w-full bg-gradient-to-r from-[#34353A] to-[#5F8EAD] text-white py-3 rounded-lg font-semibold hover:opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg"
                 >
                   {generando ? (
@@ -499,7 +510,7 @@ export default function ReportesViajesOperativosModal({ isOpen, onClose }) {
             </div>
           )}
 
-          {/* Info - COLORES CAMBIADOS */}
+          {/* Info */}
           <div className="mt-6 bg-[#5F8EAD] bg-opacity-10 border-2 border-[#5F8EAD] rounded-xl p-4">
             <div className="flex items-start gap-3">
               <CheckCircle className="text-[#5F8EAD] flex-shrink-0 mt-0.5" size={18} />

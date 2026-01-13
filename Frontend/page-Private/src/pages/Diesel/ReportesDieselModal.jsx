@@ -9,6 +9,9 @@ const ReportesDieselModal = ({ isOpen, onClose, apiUrl }) => {
   const [anoSeleccionado, setAnoSeleccionado] = useState(new Date().getFullYear());
   const [mesesSeleccionados, setMesesSeleccionados] = useState([]);
   const [generando, setGenerando] = useState(false);
+  const [fechaInicio, setFechaInicio] = useState("");
+const [fechaFin, setFechaFin] = useState("");
+
 
   const reporteBase = useMemo(() => `${apiUrl}/resumenReporte`, [apiUrl]);
 
@@ -85,27 +88,29 @@ const ReportesDieselModal = ({ isOpen, onClose, apiUrl }) => {
     }
 
     if (tipoReporte === "semanal") {
-      if (!mesSeleccionado) {
-        Swal.fire({
-          icon: "warning",
-          title: "Mes requerido",
-          text: "Por favor selecciona un mes",
-          confirmButtonColor: "#4F46E5",
-          confirmButtonText: "Entendido",
-        });
-        return;
-      }
-      if (!semanaSeleccionada) {
-        Swal.fire({
-          icon: "warning",
-          title: "Semana requerida",
-          text: "Por favor selecciona una semana",
-          confirmButtonColor: "#4F46E5",
-          confirmButtonText: "Entendido",
-        });
-        return;
-      }
-    }
+  if (!fechaInicio || !fechaFin) {
+    Swal.fire({
+      icon: "warning",
+      title: "Fechas requeridas",
+      text: "Por favor selecciona la fecha de inicio y fin",
+      confirmButtonColor: "#4F46E5",
+      confirmButtonText: "Entendido",
+    });
+    return;
+  }
+
+  if (new Date(fechaFin) < new Date(fechaInicio)) {
+    Swal.fire({
+      icon: "warning",
+      title: "Rango inválido",
+      text: "La fecha fin no puede ser menor que la fecha inicio",
+      confirmButtonColor: "#4F46E5",
+      confirmButtonText: "Entendido",
+    });
+    return;
+  }
+}
+
 
     if (tipoReporte === "multiple" && mesesSeleccionados.length === 0) {
       Swal.fire({
@@ -199,35 +204,36 @@ const ReportesDieselModal = ({ isOpen, onClose, apiUrl }) => {
         }
       }
 
-      if (tipoReporte === "semanal") {
-        const mesNombre = meses.find(m => m.value === parseInt(mesSeleccionado))?.label;
-        const url = `${reporteBase}/reportes/diesel/semanal/${mesSeleccionado}/${anoSeleccionado}/${semanaSeleccionada}`;
+     if (tipoReporte === "semanal") {
+  const url = `${reporteBase}/reportes/diesel/semanal/0/0/0?fechaInicio=${fechaInicio}&fechaFin=${fechaFin}`;
+
         
         try {
           const hayRegistros = await verificarRegistros(url);
           
           if (!hayRegistros) {
-            Swal.fire({
-              icon: "info",
-              title: "Sin registros",
-              text: `No hay registros de diésel para la semana ${semanaSeleccionada} de ${mesNombre} ${anoSeleccionado}`,
-              confirmButtonColor: "#4F46E5",
-              confirmButtonText: "Entendido",
-            });
-            setGenerando(false);
-            return;
-          }
+  Swal.fire({
+    icon: "info",
+    title: "Sin registros",
+    text: `No hay registros de diésel en el rango seleccionado`,
+    confirmButtonColor: "#4F46E5",
+    confirmButtonText: "Entendido",
+  });
+  setGenerando(false);
+  return;
+}
 
-          window.open(url, "_blank");
+window.open(url, "_blank");
 
-          Swal.fire({
-            icon: "success",
-            title: "¡Reporte generado!",
-            html: `<strong>${mesNombre} ${anoSeleccionado}</strong><br/>Semana ${semanaSeleccionada}<br/>El PDF se ha abierto en una nueva pestaña`,
-            confirmButtonColor: "#4F46E5",
-            timer: 3000,
-            timerProgressBar: true,
-          });
+Swal.fire({
+  icon: "success",
+  title: "¡Reporte generado!",
+  html: `<strong>Reporte semanal</strong><br/>Del ${fechaInicio} al ${fechaFin}<br/>El PDF se ha abierto en una nueva pestaña`,
+  confirmButtonColor: "#4F46E5",
+  timer: 3000,
+  timerProgressBar: true,
+});
+
         } catch (error) {
           throw new Error(`Error al generar reporte semanal: ${error.message}`);
         }
@@ -487,90 +493,49 @@ const ReportesDieselModal = ({ isOpen, onClose, apiUrl }) => {
           )}
 
           {/* Semanal */}
-          {tipoReporte === "semanal" && (
-            <div className="space-y-4">
-              <div className="bg-indigo-50 rounded-xl p-5 border border-indigo-100 mb-4">
-                <div className="flex items-start gap-3">
-                  <Calendar className="text-indigo-600 mt-1" size={20} />
-                  <div>
-                    <h3 className="font-semibold text-indigo-900 mb-1">Reporte Semanal</h3>
-                    <p className="text-sm text-indigo-700">Genera un reporte por semana del mes.</p>
-                  </div>
-                </div>
-              </div>
+          {/* Semanal */}
+{tipoReporte === "semanal" && (
+  <div className="space-y-4">
+    <div className="bg-indigo-50 rounded-xl p-5 border border-indigo-100 mb-4">
+      <div className="flex items-start gap-3">
+        <Calendar className="text-indigo-600 mt-1" size={20} />
+        <div>
+          <h3 className="font-semibold text-indigo-900 mb-1">Reporte Semanal</h3>
+          <p className="text-sm text-indigo-700">
+            Selecciona un rango de fechas para generar el reporte.
+          </p>
+        </div>
+      </div>
+    </div>
 
-              <div className="grid grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Mes <span className="text-red-500">*</span>
-                  </label>
-                  <div className="relative">
-                    <select
-                      value={mesSeleccionado}
-                      onChange={(e) => setMesSeleccionado(e.target.value)}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 appearance-none bg-white"
-                    >
-                      <option value="">Seleccionar</option>
-                      {meses.map((m) => (
-                        <option key={m.value} value={m.value}>
-                          {m.label}
-                        </option>
-                      ))}
-                    </select>
-                    <ChevronDown
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
-                      size={20}
-                    />
-                  </div>
-                </div>
+    <div className="grid grid-cols-2 gap-4">
+      <div>
+        <label className="block text-sm font-semibold text-gray-700 mb-2">
+          Fecha de inicio <span className="text-red-500">*</span>
+        </label>
+        <input
+          type="date"
+          value={fechaInicio}
+          onChange={(e) => setFechaInicio(e.target.value)}
+          className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+        />
+      </div>
 
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Semana <span className="text-red-500">*</span>
-                  </label>
-                  <div className="relative">
-                    <select
-                      value={semanaSeleccionada}
-                      onChange={(e) => setSemanaSeleccionada(e.target.value)}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 appearance-none bg-white"
-                    >
-                      <option value="">Seleccionar</option>
-                      {semanas.map((s) => (
-                        <option key={s.value} value={s.value}>
-                          {s.label}
-                        </option>
-                      ))}
-                    </select>
-                    <ChevronDown
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
-                      size={20}
-                    />
-                  </div>
-                </div>
+      <div>
+        <label className="block text-sm font-semibold text-gray-700 mb-2">
+          Fecha de fin <span className="text-red-500">*</span>
+        </label>
+        <input
+          type="date"
+          value={fechaFin}
+          onChange={(e) => setFechaFin(e.target.value)}
+          className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+        />
+      </div>
+    </div>
+  </div>
+)}
 
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Año</label>
-                  <div className="relative">
-                    <select
-                      value={anoSeleccionado}
-                      onChange={(e) => setAnoSeleccionado(Number(e.target.value))}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 appearance-none bg-white"
-                    >
-                      {anos.map((ano) => (
-                        <option key={ano} value={ano}>
-                          {ano}
-                        </option>
-                      ))}
-                    </select>
-                    <ChevronDown
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
-                      size={20}
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
 
           {/* Multiple */}
           {tipoReporte === "multiple" && (
