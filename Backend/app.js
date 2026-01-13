@@ -48,8 +48,7 @@ import ReportesGastosMesRoutes from "./src/Routes/ReportesGastosMesRoutes.js";
 //Nuevo: reporte consolidado
 import ReporteConsolidadoRoutes from "./src/Routes/Reporteconsolidadoroutes.js";
 
-import { validateAuthToken } from '../../Rivera/Backend/src/Middlewares/validateAuthToken.js';
-
+import { validateAuthToken } from "./src/Middlewares/validateAuthToken.js";
 // (si luego usas swagger en tu proyecto)
 
 
