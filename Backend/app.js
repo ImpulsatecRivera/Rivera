@@ -42,6 +42,7 @@ import ReportesPlanillaSemanalRoutes from "./src/Routes/ReportesPlanillaSemanalR
 // ✅ Rutas nuevas que venían en master
 import viajesOperativosRoutes from "./src/Routes/ViajesOperativosRoutes.js";
 import reportesViajesDirectoRoutes from "./src/Routes/ReportesViajesDirectoRoutes.js";
+import ReporteViajesYGastosSemanalesRoutes from "./src/Routes/ReporteViajesYGastosSemanales.js";
 
 //Nuevo: reporte consolidado
 import ReporteConsolidadoRoutes from "./src/Routes/Reporteconsolidadoroutes.js";
@@ -134,6 +135,7 @@ app.use("/api/resumenReporte", ResumenDieselReporte);
 // ✅ nuevas
 app.use("/api/viajes-operativos", viajesOperativosRoutes);
 app.use("/api/reportes-directos", reportesViajesDirectoRoutes);
+app.use("/api/reporte/viajesGastos", ReporteViajesYGastosSemanalesRoutes);
 
 // Nuevo: reporte consolidado
 app.use("/api/reporte-consolidado", ReporteConsolidadoRoutes);
