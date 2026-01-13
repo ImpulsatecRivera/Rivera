@@ -1,23 +1,21 @@
 import express from "express"
 import cotizacionesController from "../Controllers/CotizacionesController.js"
-import { authMiddleware } from "../Middleware/auth.js";
-import { requireRole, requireAdmin } from "../Middleware/roleMiddleware.js";
 
 const router = express.Router();
 
 // GET - Todos pueden leer
-router.get("/", authMiddleware, cotizacionesController.getAllCotizaciones);
+router.get("/", cotizacionesController.getAllCotizaciones);
 
 // POST - Admin, Supervisor, Operativo pueden crear
-router.post("/", authMiddleware, requireRole("Operativo", "Supervisor"), cotizacionesController.createCotizacion);
+router.post("/", cotizacionesController.createCotizacion);
 
 // GET by ID - Todos pueden leer
-router.get('/:id', authMiddleware, cotizacionesController.getCotizacionById);
+router.get('/:id', cotizacionesController.getCotizacionById);
 
 // DELETE - Solo Admin
-router.delete('/:id', authMiddleware, requireAdmin, cotizacionesController.deleteCotizacion);
+router.delete('/:id',  cotizacionesController.deleteCotizacion);
 
 // PUT - Admin, Supervisor pueden editar
-router.put("/:id", authMiddleware, requireRole("Supervisor"), cotizacionesController.updateCotizacion);
+router.put("/:id",  cotizacionesController.updateCotizacion);
 
 export default router;
