@@ -1,8 +1,5 @@
 import express from 'express';
 import ReportesPlanillaSemanalController from '../Controllers/ReportesPlanillaSemanalController.js';
-import { authMiddleware } from '../Middleware/auth.js';
-import { requireAdmin } from '../Middleware/roleMiddleware.js';
-
 const router = express.Router();
 
 // ============================================
@@ -15,7 +12,7 @@ const router = express.Router();
  * Params:
  * - id: ObjectId de la planilla semanal
  */
-router.get('/detallado/:id', authMiddleware, requireAdmin, ReportesPlanillaSemanalController.generarPDFSemanalDetallado);
+router.get('/detallado/:id', ReportesPlanillaSemanalController.generarPDFSemanalDetallado);
 
 /**
  * GET /api/reportes/planilla/semanal/mensual/:mes/:ano
@@ -24,7 +21,7 @@ router.get('/detallado/:id', authMiddleware, requireAdmin, ReportesPlanillaSeman
  * - mes: Número del mes (1-12)
  * - ano: Año (ej: 2025)
  */
-router.get('/mensual/:mes/:ano', authMiddleware, requireAdmin, ReportesPlanillaSemanalController.generarPDFMensual);
+router.get('/mensual/:mes/:ano', ReportesPlanillaSemanalController.generarPDFMensual);
 
 /**
  * POST /api/reportes/planilla/semanal/multiMes
@@ -41,7 +38,7 @@ router.get('/mensual/:mes/:ano', authMiddleware, requireAdmin, ReportesPlanillaS
  * - 9 meses: { "meses": [1, 2, 3, 4, 5, 6, 7, 8, 9], "ano": 2025 }
  * - Custom: { "meses": [1, 3, 5, 7], "ano": 2025 } // Meses no consecutivos
  */
-router.post('/multiMes', authMiddleware, requireAdmin, ReportesPlanillaSemanalController.generarPDFMultiMes);
+router.post('/multiMes', ReportesPlanillaSemanalController.generarPDFMultiMes);
 
 /**
  * GET /api/reportes/planilla/semanal/anual/:ano
@@ -49,6 +46,6 @@ router.post('/multiMes', authMiddleware, requireAdmin, ReportesPlanillaSemanalCo
  * Params:
  * - ano: Año (ej: 2025)
  */
-router.get('/anual/:ano', authMiddleware, requireAdmin, ReportesPlanillaSemanalController.generarPDFAnual);
+router.get('/anual/:ano', ReportesPlanillaSemanalController.generarPDFAnual);
 
 export default router;

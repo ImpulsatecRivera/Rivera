@@ -1,8 +1,6 @@
 import empleadosCon from "../Controllers/EmpleadosController.js";
 import express from "express";
 import multer from "multer";
-import { authMiddleware } from "../Middleware/auth.js";
-import { requireRole, requireAdmin } from "../Middleware/roleMiddleware.js";
 
 const router = express.Router();
 
@@ -20,7 +18,6 @@ const upload = multer({ dest: "public/" });
 // Acceso: Todos (ADMIN, SUPERVISOR, OPERATIVO)
 router.get(
   "/",
-  authMiddleware,
   empleadosCon.get
 );
 
@@ -28,8 +25,6 @@ router.get(
 // Acceso: ADMIN, SUPERVISOR, OPERATIVO
 router.post(
   "/",
-  authMiddleware,
-  requireRole("Operativo", "Supervisor"),
   upload.single("img"),
   empleadosCon.post
 );
@@ -38,8 +33,6 @@ router.post(
 // Acceso: ADMIN, SUPERVISOR
 router.put(
   "/:id",
-  authMiddleware,
-  requireRole("Supervisor"),
   upload.single("img"),
   empleadosCon.put
 );
@@ -48,8 +41,6 @@ router.put(
 // Acceso: Solo ADMIN
 router.delete(
   "/:id",
-  authMiddleware,
-  requireAdmin,
   empleadosCon.delete
 );
 

@@ -1,7 +1,5 @@
 import express from 'express';
 import CajaChicaConfigController from '../Controllers/CajaChicaConfigController.js';
-import { authMiddleware } from "../Middleware/auth.js";
-import { requireAdmin } from "../Middleware/roleMiddleware.js";
 
 const router = express.Router();
 
@@ -11,7 +9,7 @@ const router = express.Router();
 // GET /api/caja-chica-config
 // Retorna: { maximoPermitido, minimoReintegro, etc. }
 // Uso: Mostrar la configuración actual en el frontend
-router.get('/', authMiddleware, CajaChicaConfigController.obtenerConfiguracion);
+router.get('/',  CajaChicaConfigController.obtenerConfiguracion);
 
 // =====================================================
 // 2. ACTUALIZAR CONFIGURACIÓN
@@ -19,7 +17,7 @@ router.get('/', authMiddleware, CajaChicaConfigController.obtenerConfiguracion);
 // PUT /api/caja-chica-config
 // Body: { "maximoPermitido": 250, "minimoReintegro": 50 }
 // Uso: Cuando el admin cambia el máximo de caja chica
-router.put('/', authMiddleware, requireAdmin, CajaChicaConfigController.actualizarConfiguracion);
+router.put('/', CajaChicaConfigController.actualizarConfiguracion);
 
 // =====================================================
 // 3. CALCULAR REINTEGRO NECESARIO
@@ -33,7 +31,7 @@ router.put('/', authMiddleware, requireAdmin, CajaChicaConfigController.actualiz
 //   porcentajeDisponible: "5.88"
 // }
 // Uso: Mostrar cuánto dinero hace falta para llenar la caja
-router.get('/calcular-reintegro', authMiddleware, CajaChicaConfigController.calcularReintegro);
+router.get('/calcular-reintegro',  CajaChicaConfigController.calcularReintegro);
 
 // =====================================================
 // 4. VERIFICAR SI NECESITA REINTEGRO
@@ -41,7 +39,7 @@ router.get('/calcular-reintegro', authMiddleware, CajaChicaConfigController.calc
 // GET /api/caja-chica-config/verificar-reintegro
 // Retorna: { necesitaReintegro: true/false, mensaje, etc. }
 // Uso: Mostrar alerta en el dashboard si necesita reintegro
-router.get('/verificar-reintegro', authMiddleware, CajaChicaConfigController.verificarReintegro);
+router.get('/verificar-reintegro', CajaChicaConfigController.verificarReintegro);
 
 // =====================================================
 // 5. REGISTRAR REINTEGRO AUTOMÁTICO ⭐ NUEVO
@@ -54,6 +52,6 @@ router.get('/verificar-reintegro', authMiddleware, CajaChicaConfigController.ver
 //   Acción: Crea ingreso de $235.31 (lo gastado)
 //   Resultado: Balance nuevo = $250.00
 // Uso: Botón "Registrar Reintegro" en el frontend
-router.post('/registrar-reintegro', authMiddleware, CajaChicaConfigController.registrarReintegro);
+router.post('/registrar-reintegro', CajaChicaConfigController.registrarReintegro);
 
 export default router;
