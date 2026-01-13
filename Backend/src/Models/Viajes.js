@@ -655,18 +655,69 @@ viajeSchema.pre('save', async function (next) {
   }
 
   // 🔢 GENERAR NÚMERO DE VIAJE GLOBAL (si no existe)
-  if (this.isNew && this.tipoViaje === 'operativo') {
-    if (!this.numeroViajeGlobal) {
-      const año = new Date().getFullYear();
-      const count = await this.constructor.countDocuments({
-        tipoViaje: 'operativo',
-        'periodoContable.año': año
-      });
-      
-      const numero = String(count + 1).padStart(5, '0');
-      this.numeroViajeGlobal = `VOP-${año}-${numero}`;
+// 🔢 GENERAR NÚMERO DE VIAJE GLOBAL (si no existe)
+if (this.isNew && this.tipoViaje === 'operativo') {
+  if (!this.numeroViajeGlobal) {
+    const año = new Date().getFullYear();
+    
+    // Buscar el último número usado con reintentos
+    let numeroGenerado = null;
+    let intentos = 0;
+    const maxIntentos = 10;
+    
+    while (!numeroGenerado && intentos < maxIntentos) {
+      try {
+        // Encontrar el último viaje del año con número global
+        const ultimoViaje = await this.constructor.findOne({
+          tipoViaje: 'operativo',
+          'periodoContable.año': año,
+          numeroViajeGlobal: { $exists: true, $ne: null }
+        })
+        .sort({ numeroViajeGlobal: -1 })
+        .select('numeroViajeGlobal')
+        .lean();
+        
+        let siguienteNumero = 1;
+        
+        if (ultimoViaje && ultimoViaje.numeroViajeGlobal) {
+          // Extraer el número del formato VOP-2026-00009
+          const match = ultimoViaje.numeroViajeGlobal.match(/VOP-\d{4}-(\d+)/);
+          if (match) {
+            siguienteNumero = parseInt(match[1], 10) + 1;
+          }
+        }
+        
+        const numero = String(siguienteNumero).padStart(5, '0');
+        numeroGenerado = `VOP-${año}-${numero}`;
+        
+        // Verificar que no exista (por si acaso)
+        const existe = await this.constructor.findOne({ 
+          numeroViajeGlobal: numeroGenerado 
+        }).lean();
+        
+        if (existe) {
+          // Si existe, incrementar y reintentar
+          siguienteNumero++;
+          numeroGenerado = null;
+          intentos++;
+          continue;
+        }
+        
+        this.numeroViajeGlobal = numeroGenerado;
+        break;
+        
+      } catch (error) {
+        intentos++;
+        if (intentos >= maxIntentos) {
+          // Fallback: usar timestamp si falla todo
+          this.numeroViajeGlobal = `VOP-${año}-T${Date.now().toString().slice(-8)}`;
+          console.error('⚠️ Generación de número de viaje falló, usando timestamp:', this.numeroViajeGlobal);
+        }
+        await new Promise(resolve => setTimeout(resolve, 50 * intentos)); // Backoff exponencial
+      }
     }
   }
+}
 
   // 💰 AUTO-CALCULAR COSTO TOTAL
   this.costosReales.total = (this.costosReales.combustible || 0) +

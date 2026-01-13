@@ -8,9 +8,14 @@ import {
   StyleSheet,
   Alert,
   ActivityIndicator,
-  Dimensions
+  Dimensions,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  Keyboard
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
+// import LottieView from 'lottie-react-native'; // 👉 Descomenta si usarás Lottie
 
 const { width, height } = Dimensions.get('window');
 
@@ -19,22 +24,13 @@ const RecuperacionScreen = ({ navigation }) => {
   const [emailError, setEmailError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // Validar formato de email
-  const validateEmail = (email) => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
-  };
-
-  // Verificar si contiene solo números
-  const isOnlyNumbers = (text) => {
-    return /^\d+$/.test(text.trim());
-  };
+  const validateEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  const isOnlyNumbers = (text) => /^\d+$/.test(text.trim());
 
   const handleEmailChange = (text) => {
     setEmail(text);
     setEmailError('');
 
-    // Validación en tiempo real
     if (text.length > 0) {
       if (isOnlyNumbers(text)) {
         setEmailError('Ingresa un email, no un número de teléfono');
@@ -44,121 +40,93 @@ const RecuperacionScreen = ({ navigation }) => {
     }
   };
 
-const handleNext = async () => {
-  // ... validaciones existentes ...
+  const handleNext = async () => {
+    if (!validateEmail(email)) return;
 
-  setLoading(true);
-  try {
-    console.log('🔐 Solicitando código de recuperación para:', email);
-    
-    const API_URL = 'https://rivera-test-629395560179.us-west1.run.app/api/recovery/requestCode';
-    
-    const response = await fetch(API_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-      },
-      body: JSON.stringify({
-        email: email.trim().toLowerCase(),
-        via: 'email' // Agregar esto también
-      }),
-    });
-
-    const responseText = await response.text();
-    console.log('📄 Response text:', responseText);
-
-    if (responseText.includes('<html>') || responseText.includes('<!DOCTYPE')) {
-      throw new Error('El servidor devolvió HTML en lugar de JSON.');
-    }
-
-    let data;
+    setLoading(true);
     try {
-      data = JSON.parse(responseText);
-    } catch (parseError) {
-      console.error('❌ Error parsing JSON:', parseError);
-      throw new Error('Respuesta inválida del servidor');
+      const API_URL = 'https://rivera-test-629395560179.us-west1.run.app/api/recovery/requestCode';
+
+      const response = await fetch(API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify({ email: email.trim().toLowerCase(), via: 'email' }),
+      });
+
+      const responseText = await response.text();
+      const data = JSON.parse(responseText);
+
+      if (!response.ok) throw new Error(data.message || 'Error al enviar código');
+
+      if (!data.recoveryToken) throw new Error('Token no recibido');
+
+      Alert.alert('Código enviado', 'Revisa tu correo electrónico', [
+        {
+          text: 'Continuar',
+          onPress: () =>
+            navigation.navigate('Recuperacion2', {
+              email: email.trim(),
+              recoveryToken: data.recoveryToken,
+            }),
+        },
+      ]);
+    } catch (err) {
+      Alert.alert('Error', err.message || 'Error inesperado');
+    } finally {
+      setLoading(false);
     }
-
-    if (!response.ok) {
-      Alert.alert('Error', data.message || 'Error al enviar código de recuperación');
-      return;
-    }
-
-    console.log('✅ Código enviado exitosamente:', data);
-    
-    // ✅ GUARDAR EL RECOVERY TOKEN QUE DEVUELVE EL BACKEND
-    const recoveryToken = data.recoveryToken;
-    
-    if (!recoveryToken) {
-      Alert.alert('Error', 'No se recibió el token de recuperación');
-      return;
-    }
-    
-    Alert.alert(
-      'Código Enviado', 
-      'Se ha enviado un código de recuperación a tu email. Revisa tu bandeja de entrada.',
-      [
-        { 
-          text: 'Continuar', 
-          onPress: () => navigation.navigate('Recuperacion2', { 
-            email: email.trim(),
-            recoveryToken: recoveryToken  // ✅ PASAR EL TOKEN
-          })
-        }
-      ]
-    );
-
-  } catch (error) {
-    console.error('❌ Error al solicitar código:', error);
-    // ... manejo de errores existente ...
-  } finally {
-    setLoading(false);
-  }
-};
-
-  const handleClose = () => {
-    navigation.goBack();
   };
 
   const isEmailValid = email && validateEmail(email) && !isOnlyNumbers(email);
   const isButtonDisabled = !isEmailValid || loading;
 
   return (
-    <View style={styles.container}>
-      {/* Header con X para cerrar */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={handleClose} disabled={loading}>
-          <Icon name="close" size={24} color="#666" />
-        </TouchableOpacity>
-      </View>
-
-      {/* Contenido principal centrado */}
-      <View style={styles.mainContent}>
-        {/* Ilustración */}
-        <View style={styles.imageContainer}>
-          <Image 
-            source={require('../images/recuperarcontra.png')}
-            style={styles.image}
-            resizeMode="contain"
-          />
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 40 : 0}
+    >
+      <ScrollView
+        contentContainerStyle={styles.container}
+        keyboardShouldPersistTaps="handled"
+      >
+        {/* Header */}
+        <View style={styles.header}> 
+          <TouchableOpacity onPress={() => navigation.goBack()} disabled={loading}>
+            <Icon name="close" size={24} color="#666" />
+          </TouchableOpacity>
         </View>
 
-        {/* Contenido de texto */}
-        <View style={styles.contentWrapper}>
-          <View style={styles.textContent}>
-            {/* Título */}
-            <Text style={styles.title}>
-              ¿Olvidaste tu contraseña?
-            </Text>
+        <View style={styles.card}>
+          {/* Ilustración o Lottie */}
+          <View style={styles.imageContainer}>
+            {/* OPCIÓN LOTTIE */}
+            {/*
+            <LottieView
+              source={require('../lotties/forgot-password.json')}
+              autoPlay
+              loop
+              style={styles.lottie}
+            />
+            */}
 
-            {/* Subtítulo */}
-            <Text style={styles.subtitle}>
-              No te preocupes, puede pasar. Introduce tu correo electrónico y te enviaremos un código de recuperación.
-            </Text>
+            {/* OPCIÓN IMAGEN */}
+            <Image
+              source={require('../images/recuperarcontra.png')}
+              style={styles.image}
+              resizeMode="contain"
+            />
+          </View>
 
-            {/* Campo de entrada */}
-            <View style={styles.inputContainer}>
+          <Text style={styles.title}>¿Olvidaste tu contraseña?</Text>
+
+          <Text style={styles.subtitle}>
+            Ingresa tu correo electrónico y te enviaremos un código de recuperación.
+          </Text>
+
+          <View style={styles.inputContainer}>
+            <View style={styles.inputWrapper}>
+              <Icon name="email" size={20} color="#9ca3af" style={{ marginRight: 8 }} />
               <TextInput
                 style={[styles.input, emailError && styles.inputError]}
                 placeholder="ejemplo@correo.com"
@@ -166,43 +134,22 @@ const handleNext = async () => {
                 onChangeText={handleEmailChange}
                 keyboardType="email-address"
                 autoCapitalize="none"
-                autoCorrect={false}
                 placeholderTextColor="#9ca3af"
                 editable={!loading}
+                returnKeyType="done"
+                onSubmitEditing={Keyboard.dismiss}
               />
-              
-              {/* Mensaje de error */}
-              {emailError ? (
-                <View style={styles.errorContainer}>
-                  <Icon name="error-outline" size={16} color="#ef4444" />
-                  <Text style={styles.errorText}>{emailError}</Text>
-                </View>
-              ) : null}
             </View>
 
-            {/* Ayuda adicional */}
-            <View style={styles.helpContainer}>
-              <Icon name="info-outline" size={16} color="#6b7280" />
-              <Text style={styles.helpText}>
-                Solo se aceptan direcciones de email válidas
-              </Text>
-            </View>
+            {emailError && (
+              <View style={styles.errorContainer}>
+                <Icon name="error-outline" size={16} color="#ef4444" />
+                <Text style={styles.errorText}>{emailError}</Text>
+              </View>
+            )}
           </View>
-        </View>
-      </View>
 
-      {/* Footer con indicadores y botón */}
-      <View style={styles.footer}>
-        {/* Indicadores de progreso */}
-        <View style={styles.progressContainer}>
-          <View style={[styles.progressBar, styles.progressActive]} />
-          <View style={[styles.progressDot]} />
-          <View style={[styles.progressDot]} />
-        </View>
-
-        {/* Botón Siguiente */}
-        <View style={styles.buttonContainer}>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={[styles.button, isButtonDisabled && styles.buttonDisabled]}
             onPress={handleNext}
             disabled={isButtonDisabled}
@@ -210,184 +157,124 @@ const handleNext = async () => {
             {loading ? (
               <View style={styles.loadingContainer}>
                 <ActivityIndicator color="#fff" size="small" />
-                <Text style={styles.loadingText}>Enviando código...</Text>
+                <Text style={styles.loadingText}>Enviando...</Text>
               </View>
             ) : (
-              <Text style={[styles.buttonText, isButtonDisabled && styles.buttonTextDisabled]}>
-                Enviar código
-              </Text>
+              <Text style={styles.buttonText}>Enviar código</Text>
             )}
           </TouchableOpacity>
         </View>
 
-        {/* Footer text */}
-        <View style={styles.footerTextContainer}>
-          <Text style={styles.footerText}>
-            Rivera distribuidora y{'\n'}
-            transporte || 2025
-          </Text>
-        </View>
-      </View>
-    </View>
+        <Text style={styles.footerText}>Rivera distribuidora y transporte · 2025</Text>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
-    backgroundColor: '#f9fafb',
+    flexGrow: 1,
+    backgroundColor: '#f3f4f6',
+    paddingBottom: 30,
   },
   header: {
-    paddingHorizontal: width * 0.04, // 4% del ancho
-    paddingTop: height * 0.06, // 6% de la altura
-    paddingBottom: height * 0.02, // 2% de la altura
+    paddingTop: 50,
+    paddingHorizontal: 20,
   },
-  mainContent: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: width * 0.06, // 6% del ancho
+  card: {
+    marginTop: 20,
+    marginHorizontal: 20,
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 5,
   },
   imageContainer: {
     alignItems: 'center',
-    marginBottom: height * 0.04, // 4% de la altura
-    width: '100%',
+    marginBottom: 10,
   },
   image: {
-    width: Math.min(width * 0.65, 256), // Máximo 65% del ancho o 256px
-    height: Math.min(width * 0.65 * 0.75, 192), // Mantener proporción 4:3
+    width: width * 0.5,
+    height: width * 0.4,
   },
-  contentWrapper: {
-    width: '100%',
-    maxWidth: 400, // Ancho máximo para pantallas grandes
-    alignItems: 'center',
-  },
-  textContent: {
-    width: '100%',
+  lottie: {
+    width: width * 0.6,
+    height: width * 0.6,
   },
   title: {
-    fontSize: Math.min(width * 0.06, 24), // Responsive font size
-    fontWeight: 'bold',
+    fontSize: 22,
+    fontWeight: '700',
     color: '#111827',
-    marginBottom: height * 0.02,
     textAlign: 'center',
+    marginBottom: 8,
   },
   subtitle: {
-    fontSize: Math.min(width * 0.035, 14),
+    fontSize: 14,
     color: '#6b7280',
-    marginBottom: height * 0.04,
     textAlign: 'center',
-    lineHeight: 20,
-    paddingHorizontal: width * 0.02,
+    marginBottom: 20,
   },
   inputContainer: {
-    marginBottom: height * 0.02,
-    width: '100%',
+    marginBottom: 16,
+  },
+  inputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f3f4f6',
+    borderRadius: 12,
+    paddingHorizontal: 12,
   },
   input: {
-    backgroundColor: '#f3f4f6',
-    borderRadius: 8,
-    paddingVertical: height * 0.02,
-    paddingHorizontal: width * 0.04,
-    fontSize: Math.min(width * 0.04, 16),
-    color: '#374151',
-    borderWidth: 1,
-    borderColor: 'transparent',
-    width: '100%',
+    flex: 1,
+    height: 48,
+    fontSize: 16,
+    color: '#111827',
   },
   inputError: {
     borderColor: '#ef4444',
-    backgroundColor: '#fef2f2',
   },
   errorContainer: {
     flexDirection: 'row',
+    marginTop: 6,
     alignItems: 'center',
-    marginTop: height * 0.01,
-    paddingHorizontal: width * 0.01,
   },
   errorText: {
+    marginLeft: 6,
     color: '#ef4444',
-    fontSize: Math.min(width * 0.035, 14),
-    marginLeft: 6,
-    flex: 1,
-  },
-  helpContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: width * 0.01,
-    justifyContent: 'center',
-  },
-  helpText: {
-    color: '#6b7280',
-    fontSize: Math.min(width * 0.032, 13),
-    marginLeft: 6,
-  },
-  footer: {
-    paddingHorizontal: width * 0.06,
-    paddingBottom: height * 0.03,
-  },
-  progressContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: height * 0.03,
-  },
-  progressBar: {
-    width: 32,
-    height: 4,
-    backgroundColor: '#d1d5db',
-    borderRadius: 2,
-    marginRight: 8,
-  },
-  progressActive: {
-    backgroundColor: '#111827',
-  },
-  progressDot: {
-    width: 8,
-    height: 8,
-    backgroundColor: '#d1d5db',
-    borderRadius: 4,
-    marginRight: 8,
-  },
-  buttonContainer: {
-    marginBottom: height * 0.02,
+    fontSize: 13,
   },
   button: {
     backgroundColor: '#10b981',
-    borderRadius: 8,
-    paddingVertical: height * 0.02,
+    borderRadius: 12,
+    height: 50,
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 50, // Altura mínima para facilitar el toque
+    marginTop: 10,
   },
   buttonDisabled: {
-    backgroundColor: '#d1d5db',
+    backgroundColor: '#9ca3af',
   },
   buttonText: {
     color: '#fff',
-    fontSize: Math.min(width * 0.04, 16),
+    fontSize: 16,
     fontWeight: '600',
-  },
-  buttonTextDisabled: {
-    color: '#9ca3af',
   },
   loadingContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
   },
   loadingText: {
-    color: '#fff',
-    fontSize: Math.min(width * 0.035, 14),
     marginLeft: 8,
-  },
-  footerTextContainer: {
-    alignItems: 'center',
+    color: '#fff',
   },
   footerText: {
-    fontSize: Math.min(width * 0.035, 14),
-    color: '#9ca3af',
+    marginTop: 20,
     textAlign: 'center',
+    color: '#9ca3af',
+    fontSize: 13,
   },
 });
 
