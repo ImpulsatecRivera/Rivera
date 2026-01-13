@@ -95,10 +95,8 @@ const obtenerDatosCamionMes = async (placa, mes, ano) => {
         const diesel = registrosDiesel.reduce((sum, d) => sum + (d.Total || 0), 0);
 
         // 4. PLANILLA: Obtener pagos al motorista asociado al camión (SOLO PAGADAS)
-        // Buscar el motorista asociado a este camión
-        const motorista = await Motorista.findOne({ 
-            vehicleAssigned: camion._id 
-        });
+        // Buscar el motorista asociado a este camión (driverId en el documento del camión)
+        const motorista = camion.driverId ? await Motorista.findById(camion.driverId) : null;
 
         let planilla = 0;
 
