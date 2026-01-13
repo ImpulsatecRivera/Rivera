@@ -11,6 +11,8 @@ import {
   Dimensions
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import { KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -83,9 +85,11 @@ const RecuperacionTelefonoScreen = ({ navigation }) => {
           { 
             text: 'Continuar', 
             onPress: () => navigation.navigate('Recuperacion2', { 
-              phone: fullPhoneNumber,
-              via: 'sms'
-            })
+  phone: fullPhoneNumber,
+  via: 'sms',
+  recoveryToken: data.recoveryToken // 🔹 PASA EL TOKEN AQUÍ
+})
+
           }
         ]
       );
@@ -177,301 +181,358 @@ const RecuperacionTelefonoScreen = ({ navigation }) => {
   const isButtonDisabled = !telefono || telefono.length < 9 || telefonoError || loading || !isValidSalvadoranNumber(telefono);
 
   return (
-    <View style={styles.container}>
-      {/* Header con X para cerrar */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={handleClose} disabled={loading}>
-          <Icon name="close" size={24} color="#666" />
-        </TouchableOpacity>
-      </View>
-
-      {/* Contenido principal centrado */}
-      <View style={styles.mainContent}>
-        {/* Ilustración */}
-        <View style={styles.imageContainer}>
-          <Image 
-            source={require('../images/recuperarcontra.png')} // Ajusta la ruta según tu estructura
-            style={styles.image}
-            resizeMode="contain"
-          />
+  <KeyboardAvoidingView
+    style={{ flex: 1 }}
+    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+  >
+    <ScrollView
+      style={{ flex: 1 }}
+      contentContainerStyle={{ flexGrow: 1 }}
+      keyboardShouldPersistTaps="handled"
+      showsVerticalScrollIndicator={false}
+    >
+      <View style={styles.container}>
+        {/* Header con X para cerrar */}
+        <View style={styles.header}>
+          <TouchableOpacity onPress={handleClose} disabled={loading}>
+            <Icon name="close" size={24} color="#666" />
+          </TouchableOpacity>
         </View>
 
-        {/* Contenido de texto y formulario */}
-        <View style={styles.content}>
-          {/* Título */}
-          <Text style={styles.title}>
-            Verificación por SMS
-          </Text>
-
-          {/* Subtítulo */}
-          <Text style={styles.subtitle}>
-            No te preocupes, puede pasar. Introduce tu número de teléfono de El Salvador y te enviaremos un código de verificación por SMS.
-          </Text>
-
-          {/* Campo de entrada con prefijo */}
-          <View style={styles.inputContainer}>
-            <View style={styles.prefixContainer}>
-              <Text style={styles.flagEmoji}>🇸🇻</Text>
-              <Text style={styles.prefixText}>+503</Text>
-            </View>
-            <TextInput
-              style={[
-                styles.input,
-                telefonoError && styles.inputError
-              ]}
-              placeholder="2234-5678"
-              value={telefono}
-              onChangeText={handleTelefonoChange}
-              keyboardType="phone-pad"
-              maxLength={9} // 4 + 1 (guión) + 4
-              autoCorrect={false}
-              editable={!loading}
-              placeholderTextColor="#9ca3af"
+        {/* Contenido principal centrado */}
+        <View style={styles.mainContent}>
+          {/* Ilustración */}
+          <View style={styles.imageContainer}>
+            <Image 
+              source={require('../images/recuperarcontra.png')} 
+              style={styles.image}
+              resizeMode="contain"
             />
           </View>
 
-          {/* Mensaje de error */}
-          {telefonoError ? (
-            <View style={styles.errorContainer}>
-              <Icon name="error-outline" size={16} color="#ef4444" />
-              <Text style={styles.errorText}>{telefonoError}</Text>
-            </View>
-          ) : null}
+          {/* Contenido de texto y formulario */}
+          <View style={styles.content}>
+            {/* Título */}
+            <Text style={styles.title}>
+              Verificación por SMS
+            </Text>
 
-          {/* Texto de ayuda */}
-          <View style={styles.helpContainer}>
-            <Icon name="info-outline" size={16} color="#6b7280" />
-            <Text style={styles.helpText}>
-              Números válidos empiezan con 2, 6 o 7 (ejemplo: 2234-5678, 6789-1234, 7456-7890)
+            {/* Subtítulo */}
+            <Text style={styles.subtitle}>
+              No te preocupes, puede pasar. Introduce tu número de teléfono de El Salvador y te enviaremos un código de verificación por SMS.
+            </Text>
+
+            {/* Campo de entrada con prefijo */}
+            <View style={styles.inputContainer}>
+              <View style={styles.prefixContainer}>
+                <Text style={styles.flagEmoji}>🇸🇻</Text>
+                <Text style={styles.prefixText}>+503</Text>
+              </View>
+              <TextInput
+                style={[
+                  styles.input,
+                  telefonoError && styles.inputError
+                ]}
+                placeholder="2234-5678"
+                value={telefono}
+                onChangeText={handleTelefonoChange}
+                keyboardType="phone-pad"
+                maxLength={9}
+                autoCorrect={false}
+                editable={!loading}
+                placeholderTextColor="#9ca3af"
+              />
+            </View>
+
+            {/* Mensaje de error */}
+            {telefonoError && (
+              <View style={styles.errorContainer}>
+                <Icon name="error-outline" size={16} color="#ef4444" />
+                <Text style={styles.errorText}>{telefonoError}</Text>
+              </View>
+            )}
+
+            {/* Texto de ayuda */}
+            <View style={styles.helpContainer}>
+              <Icon name="info-outline" size={16} color="#6b7280" />
+              <Text style={styles.helpText}>
+                Números válidos empiezan con 2, 6 o 7 (ejemplo: 2234-5678, 6789-1234, 7456-7890)
+              </Text>
+            </View>
+          </View>
+        </View>
+
+        {/* Sección inferior fija */}
+        <View style={styles.bottomSection}>
+          {/* Indicadores de progreso */}
+          <View style={styles.progressContainer}>
+            <View style={[styles.progressBar, styles.progressActive]} />
+            <View style={styles.progressDot} />
+            <View style={styles.progressDot} />
+          </View>
+
+          {/* Botón Siguiente */}
+          <View style={styles.buttonContainer}>
+            <TouchableOpacity 
+              style={[styles.button, isButtonDisabled && styles.buttonDisabled]}
+              onPress={handleNext}
+              disabled={isButtonDisabled}
+            >
+              {loading ? (
+                <View style={styles.loadingContainer}>
+                  <ActivityIndicator color="#fff" size="small" />
+                  <Text style={styles.loadingText}>Enviando código...</Text>
+                </View>
+              ) : (
+                <Text style={[styles.buttonText, isButtonDisabled && styles.buttonTextDisabled]}>
+                  Enviar código SMS
+                </Text>
+              )}
+            </TouchableOpacity>
+          </View>
+
+          {/* Footer */}
+          <View style={styles.footer}>
+            <Text style={styles.footerText}>
+              Rivera distribuidora y{'\n'}
+              transporte || 2025
             </Text>
           </View>
         </View>
       </View>
+    </ScrollView>
+  </KeyboardAvoidingView>
+);
 
-      {/* Sección inferior fija */}
-      <View style={styles.bottomSection}>
-        {/* Indicadores de progreso */}
-        <View style={styles.progressContainer}>
-          <View style={[styles.progressBar, styles.progressActive]} />
-          <View style={[styles.progressDot]} />
-          <View style={[styles.progressDot]} />
-        </View>
-
-        {/* Botón Siguiente */}
-        <View style={styles.buttonContainer}>
-          <TouchableOpacity 
-            style={[styles.button, isButtonDisabled && styles.buttonDisabled]}
-            onPress={handleNext}
-            disabled={isButtonDisabled}
-          >
-            {loading ? (
-              <View style={styles.loadingContainer}>
-                <ActivityIndicator color="#fff" size="small" />
-                <Text style={styles.loadingText}>Enviando código...</Text>
-              </View>
-            ) : (
-              <Text style={[styles.buttonText, isButtonDisabled && styles.buttonTextDisabled]}>
-                Enviar código SMS
-              </Text>
-            )}
-          </TouchableOpacity>
-        </View>
-
-        {/* Footer */}
-        <View style={styles.footer}>
-          <Text style={styles.footerText}>
-            Rivera distribuidora y{'\n'}
-            transporte || 2025
-          </Text>
-        </View>
-      </View>
-    </View>
-  );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f9fafb',
+    backgroundColor: '#F4F7FB',
   },
+
   header: {
-    paddingHorizontal: screenWidth * 0.04, // 4% del ancho
-    paddingTop: screenHeight * 0.06, // 6% de la altura
-    paddingBottom: screenHeight * 0.02, // 2% de la altura
+    paddingHorizontal: screenWidth * 0.05,
+    paddingTop: screenHeight * 0.06,
+    paddingBottom: screenHeight * 0.015,
   },
+
   mainContent: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: screenWidth * 0.06, // 6% del ancho
-    marginTop: -screenHeight * 0.05, // Ajuste para centrar mejor
+    paddingHorizontal: screenWidth * 0.07,
   },
+
   imageContainer: {
     alignItems: 'center',
-    marginBottom: screenHeight * 0.04, // 4% de la altura
+    marginBottom: screenHeight * 0.035,
     width: '100%',
   },
+
   image: {
-    width: Math.min(screenWidth * 0.7, 256), // Máximo 70% del ancho o 256px
-    height: Math.min(screenWidth * 0.7 * 0.75, 192), // Mantener proporción
+    width: Math.min(screenWidth * 0.65, 240),
+    height: Math.min(screenWidth * 0.65 * 0.75, 180),
   },
+
   content: {
     width: '100%',
-    maxWidth: 400, // Ancho máximo para pantallas grandes
+    maxWidth: 420,
     alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    padding: 22,
+    borderRadius: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 8,
   },
+
   title: {
-    fontSize: Math.min(screenWidth * 0.06, 24), // Responsive font size
-    fontWeight: 'bold',
+    fontSize: Math.min(screenWidth * 0.065, 26),
+    fontWeight: '700',
     color: '#111827',
-    marginBottom: screenHeight * 0.02,
+    marginBottom: 12,
     textAlign: 'center',
   },
+
   subtitle: {
-    fontSize: Math.min(screenWidth * 0.037, 14),
-    color: '#6b7280',
-    marginBottom: screenHeight * 0.04,
+    fontSize: Math.min(screenWidth * 0.038, 15),
+    color: '#6B7280',
+    marginBottom: 22,
     textAlign: 'center',
-    lineHeight: 20,
-    paddingHorizontal: screenWidth * 0.02,
+    lineHeight: 21,
   },
+
   inputContainer: {
     flexDirection: 'row',
-    backgroundColor: '#f3f4f6',
-    borderRadius: 8,
-    marginBottom: screenHeight * 0.015,
+    backgroundColor: '#F1F5F9',
+    borderRadius: 14,
+    marginBottom: 10,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: 'transparent',
+    borderColor: '#E5E7EB',
     width: '100%',
-    maxWidth: 350,
   },
+
   inputError: {
-    borderColor: '#ef4444',
-    backgroundColor: '#fef2f2',
+    borderColor: '#EF4444',
+    backgroundColor: '#FEF2F2',
   },
+
   prefixContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingLeft: 16,
     paddingRight: 12,
     borderRightWidth: 1,
-    borderRightColor: '#d1d5db',
+    borderRightColor: '#CBD5E1',
   },
+
   flagEmoji: {
     fontSize: 18,
     marginRight: 6,
   },
+
   prefixText: {
-    fontSize: 16,
+    fontSize: 15,
     color: '#374151',
-    fontWeight: '500',
+    fontWeight: '600',
   },
+
   input: {
     flex: 1,
-    paddingVertical: screenHeight * 0.02,
-    paddingHorizontal: 16,
+    paddingVertical: screenHeight * 0.018,
+    paddingHorizontal: 14,
     fontSize: 16,
-    color: '#374151',
+    color: '#111827',
   },
+
   errorContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: screenHeight * 0.015,
-    paddingHorizontal: 4,
+    marginTop: 4,
+    marginBottom: 6,
     width: '100%',
-    maxWidth: 350,
   },
+
   errorText: {
-    color: '#ef4444',
-    fontSize: 14,
+    color: '#EF4444',
+    fontSize: 13,
     marginLeft: 6,
     flex: 1,
   },
+
   helpContainer: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    marginBottom: screenHeight * 0.025,
-    paddingHorizontal: 4,
+    marginTop: 6,
+    marginBottom: 10,
     width: '100%',
-    maxWidth: 350,
   },
+
   helpText: {
     fontSize: 12,
-    color: '#6b7280',
+    color: '#6B7280',
     marginLeft: 6,
     flex: 1,
     lineHeight: 16,
   },
+
   bottomSection: {
     paddingBottom: screenHeight * 0.03,
+    paddingTop: 10,
   },
+
   progressContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: screenHeight * 0.03,
-    paddingHorizontal: 24,
+    marginBottom: 18,
   },
+
   progressBar: {
-    width: 32,
-    height: 4,
-    backgroundColor: '#d1d5db',
-    borderRadius: 2,
+    width: 34,
+    height: 5,
+    backgroundColor: '#CBD5E1',
+    borderRadius: 3,
     marginRight: 8,
   },
+
   progressActive: {
-    backgroundColor: '#111827',
+    backgroundColor: '#10B981',
   },
+
   progressDot: {
-    width: 8,
-    height: 8,
-    backgroundColor: '#d1d5db',
-    borderRadius: 4,
+    width: 9,
+    height: 9,
+    backgroundColor: '#CBD5E1',
+    borderRadius: 5,
     marginRight: 8,
   },
+
   buttonContainer: {
-    paddingHorizontal: screenWidth * 0.06,
-    marginBottom: screenHeight * 0.03,
+    paddingHorizontal: screenWidth * 0.07,
+    marginBottom: 18,
     alignItems: 'center',
   },
+
   button: {
-    backgroundColor: '#10b981',
-    borderRadius: 8,
+    backgroundColor: '#10B981',
+    borderRadius: 16,
     paddingVertical: screenHeight * 0.02,
     alignItems: 'center',
     width: '100%',
-    maxWidth: 350,
+    maxWidth: 380,
+    shadowColor: '#10B981',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
+    elevation: 8,
   },
+
   buttonDisabled: {
-    backgroundColor: '#d1d5db',
+    backgroundColor: '#CBD5E1',
+    shadowOpacity: 0,
   },
+
   buttonText: {
-    color: '#fff',
+    color: '#FFFFFF',
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
+    letterSpacing: 0.3,
   },
+
   buttonTextDisabled: {
-    color: '#9ca3af',
+    color: '#9CA3AF',
   },
+
   loadingContainer: {
     flexDirection: 'row',
     alignItems: 'center',
   },
+
   loadingText: {
-    color: '#fff',
+    color: '#FFFFFF',
     fontSize: 14,
     marginLeft: 8,
   },
+
   footer: {
     paddingHorizontal: 24,
     alignItems: 'center',
+    marginTop: 6,
   },
+
   footerText: {
-    fontSize: 14,
-    color: '#9ca3af',
+    fontSize: 13,
+    color: '#94A3B8',
     textAlign: 'center',
   },
 });
+
 
 export default RecuperacionTelefonoScreen;

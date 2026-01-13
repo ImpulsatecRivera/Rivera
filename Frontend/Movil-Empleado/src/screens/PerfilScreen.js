@@ -115,6 +115,7 @@ const PerfilScreen = ({ navigation }) => {
             {profile?.cargo || "Motorista"}
           </Text>
         </View>
+        
 
         {/* Información Personal */}
         <View
@@ -146,27 +147,10 @@ const PerfilScreen = ({ navigation }) => {
           <InfoRow label="Dirección" value={profile?.direccion || "—"} />
 
           {/* Botón Editar perfil */}
-          <TouchableOpacity
-            style={[styles.btn, styles.btnGreen]}
-            onPress={() => navigation.navigate("EditarPerfil")}
-            activeOpacity={0.85}
-          >
-            <Text style={styles.btnText}>Editar perfil</Text>
-          </TouchableOpacity>
+        
 
           {/* Botón refrescar */}
-          <TouchableOpacity
-            style={[styles.btn, styles.btnBlue]}
-            onPress={fetchProfile}
-            disabled={loading}
-            activeOpacity={0.85}
-          >
-            {loading ? (
-              <ActivityIndicator color="#fff" size="small" />
-            ) : (
-              <Text style={styles.btnText}>Actualizar datos</Text>
-            )}
-          </TouchableOpacity>
+          
 
           {/* Logout */}
           <TouchableOpacity
@@ -183,50 +167,124 @@ const PerfilScreen = ({ navigation }) => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#f8f9fa" },
-  centerContent: { justifyContent: "center", alignItems: "center" },
-  loadingText: { marginTop: 10, fontSize: 16, color: "#666" },
+  container: {
+    flex: 1,
+    backgroundColor: "#EEF2F6",
+  },
 
-  header: {
-    backgroundColor: "#4CAF50",
-    paddingBottom: 26,
-    paddingHorizontal: 20,
+  centerContent: {
+    justifyContent: "center",
     alignItems: "center",
   },
-  title: { fontWeight: "bold", color: "#fff", marginBottom: 16 },
 
-  perfilImage: { borderWidth: 3, borderColor: "#fff" },
-  name: {
-    fontWeight: "bold",
-    color: "#fff",
+  loadingText: {
     marginTop: 12,
-    textAlign: "center",
+    fontSize: 15,
+    color: "#666",
   },
-  cargo: { color: "#fff", opacity: 0.9, textAlign: "center" },
 
-  content: { backgroundColor: "#fff", flex: 1 },
+  header: {
+    backgroundColor: "#43A047",
+    paddingBottom: 70,
+    paddingHorizontal: 20,
+    alignItems: "center",
+    borderBottomLeftRadius: 30,
+    borderBottomRightRadius: 30,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    elevation: 10,
+  },
+
+  title: {
+    fontWeight: "700",
+    color: "#fff",
+    marginBottom: 18,
+    letterSpacing: 0.4,
+  },
+
+  perfilImage: {
+    borderWidth: 4,
+    borderColor: "#fff",
+    marginTop: 10,
+    backgroundColor: "#fff",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    elevation: 10,
+  },
+
+  name: {
+    fontWeight: "700",
+    color: "#fff",
+    marginTop: 14,
+    textAlign: "center",
+    letterSpacing: 0.3,
+  },
+
+  cargo: {
+    color: "#E8F5E9",
+    marginTop: 4,
+    fontWeight: "500",
+  },
+
+  content: {
+    backgroundColor: "#fff",
+    marginHorizontal: 16,
+    marginTop: -45,
+    borderRadius: 22,
+    padding: 22,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 10,
+  },
+
   sectionTitle: {
     fontSize: 18,
-    fontWeight: "bold",
-    color: "#000",
-    marginBottom: 18,
+    fontWeight: "700",
+    color: "#263238",
+    marginBottom: 20,
   },
 
   btn: {
-    paddingVertical: 14,
-    borderRadius: 10,
+    paddingVertical: 15,
+    borderRadius: 14,
     alignItems: "center",
     justifyContent: "center",
     marginTop: 14,
-    elevation: 4,
+    flexDirection: "row",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.25,
     shadowRadius: 8,
+    elevation: 6,
   },
-  btnGreen: { backgroundColor: "#4CAF50", shadowColor: "#4CAF50" },
-  btnBlue: { backgroundColor: "#2196F3", shadowColor: "#2196F3" },
-  btnRed: { backgroundColor: "#F44336", shadowColor: "#F44336" },
-  btnText: { color: "#fff", fontWeight: "bold", fontSize: 16 },
+
+  btnGreen: {
+    backgroundColor: "#4CAF50",
+    shadowColor: "#4CAF50",
+  },
+
+  btnBlue: {
+    backgroundColor: "#1E88E5",
+    shadowColor: "#1E88E5",
+  },
+
+  btnRed: {
+    backgroundColor: "#E53935",
+    shadowColor: "#E53935",
+  },
+
+  btnText: {
+    color: "#fff",
+    fontWeight: "700",
+    fontSize: 15,
+    letterSpacing: 0.3,
+  },
 });
+
 
 export default PerfilScreen;
