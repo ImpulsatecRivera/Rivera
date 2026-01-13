@@ -1,11 +1,18 @@
 import React, { useState, useEffect } from "react";
 import { Home, Clock, BarChart3, Wrench, Users, Fuel, Vault, Route, LogOut } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
+import { useAuth } from "../../Context/AuthContext";
+import Lottie from "lottie-react";
+import logoutAnim from "../../assets/lotties/Campervan _ Ignite Animation.json"; // ejemplo
 
 const SidebarNav = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { logOut } = useAuth();
+
   const [activeItem, setActiveItem] = useState("home");
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [isLogoutLoading, setIsLogoutLoading] = useState(false);
 
   const navItems = [
     { id: "home", route: "/home", icon: Home },
@@ -28,8 +35,32 @@ const SidebarNav = () => {
     }
   };
 
-  const handleLogout = () => {
-    navigate("/SeleccionarProceso");
+  const handleLogoutClick = () => {
+    if (isLogoutLoading) return;
+    setShowLogoutModal(true);
+  };
+
+  const handleLogoutConfirm = async (cerrarSesion) => {
+    setShowLogoutModal(false);
+
+    if (cerrarSesion) {
+      // Cerrar sesión completamente (eliminar cookies)
+      if (isLogoutLoading) return;
+
+      setIsLogoutLoading(true);
+
+      try {
+        await logOut(); // elimina cookies del servidor y UI
+        navigate("/", { replace: true });
+      } catch (error) {
+        console.error("Error en cierre de sesión:", error);
+      } finally {
+        setIsLogoutLoading(false);
+      }
+    } else {
+      // Solo volver a selección de proceso (mantener sesión)
+      navigate("/SeleccionarProceso", { replace: true });
+    }
   };
 
   return (
@@ -90,10 +121,9 @@ const SidebarNav = () => {
                   className={`
                     w-11 h-11 rounded-xl flex items-center justify-center
                     transition-all duration-300 relative
-                    ${
-                      isActive
-                        ? "bg-white bg-opacity-25 backdrop-blur-sm shadow-lg"
-                        : "hover:bg-white hover:bg-opacity-15"
+                    ${isActive
+                      ? "bg-white bg-opacity-25 backdrop-blur-sm shadow-lg"
+                      : "hover:bg-white hover:bg-opacity-15"
                     }
                   `}
                   title={item.id}
@@ -108,11 +138,13 @@ const SidebarNav = () => {
 
             {/* Botón de salir justo debajo de Caja Chica */}
             <button
-              onClick={handleLogout}
+              onClick={handleLogoutClick}
+              disabled={isLogoutLoading}
               className="w-11 h-11 rounded-xl flex items-center justify-center
                        transition-all duration-300
                        hover:bg-red-500 hover:bg-opacity-20
-                       hover:scale-110 group"
+                       hover:scale-110 group
+                       disabled:opacity-50 disabled:cursor-not-allowed"
               title="Salir"
             >
               <LogOut size={24} strokeWidth={1.8} className="text-white group-hover:text-red-200 transition-colors" />
@@ -122,6 +154,65 @@ const SidebarNav = () => {
       </div>
 
       <div className="flex-1 bg-white">{/* contenido */}</div>
+
+      {/* Modal de confirmación */}
+      {showLogoutModal && (
+        <div
+  className="
+    relative bg-white/90 backdrop-blur-xl
+    rounded-2xl w-[340px] p-6 shadow-2xl
+    animate-[fadeInScale_0.25s_ease-out]
+    overflow-hidden
+  "
+>
+  {/* LOTTIE FONDO */}
+  <Lottie
+    animationData={logoutAnim}
+    loop
+    autoplay
+    className="absolute inset-0 opacity-10 pointer-events-none"
+  />
+
+  {/* CONTENIDO */}
+  <div className="relative z-10">
+    <h3 className="text-lg font-semibold text-gray-900 text-center">
+      Cerrar sesión
+    </h3>
+
+    <p className="text-sm text-gray-500 text-center mt-2 mb-6">
+      ¿Qué deseas hacer?
+    </p>
+
+    <div className="flex flex-col gap-3">
+      <button
+        onClick={() => handleLogoutConfirm(false)}
+        disabled={isLogoutLoading}
+        className="w-full py-3 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium transition-all"
+      >
+        Cambiar de proceso
+      </button>
+
+      <button
+        onClick={() => handleLogoutConfirm(true)}
+        disabled={isLogoutLoading}
+        className="w-full py-3 rounded-xl bg-red-500 hover:bg-red-600 text-white font-medium transition-all"
+      >
+        {isLogoutLoading ? "Cerrando..." : "Cerrar sesión"}
+      </button>
+
+      <button
+        onClick={() => setShowLogoutModal(false)}
+        disabled={isLogoutLoading}
+        className="w-full py-3 rounded-xl text-gray-500 hover:text-gray-700 text-sm transition-all"
+      >
+        Cancelar
+      </button>
+    </div>
+  </div>
+</div>
+
+      )}
+
     </div>
   );
 };

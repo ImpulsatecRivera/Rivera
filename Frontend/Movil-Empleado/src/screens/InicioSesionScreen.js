@@ -10,6 +10,9 @@ import {
   Dimensions,
   Animated,
   Image,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import LottieView from 'lottie-react-native';
@@ -27,7 +30,6 @@ const InicioSesionScreen = ({ navigation }) => {
 
   const { login } = useAuth();
 
-  // Animación de entrada
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const translateAnim = useRef(new Animated.Value(30)).current;
 
@@ -102,8 +104,12 @@ const InicioSesionScreen = ({ navigation }) => {
   };
 
   return (
-    <View style={styles.container}>
-      {/* Lottie fondo full screen */}
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={80}
+    >
+      {/* Lottie fondo */}
       <LottieView
         source={require('../../assets/lottie/Background Full Screen-Train.json')}
         autoPlay
@@ -112,93 +118,90 @@ const InicioSesionScreen = ({ navigation }) => {
         style={styles.lottie}
       />
 
-      {/* Card glassmorphism */}
-      <Animated.View
-        style={{
-          opacity: fadeAnim,
-          transform: [{ translateY: translateAnim }],
-        }}
+      <ScrollView
+        contentContainerStyle={{ flexGrow: 1, justifyContent: 'center' }}
+        keyboardShouldPersistTaps="handled"
       >
-        <BlurView intensity={45} tint="light" style={styles.card}>
-          {/* Logo opcional */}
-          <Image source={require('../images/logo.png')} style={styles.logo} /> 
+        <Animated.View
+          style={{
+            opacity: fadeAnim,
+            transform: [{ translateY: translateAnim }],
+          }}
+        >
+          <BlurView intensity={45} tint="light" style={styles.card}>
+            <Image source={require('../images/logo.png')} style={styles.logo} />
 
-          <Text style={styles.title}>Rivera</Text>
-          <Text style={styles.subtitle}>Inicia sesión para continuar</Text>
+            <Text style={styles.title}>Rivera distribuidora y transporte</Text>
+            <Text style={styles.subtitle}>Inicia sesión para continuar</Text>
 
-          <View style={styles.inputContainer}>
-            <View style={styles.iconBox}>
-              <Icon name="mail-outline" size={16} color="#555" />
-            </View>
-            <TextInput
-              style={styles.input}
-              placeholder="Email"
-              placeholderTextColor="#777"
-              value={email}
-              onChangeText={setEmail}
-              autoCapitalize="none"
-              editable={!loading}
-            />
-          </View>
-
-          <View style={styles.inputContainer}>
-            <View style={styles.iconBox}>
-              <Icon name="lock-closed-outline" size={16} color="#555" />
-            </View>
-            <TextInput
-              style={styles.input}
-              placeholder="Contraseña"
-              placeholderTextColor="#777"
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry={!showPassword}
-              editable={!loading}
-            />
-            <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-              <Icon
-                name={showPassword ? 'eye-off-outline' : 'eye-outline'}
-                size={18}
-                color="#555"
+            <View style={styles.inputContainer}>
+              <View style={styles.iconBox}>
+                <Icon name="mail-outline" size={16} color="#555" />
+              </View>
+              <TextInput
+                style={styles.input}
+                placeholder="Email"
+                placeholderTextColor="#777"
+                value={email}
+                onChangeText={setEmail}
+                autoCapitalize="none"
+                editable={!loading}
               />
-            </TouchableOpacity>
-          </View>
+            </View>
 
-          {/* Forgot password mejorado */}
-          <TouchableOpacity
-            style={styles.forgotPill}
-            onPress={() => navigation.navigate('elegirMetodoRecuperacion')}
-            disabled={loading}
-          >
-            <Icon name="help-circle-outline" size={14} color="#2ecc71" />
-            <Text style={styles.forgotText}>¿Olvidaste tu contraseña?</Text>
-          </TouchableOpacity>
+            <View style={styles.inputContainer}>
+              <View style={styles.iconBox}>
+                <Icon name="lock-closed-outline" size={16} color="#555" />
+              </View>
+              <TextInput
+                style={styles.input}
+                placeholder="Contraseña"
+                placeholderTextColor="#777"
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry={!showPassword}
+                editable={!loading}
+              />
+              <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+                <Icon
+                  name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                  size={18}
+                  color="#555"
+                />
+              </TouchableOpacity>
+            </View>
 
-          {/* Botón pro con degradado */}
-          <TouchableOpacity onPress={handleLogin} disabled={loading}>
-            <LinearGradient
-              colors={['#4CAF50', '#2ecc71']}
-              style={styles.button}
+            <TouchableOpacity
+              style={styles.forgotPill}
+              onPress={() => navigation.navigate('elegirMetodoRecuperacion')}
+              disabled={loading}
             >
-              {loading ? (
-                <ActivityIndicator color="#fff" />
-              ) : (
-                <Text style={styles.buttonText}>Entrar</Text>
-              )}
-            </LinearGradient>
-          </TouchableOpacity>
+              <Icon name="help-circle-outline" size={14} color="#2ecc71" />
+              <Text style={styles.forgotText}>¿Olvidaste tu contraseña?</Text>
+            </TouchableOpacity>
 
-          {/* Indicador seguridad */}
-         
-        </BlurView>
-      </Animated.View>
-    </View>
+            <TouchableOpacity onPress={handleLogin} disabled={loading}>
+              <LinearGradient
+                colors={['#4CAF50', '#2ecc71']}
+                style={styles.button}
+              >
+                {loading ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <Text style={styles.buttonText}>Entrar</Text>
+                )}
+              </LinearGradient>
+            </TouchableOpacity>
+          </BlurView>
+        </Animated.View>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: 'transparent',
   },
   lottie: {
     position: 'absolute',
@@ -208,7 +211,6 @@ const styles = StyleSheet.create({
   card: {
     width: '85%',
     alignSelf: 'center',
-    marginTop: height * 0.22,
     padding: 24,
     borderRadius: 26,
     overflow: 'hidden',
@@ -281,17 +283,6 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: '700',
     fontSize: 16,
-  },
-  secureRow: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 12,
-  },
-  secureText: {
-    fontSize: 12,
-    color: '#2ecc71',
-    marginLeft: 6,
   },
 });
 
