@@ -7,10 +7,18 @@ import {
 } from 'lucide-react';
 import { config } from '../../config';
 import Swal from 'sweetalert2';
+import { useAuth } from '../../context/AuthContext';
  
 export default function PlanillaQuincenal() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { user, loading: authLoading } = useAuth();
+
+  React.useEffect(() => {
+    if (!authLoading && user && user.userType !== 'Administrador') {
+      navigate('/no-access');
+    }
+  }, [user, authLoading, navigate]);
   
   const [planilla, setPlanilla] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -138,7 +146,7 @@ export default function PlanillaQuincenal() {
   const cargarUltimaPlanilla = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`${config.api.API_URL}/planillas/quincenal`);
+      const response = await fetch(`${config.api.API_URL}/planillas/quincenal`, { credentials: 'include' });
       const data = await response.json();
       
       if (data.success && Array.isArray(data.data) && data.data.length > 0) {
@@ -185,6 +193,7 @@ export default function PlanillaQuincenal() {
 
       const response = await fetch(`${config.api.API_URL}/planillas/quincenal`, {
         method: 'POST',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           año,
@@ -225,6 +234,7 @@ export default function PlanillaQuincenal() {
       try {
         const response = await fetch(`${config.api.API_URL}/planillas/quincenal`, {
           method: 'POST',
+          credentials: 'include',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             año,
@@ -246,7 +256,7 @@ export default function PlanillaQuincenal() {
 
         if (response.status === 400 && data.data?.planillaId) {
           const planillaResponse = await fetch(
-            `${config.api.API_URL}/planillas/quincenal/${data.data.planillaId}`
+            `${config.api.API_URL}/planillas/quincenal/${data.data.planillaId}`, { credentials: 'include' }
           );
           const planillaData = await planillaResponse.json();
 

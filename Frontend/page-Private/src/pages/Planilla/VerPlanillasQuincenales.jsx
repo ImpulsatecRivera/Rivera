@@ -22,7 +22,7 @@ export default function VerPlanillaQuincenal() {
   const cargarPlanilla = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`${config.api.API_URL}/planillas/quincenal/${id}`);
+      const response = await fetch(`${config.api.API_URL}/planillas/quincenal/${id}`, { credentials: 'include' });
       const data = await response.json();
       
       if (data.success) {

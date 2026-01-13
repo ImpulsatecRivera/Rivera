@@ -1,6 +1,5 @@
 import express from 'express';
 import ReportesCajaChicaController from '../Controllers/ReportesCajaChicaController.js';
-import { authMiddleware } from "../Middleware/auth.js";
 
 const router = express.Router();
 
@@ -10,7 +9,7 @@ const router = express.Router();
 // GET /api/reportesCajaChica/individual/:id
 // Ejemplo: /api/reportesCajaChica/individual/507f1f77bcf86cd799439011
 // Uso: Ver comprobante de un ingreso o egreso específico
-router.get('/individual/:id', authMiddleware, ReportesCajaChicaController.generarPDFIndividual);
+router.get('/individual/:id',  ReportesCajaChicaController.generarPDFIndividual);
 
 // =====================================================
 // 2. REPORTE CONSOLIDADO - Todos los movimientos históricos
@@ -18,7 +17,7 @@ router.get('/individual/:id', authMiddleware, ReportesCajaChicaController.genera
 // GET /api/reportesCajaChica/todos
 // Ejemplo: /api/reportesCajaChica/todos
 // Uso: Auditoría completa, ver todo el historial de caja chica
-router.get('/todos', authMiddleware, ReportesCajaChicaController.generarPDFTodosMovimientos);
+router.get('/todos',  ReportesCajaChicaController.generarPDFTodosMovimientos);
 
 // =====================================================
 // 3. REPORTE MENSUAL - Movimientos de un mes específico
@@ -29,7 +28,7 @@ router.get('/todos', authMiddleware, ReportesCajaChicaController.generarPDFTodos
 //   - ano: 2024, 2025, etc.
 // Ejemplo: /api/reportesCajaChica/mensual-simple/12/2025
 // Uso: Cierre mensual, reporte de diciembre 2025
-router.get('/mensual-simple/:mes/:ano', authMiddleware, ReportesCajaChicaController.generarPDFMensualSimple);
+router.get('/mensual-simple/:mes/:ano', ReportesCajaChicaController.generarPDFMensualSimple);
 
 // =====================================================
 // 4. REPORTE COMPARATIVO - Múltiples meses seleccionados
@@ -41,7 +40,7 @@ router.get('/mensual-simple/:mes/:ano', authMiddleware, ReportesCajaChicaControl
 //   "ano": 2025
 // }
 // Uso: Comparar trimestre (Oct-Nov-Dic), análisis de tendencias
-router.post('/mensual-multiple', authMiddleware, ReportesCajaChicaController.generarPDFMultiplesMeses);
+router.post('/mensual-multiple', ReportesCajaChicaController.generarPDFMultiplesMeses);
 
 // =====================================================
 // 5. REPORTE DIARIO - Movimientos de un día específico
@@ -51,7 +50,7 @@ router.post('/mensual-multiple', authMiddleware, ReportesCajaChicaController.gen
 //   - fecha: YYYY-MM-DD (formato ISO)
 // Ejemplo: /api/reportesCajaChica/diario/2025-12-12
 // Uso: Cierre de caja diario, ver movimientos del día con horas
-router.get('/diario/:fecha', authMiddleware, ReportesCajaChicaController.generarPDFDiario);
+router.get('/diario/:fecha', ReportesCajaChicaController.generarPDFDiario);
 
 // =====================================================
 // 6. REPORTE POR RANGO DE FECHAS - Período personalizado
@@ -67,6 +66,6 @@ router.get('/diario/:fecha', authMiddleware, ReportesCajaChicaController.generar
 //   - Quincenal: del 1 al 15 (15 días)
 //   - Personalizado: cualquier rango (ej: Nov 1 a Ene 2)
 // Nota: Sin límite de días, puede cruzar meses y años
-router.post('/rango-fechas', authMiddleware, ReportesCajaChicaController.generarPDFRangoFechas);
+router.post('/rango-fechas', ReportesCajaChicaController.generarPDFRangoFechas);
 
 export default router;

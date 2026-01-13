@@ -7,9 +7,19 @@ import {
 } from 'lucide-react';
 import { config } from '../../config';
 import Swal from 'sweetalert2';
+import { useAuth } from '../../context/AuthContext';
 
 export default function Planillas() {
   const navigate = useNavigate();
+  const { user, loading: authLoading } = useAuth();
+
+  // Redirigir si está autenticado pero no es administrador
+  React.useEffect(() => {
+    if (!authLoading && user && user.userType !== 'Administrador') {
+      navigate('/no-access');
+    }
+  }, [user, authLoading, navigate]);
+
   const [planillas, setPlanillas] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -53,10 +63,10 @@ export default function Planillas() {
   const cargarPlanillas = async () => {
     setLoading(true);
     try {
-      const responseQuincenal = await fetch(`${config.api.API_URL}/planillas/quincenal`);
+      const responseQuincenal = await fetch(`${config.api.API_URL}/planillas/quincenal`, { credentials: 'include' });
       const dataQuincenal = await responseQuincenal.json();
       
-      const responseSemanal = await fetch(`${config.api.API_URL}/planillas/semanal`);
+      const responseSemanal = await fetch(`${config.api.API_URL}/planillas/semanal`, { credentials: 'include' });
       const dataSemanal = await responseSemanal.json();
       
       const planillasQuincenales = (dataQuincenal.success && Array.isArray(dataQuincenal.data)) 
@@ -129,7 +139,7 @@ export default function Planillas() {
       navigate('/planilla/quincenal');
     } else if (tipo === 'semanal') {
       try {
-        const response = await fetch(`${config.api.API_URL}/planillas/semanal?estado=pendiente&limit=1`);
+        const response = await fetch(`${config.api.API_URL}/planillas/semanal?estado=pendiente&limit=1`, { credentials: 'include' });
         const data = await response.json();
         
         if (data.success && data.data && data.data.length > 0) {
@@ -186,7 +196,7 @@ export default function Planillas() {
           ? `${config.api.API_URL}/planillas/semanal/${planilla._id}`
           : `${config.api.API_URL}/planillas/quincenal/${planilla._id}`;
         
-        const response = await fetch(endpoint, { method: 'DELETE' });
+        const response = await fetch(endpoint, { method: 'DELETE', credentials: 'include' });
         const data = await response.json();
 
         if (data.success) {
@@ -235,7 +245,7 @@ export default function Planillas() {
         filename = `Planilla_${planilla.descripcion}_${planilla.año}_${planilla.mes}.pdf`;
       }
 
-      const response = await fetch(endpoint);
+      const response = await fetch(endpoint, { credentials: 'include' });
 
       if (!response.ok) {
         throw new Error('Error al generar el PDF');
@@ -394,6 +404,7 @@ export default function Planillas() {
 
       const response = await fetch(endpoint, {
         method: 'POST',
+        credentials: 'include',
         headers: {
           'Content-Type': 'application/json'
         },

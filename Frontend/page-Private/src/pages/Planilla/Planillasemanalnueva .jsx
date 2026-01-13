@@ -6,9 +6,17 @@ import {
 } from 'lucide-react';
 import { config } from '../../config';
 import Swal from 'sweetalert2';
+import { useAuth } from '../../context/AuthContext';
 
 export default function PlanillaSemanalNueva() {
   const navigate = useNavigate();
+  const { user, loading: authLoading } = useAuth();
+
+  React.useEffect(() => {
+    if (!authLoading && user && user.userType !== 'Administrador') {
+      navigate('/no-access');
+    }
+  }, [user, authLoading, navigate]);
   
   const [fechaInicio, setFechaInicio] = useState('');
   const [fechaFin, setFechaFin] = useState('');
@@ -54,10 +62,10 @@ export default function PlanillaSemanalNueva() {
 
   const cargarEmpleados = async () => {
     try {
-      const resEmpleados = await fetch(`${config.api.API_URL}/empleados`);
+      const resEmpleados = await fetch(`${config.api.API_URL}/empleados`, { credentials: 'include' });
       const dataEmpleados = await resEmpleados.json();
 
-      const resMotoristas = await fetch(`${config.api.API_URL}/motoristas`);
+      const resMotoristas = await fetch(`${config.api.API_URL}/motoristas`, { credentials: 'include' });
       const dataMotoristas = await resMotoristas.json();
 
       let empleados = [];
@@ -149,6 +157,7 @@ export default function PlanillaSemanalNueva() {
     try {
       const responsePlanilla = await fetch(`${config.api.API_URL}/planillas/semanal`, {
         method: 'POST',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           fechaInicio,
@@ -169,6 +178,7 @@ export default function PlanillaSemanalNueva() {
         for (const empleado of empleadosSeleccionados) {
           await fetch(`${config.api.API_URL}/planillas/semanal/${planillaId}/empleado`, {
             method: 'POST',
+            credentials: 'include',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               empleadoId: empleado._id

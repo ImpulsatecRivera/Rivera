@@ -15,8 +15,10 @@
 
 import express from 'express';
 import PlanillaQuincenalController from '../Controllers/PlanillaQuincenalController.js';
+import { validateAuthToken } from '../Middlewares/validateAuthToken.js';
 
 const router = express.Router();
+router.use(validateAuthToken(['admin']));
 
 /**
  * POST /api/planillas/quincenal

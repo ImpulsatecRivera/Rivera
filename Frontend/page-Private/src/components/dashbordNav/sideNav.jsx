@@ -8,15 +8,16 @@ import logoutAnim from "../../assets/lotties/Campervan _ Ignite Animation.json";
 const SidebarNav = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { logOut } = useAuth();
+  const { logOut, user } = useAuth();
 
   const [activeItem, setActiveItem] = useState("home");
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [isLogoutLoading, setIsLogoutLoading] = useState(false);
 
+  // Construimos el menú y ocultamos "Planilla" si el usuario no es administrador
   const navItems = [
     { id: "home", route: "/home", icon: Home },
-    { id: "planilla", route: "/planilla", icon: BarChart3 },
+    ...(user && user.userType === "Administrador" ? [{ id: "planilla", route: "/planilla", icon: BarChart3 }] : []),
     { id: "maintenance", route: "/mantenimientos", icon: Wrench },
     { id: "diesel", route: "/diesel", icon: Fuel },
     { id: "viajesInternos", route: "/viajesInternos", icon: Route },

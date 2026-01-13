@@ -7,10 +7,18 @@ import {
 } from 'lucide-react';
 import { config } from '../../config';
 import Swal from 'sweetalert2';
+import { useAuth } from '../../context/AuthContext';
 
 export default function PlanillaSemanal() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { user, loading: authLoading } = useAuth();
+
+  React.useEffect(() => {
+    if (!authLoading && user && user.userType !== 'Administrador') {
+      navigate('/no-access');
+    }
+  }, [user, authLoading, navigate]);
   
   const [planilla, setPlanilla] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -40,7 +48,7 @@ export default function PlanillaSemanal() {
 
   const cargarPlanilla = async () => {
     try {
-      const response = await fetch(`${config.api.API_URL}/planillas/semanal/${id}`);
+      const response = await fetch(`${config.api.API_URL}/planillas/semanal/${id}`, { credentials: 'include' });
       const data = await response.json();
       
       if (data.success) {
@@ -128,6 +136,7 @@ export default function PlanillaSemanal() {
 
       const response = await fetch(endpoint, {
         method: 'PATCH',
+        credentials: 'include',
         headers: {
           'Content-Type': 'application/json'
         },
@@ -207,6 +216,7 @@ export default function PlanillaSemanal() {
           `${config.api.API_URL}/planillas/semanal/${planilla._id}/empleado/${empleadoId}/dia/${dia}/falta`,
           {
             method: 'POST',
+            credentials: 'include',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ descuentoFalta: parseFloat(descuento) })
           }
@@ -250,7 +260,7 @@ export default function PlanillaSemanal() {
       try {
         const response = await fetch(
           `${config.api.API_URL}/planillas/semanal/${planilla._id}/empleado/${empleadoId}/dia/${dia}/falta`,
-          { method: 'DELETE' }
+          { method: 'DELETE', credentials: 'include' }
         );
 
         const data = await response.json();
@@ -291,7 +301,7 @@ export default function PlanillaSemanal() {
       console.log('📡 Endpoint:', `${config.api.API_URL}/reportes/planilla/semanal/detallado/${planilla._id}`);
 
       const response = await fetch(
-        `${config.api.API_URL}/reportes/planilla/semanal/detallado/${planilla._id}`
+        `${config.api.API_URL}/reportes/planilla/semanal/detallado/${planilla._id}`, { credentials: 'include' }
       );
 
       console.log('📊 Response status:', response.status, response.statusText);
