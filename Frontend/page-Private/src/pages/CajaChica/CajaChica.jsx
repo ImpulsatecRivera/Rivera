@@ -4,9 +4,13 @@ import { config } from '../../config';
 import Swal from 'sweetalert2';
 import './CajaChica.css';
 import ReportesCajaChicaModal from './ModalReportesCajaChica';
+import { usePermissions } from '../../hooks/usePermissions';
+import { ProtectedAction, RoleBadge } from '../../components/Auth';
 
 
 export default function CajaChicaModern() {
+  const { canCreate, canDelete } = usePermissions();
+  
   const [balance, setBalance] = useState(0);
   const [activeTab, setActiveTab] = useState('all');
   const [transactions, setTransactions] = useState([]);

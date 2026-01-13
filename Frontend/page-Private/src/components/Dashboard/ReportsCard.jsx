@@ -1,7 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
 import PrimaryButton from '../Dashboard/PrimaryButton';
+import ReportsPdfModal from './ReportsPdfModal';
 
 const ReportsCard = () => {
+  const [showPdfModal, setShowPdfModal] = useState(false);
+
   return (
     <div className="flex-1 flex flex-col justify-between bg-gradient-to-br from-blue-50 to-purple-50 p-4 rounded-lg text-center border border-gray-200 min-h-[180px]">
       <div className="absolute top-2 right-2 opacity-20">
@@ -23,7 +26,22 @@ const ReportsCard = () => {
       <p className="text-xs text-gray-600 mb-4 leading-relaxed px-1">
         Resumen semanal agrupado de todos los viajes imagen principal de la empresa
       </p>
-      <PrimaryButton text="Ver más" to="/informes" />
+
+      <div className="flex gap-2">
+        <div className="flex-1">
+          <PrimaryButton text="Ver más" to="/informes" />
+        </div>
+        <div className="flex-1">
+          <button
+            className="w-full bg-green-600 text-white py-2 px-4 rounded-lg text-xs font-medium hover:bg-green-700 transition-colors"
+            onClick={() => setShowPdfModal(true)}
+          >
+            Generar PDF
+          </button>
+        </div>
+      </div>
+
+      <ReportsPdfModal isOpen={showPdfModal} onClose={() => setShowPdfModal(false)} />
     </div>
   );
 };

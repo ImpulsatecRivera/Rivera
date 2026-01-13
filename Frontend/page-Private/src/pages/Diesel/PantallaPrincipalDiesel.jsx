@@ -12,6 +12,8 @@ import {
 import { useNavigate, useLocation } from "react-router-dom";
 import Swal from "sweetalert2";
 import { config } from "../../config";
+import { usePermissions } from "../../hooks/usePermissions";
+import { ProtectedAction, RoleBadge } from "../../components/Auth";
 
 import DieselDetailModal from "./DieselDetailModal";
 import ReportesDieselModal from "./ReportesDieselModal";
@@ -22,6 +24,7 @@ const DIESEL_REPORTE_ENDPOINT = `${config.api.API_URL}/resumenReporte`;
 const PantallaPrincipalDiesel = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { canEdit, canDelete } = usePermissions();
 
   const [currentPage, setCurrentPage] = useState(1);
   const [sortBy, setSortBy] = useState("newest");
@@ -245,7 +248,10 @@ const PantallaPrincipalDiesel = () => {
           <h1 className="text-4xl font-bold text-[#34353A] mb-2">Diésel</h1>
 
           <div className="flex items-center justify-between flex-wrap gap-2">
-            <p className="text-[#5F8EAD] text-base font-semibold">Total: {diesel.length} registros</p>
+            <div className="flex items-center gap-4">
+              <p className="text-[#5F8EAD] text-base font-semibold">Total: {diesel.length} registros</p>
+              <RoleBadge />
+            </div>
             <p className="text-gray-700 font-semibold">
               Total general (filtrado): <span className="text-[#34353A]">{formatearMoneda(totalGeneral)}</span>
             </p>
@@ -321,13 +327,15 @@ const PantallaPrincipalDiesel = () => {
                 Generar Reportes
               </button>
 
-              <button
-                onClick={() => navigate("/diesel/agregar")}
-                className="flex items-center gap-2 px-5 py-3 bg-[#5D9646] text-white rounded-xl hover:opacity-90 font-semibold shadow-lg"
-              >
-                <Plus size={20} />
-                Agregar Diésel
-              </button>
+              <ProtectedAction action="create">
+                <button
+                  onClick={() => navigate("/diesel/agregar")}
+                  className="flex items-center gap-2 px-5 py-3 bg-[#5D9646] text-white rounded-xl hover:opacity-90 font-semibold shadow-lg"
+                >
+                  <Plus size={20} />
+                  Agregar Diésel
+                </button>
+              </ProtectedAction>
             </div>
           </div>
         </div>
@@ -387,22 +395,37 @@ const PantallaPrincipalDiesel = () => {
                           </button>
 
                           {!isCompletado && (
-                            <button
-                              onClick={() => navigate(`/diesel/editar/${id}`)}
-                              className="p-2 rounded-lg bg-yellow-50 hover:bg-yellow-100 text-yellow-600 transition-colors"
-                              title="Editar"
-                            >
-                              <Edit size={18} />
-                            </button>
+                            <ProtectedAction action="edit">
+                              <button
+                                onClick={() => navigate(`/diesel/editar/${id}`)}
+                                className="p-2 rounded-lg bg-yellow-50 hover:bg-yellow-100 text-yellow-600 transition-colors"
+                                title="Editar"
+                              >
+                                <Edit size={18} />
+                              </button>
+                            </ProtectedAction>
                           )}
 
-                          <button
-                            onClick={() => handleDelete(row)}
-                            className="p-2 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 transition-colors"
-                            title="Eliminar"
+                          <ProtectedAction 
+                            action="delete"
+                            fallback={
+                              <button
+                                disabled
+                                className="p-2 rounded-lg bg-red-50 text-red-300 cursor-not-allowed opacity-50"
+                                title="No tienes permisos para eliminar"
+                              >
+                                <Trash2 size={18} />
+                              </button>
+                            }
                           >
-                            <Trash2 size={18} />
-                          </button>
+                            <button
+                              onClick={() => handleDelete(row)}
+                              className="p-2 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 transition-colors"
+                              title="Eliminar"
+                            >
+                              <Trash2 size={18} />
+                            </button>
+                          </ProtectedAction>
                         </div>
                       </td>
                     </tr>

@@ -1,17 +1,25 @@
 import React, { useState } from 'react';
 import { X, Calendar, FileText, Download, ChevronDown, AlertCircle, CheckCircle } from 'lucide-react';
 
-const ReportesModal = ({ isOpen, onClose, apiUrl }) => {
+/**
+ * MODAL RESUMEN CONSOLIDADO
+ * Modal para generar reportes consolidados por camión
+ * Opciones: Mensual (con días trabajados), Multi-mes, Anual
+ */
+const ModalResumenConsolidado = ({ isOpen, onClose, apiUrl }) => {
+  // Estados principales
   const [tipoReporte, setTipoReporte] = useState('mensual');
   const [mesSeleccionado, setMesSeleccionado] = useState('');
   const [anoSeleccionado, setAnoSeleccionado] = useState(new Date().getFullYear());
   const [mesesSeleccionados, setMesesSeleccionados] = useState([]);
-  const [fechaInicio, setFechaInicio] = useState('');
-  const [fechaFin, setFechaFin] = useState('');
+  const [diasTrabajados, setDiasTrabajados] = useState('');
   const [generando, setGenerando] = useState(false);
+  
+  // Estados de alerta
   const [showAlert, setShowAlert] = useState(false);
   const [alertData, setAlertData] = useState({ type: '', title: '', message: '', details: [] });
 
+  // Meses del año
   const meses = [
     { value: 1, label: 'Enero' },
     { value: 2, label: 'Febrero' },
@@ -27,8 +35,12 @@ const ReportesModal = ({ isOpen, onClose, apiUrl }) => {
     { value: 12, label: 'Diciembre' }
   ];
 
+  // Años disponibles (últimos 10 años)
   const anos = Array.from({ length: 10 }, (_, i) => new Date().getFullYear() - i);
 
+  /**
+   * Toggle de selección de meses para multi-mes
+   */
   const toggleMes = (mes) => {
     if (mesesSeleccionados.includes(mes)) {
       setMesesSeleccionados(mesesSeleccionados.filter(m => m !== mes));
@@ -37,52 +49,41 @@ const ReportesModal = ({ isOpen, onClose, apiUrl }) => {
     }
   };
 
-  const parseDate = (dateString) => {
-    const [year, month, day] = dateString.split('-');
-    return new Date(year, month - 1, day);
-  };
-
-  // Función para formatear fecha de forma consistente
- // Función para formatear fecha de forma consistente (SIN crear objeto Date)
-const formatearFecha = (fechaString) => {
-  // Si la fecha viene en formato YYYY-MM-DD del input
-  const [year, month, day] = fechaString.split('-');
-  return `${day}/${month}/${year}`;
-};
-
+  /**
+   * Validar si el botón de generar debe estar deshabilitado
+   */
   const isButtonDisabled = () => {
     if (generando) return true;
-    if (tipoReporte === 'mensual' && !mesSeleccionado) return true;
-    if (tipoReporte === 'semanal' && (!fechaInicio || !fechaFin)) return true;
+    if (tipoReporte === 'mensual' && (!mesSeleccionado || !diasTrabajados)) return true;
     if (tipoReporte === 'multiple' && mesesSeleccionados.length === 0) return true;
     return false;
   };
 
+  /**
+   * Mostrar alerta personalizada
+   */
   const showCustomAlert = (type, title, message, details = []) => {
     setAlertData({ type, title, message, details });
     setShowAlert(true);
   };
 
+  /**
+   * GENERAR REPORTE
+   * Lógica principal para generar el PDF según el tipo seleccionado
+   */
   const generarReporte = async () => {
-    // Validaciones
-    if (tipoReporte === 'mensual' && !mesSeleccionado) {
-      showCustomAlert('warning', 'Mes no seleccionado', 'Por favor selecciona un mes para generar el reporte.');
-      return;
-    }
-    if (tipoReporte === 'semanal') {
-      if (!fechaInicio) {
-        showCustomAlert('warning', 'Fecha no seleccionada', 'Por favor selecciona una fecha de inicio.');
+    // Validaciones específicas por tipo
+    if (tipoReporte === 'mensual') {
+      if (!mesSeleccionado) {
+        showCustomAlert('warning', 'Mes no seleccionado', 'Por favor selecciona un mes para generar el reporte.');
         return;
       }
-      if (!fechaFin) {
-        showCustomAlert('warning', 'Fecha no seleccionada', 'Por favor selecciona una fecha de fin.');
-        return;
-      }
-      if (parseDate(fechaInicio) > parseDate(fechaFin)) {
-        showCustomAlert('warning', 'Rango inválido', 'La fecha de inicio debe ser anterior a la fecha de fin.');
+      if (!diasTrabajados || parseInt(diasTrabajados) < 1 || parseInt(diasTrabajados) > 31) {
+        showCustomAlert('warning', 'Días trabajados inválidos', 'Por favor ingresa un número válido de días trabajados (1-31).');
         return;
       }
     }
+    
     if (tipoReporte === 'multiple' && mesesSeleccionados.length === 0) {
       showCustomAlert('warning', 'Meses no seleccionados', 'Por favor selecciona al menos un mes para continuar.');
       return;
@@ -91,32 +92,38 @@ const formatearFecha = (fechaString) => {
     setGenerando(true);
     
     try {
+      // REPORTE ANUAL
       if (tipoReporte === 'anual') {
-        const reporteUrl = `${apiUrl}/reporte/anual/${anoSeleccionado}`;
+        const reporteUrl = `${apiUrl}/reporte-consolidado/anual/${anoSeleccionado}`;
         
         try {
-          const checkResponse = await fetch(reporteUrl, { method: 'HEAD' });
+          const response = await fetch(reporteUrl);
           
-          if (checkResponse.status === 404) {
+          if (response.ok) {
+            window.open(reporteUrl, '_blank');
+            setTimeout(() => {
+              setGenerando(false);
+              showCustomAlert('success', '¡Reporte generado!', 'El reporte anual consolidado está listo.');
+            }, 1000);
+          } else if (response.status === 404) {
             setGenerando(false);
+            const errorData = await response.json();
             showCustomAlert(
               'info',
               'Sin datos disponibles',
-              `No hay registros de mantenimiento para el año ${anoSeleccionado}.`,
-              ['Verifica que existan mantenimientos registrados en ese año', 'Intenta con otro año']
+              errorData.message || `No hay registros para el año ${anoSeleccionado}.`,
+              ['Verifica que existan datos registrados en ese año', 'Intenta con otro año']
             );
-            return;
-          }
-
-          if (!checkResponse.ok) {
-            throw new Error('Error al verificar datos');
-          }
-
-          window.open(reporteUrl, '_blank');
-          setTimeout(() => {
+          } else {
             setGenerando(false);
-            showCustomAlert('success', '¡Reporte generado!', 'El reporte anual está listo para visualizar.');
-          }, 1000);
+            const errorData = await response.json().catch(() => ({}));
+            showCustomAlert(
+              'error',
+              'Error al generar reporte',
+              errorData.message || 'No se pudo generar el reporte.',
+              ['Verifica tu conexión a internet', 'Si el problema persiste, contacta al administrador']
+            );
+          }
         } catch (error) {
           setGenerando(false);
           showCustomAlert(
@@ -126,33 +133,40 @@ const formatearFecha = (fechaString) => {
             ['Verifica tu conexión a internet', 'Intenta nuevamente']
           );
         }
-      } else if (tipoReporte === 'mensual') {
-        const reporteUrl = `${apiUrl}/reporte/mensual-simple/${mesSeleccionado}/${anoSeleccionado}`;
+      } 
+      // REPORTE MENSUAL
+      else if (tipoReporte === 'mensual') {
+        const reporteUrl = `${apiUrl}/reporte-consolidado/mensual/${mesSeleccionado}/${anoSeleccionado}/${diasTrabajados}`;
         
         try {
-          const checkResponse = await fetch(reporteUrl, { method: 'HEAD' });
+          const response = await fetch(reporteUrl);
           
-          if (checkResponse.status === 404) {
+          if (response.ok) {
+            window.open(reporteUrl, '_blank');
+            setTimeout(() => {
+              setGenerando(false);
+              showCustomAlert('success', '¡Reporte generado!', 'El reporte mensual consolidado está listo.');
+            }, 1000);
+          } else if (response.status === 404) {
             setGenerando(false);
+            const errorData = await response.json();
             const mesNombre = meses.find(m => m.value === parseInt(mesSeleccionado))?.label;
             showCustomAlert(
               'info',
               'Sin datos disponibles',
-              `No hay registros de mantenimiento para ${mesNombre} ${anoSeleccionado}.`,
-              ['Verifica que existan mantenimientos registrados en ese período', 'Intenta con otro mes']
+              errorData.message || `No hay registros para ${mesNombre} ${anoSeleccionado}.`,
+              ['Verifica que existan datos registrados en ese período', 'Intenta con otro mes']
             );
-            return;
-          }
-
-          if (!checkResponse.ok) {
-            throw new Error('Error al verificar datos');
-          }
-
-          window.open(reporteUrl, '_blank');
-          setTimeout(() => {
+          } else {
             setGenerando(false);
-            showCustomAlert('success', '¡Reporte generado!', 'El reporte mensual está listo para visualizar.');
-          }, 1000);
+            const errorData = await response.json().catch(() => ({}));
+            showCustomAlert(
+              'error',
+              'Error al generar reporte',
+              errorData.message || 'No se pudo generar el reporte.',
+              ['Verifica tu conexión a internet', 'Si el problema persiste, contacta al administrador']
+            );
+          }
         } catch (error) {
           setGenerando(false);
           showCustomAlert(
@@ -162,52 +176,10 @@ const formatearFecha = (fechaString) => {
             ['Verifica tu conexión a internet', 'Intenta nuevamente']
           );
         }
-      } else if (tipoReporte === 'semanal') {
-        console.log('=== DEBUG FECHAS ===');
-  console.log('fechaInicio (raw):', fechaInicio);
-  console.log('fechaFin (raw):', fechaFin);
-  console.log('URL que se enviará:', `${apiUrl}/reporte/rango-fechas/${fechaInicio}/${fechaFin}`);
-  console.log('==================');
-        const reporteUrl = `${apiUrl}/reporte/rango-fechas/${fechaInicio}/${fechaFin}`;
-        
-        try {
-          const checkResponse = await fetch(reporteUrl, { method: 'HEAD' });
-          
-          if (checkResponse.status === 404) {
-            setGenerando(false);
-            showCustomAlert(
-              'info',
-              'Sin datos disponibles',
-              'No hay registros de mantenimiento en el rango de fechas seleccionado.',
-              ['Verifica que existan mantenimientos registrados en ese período']
-            );
-            return;
-          }
-
-          if (!checkResponse.ok) {
-            throw new Error('Error al verificar datos');
-          }
-
-          window.open(reporteUrl, '_blank');
-          setTimeout(() => {
-            setGenerando(false);
-            showCustomAlert(
-              'success', 
-              '¡Reporte generado!', 
-              `Reporte del ${formatearFecha(fechaInicio)} al ${formatearFecha(fechaFin)} está listo.`
-            );
-          }, 1000);
-        } catch (error) {
-          setGenerando(false);
-          showCustomAlert(
-            'error',
-            'Error de conexión',
-            'No se pudo conectar con el servidor.',
-            ['Verifica tu conexión a internet', 'Intenta nuevamente']
-          );
-        }
-      } else if (tipoReporte === 'multiple') {
-        const response = await fetch(`${apiUrl}/reporte/mensual-multiple`, {
+      } 
+      // REPORTE MULTI-MES
+      else if (tipoReporte === 'multiple') {
+        const response = await fetch(`${apiUrl}/reporte-consolidado/multi-mes`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -227,7 +199,7 @@ const formatearFecha = (fechaString) => {
             showCustomAlert(
               'info',
               'Sin datos disponibles',
-              errorData.message || `Ninguno de los meses seleccionados tiene registros de mantenimiento para ${anoSeleccionado}.`,
+              errorData.message || `Ninguno de los meses seleccionados tiene registros para ${anoSeleccionado}.`,
               mesesSinDatosNombres
             );
             return;
@@ -254,11 +226,12 @@ const formatearFecha = (fechaString) => {
           return;
         }
         
+        // Descargar el PDF
         const blob = await response.blob();
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `reporte-multiple-${anoSeleccionado}.pdf`;
+        a.download = `reporte-consolidado-multi-${anoSeleccionado}.pdf`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
@@ -266,7 +239,7 @@ const formatearFecha = (fechaString) => {
         
         setTimeout(() => {
           setGenerando(false);
-          showCustomAlert('success', '¡Descarga completa!', 'El reporte de múltiples meses se ha descargado correctamente.');
+          showCustomAlert('success', '¡Descarga completa!', 'El reporte multi-mes se ha descargado correctamente.');
         }, 1000);
       }
       
@@ -289,14 +262,14 @@ const formatearFecha = (fechaString) => {
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
         <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden">
           {/* Header */}
-          <div className="bg-gradient-to-r from-indigo-600 to-indigo-700 px-6 py-5 flex items-center justify-between">
+          <div className="bg-gradient-to-r from-[#5F8EAD] to-[#5D9646] px-6 py-5 flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-white bg-opacity-20 rounded-lg flex items-center justify-center">
                 <FileText className="text-white" size={22} />
               </div>
               <div>
-                <h2 className="text-xl font-bold text-white">Generar Reportes</h2>
-                <p className="text-indigo-100 text-sm">Selecciona el tipo de reporte</p>
+                <h2 className="text-xl font-bold text-white">Resumen Consolidado</h2>
+                <p className="text-white text-opacity-90 text-sm">Reportes por camión</p>
               </div>
             </div>
             <button onClick={onClose} className="text-white hover:bg-white hover:bg-opacity-20 p-2 rounded-lg transition-colors">
@@ -308,43 +281,30 @@ const formatearFecha = (fechaString) => {
             {/* Selector de Tipo de Reporte */}
             <div className="mb-6">
               <label className="block text-sm font-semibold text-gray-700 mb-3">Tipo de Reporte</label>
-              <div className="grid grid-cols-4 gap-3">
+              <div className="grid grid-cols-3 gap-3">
                 <button
                   onClick={() => setTipoReporte('mensual')}
                   className={`p-4 rounded-xl border-2 transition-all ${
                     tipoReporte === 'mensual'
-                      ? 'border-indigo-600 bg-indigo-50 text-indigo-700'
+                      ? 'border-[#5F8EAD] bg-[#5F8EAD] bg-opacity-10 text-[#5F8EAD]'
                       : 'border-gray-200 hover:border-gray-300 text-gray-700'
                   }`}
                 >
                   <Calendar className="mx-auto mb-2" size={24} />
                   <div className="text-sm font-semibold">Mensual</div>
-                  <div className="text-xs text-gray-500 mt-1">1 mes</div>
-                </button>
-
-                <button
-                  onClick={() => setTipoReporte('semanal')}
-                  className={`p-4 rounded-xl border-2 transition-all ${
-                    tipoReporte === 'semanal'
-                      ? 'border-indigo-600 bg-indigo-50 text-indigo-700'
-                      : 'border-gray-200 hover:border-gray-300 text-gray-700'
-                  }`}
-                >
-                  <Calendar className="mx-auto mb-2" size={24} />
-                  <div className="text-sm font-semibold">Rango</div>
-                  <div className="text-xs text-gray-500 mt-1">Personalizado</div>
+                  <div className="text-xs text-gray-500 mt-1">Un mes</div>
                 </button>
 
                 <button
                   onClick={() => setTipoReporte('multiple')}
                   className={`p-4 rounded-xl border-2 transition-all ${
                     tipoReporte === 'multiple'
-                      ? 'border-indigo-600 bg-indigo-50 text-indigo-700'
+                      ? 'border-[#5F8EAD] bg-[#5F8EAD] bg-opacity-10 text-[#5F8EAD]'
                       : 'border-gray-200 hover:border-gray-300 text-gray-700'
                   }`}
                 >
                   <Calendar className="mx-auto mb-2" size={24} />
-                  <div className="text-sm font-semibold">Múltiples</div>
+                  <div className="text-sm font-semibold">Multi-mes</div>
                   <div className="text-xs text-gray-500 mt-1">Varios meses</div>
                 </button>
 
@@ -352,7 +312,7 @@ const formatearFecha = (fechaString) => {
                   onClick={() => setTipoReporte('anual')}
                   className={`p-4 rounded-xl border-2 transition-all ${
                     tipoReporte === 'anual'
-                      ? 'border-indigo-600 bg-indigo-50 text-indigo-700'
+                      ? 'border-[#5F8EAD] bg-[#5F8EAD] bg-opacity-10 text-[#5F8EAD]'
                       : 'border-gray-200 hover:border-gray-300 text-gray-700'
                   }`}
                 >
@@ -363,16 +323,18 @@ const formatearFecha = (fechaString) => {
               </div>
             </div>
 
-            {/* Opciones según tipo seleccionado */}
+            {/* OPCIONES SEGÚN TIPO SELECCIONADO */}
+            
+            {/* ANUAL */}
             {tipoReporte === 'anual' && (
               <div className="space-y-4">
-                <div className="bg-indigo-50 rounded-xl p-5 border border-indigo-100 mb-4">
+                <div className="bg-[#5F8EAD] bg-opacity-10 rounded-xl p-5 border border-[#5F8EAD] mb-4">
                   <div className="flex items-start gap-3">
-                    <FileText className="text-indigo-600 mt-1" size={20} />
+                    <FileText className="text-[#5F8EAD] mt-1" size={20} />
                     <div>
-                      <h3 className="font-semibold text-indigo-900 mb-1">Reporte Anual por Camión</h3>
-                      <p className="text-sm text-indigo-700">
-                        Genera un reporte horizontal con tabla de todas las placas y sus montos por mes del año seleccionado.
+                      <h3 className="font-semibold text-[#34353A] mb-1">Reporte Anual Consolidado</h3>
+                      <p className="text-sm text-gray-600">
+                        Genera un reporte vertical con utilidad bruta de todos los camiones por mes del año seleccionado.
                       </p>
                     </div>
                   </div>
@@ -384,7 +346,7 @@ const formatearFecha = (fechaString) => {
                     <select
                       value={anoSeleccionado}
                       onChange={(e) => setAnoSeleccionado(Number(e.target.value))}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 appearance-none bg-white"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#5F8EAD] focus:border-[#5F8EAD] appearance-none bg-white font-semibold"
                     >
                       {anos.map(ano => (
                         <option key={ano} value={ano}>{ano}</option>
@@ -396,15 +358,16 @@ const formatearFecha = (fechaString) => {
               </div>
             )}
 
+            {/* MENSUAL */}
             {tipoReporte === 'mensual' && (
               <div className="space-y-4">
-                <div className="bg-indigo-50 rounded-xl p-5 border border-indigo-100 mb-4">
+                <div className="bg-[#5F8EAD] bg-opacity-10 rounded-xl p-5 border border-[#5F8EAD] mb-4">
                   <div className="flex items-start gap-3">
-                    <Calendar className="text-indigo-600 mt-1" size={20} />
+                    <Calendar className="text-[#5F8EAD] mt-1" size={20} />
                     <div>
-                      <h3 className="font-semibold text-indigo-900 mb-1">Reporte Mensual Individual</h3>
-                      <p className="text-sm text-indigo-700">
-                        Genera un reporte simple con la tabla de placas y montos de un mes específico.
+                      <h3 className="font-semibold text-[#34353A] mb-1">Reporte Mensual Consolidado</h3>
+                      <p className="text-sm text-gray-600">
+                        Genera un reporte horizontal con ingresos, diesel, planilla y utilidad bruta por camión.
                       </p>
                     </div>
                   </div>
@@ -412,14 +375,12 @@ const formatearFecha = (fechaString) => {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Mes <span className="text-red-500">*</span>
-                    </label>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">Mes</label>
                     <div className="relative">
                       <select
                         value={mesSeleccionado}
                         onChange={(e) => setMesSeleccionado(e.target.value)}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 appearance-none bg-white"
+                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#5F8EAD] focus:border-[#5F8EAD] appearance-none bg-white"
                       >
                         <option value="">Seleccionar mes</option>
                         {meses.map(m => (
@@ -436,7 +397,7 @@ const formatearFecha = (fechaString) => {
                       <select
                         value={anoSeleccionado}
                         onChange={(e) => setAnoSeleccionado(Number(e.target.value))}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 appearance-none bg-white"
+                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#5F8EAD] focus:border-[#5F8EAD] appearance-none bg-white"
                       >
                         {anos.map(ano => (
                           <option key={ano} value={ano}>{ano}</option>
@@ -446,69 +407,34 @@ const formatearFecha = (fechaString) => {
                     </div>
                   </div>
                 </div>
+
+                {/* DÍAS TRABAJADOS (SOLO MENSUAL) */}
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Días trabajados del mes</label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="31"
+                    value={diasTrabajados}
+                    onChange={(e) => setDiasTrabajados(e.target.value)}
+                    placeholder="Ej: 30"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#5F8EAD] focus:border-[#5F8EAD] bg-white"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Este valor se usará para calcular las observaciones (ej: "26 de 30")</p>
+                </div>
               </div>
             )}
 
-            {tipoReporte === 'semanal' && (
-              <div className="space-y-4">
-                <div className="bg-indigo-50 rounded-xl p-5 border border-indigo-100 mb-4">
-                  <div className="flex items-start gap-3">
-                    <Calendar className="text-indigo-600 mt-1" size={20} />
-                    <div>
-                      <h3 className="font-semibold text-indigo-900 mb-1">Reporte por Rango de Fechas</h3>
-                      <p className="text-sm text-indigo-700">
-                        Genera un reporte personalizado para cualquier período (semanal, quincenal, mensual, etc).
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">Fecha de Inicio</label>
-                    <input
-                      type="date"
-                      value={fechaInicio}
-                      onChange={(e) => setFechaInicio(e.target.value)}
-                      max={fechaFin || new Date().toISOString().split('T')[0]}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">Fecha de Fin</label>
-                    <input
-                      type="date"
-                      value={fechaFin}
-                      onChange={(e) => setFechaFin(e.target.value)}
-                      min={fechaInicio}
-                      max={new Date().toISOString().split('T')[0]}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white"
-                    />
-                  </div>
-                </div>
-
-                {fechaInicio && fechaFin && (
-                  <div className="bg-blue-50 rounded-lg p-4 border border-blue-100">
-                    <p className="text-sm text-blue-700">
-                      <span className="font-semibold">Período seleccionado:</span> {' '}
-                      {Math.ceil((parseDate(fechaFin) - parseDate(fechaInicio)) / (1000 * 60 * 60 * 24)) + 1} días
-                      {' '}({formatearFecha(fechaInicio)} - {formatearFecha(fechaFin)})
-                    </p>
-                  </div>
-                )}
-              </div>
-            )}
-
+            {/* MULTI-MES */}
             {tipoReporte === 'multiple' && (
               <div className="space-y-4">
-                <div className="bg-indigo-50 rounded-xl p-5 border border-indigo-100 mb-4">
+                <div className="bg-[#5F8EAD] bg-opacity-10 rounded-xl p-5 border border-[#5F8EAD] mb-4">
                   <div className="flex items-start gap-3">
-                    <Calendar className="text-indigo-600 mt-1" size={20} />
+                    <Calendar className="text-[#5F8EAD] mt-1" size={20} />
                     <div>
-                      <h3 className="font-semibold text-indigo-900 mb-1">Reporte de Múltiples Meses</h3>
-                      <p className="text-sm text-indigo-700">
-                        Selecciona varios meses para generar un reporte combinado con tablas individuales.
+                      <h3 className="font-semibold text-[#34353A] mb-1">Reporte Multi-Mes Consolidado</h3>
+                      <p className="text-sm text-gray-600">
+                        Selecciona varios meses para generar un reporte vertical con secciones por cada mes.
                       </p>
                     </div>
                   </div>
@@ -520,7 +446,7 @@ const formatearFecha = (fechaString) => {
                     <select
                       value={anoSeleccionado}
                       onChange={(e) => setAnoSeleccionado(Number(e.target.value))}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 appearance-none bg-white"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#5F8EAD] focus:border-[#5F8EAD] appearance-none bg-white"
                     >
                       {anos.map(ano => (
                         <option key={ano} value={ano}>{ano}</option>
@@ -532,9 +458,8 @@ const formatearFecha = (fechaString) => {
 
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-3">
-                    Seleccionar Meses <span className="text-red-500">*</span>{" "}
-                    {mesesSeleccionados.length > 0 && (
-                      <span className="text-indigo-600">({mesesSeleccionados.length} seleccionados)</span>
+                    Seleccionar Meses {mesesSeleccionados.length > 0 && (
+                      <span className="text-[#5F8EAD]">({mesesSeleccionados.length} seleccionados)</span>
                     )}
                   </label>
                   <div className="grid grid-cols-3 gap-2">
@@ -544,7 +469,7 @@ const formatearFecha = (fechaString) => {
                         onClick={() => toggleMes(mes.value)}
                         className={`px-4 py-3 rounded-lg text-sm font-semibold transition-all ${
                           mesesSeleccionados.includes(mes.value)
-                            ? 'bg-indigo-600 text-white shadow-md'
+                            ? 'bg-[#5F8EAD] text-white shadow-md'
                             : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                         }`}
                       >
@@ -568,7 +493,7 @@ const formatearFecha = (fechaString) => {
             <button
               onClick={generarReporte}
               disabled={isButtonDisabled()}
-              className="flex items-center gap-2 px-6 py-2.5 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 font-semibold shadow-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-indigo-600 transition-all"
+              className="flex items-center gap-2 px-6 py-2.5 bg-[#5F8EAD] text-white rounded-xl hover:bg-[#5D9646] font-semibold shadow-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-[#5F8EAD] transition-all"
             >
               {generando ? (
                 <>
@@ -590,7 +515,6 @@ const formatearFecha = (fechaString) => {
       {showAlert && (
         <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-[60] p-4 animate-fadeIn">
           <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden animate-slideUp">
-            {/* Alert Icon Header */}
             <div className={`px-6 py-8 ${
               alertData.type === 'success' ? 'bg-gradient-to-br from-green-50 to-emerald-50' :
               alertData.type === 'error' ? 'bg-gradient-to-br from-red-50 to-rose-50' :
@@ -628,7 +552,6 @@ const formatearFecha = (fechaString) => {
               </div>
             </div>
 
-            {/* Alert Details */}
             {alertData.details && alertData.details.length > 0 && (
               <div className="px-6 py-4 bg-gray-50 border-t border-gray-100">
                 <ul className="space-y-2">
@@ -642,7 +565,6 @@ const formatearFecha = (fechaString) => {
               </div>
             )}
 
-            {/* Alert Actions */}
             <div className="px-6 py-4 bg-white border-t border-gray-100">
               <button
                 onClick={() => setShowAlert(false)}
@@ -660,7 +582,7 @@ const formatearFecha = (fechaString) => {
         </div>
       )}
 
-      <style>{`
+      <style jsx>{`
         @keyframes fadeIn {
           from { opacity: 0; }
           to { opacity: 1; }
@@ -689,4 +611,4 @@ const formatearFecha = (fechaString) => {
   );
 };
 
-export default ReportesModal;
+export default ModalResumenConsolidado;

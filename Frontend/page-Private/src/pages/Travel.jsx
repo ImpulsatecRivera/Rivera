@@ -2,6 +2,8 @@
 import React from 'react';
 import { Plus } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { usePermissions } from '../hooks/usePermissions';
+import { ProtectedAction } from '../components/Auth';
 
 // Hooks
 import { useTravels } from '../components/Travels/hooks/useDataTravels'; // ✅ CORREGIDO: useDataTravels → useTravels
@@ -21,6 +23,7 @@ import ProgramTripModal from '../components/FormsTravels/ProgramTripModal';
 
 const TravelDashboard = () => {
   const navigate = useNavigate();
+  const { canCreate } = usePermissions();
   useAnimations(); // Inyecta las animaciones CSS
 
   const {
@@ -136,20 +139,22 @@ const TravelDashboard = () => {
                 
                 {/* Botón Programar Viaje */}
                 <div className="mt-4 px-8">
-                  <button 
-                    onClick={handleOpenProgramModal}
-                    disabled={loading || isRefreshing} // ✅ DESHABILITAR también durante refresh
-                    className="w-full p-4 text-gray-900 hover:bg-gray-50 rounded-xl transition-colors flex items-center justify-start disabled:opacity-50"
-                  >
-                    <div className="w-6 h-6 bg-black rounded-full flex items-center justify-center mr-3">
-                      <Plus size={14} className="text-white" />
-                    </div>
-                    <span className="font-medium">
-                      {loading ? 'Cargando...' : 
-                       isRefreshing ? 'Actualizando...' : 
-                       'Programar un viaje'}
-                    </span>
-                  </button>
+                  <ProtectedAction action="create">
+                    <button 
+                      onClick={handleOpenProgramModal}
+                      disabled={loading || isRefreshing}
+                      className="w-full p-4 text-gray-900 hover:bg-gray-50 rounded-xl transition-colors flex items-center justify-start disabled:opacity-50"
+                    >
+                      <div className="w-6 h-6 bg-black rounded-full flex items-center justify-center mr-3">
+                        <Plus size={14} className="text-white" />
+                      </div>
+                      <span className="font-medium">
+                        {loading ? 'Cargando...' : 
+                         isRefreshing ? 'Actualizando...' : 
+                         'Programar un viaje'}
+                      </span>
+                    </button>
+                  </ProtectedAction>
                 </div>
               </div>
             </div>

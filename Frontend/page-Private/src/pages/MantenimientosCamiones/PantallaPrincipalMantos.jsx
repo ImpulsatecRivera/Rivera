@@ -4,10 +4,13 @@ import { useNavigate } from 'react-router-dom';
 import { config } from '../../config';
 import MantenimientoDetailModal from "./VerDetalleManto";
 import ReportesModal from "./ReportesModal";
+import { usePermissions } from '../../hooks/usePermissions';
+import { ProtectedAction } from '../../components/Auth';
 import Swal from 'sweetalert2';
 
 const MantenimientosTable = () => {
   const navigate = useNavigate();
+  const { canCreate, canDelete } = usePermissions();
   const [currentPage, setCurrentPage] = useState(1);
   const [sortBy, setSortBy] = useState('newest');
   const [mantenimientos, setMantenimientos] = useState([]);
@@ -215,13 +218,15 @@ const MantenimientosTable = () => {
                 Generar Reportes
               </button>
 
-              <button 
-                onClick={() => navigate('/mantenimientos/agregar-mantenimiento')} 
-                className="flex items-center gap-2 px-5 py-3 bg-[#5D9646] text-white rounded-xl hover:opacity-90 font-semibold shadow-lg"
-              >
-                <Plus size={20} />
-                Agregar Mantenimiento
-              </button>
+              <ProtectedAction action="create">
+                <button 
+                  onClick={() => navigate('/mantenimientos/agregar-mantenimiento')} 
+                  className="flex items-center gap-2 px-5 py-3 bg-[#5D9646] text-white rounded-xl hover:opacity-90 font-semibold shadow-lg"
+                >
+                  <Plus size={20} />
+                  Agregar Mantenimiento
+                </button>
+              </ProtectedAction>
             </div>
           </div>
         </div>
@@ -278,22 +283,26 @@ const MantenimientosTable = () => {
                           </button>
 
                           {mant.estado !== 'completado' && mant.estado !== 'cancelado' && (
-                            <button
-                              onClick={() => navigate(`/mantenimientos/editar/${mant._id}`)}
-                              className="p-2 rounded-lg bg-yellow-50 hover:bg-yellow-100 text-yellow-600 transition-colors"
-                              title="Editar"
-                            >
-                              <Edit size={18} />
-                            </button>
+                            <ProtectedAction action="edit">
+                              <button
+                                onClick={() => navigate(`/mantenimientos/editar/${mant._id}`)}
+                                className="p-2 rounded-lg bg-yellow-50 hover:bg-yellow-100 text-yellow-600 transition-colors"
+                                title="Editar"
+                              >
+                                <Edit size={18} />
+                              </button>
+                            </ProtectedAction>
                           )}
 
-                          <button
-                            onClick={() => handleDelete(mant)}
-                            className="p-2 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 transition-colors"
-                            title="Eliminar"
-                          >
-                            <Trash2 size={18} />
-                          </button>
+                          <ProtectedAction action="delete">
+                            <button
+                              onClick={() => handleDelete(mant)}
+                              className="p-2 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 transition-colors"
+                              title="Eliminar"
+                            >
+                              <Trash2 size={18} />
+                            </button>
+                          </ProtectedAction>
                         </div>
                       </td>
                     </tr>

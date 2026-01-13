@@ -1,7 +1,11 @@
 // 1. components/UI/SweetAlert.jsx
 import React from 'react';
+import { usePermissions } from '../../../hooks/usePermissions';
+import { ProtectedAction } from '../Auth';
 
 const SweetAlert = ({ isOpen, onClose, onEdit, onDelete }) => {
+  const { canEdit, canDelete: canDeletePerm } = usePermissions();
+  
   if (!isOpen) return null;
 
   return (
@@ -99,18 +103,45 @@ const SweetAlert = ({ isOpen, onClose, onEdit, onDelete }) => {
                 animation: isOpen ? 'fadeInUp 0.5s ease-out 0.5s both' : 'none'
               }}
             >
-              <button
-                onClick={onDelete}
-                className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-all duration-200 transform hover:scale-105 hover:shadow-lg active:scale-95"
+              <ProtectedAction 
+                action="delete"
+                fallback={
+                  <button
+                    disabled
+                    className="flex-1 px-4 py-2 bg-red-300 text-white rounded-lg opacity-50 cursor-not-allowed"
+                    title="Sin permisos de eliminación"
+                  >
+                    Eliminar
+                  </button>
+                }
               >
-                Eliminar
-              </button>
-              <button
-                onClick={onEdit}
-                className="flex-1 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-all duration-200 transform hover:scale-105 hover:shadow-lg active:scale-95"
+                <button
+                  onClick={onDelete}
+                  className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-all duration-200 transform hover:scale-105 hover:shadow-lg active:scale-95"
+                >
+                  Eliminar
+                </button>
+              </ProtectedAction>
+              
+              <ProtectedAction 
+                action="edit"
+                fallback={
+                  <button
+                    disabled
+                    className="flex-1 px-4 py-2 bg-green-300 text-white rounded-lg opacity-50 cursor-not-allowed"
+                    title="Sin permisos de edición"
+                  >
+                    Actualizar
+                  </button>
+                }
               >
-                Actualizar
-              </button>
+                <button
+                  onClick={onEdit}
+                  className="flex-1 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-all duration-200 transform hover:scale-105 hover:shadow-lg active:scale-95"
+                >
+                  Actualizar
+                </button>
+              </ProtectedAction>
             </div>
           </div>
         </div>
