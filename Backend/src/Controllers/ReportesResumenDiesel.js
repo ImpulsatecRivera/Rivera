@@ -1528,34 +1528,77 @@ ReportesRoutes.generarPDFSemanal = async (req, res) => {
     let browser;
     try {
         const { mes, ano, semana } = req.params;
+        const { fechaInicio, fechaFin } = req.query;
         const mesNum = parseInt(mes);
         const anoNum = parseInt(ano);
         const semanaNum = parseInt(semana);
 
-        if (mesNum < 1 || mesNum > 12) {
-            return res.status(400).json({
-                success: false,
-                message: 'Mes inválido'
-            });
-        }
+        // ✅ SOPORTE PARA RANGO DE FECHAS PERSONALIZADO
+        let inicioSemana, finSemana;
 
-        if (semanaNum < 1 || semanaNum > 5) {
-            return res.status(400).json({
-                success: false,
-                message: 'Semana inválida. Debe estar entre 1 y 5'
-            });
-        }
+        if (fechaInicio && fechaFin) {
+            // Validar formato de fechas
+            if (!/^\d{4}-\d{2}-\d{2}$/.test(fechaInicio) || !/^\d{4}-\d{2}-\d{2}$/.test(fechaFin)) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Las fechas deben tener formato YYYY-MM-DD"
+                });
+            }
 
-        // Calcular rango de fechas de la semana
-        const primerDiaMes = new Date(anoNum, mesNum - 1, 1);
-        const ultimoDiaMes = new Date(anoNum, mesNum, 0);
-        
-        const inicioSemana = new Date(anoNum, mesNum - 1, ((semanaNum - 1) * 7) + 1);
-        const finSemana = new Date(anoNum, mesNum - 1, Math.min(semanaNum * 7, ultimoDiaMes.getDate()));
+            // Crear fechas en zona horaria local (NO UTC)
+            const [yInicio, mInicio, dInicio] = fechaInicio.split('-');
+            const [yFin, mFin, dFin] = fechaFin.split('-');
+
+            inicioSemana = new Date(parseInt(yInicio), parseInt(mInicio) - 1, parseInt(dInicio), 0, 0, 0, 0);
+            finSemana = new Date(parseInt(yFin), parseInt(mFin) - 1, parseInt(dFin), 23, 59, 59, 999);
+
+            console.log('🔍 DEBUG - Fechas de búsqueda (Diesel Semanal):');
+            console.log('   📅 Inicio:', inicioSemana.toLocaleString('es-ES', { timeZone: 'America/El_Salvador' }));
+            console.log('   📅 Fin:', finSemana.toLocaleString('es-ES', { timeZone: 'America/El_Salvador' }));
+            console.log('   📅 Fin ISO:', finSemana.toISOString());
+
+            // Validar que fechaFin >= fechaInicio
+            if (finSemana < inicioSemana) {
+                return res.status(400).json({
+                    success: false,
+                    message: "La fecha de fin debe ser mayor o igual a la fecha de inicio"
+                });
+            }
+        } else {
+            // Sistema original por número de semana
+            if (!mes || !ano || !semana) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Se requieren: mes, ano, semana (o fechaInicio y fechaFin en formato YYYY-MM-DD)'
+                });
+            }
+
+            if (mesNum < 1 || mesNum > 12) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Mes inválido'
+                });
+            }
+
+            if (semanaNum < 1 || semanaNum > 5) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Semana inválida. Debe estar entre 1 y 5'
+                });
+            }
+
+            // Calcular rango de fechas de la semana
+            const ultimoDiaMes = new Date(anoNum, mesNum, 0);
+            inicioSemana = new Date(anoNum, mesNum - 1, ((semanaNum - 1) * 7) + 1, 0, 0, 0, 0);
+            finSemana = new Date(anoNum, mesNum - 1, Math.min(semanaNum * 7, ultimoDiaMes.getDate()), 23, 59, 59, 999);
+        }
+        // Asegurar que las fechas están correctamente configuradas
+        console.log('📋 DEBUG - Búsqueda de registros:');
+        console.log('   Inicio:', inicioSemana.toISOString());
+        console.log('   Fin:', finSemana.toISOString());
+        console.log('   Búsqueda: fecha >= ' + inicioSemana.toLocaleString('es-ES') + ' y fecha <= ' + finSemana.toLocaleString('es-ES'));
 
         const registros = await ResumenDiesel.find({
-            mes: mesNum,
-            ano: anoNum,
             fecha: {
                 $gte: inicioSemana,
                 $lte: finSemana
@@ -1563,6 +1606,8 @@ ReportesRoutes.generarPDFSemanal = async (req, res) => {
         })
             .populate('CicurlationCard', 'licensePlate')
             .sort({ fecha: 1 });
+
+        console.log('📊 Registros encontrados:', registros.length);
 
         // ✅ VERIFICACIÓN PARA HEAD REQUEST
         if (req.method === 'HEAD') {
@@ -1581,10 +1626,29 @@ ReportesRoutes.generarPDFSemanal = async (req, res) => {
         });
         const placas = Array.from(placasSet).sort();
 
-        // Días de la semana (1-7 o lo que tenga la semana)
+        // Generar título y subtítulo según el tipo de búsqueda
+        let subtituloHTML = '';
+        let resumenTitulo = '';
+        
+        if (fechaInicio && fechaFin) {
+            // Formato: DD/MM/YYYY
+            const formatoFecha = (f) => {
+                const [y, m, d] = f.split('-');
+                return `${d}/${m}/${y}`;
+            };
+            subtituloHTML = `${formatoFecha(fechaInicio)} AL ${formatoFecha(fechaFin)}`;
+            resumenTitulo = `RESUMEN DEL PERÍODO (${formatoFecha(fechaInicio)} - ${formatoFecha(fechaFin)})`;
+        } else {
+            subtituloHTML = `${obtenerNombreMes(mesNum).toUpperCase()} ${anoNum} - SEMANA ${semanaNum}`;
+            resumenTitulo = `RESUMEN DE LA SEMANA ${semanaNum}`;
+        }
+
+        // Calcular días (considerando posibles cruces de meses)
         const diasSemana = [];
-        for (let d = inicioSemana.getDate(); d <= finSemana.getDate(); d++) {
-            diasSemana.push(d);
+        let fechaActual = new Date(inicioSemana);
+        while (fechaActual <= finSemana) {
+            diasSemana.push(fechaActual.getDate());
+            fechaActual.setDate(fechaActual.getDate() + 1);
         }
 
         // ✅ GENERAR TABLA DETALLADA (cada registro una fila)
@@ -1606,10 +1670,16 @@ ReportesRoutes.generarPDFSemanal = async (req, res) => {
                 totalGeneralGalones += registro.Galones;
                 totalGeneralMonto += registro.Total;
                 
+                // Formatear fecha correctamente (ajustando zona horaria local)
+                const fechaRegistro = new Date(registro.fecha);
+                const offset = fechaRegistro.getTimezoneOffset() * 60000;
+                const fechaLocal = new Date(fechaRegistro.getTime() + offset);
+                const fechaFormato = fechaLocal.toLocaleDateString('es-ES');
+                
                 tablaHTML += `<tr>`;
                 tablaHTML += `<td class="col-numero">${index + 1}</td>`;
                 tablaHTML += `<td class="col-placa"><strong>${registro.CicurlationCard.licensePlate}</strong></td>`;
-                tablaHTML += `<td class="col-fecha">${new Date(registro.fecha).toLocaleDateString('es-ES')}</td>`;
+                tablaHTML += `<td class="col-fecha">${fechaFormato}</td>`;
                 tablaHTML += `<td class="col-galones">${registro.Galones.toFixed(2)}</td>`;
                 tablaHTML += `<td class="col-total">$${registro.Total.toFixed(2)}</td>`;
                 tablaHTML += `</tr>`;
@@ -1723,6 +1793,10 @@ ReportesRoutes.generarPDFSemanal = async (req, res) => {
                     font-weight: bold;
                     color: white;
                 }
+                .total-row .col-galones,
+                .total-row .col-total {
+                    color: white !important;
+                }
                 .resumen-final { 
                     background-color: #f5f5f5;
                     border: 2px solid #5F8EAD;
@@ -1784,13 +1858,13 @@ ReportesRoutes.generarPDFSemanal = async (req, res) => {
                     ${logoBase64 ? `<img src="${logoBase64}" alt="Rivera Logo" />` : '<p>RIVERA</p>'}
                 </div>
                 <h1>REPORTE SEMANAL DE DIESEL</h1>
-                <div class="subtitle">${obtenerNombreMes(mesNum).toUpperCase()} ${anoNum} - SEMANA ${semanaNum}</div>
+                <div class="subtitle">${subtituloHTML}</div>
             </div>
 
             ${tablaHTML}
 
             <div class="resumen-final">
-                <h3>RESUMEN DE LA SEMANA ${semanaNum}</h3>
+                <h3>${resumenTitulo}</h3>
                 <div class="resumen-stats">
                     <div class="resumen-stat">
                         <label>Días</label>
