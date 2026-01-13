@@ -35,6 +35,8 @@ import checkmarkAnimation from '../../assets/lotties/Success (1).json';
 import ModalResumenConsolidado from "./ModalResumenConsolidado";
 // Modal para generar reporte semanal (PDF)
 import ReportsPdfModal from '../../components/Dashboard/ReportsPdfModal';
+// Modal reporte mensual de gastos
+import ReportsGastosMesModal from '../../components/Dashboard/ReportsGastosMesModal';
 
 const ModernDashboard = () => {
 
@@ -42,6 +44,8 @@ const ModernDashboard = () => {
   const [modalResumenOpen, setModalResumenOpen] = useState(false);
   // nuevo estado para el modal PDF
   const [modalPdfOpen, setModalPdfOpen] = useState(false);
+  // nuevo estado para modal Mensual Gastos
+  const [modalGastosMesOpen, setModalGastosMesOpen] = useState(false);
 
   const navigate = useNavigate();
   const [selectedPeriod, setSelectedPeriod] = useState('30');
@@ -834,6 +838,17 @@ const ModernDashboard = () => {
                   </div>
                   <ChevronRight className="text-green-600" size={18} />
                 </div>
+
+                <div
+                  onClick={() => setModalGastosMesOpen(true)}
+                  className="flex items-center justify-between p-3 bg-blue-50 rounded-lg cursor-pointer hover:bg-blue-100 transition-all"
+                >
+                  <div className="flex items-center gap-2">
+                    <FileText className="text-blue-600" size={18} />
+                    <span className="text-sm font-semibold text-gray-700">Reporte Mensual Gastos (PDF)</span>
+                  </div>
+                  <ChevronRight className="text-blue-600" size={18} />
+                </div>
               </div>
             </div>
 
@@ -847,6 +862,11 @@ const ModernDashboard = () => {
             <ReportsPdfModal
               isOpen={modalPdfOpen}
               onClose={() => setModalPdfOpen(false)}
+            />
+
+            <ReportsGastosMesModal
+              isOpen={modalGastosMesOpen}
+              onClose={() => setModalGastosMesOpen(false)}
             />
 
             {/* Actividad Reciente CON LOTTIE CHECKMARK */}
