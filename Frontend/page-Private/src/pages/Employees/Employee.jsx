@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import useEmployeeManagement from '../../components/Empleados/hooks/useDataEmpleado';
+import { usePermissions } from '../../hooks/usePermissions';
 
 // Importar componentes UI
 import SweetAlert from '../../components/UIEmpleados/SweetAlert';
@@ -17,6 +18,7 @@ import EmployeeDetailPanel from '../../components/Empleados/EmployeDetailsPanel'
 import EditEmployeeModal from '../../components/Empleados/EditEmployeeModal';
 
 const Employee = () => {
+  const { canDelete } = usePermissions();
   const {
     empleados,
     selectedEmpleados,

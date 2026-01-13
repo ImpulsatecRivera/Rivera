@@ -1271,6 +1271,60 @@ viajeSchema.statics.obtenerConsolidadoAnual = async function(ano) {
   ]);
 };
 
+// RANGO PERSONALIZADO: Agrupa por día exacto en el rango
+viajeSchema.statics.obtenerConsolidadoPorRango = async function (fechaInicio, fechaFin) {
+  return await this.aggregate([
+    {
+      $match: {
+        tipoViaje: 'operativo',
+        'estado.actual': 'completado',
+        departureTime: {
+          $gte: fechaInicio,
+          $lte: fechaFin
+        }
+      }
+    },
+    {
+      $addFields: {
+        diaAno: {
+          $concat: [
+            { $toString: { $year: '$departureTime' } },
+            '-',
+            { $toString: { $month: '$departureTime' } },
+            '-',
+            { $toString: { $dayOfMonth: '$departureTime' } }
+          ]
+        }
+      }
+    },
+    {
+      $group: {
+        _id: {
+          cliente: '$clienteNombre',
+          fecha: '$diaAno'
+        },
+        viajes: { $sum: 1 },
+        monto: { $sum: '$montoAcordado' }
+      }
+    },
+    {
+      $group: {
+        _id: '$_id.cliente',
+        periodos: {
+          $push: {
+            fecha: '$_id.fecha',
+            viajes: '$viajes',
+            monto: '$monto'
+          }
+        }
+      }
+    },
+    {
+      $sort: { _id: 1 }
+    }
+  ]);
+};
+
 // =====================================================
 // FUNCIÓN AUXILIAR PARA CALCULAR SEMANA ISO
 // =====================================================

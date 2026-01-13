@@ -15,6 +15,10 @@ const saveToStorage = (userData, userType) => {
   try {
     localStorage.setItem("authToken", JSON.stringify(userData));
     if (userType) localStorage.setItem("userType", String(userType));
+    // ✅ Guardar rol si existe
+    if (userData?.rol) {
+      localStorage.setItem("userRole", String(userData.rol));
+    }
   } catch (error) {
     console.error("Error guardando en localStorage:", error);
   }
@@ -33,10 +37,19 @@ const loadFromStorage = () => {
   }
 };
 
+const loadRoleFromStorage = () => {
+  try {
+    return localStorage.getItem("userRole") || null;
+  } catch {
+    return null;
+  }
+};
+
 const clearStorage = () => {
   try {
     localStorage.removeItem("authToken");
     localStorage.removeItem("userType");
+    localStorage.removeItem("userRole");
     console.log("✅ Storage limpiado correctamente");
   } catch (error) {
     console.error("Error limpiando storage:", error);
@@ -47,15 +60,45 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [userRole, setUserRole] = useState(null);
+
+  // ===================== Funciones de verificación de permisos =====================
+  const hasRole = (requiredRoles) => {
+    if (!Array.isArray(requiredRoles)) {
+      requiredRoles = [requiredRoles];
+    }
+    if (user?.userType === "Administrador") return true; // Admin siempre tiene acceso
+    return requiredRoles.includes(userRole);
+  };
+
+  const canCreate = () => {
+    if (user?.userType === "Administrador") return true;
+    return ["Operativo", "Supervisor"].includes(userRole);
+  };
+
+  const canEdit = () => {
+    if (user?.userType === "Administrador") return true;
+    return userRole === "Supervisor";
+  };
+
+  const canDelete = () => {
+    return user?.userType === "Administrador";
+  };
+
+  const canViewReports = () => {
+    if (user?.userType === "Administrador") return true;
+    return ["Operativo", "Supervisor"].includes(userRole);
+  };
 
   // ===================== Login =====================
   const login = async (email, password) => {
     try {
       const { data } = await api.post("/login", { email, password });
       if (data?.user) {
-        // ✅ Guardar en storage para persistencia
+        // ✅ Guardar en storage para persistencia incluyendo rol
         saveToStorage(data.user, data.userType || data.user.userType);
         setUser(data.user);
+        setUserRole(data.user.rol || null);
         setIsLoggedIn(true);
         toast.success("Inicio de sesión exitoso.");
         return { success: true, data };
@@ -101,6 +144,7 @@ export const AuthProvider = ({ children }) => {
     } finally {
       // 2. Limpiar estado local inmediatamente
       setUser(null);
+      setUserRole(null);
       setIsLoggedIn(false);
       clearStorage();
       
@@ -143,16 +187,20 @@ export const AuthProvider = ({ children }) => {
         // ✅ Sesión válida - actualizar estado
         saveToStorage(data.user, data.user.userType);
         setUser(data.user);
+        setUserRole(data.user.rol || null);
         setIsLoggedIn(true);
       } else {
         // ❌ No hay sesión válida - limpiar silenciosamente
         const savedUser = loadFromStorage();
+        const savedRole = loadRoleFromStorage();
         if (savedUser) {
           console.log("🔄 Usando datos guardados localmente");
           setUser(savedUser);
+          setUserRole(savedRole);
           setIsLoggedIn(true);
         } else {
           setUser(null);
+          setUserRole(null);
           setIsLoggedIn(false);
         }
       }
@@ -160,12 +208,15 @@ export const AuthProvider = ({ children }) => {
       console.log("🔍 checkAuth: Verificando storage local...");
       // Si falla la verificación, intentar cargar desde storage
       const savedUser = loadFromStorage();
+      const savedRole = loadRoleFromStorage();
       if (savedUser) {
         console.log("📱 Usando sesión guardada localmente");
         setUser(savedUser);
+        setUserRole(savedRole);
         setIsLoggedIn(true);
       } else {
         setUser(null);
+        setUserRole(null);
         setIsLoggedIn(false);
       }
     } finally {
@@ -183,6 +234,7 @@ export const AuthProvider = ({ children }) => {
       if (data?.user) {
         saveToStorage(data.user, data.user.userType);
         setUser(data.user);
+        setUserRole(data.user.rol || null);
         setIsLoggedIn(true);
         return true;
       }
@@ -239,10 +291,18 @@ export const AuthProvider = ({ children }) => {
       logOut, 
       isLoggedIn, 
       loading,
+      userRole,
       setUser, 
       setIsLoggedIn, 
+      setUserRole,
       syncWithServer, 
       checkAuth,
+      // ✅ Funciones de permisos
+      hasRole,
+      canCreate,
+      canEdit,
+      canDelete,
+      canViewReports,
     }}>
       {children}
     </AuthContext.Provider>

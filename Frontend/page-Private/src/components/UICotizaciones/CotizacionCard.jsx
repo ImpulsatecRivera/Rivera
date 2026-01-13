@@ -1,6 +1,8 @@
 // components/CotizacionCard.jsx
 import React from 'react';
 import { Trash2, Edit3, Eye, Calendar, MapPin, User, Truck } from 'lucide-react';
+import { usePermissions } from '../../hooks/usePermissions';
+import { ProtectedAction } from '../Auth';
 
 const CotizacionCard = ({ 
   cotizacion, 
@@ -10,6 +12,8 @@ const CotizacionCard = ({
   onEditar, 
   onEliminar 
 }) => {
+  const { canEdit, canDelete } = usePermissions();
+  
   // Icono del camión
   const CotizacionIcon = () => (
     <div className="w-6 h-6 bg-white rounded flex items-center justify-center">
@@ -41,24 +45,28 @@ const CotizacionCard = ({
         >
           <Eye size={16} />
         </button>
-        <button 
-          onClick={(e) => {
-            e.stopPropagation();
-            onEditar();
-          }}
-          className="p-2.5 bg-white/80 backdrop-blur-sm text-emerald-600 hover:text-white hover:bg-emerald-600 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-110 hover:rotate-3"
-        >
-          <Edit3 size={16} />
-        </button>
-        <button 
-          onClick={(e) => {
-            e.stopPropagation();
-            onEliminar(cotizacion);
-          }}
-          className="p-2.5 bg-white/80 backdrop-blur-sm text-red-500 hover:text-white hover:bg-red-500 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-110 hover:rotate-3"
-        >
-          <Trash2 size={16} />
-        </button>
+        <ProtectedAction action="edit">
+          <button 
+            onClick={(e) => {
+              e.stopPropagation();
+              onEditar();
+            }}
+            className="p-2.5 bg-white/80 backdrop-blur-sm text-emerald-600 hover:text-white hover:bg-emerald-600 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-110 hover:rotate-3"
+          >
+            <Edit3 size={16} />
+          </button>
+        </ProtectedAction>
+        <ProtectedAction action="delete">
+          <button 
+            onClick={(e) => {
+              e.stopPropagation();
+              onEliminar(cotizacion);
+            }}
+            className="p-2.5 bg-white/80 backdrop-blur-sm text-red-500 hover:text-white hover:bg-red-500 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-110 hover:rotate-3"
+          >
+            <Trash2 size={16} />
+          </button>
+        </ProtectedAction>
       </div>
 
       {/* Contenido principal */}

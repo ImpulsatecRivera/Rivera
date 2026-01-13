@@ -298,16 +298,24 @@ LoginController.Login = async (req, res) => {
     const token = generateToken({ id: userFound._id, userType });
     setAuthCookie(res, token);
 
+    // Construir objeto de usuario con rol si es empleado
+    const userData = {
+      id: userFound._id,
+      email: userFound.email || email,
+      nombre: userFound.nombre || userFound.firstName || userFound.name || null,
+      apellido: userFound.lastName || null,
+      userType
+    };
+
+    // Agregar rol si es empleado
+    if (userType === "Empleado" && userFound.rol) {
+      userData.rol = userFound.rol;
+    }
+
     return res.status(200).json({
       message: "Inicio de sesión completado",
       userType,
-      user: {
-        id: userFound._id,
-        email: userFound.email || email,
-        nombre: userFound.nombre || userFound.firstName || userFound.name || null,
-        apellido: userFound.lastName || null,
-        userType
-      },
+      user: userData,
       token,
     });
     
@@ -361,7 +369,11 @@ LoginController.checkAuth = async (req, res) => {
         });
       }
 
-      const userFound = await Model.findById(id).select("email nombre name firstName lastName profilePicture googleId");
+      const selectFields = userType === "Empleado" 
+        ? "email nombre name firstName lastName profilePicture googleId rol"
+        : "email nombre name firstName lastName profilePicture googleId";
+      
+      const userFound = await Model.findById(id).select(selectFields);
       if (!userFound) {
         return res.status(200).json({ 
           message: `${userType} no encontrado`, 
@@ -369,18 +381,26 @@ LoginController.checkAuth = async (req, res) => {
         });
       }
 
+      // Construir objeto de usuario
+      const userData = {
+        id: userFound._id,
+        email: userFound.email,
+        userType,
+        nombre: userFound.firstName || userFound.nombre || userFound.name || null,
+        apellido: userFound.lastName || null,
+        profilePicture: userFound.profilePicture || null,
+        isGoogleUser: !!userFound.googleId,
+        profileCompleted: userFound.profileCompleted || false,
+        needsProfileCompletion: userFound.isGoogleUser && userFound.isProfileComplete && !userFound.isProfileComplete()
+      };
+
+      // Agregar rol si es empleado
+      if (userType === "Empleado" && userFound.rol) {
+        userData.rol = userFound.rol;
+      }
+
       return res.status(200).json({
-        user: {
-          id: userFound._id,
-          email: userFound.email,
-          userType,
-          nombre: userFound.firstName || userFound.nombre || userFound.name || null,
-          apellido: userFound.lastName || null,
-          profilePicture: userFound.profilePicture || null,
-          isGoogleUser: !!userFound.googleId,
-          profileCompleted: userFound.profileCompleted || false,
-          needsProfileCompletion: userFound.isGoogleUser && userFound.isProfileComplete && !userFound.isProfileComplete()
-        },
+        user: userData,
       });
     });
   } catch (e) {
