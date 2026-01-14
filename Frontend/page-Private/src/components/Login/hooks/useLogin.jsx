@@ -4,17 +4,29 @@ import { useNavigate } from "react-router-dom";
 
 const useLogin = () => {
   const [loading, setLoading] = useState(false);
-  const { login } = useAuth();
+  const { login, logOut } = useAuth();
   const navigate = useNavigate();
 
   const handleLogin = useCallback(async (email, password) => {
     setLoading(true);
     try {
       const result = await login(email, password); // llama al AuthContext
+
+      // Si el login fue exitoso, revisar role
       if (result?.success) {
-        // replace para que el botón “atrás” no regrese al login
+        const userType = result?.data?.user?.userType;
+
+        // Si es motorista, no permitir acceso a la app web
+        if (userType === 'Motorista') {
+          // Cerrar sesión para limpiar cookies/estado en caso de que el backend las haya establecido
+          try { await logOut(); } catch (e) { /* ignore */ }
+          return { success: false, isMotorista: true, message: 'El acceso web no está disponible para Motoristas. Usa la app móvil.' };
+        }
+
+        // Si no es motorista, acceder normalmente
         navigate("/dashboard", { replace: true });
       }
+
       // Garantiza un objeto consistente al caller
       return result ?? { success: false };
     } catch {
@@ -23,7 +35,7 @@ const useLogin = () => {
     } finally {
       setLoading(false);
     }
-  }, [login, navigate]);
+  }, [login, logOut, navigate]);
 
   return { handleLogin, loading };
 };

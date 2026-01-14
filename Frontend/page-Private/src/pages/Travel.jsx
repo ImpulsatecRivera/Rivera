@@ -6,7 +6,7 @@ import { usePermissions } from '../hooks/usePermissions';
 import { ProtectedAction } from '../components/Auth';
 
 // Hooks
-import { useTravels } from '../components/Travels/hooks/useDataTravels'; // ✅ CORREGIDO: useDataTravels → useTravels
+import { useTravels } from '../components/Travels/hooks/useDataTravels';
 import { useAnimations } from '../components/UITravels/Animation';
 
 // Components
@@ -24,7 +24,7 @@ import ProgramTripModal from '../components/FormsTravels/ProgramTripModal';
 const TravelDashboard = () => {
   const navigate = useNavigate();
   const { canCreate } = usePermissions();
-  useAnimations(); // Inyecta las animaciones CSS
+  useAnimations();
 
   const {
     // Estados
@@ -50,16 +50,16 @@ const TravelDashboard = () => {
     editForm,
     programForm,
     
-    // Datos (ahora solo de la API)
+    // Datos
     scheduledTrips,
     earningsData,
     barHeights,
     loading,
     error,
     stats,
-    isRefreshing, // ✅ AGREGAR isRefreshing del hook corregido
+    isRefreshing,
     
-    // Funciones (mantener las originales para compatibilidad)
+    // Funciones
     handleTripMenuClick,
     handleCloseModal,
     handleEdit,
@@ -79,29 +79,25 @@ const TravelDashboard = () => {
     handleProgramTrip,
     handleCloseProgramSuccessModal,
     refreshTravels,
-    
-    // ✅ FUNCIONES DIRECTAS PARA CONTEXTMENU (por si se necesitan)
     onEdit,
     onDelete
   } = useTravels();
 
   const handleAddTruck = () => navigate('/viajes/maps');
 
-  // 🆕 DATOS PARA EL GRÁFICO BASADOS EN LA API REAL
+  // Datos para el gráfico basados en la API real
   const chartData = React.useMemo(() => {
     if (!scheduledTrips || scheduledTrips.length === 0) {
       return Array(14).fill(0);
     }
 
-    // Generar datos del gráfico basados en los viajes reales
     const dataPoints = [];
     const baseHeight = 40;
     
     for (let i = 0; i < 14; i++) {
-      // Calcular altura basada en los datos reales
       const viajesParaEsteIndice = scheduledTrips.filter((_, index) => index % 14 === i);
       const altura = baseHeight + (viajesParaEsteIndice.length * 20);
-      dataPoints.push(Math.min(altura, 140)); // Máximo 140px
+      dataPoints.push(Math.min(altura, 140));
     }
     
     return dataPoints;
@@ -121,7 +117,7 @@ const TravelDashboard = () => {
                   <p className="text-gray-500 text-sm">
                     {loading ? 'Cargando datos...' : 
                      error ? 'Error en los datos' : 
-                     isRefreshing ? 'Actualizando datos...' : // ✅ AGREGAR estado de refreshing
+                     isRefreshing ? 'Actualizando datos...' :
                      `${stats.total} viajes totales - ${stats.en_curso} en curso`}
                   </p>
                 </div>
@@ -129,7 +125,7 @@ const TravelDashboard = () => {
                 {/* Animated Bar Chart con datos reales */}
                 <AnimatedBarChart 
                   animatedBars={animatedBars} 
-                  barHeights={chartData} // Usar datos reales
+                  barHeights={chartData}
                 />
                 
                 {/* Sección de viajes con estadísticas integradas */}
@@ -159,15 +155,59 @@ const TravelDashboard = () => {
               </div>
             </div>
             
-            {/* Right Column - Earnings and Stats */}
+            {/* Right Column - Earnings and Routes */}
             <div className="space-y-6 h-full flex flex-col">
               {/* Earnings Card */}
               <EarningsCard earningsData={earningsData} />
               
-              {/* Routes Card con datos reales */}
-              <RoutesCard onAddTruck={handleAddTruck} />
+              {/* ✅ ROUTES CARD MOVIDO AQUÍ - Reemplaza el gráfico de porcentajes */}
+              <div className="flex-1 bg-gray-50 rounded-3xl shadow-sm p-6 flex flex-col">
+                <h3 className="text-xl font-bold text-gray-900 mb-4">Rutas Frecuentes</h3>
+                
+                {/* Icono decorativo */}
+                <div className="flex justify-center mb-6">
+                  <div className="relative">
+                    <div className="w-16 h-16 bg-blue-100 rounded-2xl flex items-center justify-center">
+                      <div className="w-8 h-8 bg-blue-500 rounded-lg"></div>
+                    </div>
+                    <div className="absolute -top-2 -right-2 w-6 h-6 bg-blue-400 rounded-full"></div>
+                    <div className="absolute -bottom-1 -left-1 w-4 h-4 bg-gray-300 rounded"></div>
+                  </div>
+                </div>
+                
+                {/* Descripción */}
+                <p className="text-sm text-gray-500 text-center mb-6 px-4">
+                  Explora las rutas más utilizadas en el sistema de transporte Rivera
+                </p>
+                
+                {/* Botón */}
+                <button 
+                  onClick={handleAddTruck}
+                  className="w-full bg-[#34353A] text-white py-3 px-6 rounded-xl font-medium hover:bg-[#2a2b2f] transition-colors"
+                >
+                  Ver más
+                </button>
+                
+                {/* Estadísticas de rutas */}
+                <div className="mt-6 pt-4 border-t border-gray-200">
+                  <div className="grid grid-cols-2 gap-4 text-center">
+                    <div>
+                      <div className="text-2xl font-bold text-gray-900">
+                        {stats.total || 0}
+                      </div>
+                      <div className="text-xs text-gray-500 mt-1">Viajes Totales</div>
+                    </div>
+                    <div>
+                      <div className="text-2xl font-bold text-gray-900">
+                        {stats.completado || 0}
+                      </div>
+                      <div className="text-xs text-gray-500 mt-1">Completados</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
               
-              {/* 🆕 Información de estado de la conexión MEJORADA */}
+              {/* Información de estado de la conexión */}
               <div className="mt-auto p-4 bg-gray-50 rounded-xl">
                 <div className="text-xs text-gray-500">
                   {loading && (

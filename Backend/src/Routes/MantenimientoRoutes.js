@@ -1,14 +1,15 @@
 import express from "express"
 import mantenimientoCon from "../Controllers/MantenimientoController.js"
-const router= express.Router()
+import { validateAuthToken } from "../Middlewares/validateAuthToken.js"
+const router = express.Router()
 
 router.route("/")
-.get( mantenimientoCon.getMantenimineto)
-.post( mantenimientoCon.postMantenimiento);
+    .get(validateAuthToken(["admin", "Operativo", "Supervisor", "motorista"]), mantenimientoCon.getMantenimineto)
+    .post(validateAuthToken(["admin", "Operativo", "Supervisor", "motorista"]), mantenimientoCon.postMantenimiento);
 
 router.route("/:id")
-.get( mantenimientoCon.obtenerMantoId)
-.put( mantenimientoCon.ActualizarMantenimiento)
-.delete( mantenimientoCon.DeleteManto)
+    .get(validateAuthToken(["admin", "Operativo", "Supervisor", "motorista"]), mantenimientoCon.obtenerMantoId)
+    .put(validateAuthToken(["admin", "Operativo", "Supervisor", "motorista"]), mantenimientoCon.ActualizarMantenimiento)
+    .delete(validateAuthToken(["admin", "Operativo", "Supervisor", "motorista"]), mantenimientoCon.DeleteManto)
 
 export default router;

@@ -73,6 +73,7 @@ const ReportsPdfModal = ({ isOpen, onClose }) => {
       const endpoint = `${config.api.API_URL}/reporte/viajesGastos/pdf`;
       const res = await fetch(endpoint, {
         method: 'POST',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });

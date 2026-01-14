@@ -820,6 +820,13 @@ PlanillaSemanalController.obtenerPorEmpleado = async (req, res) => {
             });
         }
 
+        // Security: If requester is an employee or motorista, allow only own planillas
+        if (req.user && (req.user.userType === 'motorista' || req.user.userType === 'empleado')) {
+            if (String(req.user.id) !== String(empleadoId)) {
+                return res.status(403).json({ success: false, message: 'Access denied: can only view your own planillas' });
+            }
+        }
+
         const filtro = {
             'empleados.empleadoId': empleadoId
         };

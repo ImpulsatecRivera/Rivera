@@ -262,7 +262,7 @@ const fetchWithAuth = async (url, token, signal) => {
       : {}),
   };
 
-  const r = await fetch(url, { headers, signal });
+  const r = await fetch(url, { credentials: 'include', headers, signal });
   if (!r.ok) return null;
   try {
     return await r.json();

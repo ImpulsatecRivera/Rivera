@@ -22,7 +22,7 @@ export async function fetchQuotesByClient({ baseUrl, token, clientId }) {
   const url = `${baseUrl}/api/cotizaciones?clientId=${encodeURIComponent(clientId)}`;
   
   try {
-    const res = await fetch(url, { headers });
+    const res = await fetch(url, { credentials: 'include', headers });
     
     if (!res.ok) {
       let body = '';
@@ -57,7 +57,7 @@ export async function fetchQuoteById({ baseUrl, token, quoteId }) {
   const url = `${baseUrl}/api/cotizaciones/${encodeURIComponent(quoteId)}`;
   
   try {
-    const res = await fetch(url, { headers });
+    const res = await fetch(url, { credentials: 'include', headers });
     
     if (!res.ok) {
       let body = '';

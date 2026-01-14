@@ -322,7 +322,7 @@ export default function Planillas() {
         ? `${config.api.API_URL}/reportes/planilla/semanal/mensual/${mesSeleccionado}/${añoSeleccionado}`
         : `${config.api.API_URL}/reportes/planilla/quincenal/mensual/${mesSeleccionado}/${añoSeleccionado}`;
 
-      const response = await fetch(endpoint);
+      const response = await fetch(endpoint, { credentials: 'include' });
 
       if (!response.ok) {
         const errorData = await response.json();
@@ -483,7 +483,7 @@ export default function Planillas() {
         ? `${config.api.API_URL}/reportes/planilla/semanal/anual/${añoAnual}`
         : `${config.api.API_URL}/reportes/planilla/quincenal/anual/${añoAnual}`;
 
-      const response = await fetch(endpoint);
+      const response = await fetch(endpoint, { credentials: 'include' });
 
       if (!response.ok) {
         const errorData = await response.json();

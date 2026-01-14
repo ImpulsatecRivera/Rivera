@@ -37,6 +37,7 @@ const ActivityChart = () => {
         `${API_URL}/viajes/trip-stats?periodo=${tipo}`,
         {
           timeout: 10000, // 10 segundos de timeout
+          withCredentials: true,
           headers: {
             'Content-Type': 'application/json',
           }

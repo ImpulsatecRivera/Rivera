@@ -40,7 +40,7 @@ export default function EditMantenimiento({ onClose }) {
     const url = `${config.api.API_URL}/mantenimientos/${id}`;
     console.log('🔍 Intentando cargar desde URL:', url);
     
-    fetch(url)
+    fetch(url, { credentials: 'include' })
       .then((response) => {
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);

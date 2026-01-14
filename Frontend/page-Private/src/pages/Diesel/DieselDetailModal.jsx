@@ -57,7 +57,7 @@ const DieselDetailModal = ({ dieselId, isOpen, onClose }) => {
       setLoading(true);
       setError(null);
 
-      const res = await fetch(`${config.api.API_URL}/resumen`);
+      const res = await fetch(`${config.api.API_URL}/resumen`, { credentials: 'include' });
       const json = await res.json();
 
       const found = json.data.find(

@@ -2,6 +2,9 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { config } from '../../../config';
 import { useNavigate } from 'react-router-dom';
 import axios from "axios";
+import { api } from '../../../context/AuthContext';
+import { useAuth } from '../../../context/AuthContext';
+import Swal from 'sweetalert2';
 
 const API_URL = config.api.API_URL;
 
@@ -60,7 +63,7 @@ const useDataMotorista = () => {
       setLoading(true);
       setError(null);
 
-      const response = await axios.get(`${API_URL}/motoristas`);
+      const response = await api.get(`/motoristas`);
 
       const data = response.data;
 
@@ -160,12 +163,50 @@ const useDataMotorista = () => {
     setShowAlert(true);
   };
 
+  const { user } = useAuth();
+
   const handleEdit = () => {
-    setShowAlert(false);
-    setShowEditAlert(true);
+    // Only Admins can edit any motorista; a Motorista may edit their own profile via mobile (or web if id matches)
+    if (!user) {
+      // Mostrar modal como en el login cuando no está autenticado
+      Swal.fire({
+        title: 'No autenticado',
+        text: 'Por favor inicia sesión para continuar.',
+        icon: 'warning',
+        confirmButtonText: 'Entendido',
+        confirmButtonColor: '#2563eb'
+      });
+      return;
+    }
+
+    if (user.userType === 'Administrador' || (user.userType === 'Motorista' && String(user.id) === String(selectedMotorista?._id))) {
+      setShowAlert(false);
+      setShowEditAlert(true);
+      return;
+    }
+
+    Swal.fire({
+      title: 'Acceso restringido',
+      html: 'No tienes permisos para editar este motorista. Contacta a un administrador.',
+      icon: 'info',
+      confirmButtonText: 'Entendido',
+      confirmButtonColor: '#2563eb'
+    });
   };
 
   const handleDelete = () => {
+    if (!user || user.userType !== 'Administrador') {
+      Swal.fire({
+        title: 'Acceso restringido',
+        html: 'No tienes permisos para eliminar motoristas. Contacta a un administrador.',
+        icon: 'info',
+        confirmButtonText: 'Entendido',
+        confirmButtonColor: '#2563eb'
+      });
+      setShowAlert(false);
+      return;
+    }
+
     setShowAlert(false);
     setShowConfirmDelete(true);
   };
@@ -179,7 +220,7 @@ const useDataMotorista = () => {
         return;
       }
 
-      await axios.delete(`${API_URL}/motoristas/${selectedMotorista._id}`);
+      await api.delete(`/motoristas/${selectedMotorista._id}`);
 
       setMotoristas(prev =>
         Array.isArray(prev) ? prev.filter(m => m._id !== selectedMotorista._id) : []
@@ -210,7 +251,7 @@ const useDataMotorista = () => {
     setUploading(true);
 
     try {
-      const url = `${API_URL}/motoristas/${selectedMotorista._id}`;
+      const url = `/motoristas/${selectedMotorista._id}`;
 
       // --- Caso 1: ya viene FormData ---
       if (typeof FormData !== 'undefined' && formData instanceof FormData) {
@@ -219,7 +260,7 @@ const useDataMotorista = () => {
         // FormData no tiene set en todos los navegadores viejos, pero en modern sí.
         // Lo dejamos simple: no tocar si ya lo estás manejando en el modal.
 
-        const response = await axios.put(url, formData, {
+        const response = await api.put(url, formData, {
           headers: { 'Content-Type': 'multipart/form-data' },
           timeout: 20000
         });
@@ -278,7 +319,7 @@ const useDataMotorista = () => {
 
         submitData.append('img', imgFile);
 
-        const response = await axios.put(url, submitData, {
+        const response = await api.put(url, submitData, {
           headers: { 'Content-Type': 'multipart/form-data' },
           timeout: 20000
         });
@@ -339,7 +380,7 @@ const useDataMotorista = () => {
         return;
       }
 
-      const response = await axios.put(url, updateData, {
+      const response = await api.put(url, updateData, {
         headers: { 'Content-Type': 'application/json' },
         timeout: 20000
       });

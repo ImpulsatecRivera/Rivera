@@ -307,6 +307,7 @@ const AgregarMotorista = () => {
 
       const response = await fetch('https://riveraproject-production-933e.up.railway.app/api/motoristas', {
         method: 'POST',
+        credentials: 'include',
         body: formDataToSend,
       });
 

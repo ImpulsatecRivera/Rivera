@@ -81,7 +81,7 @@ export default function PlanillaQuincenal() {
 
   const cargarEmpleadosYMotoristas = async () => {
     try {
-      const resEmpleados = await fetch(`${config.api.API_URL}/empleados`);
+      const resEmpleados = await fetch(`${config.api.API_URL}/empleados`, { credentials: 'include' });
       const dataEmpleados = await resEmpleados.json();
       
       let empleadosArray = [];
@@ -93,7 +93,7 @@ export default function PlanillaQuincenal() {
       
       setEmpleados(empleadosArray);
 
-      const resMotoristas = await fetch(`${config.api.API_URL}/motoristas`);
+      const resMotoristas = await fetch(`${config.api.API_URL}/motoristas`, { credentials: 'include' });
       const dataMotoristas = await resMotoristas.json();
       const motoristasArray = Array.isArray(dataMotoristas) ? dataMotoristas : [];
       
@@ -109,7 +109,8 @@ export default function PlanillaQuincenal() {
     setLoading(true);
     try {
       const response = await fetch(
-        `${config.api.API_URL}/planillas/quincenal/${planillaId}`
+        `${config.api.API_URL}/planillas/quincenal/${planillaId}`,
+        { credentials: 'include' }
       );
       const data = await response.json();
       

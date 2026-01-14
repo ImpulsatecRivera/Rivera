@@ -4,8 +4,9 @@ import { toast } from "react-toastify";
 import { config } from "../config";
 const API_URL = config.api.API_URL;
 
-const api = axios.create({
-baseURL: import.meta.env.VITE_API_BASE_URL || `${API_URL}`,  withCredentials: true,
+export const api = axios.create({
+  baseURL: import.meta.env.VITE_API_BASE_URL || `${API_URL}`,
+  withCredentials: true,
 });
 
 const AuthContext = createContext();
@@ -94,6 +95,13 @@ export const AuthProvider = ({ children }) => {
   const login = async (email, password) => {
     try {
       const { data } = await api.post("/login", { email, password });
+
+      // Si el backend devuelve un cliente, no permitir acceso a la app privada
+      if (data?.userType === 'Cliente') {
+        // Devolver bandera para que el UI muestre el modal informativo y no navegue
+        return { success: false, isCliente: true, message: 'El acceso web no está disponible para usuarios con role Cliente. Por favor utiliza la plataforma de clientes.' };
+      }
+
       if (data?.user) {
         // ✅ Guardar en storage para persistencia incluyendo rol
         saveToStorage(data.user, data.userType || data.user.userType);

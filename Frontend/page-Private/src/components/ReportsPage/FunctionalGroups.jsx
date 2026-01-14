@@ -3,79 +3,130 @@ import { config } from "../../config";
 
 const API_URL = config.api.API_URL;
 
-// Componente individual mejorado
+// Componente individual mejorado con diseño responsive y contraste para fondo oscuro
 const CategoryItem = ({ image, name, progress, gradientClass, count, riskLevel, pesoPromedio, ejemplos }) => (
-  <div className="flex items-center space-x-3 mb-4 last:mb-0 group hover:bg-gray-50 rounded-lg p-2 transition-colors">
-    {image ? (
-      <img 
-        src={image}
-        alt={name}
-        className="w-12 h-12 rounded-lg object-cover flex-shrink-0 shadow-sm"
-        onError={(e) => {
-          e.target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDgiIGhlaWdodD0iNDgiIHZpZXdCb3g9IjAgMCA0OCA0OCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjQ4IiBoZWlnaHQ9IjQ4IiByeD0iOCIgZmlsbD0iI0Y5RkFGQiIvPgo8cGF0aCBkPSJNMjQgMTZDMjAgMTYgMTYgMjAgMTYgMjRDMTYgMjggMjAgMzIgMjQgMzJDMjggMzIgMzIgMjggMzIgMjRDMzIgMjAgMjggMTYgMjQgMTYiIGZpbGw9IiNEMUQ1REIiLz4KPC9zdmc+';
-        }}
-      />
-    ) : (
-      <div className="w-12 h-12 rounded-lg bg-gray-100 flex items-center justify-center flex-shrink-0 shadow-sm">
-        <svg className="w-6 h-6 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
-          <path fillRule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clipRule="evenodd" />
-        </svg>
-      </div>
-    )}
-    <div className="flex-1 min-w-0">
-      <div className="flex items-center justify-between mb-1">
-        <h4 className="text-base font-semibold text-gray-900 truncate">{name}</h4>
-        {riskLevel && riskLevel !== 'normal' && (
-          <span className={`text-xs px-2 py-1 rounded-full ${getRiskBadgeClass(riskLevel)}`}>
-            {getRiskLabel(riskLevel)}
-          </span>
-        )}
-      </div>
-      
-      {/* 📊 Información adicional en hover */}
-      {ejemplos && ejemplos.length > 0 && (
-        <div className="text-xs text-gray-400 mb-1 opacity-0 group-hover:opacity-100 transition-opacity">
-          Ej: {ejemplos[0]}
+  <div className="group hover:shadow-lg rounded-xl p-3 sm:p-4 transition-all duration-300 bg-gray-800/60 backdrop-blur-sm border border-gray-700/50 hover:border-gray-600/80 hover:bg-gray-800/80">
+    {/* Vista Desktop - Layout horizontal */}
+    <div className="hidden sm:flex items-center space-x-4">
+      {image ? (
+        <img 
+          src={image}
+          alt={name}
+          className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl object-cover flex-shrink-0 shadow-md ring-2 ring-gray-700/50"
+          onError={(e) => {
+            e.target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDgiIGhlaWdodD0iNDgiIHZpZXdCb3g9IjAgMCA0OCA0OCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjQ4IiBoZWlnaHQ9IjQ4IiByeD0iOCIgZmlsbD0iIzM3NDE1MSIvPgo8cGF0aCBkPSJNMjQgMTZDMjAgMTYgMTYgMjAgMTYgMjRDMTYgMjggMjAgMzIgMjQgMzJDMjggMzIgMzIgMjggMzIgMjRDMzIgMjAgMjggMTYgMjQgMTYiIGZpbGw9IiM2QjcyODAiLz4KPC9zdmc+';
+          }}
+        />
+      ) : (
+        <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl bg-gray-700/50 flex items-center justify-center flex-shrink-0 shadow-md ring-2 ring-gray-700/50">
+          <svg className="w-6 h-6 sm:w-7 sm:h-7 text-gray-500" fill="currentColor" viewBox="0 0 20 20">
+            <path fillRule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clipRule="evenodd" />
+          </svg>
         </div>
       )}
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center justify-between mb-2 gap-2">
+          <h4 className="text-sm sm:text-base font-semibold text-gray-100 truncate">{name}</h4>
+          {riskLevel && riskLevel !== 'normal' && (
+            <span className={`text-xs px-2.5 py-1 rounded-full flex-shrink-0 font-medium ${getRiskBadgeClass(riskLevel)}`}>
+              {getRiskLabel(riskLevel)}
+            </span>
+          )}
+        </div>
+        
+        {/* 📊 Información adicional en hover */}
+        {ejemplos && ejemplos.length > 0 && (
+          <div className="text-xs text-gray-400 mb-2 opacity-0 group-hover:opacity-100 transition-opacity line-clamp-1">
+            Ej: {ejemplos[0]}
+          </div>
+        )}
+        
+        <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-4 gap-2">
+          <div className="flex-1 bg-gray-700/50 rounded-full h-2.5 shadow-inner">
+            <div
+              className={`h-2.5 rounded-full ${gradientClass} transition-all duration-500 ease-out shadow-sm`}
+              style={{ width: `${Math.min(Math.max(progress, 0), 100)}%` }}
+            />
+          </div>
+          <div className="flex justify-between sm:text-right sm:flex-shrink-0 sm:min-w-[120px]">
+            <span className="text-sm sm:text-lg font-bold text-gray-100">{progress}%</span>
+            <div className="text-xs text-gray-400 ml-2 sm:ml-0">
+              {count} viaje{count !== 1 ? 's' : ''}
+            </div>
+          </div>
+        </div>
+        {pesoPromedio > 0 && (
+          <div className="text-xs text-gray-500 mt-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+            ⚖️ {pesoPromedio.toFixed(1)} kg prom
+          </div>
+        )}
+      </div>
+    </div>
+
+    {/* Vista Mobile - Layout de tarjeta compacta */}
+    <div className="sm:hidden">
+      <div className="flex items-start gap-3 mb-2.5">
+        {image ? (
+          <img 
+            src={image}
+            alt={name}
+            className="w-12 h-12 rounded-xl object-cover flex-shrink-0 shadow-md ring-2 ring-gray-700/50"
+            onError={(e) => {
+              e.target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDgiIGhlaWdodD0iNDgiIHZpZXdCb3g9IjAgMCA0OCA0OCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjQ4IiBoZWlnaHQ9IjQ4IiByeD0iOCIgZmlsbD0iIzM3NDE1MSIvPgo8cGF0aCBkPSJNMjQgMTZDMjAgMTYgMTYgMjAgMTYgMjRDMTYgMjggMjAgMzIgMjQgMzJDMjggMzIgMzIgMjggMzIgMjRDMzIgMjAgMjggMTYgMjQgMTYiIGZpbGw9IiM2QjcyODAiLz4KPC9zdmc+';
+            }}
+          />
+        ) : (
+          <div className="w-12 h-12 rounded-xl bg-gray-700/50 flex items-center justify-center flex-shrink-0 shadow-md ring-2 ring-gray-700/50">
+            <svg className="w-6 h-6 text-gray-500" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clipRule="evenodd" />
+            </svg>
+          </div>
+        )}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center justify-between gap-1.5">
+            <h4 className="text-sm font-semibold text-gray-100 truncate flex-1">{name}</h4>
+            {riskLevel && riskLevel !== 'normal' && (
+              <span className={`text-xs px-2 py-0.5 rounded-full flex-shrink-0 font-medium ${getRiskBadgeClass(riskLevel)}`}>
+                {getRiskLabel(riskLevel)}
+              </span>
+            )}
+          </div>
+          <div className="flex items-center justify-between mt-1">
+            <span className="text-xs text-gray-400">{count} viaje{count !== 1 ? 's' : ''}</span>
+            <span className="text-sm font-bold text-gray-100">{progress}%</span>
+          </div>
+        </div>
+      </div>
       
-      <div className="flex items-center space-x-3">
-        <div className="flex-1 bg-gray-200 rounded-full h-2">
+      <div className="flex gap-2 items-center">
+        <div className="flex-1 bg-gray-700/50 rounded-full h-2 shadow-inner">
           <div
-            className={`h-2 rounded-full ${gradientClass} transition-all duration-500 ease-out`}
+            className={`h-2 rounded-full ${gradientClass} transition-all duration-500 ease-out shadow-sm`}
             style={{ width: `${Math.min(Math.max(progress, 0), 100)}%` }}
           />
         </div>
-        <div className="text-right flex-shrink-0">
-          <span className="text-lg font-bold text-gray-900">{progress}%</span>
-          <div className="text-xs text-gray-500">
-            {count} viaje{count !== 1 ? 's' : ''}
-          </div>
-          {pesoPromedio > 0 && (
-            <div className="text-xs text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity">
-              {pesoPromedio.toFixed(1)} kg prom
-            </div>
-          )}
-        </div>
+        {pesoPromedio > 0 && (
+          <span className="text-xs text-gray-500 flex-shrink-0">⚖️ {pesoPromedio.toFixed(0)} kg</span>
+        )}
       </div>
     </div>
   </div>
 );
 
-// 🏷️ FUNCIONES AUXILIARES PARA BADGES DE RIESGO
+// 🏷️ FUNCIONES AUXILIARES PARA BADGES DE RIESGO (con mejor contraste)
 const getRiskBadgeClass = (risk) => {
   const classes = {
-    'fragil': 'bg-yellow-100 text-yellow-800',
-    'peligroso': 'bg-red-100 text-red-800',
-    'perecedero': 'bg-green-100 text-green-800',
-    'refrigerado': 'bg-blue-100 text-blue-800',
-    'congelado': 'bg-cyan-100 text-cyan-800',
-    'inflamable': 'bg-orange-100 text-orange-800',
-    'toxico': 'bg-purple-100 text-purple-800',
-    'corrosivo': 'bg-red-100 text-red-800',
-    'especial': 'bg-amber-100 text-amber-800',
+    'fragil': 'bg-yellow-500/20 text-yellow-300 ring-1 ring-yellow-500/30',
+    'peligroso': 'bg-red-500/20 text-red-300 ring-1 ring-red-500/30',
+    'perecedero': 'bg-green-500/20 text-green-300 ring-1 ring-green-500/30',
+    'refrigerado': 'bg-blue-500/20 text-blue-300 ring-1 ring-blue-500/30',
+    'congelado': 'bg-cyan-500/20 text-cyan-300 ring-1 ring-cyan-500/30',
+    'inflamable': 'bg-orange-500/20 text-orange-300 ring-1 ring-orange-500/30',
+    'toxico': 'bg-purple-500/20 text-purple-300 ring-1 ring-purple-500/30',
+    'corrosivo': 'bg-red-500/20 text-red-300 ring-1 ring-red-500/30',
+    'especial': 'bg-amber-500/20 text-amber-300 ring-1 ring-amber-500/30',
   };
-  return classes[risk] || 'bg-gray-100 text-gray-800';
+  return classes[risk] || 'bg-gray-500/20 text-gray-300 ring-1 ring-gray-500/30';
 };
 
 const getRiskLabel = (risk) => {
@@ -209,16 +260,16 @@ const getGradientForCategory = (category) => {
     'electrónicos': 'bg-gradient-to-r from-indigo-400 via-blue-500 to-purple-500',
     
     // Materiales - grises/azules
-    'materiales_construccion': 'bg-gradient-to-r from-gray-500 via-slate-600 to-gray-700',
-    'construccion': 'bg-gradient-to-r from-gray-500 via-slate-600 to-gray-700',
-    'construcción': 'bg-gradient-to-r from-gray-500 via-slate-600 to-gray-700',
+    'materiales_construccion': 'bg-gradient-to-r from-gray-400 via-slate-500 to-gray-600',
+    'construccion': 'bg-gradient-to-r from-gray-400 via-slate-500 to-gray-600',
+    'construcción': 'bg-gradient-to-r from-gray-400 via-slate-500 to-gray-600',
     'textiles': 'bg-gradient-to-r from-purple-400 via-pink-500 to-rose-500',
     
     // Especializados
     'medicamentos': 'bg-gradient-to-r from-teal-400 via-cyan-500 to-blue-500',
     'maquinaria': 'bg-gradient-to-r from-orange-400 via-red-500 to-pink-500',
-    'vehiculos': 'bg-gradient-to-r from-slate-400 via-gray-500 to-zinc-600',
-    'vehículos': 'bg-gradient-to-r from-slate-400 via-gray-500 to-zinc-600',
+    'vehiculos': 'bg-gradient-to-r from-slate-400 via-gray-500 to-zinc-500',
+    'vehículos': 'bg-gradient-to-r from-slate-400 via-gray-500 to-zinc-500',
     
     // Peligrosos - rojos/naranjas
     'quimicos': 'bg-gradient-to-r from-red-400 via-red-500 to-red-600',
@@ -231,7 +282,7 @@ const getGradientForCategory = (category) => {
     'papel_carton': 'bg-gradient-to-r from-amber-400 via-yellow-500 to-orange-500',
     'muebles': 'bg-gradient-to-r from-yellow-400 via-amber-500 to-orange-500',
     'productos_agricolas': 'bg-gradient-to-r from-lime-400 via-green-500 to-emerald-500',
-    'metales': 'bg-gradient-to-r from-slate-400 via-zinc-500 to-stone-600',
+    'metales': 'bg-gradient-to-r from-slate-400 via-zinc-500 to-stone-500',
     'plasticos': 'bg-gradient-to-r from-cyan-400 via-sky-500 to-blue-500',
     'plásticos': 'bg-gradient-to-r from-cyan-400 via-sky-500 to-blue-500',
     'vidrio_ceramica': 'bg-gradient-to-r from-sky-400 via-blue-500 to-indigo-500',
@@ -279,7 +330,7 @@ const FunctionalGroups = () => {
       setError(null);
       
       // 🔧 RUTA CORRECTA: carga-distribution
-      const res = await fetch(`${API_URL}/viajes/carga-distribution`);
+      const res = await fetch(`${API_URL}/viajes/carga-distribution`, { credentials: 'include' });
       
       if (!res.ok) {
         throw new Error(`HTTP error! status: ${res.status}`);
@@ -400,14 +451,16 @@ const FunctionalGroups = () => {
   };
 
   return (
-    <div className="bg-white rounded-lg p-4 border border-gray-100 h-full overflow-hidden">
-      {/* 📊 Header con información */}
-      <div className="mb-4 flex justify-between items-center">
+    <div className="bg-gray-800/40 backdrop-blur-md rounded-xl p-4 sm:p-5 border border-gray-700/50 shadow-xl h-full flex flex-col overflow-hidden">
+      {/* 📊 Header con información - Fixed */}
+      <div className="mb-4 flex justify-between items-center flex-shrink-0">
         <div>
-          <h3 className="text-lg font-semibold text-gray-900">Distribución de Cargas</h3>
-          <p className="text-sm text-gray-500">
+          <h3 className="text-lg sm:text-xl font-semibold text-gray-100 flex items-center gap-2">
+            📦 Distribución de Cargas
+          </h3>
+          <p className="text-sm text-gray-400 mt-1">
             {totalTrips > 0 ? `${totalTrips} viajes totales` : 'Por categoría'}
-            {error && <span className="text-red-500 ml-2">⚠️</span>}
+            {error && <span className="text-red-400 ml-2">⚠️ Usando datos de ejemplo</span>}
           </p>
         </div>
         
@@ -415,79 +468,91 @@ const FunctionalGroups = () => {
         <button
           onClick={fetchDistribution}
           disabled={loading}
-          className="p-2 text-gray-400 hover:text-gray-600 disabled:opacity-50 rounded-lg hover:bg-gray-50"
+          className="p-2 text-gray-400 hover:text-gray-200 disabled:opacity-50 rounded-lg hover:bg-gray-700/50 transition-all duration-200"
           title="Actualizar datos"
         >
-          <svg className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
           </svg>
         </button>
       </div>
 
-      {/* 📊 Contenido principal */}
-      <div className="space-y-3 overflow-y-auto flex-1">
-        {loading ? (
-          <div className="flex items-center justify-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-            <span className="ml-2 text-sm text-gray-500">Cargando distribución...</span>
-          </div>
-        ) : error && categories.length === 0 ? (
-          <div className="text-center py-8">
-            <div className="text-red-500 mb-2">❌ Error</div>
-            <p className="text-sm text-gray-500 mb-3">{error}</p>
-            <button 
-              onClick={fetchDistribution} 
-              className="px-4 py-2 bg-blue-500 text-white rounded-lg text-sm hover:bg-blue-600 transition-colors"
-            >
-              Reintentar
-            </button>
-          </div>
-        ) : categories.length > 0 ? (
-          <>
-            {categories.map((category, index) => (
-              <CategoryItem key={`${category.rawType}-${index}`} {...category} />
-            ))}
-            
-            {/* 📊 Resumen de estadísticas */}
-            <div className="mt-4 pt-3 border-t border-gray-100">
-              <div className="flex justify-between text-xs text-gray-500">
-                <span>Categorías: {categories.length}</span>
-                <span>
-                  Peso total: {categories.reduce((sum, cat) => sum + (cat.pesoTotal || 0), 0).toFixed(1)} kg
-                </span>
-              </div>
-              <div className="flex justify-between text-xs text-gray-400 mt-1">
-                <span>
-                  Más común: {categories[0]?.name || 'N/A'}
-                </span>
-                <span>
-                  {categories[0]?.progress || 0}%
-                </span>
+      {/* 📊 Contenido principal con scroll - Scrollable */}
+      <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-gray-800/50 pr-2">
+        <div className="space-y-3">
+          {loading ? (
+            <div className="flex flex-col items-center justify-center py-12">
+              <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-500 mb-3"></div>
+              <span className="text-sm text-gray-400">Cargando distribución...</span>
+            </div>
+          ) : error && categories.length === 0 ? (
+            <div className="text-center py-12 bg-gray-800/40 rounded-lg border border-gray-700/50">
+              <div className="text-red-400 text-3xl mb-3">❌</div>
+              <p className="text-sm text-gray-300 mb-1 font-medium">Error al cargar</p>
+              <p className="text-xs text-gray-500 mb-4 px-4">{error}</p>
+              <button 
+                onClick={fetchDistribution} 
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors shadow-lg"
+              >
+                🔄 Reintentar
+              </button>
+            </div>
+          ) : categories.length > 0 ? (
+            <>
+              {categories.map((category, index) => (
+                <CategoryItem key={`${category.rawType}-${index}`} {...category} />
+              ))}
+            </>
+          ) : (
+            <div className="text-center py-12 bg-gray-800/40 rounded-lg border border-gray-700/50">
+              <div className="text-gray-500 text-4xl mb-3">📦</div>
+              <p className="text-sm text-gray-300 mb-1 font-medium">No hay datos disponibles</p>
+              <p className="text-xs text-gray-500 mb-4 px-4">
+                Verifica que tengas viajes creados en tu base de datos
+              </p>
+              <button 
+                onClick={fetchDistribution} 
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors shadow-lg"
+              >
+                📊 Cargar datos
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* 📊 Resumen de estadísticas - Fixed at bottom */}
+      {categories.length > 0 && (
+        <div className="mt-4 pt-4 border-t border-gray-700/50 flex-shrink-0 bg-gray-800/30 rounded-lg p-3">
+          <div className="grid grid-cols-2 gap-3 text-xs">
+            <div className="bg-gray-700/30 rounded-lg p-2">
+              <div className="text-gray-400 mb-0.5">Categorías</div>
+              <div className="text-gray-100 font-bold text-base">{categories.length}</div>
+            </div>
+            <div className="bg-gray-700/30 rounded-lg p-2">
+              <div className="text-gray-400 mb-0.5">Peso total</div>
+              <div className="text-gray-100 font-bold text-base">
+                {categories.reduce((sum, cat) => sum + (cat.pesoTotal || 0), 0).toFixed(1)} kg
               </div>
             </div>
-          </>
-        ) : (
-          <div className="text-center py-8">
-            <div className="text-gray-400 mb-2">📦</div>
-            <p className="text-sm text-gray-500 mb-1">No hay datos de cargas disponibles</p>
-            <p className="text-xs text-gray-400 mb-3">
-              Verifica que tengas viajes creados en tu base de datos
-            </p>
-            <button 
-              onClick={fetchDistribution} 
-              className="px-3 py-1 bg-blue-500 text-white rounded text-sm hover:bg-blue-600 transition-colors"
-            >
-              Cargar datos
-            </button>
           </div>
-        )}
-      </div>
+          <div className="flex justify-between items-center mt-2 pt-2 border-t border-gray-700/30">
+            <span className="text-xs text-gray-400">
+              Más común: <span className="text-gray-300 font-medium">{categories[0]?.name || 'N/A'}</span>
+            </span>
+            <span className="text-xs font-bold text-gray-300">
+              {categories[0]?.progress || 0}%
+            </span>
+          </div>
+        </div>
+      )}
       
       {/* 📈 Información adicional en modo error con datos de ejemplo */}
       {error && categories.length > 0 && (
-        <div className="mt-3 p-2 bg-amber-50 border border-amber-200 rounded-lg">
-          <p className="text-xs text-amber-700">
-            ⚠️ Mostrando datos de ejemplo. Error: {error}
+        <div className="mt-3 p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg flex-shrink-0">
+          <p className="text-xs text-amber-300 flex items-start gap-2">
+            <span>⚠️</span>
+            <span>Mostrando datos de ejemplo. Error: {error}</span>
           </p>
         </div>
       )}
