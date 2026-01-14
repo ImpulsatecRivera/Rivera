@@ -108,6 +108,7 @@ const ReportsPage = () => {
             -webkit-overflow-scrolling: touch;
             overscroll-behavior: contain;
             contain: layout style;
+            background-color: #34353A !important;
           }
           
           /* =================================================================
@@ -118,12 +119,12 @@ const ReportsPage = () => {
           .reports-outer-scroll {
             overflow: auto;
             scrollbar-width: thin;
-            scrollbar-color: #cbd5e1 transparent;
+            scrollbar-color: #555a5f transparent;
           }
           
           .reports-outer-scroll::-webkit-scrollbar {
-            width: 6px;
-            height: 6px;
+            width: 8px;
+            height: 8px;
           }
           
           .reports-outer-scroll::-webkit-scrollbar-track {
@@ -131,23 +132,26 @@ const ReportsPage = () => {
           }
           
           .reports-outer-scroll::-webkit-scrollbar-thumb {
-            background-color: #cbd5e1;
-            border-radius: 3px;
+            background-color: #555a5f;
+            border-radius: 4px;
           }
           
           .reports-outer-scroll::-webkit-scrollbar-thumb:hover {
-            background-color: #94a3b8;
+            background-color: #6a7074;
           }
           
           /* Contenedor con altura mínima para scroll */
           .reports-container-height {
             min-height: 100%;
             height: auto;
+            background-color: #2a2d31;
+            border-radius: 0.5rem;
           }
           
           /* Overflow interno adaptativo */
           .reports-inner-overflow {
             overflow: visible;
+            background-color: #2a2d31;
           }
           
           /* Scroll del contenido principal */
@@ -175,12 +179,12 @@ const ReportsPage = () => {
           .reports-component-overflow {
             overflow: auto;
             scrollbar-width: thin;
-            scrollbar-color: #e2e8f0 transparent;
+            scrollbar-color: #555a5f transparent;
           }
           
           .reports-component-overflow::-webkit-scrollbar {
-            width: 4px;
-            height: 4px;
+            width: 6px;
+            height: 6px;
           }
           
           .reports-component-overflow::-webkit-scrollbar-track {
@@ -188,12 +192,12 @@ const ReportsPage = () => {
           }
           
           .reports-component-overflow::-webkit-scrollbar-thumb {
-            background-color: #e2e8f0;
-            border-radius: 2px;
+            background-color: #555a5f;
+            border-radius: 3px;
           }
           
           .reports-component-overflow::-webkit-scrollbar-thumb:hover {
-            background-color: #cbd5e1;
+            background-color: #6a7074;
           }
           
           /* Scroll específicos por sección */
@@ -226,8 +230,8 @@ const ReportsPage = () => {
              ================================================================= */
           
           /* Extra Small: 320px - 374px (iPhone SE, pequeños Android) */
-          .reports-padding { padding: 0.25rem; }
-          .reports-border { border-radius: 0.375rem; }
+          .reports-padding { padding: 0.5rem; }
+          .reports-border { border-radius: 0.5rem; }
           .reports-inner-padding { padding: 0.5rem; }
           .reports-header-margin { margin-bottom: 0.5rem; }
           .reports-main-layout { 
@@ -235,38 +239,40 @@ const ReportsPage = () => {
             flex-direction: column;
           }
           .reports-gap { gap: 0.5rem; }
-          .reports-main-column { order: 1; }
-          .reports-side-column { order: 2; }
-          .functional-groups-height { height: auto; max-height: 15vh; }
+          .reports-main-column { order: 1; width: 100%; }
+          .reports-side-column { order: 2; width: 100%; }
+          .functional-groups-height { height: auto; max-height: 12vh; min-height: 80px; }
           .trips-chart-min-height { min-height: 140px; }
           .bottom-metrics-desktop { display: none; }
-          .bottom-metrics-mobile { display: block; order: 3; margin-top: 0.25rem; }
+          .bottom-metrics-mobile { display: block; order: 3; margin-top: 0.5rem; width: 100%; }
           
           /* Small: 375px - 424px (iPhone 12/13/14, Galaxy S) */
           @media (min-width: 375px) {
-            .reports-padding { padding: 0.375rem; }
+            .reports-padding { padding: 0.5rem; }
             .reports-inner-padding { padding: 0.625rem; }
             .reports-gap { gap: 0.625rem; }
-            .functional-groups-height { max-height: 16vh; }
+            .reports-header-margin { margin-bottom: 0.625rem; }
+            .functional-groups-height { max-height: 12vh; min-height: 85px; }
             .trips-chart-min-height { min-height: 150px; }
           }
           
-          /* Medium Small: 425px - 480px (iPhone Plus/Max, grandes Android) */
+          /* Medium Small: 425px - 540px (iPhone Plus/Max, grandes Android) */
           @media (min-width: 425px) {
             .reports-padding { padding: 0.5rem; }
             .reports-inner-padding { padding: 0.75rem; }
-            .reports-header-margin { margin-bottom: 0.625rem; }
+            .reports-header-margin { margin-bottom: 0.75rem; }
             .reports-gap { gap: 0.75rem; }
-            .functional-groups-height { max-height: 17vh; }
+            .functional-groups-height { max-height: 13vh; min-height: 90px; }
             .trips-chart-min-height { min-height: 160px; }
           }
           
-          /* Large Mobile: 481px - 640px (móviles landscape, phablets) */
-          @media (min-width: 481px) {
+          /* Large Mobile: 541px - 768px (móviles landscape, tablets 7") */
+          @media (min-width: 541px) {
             .reports-padding { padding: 0.625rem; }
             .reports-inner-padding { padding: 0.875rem; }
+            .reports-header-margin { margin-bottom: 0.875rem; }
             .reports-gap { gap: 0.875rem; }
-            .functional-groups-height { max-height: 18vh; }
+            .functional-groups-height { max-height: 14vh; min-height: 100px; }
             .trips-chart-min-height { min-height: 170px; }
           }
           
@@ -375,29 +381,20 @@ const ReportsPage = () => {
           }
           
           /* =================================================================
-             TABLETS - PEQUEÑAS A MEDIANAS (641px - 1024px)
+             TABLETS - PEQUEÑAS A MEDIANAS (769px - 1024px)
              ================================================================= */
           
-          /* Tablet Small: 641px - 768px (iPad Mini, tablets 7-8") */
-          @media (min-width: 641px) {
-            .reports-padding { padding: 0.75rem; }
-            .reports-inner-padding { padding: 1rem; }
-            .reports-header-margin { margin-bottom: 0.75rem; }
-            .reports-gap { gap: 1rem; }
-            .functional-groups-height { max-height: 20vh; }
-            .trips-chart-min-height { min-height: 180px; }
-          }
-          
-          /* Tablet Medium: 769px - 1024px (iPad estándar, tablets 9-11") */
+          /* Tablet Small: 769px - 820px (iPad Mini landscape) */
           @media (min-width: 769px) {
-            .reports-padding { padding: 1rem; }
-            .reports-inner-padding { padding: 1.25rem; }
-            .reports-header-margin { margin-bottom: 1rem; }
-            .reports-gap { gap: 1.25rem; }
+            .reports-padding { padding: 0.75rem; }
+            .reports-inner-padding { padding: 0.875rem; }
+            .reports-header-margin { margin-bottom: 0.75rem; }
+            .reports-gap { gap: 0.875rem; }
             .reports-main-layout { 
               display: grid; 
-              grid-template-columns: 1fr 300px;
-              grid-template-rows: 1fr auto;
+              grid-template-columns: 1fr 250px;
+              grid-template-rows: auto 1fr;
+              gap: 0.875rem;
             }
             .reports-main-column { 
               order: unset;
@@ -407,17 +404,32 @@ const ReportsPage = () => {
             .reports-side-column { 
               order: unset;
               grid-column: 2;
-              grid-row: 1;
+              grid-row: 1 / 3;
             }
             .bottom-metrics-desktop { 
               display: block;
+              grid-column: 1;
+              grid-row: 2;
               height: auto;
-              max-height: 15vh;
+              max-height: 12vh;
             }
             .bottom-metrics-mobile { 
               display: none;
             }
-            .functional-groups-height { max-height: 22vh; }
+            .functional-groups-height { max-height: 14vh; min-height: 100px; }
+            .trips-chart-min-height { min-height: 180px; }
+          }
+          
+          /* Tablet Medium: 821px - 1024px (iPad estándar portrait, tablets 10") */
+          @media (min-width: 821px) {
+            .reports-padding { padding: 0.875rem; }
+            .reports-inner-padding { padding: 1rem; }
+            .reports-header-margin { margin-bottom: 0.875rem; }
+            .reports-gap { gap: 1rem; }
+            .reports-main-layout { 
+              grid-template-columns: 1fr 270px;
+            }
+            .functional-groups-height { max-height: 15vh; min-height: 110px; }
             .trips-chart-min-height { min-height: 200px; }
           }
           
@@ -427,6 +439,28 @@ const ReportsPage = () => {
           
           /* Desktop Small: 1025px - 1280px (laptops 13-15") */
           @media (min-width: 1025px) {
+            .reports-padding { padding: 1rem; }
+            .reports-inner-padding { padding: 1.25rem; }
+            .reports-header-margin { margin-bottom: 1rem; }
+            .reports-gap { gap: 1.25rem; }
+            .reports-main-layout { 
+              grid-template-columns: 1fr 300px;
+              gap: 1.25rem;
+            }
+            .functional-groups-height { 
+              max-height: 16vh; 
+              min-height: 120px;
+              overflow-y: auto;
+            }
+            .trips-chart-min-height { min-height: 220px; }
+            .bottom-metrics-desktop { 
+              max-height: 14vh;
+              overflow-y: auto;
+            }
+          }
+          
+          /* Desktop Medium: 1281px - 1600px (laptops 15-17", monitores 24") */
+          @media (min-width: 1281px) {
             .reports-padding { padding: 1.25rem; }
             .reports-inner-padding { padding: 1.5rem; }
             .reports-header-margin { margin-bottom: 1.25rem; }
@@ -434,41 +468,36 @@ const ReportsPage = () => {
             .reports-main-layout { 
               grid-template-columns: 1fr 320px;
             }
-            .functional-groups-height { max-height: 24vh; }
-            .trips-chart-min-height { min-height: 240px; }
+            .functional-groups-height { 
+              max-height: 18vh; 
+              min-height: 140px;
+              overflow-y: auto;
+            }
+            .trips-chart-min-height { min-height: 250px; }
             .bottom-metrics-desktop { max-height: 16vh; }
           }
           
-          /* Desktop Medium: 1281px - 1440px (laptops 15-17", monitores 24") */
-          @media (min-width: 1281px) {
+          /* =================================================================
+             DESKTOP GRANDE Y ULTRA WIDE (1601px+)
+             ================================================================= */
+          
+          /* Desktop Large: 1601px - 1920px (monitores 27-32") */
+          @media (min-width: 1601px) {
             .reports-padding { padding: 1.5rem; }
             .reports-inner-padding { padding: 1.75rem; }
             .reports-header-margin { margin-bottom: 1.5rem; }
             .reports-gap { gap: 1.75rem; }
             .reports-main-layout { 
               grid-template-columns: 1fr 350px;
+              gap: 1.75rem;
             }
-            .functional-groups-height { max-height: 26vh; }
+            .functional-groups-height { 
+              max-height: 20vh; 
+              min-height: 160px;
+              overflow-y: auto;
+            }
             .trips-chart-min-height { min-height: 280px; }
             .bottom-metrics-desktop { max-height: 18vh; }
-          }
-          
-          /* =================================================================
-             DESKTOP GRANDE Y ULTRA WIDE (1441px+)
-             ================================================================= */
-          
-          /* Desktop Large: 1441px - 1920px (monitores 27-32") */
-          @media (min-width: 1441px) {
-            .reports-padding { padding: 1.75rem; }
-            .reports-inner-padding { padding: 2rem; }
-            .reports-header-margin { margin-bottom: 1.75rem; }
-            .reports-gap { gap: 2rem; }
-            .reports-main-layout { 
-              grid-template-columns: 1fr 380px;
-            }
-            .functional-groups-height { max-height: 28vh; }
-            .trips-chart-min-height { min-height: 320px; }
-            .bottom-metrics-desktop { max-height: 20vh; }
           }
           
           /* Ultra Wide: 1921px - 2560px (monitores ultrawide 34-49") */
@@ -477,15 +506,21 @@ const ReportsPage = () => {
               max-width: 2400px;
               margin: 0 auto;
             }
-            .reports-padding { padding: 2rem; }
-            .reports-inner-padding { padding: 2.5rem; }
-            .reports-header-margin { margin-bottom: 2rem; }
-            .reports-gap { gap: 2.5rem; }
+            .reports-padding { padding: 1.75rem; }
+            .reports-inner-padding { padding: 2rem; }
+            .reports-header-margin { margin-bottom: 1.75rem; }
+            .reports-gap { gap: 2rem; }
             .reports-main-layout { 
-              grid-template-columns: 1fr 420px;
+              grid-template-columns: 1fr 380px;
+              gap: 2rem;
             }
-            .functional-groups-height { max-height: 30vh; }
-            .trips-chart-min-height { min-height: 360px; }
+            .functional-groups-height { 
+              max-height: 22vh; 
+              min-height: 180px;
+              overflow-y: auto;
+            }
+            .trips-chart-min-height { min-height: 320px; }
+            .bottom-metrics-desktop { max-height: 20vh; }
           }
           
           /* Super Ultra Wide: 2561px+ (monitores 49"+ y setups multi-monitor) */
@@ -493,14 +528,19 @@ const ReportsPage = () => {
             .reports-container {
               max-width: 3000px;
             }
-            .reports-padding { padding: 2.5rem; }
-            .reports-inner-padding { padding: 3rem; }
-            .reports-gap { gap: 3rem; }
+            .reports-padding { padding: 2rem; }
+            .reports-inner-padding { padding: 2.25rem; }
+            .reports-gap { gap: 2.25rem; }
             .reports-main-layout { 
-              grid-template-columns: 1fr 480px;
+              grid-template-columns: 1fr 420px;
+              gap: 2.25rem;
             }
-            .functional-groups-height { max-height: 32vh; }
-            .trips-chart-min-height { min-height: 400px; }
+            .functional-groups-height { 
+              max-height: 24vh; 
+              min-height: 200px;
+              overflow-y: auto;
+            }
+            .trips-chart-min-height { min-height: 360px; }
           }
           
           /* =================================================================
@@ -509,12 +549,15 @@ const ReportsPage = () => {
           
           /* Landscape en móviles - Scroll horizontal habilitado */
           @media (max-height: 500px) and (orientation: landscape) and (max-width: 1024px) {
-            .reports-padding { padding: 0.25rem !important; }
-            .reports-inner-padding { padding: 0.5rem !important; }
-            .reports-header-margin { margin-bottom: 0.25rem !important; }
-            .reports-gap { gap: 0.5rem !important; }
-            .functional-groups-height { max-height: 25vh !important; }
-            .trips-chart-min-height { min-height: 100px !important; }
+            .reports-padding { padding: 0.375rem !important; }
+            .reports-inner-padding { padding: 0.625rem !important; }
+            .reports-header-margin { margin-bottom: 0.375rem !important; }
+            .reports-gap { gap: 0.625rem !important; }
+            .functional-groups-height { 
+              max-height: 22vh !important; 
+              min-height: 80px !important;
+            }
+            .trips-chart-min-height { min-height: 80px !important; }
             
             /* Scroll agresivo en landscape móvil */
             .reports-outer-scroll {
@@ -524,7 +567,7 @@ const ReportsPage = () => {
             
             .reports-content-scroll {
               overflow: auto !important;
-              max-height: calc(100vh - 80px);
+              max-height: calc(100vh - 60px);
             }
             
             .reports-main-overflow {
@@ -534,44 +577,61 @@ const ReportsPage = () => {
             
             .functional-groups-height {
               overflow-y: auto !important;
-              max-height: min(25vh, 120px) !important;
+              max-height: min(22vh, 100px) !important;
             }
           }
           
           /* Landscape en tablets - Scroll optimizado */
           @media (max-height: 800px) and (orientation: landscape) and (min-width: 769px) and (max-width: 1440px) {
+            .reports-padding { padding: 0.75rem !important; }
+            .reports-inner-padding { padding: 1rem !important; }
             .functional-groups-height { 
-              max-height: 20vh !important; 
+              max-height: 18vh !important;
+              min-height: 100px !important;
               overflow-y: auto !important;
             }
-            .trips-chart-min-height { min-height: 150px !important; }
+            .trips-chart-min-height { min-height: 120px !important; }
             .bottom-metrics-desktop { 
-              max-height: 12vh !important; 
+              max-height: 10vh !important; 
               overflow-y: auto !important;
             }
             
             .reports-content-scroll {
-              max-height: calc(100vh - 100px);
+              max-height: calc(100vh - 80px);
               overflow: auto;
+            }
+            
+            .reports-main-layout {
+              grid-template-columns: 1fr 240px !important;
+              gap: 1rem !important;
             }
           }
           
           /* Portrait en tablets grandes - Más espacio vertical */
           @media (min-height: 1200px) and (orientation: portrait) and (min-width: 768px) {
             .functional-groups-height { 
-              max-height: 35vh !important; 
+              max-height: 30vh !important; 
+              min-height: 200px !important;
               overflow-y: auto !important;
             }
-            .trips-chart-min-height { min-height: 400px !important; }
+            .trips-chart-min-height { min-height: 350px !important; }
             .bottom-metrics-desktop { 
-              max-height: 25vh !important; 
+              max-height: 22vh !important; 
               overflow-y: auto !important;
             }
             
             .reports-cards-scroll {
-              max-height: calc(100vh - 300px);
+              max-height: calc(100vh - 250px);
               overflow-y: auto;
             }
+          }
+          
+          /* Altura mínima en pantallas cortas */
+          @media (max-height: 600px) {
+            .functional-groups-height {
+              max-height: 120px !important;
+            }
+            .trips-chart-min-height { min-height: 100px !important; }
           }
           
           /* =================================================================
@@ -585,6 +645,7 @@ const ReportsPage = () => {
             }
             .functional-groups-height { 
               max-height: 25vh; 
+              min-height: 200px;
               overflow-y: auto;
             }
             .trips-chart-min-height { min-height: 300px; }
@@ -600,23 +661,24 @@ const ReportsPage = () => {
           }
           
           /* iPads Pro landscape - Scroll específico */
-          @media (min-width: 1024px) and (max-width: 1366px) and (min-height: 768px) and (max-height: 1024px) {
+          @media (min-width: 1024px) and (max-width: 1366px) and (min-height: 768px) and (max-height: 1024px) and (orientation: landscape) {
             .reports-main-layout { 
-              grid-template-columns: 1fr 280px;
+              grid-template-columns: 1fr 260px;
             }
             .functional-groups-height { 
-              max-height: 22vh; 
+              max-height: 20vh; 
+              min-height: 100px;
               overflow-y: auto;
             }
-            .trips-chart-min-height { min-height: 220px; }
+            .trips-chart-min-height { min-height: 150px; }
             
             .reports-bottom-scroll {
-              max-height: 120px;
+              max-height: 100px;
               overflow-y: auto;
             }
             
             .reports-cards-scroll {
-              max-height: calc(100vh - 300px);
+              max-height: calc(100vh - 250px);
               overflow-y: auto;
             }
           }
@@ -641,7 +703,7 @@ const ReportsPage = () => {
           
           /* Transiciones suaves con scroll */
           .reports-container * {
-            transition: padding 0.3s ease, margin 0.3s ease, gap 0.3s ease, max-height 0.3s ease;
+            transition: padding 0.2s ease, margin 0.2s ease, gap 0.2s ease, max-height 0.2s ease;
           }
           
           /* Scroll suave global */
@@ -664,33 +726,41 @@ const ReportsPage = () => {
             }
           }
           
-          /* Alto contraste - scroll visible */
+          /* Alto contraste - scroll visible con tema oscuro */
           @media (prefers-contrast: high) {
             .reports-container {
-              background-color: #000000;
+              background-color: #1a1c1f;
             }
             
             .reports-outer-scroll::-webkit-scrollbar-thumb {
-              background-color: #ffffff;
+              background-color: #aaaaaa;
             }
             
             .reports-component-overflow::-webkit-scrollbar-thumb {
-              background-color: #ffffff;
+              background-color: #aaaaaa;
+            }
+            
+            .reports-container-height {
+              background-color: #242729;
             }
           }
           
           /* Modo oscuro del sistema con scroll */
           @media (prefers-color-scheme: dark) {
             .reports-container {
-              background-color: #4a5568;
+              background-color: #34353A;
             }
             
             .reports-outer-scroll::-webkit-scrollbar-thumb {
-              background-color: #4a5568;
+              background-color: #555a5f;
             }
             
             .reports-component-overflow::-webkit-scrollbar-thumb {
-              background-color: #4a5568;
+              background-color: #555a5f;
+            }
+            
+            .reports-container-height {
+              background-color: #2a2d31;
             }
           }
           
@@ -699,6 +769,7 @@ const ReportsPage = () => {
           .reports-container * {
             will-change: auto;
             transform: translateZ(0);
+            backface-visibility: hidden;
           }
           
           /* Scroll momentum en iOS */
@@ -728,7 +799,7 @@ const ReportsPage = () => {
               }
               .reports-main-column {
                 flex: 1 !important;
-                margin-right: 1rem !important;
+                margin-right: 1.5rem !important;
                 overflow-y: auto !important;
               }
               .reports-side-column {
@@ -742,7 +813,7 @@ const ReportsPage = () => {
           /* Fallback para navegadores sin vh con scroll */
           @supports not (height: 1vh) {
             .functional-groups-height {
-              height: 120px !important;
+              height: 150px !important;
               max-height: none !important;
               overflow-y: auto !important;
             }
@@ -785,6 +856,38 @@ const ReportsPage = () => {
             
             .reports-component-overflow::-webkit-scrollbar {
               display: block !important;
+            }
+          }
+          
+          /* =================================================================
+             ESTILOS ADICIONALES PARA MEJOR RESPONSIVE
+             ================================================================= */
+          
+          /* Contenedor flexible para componentes */
+          .reports-inner-padding {
+            display: flex;
+            flex-direction: column;
+            background-color: #2a2d31;
+          }
+          
+          /* Mejorar espacios en móvil */
+          @media (max-width: 540px) {
+            .reports-main-column > div {
+              flex-shrink: 0;
+            }
+          }
+          
+          /* Evitar overflow en tablet */
+          @media (min-width: 541px) and (max-width: 768px) {
+            .reports-main-layout {
+              min-height: auto;
+            }
+          }
+          
+          /* Distribuir espacio en desktop */
+          @media (min-width: 1025px) {
+            .reports-cards-scroll {
+              max-height: calc(100vh - 400px);
             }
           }
         `

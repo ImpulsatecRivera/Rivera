@@ -405,13 +405,13 @@ export default function VerPlanillaQuincenal() {
                 {/* Grid de información */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
                   <div className="bg-gradient-to-br from-[#5F8EAD] from-opacity-10 to-[#5F8EAD] to-opacity-20 rounded-lg md:rounded-xl p-3 md:p-4 border border-[#5F8EAD]">
-                    <p className="text-xs text-[#5F8EAD] font-semibold mb-1">Salario Quincenal</p>
+                    <p className="text-xs text-[#FFFFF] font-semibold mb-1">Salario Quincenal</p>
                     <p className="text-base md:text-lg font-bold text-[#34353A]">{formatearMoneda(emp.salarioQuincenal)}</p>
                   </div>
 
                   {emp.viaticos > 0 && (
                     <div className="bg-gradient-to-br from-[#5D9646] from-opacity-10 to-[#5D9646] to-opacity-20 rounded-lg md:rounded-xl p-3 md:p-4 border border-[#5D9646]">
-                      <p className="text-xs text-[#5D9646] font-semibold mb-1">Viáticos</p>
+                      <p className="text-xs text-[#FFFFF] font-semibold mb-1">Viáticos</p>
                       <p className="text-base md:text-lg font-bold text-[#34353A]">{formatearMoneda(emp.viaticos)}</p>
                     </div>
                   )}
@@ -568,22 +568,22 @@ export default function VerPlanillaQuincenal() {
               </div>
 
               <div className="space-y-4">
-                <div className="flex items-center justify-between p-4 bg-gradient-to-r from-[#5F8EAD] from-opacity-10 to-[#5F8EAD] to-opacity-20 rounded-xl border border-[#5F8EAD]">
+                <div className="flex items-center justify-between p-4 bg-gradient-to-r from-[#5F8EAD] to-[#5F8EAD] rounded-xl border border-[#5F8EAD]">
                   <div className="flex-1 min-w-0 pr-4">
-                    <p className="text-xs md:text-sm text-[#5F8EAD] font-semibold">ISSS (3%)</p>
-                    <p className="text-xs text-[#5F8EAD] mt-1">Seguro Social</p>
+                    <p className="text-xs md:text-sm text-white font-semibold">ISSS (3%)</p>
+                    <p className="text-xs text-white mt-1">Seguro Social</p>
                   </div>
-                  <p className="text-xl md:text-2xl font-black text-[#34353A] whitespace-nowrap">
+                  <p className="text-xl md:text-2xl font-black text-white whitespace-nowrap">
                     {formatearMoneda(planilla.totales?.totalISSS)}
                   </p>
                 </div>
 
-                <div className="flex items-center justify-between p-4 bg-gradient-to-r from-[#34353A] from-opacity-10 to-[#34353A] to-opacity-20 rounded-xl border border-[#34353A]">
+                <div className="flex items-center justify-between p-4 bg-gradient-to-r from-[#34353A] to-[#34353A] rounded-xl border border-[#34353A]">
                   <div className="flex-1 min-w-0 pr-4">
-                    <p className="text-xs md:text-sm text-[#34353A] font-semibold">AFP (7.25%)</p>
-                    <p className="text-xs text-gray-600 mt-1">Pensiones</p>
+                    <p className="text-xs md:text-sm text-white font-semibold">AFP (7.25%)</p>
+                    <p className="text-xs text-white mt-1">Pensiones</p>
                   </div>
-                  <p className="text-xl md:text-2xl font-black text-[#34353A] whitespace-nowrap">
+                  <p className="text-xl md:text-2xl font-black text-white whitespace-nowrap">
                     {formatearMoneda(planilla.totales?.totalAFP)}
                   </p>
                 </div>
@@ -694,41 +694,41 @@ export default function VerPlanillaQuincenal() {
               </h3>
 
               <div className="space-y-3">
-                <div className="flex items-center justify-between p-4 bg-gradient-to-r from-[#5F8EAD] from-opacity-10 to-[#5F8EAD] to-opacity-20 rounded-xl">
-                  <span className="text-[#5F8EAD] font-semibold text-sm md:text-base">Salarios Quincenales</span>
-                  <span className="text-[#34353A] font-bold text-base md:text-lg whitespace-nowrap">
+                <div className="flex items-center justify-between p-4 bg-gradient-to-r from-[#5F8EAD] to-[#5F8EAD] rounded-xl">
+                  <span className="text-white font-semibold text-sm md:text-base">Salarios Quincenales</span>
+                  <span className="text-white font-bold text-base md:text-lg whitespace-nowrap">
                     {formatearMoneda(planilla.totales?.totalSalariosQuincenales)}
                   </span>
                 </div>
 
                 {planilla.totales?.totalViaticos > 0 && (
-                  <div className="flex items-center justify-between p-4 bg-gradient-to-r from-[#5D9646] from-opacity-10 to-[#5D9646] to-opacity-20 rounded-xl">
-                    <span className="text-[#5D9646] font-semibold text-sm md:text-base">Viáticos</span>
-                    <span className="text-[#34353A] font-bold text-base md:text-lg whitespace-nowrap">
+                  <div className="flex items-center justify-between p-4 bg-gradient-to-r from-[#5D9646] to-[#5D9646] rounded-xl">
+                    <span className="text-white font-semibold text-sm md:text-base">Viáticos</span>
+                    <span className="text-white font-bold text-base md:text-lg whitespace-nowrap">
                       {formatearMoneda(planilla.totales?.totalViaticos)}
                     </span>
                   </div>
                 )}
 
                 {planilla.totales?.totalTrabajoSabadoDomingo > 0 && (
-                  <div className="flex items-center justify-between p-4 bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl">
-                    <span className="text-purple-700 font-semibold text-sm md:text-base">Trabajo Extra</span>
-                    <span className="text-purple-900 font-bold text-base md:text-lg whitespace-nowrap">
+                  <div className="flex items-center justify-between p-4 bg-gradient-to-r from-purple-600 to-purple-600 rounded-xl">
+                    <span className="text-white font-semibold text-sm md:text-base">Trabajo Extra</span>
+                    <span className="text-white font-bold text-base md:text-lg whitespace-nowrap">
                       {formatearMoneda(planilla.totales?.totalTrabajoSabadoDomingo)}
                     </span>
                   </div>
                 )}
 
-                <div className="flex items-center justify-between p-4 bg-gradient-to-r from-[#5F8EAD] from-opacity-10 to-[#5F8EAD] to-opacity-20 rounded-xl border-2 border-[#5F8EAD]">
-                  <span className="text-[#5F8EAD] font-bold text-sm md:text-base">Subtotal</span>
-                  <span className="text-[#34353A] font-black text-lg md:text-xl whitespace-nowrap">
+                <div className="flex items-center justify-between p-4 bg-gradient-to-r from-[#5F8EAD] to-[#5F8EAD] rounded-xl border-2 border-[#5F8EAD]">
+                  <span className="text-white font-bold text-sm md:text-base">Subtotal</span>
+                  <span className="text-white font-black text-lg md:text-xl whitespace-nowrap">
                     {formatearMoneda(planilla.totales?.totalSalariosMasViaticos)}
                   </span>
                 </div>
 
-                <div className="flex items-center justify-between p-4 bg-gradient-to-r from-red-50 to-orange-50 rounded-xl">
-                  <span className="text-red-700 font-semibold text-sm md:text-base">Descuentos</span>
-                  <span className="text-red-900 font-bold text-base md:text-lg whitespace-nowrap">
+                <div className="flex items-center justify-between p-4 bg-gradient-to-r from-red-600 to-red-600 rounded-xl">
+                  <span className="text-white font-semibold text-sm md:text-base">Descuentos</span>
+                  <span className="text-white font-bold text-base md:text-lg whitespace-nowrap">
                     -{formatearMoneda(planilla.totales?.totalDescuentos)}
                   </span>
                 </div>

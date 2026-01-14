@@ -37,7 +37,7 @@ const TripsChart = () => {
       console.log(`📊 Obteniendo estadísticas de viajes - Período: ${periodo}`);
       
       // 🔧 USAR TU ENDPOINT REAL
-      const response = await fetch(`https://riveraproject-production-933e.up.railway.app/api/viajes/trip-stats?periodo=${periodo}`, { credentials: 'include' });
+      const response = await fetch(`${API_URL}/viajes/trip-stats?periodo=${periodo}`);
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -223,19 +223,10 @@ const TripsChart = () => {
     fetchTripStats();
   };
 
-  // Calcular altura del gráfico basado en cantidad de datos
-  const getChartHeight = () => {
-    if (tripData.length === 0) return 200;
-    // Mínimo 300px, pero agregamos 30px por cada 5 datos si hay muchos
-    const minHeight = 300;
-    const extraHeight = Math.max(0, (tripData.length - 5) * 6);
-    return minHeight + extraHeight;
-  };
-
   return (
-    <div className="bg-[#2a2d31] p-4 sm:p-5 md:p-6 rounded-xl border border-[#34353A] flex flex-col h-full">
+    <div className="bg-[#2a2d31] p-4 sm:p-5 md:p-6 rounded-xl border border-[#34353A] h-[400px] sm:h-[450px] md:h-[500px]">
       {/* 📊 Header con controles */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-3 sm:mb-4 gap-2 sm:gap-3 flex-shrink-0">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-3 sm:mb-4 gap-2 sm:gap-3">
         <div className="flex items-center space-x-2 sm:space-x-3">
           <h2 className="text-sm sm:text-base md:text-lg font-bold text-white">Estadísticas de Viajes</h2>
           {error && (
@@ -283,57 +274,33 @@ const TripsChart = () => {
         </div>
       </div>
 
-      {/* 📈 Gráfico principal con scroll */}
-      <div className="flex-1 overflow-y-auto overflow-x-hidden relative" style={{
-        maxHeight: 'calc(100% - 100px)',
-        minHeight: '250px',
-        scrollbarWidth: 'thin',
-        scrollbarColor: '#555a5f transparent'
-      }}>
-        <style>{`
-          .trips-chart-scroll::-webkit-scrollbar {
-            width: 8px;
-          }
-          .trips-chart-scroll::-webkit-scrollbar-track {
-            background: transparent;
-          }
-          .trips-chart-scroll::-webkit-scrollbar-thumb {
-            background-color: #555a5f;
-            border-radius: 4px;
-            border: 2px solid transparent;
-            background-clip: content-box;
-          }
-          .trips-chart-scroll::-webkit-scrollbar-thumb:hover {
-            background-color: #6a7074;
-          }
-        `}</style>
-        <div className="trips-chart-scroll w-full h-full">
-          {loading ? (
-            <div className="flex items-center justify-center h-[300px]">
-              <div className="text-center">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-2"></div>
-                <p className="text-xs sm:text-sm text-gray-400">Cargando estadísticas...</p>
-              </div>
+      {/* 📈 Gráfico principal */}
+      <div className="h-[300px] sm:h-[350px] md:h-[400px]">
+        {loading ? (
+          <div className="flex items-center justify-center h-full">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-2"></div>
+              <p className="text-xs sm:text-sm text-gray-400">Cargando estadísticas...</p>
             </div>
-          ) : error && tripData.length === 0 ? (
-            <div className="flex items-center justify-center h-[300px]">
-              <div className="text-center">
-                <p className="text-red-400 mb-2 text-xs sm:text-sm">❌ {error}</p>
-                <button
-                  onClick={handleRefresh}
-                  className="text-xs sm:text-sm text-blue-400 hover:text-blue-300 underline"
-                >
-                  Intentar de nuevo
-                </button>
-              </div>
+          </div>
+        ) : error && tripData.length === 0 ? (
+          <div className="flex items-center justify-center h-full">
+            <div className="text-center">
+              <p className="text-red-400 mb-2 text-xs sm:text-sm">❌ {error}</p>
+              <button
+                onClick={handleRefresh}
+                className="text-xs sm:text-sm text-blue-400 hover:text-blue-300 underline"
+              >
+                Intentar de nuevo
+              </button>
             </div>
-          ) : tripData.length === 0 ? (
-            <div className="flex items-center justify-center h-[300px]">
-              <p className="text-gray-400 text-xs sm:text-sm text-center">📊 No hay datos disponibles para este período</p>
-            </div>
-          ) : (
-            <div style={{ height: `${tripData.length > 5 ? 300 + (tripData.length - 5) * 30 : 300}px`, width: '100%' }}>
-              <ResponsiveContainer width="100%" height="100%">
+          </div>
+        ) : tripData.length === 0 ? (
+          <div className="flex items-center justify-center h-full">
+            <p className="text-gray-400 text-xs sm:text-sm text-center">📊 No hay datos disponibles para este período</p>
+          </div>
+        ) : (
+          <ResponsiveContainer width="100%" height="100%">
             {chartType === 'bar' ? (
               <BarChart
                 data={tripData}
@@ -401,17 +368,15 @@ const TripsChart = () => {
               </LineChart>
             )}
           </ResponsiveContainer>
-            </div>
-          )}
-        </div>
+        )}
       </div>
 
       {/* 📊 Información adicional */}
       {!loading && tripData.length > 0 && (
-        <div className="mt-3 pt-3 border-t border-gray-700 flex-shrink-0">
+        <div className="mt-4 pt-3 border-t border-gray-100">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
             <div>
-              <div className="text-sm font-medium text-white">
+              <div className="text-sm font-medium text-gray-900">
                 {tripData.reduce((sum, item) => sum + item.viajes, 0)}
               </div>
               <div className="text-xs text-gray-500">Total Viajes</div>
