@@ -465,7 +465,7 @@ export const useTrips = (motoristaId = null, tipoConsulta = 'programados') => {
         Accept: 'application/json',
         ...(token && !/^temp(-register)?-token$/.test(token) ? { Authorization: `Bearer ${token}` } : {}),
       };
-      const resp = await fetch(url, { headers, signal: controller.signal });
+      const resp = await fetch(url, { credentials: 'include', headers, signal: controller.signal });
       if (!resp.ok) throw new Error(`HTTP ${resp.status} ${resp.statusText}`);
       return await resp.json();
     } catch (e) {
@@ -484,7 +484,7 @@ export const useTrips = (motoristaId = null, tipoConsulta = 'programados') => {
         Accept: 'application/json',
         ...(token && !/^temp(-register)?-token$/.test(token) ? { Authorization: `Bearer ${token}` } : {}),
       };
-      const resp = await fetch(url, { headers, signal: controller.signal });
+      const resp = await fetch(url, { credentials: 'include', headers, signal: controller.signal });
       if (!resp.ok) return null;
       return await resp.json();
     } catch {

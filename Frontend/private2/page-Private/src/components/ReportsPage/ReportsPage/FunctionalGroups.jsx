@@ -279,7 +279,7 @@ const FunctionalGroups = () => {
       setError(null);
       
       // 🔧 RUTA CORRECTA: carga-distribution
-      const res = await fetch(`${API_URL}/viajes/carga-distribution`);
+      const res = await fetch(`${API_URL}/viajes/carga-distribution`, { credentials: 'include' });
       
       if (!res.ok) {
         throw new Error(`HTTP error! status: ${res.status}`);

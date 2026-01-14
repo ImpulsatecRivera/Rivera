@@ -330,6 +330,7 @@ export const AuthProvider = ({ children }) => {
 
       const response = await fetch('https://rivera-test-629395560179.us-west1.run.app/api/login/complete-profile', {
         method: 'POST',
+        credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${await AsyncStorage.getItem('clientToken')}`,

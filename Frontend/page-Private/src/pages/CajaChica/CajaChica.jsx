@@ -88,6 +88,7 @@ export default function CajaChicaModern() {
   const obtenerMovimientos = async () => {
     try {
       const response = await fetch(`${config.api.API_URL}/cajaChica`, {
+        credentials: 'include',
         headers: getAuthHeaders()
       });
       
@@ -106,6 +107,7 @@ export default function CajaChicaModern() {
   const obtenerBalance = async () => {
     try {
       const response = await fetch(`${config.api.API_URL}/cajaChica/balance`, {
+        credentials: 'include',
         headers: getAuthHeaders()
       });
       
@@ -123,6 +125,7 @@ export default function CajaChicaModern() {
   const obtenerConfiguracion = async () => {
     try {
       const response = await fetch(`${config.api.API_URL}/cajaChicaConfig`, {
+        credentials: 'include',
         headers: getAuthHeaders()
       });
       
@@ -142,6 +145,7 @@ export default function CajaChicaModern() {
   const verificarReintegro = async () => {
     try {
       const response = await fetch(`${config.api.API_URL}/cajaChicaConfig/verificar-reintegro`, {
+        credentials: 'include',
         headers: getAuthHeaders()
       });
       
@@ -161,6 +165,7 @@ export default function CajaChicaModern() {
       const token = localStorage.getItem('authToken');
       const response = await fetch(`${config.api.API_URL}/reportesCajaChica/individual/${transaccionId}`, {
         method: 'GET',
+        credentials: 'include',
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -268,6 +273,7 @@ export default function CajaChicaModern() {
         `${config.api.API_URL}/cajaChica/movements/${transaccion._id}/voucher`,
         {
           method: 'PATCH',
+          credentials: 'include',
           headers: {
             'Authorization': `Bearer ${token}`
           },
@@ -349,6 +355,7 @@ export default function CajaChicaModern() {
         `${config.api.API_URL}/cajaChica/${transaccion._id}/generar-vale`,
         {
           method: 'POST',
+          credentials: 'include',
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${token}`
@@ -449,6 +456,7 @@ export default function CajaChicaModern() {
 
       const response = await fetch(`${config.api.API_URL}/cajaChicaConfig`, {
         method: 'PUT',
+        credentials: 'include',
         headers: { 
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
@@ -538,6 +546,7 @@ export default function CajaChicaModern() {
       const token = localStorage.getItem('authToken');
       const response = await fetch(`${config.api.API_URL}/cajaChica/ingreso`, {
         method: 'POST',
+        credentials: 'include',
         headers: {
           'Authorization': `Bearer ${token}`
         },
@@ -608,6 +617,7 @@ export default function CajaChicaModern() {
     try {
       const response = await fetch(`${config.api.API_URL}/cajaChicaConfig/registrar-reintegro`, {
         method: 'POST',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
         body: JSON.stringify({ password }) // no enviamos monto -> backend calcula hasta el máximo
       });
@@ -648,6 +658,7 @@ export default function CajaChicaModern() {
       const token = localStorage.getItem('authToken');
       const response = await fetch(`${config.api.API_URL}/cajaChica/egreso`, {
         method: 'POST',
+        credentials: 'include',
         headers: {
           'Authorization': `Bearer ${token}`
         },

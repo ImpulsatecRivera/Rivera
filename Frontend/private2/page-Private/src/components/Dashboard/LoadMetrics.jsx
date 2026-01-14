@@ -15,7 +15,7 @@ const LoadMetrics = () => {
       setLoading(true);
       setError(null);
       
-      const response = await fetch(`${API_URL}/viajes/carga-distribution`);
+      const response = await fetch(`${API_URL}/viajes/carga-distribution`, { credentials: 'include' });
       
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
