@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Users, Truck, Clock } from 'lucide-react';
+import { config } from "../../config";
+
+const API_URL = config.api.API_URL;
 
 const MainMetrics = () => {
   // 📊 Estados para las métricas dinámicas
@@ -181,9 +184,9 @@ const MainMetrics = () => {
   ];
 
   return (
-    <div className="grid grid-cols-3 gap-4 mb-4">
+    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3 md:gap-4 mb-4">
       {metrics.map((metric, index) => (
-        <div key={index} className="bg-white rounded-lg border border-gray-200 p-4 min-h-[120px] flex flex-col justify-between relative group hover:shadow-md transition-all duration-300">
+        <div key={index} className="bg-[#2a2d31] rounded-lg border border-[#34353A] p-3 sm:p-4 md:p-5 min-h-[100px] sm:min-h-[120px] flex flex-col justify-between relative group hover:border-[#555a5f] transition-all duration-300">
           {/* 🔄 Indicador de carga */}
           {metric.loading && (
             <div className="absolute top-2 right-2">
@@ -194,24 +197,24 @@ const MainMetrics = () => {
           {/* ⚠️ Indicador de error */}
           {metric.error && (
             <div className="absolute top-2 right-2">
-              <div className="w-4 h-4 bg-amber-100 rounded-full flex items-center justify-center" title={`Error: ${metric.error}`}>
-                <span className="text-xs text-amber-600">⚠️</span>
+              <div className="w-4 h-4 bg-amber-500/20 rounded-full flex items-center justify-center" title={`Error: ${metric.error}`}>
+                <span className="text-xs">⚠️</span>
               </div>
             </div>
           )}
 
-          <div className="flex items-center gap-2 mb-3">
-            <metric.icon className={`w-4 h-4 ${metric.color} ${metric.loading ? 'opacity-50' : ''}`} />
-            <span className="text-xs text-gray-600 font-medium leading-tight">
+          <div className="flex items-center gap-2 mb-2 sm:mb-3">
+            <metric.icon className={`w-4 h-4 sm:w-5 sm:h-5 text-green-400 ${metric.loading ? 'opacity-50' : ''}`} />
+            <span className="text-xs sm:text-sm text-gray-400 font-medium leading-tight">
               {metric.title}
             </span>
           </div>
           
           <div className="flex-1 flex items-center">
             {metric.loading ? (
-              <div className="animate-pulse bg-gray-200 h-8 w-20 rounded"></div>
+              <div className="animate-pulse bg-gray-500/20 h-6 sm:h-8 w-16 sm:w-20 rounded"></div>
             ) : (
-              <span className={`text-2xl font-bold ${metric.color} leading-none`} style={{ lineHeight: '1.1' }}>
+              <span className="text-lg sm:text-xl md:text-2xl font-bold text-white leading-none">
                 {metric.value}
               </span>
             )}
@@ -236,7 +239,7 @@ const MainMetrics = () => {
                 }
               }}
               disabled={metric.loading}
-              className="text-xs text-gray-400 hover:text-gray-600 transition-colors disabled:opacity-50"
+              className="text-xs text-gray-400 hover:text-gray-300 transition-colors disabled:opacity-50"
               title="Actualizar métrica"
             >
               {metric.loading ? '🔄' : '↻'}
@@ -246,28 +249,28 @@ const MainMetrics = () => {
       ))}
       
       {/* 📊 Status bar */}
-      <div className="col-span-3 mt-2">
-        <div className="flex items-center justify-between text-xs text-gray-400">
-          <div className="flex items-center gap-4">
+      <div className="col-span-1 sm:col-span-3 mt-2 sm:mt-3">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between text-xs text-gray-400 gap-2 sm:gap-4">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
             <span>🔄 Auto-actualización: 3 min</span>
-            <span>📊 Datos en tiempo real</span>
+            <span className="hidden sm:inline">📊 Datos en tiempo real</span>
           </div>
           
-          <div className="flex items-center gap-4">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-4">
             {/* 📊 Status de cada métrica */}
             <div className="flex items-center gap-2">
               <div className={`w-2 h-2 rounded-full ${usuariosActivos.loading ? 'bg-blue-400 animate-pulse' : usuariosActivos.error ? 'bg-amber-400' : 'bg-green-400'}`}></div>
-              <span>Usuarios</span>
+              <span className="text-xs">Usuarios</span>
             </div>
             
             <div className="flex items-center gap-2">
               <div className={`w-2 h-2 rounded-full ${cargasEntregadas.loading ? 'bg-blue-400 animate-pulse' : cargasEntregadas.error ? 'bg-amber-400' : 'bg-green-400'}`}></div>
-              <span>Cargas</span>
+              <span className="text-xs">Cargas</span>
             </div>
             
             <div className="flex items-center gap-2">
               <div className={`w-2 h-2 rounded-full ${tiempoPromedio.loading ? 'bg-blue-400 animate-pulse' : tiempoPromedio.error ? 'bg-amber-400' : 'bg-green-400'}`}></div>
-              <span>Tiempo</span>
+              <span className="text-xs">Tiempo</span>
             </div>
 
             {/* 🔄 Botón de actualización general */}
