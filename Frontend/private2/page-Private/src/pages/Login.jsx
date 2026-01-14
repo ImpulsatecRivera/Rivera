@@ -9,7 +9,7 @@ import SideImage from "../components/Login/SideImage";
 import Title from "../components/RecoverPassword/Title";
  
 import useLogin from "../components/Login/hooks/useLogin";
-import { useAuth } from "../Context/AuthContext";
+import { useAuth } from "../context/AuthContext";
  
 const Login = () => {
   const navigate = useNavigate();

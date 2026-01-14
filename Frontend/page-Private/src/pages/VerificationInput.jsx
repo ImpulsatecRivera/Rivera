@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { useAuth } from "../Context/AuthContext";
+import { useAuth } from "../context/AuthContext";
 import axios from "axios";
 import illustration from "../images/verification-box.png";
 import Title from "../components/RecoverPassword/Title";

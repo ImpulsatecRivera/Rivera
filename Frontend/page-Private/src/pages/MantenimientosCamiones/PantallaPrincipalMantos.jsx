@@ -79,7 +79,7 @@ const MantenimientosTable = () => {
   const fetchMantenimientos = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${config.api.API_URL}/mantenimientos`);
+      const response = await fetch(`${config.api.API_URL}/mantenimientos`, { credentials: 'include' });
       if (!response.ok) throw new Error('Error al cargar los mantenimientos');
       const result = await response.json();
       setMantenimientos(result.data || []);
@@ -109,7 +109,7 @@ const MantenimientosTable = () => {
 
     if (result.isConfirmed) {
       try {
-        const response = await fetch(`${config.api.API_URL}/mantenimientos/${mantenimiento._id}`, { method: 'DELETE' });
+        const response = await fetch(`${config.api.API_URL}/mantenimientos/${mantenimiento._id}`, { method: 'DELETE', credentials: 'include' });
         const data = await response.json();
         if (response.ok && data.success) {
           await Swal.fire({ title: '¡Eliminado!', text: 'Mantenimiento eliminado exitosamente', icon: 'success', timer: 2000 });

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { User, LogOut, Menu, X } from 'lucide-react';
 import avatarImg from '../../images/avatarDashboard.png';
 import { NavLink, useNavigate, useLocation } from "react-router-dom";
-import { useAuth } from "../../Context/AuthContext";
+import { useAuth } from "../../context/AuthContext";
 
 const SidebarNav = () => {
   const [activeItem, setActiveItem] = useState('Inicio');

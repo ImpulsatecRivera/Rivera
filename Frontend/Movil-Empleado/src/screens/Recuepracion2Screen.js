@@ -78,6 +78,7 @@ const Recuperacion2Screen = ({ navigation, route }) => {
     try {
       const response = await fetch('https://rivera-test-629395560179.us-west1.run.app/api/recovery/verifyCode', {
         method: 'POST',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
         body: JSON.stringify({ code: otpCode, recoveryToken }),
       });
@@ -108,6 +109,7 @@ const Recuperacion2Screen = ({ navigation, route }) => {
     try {
       const response = await fetch('https://rivera-test-629395560179.us-west1.run.app/api/recovery/requestCode', {
         method: 'POST',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
         body: JSON.stringify({ email, via: 'email' }),
       });

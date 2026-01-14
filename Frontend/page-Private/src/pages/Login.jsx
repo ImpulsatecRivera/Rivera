@@ -8,7 +8,7 @@ import SideImage from "../components/Login/SideImage";
 import Title from "../components/RecoverPassword/Title";
  import animationData from '../assets/lotties/Winter Snow.json';
 import useLogin from "../components/Login/hooks/useLogin";
-import { useAuth } from "../Context/AuthContext";
+import { useAuth } from "../context/AuthContext";
  
 const Login = () => {
   const navigate = useNavigate();
@@ -153,6 +153,24 @@ const Login = () => {
       Swal.close();
       if (result?.success) {
         showSuccessAlert();
+      } else if (result?.isMotorista) {
+        // Mensaje específico para Motoristas
+        Swal.fire({
+          title: 'Acceso no disponible',
+          html: `El acceso web no está disponible para usuarios con role <strong>Motorista</strong>.<br/>Utiliza la aplicación móvil (Movil-Empleado) para iniciar sesión.`,
+          icon: 'info',
+          confirmButtonText: 'Entendido',
+          confirmButtonColor: '#2563eb'
+        });
+      } else if (result?.isCliente) {
+        // Mensaje específico para Clientes
+        Swal.fire({
+          title: 'Acceso no disponible',
+          html: `El acceso privado no está disponible para usuarios con role <strong>Cliente</strong>.<br/>Por favor utiliza la plataforma de clientes o contacta al administrador.`,
+          icon: 'info',
+          confirmButtonText: 'Entendido',
+          confirmButtonColor: '#2563eb'
+        });
       } else {
         handleLoginResponse(result);
       }

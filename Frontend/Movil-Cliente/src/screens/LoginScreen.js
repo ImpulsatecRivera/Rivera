@@ -42,6 +42,7 @@ const LoginScreen = () => {
     try {
       const response = await fetch('https://rivera-test-629395560179.us-west1.run.app/api/login', {
         method: 'POST',
+        credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',

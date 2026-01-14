@@ -37,7 +37,7 @@ const TripsChart = () => {
       console.log(`📊 Obteniendo estadísticas de viajes - Período: ${periodo}`);
       
       // 🔧 USAR TU ENDPOINT REAL
-      const response = await fetch(`${API_URL}/viajes/trip-stats?periodo=${periodo}`);
+      const response = await fetch(`${API_URL}/viajes/trip-stats?periodo=${periodo}`, { credentials: 'include' });
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -196,19 +196,19 @@ const TripsChart = () => {
     if (active && payload && payload.length) {
       const data = payload[0].payload;
       return (
-        <div className="bg-white p-3 border border-gray-200 rounded-lg shadow-lg">
-          <p className="font-medium text-gray-900 mb-2">{label}</p>
+        <div className="bg-[#2a2d31] p-3 border border-[#34353A] rounded-lg shadow-lg">
+          <p className="font-medium text-white mb-2">{label}</p>
           <div className="space-y-1">
-            <p className="text-sm text-blue-600">
+            <p className="text-sm text-blue-400">
               📊 Total viajes: <span className="font-medium">{data.viajes}</span>
             </p>
-            <p className="text-sm text-green-600">
+            <p className="text-sm text-green-400">
               ✅ Completados: <span className="font-medium">{data.completados}</span>
             </p>
-            <p className="text-sm text-purple-600">
+            <p className="text-sm text-purple-400">
               📈 Progreso promedio: <span className="font-medium">{data.progresoPromedio}%</span>
             </p>
-            <p className="text-sm text-orange-600">
+            <p className="text-sm text-orange-400">
               🎯 Tasa éxito: <span className="font-medium">{data.tasaCompletado}%</span>
             </p>
           </div>
@@ -223,24 +223,33 @@ const TripsChart = () => {
     fetchTripStats();
   };
 
+  // Calcular altura del gráfico basado en cantidad de datos
+  const getChartHeight = () => {
+    if (tripData.length === 0) return 200;
+    // Mínimo 300px, pero agregamos 30px por cada 5 datos si hay muchos
+    const minHeight = 300;
+    const extraHeight = Math.max(0, (tripData.length - 5) * 6);
+    return minHeight + extraHeight;
+  };
+
   return (
-    <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 h-[400px]">
+    <div className="bg-[#2a2d31] p-4 sm:p-5 md:p-6 rounded-xl border border-[#34353A] flex flex-col h-full">
       {/* 📊 Header con controles */}
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center space-x-3">
-          <h2 className="text-lg font-semibold text-gray-900">Estadísticas de Viajes</h2>
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-3 sm:mb-4 gap-2 sm:gap-3 flex-shrink-0">
+        <div className="flex items-center space-x-2 sm:space-x-3">
+          <h2 className="text-sm sm:text-base md:text-lg font-bold text-white">Estadísticas de Viajes</h2>
           {error && (
-            <span className="text-xs text-red-500" title={error}>⚠️</span>
+            <span className="text-xs text-red-400" title={error}>⚠️</span>
           )}
         </div>
         
-        <div className="flex items-center space-x-3">
+        <div className="flex items-center space-x-2 sm:space-x-3 flex-wrap">
           {/* Selector de período */}
           <select
             value={periodo}
             onChange={(e) => setPeriodo(e.target.value)}
             disabled={loading}
-            className="text-sm border border-gray-300 rounded-lg px-3 py-1 text-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white disabled:opacity-50"
+            className="text-xs sm:text-sm border border-[#34353A] rounded-lg px-2 sm:px-3 py-1 text-gray-300 bg-[#1a1c1f] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50"
           >
             {periodoOptions.map((opt) => (
               <option key={opt.value} value={opt.value}>
@@ -254,7 +263,7 @@ const TripsChart = () => {
             value={chartType}
             onChange={(e) => setChartType(e.target.value)}
             disabled={loading}
-            className="text-sm border border-gray-300 rounded-lg px-3 py-1 text-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white disabled:opacity-50"
+            className="text-xs sm:text-sm border border-[#34353A] rounded-lg px-2 sm:px-3 py-1 text-gray-300 bg-[#1a1c1f] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50"
           >
             <option value="bar">Barras</option>
             <option value="line">Líneas</option>
@@ -264,43 +273,67 @@ const TripsChart = () => {
           <button
             onClick={handleRefresh}
             disabled={loading}
-            className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50"
+            className="p-2 text-gray-400 hover:text-white hover:bg-[#34353A]/50 rounded-lg transition-all disabled:opacity-50"
             title="Actualizar estadísticas"
           >
-            <svg className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className={`w-4 h-4 sm:w-5 sm:h-5 ${loading ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
             </svg>
           </button>
         </div>
       </div>
 
-      {/* 📈 Gráfico principal */}
-      <div className="h-[300px]">
-        {loading ? (
-          <div className="flex items-center justify-center h-full">
-            <div className="text-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
-              <p className="text-sm text-gray-500">Cargando estadísticas...</p>
+      {/* 📈 Gráfico principal con scroll */}
+      <div className="flex-1 overflow-y-auto overflow-x-hidden relative" style={{
+        maxHeight: 'calc(100% - 100px)',
+        minHeight: '250px',
+        scrollbarWidth: 'thin',
+        scrollbarColor: '#555a5f transparent'
+      }}>
+        <style>{`
+          .trips-chart-scroll::-webkit-scrollbar {
+            width: 8px;
+          }
+          .trips-chart-scroll::-webkit-scrollbar-track {
+            background: transparent;
+          }
+          .trips-chart-scroll::-webkit-scrollbar-thumb {
+            background-color: #555a5f;
+            border-radius: 4px;
+            border: 2px solid transparent;
+            background-clip: content-box;
+          }
+          .trips-chart-scroll::-webkit-scrollbar-thumb:hover {
+            background-color: #6a7074;
+          }
+        `}</style>
+        <div className="trips-chart-scroll w-full h-full">
+          {loading ? (
+            <div className="flex items-center justify-center h-[300px]">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-2"></div>
+                <p className="text-xs sm:text-sm text-gray-400">Cargando estadísticas...</p>
+              </div>
             </div>
-          </div>
-        ) : error && tripData.length === 0 ? (
-          <div className="flex items-center justify-center h-full">
-            <div className="text-center">
-              <p className="text-red-500 mb-2">❌ {error}</p>
-              <button
-                onClick={handleRefresh}
-                className="text-sm text-blue-600 hover:text-blue-800 underline"
-              >
-                Intentar de nuevo
-              </button>
+          ) : error && tripData.length === 0 ? (
+            <div className="flex items-center justify-center h-[300px]">
+              <div className="text-center">
+                <p className="text-red-400 mb-2 text-xs sm:text-sm">❌ {error}</p>
+                <button
+                  onClick={handleRefresh}
+                  className="text-xs sm:text-sm text-blue-400 hover:text-blue-300 underline"
+                >
+                  Intentar de nuevo
+                </button>
+              </div>
             </div>
-          </div>
-        ) : tripData.length === 0 ? (
-          <div className="flex items-center justify-center h-full">
-            <p className="text-gray-500">📊 No hay datos disponibles para este período</p>
-          </div>
-        ) : (
-          <ResponsiveContainer width="100%" height="100%">
+          ) : tripData.length === 0 ? (
+            <div className="flex items-center justify-center h-[300px]">
+              <p className="text-gray-400 text-xs sm:text-sm text-center">📊 No hay datos disponibles para este período</p>
+            </div>
+          ) : (
+            <div style={{ height: `${tripData.length > 5 ? 300 + (tripData.length - 5) * 30 : 300}px`, width: '100%' }}>
+              <ResponsiveContainer width="100%" height="100%">
             {chartType === 'bar' ? (
               <BarChart
                 data={tripData}
@@ -368,15 +401,17 @@ const TripsChart = () => {
               </LineChart>
             )}
           </ResponsiveContainer>
-        )}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* 📊 Información adicional */}
       {!loading && tripData.length > 0 && (
-        <div className="mt-4 pt-3 border-t border-gray-100">
+        <div className="mt-3 pt-3 border-t border-gray-700 flex-shrink-0">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
             <div>
-              <div className="text-sm font-medium text-gray-900">
+              <div className="text-sm font-medium text-white">
                 {tripData.reduce((sum, item) => sum + item.viajes, 0)}
               </div>
               <div className="text-xs text-gray-500">Total Viajes</div>

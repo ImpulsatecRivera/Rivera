@@ -103,6 +103,7 @@ const ReportesCajaChicaModal = ({ isOpen, onClose, apiUrl }) => {
         
         try {
           const response = await fetch(reporteUrl, {
+            credentials: 'include',
             headers: { 'Authorization': `Bearer ${token}` }
           });
           
@@ -144,6 +145,7 @@ const ReportesCajaChicaModal = ({ isOpen, onClose, apiUrl }) => {
       } else if (tipoReporte === 'multiple') {
         const response = await fetch(`${apiUrl}/reportesCajaChica/mensual-multiple`, {
           method: 'POST',
+          credentials: 'include',
           headers: { 
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${token}`
@@ -200,6 +202,7 @@ const ReportesCajaChicaModal = ({ isOpen, onClose, apiUrl }) => {
         
         try {
           const response = await fetch(reporteUrl, {
+            credentials: 'include',
             headers: { 'Authorization': `Bearer ${token}` }
           });
           
@@ -231,6 +234,7 @@ const ReportesCajaChicaModal = ({ isOpen, onClose, apiUrl }) => {
       } else if (tipoReporte === 'rango') {
         const response = await fetch(`${apiUrl}/reportesCajaChica/rango-fechas`, {
           method: 'POST',
+          credentials: 'include',
           headers: { 
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${token}`

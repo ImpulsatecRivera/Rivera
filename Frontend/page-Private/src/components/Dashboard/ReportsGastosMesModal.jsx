@@ -87,6 +87,7 @@ const ReportsGastosMesModal = ({ isOpen, onClose }) => {
     try {
       const resp = await fetch(`${config.api.API_URL}/reporte/gastosMes/pdf`, {
         method: 'POST',
+        credentials: 'include',
         headers: {
           'Content-Type': 'application/json'
         },

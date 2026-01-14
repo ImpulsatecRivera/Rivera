@@ -3,7 +3,7 @@ import ResumenCon from "../Controllers/ResumenDieselController.js";
 import multer from 'multer';
 import path from 'path';
 import { fileURLToPath } from 'url';
-
+import { validateAuthToken } from "../Middlewares/validateAuthToken.js";
 const router = express.Router();
 
 // Configuración de __dirname para ES modules
@@ -47,15 +47,15 @@ const upload = multer({
 // =====================================================
 
 // Obtener todos los resúmenes
-router.get("/", ResumenCon.getResumen);
+router.get("/", validateAuthToken(["admin", "Operativo", "Supervisor"]), ResumenCon.getResumen);
 
 // Agregar resumen con comprobante opcional
-router.post("/",  upload.single('comprobante'), ResumenCon.AgregarDiesel);
+router.post("/", validateAuthToken(["admin", "Operativo", "Supervisor"]), upload.single('comprobante'), ResumenCon.AgregarDiesel);
 
 // Actualizar resumen con comprobante opcional
-router.put("/:id", upload.single('comprobante'), ResumenCon.PutDiesel);
+router.put("/:id", validateAuthToken(["admin", "Operativo", "Supervisor"]), upload.single('comprobante'), ResumenCon.PutDiesel);
 
 // Eliminar resumen
-router.delete("/:id",  ResumenCon.DeleteResumen);
+router.delete("/:id", validateAuthToken(["admin", "Operativo", "Supervisor"]), ResumenCon.DeleteResumen);
 
 export default router;

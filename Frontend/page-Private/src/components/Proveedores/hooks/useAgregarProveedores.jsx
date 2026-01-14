@@ -185,6 +185,7 @@ const useSupplierForm = () => {
 
       const response = await fetch(`${API_URL}/proveedores`, {
         method: 'POST',
+        credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
         },

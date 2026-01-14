@@ -90,6 +90,7 @@ const RiveraTransportMapDemo = () => {
       
       const response = await fetch(`${API_URL}/viajes/map-data`, {
         method: 'GET',
+        credentials: 'include',
         headers: { 
           'Content-Type': 'application/json',
           'Cache-Control': 'no-cache'

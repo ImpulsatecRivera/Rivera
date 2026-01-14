@@ -47,7 +47,7 @@ const useTrucksData = () => {
       
       console.log('🚚 Iniciando petición a la API...');
       
-      const response = await fetch('https://riveraproject-production-933e.up.railway.app/api/camiones', fetchOptions);
+      const response = await fetch('https://riveraproject-production-933e.up.railway.app/api/camiones', { credentials: 'include', ...fetchOptions });
       
       console.log('📡 Status de la respuesta:', response.status);
       console.log('📡 Response OK:', response.ok);

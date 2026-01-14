@@ -106,7 +106,7 @@ const PantallaPrincipalDiesel = () => {
   const fetchDiesel = async () => {
     try {
       setLoading(true);
-      const res = await fetch(DIESEL_ENDPOINT);
+      const res = await fetch(DIESEL_ENDPOINT, { credentials: 'include' });
       const json = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(json?.message || "Error al cargar los registros de diésel");
       const rows = json.data || (Array.isArray(json) ? json : []);
@@ -147,7 +147,7 @@ const PantallaPrincipalDiesel = () => {
       const id = row?._id || row?.id;
       if (!id) throw new Error("No se encontró el ID del registro");
 
-      const res = await fetch(`${DIESEL_ENDPOINT}/${id}`, { method: "DELETE" });
+      const res = await fetch(`${DIESEL_ENDPOINT}/${id}`, { method: "DELETE", credentials: 'include' });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.message || "Error al eliminar");
 

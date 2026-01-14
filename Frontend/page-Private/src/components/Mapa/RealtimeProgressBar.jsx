@@ -1,5 +1,5 @@
 // 📁 Frontend/src/components/Mapa/RealtimeProgressBar.jsx
-// VERSIÓN COMPATIBLE CON TU BACKEND EXISTENTE - SIN CAMBIOS AL BACKEND
+// VERSIÓN COMPATIBLE CON TU BACKEND EXISTENTE - CORREGIDA
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { config } from '../../config';
@@ -15,12 +15,12 @@ const RealtimeProgressBar = ({
   viajeId,
   onStatusChange,
   apiConfig = {
-    baseUrl: API_URL || `${API_URL}`,
+    baseUrl: API_URL,  // ✅ SIN DUPLICACIÓN
     endpoints: {
-      getTripDetails: '/api/viajes/:id',
-      updateProgress: '/api/viajes/:id/progress',
-      completeTrip: '/api/viajes/:id/complete',
-      getMapData: '/api/viajes/map-data'
+      getTripDetails: '/viajes/:id',        // ✅ SIN /api/
+      updateProgress: '/viajes/:id/progress', // ✅ SIN /api/
+      completeTrip: '/viajes/:id/complete',   // ✅ SIN /api/
+      getMapData: '/viajes/map-data'          // ✅ SIN /api/
     }
   },
   enablePolling = true,
@@ -162,16 +162,24 @@ const RealtimeProgressBar = ({
     ];
   }, []);
 
-  // Función para hacer llamadas a la API usando tus endpoints existentes
+  // ✅ FUNCIÓN CORREGIDA: Construye URLs correctamente
   const apiCall = useCallback(async (endpoint, options = {}) => {
     try {
       setIsConnected(true);
+      
+      // ✅ Construir URL correctamente
+      // Si API_URL = "http://localhost:4000/api"
+      // Y endpoint = "/viajes/:id"
+      // Resultado = "http://localhost:4000/api/viajes/:id"
       const url = `${apiConfig.baseUrl}${endpoint}`.replace(':id', viajeId);
       
+      console.log('🔗 API Call:', url); // Debug
+      
       const response = await fetch(url, {
+        credentials: options.credentials || 'include',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+          'Authorization': `Bearer ${localStorage.getItem('authToken') || ''}`,
           ...options.headers
         },
         ...options
@@ -185,7 +193,7 @@ const RealtimeProgressBar = ({
       setLastUpdate(new Date());
       return data;
     } catch (error) {
-      console.error('API Call Error:', error);
+      console.error('❌ API Call Error:', error);
       setIsConnected(false);
       setError(error.message);
       throw error;
@@ -194,15 +202,22 @@ const RealtimeProgressBar = ({
 
   // Cargar datos del viaje usando tu endpoint existente
   const loadTripData = useCallback(async () => {
-    if (!viajeId) return;
+    if (!viajeId) {
+      console.warn('⚠️ No hay viajeId');
+      return;
+    }
 
     try {
       setLoading(true);
       setError(null);
 
+      console.log('🔍 Viaje seleccionado:', { id: viajeId, status: currentStatus, progress });
+
       // Usar tu endpoint getTripDetails existente
       const response = await apiCall(apiConfig.endpoints.getTripDetails);
       const viaje = response.data || response;
+
+      console.log('✅ Datos del viaje cargados:', viaje);
 
       setViajeData(viaje);
       
@@ -230,12 +245,12 @@ const RealtimeProgressBar = ({
       })));
 
     } catch (error) {
-      console.error('Error loading trip data:', error);
+      console.error('❌ Error loading trip data:', error);
       setError('Error al cargar datos del viaje');
     } finally {
       setLoading(false);
     }
-  }, [viajeId, apiCall, apiConfig.endpoints.getTripDetails]);
+  }, [viajeId, apiCall, apiConfig.endpoints.getTripDetails, currentStatus, progress]);
 
   // Iniciar viaje usando tu endpoint de actualización de progreso
   const startTrip = async () => {
@@ -541,7 +556,7 @@ const RealtimeProgressBar = ({
           <div className="flex items-center space-x-2">
             <div className={`w-3 h-3 rounded-full ${getStatusColor()}`}></div>
             <span className="font-medium text-gray-900">{getStatusText()}</span>
-            <span className="text-xs text-gray-400">({viajeId})</span>
+            <span className="text-xs text-gray-400">({viajeId?.slice(-8)})</span>
           </div>
           <div className="flex items-center space-x-2">
             <div className="text-sm text-gray-500 font-semibold">

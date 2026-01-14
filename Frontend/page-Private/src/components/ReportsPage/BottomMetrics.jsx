@@ -6,21 +6,21 @@ const API_URL = config.api.API_URL;
 
 const MetricCard = ({ icon: Icon, title, value, trend, trendValue, color = "green", loading = false }) => {
   const colorClasses = {
-    green: "text-green-500 bg-green-50",
-    blue: "text-blue-500 bg-blue-50",
-    purple: "text-purple-500 bg-purple-50",
-    orange: "text-orange-500 bg-orange-50",
-    red: "text-red-500 bg-red-50"
+    green: "text-green-400 bg-green-500/20",
+    blue: "text-blue-400 bg-blue-500/20",
+    purple: "text-purple-400 bg-purple-500/20",
+    orange: "text-orange-400 bg-orange-500/20",
+    red: "text-red-400 bg-red-500/20"
   };
 
   const trendColors = {
-    positive: "text-green-600 bg-green-100",
-    negative: "text-red-600 bg-red-100",
-    neutral: "text-gray-600 bg-gray-100"
+    positive: "text-green-400 bg-green-500/20",
+    negative: "text-red-400 bg-red-500/20",
+    neutral: "text-gray-400 bg-gray-500/20"
   };
 
   return (
-    <div className="bg-white p-3 sm:p-4 lg:p-5 rounded-lg shadow-sm border border-gray-100 hover:shadow-md transition-all duration-300 hover:border-gray-200 group">
+    <div className="bg-[#2a2d31] p-3 sm:p-4 lg:p-5 rounded-lg border border-[#34353A] hover:border-[#555a5f] transition-all duration-300 hover:shadow-lg hover:shadow-black/50 group">
       {/* Header */}
       <div className="flex items-start justify-between mb-3">
         <div className={`p-2 rounded-lg ${colorClasses[color]} group-hover:scale-110 transition-transform duration-300`}>
@@ -41,14 +41,14 @@ const MetricCard = ({ icon: Icon, title, value, trend, trendValue, color = "gree
       </div>
 
       {/* Title */}
-      <div className="text-xs sm:text-sm font-medium text-gray-600 mb-2 leading-tight">
+      <div className="text-xs sm:text-sm font-medium text-gray-400 mb-2 leading-tight">
         {title}
       </div>
 
       {/* Value */}
-      <div className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900 leading-none">
+      <div className="text-lg sm:text-xl lg:text-2xl font-bold text-white leading-none">
         {loading ? (
-          <div className="animate-pulse bg-gray-200 h-6 w-16 rounded"></div>
+          <div className="animate-pulse bg-gray-500/30 h-6 w-16 rounded"></div>
         ) : (
           value
         )}
@@ -117,7 +117,7 @@ const BottomMetrics = () => {
       
       console.log('📊 Obteniendo usuarios activos...');
       
-      const response = await fetch(`${API_URL}/clientes/resumen-usuarios`);
+      const response = await fetch(`${API_URL}/clientes/resumen-usuarios`, { credentials: 'include' });
       
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -158,7 +158,7 @@ const BottomMetrics = () => {
       
       console.log('🚛 Obteniendo cargas entregadas...');
       
-      const response = await fetch(`${API_URL}/viajes/completed`);
+      const response = await fetch(`${API_URL}/viajes/completed`, { credentials: 'include' });
       
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -228,7 +228,7 @@ const BottomMetrics = () => {
       
       console.log('⏰ Obteniendo tiempo promedio de viaje...');
       
-      const response = await fetch(`${API_URL}/viajes/tiempo-promedio`);
+      const response = await fetch(`${API_URL}/viajes/tiempo-promedio`, { credentials: 'include' });
       
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -270,7 +270,7 @@ const BottomMetrics = () => {
       
       console.log('📦 Obteniendo capacidades de carga...');
       
-      const response = await fetch(`${API_URL}/viajes/capacidad-carga`);
+      const response = await fetch(`${API_URL}/viajes/capacidad-carga`, { credentials: 'include' });
       
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -430,7 +430,7 @@ const BottomMetrics = () => {
       <div className="mb-4 sm:mb-5 lg:mb-6">
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="text-base sm:text-lg lg:text-xl font-semibold text-gray-900 mb-1">
+            <h3 className="text-base sm:text-lg lg:text-xl font-semibold text-white mb-1">
               Métricas de Rendimiento
             </h3>
             <p className="text-xs sm:text-sm text-gray-500">
@@ -502,10 +502,10 @@ const BottomMetrics = () => {
                   <metric.icon size={16} />
                 </div>
                 <div>
-                  <div className="text-xs font-medium text-gray-600">{metric.title}</div>
-                  <div className="text-lg font-bold text-gray-900">
+                  <div className="text-xs font-medium text-gray-400">{metric.title}</div>
+                  <div className="text-lg font-bold text-white">
                     {metric.loading ? (
-                      <div className="animate-pulse bg-gray-200 h-4 w-12 rounded"></div>
+                      <div className="animate-pulse bg-gray-700 h-4 w-12 rounded"></div>
                     ) : (
                       metric.value
                     )}

@@ -1,14 +1,14 @@
 import proveedorsCon from "../Controllers/ProveedorController.js"
+import { validateAuthToken } from "../Middlewares/validateAuthToken.js";
 import express from "express";
 
-const router=express.Router();
+const router = express.Router();
 
 router.route("/")
-.get( proveedorsCon.get)
-.post( proveedorsCon.post);
+    .get(validateAuthToken(["admin", "Operativo", "Supervisor", "motorista"]), proveedorsCon.get)
+    .post(validateAuthToken(["admin", "Operativo", "Supervisor", "motorista"]), proveedorsCon.post);
 
 router.route("/:id")
-.put( proveedorsCon.put)
-.delete( proveedorsCon.delete);
-
+    .put(validateAuthToken(["admin", "Operativo", "Supervisor", "motorista"]), proveedorsCon.put)
+    .delete(validateAuthToken(["admin", "Operativo", "Supervisor", "motorista"]), proveedorsCon.delete);
 export default router;
