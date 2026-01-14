@@ -430,7 +430,7 @@ const BottomMetrics = () => {
       <div className="mb-4 sm:mb-5 lg:mb-6">
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="text-base sm:text-lg lg:text-xl font-semibold text-white mb-1">
+            <h3 className="text-base sm:text-lg lg:text-xl font-semibold text-gray-900 mb-1">
               Métricas de Rendimiento
             </h3>
             <p className="text-xs sm:text-sm text-gray-500">
@@ -502,10 +502,10 @@ const BottomMetrics = () => {
                   <metric.icon size={16} />
                 </div>
                 <div>
-                  <div className="text-xs font-medium text-gray-400">{metric.title}</div>
-                  <div className="text-lg font-bold text-white">
+                  <div className="text-xs font-medium text-gray-600">{metric.title}</div>
+                  <div className="text-lg font-bold text-gray-900">
                     {metric.loading ? (
-                      <div className="animate-pulse bg-gray-700 h-4 w-12 rounded"></div>
+                      <div className="animate-pulse bg-gray-200 h-4 w-12 rounded"></div>
                     ) : (
                       metric.value
                     )}
