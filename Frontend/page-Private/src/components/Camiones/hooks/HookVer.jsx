@@ -28,6 +28,7 @@ export const useTruckDetail = (truckId) => {
         `${API_URL}/motoristas`,
         {
           method: 'GET',
+          credentials: 'include',
           headers: {
             'Content-Type': 'application/json',
           },

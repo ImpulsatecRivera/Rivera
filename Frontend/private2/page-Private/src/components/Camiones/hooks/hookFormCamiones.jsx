@@ -24,7 +24,7 @@ export const useTruckForm = (onSuccess) => {
 
   // Cargar motoristas
   useEffect(() => {
-    fetch(API_URL_MOTORISTAS)
+    fetch(API_URL_MOTORISTAS, { credentials: 'include' })
       .then((res) => res.json())
       .then((data) => {
         console.log('Motoristas cargados:', data);
@@ -35,7 +35,7 @@ export const useTruckForm = (onSuccess) => {
 
   // Cargar proveedores
   useEffect(() => {
-    fetch(API_URL_PROVEEDORES)
+    fetch(API_URL_PROVEEDORES, { credentials: 'include' })
       .then((res) => res.json())
       .then((data) => {
         console.log('Proveedores cargados:', data);

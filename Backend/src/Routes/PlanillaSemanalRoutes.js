@@ -19,7 +19,7 @@
 
 import express from 'express';
 import PlanillaSemanalController from '../Controllers/PlanillaSemanalController.js';
-
+import { validateAuthToken } from '../Middlewares/validateAuthToken.js';
 const router = express.Router();
 
 /**
@@ -36,7 +36,7 @@ const router = express.Router();
  * 
  * Nota: La planilla se crea vacía y los empleados se agregan después con POST /:id/empleado
  */
-router.post('/', PlanillaSemanalController.crear);
+router.post('/',validateAuthToken(["admin"]), PlanillaSemanalController.crear);
 
 /**
  * GET /api/planillas/semanal
@@ -50,7 +50,7 @@ router.post('/', PlanillaSemanalController.crear);
  * Ejemplo:
  * GET /api/planillas/semanal?estado=pendiente&page=1&limit=10
  */
-router.get('/', PlanillaSemanalController.obtenerTodas);
+router.get('/',validateAuthToken(["admin", "Operativo", "Supervisor"]), PlanillaSemanalController.obtenerTodas);
 
 /**
  * GET /api/planillas/semanal/:id
@@ -62,7 +62,7 @@ router.get('/', PlanillaSemanalController.obtenerTodas);
  * Ejemplo:
  * GET /api/planillas/semanal/674abc123def456
  */
-router.get('/:id', PlanillaSemanalController.obtenerPorId);
+router.get('/:id',validateAuthToken(["admin", "Operativo", "Supervisor"]), PlanillaSemanalController.obtenerPorId);
 
 /**
  * PATCH /api/planillas/semanal/:id/estado
@@ -101,7 +101,7 @@ router.get('/:id', PlanillaSemanalController.obtenerPorId);
  * 
  * Nota: NO SE ACEPTAN FECHAS FUTURAS.
  */
-router.patch('/:id/estado', PlanillaSemanalController.cambiarEstado);
+router.patch('/:id/estado',validateAuthToken(["admin"]), PlanillaSemanalController.cambiarEstado);
 
 /**
  * POST /api/planillas/semanal/:id/empleado
@@ -126,7 +126,7 @@ router.patch('/:id/estado', PlanillaSemanalController.cambiarEstado);
  * - Se crean automáticamente 6 días (lunes a sábado) con la base calculada
  * - Campo anticipos se inicializa en 0
  */
-router.post('/:id/empleado', PlanillaSemanalController.agregarEmpleado);
+router.post('/:id/empleado',validateAuthToken(["admin"]), PlanillaSemanalController.agregarEmpleado);
 
 /**
  * PUT /api/planillas/semanal/:id/empleado/:empleadoId
@@ -167,7 +167,7 @@ router.post('/:id/empleado', PlanillaSemanalController.agregarEmpleado);
  * - Para empleados con planillaTipo="Quincenal", base siempre es 0
  * - Los totales se recalculan automáticamente
  */
-router.put('/:id/empleado/:empleadoId', PlanillaSemanalController.actualizarEmpleado);
+router.put('/:id/empleado/:empleadoId',validateAuthToken(["admin"]), PlanillaSemanalController.actualizarEmpleado);
 
 /**
  * PATCH /api/planillas/semanal/:id/empleado/:empleadoId/dia/:dia
@@ -197,7 +197,7 @@ router.put('/:id/empleado/:empleadoId', PlanillaSemanalController.actualizarEmpl
  *   "viaticos": 20.00
  * }
  */
-router.patch('/:id/empleado/:empleadoId/dia/:dia', PlanillaSemanalController.actualizarDia);
+router.patch('/:id/empleado/:empleadoId/dia/:dia',validateAuthToken(["admin"]), PlanillaSemanalController.actualizarDia);
 
 /**
  * PATCH /api/planillas/semanal/:id/empleado/:empleadoId/montos
@@ -228,7 +228,7 @@ router.patch('/:id/empleado/:empleadoId/dia/:dia', PlanillaSemanalController.act
  *   "anticipos": 100.00
  * }
  */
-router.patch('/:id/empleado/:empleadoId/montos', PlanillaSemanalController.actualizarMontos);
+router.patch('/:id/empleado/:empleadoId/montos',validateAuthToken(["admin"]), PlanillaSemanalController.actualizarMontos);
 
 /**
  * DELETE /api/planillas/semanal/:id/empleado/:empleadoId
@@ -244,7 +244,7 @@ router.patch('/:id/empleado/:empleadoId/montos', PlanillaSemanalController.actua
  * Ejemplo:
  * DELETE /api/planillas/semanal/674abc123/empleado/674def456
  */
-router.delete('/:id/empleado/:empleadoId', PlanillaSemanalController.eliminarEmpleado);
+router.delete('/:id/empleado/:empleadoId',validateAuthToken(["admin"]), PlanillaSemanalController.eliminarEmpleado);
 
 /**
  * DELETE /api/planillas/semanal/:id
@@ -259,7 +259,7 @@ router.delete('/:id/empleado/:empleadoId', PlanillaSemanalController.eliminarEmp
  * Ejemplo:
  * DELETE /api/planillas/semanal/674abc123
  */
-router.delete('/:id', PlanillaSemanalController.eliminar);
+router.delete('/:id',validateAuthToken(["admin"]), PlanillaSemanalController.eliminar);
 
 /**
  * GET /api/planillas/semanal/empleado/:empleadoId
@@ -273,7 +273,7 @@ router.delete('/:id', PlanillaSemanalController.eliminar);
  * 
  * Retorna todas las planillas donde aparece el empleado con sus datos específicos
  */
-router.get('/empleado/:empleadoId', PlanillaSemanalController.obtenerPorEmpleado);
+router.get('/empleado/:empleadoId',validateAuthToken(["admin"]), PlanillaSemanalController.obtenerPorEmpleado);
 
 /**
  * POST /api/planillas/semanal/:id/empleado/:empleadoId/dia/:dia/falta
@@ -306,7 +306,7 @@ router.get('/empleado/:empleadoId', PlanillaSemanalController.obtenerPorEmpleado
  *   "descuentoFalta": 25.50
  * }
  */
-router.post('/:id/empleado/:empleadoId/dia/:dia/falta', PlanillaSemanalController.marcarFaltaInjustificada);
+router.post('/:id/empleado/:empleadoId/dia/:dia/falta',validateAuthToken(["admin"]), PlanillaSemanalController.marcarFaltaInjustificada);
 
 /**
  * DELETE /api/planillas/semanal/:id/empleado/:empleadoId/dia/:dia/falta
@@ -330,6 +330,6 @@ router.post('/:id/empleado/:empleadoId/dia/:dia/falta', PlanillaSemanalControlle
  * Ejemplo:
  * DELETE /api/planillas/semanal/674abc123/empleado/674def456/dia/lunes/falta
  */
-router.delete('/:id/empleado/:empleadoId/dia/:dia/falta', PlanillaSemanalController.desmarcarFaltaInjustificada);
+router.delete('/:id/empleado/:empleadoId/dia/:dia/falta',validateAuthToken(["admin"]), PlanillaSemanalController.desmarcarFaltaInjustificada);
 
 export default router;

@@ -36,7 +36,7 @@ const DashboardBackendIntegration = ({ onClose }) => {
   const fetchRealTimeMetrics = async () => {
     try {
       console.log('📊 Obteniendo métricas en tiempo real...');
-      const response = await fetch('https://riveraproject-production-933e.up.railway.app/api/viajes/real-time-metrics');
+      const response = await fetch('https://riveraproject-production-933e.up.railway.app/api/viajes/real-time-metrics', { credentials: 'include' });
       
       if (response.ok) {
         const data = await response.json();
@@ -65,7 +65,7 @@ const DashboardBackendIntegration = ({ onClose }) => {
   const fetchAllTrips = async () => {
     try {
       console.log('🚛 Obteniendo datos de viajes...');
-      const response = await fetch('https://riveraproject-production-933e.up.railway.app/api/viajes/map-data');
+      const response = await fetch('https://riveraproject-production-933e.up.railway.app/api/viajes/map-data', { credentials: 'include' });
       
       if (response.ok) {
         const data = await response.json();

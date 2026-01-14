@@ -26,7 +26,7 @@ const MainMetrics = () => {
     try {
       setUsuariosActivos(prev => ({ ...prev, loading: true, error: null }));
       
-      const response = await fetch('https://riveraproject-production-933e.up.railway.app/api/clientes/resumen-usuarios');
+      const response = await fetch('https://riveraproject-production-933e.up.railway.app/api/clientes/resumen-usuarios', { credentials: 'include' });
       
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -59,7 +59,7 @@ const MainMetrics = () => {
     try {
       setCargasEntregadas(prev => ({ ...prev, loading: true, error: null }));
       
-      const response = await fetch('https://riveraproject-production-933e.up.railway.app/api/viajes/completed');
+      const response = await fetch('https://riveraproject-production-933e.up.railway.app/api/viajes/completed', { credentials: 'include' });
       
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -105,7 +105,7 @@ const MainMetrics = () => {
     try {
       setTiempoPromedio(prev => ({ ...prev, loading: true, error: null }));
       
-      const response = await fetch('/api/viajes/tiempo-promedio');
+      const response = await fetch('/api/viajes/tiempo-promedio', { credentials: 'include' });
       
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);

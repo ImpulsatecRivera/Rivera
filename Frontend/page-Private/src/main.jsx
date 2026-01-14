@@ -2,7 +2,11 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App.jsx';
 import { BrowserRouter } from 'react-router-dom';
-import { AuthProvider } from './Context/AuthContext'; 
+import { AuthProvider } from './context/AuthContext'; 
+import axios from 'axios';
+
+// Ensure cookies are included on all axios requests by default
+axios.defaults.withCredentials = true;
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>

@@ -75,12 +75,12 @@ export default function EditDiesel() {
         setLoading(true);
         setError(null);
 
-        const resCam = await fetch(CAMIONES_ENDPOINT);
+        const resCam = await fetch(CAMIONES_ENDPOINT, { credentials: 'include' });
         const jsonCam = await resCam.json().catch(() => ({}));
         const camRows = jsonCam.data || (Array.isArray(jsonCam) ? jsonCam : []);
         setCamiones(camRows);
 
-        const res = await fetch(DIESEL_ENDPOINT);
+      const res = await fetch(DIESEL_ENDPOINT, { credentials: 'include' });
         const json = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error(json?.message || "Error al cargar diésel");
 
@@ -171,6 +171,7 @@ export default function EditDiesel() {
 
       const res = await fetch(`${DIESEL_ENDPOINT}/${id}`, {
         method: "PUT",
+        credentials: 'include',
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });

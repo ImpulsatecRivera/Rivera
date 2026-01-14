@@ -117,7 +117,8 @@ const buildDriverMatch = (motoristaOrId) => {
 
 motoristasCon.get = async (req, res) => {
   try {
-    const newMotorista = await motoristalModel.find();
+    // Excluir contraseñas
+    const newMotorista = await motoristalModel.find().select('-password');
     res.status(200).json(newMotorista);
   } catch (error) {
     res.status(500).json({ message: "Error al obtener motoristas", error: error.message });
@@ -126,17 +127,27 @@ motoristasCon.get = async (req, res) => {
 
 motoristasCon.getById = async (req, res) => {
   try {
-    const motorista = await motoristalModel.findById(req.params.id);
+      const motorista = await motoristalModel.findById(req.params.id);
     if (!motorista) {
       return res.status(404).json({ message: "Motorista no encontrado" });
+    }
+
+    // Ownership/security: if requester is a motorista, allow only access to own profile
+    if (req.user && req.user.userType === "motorista") {
+      if (String(req.user.id) !== String(req.params.id)) {
+        return res.status(403).json({ message: "Access denied: can only access your own profile" });
+      }
     }
 
     // soporta driverId como ObjectId o string
     const driverVariants = toIdList(motorista._id);
     const camion = await camioneModel.findOne({ driverId: { $in: driverVariants } });
 
+    const motoristaObj = motorista.toObject();
+    delete motoristaObj.password; // remove sensitive field
+
     const motoristaCompleto = {
-      ...motorista.toObject(),
+      ...motoristaObj,
       camionAsignado: camion
         ? {
             _id: camion._id,
@@ -292,6 +303,13 @@ motoristasCon.put = async (req, res) => {
     const motoristaExistente = await motoristalModel.findById(motoristaId);
     if (!motoristaExistente) {
       return res.status(404).json({ message: "Motorista no encontrado" });
+    }
+
+    // Ownership/security: if requester is a motorista, allow only editing their own profile
+    if (req.user && req.user.userType === "motorista") {
+      if (String(req.user.id) !== String(motoristaId)) {
+        return res.status(403).json({ message: "Access denied: can only edit your own profile" });
+      }
     }
 
     let imgUrl = "";

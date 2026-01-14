@@ -128,7 +128,7 @@ export default function AgregarViajeOperativo() {
   const fetchClientes = async () => {
     try {
       setLoadingClientes(true);
-      const res = await fetch(CLIENTES_ENDPOINT);
+      const res = await fetch(CLIENTES_ENDPOINT, { credentials: 'include' });
       const json = await res.json().catch(() => ({}));
       const rows = json?.data?.clientes || json?.data || (Array.isArray(json) ? json : []);
 
@@ -186,6 +186,7 @@ export default function AgregarViajeOperativo() {
 
     const res = await fetch(CLIENTES_ENDPOINT, {
       method: "POST",
+      credentials: 'include',
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
@@ -230,7 +231,7 @@ export default function AgregarViajeOperativo() {
   const fetchMotoristas = async () => {
     try {
       setLoadingMotoristas(true);
-      const res = await fetch(MOTORISTAS_ENDPOINT);
+      const res = await fetch(MOTORISTAS_ENDPOINT, { credentials: 'include' });
       const json = await res.json().catch(() => ({}));
       const rows = json?.data || (Array.isArray(json) ? json : []);
       setMotoristas(Array.isArray(rows) ? rows : []);
@@ -257,7 +258,7 @@ export default function AgregarViajeOperativo() {
   const fetchCamiones = async () => {
     try {
       setLoadingCamiones(true);
-      const res = await fetch(CAMIONES_ENDPOINT);
+      const res = await fetch(CAMIONES_ENDPOINT, { credentials: 'include' });
       const json = await res.json().catch(() => ({}));
 
       const rows =
@@ -351,6 +352,7 @@ arrivalTime: new Date(formData.arrivalTime).toISOString(),
       
       const res = await fetch(VIAJES_OPERATIVOS_ENDPOINT, {
         method: "POST",
+        credentials: 'include',
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(dataToSend),
       });

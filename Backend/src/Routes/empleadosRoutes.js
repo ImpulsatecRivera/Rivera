@@ -1,6 +1,7 @@
 import empleadosCon from "../Controllers/EmpleadosController.js";
 import express from "express";
 import multer from "multer";
+import { validateAuthToken } from "../Middlewares/validateAuthToken.js";
 
 const router = express.Router();
 
@@ -15,24 +16,27 @@ const upload = multer({ dest: "public/" });
  */
 
 // GET /empleados - Obtener todos los empleados
-// Acceso: Todos (ADMIN, SUPERVISOR, OPERATIVO)
+// Acceso: ADMIN, SUPERVISOR, OPERATIVO (view-only)
 router.get(
   "/",
+  validateAuthToken(["admin","Operativo","Supervisor"]),
   empleadosCon.get
 );
 
 // POST /empleados - Crear nuevo empleado
-// Acceso: ADMIN, SUPERVISOR, OPERATIVO
+// Acceso: Solo ADMIN
 router.post(
   "/",
+  validateAuthToken(["admin"]),
   upload.single("img"),
   empleadosCon.post
 );
 
 // PUT /empleados/:id - Actualizar empleado
-// Acceso: ADMIN, SUPERVISOR
+// Acceso: Solo ADMIN
 router.put(
   "/:id",
+  validateAuthToken(["admin"]),
   upload.single("img"),
   empleadosCon.put
 );
@@ -41,6 +45,7 @@ router.put(
 // Acceso: Solo ADMIN
 router.delete(
   "/:id",
+  validateAuthToken(["admin"]),
   empleadosCon.delete
 );
 

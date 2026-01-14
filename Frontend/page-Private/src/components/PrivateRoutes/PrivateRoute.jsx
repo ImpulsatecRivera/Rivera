@@ -1,4 +1,4 @@
-import { useAuth } from "../../Context/AuthContext";
+import { useAuth } from "../../context/AuthContext";
 import { Navigate } from "react-router-dom";
 
 const PrivateRoute = ({ children }) => {
@@ -24,6 +24,12 @@ const PrivateRoute = ({ children }) => {
   if (!isLoggedIn) {
     console.log("🚫 [PrivateRoute] Usuario no autenticado, redirigiendo a login");
     return <Navigate to="/" replace />;
+  }
+
+  // Bloquear clientes del acceso a la app privada
+  if (user && (user.userType === 'Cliente' || user.userType === 'cliente')) {
+    console.log("🚫 [PrivateRoute] Cliente detectado, acceso privado no permitido");
+    return <Navigate to="/no-access" replace />;
   }
 
   console.log("✅ [PrivateRoute] Usuario autenticado, mostrando contenido");

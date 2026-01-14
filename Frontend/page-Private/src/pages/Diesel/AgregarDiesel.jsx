@@ -45,7 +45,7 @@ const AgregarDiesel = () => {
 
   const fetchCamiones = async () => {
     try {
-      const response = await fetch(`${config.api.API_URL}/camiones`);
+      const response = await fetch(`${config.api.API_URL}/camiones`, { credentials: 'include' });
       const result = await response.json().catch(() => ({}));
       setCamiones(result.data || []);
     } catch (err) {
@@ -115,6 +115,7 @@ const AgregarDiesel = () => {
 
       const response = await fetch(`${config.api.API_URL}/resumen`, {
         method: "POST",
+        credentials: 'include',
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });

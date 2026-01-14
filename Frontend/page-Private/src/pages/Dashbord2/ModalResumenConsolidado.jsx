@@ -97,7 +97,7 @@ const ModalResumenConsolidado = ({ isOpen, onClose, apiUrl }) => {
         const reporteUrl = `${apiUrl}/reporte-consolidado/anual/${anoSeleccionado}`;
         
         try {
-          const response = await fetch(reporteUrl);
+          const response = await fetch(reporteUrl, { credentials: 'include' });
           
           if (response.ok) {
             window.open(reporteUrl, '_blank');
@@ -139,7 +139,7 @@ const ModalResumenConsolidado = ({ isOpen, onClose, apiUrl }) => {
         const reporteUrl = `${apiUrl}/reporte-consolidado/mensual/${mesSeleccionado}/${anoSeleccionado}/${diasTrabajados}`;
         
         try {
-          const response = await fetch(reporteUrl);
+          const response = await fetch(reporteUrl, { credentials: 'include' });
           
           if (response.ok) {
             window.open(reporteUrl, '_blank');

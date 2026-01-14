@@ -95,7 +95,7 @@ const formatearFecha = (fechaString) => {
         const reporteUrl = `${apiUrl}/reporte/anual/${anoSeleccionado}`;
         
         try {
-          const checkResponse = await fetch(reporteUrl, { method: 'HEAD' });
+          const checkResponse = await fetch(reporteUrl, { method: 'HEAD', credentials: 'include' });
           
           if (checkResponse.status === 404) {
             setGenerando(false);
@@ -130,7 +130,7 @@ const formatearFecha = (fechaString) => {
         const reporteUrl = `${apiUrl}/reporte/mensual-simple/${mesSeleccionado}/${anoSeleccionado}`;
         
         try {
-          const checkResponse = await fetch(reporteUrl, { method: 'HEAD' });
+          const checkResponse = await fetch(reporteUrl, { method: 'HEAD', credentials: 'include' });
           
           if (checkResponse.status === 404) {
             setGenerando(false);
@@ -171,7 +171,7 @@ const formatearFecha = (fechaString) => {
         const reporteUrl = `${apiUrl}/reporte/rango-fechas/${fechaInicio}/${fechaFin}`;
         
         try {
-          const checkResponse = await fetch(reporteUrl, { method: 'HEAD' });
+          const checkResponse = await fetch(reporteUrl, { method: 'HEAD', credentials: 'include' });
           
           if (checkResponse.status === 404) {
             setGenerando(false);
@@ -209,6 +209,7 @@ const formatearFecha = (fechaString) => {
       } else if (tipoReporte === 'multiple') {
         const response = await fetch(`${apiUrl}/reporte/mensual-multiple`, {
           method: 'POST',
+          credentials: 'include',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             meses: mesesSeleccionados.sort((a, b) => a - b),

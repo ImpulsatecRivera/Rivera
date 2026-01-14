@@ -29,7 +29,7 @@ const MainMetrics = () => {
     try {
       setUsuariosActivos(prev => ({ ...prev, loading: true, error: null }));
       
-      const response = await fetch(`${API_URL}/clientes/resumen-usuarios`);
+      const response = await fetch(`${API_URL}/clientes/resumen-usuarios`, { credentials: 'include' });
       
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -62,7 +62,7 @@ const MainMetrics = () => {
     try {
       setCargasEntregadas(prev => ({ ...prev, loading: true, error: null }));
       
-      const response = await fetch(`${API_URL}/viajes/completed`);
+      const response = await fetch(`${API_URL}/viajes/completed`, { credentials: 'include' });
       
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -108,7 +108,7 @@ const MainMetrics = () => {
     try {
       setTiempoPromedio(prev => ({ ...prev, loading: true, error: null }));
       
-      const response = await fetch(`${API_URL}/viajes/tiempo-promedio`);
+      const response = await fetch(`${API_URL}/viajes/tiempo-promedio`, { credentials: 'include' });
       
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);

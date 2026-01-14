@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { config } from "../../../config";
 import axios from "axios";
+import { useAuth } from '../../../context/AuthContext';
+import Swal from 'sweetalert2';
 
 const API_URL = config.api.API_URL;
 
@@ -145,10 +147,22 @@ const useDataEmpleado = () => {
     : [];
 
   // Navegación
+  const { user } = useAuth();
+
   const handleContinue = (e) => {
     e.preventDefault();
+    if (!user || user.userType !== 'Administrador') {
+      Swal.fire({
+        title: 'Acceso restringido',
+        html: 'No tienes permisos para crear empleados. Contacta a un administrador.',
+        icon: 'info',
+        confirmButtonText: 'Entendido',
+        confirmButtonColor: '#2563eb'
+      });
+      return;
+    }
     navigate('/empleados/agregarEmployee');
-  };
+  }; 
 
   // Manejo de opciones
   const handleOptionsClick = (e) => {
@@ -157,11 +171,33 @@ const useDataEmpleado = () => {
   };
 
   const handleEdit = () => {
+    if (!user || user.userType !== 'Administrador') {
+      Swal.fire({
+        title: 'Acceso restringido',
+        html: 'No tienes permisos para editar empleados. Contacta a un administrador.',
+        icon: 'info',
+        confirmButtonText: 'Entendido',
+        confirmButtonColor: '#2563eb'
+      });
+      setShowAlert(false);
+      return;
+    }
     setShowAlert(false);
     setShowEditAlert(true);
-  };
+  }; 
 
   const handleDelete = () => {
+    if (!user || user.userType !== 'Administrador') {
+      Swal.fire({
+        title: 'Acceso restringido',
+        html: 'No tienes permisos para eliminar empleados. Contacta a un administrador.',
+        icon: 'info',
+        confirmButtonText: 'Entendido',
+        confirmButtonColor: '#2563eb'
+      });
+      setShowAlert(false);
+      return;
+    }
     setShowAlert(false);
     setShowConfirmDelete(true);
   };

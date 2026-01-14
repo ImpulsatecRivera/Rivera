@@ -138,10 +138,9 @@ ReportesGastosMesController.generarPDFMensualConsolidado = async (req, res) => {
     // 3) PLANILLAS QUINCENALES - incluir quincenas registradas para el mes
     const planillasQuincenales = await PlanillaQuincenal.find({ mes: mes, año: ano }).sort({ quincena: 1 }).lean();
 
-    // 4) PRESTACIONES - ISSS, AFP y RENTA desde quincenas (sumar totales de quincenas del mes)
+    // 4) PRESTACIONES - ISSS, AFP desde quincenas (sumar totales de quincenas del mes)
     const totalISSS = planillasQuincenales.reduce((s, q) => s + Number(q.totales?.totalISSS || 0), 0);
     const totalAFP = planillasQuincenales.reduce((s, q) => s + Number(q.totales?.totalAFP || 0), 0);
-    const totalRenta = planillasQuincenales.reduce((s, q) => s + Number(q.totales?.totalRenta || 0), 0);
 
     // 5) DIÉSEL - sumar ResumenDiesel.Total por mes/ano
     const resumenDiesel = await ResumenDiesel.find({ mes: mes, ano: ano }).lean();
@@ -252,8 +251,7 @@ ReportesGastosMesController.generarPDFMensualConsolidado = async (req, res) => {
                 <tr><td>ISSS</td><td class="right">$ ${formatMoney(totalISSS)}</td></tr>
             <tr><td>INCAF</td><td class="right">$ ${formatMoney(Number(incaf || 0))}</td></tr>
             <tr><td>AFP</td><td class="right">$ ${formatMoney(totalAFP)}</td></tr>
-            <tr><td>RENTA</td><td class="right">$ ${formatMoney(totalRenta)}</td></tr>
-            <tr><td><strong>TOTAL</strong></td><td class="right"><strong>$ ${formatMoney(totalISSS + Number(incaf || 0) + totalAFP + totalRenta)}</strong></td></tr>
+            <tr><td><strong>TOTAL</strong></td><td class="right"><strong>$ ${formatMoney(totalISSS + Number(incaf || 0) + totalAFP)}</strong></td></tr>
           </tbody>
         </table>
 
@@ -274,7 +272,7 @@ ReportesGastosMesController.generarPDFMensualConsolidado = async (req, res) => {
         </table>
 
         <h3 style="text-align:right;margin-top:14px;color:#1e3a8a;">TOTAL GASTOS DE ${String(new Date(ano, mes-1, 1).toLocaleString('es-ES',{ month: 'long', year: 'numeric' })).toUpperCase()} : $ ${formatMoney(
-          mantenimientoTotal + planillasSemanalesAgg.reduce((s,p)=>s+p.total,0) + planillasQuincenales.reduce((s,q)=>s + Number(q.totales?.totalAPagar || 0), 0) + totalCena + totalISSS + Number(incaf || 0) + totalAFP + totalRenta + dieselTotal + renovacionAmount
+          mantenimientoTotal + planillasSemanalesAgg.reduce((s,p)=>s+p.total,0) + planillasQuincenales.reduce((s,q)=>s + Number(q.totales?.totalAPagar || 0), 0) + totalCena + totalISSS + Number(incaf || 0) + totalAFP + dieselTotal + renovacionAmount
         )}</h3>
 
       </body>
