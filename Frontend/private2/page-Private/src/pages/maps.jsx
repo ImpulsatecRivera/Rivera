@@ -183,6 +183,7 @@ const RiveraTransportMapDemo = () => {
       const apiUrl = 'https://riveraproject-production-933e.up.railway.app/api/viajes/map-data';
       const response = await fetch(apiUrl, {
         method: 'GET',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' }
       });
       if (!response.ok) throw new Error(`Error ${response.status}: ${response.statusText}`);

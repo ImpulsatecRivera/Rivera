@@ -212,6 +212,7 @@ const AgregarProveedor = () => {
 
       const response = await fetch('https://riveraproject-production-933e.up.railway.app/api/proveedores', {
         method: 'POST',
+        credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
         },

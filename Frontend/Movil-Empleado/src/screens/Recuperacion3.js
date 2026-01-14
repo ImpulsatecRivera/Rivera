@@ -48,6 +48,7 @@ const Recuperacion3 = ({ navigation, route }) => {
       const API_URL = 'https://rivera-test-629395560179.us-west1.run.app/api/recovery/newPassword';
       const response = await fetch(API_URL, {
         method: 'POST',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
         body: JSON.stringify({ newPassword: password, verifiedToken }),
       });

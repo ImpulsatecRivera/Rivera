@@ -42,7 +42,7 @@ const request = async (path, { method = 'GET', signal } = {}) => {
       : {}),
   };
 
-  const res = await fetch(url, { method, headers, signal });
+  const res = await fetch(url, { credentials: 'include', method, headers, signal });
 
   // 204 No Content
   if (res.status === 204) return { status: res.status, url, raw: null, payload: null };

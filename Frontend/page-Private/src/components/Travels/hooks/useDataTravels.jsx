@@ -129,6 +129,7 @@ export const useTravels = () => {
           'Cache-Control': 'no-cache',
           'Pragma': 'no-cache'
         },
+        withCredentials: true,
         timeout: 10000
       });
       
@@ -278,6 +279,7 @@ export const useTravels = () => {
         headers: {
           'Content-Type': 'application/json'
         },
+        withCredentials: true,
         timeout: 15000
       });
       
@@ -322,6 +324,7 @@ export const useTravels = () => {
         headers: {
           'Content-Type': 'application/json'
         },
+        withCredentials: true,
         timeout: 10000
       });
       
@@ -385,6 +388,7 @@ export const useTravels = () => {
           headers: {
             'Content-Type': 'application/json'
           },
+          withCredentials: true,
           timeout: 10000
         });
         
@@ -406,6 +410,7 @@ export const useTravels = () => {
             headers: {
               'Content-Type': 'application/json'
             },
+            withCredentials: true,
             timeout: 10000
           });
           

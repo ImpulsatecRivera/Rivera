@@ -28,7 +28,7 @@ const useDataCliente = () => {
       
       console.log('🚀 Iniciando petición a la API de clientes...');
       
-      const response = await axios.get(`${API_URL}/clientes`);
+      const response = await axios.get(`${API_URL}/clientes`, { withCredentials: true });
       
       console.log('📡 Status de la respuesta:', response.status);
       console.log('📋 Datos recibidos completos:', response.data);
@@ -116,7 +116,7 @@ const useDataCliente = () => {
   const addClient = async (clientData) => {
     try {
       console.log('➕ Agregando nuevo cliente:', clientData);
-      const response = await axios.post(`${API_URL}/clientes`, clientData);
+      const response = await axios.post(`${API_URL}/clientes`, clientData, { withCredentials: true });
       
       const newClient = response.data.data || response.data;
       const normalizedClient = {
@@ -146,7 +146,7 @@ const useDataCliente = () => {
   const updateClient = async (clientId, updateData) => {
     try {
       console.log(`📝 Actualizando cliente ${clientId}:`, updateData);
-      const response = await axios.put(`${API_URL}/clientes/${clientId}`, updateData);
+      const response = await axios.put(`${API_URL}/clientes/${clientId}`, updateData, { withCredentials: true });
       
       const updatedClientData = response.data.cliente || response.data.data || { ...selectedClient, ...updateData };
       const updatedClient = {
@@ -186,7 +186,7 @@ const useDataCliente = () => {
   const deleteClient = async (clientId) => {
     try {
       console.log(`🗑️ Eliminando cliente ${clientId}`);
-      await axios.delete(`${API_URL}/clientes/${clientId}`);
+      await axios.delete(`${API_URL}/clientes/${clientId}`, { withCredentials: true });
       setClients(prev => Array.isArray(prev) ? prev.filter(client => client._id !== clientId) : []);
       
       // Limpiar selección si se elimina el cliente seleccionado

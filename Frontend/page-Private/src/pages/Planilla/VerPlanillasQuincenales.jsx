@@ -119,7 +119,8 @@ export default function VerPlanillaQuincenal() {
       });
 
       const response = await fetch(
-        `${config.api.API_URL}/reportes/planilla/quincenal/${id}`
+        `${config.api.API_URL}/reportes/planilla/quincenal/${id}`,
+        { credentials: 'include' }
       );
 
       if (!response.ok) {
