@@ -18,9 +18,11 @@ export const validateAuthToken = (allowedRoles = []) => {
 
       const decoded = jwt.verify(token, config.JWT.secret);
       const { id, userType } = decoded;
+      const normalizedType = String(userType || '').trim().toLowerCase();
+      const normalizedSingular = normalizedType.replace(/s$/,'');
 
-      // ADMIN (env) -> mapped to 'admin'
-      if (userType === "Administrador") {
+      // ADMIN -> normalized to 'admin'
+      if (normalizedType === 'administrador' || normalizedType === 'admin' || normalizedType.startsWith('admin')) {
         if (allowedRoles.length === 0 || allowedRoles.includes("admin")) {
           req.user = { id, userType: "admin" };
           return next();
@@ -28,9 +30,9 @@ export const validateAuthToken = (allowedRoles = []) => {
         return res.status(403).json({ message: "Access denied", userPermission: "admin" });
       }
 
-      // MOTORISTA -> mapped to 'motorista'
-      if (userType === "Motorista") {
-        if (allowedRoles.length === 0 || allowedRoles.includes("motorista")) {
+      // MOTORISTA -> mapped to 'motorista' (accept 'motorista', 'motoristas', case-insensitive)
+      if (normalizedType.startsWith('motorist') || normalizedType === 'motoristas' || normalizedSingular === 'motorista') {
+        if (allowedRoles.length === 0 || allowedRoles.includes("motorista") || allowedRoles.includes("motoristas")) {
           req.user = { id, userType: "motorista" };
           return next();
         }
@@ -38,7 +40,7 @@ export const validateAuthToken = (allowedRoles = []) => {
       }
 
       // EMPLEADO -> fetch DB to resolve rol (Operativo | Supervisor)
-      if (userType === "Empleado") {
+      if (normalizedType.startsWith('emplead') || normalizedType === 'empleados' || normalizedSingular === 'empleado') {
         const empleado = await EmpleadoModel.findById(id).select("rol email name lastName");
         if (!empleado) {
           return res.status(401).json({ message: "Empleado no encontrado" });
@@ -69,13 +71,13 @@ export const validateAuthToken = (allowedRoles = []) => {
       }
 
       // CLIENTE -> mapped to 'cliente' (load basic info for ownership checks)
-      if (userType === "Cliente") {
+      if (normalizedType.startsWith('client') || normalizedType === 'clientes' || normalizedSingular === 'cliente') {
         const cliente = await ClienteModel.findById(id).select("email firstName lastName nombreComercial tipoCliente");
         if (!cliente) {
           return res.status(401).json({ message: "Cliente no encontrado" });
         }
 
-        if (allowedRoles.length === 0 || allowedRoles.includes("cliente") || allowedRoles.includes("Cliente")) {
+        if (allowedRoles.length === 0 || allowedRoles.includes("cliente") || allowedRoles.includes("Cliente") || allowedRoles.includes('clientes')) {
           req.user = {
             id,
             userType: "cliente",
@@ -95,9 +97,9 @@ export const validateAuthToken = (allowedRoles = []) => {
         return next();
       }
 
-      const simpleType = String(userType).toLowerCase();
-      if (allowedRoles.includes(simpleType) || allowedRoles.includes(userType)) {
-        req.user = { id, userType };
+      const simpleType = normalizedSingular; // normalized and singular
+      if (allowedRoles.includes(simpleType) || allowedRoles.includes(normalizedType) || allowedRoles.includes(userType)) {
+        req.user = { id, userType: normalizedSingular };
         return next();
       }
 
