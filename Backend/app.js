@@ -119,11 +119,11 @@ app.use("/api/proveedores", proveedoresRoutes);
 app.use("/api/cajaChica", cajachicaRoutes);
 app.use("/api/cajaChicaConfig", CajaChicaConfigRoutes);
 app.use("/api/reportesCajaChica", reportesCajaChicaRoutes);
-app.use("/api/planillas/quincenal", validateAuthToken(["admin"]), PlanillaQuincenalRoutes);
+app.use("/api/planillas/quincenal",  PlanillaQuincenalRoutes);
 app.use("/api/reportes/planilla/quincenal", validateAuthToken(["admin"]), ReportesPlanillaQuincenalRoutes);
 
-app.use("/api/planillas/semanal", validateAuthToken(["admin"]), PlanillaSemanalRoutes);
-app.use("/api/reportes/planilla/semanal", validateAuthToken(["admin"]), ReportesPlanillaSemanalRoutes);
+app.use("/api/planillas/semanal",PlanillaSemanalRoutes);
+app.use("/api/reportes/planilla/semanal",validateAuthToken(["admin"]), ReportesPlanillaSemanalRoutes);
 
 app.use("/api/auto-update", autoUpdateRoutes);
 app.use("/api/call", callRoutes);

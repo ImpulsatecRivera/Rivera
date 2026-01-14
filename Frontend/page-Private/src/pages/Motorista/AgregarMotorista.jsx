@@ -295,6 +295,7 @@ const AgregarMotorista = () => {
       const response = await fetch(`${API_URL}/motoristas`, {
         method: 'POST',
         body: formDataToSend,
+        credentials: 'include'
       });
 
       if (response.ok) {

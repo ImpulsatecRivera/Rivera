@@ -92,7 +92,7 @@ const ModernDashboard = () => {
       setLoading(true);
 
 
-      const viajesRes = await fetch(`${config.api.API_URL}/viajes-operativos/listar`);
+      const viajesRes = await fetch(`${config.api.API_URL}/viajes-operativos/listar`, { credentials: 'include' });
       const viajesData = await viajesRes.json();
       let viajes = viajesData?.data || [];
 
@@ -111,7 +111,7 @@ const ModernDashboard = () => {
         ingresos: viajes.reduce((sum, v) => sum + (v?.montoAcordado || 0), 0)
       };
 
-      const mantoRes = await fetch(`${config.api.API_URL}/mantenimientos`);
+      const mantoRes = await fetch(`${config.api.API_URL}/mantenimientos`, { credentials: 'include' });
       const mantoData = await mantoRes.json();
       let mantenimientos = mantoData?.data || [];
 
@@ -127,7 +127,7 @@ const ModernDashboard = () => {
         }, 0)
       };
 
-      const dieselRes = await fetch(`${config.api.API_URL}/resumen`);
+      const dieselRes = await fetch(`${config.api.API_URL}/resumen`, { credentials: 'include' });
       const dieselData = await dieselRes.json();
       let diesel = dieselData?.data || (Array.isArray(dieselData) ? dieselData : []);
 

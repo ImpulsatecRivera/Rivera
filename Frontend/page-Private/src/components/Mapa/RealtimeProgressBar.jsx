@@ -169,6 +169,7 @@ const RealtimeProgressBar = ({
       const url = `${apiConfig.baseUrl}${endpoint}`.replace(':id', viajeId);
       
       const response = await fetch(url, {
+        credentials: options.credentials || 'include',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${localStorage.getItem('authToken')}`,

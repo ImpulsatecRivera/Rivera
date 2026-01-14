@@ -58,6 +58,16 @@ const EmployeeDetailPanel = ({
     return d.toLocaleDateString();
   };
 
+  // Formatea el tipo de planilla a un label legible (Semanal | Quincenal | Mensual)
+  const formatPlanillaLabel = (planilla) => {
+    const s = (planilla ?? '').toString().toLowerCase().trim();
+    if (!s) return 'Mensual';
+    if (s.includes('seman') || s === '1') return 'Semanal';
+    if (s.includes('quinc') || s === '2') return 'Quincenal';
+    if (s.includes('mens')) return 'Mensual';
+    return 'Mensual';
+  };
+
   if (isLoading) {
     return (
       <div className="w-96 bg-white rounded-2xl shadow-2xl relative overflow-hidden flex flex-col h-full">
@@ -366,7 +376,7 @@ const EmployeeDetailPanel = ({
                   </div>
                   {Number(selectedEmpleados?.salario) > 0 && (
                     <span className="text-xs bg-emerald-100 text-emerald-700 px-3 py-1 rounded-full font-medium">
-                      Mensual
+                      {formatPlanillaLabel(selectedEmpleados?.planillaTipo || selectedEmpleados?.tipoPlanilla)}
                     </span>
                   )}
                 </div>

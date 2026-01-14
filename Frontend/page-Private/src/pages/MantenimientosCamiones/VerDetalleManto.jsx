@@ -32,7 +32,7 @@ const MantenimientoDetailModal = ({ mantenimientoId, isOpen, onClose }) => {
       setLoading(true);
       setError(null);
       
-      const response = await fetch(`${config.api.API_URL}/mantenimientos/${id}`);
+      const response = await fetch(`${config.api.API_URL}/mantenimientos/${id}`, { credentials: 'include' });
       
       if (!response.ok) {
         throw new Error('Error al cargar el mantenimiento');

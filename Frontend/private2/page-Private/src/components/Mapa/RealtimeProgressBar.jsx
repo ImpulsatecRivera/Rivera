@@ -45,7 +45,7 @@ const RealtimeProgressBar = ({
 
       try {
         // 🔧 RUTA CORRECTA: Usar el endpoint de métricas en tiempo real para verificar API
-        const response = await fetch(`https://riveraproject-production-933e.up.railway.app/api/viajes/real-time-metrics`);
+        const response = await fetch(`https://riveraproject-production-933e.up.railway.app/api/viajes/real-time-metrics`, { credentials: 'include' });
         if (response.ok) {
           setApiAvailable(true);
           setIsConnected(true);
@@ -77,7 +77,7 @@ const RealtimeProgressBar = ({
     const pollInterval = setInterval(async () => {
       try {
         // 🔧 RUTA CORRECTA: Obtener detalles específicos del viaje
-        const response = await fetch(`https://riveraproject-production-933e.up.railway.app/api/viajes/${viajeId}`);
+        const response = await fetch(`https://riveraproject-production-933e.up.railway.app/api/viajes/${viajeId}`, { credentials: 'include' });
         
         if (response.ok) {
           const result = await response.json();

@@ -34,7 +34,7 @@ const TripsChart = () => {
       console.log(`📊 Obteniendo estadísticas de viajes - Período: ${periodo}`);
       
       // 🔧 USAR TU ENDPOINT REAL
-      const response = await fetch(`https://riveraproject-production-933e.up.railway.app/api/viajes/trip-stats?periodo=${periodo}`);
+      const response = await fetch(`https://riveraproject-production-933e.up.railway.app/api/viajes/trip-stats?periodo=${periodo}`, { credentials: 'include' });
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);

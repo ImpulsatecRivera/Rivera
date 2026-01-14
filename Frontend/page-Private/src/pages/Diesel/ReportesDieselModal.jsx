@@ -61,7 +61,7 @@ const [fechaFin, setFechaFin] = useState("");
   // Función para verificar si hay registros
   const verificarRegistros = async (url) => {
     try {
-      const response = await fetch(url);
+      const response = await fetch(url, { credentials: 'include' });
       if (!response.ok) {
         if (response.status === 404) {
           return false; // No hay registros

@@ -16,9 +16,8 @@
 import express from 'express';
 import PlanillaQuincenalController from '../Controllers/PlanillaQuincenalController.js';
 import { validateAuthToken } from '../Middlewares/validateAuthToken.js';
-
 const router = express.Router();
-router.use(validateAuthToken(['admin']));
+router.use(express.Router());
 
 /**
  * POST /api/planillas/quincenal
@@ -44,7 +43,7 @@ router.use(validateAuthToken(['admin']));
  *   ]
  * }
  */
-router.post('/', PlanillaQuincenalController.crear);
+router.post('/',validateAuthToken(["admin"]), PlanillaQuincenalController.crear);
 
 /**
  * GET /api/planillas/quincenal
@@ -61,7 +60,7 @@ router.post('/', PlanillaQuincenalController.crear);
  * Ejemplo:
  * GET /api/planillas/quincenal?año=2025&mes=12&quincena=1&estado=pendiente
  */
-router.get('/', PlanillaQuincenalController.obtenerTodas);
+router.get('/', validateAuthToken(["admin", "Operativo", "Supervisor"]),PlanillaQuincenalController.obtenerTodas);
 
 /**
  * GET /api/planillas/quincenal/:id
@@ -73,7 +72,7 @@ router.get('/', PlanillaQuincenalController.obtenerTodas);
  * Ejemplo:
  * GET /api/planillas/quincenal/674abc123def456
  */
-router.get('/:id', PlanillaQuincenalController.obtenerPorId);
+router.get('/:id',validateAuthToken(["admin", "Operativo", "Supervisor"]), PlanillaQuincenalController.obtenerPorId);
 
 /**
  * GET /api/planillas/quincenal/empleado/:empleadoId
@@ -89,7 +88,7 @@ router.get('/:id', PlanillaQuincenalController.obtenerPorId);
  * Ejemplo:
  * GET /api/planillas/quincenal/empleado/674abc123?año=2025&mes=12
  */
-router.get('/empleado/:empleadoId', PlanillaQuincenalController.obtenerPorEmpleado);
+router.get('/empleado/:empleadoId',validateAuthToken(["admin", "Operativo", "Supervisor"]), PlanillaQuincenalController.obtenerPorEmpleado);
 
 /**
  * PUT /api/planillas/quincenal/:id/empleado/:empleadoId
@@ -116,7 +115,7 @@ router.get('/empleado/:empleadoId', PlanillaQuincenalController.obtenerPorEmplea
  * 
  * Nota: El salario quincenal, ISSS, AFP y Renta se recalculan automáticamente
  */
-router.put('/:id/empleado/:empleadoId', PlanillaQuincenalController.actualizarEmpleado);
+router.put('/:id/empleado/:empleadoId',validateAuthToken(["admin"]), PlanillaQuincenalController.actualizarEmpleado);
 
 /**
  * POST /api/planillas/quincenal/:id/empleado
@@ -142,7 +141,7 @@ router.put('/:id/empleado/:empleadoId', PlanillaQuincenalController.actualizarEm
  *   }
  * }
  */
-router.post('/:id/empleado', PlanillaQuincenalController.agregarEmpleado);
+router.post('/:id/empleado', validateAuthToken(["admin"]), PlanillaQuincenalController.agregarEmpleado);
 
 /**
  * DELETE /api/planillas/quincenal/:id/empleado/:empleadoId
@@ -158,7 +157,7 @@ router.post('/:id/empleado', PlanillaQuincenalController.agregarEmpleado);
  * Ejemplo:
  * DELETE /api/planillas/quincenal/674abc123/empleado/674def456
  */
-router.delete('/:id/empleado/:empleadoId', PlanillaQuincenalController.eliminarEmpleado);
+router.delete('/:id/empleado/:empleadoId',validateAuthToken(["admin"]), PlanillaQuincenalController.eliminarEmpleado);
 
 /**
  * PATCH /api/planillas/quincenal/:id/estado
@@ -194,7 +193,7 @@ router.delete('/:id/empleado/:empleadoId', PlanillaQuincenalController.eliminarE
  * 
  * Nota: Las fechas se validan en la zona de El Salvador (America/El_Salvador). NO SE ACEPTAN FECHAS FUTURAS.
  */
-router.patch('/:id/estado', PlanillaQuincenalController.cambiarEstado);
+router.patch('/:id/estado',validateAuthToken(["admin"]), PlanillaQuincenalController.cambiarEstado);
 
 /**
  * DELETE /api/planillas/quincenal/:id
@@ -209,6 +208,6 @@ router.patch('/:id/estado', PlanillaQuincenalController.cambiarEstado);
  * Ejemplo:
  * DELETE /api/planillas/quincenal/674abc123
  */
-router.delete('/:id', PlanillaQuincenalController.eliminar);
+router.delete('/:id',validateAuthToken(["admin"]), PlanillaQuincenalController.eliminar);
 
 export default router;
