@@ -36,7 +36,7 @@ import OnboardingScreen3 from "../screens/pantallacarga3";
 // Edit profile
 import EditProfileScreen from "../screens/EditProfileScreen";
 
-const nTab = createBottomTabNavigator();
+const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
 
 /* =========================
