@@ -6,6 +6,7 @@ import './CajaChica.css';
 import ReportesCajaChicaModal from './ModalReportesCajaChica';
 import { usePermissions } from '../../hooks/usePermissions';
 import { ProtectedAction, RoleBadge } from '../../components/Auth';
+import { api } from "../../Context/authContext"
 
 
 export default function CajaChicaModern() {
@@ -62,39 +63,17 @@ export default function CajaChicaModern() {
     }
   };
 
-  const getAuthHeaders = () => {
-    const token = localStorage.getItem('token');
-    return {
-      'Authorization': `Bearer ${token}`
-    };
-  };
-
-  const handleAuthError = (response) => {
-    if (response.status === 401) {
-      Swal.fire({
-        title: 'Sesión expirada',
-        text: 'Tu sesión ha expirado. Por favor inicia sesión nuevamente.',
-        icon: 'warning',
-        confirmButtonText: 'Ir al login'
-      }).then(() => {
-        localStorage.removeItem('authToken');
-        window.location.href = '/login';
-      });
-      return true;
-    }
-    return false;
-  };
+ 
 
   const obtenerMovimientos = async () => {
     try {
-      const response = await fetch(`${config.api.API_URL}/cajaChica`, {
-        credentials: 'include',
-        headers: getAuthHeaders()
-      });
+     const { data } = await api.get('/cajaChica');
+setTransactions(data);
+calcularEstadisticas(data);
+
       
       if (handleAuthError(response)) return;
       
-      const data = await response.json();
       if (response.ok) {
         setTransactions(data);
         calcularEstadisticas(data);
@@ -269,17 +248,11 @@ export default function CajaChicaModern() {
       const formData = new FormData();
       formData.append('voucher', file);
 
-      const response = await fetch(
-        `${config.api.API_URL}/cajaChica/movements/${transaccion._id}/voucher`,
-        {
-          method: 'PATCH',
-          credentials: 'include',
-          headers: {
-            'Authorization': `Bearer ${token}`
-          },
-          body: formData
-        }
-      );
+      await api.patch(
+  `/cajaChica/movements/${transaccion._id}/voucher`,
+  formData
+);
+
 
       const contentType = response.headers.get('content-type');
       

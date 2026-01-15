@@ -2,6 +2,8 @@ import React, { useEffect, useMemo, useState } from "react";
 import { ArrowLeft, Save, AlertCircle, Fuel } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import { config } from "../../config";
+import { api } from "../../Context/authContext";
+
 
 const DIESEL_ENDPOINT = `${config.api.API_URL}/resumen`;
 const CAMIONES_ENDPOINT = `${config.api.API_URL}/camiones`;
@@ -71,48 +73,58 @@ export default function EditDiesel() {
 
   useEffect(() => {
     const run = async () => {
-      try {
-        setLoading(true);
-        setError(null);
+  try {
+    setLoading(true);
+    setError(null);
 
-        const resCam = await fetch(CAMIONES_ENDPOINT, { credentials: 'include' });
-        const jsonCam = await resCam.json().catch(() => ({}));
-        const camRows = jsonCam.data || (Array.isArray(jsonCam) ? jsonCam : []);
-        setCamiones(camRows);
+    // 🔹 Camiones
+    const camRes = await api.get(
+      `${config.api.API_URL}/camiones`
+    );
 
-      const res = await fetch(DIESEL_ENDPOINT, { credentials: 'include' });
-        const json = await res.json().catch(() => ({}));
-        if (!res.ok) throw new Error(json?.message || "Error al cargar diésel");
+    const camRows = camRes.data?.data || [];
+    setCamiones(camRows);
 
-        const rows = json.data || (Array.isArray(json) ? json : []);
-        const found = rows.find((r) => String(r?._id || r?.id) === String(id));
-        if (!found) throw new Error("No se encontró el registro de diésel");
+    // 🔹 Diesel
+    const dieselRes = await api.get(
+      `${config.api.API_URL}/resumen`
+    );
 
-        const fecha = found.fecha || found.date || found.createdAt || found.fecha_diesel;
+    const rows = dieselRes.data?.data || [];
+    const found = rows.find((r) => String(r?._id || r?.id) === String(id));
+    if (!found) throw new Error("No se encontró el registro de diésel");
 
-        const cic =
-          (typeof found.CicurlationCard === "object" && found.CicurlationCard?._id) ||
-          found.CicurlationCard ||
-          "";
+    const fecha = found.fecha || found.date || found.createdAt || found.fecha_diesel;
 
-        const estadoBD = canonEstado(found.estado || found.Estado || found.status);
+    const cic =
+      (typeof found.CicurlationCard === "object" && found.CicurlationCard?._id) ||
+      found.CicurlationCard ||
+      "";
 
-        setFormData({
-          fecha: toISODate(fecha),
-          CicurlationCard: cic,
-          Galones: String(found.Galones ?? found.galones ?? 0),
-          Total: String(found.Total ?? found.total ?? 0),
-          estado: estadoBD,
-        });
+    const estadoBD = canonEstado(found.estado || found.Estado || found.status);
 
-        setIsLocked(estadoBD === ESTADOS.COMPLETADO);
-      } catch (e) {
-        console.error(e);
-        setError(e.message || "Error al cargar");
-      } finally {
-        setLoading(false);
-      }
-    };
+    setFormData({
+      fecha: toISODate(fecha),
+      CicurlationCard: cic,
+      Galones: String(found.Galones ?? found.galones ?? 0),
+      Total: String(found.Total ?? found.total ?? 0),
+      estado: estadoBD,
+    });
+
+    setIsLocked(estadoBD === ESTADOS.COMPLETADO);
+
+  } catch (e) {
+    console.error(e);
+    setError(
+      e.response?.data?.message ||
+      e.message ||
+      "Error al cargar"
+    );
+  } finally {
+    setLoading(false);
+  }
+};
+
 
     run();
   }, [id]);
@@ -169,12 +181,10 @@ export default function EditDiesel() {
         estado: formData.estado,
       };
 
-      const res = await fetch(`${DIESEL_ENDPOINT}/${id}`, {
-        method: "PUT",
-        credentials: 'include',
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
+    await api.put(
+  `${config.api.API_URL}/resumen/${id}`,
+  payload
+);
 
       const json = await res.json().catch(() => ({}));
       if (!res.ok || !json?.success) throw new Error(json?.message || "Error al actualizar");
