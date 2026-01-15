@@ -76,7 +76,7 @@ const SmallInfoCard = ({ icon, label, value }) => (
 
 
 
-export default function CamionScreen() {
+export default function CamionProfileScreen() {
   const { profile, loading, fetchProfile } = useProfile();
   const insets = useSafeAreaInsets();
   const [uploading, setUploading] = useState(false);
