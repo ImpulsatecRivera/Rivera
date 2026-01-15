@@ -22,17 +22,17 @@ const __dirname = dirname(__filename);
 const convertirImagenABase64 = (rutaImagen) => {
     try {
         console.log('Intentando leer imagen desde:', rutaImagen);
-        
+
         if (!fs.existsSync(rutaImagen)) {
             console.error('La imagen no existe en la ruta:', rutaImagen);
             return null;
         }
-        
+
         const imagen = fs.readFileSync(rutaImagen);
         const base64 = imagen.toString('base64');
         const ext = path.extname(rutaImagen).toLowerCase();
         const mimeType = ext === '.png' ? 'image/png' : 'image/jpeg';
-        
+
         console.log('Imagen convertida exitosamente a base64');
         return `data:${mimeType};base64,${base64}`;
     } catch (error) {
@@ -43,6 +43,20 @@ const convertirImagenABase64 = (rutaImagen) => {
 
 // Ruta al logo
 const RUTA_LOGO = path.join(process.cwd(), 'src', 'imagenes', 'imagen_15.png');
+
+// Puppeteer config para Cloud Run
+const PUPPETEER_CONFIG = {
+    headless: 'new',
+    executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/chromium',
+    args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-gpu',
+        '--single-process',
+        '--no-zygote'
+    ]
+};
 
 /**
  * Función auxiliar para obtener nombre del mes
@@ -60,10 +74,10 @@ const obtenerNombreMes = (mes) => {
  */
 const formatearFecha = (fecha) => {
     const date = new Date(fecha);
-    return date.toLocaleDateString('es-ES', { 
-        day: '2-digit', 
-        month: '2-digit', 
-        year: 'numeric' 
+    return date.toLocaleDateString('es-ES', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
     });
 };
 
@@ -241,20 +255,20 @@ ReportesPlanillasController.generarPDFQuincenal = async (req, res) => {
                 </thead>
                 <tbody>
                     ${(planilla.empleados || []).map((emp, index) => {
-                        const salarioQuincenal = emp.salarioQuincenal || 0;
-                        const viaticos = emp.viaticos || 0;
-                        const trabajoSabadoDomingo = emp.trabajoSabadoDomingo || 0;
-                        const totalSalarioMasViaticos = emp.totalSalarioMasViaticos || 0;
-                        const isss = emp.descuentosLey?.isss?.monto || 0;
-                        const afp = emp.descuentosLey?.afp?.monto || 0;
-                        const renta = emp.descuentosLey?.renta?.monto || 0;
-                        const anticipos = emp.otrosDescuentos?.anticipos || 0;
-                        const prestamos = emp.otrosDescuentos?.prestamos || 0;
-                        const otros = emp.otrosDescuentos?.otros || 0;
-                        const totalDescuentos = emp.totalDescuentos || 0;
-                        const totalAPagar = emp.totalAPagar || 0;
+            const salarioQuincenal = emp.salarioQuincenal || 0;
+            const viaticos = emp.viaticos || 0;
+            const trabajoSabadoDomingo = emp.trabajoSabadoDomingo || 0;
+            const totalSalarioMasViaticos = emp.totalSalarioMasViaticos || 0;
+            const isss = emp.descuentosLey?.isss?.monto || 0;
+            const afp = emp.descuentosLey?.afp?.monto || 0;
+            const renta = emp.descuentosLey?.renta?.monto || 0;
+            const anticipos = emp.otrosDescuentos?.anticipos || 0;
+            const prestamos = emp.otrosDescuentos?.prestamos || 0;
+            const otros = emp.otrosDescuentos?.otros || 0;
+            const totalDescuentos = emp.totalDescuentos || 0;
+            const totalAPagar = emp.totalAPagar || 0;
 
-                        return `
+            return `
                         <tr>
                             <td>${index + 1}</td>
                             <td class="text-left employee-name">${emp.nombreCompleto || 'Sin nombre'}</td>
@@ -272,7 +286,7 @@ ReportesPlanillasController.generarPDFQuincenal = async (req, res) => {
                             <td class="text-right"><strong>$ ${totalAPagar.toFixed(2)}</strong></td>
                         </tr>
                         `;
-                    }).join('')}
+        }).join('')}
                     <tr class="totals-row">
                         <td colspan="2"><strong>TOTAL DE PLANILLA</strong></td>
                         <td class="text-right"><strong>$ ${safeNumber(totales.totalSalariosQuincenales)}</strong></td>
@@ -299,10 +313,7 @@ ReportesPlanillasController.generarPDFQuincenal = async (req, res) => {
         </html>
         `;
 
-        browser = await puppeteer.launch({
-            headless: 'new',
-            args: ['--no-sandbox', '--disable-setuid-sandbox']
-        });
+        browser = await puppeteer.launch(PUPPETEER_CONFIG);
 
         const page = await browser.newPage();
         await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
@@ -549,10 +560,7 @@ ReportesPlanillasController.generarPDFMensual = async (req, res) => {
         </html>
         `;
 
-        browser = await puppeteer.launch({
-            headless: 'new',
-            args: ['--no-sandbox', '--disable-setuid-sandbox']
-        });
+        browser = await puppeteer.launch(PUPPETEER_CONFIG);
 
         const page = await browser.newPage();
         await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
@@ -821,10 +829,7 @@ ReportesPlanillasController.generarPDFMultiMes = async (req, res) => {
         </html>
         `;
 
-        browser = await puppeteer.launch({
-            headless: 'new',
-            args: ['--no-sandbox', '--disable-setuid-sandbox']
-        });
+        browser = await puppeteer.launch(PUPPETEER_CONFIG);
 
         const page = await browser.newPage();
         await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
@@ -951,7 +956,7 @@ ReportesPlanillasController.generarPDFAnual = async (req, res) => {
         const filasHTML = Object.keys(porMes).map(mesNum => {
             const datos = porMes[mesNum];
             const tieneRegistros = datos.quincenas > 0;
-            
+
             return `
                 <tr style="${!tieneRegistros ? 'opacity: 0.5;' : ''}">
                     <td class="col-mes">${datos.nombre.toUpperCase()}</td>
@@ -1205,10 +1210,7 @@ ReportesPlanillasController.generarPDFAnual = async (req, res) => {
         </html>
         `;
 
-        browser = await puppeteer.launch({
-            headless: 'new',
-            args: ['--no-sandbox', '--disable-setuid-sandbox']
-        });
+        browser = await puppeteer.launch(PUPPETEER_CONFIG);
 
         const page = await browser.newPage();
         await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
