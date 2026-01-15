@@ -48,7 +48,18 @@ const convertirImagenABase64 = (rutaImagen) => {
 // OPCIÓN 1: Desde la raíz del proyecto (RECOMENDADO)
 // Asumiendo que ejecutas el servidor desde C:\Users\djpoc\Desktop\Rivera\Backend
 const RUTA_LOGO = path.join(process.cwd(), 'src', 'imagenes', 'imagen_15.png');
-
+const PUPPETEER_CONFIG = {
+    headless: 'new',
+    executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/chromium',
+    args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-gpu',
+        '--single-process',
+        '--no-zygote'
+    ]
+};
 // OPCIÓN 2: Si no funciona la opción 1, usa ruta absoluta directa:
 // const RUTA_LOGO = 'C:\\Users\\djpoc\\Desktop\\Rivera\\Backend\\src\\imagenes\\imagen_15.png';
 
@@ -116,10 +127,7 @@ ReportesPlanillaSemanalController.generarPDFSemanalDetallado = async (req, res) 
         const logoBase64 = convertirImagenABase64(RUTA_LOGO);
         const html = generarHTMLSemanalDetallado(planilla, logoBase64);
 
-        browser = await puppeteer.launch({
-            headless: true,
-            args: ['--no-sandbox', '--disable-setuid-sandbox']
-        });
+        browser = await puppeteer.launch(PUPPETEER_CONFIG);
 
         const page = await browser.newPage();
         await page.setContent(html, { waitUntil: 'networkidle0' });
@@ -185,10 +193,7 @@ ReportesPlanillaSemanalController.generarPDFMensual = async (req, res) => {
         const logoBase64 = convertirImagenABase64(RUTA_LOGO);
         const html = generarHTMLMensual(planillas, mesNum, anoNum, logoBase64);
 
-        browser = await puppeteer.launch({
-            headless: true,
-            args: ['--no-sandbox', '--disable-setuid-sandbox']
-        });
+        browser = await puppeteer.launch(PUPPETEER_CONFIG);
 
         const page = await browser.newPage();
         await page.setContent(html, { waitUntil: 'networkidle0' });
@@ -274,10 +279,7 @@ ReportesPlanillaSemanalController.generarPDFMultiMes = async (req, res) => {
         const logoBase64 = convertirImagenABase64(RUTA_LOGO);
         const html = generarHTMLMultiMes(planillasPorMes, anoNum, logoBase64);
 
-        browser = await puppeteer.launch({
-            headless: true,
-            args: ['--no-sandbox', '--disable-setuid-sandbox']
-        });
+        browser = await puppeteer.launch(PUPPETEER_CONFIG);
 
         const page = await browser.newPage();
         await page.setContent(html, { waitUntil: 'networkidle0' });
@@ -349,10 +351,7 @@ ReportesPlanillaSemanalController.generarPDFAnual = async (req, res) => {
         const logoBase64 = convertirImagenABase64(RUTA_LOGO);
         const html = generarHTMLAnual(planillasPorMes, anoNum, logoBase64);
 
-        browser = await puppeteer.launch({
-            headless: true,
-            args: ['--no-sandbox', '--disable-setuid-sandbox']
-        });
+        browser = await puppeteer.launch(PUPPETEER_CONFIG);
 
         const page = await browser.newPage();
         await page.setContent(html, { waitUntil: 'networkidle0' });
