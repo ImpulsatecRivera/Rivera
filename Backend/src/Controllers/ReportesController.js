@@ -36,7 +36,18 @@ const convertirImagenABase64 = (rutaImagen) => {
 
 // Ruta al logo
 const RUTA_LOGO = path.join(process.cwd(), 'src', 'imagenes', 'imagen_15.png');
-
+const PUPPETEER_CONFIG = {
+    headless: 'new',
+    executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/chromium',
+    args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-gpu',
+        '--single-process',
+        '--no-zygote'
+    ]
+};
 // Función auxiliar para obtener nombre del mes
 const obtenerNombreMes = (mes) => {
     const meses = [
@@ -525,10 +536,7 @@ ReportesRoutes.generarPDFIndividual = async (req, res) => {
         </html>
         `;
 
-        browser = await puppeteer.launch({
-            headless: 'new',
-            args: ['--no-sandbox', '--disable-setuid-sandbox']
-        });
+        browser = await puppeteer.launch(PUPPETEER_CONFIG);
 
         const page = await browser.newPage();
         await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
@@ -795,10 +803,7 @@ ReportesRoutes.generarPDFAnual = async (req, res) => {
         </html>
         `;
 
-        browser = await puppeteer.launch({
-            headless: 'new',
-            args: ['--no-sandbox', '--disable-setuid-sandbox']
-        });
+        browser = await puppeteer.launch(PUPPETEER_CONFIG);
 
         const page = await browser.newPage();
         await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
@@ -1024,10 +1029,7 @@ ReportesRoutes.generarPDFMensualSimple = async (req, res) => {
         </html>
         `;
 
-        browser = await puppeteer.launch({
-            headless: 'new',
-            args: ['--no-sandbox', '--disable-setuid-sandbox']
-        });
+        browser = await puppeteer.launch(PUPPETEER_CONFIG);
 
         const page = await browser.newPage();
         await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
@@ -1357,10 +1359,7 @@ ReportesRoutes.generarPDFMultiplesMeses = async (req, res) => {
 </body>
 </html>`;
 
-        browser = await puppeteer.launch({
-            headless: 'new',
-            args: ['--no-sandbox', '--disable-setuid-sandbox']
-        });
+        browser = await puppeteer.launch(PUPPETEER_CONFIG);
 
         const page = await browser.newPage();
         await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
@@ -1727,10 +1726,7 @@ ReportesRoutes.generarPDFSemanal = async (req, res) => {
         </html>
         `;
 
-        browser = await puppeteer.launch({
-            headless: 'new',
-            args: ['--no-sandbox', '--disable-setuid-sandbox']
-        });
+        browser = await puppeteer.launch(PUPPETEER_CONFIG);
 
         const page = await browser.newPage();
         await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
@@ -2087,10 +2083,7 @@ ReportesRoutes.generarPDFRangoFechas = async (req, res) => {
         </html>
         `;
 
-        browser = await puppeteer.launch({
-            headless: 'new',
-            args: ['--no-sandbox', '--disable-setuid-sandbox']
-        });
+        browser = await puppeteer.launch(PUPPETEER_CONFIG);
 
         const page = await browser.newPage();
         await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
