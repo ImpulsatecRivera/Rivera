@@ -5,9 +5,18 @@ import { config } from "../config";
 const API_URL = config.api.API_URL;
 
 export const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || `${API_URL}`,
-  withCredentials: true,
+  baseURL: import.meta.env.VITE_API_BASE_URL || API_URL,
 });
+
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem("authToken");
+  if (token) {
+    const parsed = JSON.parse(token);
+    config.headers.Authorization = `Bearer ${parsed.token || parsed}`;
+  }
+  return config;
+});
+
 
 const AuthContext = createContext();
 
@@ -104,7 +113,11 @@ export const AuthProvider = ({ children }) => {
 
       if (data?.user) {
         // ✅ Guardar en storage para persistencia incluyendo rol
-        saveToStorage(data.user, data.userType || data.user.userType);
+        saveToStorage({
+  ...data.user,
+  token: data.token
+});
+
         setUser(data.user);
         setUserRole(data.user.rol || null);
         setIsLoggedIn(true);
@@ -193,7 +206,11 @@ export const AuthProvider = ({ children }) => {
       
       if (data?.user) {
         // ✅ Sesión válida - actualizar estado
-        saveToStorage(data.user, data.user.userType);
+        saveToStorage({
+  ...data.user,
+  token: data.token
+});
+
         setUser(data.user);
         setUserRole(data.user.rol || null);
         setIsLoggedIn(true);
@@ -240,7 +257,11 @@ export const AuthProvider = ({ children }) => {
         validateStatus: (status) => status < 500
       });
       if (data?.user) {
-        saveToStorage(data.user, data.user.userType);
+        saveToStorage({
+  ...data.user,
+  token: data.token
+});
+
         setUser(data.user);
         setUserRole(data.user.rol || null);
         setIsLoggedIn(true);

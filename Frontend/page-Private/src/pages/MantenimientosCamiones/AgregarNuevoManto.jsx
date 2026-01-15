@@ -155,6 +155,7 @@ const dataToSend = {
 
       const response = await fetch(`${config.api.API_URL}/mantenimientos`, {
         method: 'POST',
+         credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
         },
