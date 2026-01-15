@@ -8,7 +8,7 @@ import SideImage from "../components/Login/SideImage";
 import Title from "../components/RecoverPassword/Title";
  import animationData from '../assets/lotties/Winter Snow.json';
 import useLogin from "../components/Login/hooks/useLogin";
-import { useAuth } from "../context/authContext";
+import { useAuth } from "../Context/authContext";
  
 const Login = () => {
   const navigate = useNavigate();
