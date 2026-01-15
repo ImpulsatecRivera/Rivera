@@ -83,6 +83,7 @@ app.use(
       "Pragma",
       "pragma",
     ],
+    exposedHeaders: ["Set-Cookie", "Clear-Site-Data"],
   })
 );
 

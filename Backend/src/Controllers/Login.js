@@ -49,19 +49,26 @@ const generateToken = (payload) => {
   return jwt.sign(payload, config.JWT.secret, { expiresIn: config.JWT.expiresIn });
 };
 
-// ===================== Helper para Set-Cookie (Corregido) =====================
+// ===================== Helper para Set-Cookie (Corregido para Vercel) =====================
 const setAuthCookie = (res, token) => {
   const isProd = process.env.NODE_ENV === "production" || process.env.K_SERVICE;
 
-  res.cookie("authToken", token, {
+  const cookieOptions = {
     path: "/",
     httpOnly: true,
-    maxAge: 24 * 60 * 60 * 1000,
-    sameSite: "none",
-    secure: true,
-  });
+    maxAge: 24 * 60 * 60 * 1000, // 24 horas
+    sameSite: "none", // Requerido para Vercel cross-domain
+    secure: true,      // Requerido en Vercel (HTTPS)
+  };
 
-  console.log("🍪 Cookie creada:", { isProd });
+  // Para Vercel: agregar partitioned si está en producción
+  if (isProd) {
+    cookieOptions.partitioned = true;
+  }
+
+  res.cookie("authToken", token, cookieOptions);
+
+  console.log("🍪 Cookie creada:", { isProd, cookieOptions });
 };
 
 
