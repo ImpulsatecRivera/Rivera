@@ -7,6 +7,8 @@ import {
 } from 'lucide-react';
 import { config } from '../../config';
 import Swal from 'sweetalert2';
+import { api } from '../../Context/authContext';
+
 
 export default function VerPlanillaQuincenal() {
   const { id } = useParams();
@@ -19,29 +21,30 @@ export default function VerPlanillaQuincenal() {
     cargarPlanilla();
   }, [id]);
 
-  const cargarPlanilla = async () => {
-    setLoading(true);
-    try {
-      const response = await fetch(`${config.api.API_URL}/planillas/quincenal/${id}`, { credentials: 'include' });
-      const data = await response.json();
-      
-      if (data.success) {
-        setPlanilla(data.data);
-      } else {
-        throw new Error(data.message);
-      }
-    } catch (error) {
-      console.error('Error:', error);
-      Swal.fire({
-        icon: 'error',
-        title: 'Error',
-        text: 'No se pudo cargar la planilla'
-      });
-      navigate('/planillas');
-    } finally {
-      setLoading(false);
+ const cargarPlanilla = async () => {
+  setLoading(true);
+  try {
+    const response = await api.get(`${config.api.API_URL}/planillas/quincenal/${id}`);
+    const data = response.data;
+
+    if (data.success) {
+      setPlanilla(data.data);
+    } else {
+      throw new Error(data.message);
     }
-  };
+
+  } catch (error) {
+    console.error('Error:', error);
+    Swal.fire({
+      icon: 'error',
+      title: 'Error',
+      text: 'No se pudo cargar la planilla'
+    });
+    navigate('/planillas');
+  } finally {
+    setLoading(false);
+  }
+};
 
   const marcarComoPagada = async () => {
     const { value: fechaPago } = await Swal.fire({
@@ -70,33 +73,28 @@ export default function VerPlanillaQuincenal() {
     if (!fechaPago) return;
 
     try {
-      const response = await fetch(
-        `${config.api.API_URL}/planillas/quincenal/${id}/estado`,
-        {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            pagada: true,
-            fechaPago: new Date(fechaPago).toISOString()
-          })
-        }
-      );
+      const response = await api.patch(
+  `${config.api.API_URL}/planillas/quincenal/${id}/estado`,
+  {
+    pagada: true,
+    fechaPago: new Date(fechaPago).toISOString()
+  }
+);
 
-      const data = await response.json();
+const data = response.data;
 
-      if (data.success) {
-        setPlanilla(data.data);
-        
-        Swal.fire({
-          icon: 'success',
-          title: '¡Pagada!',
-          text: 'La planilla ha sido marcada como pagada',
-          timer: 2000,
-          showConfirmButton: false
-        });
-      } else {
-        throw new Error(data.message || 'Error al marcar como pagada');
-      }
+if (data.success) {
+  setPlanilla(data.data);
+  Swal.fire({
+    icon: 'success',
+    title: '¡Pagada!',
+    text: 'La planilla ha sido marcada como pagada',
+    timer: 2000,
+    showConfirmButton: false
+  });
+} else {
+  throw new Error(data.message || 'Error al marcar como pagada');
+}
     } catch (error) {
       console.error('Error:', error);
       Swal.fire({
@@ -118,16 +116,18 @@ export default function VerPlanillaQuincenal() {
         }
       });
 
-      const response = await fetch(
-        `${config.api.API_URL}/reportes/planilla/quincenal/${id}`,
-        { credentials: 'include' }
-      );
+     const response = await api.get(
+  `${config.api.API_URL}/reportes/planilla/quincenal/${id}`,
+  { responseType: 'blob' }
+);
+
+
 
       if (!response.ok) {
         throw new Error('Error al generar el PDF');
       }
 
-      const blob = await response.blob();
+const blob = new Blob([response.data], { type: 'application/pdf' });
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
