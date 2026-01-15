@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { config } from "../../../config";
 import axios from "axios";
-import { useAuth } from '../../../context/authContext';
+import { useAuth } from '../../../Context/authContext';
 import Swal from 'sweetalert2';
 
 const API_URL = config.api.API_URL;
