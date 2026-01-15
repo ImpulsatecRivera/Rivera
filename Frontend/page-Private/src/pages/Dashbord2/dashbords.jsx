@@ -21,6 +21,7 @@ import {
 import Spline from '@splinetool/react-spline';
 import Lottie from 'lottie-react';
 import { config } from '../../config';
+import { api } from '../../Context/authContext';
 
 // 🎨 Importar animaciones Lottie
 import loadingTruckAnimation from '../../assets/lotties/ready, set, go!.json';
@@ -92,9 +93,10 @@ const ModernDashboard = () => {
       setLoading(true);
 
 
-      const viajesRes = await fetch(`${config.api.API_URL}/viajes-operativos/listar`, { credentials: 'include' });
-      const viajesData = await viajesRes.json();
-      let viajes = viajesData?.data || [];
+     const viajesRes = await api.get(`${config.api.API_URL}/viajes-operativos/listar`);
+let viajes = viajesRes.data?.data || [];
+
+
 
       viajes = filtrarPorPeriodo(viajes, 'departureTime');
 
@@ -111,9 +113,9 @@ const ModernDashboard = () => {
         ingresos: viajes.reduce((sum, v) => sum + (v?.montoAcordado || 0), 0)
       };
 
-      const mantoRes = await fetch(`${config.api.API_URL}/mantenimientos`, { credentials: 'include' });
-      const mantoData = await mantoRes.json();
-      let mantenimientos = mantoData?.data || [];
+   const mantoRes = await api.get(`${config.api.API_URL}/mantenimientos`);
+let mantenimientos = mantoRes.data?.data || [];
+
 
       mantenimientos = filtrarPorPeriodo(mantenimientos, 'fecha_mantenimiento');
 
@@ -127,9 +129,9 @@ const ModernDashboard = () => {
         }, 0)
       };
 
-      const dieselRes = await fetch(`${config.api.API_URL}/resumen`, { credentials: 'include' });
-      const dieselData = await dieselRes.json();
-      let diesel = dieselData?.data || (Array.isArray(dieselData) ? dieselData : []);
+     const dieselRes = await api.get(`${config.api.API_URL}/resumen`);
+let diesel = dieselRes.data?.data || (Array.isArray(dieselRes.data) ? dieselRes.data : []);
+
 
       diesel = filtrarPorPeriodo(diesel, 'fecha');
 
@@ -147,20 +149,15 @@ const ModernDashboard = () => {
         galones: diesel.reduce((sum, d) => sum + (d?.Galones || d?.galones || 0), 0)
       };
 
-      const cajaRes = await fetch(`${config.api.API_URL}/cajaChica`, {
-        credentials: 'include',
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('authToken')}` }
-      });
-      const cajaData = await cajaRes.json();
-      let transacciones = Array.isArray(cajaData) ? cajaData : [];
+      const cajaRes = await api.get(`${config.api.API_URL}/cajaChica`);
+let transacciones = Array.isArray(cajaRes.data) ? cajaRes.data : [];
+
 
       transacciones = filtrarPorPeriodo(transacciones, 'date');
 
-      const cajaBalanceRes = await fetch(`${config.api.API_URL}/cajaChica/balance`, {
-        credentials: 'include',
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('authToken')}` }
-      });
-      const cajaBalanceData = await cajaBalanceRes.json();
+     const cajaBalanceRes = await api.get(`${config.api.API_URL}/cajaChica/balance`);
+const cajaBalanceData = cajaBalanceRes.data;
+
 
       const cajaStats = {
         balance: cajaBalanceData?.currentBalance || 0,
@@ -169,9 +166,9 @@ const ModernDashboard = () => {
         transacciones: transacciones.length
       };
 
-      const planillasRes = await fetch(`${config.api.API_URL}/planillas/quincenal`, { credentials: 'include' });
-      const planillasData = await planillasRes.json();
-      let planillas = planillasData?.data || [];
+      const planillasRes = await api.get(`${config.api.API_URL}/planillas/quincenal`);
+let planillas = planillasRes.data?.data || [];
+
 
       planillas = filtrarPorPeriodo(planillas, 'createdAt');
 
