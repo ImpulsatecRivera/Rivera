@@ -46,8 +46,8 @@ RUN npm ci --only=production
 COPY . .
 
 # Cloud Run provee el puerto en la variable PORT, exponer 8080 por convención
-ENV PORT=8080
-EXPOSE 8080
+ENV PORT=4000
+EXPOSE 4000
 
 # Inicia la aplicación
 CMD ["node", "index.js"]
