@@ -10,6 +10,8 @@ import {
   Droplets,
 } from "lucide-react";
 import { config } from "../../config";
+import { api } from "../../Context/authContext";
+
 
 const DieselDetailModal = ({ dieselId, isOpen, onClose }) => {
   const [diesel, setDiesel] = useState(null);
@@ -53,38 +55,48 @@ const DieselDetailModal = ({ dieselId, isOpen, onClose }) => {
   }, [isOpen, dieselId]);
 
   const fetchDieselById = async (id) => {
-    try {
-      setLoading(true);
-      setError(null);
+  try {
+    setLoading(true);
+    setError(null);
 
-      const res = await fetch(`${config.api.API_URL}/resumen`, { credentials: 'include' });
-      const json = await res.json();
+    const response = await api.get(
+      `${config.api.API_URL}/resumen`
+    );
 
-      const found = json.data.find(
-        (r) => String(r._id) === String(id)
-      );
+    const rows = response.data?.data || [];
 
-      if (!found) throw new Error("Registro no encontrado");
+    const found = rows.find(
+      (r) => String(r._id) === String(id)
+    );
 
-      const fechaRaw = pickFecha(found);
-      const fechaObj = parseLocalDate(fechaRaw);
+    if (!found) throw new Error("Registro no encontrado");
 
-      setDiesel({
-        _id: found._id,
-        fecha: fechaRaw,
-        mes: found.mes || (fechaObj ? fechaObj.getMonth() + 1 : null),
-        ano: found.ano || (fechaObj ? fechaObj.getFullYear() : null),
-        placa: pickPlaca(found),
-        galones: Number(pickGalones(found)),
-        total: Number(pickTotal(found)),
-        comprobante: found.comprobante || null, // ✅ URL COMPLETA
-      });
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
+    const fechaRaw = pickFecha(found);
+    const fechaObj = parseLocalDate(fechaRaw);
+
+    setDiesel({
+      _id: found._id,
+      fecha: fechaRaw,
+      mes: found.mes || (fechaObj ? fechaObj.getMonth() + 1 : null),
+      ano: found.ano || (fechaObj ? fechaObj.getFullYear() : null),
+      placa: pickPlaca(found),
+      galones: Number(pickGalones(found)),
+      total: Number(pickTotal(found)),
+      comprobante: found.comprobante || null,
+    });
+
+  } catch (err) {
+    console.error(err);
+    setError(
+      err.response?.data?.message ||
+      err.message ||
+      "Error al cargar el registro de diésel"
+    );
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   // =========================
   // FORMATTERS

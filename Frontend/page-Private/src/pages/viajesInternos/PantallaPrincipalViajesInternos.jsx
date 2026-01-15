@@ -16,6 +16,8 @@ import { useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
 import { config } from "../../config";
 import ReportesViajesOperativosModal from "./ReportesViajesInternosModal";
+import { api } from "../../Context/authContext";
+
 
 const VIAJES_OPERATIVOS_ENDPOINT = `${config.api.API_URL}/viajes-operativos/listar`;
 const DELETE_ENDPOINT = `${config.api.API_URL}/viajes-operativos`;
@@ -100,27 +102,29 @@ export default function PantallaPrincipalViajesOperativos() {
 
   const [isReportesOpen, setIsReportesOpen] = useState(false);
 
-  const fetchViajes = async () => {
-    try {
-      setLoading(true);
-      setError(null);
+ const fetchViajes = async () => {
+  try {
+    setLoading(true);
+    setError(null);
 
-      const res = await fetch(VIAJES_OPERATIVOS_ENDPOINT, {
-        credentials: "include",
-      });
-      const json = await res.json().catch(() => ({}));
+    const response = await api.get(VIAJES_OPERATIVOS_ENDPOINT);
 
-      if (!res.ok || json?.success === false)
-        throw new Error(json?.message || "Error al cargar los viajes operativos");
+    const rows =
+      response.data?.data ||
+      (Array.isArray(response.data) ? response.data : []);
 
-      const rows = json?.data || (Array.isArray(json) ? json : []);
-      setViajes(Array.isArray(rows) ? rows : []);
-    } catch (e) {
-      setError(e.message || "Error al cargar");
-    } finally {
-      setLoading(false);
-    }
-  };
+    setViajes(Array.isArray(rows) ? rows : []);
+  } catch (e) {
+    setError(
+      e.response?.data?.message ||
+      e.message ||
+      "Error al cargar"
+    );
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   useEffect(() => {
     fetchViajes();
@@ -140,10 +144,8 @@ export default function PantallaPrincipalViajesOperativos() {
     if (!result.isConfirmed) return;
 
     try {
-      const res = await fetch(COMPLETAR_TODOS_ENDPOINT, {
-        method: "PUT",
-        credentials: "include",
-      });
+      await api.put(COMPLETAR_TODOS_ENDPOINT);
+
 
       const json = await res.json().catch(() => ({}));
 
@@ -182,14 +184,10 @@ export default function PantallaPrincipalViajesOperativos() {
     if (!result.isConfirmed) return;
 
     try {
-      const res = await fetch(`${COMPLETAR_UNO_ENDPOINT}/${id}`, {
-        method: "PUT",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          observacion: "Viaje completado manualmente desde el panel",
-        }),
-      });
+    await api.put(`${COMPLETAR_UNO_ENDPOINT}/${id}`, {
+  observacion: "Viaje completado manualmente desde el panel",
+});
+
 
       const json = await res.json().catch(() => ({}));
 
@@ -235,17 +233,18 @@ export default function PantallaPrincipalViajesOperativos() {
 
       console.log("📄 Descargando PDF desde:", url);
 
-      const res = await fetch(url, {
-        method: "GET",
-        credentials: "include",
-      });
+      const response = await api.get(url, {
+  responseType: "blob",
+});
+
+const blob = response.data;
+
 
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));
         throw new Error(json?.message || "Error al generar el PDF");
       }
 
-      const blob = await res.blob();
       const downloadUrl = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = downloadUrl;
@@ -307,10 +306,9 @@ export default function PantallaPrincipalViajesOperativos() {
     if (!result.isConfirmed) return;
 
     try {
-      const res = await fetch(`${DELETE_ENDPOINT}/${id}`, {
-        method: "DELETE",
-        credentials: "include",
-      });
+      await api.delete(`${DELETE_ENDPOINT}/${id}`);
+fetchViajes();
+
 
       const json = await res.json().catch(() => ({}));
 

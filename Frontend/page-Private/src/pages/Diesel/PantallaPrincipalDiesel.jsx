@@ -14,6 +14,8 @@ import Swal from "sweetalert2";
 import { config } from "../../config";
 import { usePermissions } from "../../hooks/usePermissions";
 import { ProtectedAction, RoleBadge } from "../../components/Auth";
+import { api } from "../../Context/authContext";
+
 
 import DieselDetailModal from "./DieselDetailModal";
 import ReportesDieselModal from "./ReportesDieselModal";
@@ -104,20 +106,26 @@ const PantallaPrincipalDiesel = () => {
   };
 
   const fetchDiesel = async () => {
-    try {
-      setLoading(true);
-      const res = await fetch(DIESEL_ENDPOINT, { credentials: 'include' });
-      const json = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(json?.message || "Error al cargar los registros de diésel");
-      const rows = json.data || (Array.isArray(json) ? json : []);
-      setDiesel(rows);
-      setError(null);
-    } catch (e) {
-      setError(e.message);
-    } finally {
-      setLoading(false);
-    }
-  };
+  try {
+    setLoading(true);
+
+    const res = await api.get(
+      `${config.api.API_URL}/resumen`
+    );
+
+    setDiesel(res.data?.data || []);
+    setError(null);
+
+  } catch (e) {
+    setError(
+      e.response?.data?.message ||
+      e.message ||
+      "Error al cargar los registros de diésel"
+    );
+  } finally {
+    setLoading(false);
+  }
+};
 
   useEffect(() => {
     fetchDiesel();
@@ -147,15 +155,27 @@ const PantallaPrincipalDiesel = () => {
       const id = row?._id || row?.id;
       if (!id) throw new Error("No se encontró el ID del registro");
 
-      const res = await fetch(`${DIESEL_ENDPOINT}/${id}`, { method: "DELETE", credentials: 'include' });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data?.message || "Error al eliminar");
+await api.delete(
+  `${config.api.API_URL}/resumen/${id}`
+);
 
-      await Swal.fire({ title: "¡Eliminado!", text: "Registro eliminado exitosamente", icon: "success", timer: 2000 });
-      fetchDiesel();
+await Swal.fire({
+  title: "¡Eliminado!",
+  text: "Registro eliminado exitosamente",
+  icon: "success",
+  timer: 2000,
+});
+
+fetchDiesel();
+
     } catch (e) {
-      Swal.fire({ title: "Error", text: e.message, icon: "error" });
-    }
+  Swal.fire({
+    title: "Error",
+    text: e.response?.data?.message || e.message,
+    icon: "error",
+  });
+}
+
   };
 
   const openDetail = (id) => {
