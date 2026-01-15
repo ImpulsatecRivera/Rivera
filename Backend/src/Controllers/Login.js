@@ -51,19 +51,19 @@ const generateToken = (payload) => {
 
 // ===================== Helper para Set-Cookie (Corregido) =====================
 const setAuthCookie = (res, token) => {
-  const isProd = process.env.NODE_ENV === "production";
-  
+  const isProd = process.env.NODE_ENV === "production" || process.env.K_SERVICE;
+
   res.cookie("authToken", token, {
     path: "/",
     httpOnly: true,
-    maxAge: 24 * 60 * 60 * 1000, // 24 horas
-    sameSite: isProd ? "none" : "lax",
-    secure: isProd,
-    ...(isProd && { partitioned: true }) // CHIPS solo en producción
+    maxAge: 24 * 60 * 60 * 1000,
+    sameSite: "none",
+    secure: true,
   });
-  
-  console.log("🍪 [LOGIN] Cookie configurada correctamente");
+
+  console.log("🍪 Cookie creada:", { isProd });
 };
+
 
 // ===================== 🆕 GOOGLE LOGIN (CORREGIDO) =====================
 LoginController.GoogleLogin = async (req, res) => {
