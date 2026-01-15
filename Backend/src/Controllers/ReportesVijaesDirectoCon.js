@@ -38,7 +38,18 @@ const convertirImagenABase64 = (rutaImagen) => {
 
 // Ruta al logo
 const RUTA_LOGO = path.join(process.cwd(), 'src', 'imagenes', 'imagen_15.png');
-
+const PUPPETEER_CONFIG = {
+    headless: 'new',
+    executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/chromium',
+    args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-gpu',
+        '--single-process',
+        '--no-zygote'
+    ]
+};
 // =====================================================
 // 🛠️ FUNCIONES AUXILIARES
 // =====================================================
@@ -618,10 +629,7 @@ const diasDiferencia =
     const comparativo = periodo.toLowerCase() === 'semanal';
     const htmlContent = generarHTMLConsolidado(titulo, columnas, clientesData, landscape, comparativo);
 
-    browser = await puppeteer.launch({
-      headless: "new",
-      args: ["--no-sandbox", "--disable-setuid-sandbox"],
-    });
+    browser = await puppeteer.launch(PUPPETEER_CONFIG);
 
     const page = await browser.newPage();
     await page.setContent(htmlContent, { waitUntil: "networkidle0" });
@@ -1154,7 +1162,7 @@ ReportesViajesDirecto.generarPDFResumenMensualV2 = async (req, res) => {
 </html>
 `;
 
-    browser = await puppeteer.launch({ headless: "new", args: ["--no-sandbox", "--disable-setuid-sandbox"] });
+    browser = await puppeteer.launch(PUPPETEER_CONFIG);
     const page = await browser.newPage();
     await page.setContent(htmlContent, { waitUntil: "networkidle0" });
 
@@ -1450,10 +1458,7 @@ ReportesViajesDirecto.generarPDFResumenMensual = async (req, res) => {
 </html>
 `;
 
-    browser = await puppeteer.launch({
-      headless: "new",
-      args: ["--no-sandbox", "--disable-setuid-sandbox"],
-    });
+    browser = await puppeteer.launch(PUPPETEER_CONFIG);
 
     const page = await browser.newPage();
     await page.setContent(htmlContent, { waitUntil: "networkidle0" });
@@ -1646,7 +1651,7 @@ ReportesViajesDirecto.generarPDFResumenPorMetodoPago = async (req, res) => {
 </html>
 `;
 
-    browser = await puppeteer.launch({ headless: "new", args: ["--no-sandbox", "--disable-setuid-sandbox"] });
+    browser = await puppeteer.launch(PUPPETEER_CONFIG);
     const page = await browser.newPage();
     await page.setContent(htmlContent, { waitUntil: "networkidle0" });
 
@@ -1934,7 +1939,7 @@ ReportesViajesDirecto.generarPDFComparativoEfectivo = async (req, res) => {
 </html>
 `;
 
-    browser = await puppeteer.launch({ headless: 'new', args: ['--no-sandbox', '--disable-setuid-sandbox'] });
+    browser = await puppeteer.launch(PUPPETEER_CONFIG);
     const page = await browser.newPage();
     await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
 
@@ -2269,10 +2274,7 @@ ReportesViajesDirecto.generarPDFClienteIndividual = async (req, res) => {
 </html>
 `;
 
-    browser = await puppeteer.launch({
-      headless: "new",
-      args: ["--no-sandbox", "--disable-setuid-sandbox"],
-    });
+    browser = await puppeteer.launch(PUPPETEER_CONFIG);
 
     const page = await browser.newPage();
     await page.setContent(htmlContent, { waitUntil: "networkidle0" });
@@ -2581,10 +2583,7 @@ ReportesViajesDirecto.generarPDFCreditoFiscal = async (req, res) => {
 </html>
 `;
 
-    browser = await puppeteer.launch({
-      headless: "new",
-      args: ["--no-sandbox", "--disable-setuid-sandbox"],
-    });
+    browser = await puppeteer.launch(PUPPETEER_CONFIG);
 
     const page = await browser.newPage();
     await page.setContent(htmlContent, { waitUntil: "networkidle0" });
@@ -2817,10 +2816,7 @@ ReportesViajesDirecto.generarPDFConsolidadoAnual = async (req, res) => {
 </html>
 `;
 
-    browser = await puppeteer.launch({
-      headless: "new",
-      args: ["--no-sandbox", "--disable-setuid-sandbox"],
-    });
+    browser = await puppeteer.launch(PUPPETEER_CONFIG);
 
     const page = await browser.newPage();
     await page.setContent(htmlContent, { waitUntil: "networkidle0" });

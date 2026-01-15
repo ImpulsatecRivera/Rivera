@@ -60,7 +60,18 @@ const convertirImagenABase64 = (rutaImagen) => {
 
 // Cargar logo una vez
 const logoBase64 = convertirImagenABase64(RUTA_LOGO);
-
+const PUPPETEER_CONFIG = {
+    headless: 'new',
+    executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/chromium',
+    args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-gpu',
+        '--single-process',
+        '--no-zygote'
+    ]
+};
 const ReportesCajaChicaController = {};
 
 // =====================================================
@@ -327,10 +338,7 @@ ReportesCajaChicaController.generarPDFIndividual = async (req, res) => {
         </html>
         `;
 
-        browser = await puppeteer.launch({
-            headless: 'new',
-            args: ['--no-sandbox', '--disable-setuid-sandbox']
-        });
+        browser = await puppeteer.launch(PUPPETEER_CONFIG);
 
         const page = await browser.newPage();
         await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
@@ -631,10 +639,7 @@ ReportesCajaChicaController.generarPDFTodosMovimientos = async (req, res) => {
         </html>
         `;
 
-        browser = await puppeteer.launch({
-            headless: 'new',
-            args: ['--no-sandbox', '--disable-setuid-sandbox']
-        });
+        browser = await puppeteer.launch(PUPPETEER_CONFIG);
 
         const page = await browser.newPage();
         await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
@@ -973,10 +978,7 @@ ReportesCajaChicaController.generarPDFMensualSimple = async (req, res) => {
         </html>
         `;
 
-        browser = await puppeteer.launch({
-            headless: 'new',
-            args: ['--no-sandbox', '--disable-setuid-sandbox']
-        });
+        browser = await puppeteer.launch(PUPPETEER_CONFIG);
 
         const page = await browser.newPage();
         await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
@@ -1282,10 +1284,7 @@ ReportesCajaChicaController.generarPDFMultiplesMeses = async (req, res) => {
         </html>
         `;
 
-        browser = await puppeteer.launch({
-            headless: 'new',
-            args: ['--no-sandbox', '--disable-setuid-sandbox']
-        });
+        browser = await puppeteer.launch(PUPPETEER_CONFIG);
 
         const page = await browser.newPage();
         await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
@@ -1632,10 +1631,7 @@ ReportesCajaChicaController.generarPDFDiario = async (req, res) => {
         </html>
         `;
 
-        browser = await puppeteer.launch({
-            headless: 'new',
-            args: ['--no-sandbox', '--disable-setuid-sandbox']
-        });
+        browser = await puppeteer.launch(PUPPETEER_CONFIG);
 
         const page = await browser.newPage();
         await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
@@ -2008,10 +2004,7 @@ ReportesCajaChicaController.generarPDFRangoFechas = async (req, res) => {
         </html>
         `;
 
-        browser = await puppeteer.launch({
-            headless: 'new',
-            args: ['--no-sandbox', '--disable-setuid-sandbox']
-        });
+        browser = await puppeteer.launch(PUPPETEER_CONFIG);
 
         const page = await browser.newPage();
         await page.setContent(htmlContent, { waitUntil: 'networkidle0' });

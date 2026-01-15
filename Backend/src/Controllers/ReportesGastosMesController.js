@@ -26,7 +26,19 @@ const convertirImagenABase64 = (rutaImagen) => {
 };
 
 const RUTA_LOGO = path.join(process.cwd(), 'src', 'imagenes', 'imagen_15.png');
-
+// Puppeteer config para Cloud Run
+const PUPPETEER_CONFIG = {
+    headless: 'new',
+    executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/chromium',
+    args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-gpu',
+        '--single-process',
+        '--no-zygote'
+    ]
+};
 const formatMoney = (n) => {
   return new Intl.NumberFormat('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n || 0);
 };
@@ -280,7 +292,7 @@ ReportesGastosMesController.generarPDFMensualConsolidado = async (req, res) => {
     `;
 
     // Generar PDF con puppeteer
-    const browser = await puppeteer.launch({ args: ['--no-sandbox', '--disable-setuid-sandbox'] });
+    const browser = await puppeteer.launch(PUPPETEER_CONFIG);
     const page = await browser.newPage();
     await page.setContent(html, { waitUntil: 'networkidle0' });
     const pdfBuffer = await page.pdf({ format: 'A4', printBackground: true });
