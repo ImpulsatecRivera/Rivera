@@ -72,7 +72,7 @@ app.use(
         return callback(null, true);
       }
 
-      return callback(new Error("Not allowed by CORS"));
+      return callback(null, false);
     },
     credentials: true,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
@@ -87,6 +87,10 @@ app.use(
     exposedHeaders: ["Set-Cookie"],
   })
 );
+
+// 👇 ESTO ES CLAVE EN CLOUD RUN
+app.options("*", cors());
+
 
 app.get("/test", (req, res) => {
   res.json({ message: "Test with cookieParser" });
