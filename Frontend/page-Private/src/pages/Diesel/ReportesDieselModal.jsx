@@ -1,6 +1,8 @@
 import React, { useMemo, useState } from "react";
 import { X, Calendar, FileText, Download, ChevronDown } from "lucide-react";
 import Swal from "sweetalert2";
+import { api } from "../../Context/authContext";
+
 
 const ReportesDieselModal = ({ isOpen, onClose, apiUrl }) => {
   const [tipoReporte, setTipoReporte] = useState("todos");
@@ -59,20 +61,19 @@ const [fechaFin, setFechaFin] = useState("");
   };
 
   // Función para verificar si hay registros
-  const verificarRegistros = async (url) => {
-    try {
-      const response = await fetch(url, { credentials: 'include' });
-      if (!response.ok) {
-        if (response.status === 404) {
-          return false; // No hay registros
-        }
-        throw new Error(`Error del servidor: ${response.status}`);
-      }
-      return true; // Hay registros
-    } catch (error) {
-      throw error;
-    }
-  };
+ const verificarRegistros = async (url) => {
+  try {
+    await api.get(url);
+    return true;
+  } catch (e) {
+    if (e.response?.status === 404) return false;
+    throw new Error(
+      e.response?.data?.message ||
+      `Error del servidor: ${e.response?.status || e.message}`
+    );
+  }
+};
+
 
   const generarReporte = async () => {
     // Validaciones de campos requeridos
@@ -241,14 +242,15 @@ Swal.fire({
 
       if (tipoReporte === "multiple") {
         try {
-          const response = await fetch(`${reporteBase}/reportes/diesel/comparativo`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              meses: [...mesesSeleccionados].sort((a, b) => a - b),
-              ano: anoSeleccionado,
-            }),
-          });
+         const response = await api.post(
+  `${reporteBase}/reportes/diesel/comparativo`,
+  {
+    meses: [...mesesSeleccionados].sort((a, b) => a - b),
+    ano: anoSeleccionado,
+  },
+  { responseType: "blob" }
+);
+
 
           if (response.status === 404) {
             Swal.fire({
@@ -266,10 +268,17 @@ Swal.fire({
             throw new Error(`Error del servidor: ${response.status}`);
           }
 
-          await descargarBlobComoPDF(
-            response,
-            `reporte-diesel-comparativo-${anoSeleccionado}.pdf`
-          );
+         const blob = new Blob([response.data], { type: "application/pdf" });
+const url = window.URL.createObjectURL(blob);
+
+const a = document.createElement("a");
+a.href = url;
+a.download = `reporte-diesel-comparativo-${anoSeleccionado}.pdf`;
+document.body.appendChild(a);
+a.click();
+document.body.removeChild(a);
+window.URL.revokeObjectURL(url);
+
 
           const mesesNombres = mesesSeleccionados
             .sort((a, b) => a - b)

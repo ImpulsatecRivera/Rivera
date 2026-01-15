@@ -13,6 +13,8 @@ import {
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { config } from "../../config";
+import { api } from "../../Context/authContext";
+
 
 const VIAJES_OPERATIVOS_ENDPOINT = `${config.api.API_URL}/viajes-operativos/crear`;
 const CLIENTES_ENDPOINT = `${config.api.API_URL}/clientes`;
@@ -126,20 +128,24 @@ export default function AgregarViajeOperativo() {
 }, [formData.rutaOrigen, formData.rutaDestino]);
 
   const fetchClientes = async () => {
-    try {
-      setLoadingClientes(true);
-      const res = await fetch(CLIENTES_ENDPOINT, { credentials: 'include' });
-      const json = await res.json().catch(() => ({}));
-      const rows = json?.data?.clientes || json?.data || (Array.isArray(json) ? json : []);
+  try {
+    setLoadingClientes(true);
 
-      const corporativos = rows.filter((c) => c?.tipoCliente === "corporativo");
-      setClientes(corporativos);
-    } catch (e) {
-      console.error("Error cargando clientes:", e);
-    } finally {
-      setLoadingClientes(false);
-    }
-  };
+    const response = await api.get(CLIENTES_ENDPOINT);
+    const rows =
+      response.data?.data?.clientes ||
+      response.data?.data ||
+      (Array.isArray(response.data) ? response.data : []);
+
+    const corporativos = rows.filter((c) => c?.tipoCliente === "corporativo");
+    setClientes(corporativos);
+  } catch (e) {
+    console.error("Error cargando clientes:", e);
+  } finally {
+    setLoadingClientes(false);
+  }
+};
+
 
   const clientesOptions = useMemo(() => {
     return (clientes || [])
@@ -184,19 +190,18 @@ export default function AgregarViajeOperativo() {
       estadoCorporativo: "activo",
     };
 
-    const res = await fetch(CLIENTES_ENDPOINT, {
-      method: "POST",
-      credentials: 'include',
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
+   
 
     const json = await res.json().catch(() => ({}));
     if (!res.ok || json?.success === false)
       throw new Error(json?.message || "Error al crear cliente");
 
-    const created = json?.data?.cliente || json?.data || json;
-    const newId = String(created?._id || created?.id || "");
+const response = await api.post(CLIENTES_ENDPOINT, payload);
+
+const created =
+  response.data?.data?.cliente ||
+  response.data?.data ||
+  response.data;    const newId = String(created?._id || created?.id || "");
 
     if (!newId) throw new Error("No se pudo obtener el ID del cliente creado");
 
@@ -228,19 +233,23 @@ export default function AgregarViajeOperativo() {
   }
 };
 
-  const fetchMotoristas = async () => {
-    try {
-      setLoadingMotoristas(true);
-      const res = await fetch(MOTORISTAS_ENDPOINT, { credentials: 'include' });
-      const json = await res.json().catch(() => ({}));
-      const rows = json?.data || (Array.isArray(json) ? json : []);
-      setMotoristas(Array.isArray(rows) ? rows : []);
-    } catch (e) {
-      console.error("Error cargando motoristas:", e);
-    } finally {
-      setLoadingMotoristas(false);
-    }
-  };
+ const fetchMotoristas = async () => {
+  try {
+    setLoadingMotoristas(true);
+
+    const response = await api.get(MOTORISTAS_ENDPOINT);
+    const rows =
+      response.data?.data ||
+      (Array.isArray(response.data) ? response.data : []);
+
+    setMotoristas(Array.isArray(rows) ? rows : []);
+  } catch (e) {
+    console.error("Error cargando motoristas:", e);
+  } finally {
+    setLoadingMotoristas(false);
+  }
+};
+
 
   const motoristasOptions = useMemo(() => {
     return (motoristas || [])
@@ -255,22 +264,25 @@ export default function AgregarViajeOperativo() {
       });
   }, [motoristas]);
 
-  const fetchCamiones = async () => {
-    try {
-      setLoadingCamiones(true);
-      const res = await fetch(CAMIONES_ENDPOINT, { credentials: 'include' });
-      const json = await res.json().catch(() => ({}));
+ const fetchCamiones = async () => {
+  try {
+    setLoadingCamiones(true);
 
-      const rows =
-        json?.data?.camiones || json?.camiones || json?.data || (Array.isArray(json) ? json : []);
+    const response = await api.get(CAMIONES_ENDPOINT);
+    const rows =
+      response.data?.data?.camiones ||
+      response.data?.camiones ||
+      response.data?.data ||
+      (Array.isArray(response.data) ? response.data : []);
 
-      setCamiones(Array.isArray(rows) ? rows : []);
-    } catch (e) {
-      console.error("Error cargando camiones:", e);
-    } finally {
-      setLoadingCamiones(false);
-    }
-  };
+    setCamiones(Array.isArray(rows) ? rows : []);
+  } catch (e) {
+    console.error("Error cargando camiones:", e);
+  } finally {
+    setLoadingCamiones(false);
+  }
+};
+
 
 
   const camionesOptions = useMemo(() => {
@@ -350,12 +362,9 @@ arrivalTime: new Date(formData.arrivalTime).toISOString(),
       };
 
       
-      const res = await fetch(VIAJES_OPERATIVOS_ENDPOINT, {
-        method: "POST",
-        credentials: 'include',
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(dataToSend),
-      });
+     await api.post(VIAJES_OPERATIVOS_ENDPOINT, dataToSend);
+
+
 
       const json = await res.json().catch(() => ({}));
       if (!res.ok || json?.success === false)

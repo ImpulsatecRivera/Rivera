@@ -17,6 +17,8 @@ import {
 import { useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
 import { config } from "../../config";
+import { api } from "../../Context/authContext";
+
 
 const PROGRAMACION_ENDPOINT = `${config.api.API_URL}/viajes-operativos/programacion`;
 const COMPLETAR_UNO_ENDPOINT = `${config.api.API_URL}/viajes-operativos/completar`;
@@ -103,33 +105,31 @@ export default function ProgramacionViajesOperativos() {
   }, [selectedDate]);
 
   const fetchProgramacion = async (fecha) => {
-    try {
-      setLoading(true);
-      setError(null);
+  try {
+    setLoading(true);
+    setError(null);
 
-      const res = await fetch(`${PROGRAMACION_ENDPOINT}/${fecha}`, {
-        credentials: "include",
-      });
+    const response = await api.get(`${PROGRAMACION_ENDPOINT}/${fecha}`);
 
-      const json = await res.json().catch(() => ({}));
+    const data = response.data?.data || {};
+    const prog = data?.programacion || [];
 
-      if (!res.ok || json?.success === false)
-        throw new Error(json?.message || "Error al cargar programación");
+    setProgramacion(Array.isArray(prog) ? prog : []);
+    setFechaInfo(data?.fecha || "");
+    setTotalViajes(data?.totalViajes || 0);
+    setTotalClientes(data?.totalClientes || 0);
+  } catch (e) {
+    setError(
+      e.response?.data?.message ||
+      e.message ||
+      "Error al cargar"
+    );
+    setProgramacion([]);
+  } finally {
+    setLoading(false);
+  }
+};
 
-      const data = json?.data || {};
-      const prog = data?.programacion || [];
-      
-      setProgramacion(Array.isArray(prog) ? prog : []);
-      setFechaInfo(data?.fecha || "");
-      setTotalViajes(data?.totalViajes || 0);
-      setTotalClientes(data?.totalClientes || 0);
-    } catch (e) {
-      setError(e.message || "Error al cargar");
-      setProgramacion([]);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleRefresh = () => {
     if (selectedDate) {
@@ -155,14 +155,10 @@ export default function ProgramacionViajesOperativos() {
 
     try {
       if (nuevoEstado === "completado") {
-        const res = await fetch(`${COMPLETAR_UNO_ENDPOINT}/${viajeId}`, {
-          method: "PUT",
-          credentials: "include",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            observacion: "Viaje completado desde programación",
-          }),
-        });
+       await api.put(`${COMPLETAR_UNO_ENDPOINT}/${viajeId}`, {
+  observacion: "Viaje completado desde programación",
+});
+
 
         const json = await res.json().catch(() => ({}));
 
@@ -176,14 +172,10 @@ export default function ProgramacionViajesOperativos() {
           timer: 1500,
         });
       } else {
-        const res = await fetch(`${ACTUALIZAR_ESTADO_ENDPOINT}/${viajeId}`, {
-          method: "PATCH",
-          credentials: "include",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            estado: nuevoEstado,
-          }),
-        });
+       await api.patch(`${ACTUALIZAR_ESTADO_ENDPOINT}/${viajeId}`, {
+  estado: nuevoEstado,
+});
+
 
         const json = await res.json().catch(() => ({}));
 
