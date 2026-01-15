@@ -1,6 +1,6 @@
 // src/navigation/AppNavigator.js
 import React, { useState, useEffect, useMemo } from "react";
-import { Text, Platform, useWindowDimensions } from "react-native";
+import { Text, Platform, useWindowDimensions } from "react";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { createStackNavigator } from "@react-navigation/stack";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -36,11 +36,11 @@ import OnboardingScreen3 from "../screens/pantallacarga3";
 // Edit profile
 import EditProfileScreen from "../screens/EditProfileScreen";
 
-const Tab = createBottomTabNavigator();
+const nTab = createBottomTabNavigator();
 const Stack = createStackNavigator();
 
 /* =========================
-   Tab Navigator RESPONSIVE
+   Tab Navigator RESPONSIVE CORREGIDO
 ========================= */
 const TabNavigator = () => {
   const insets = useSafeAreaInsets();
@@ -54,14 +54,12 @@ const TabNavigator = () => {
   }, [width]);
 
   const metrics = useMemo(() => {
-    const side = Math.max(8, Math.round(10 * scale));
-    const bottom = Platform.OS === "android" ? 0 : Math.max(8, Math.round(12 * scale));
     const paddingTop = Math.round(10 * scale);
 
     const paddingBottom =
       Platform.OS === "android"
         ? Math.round(8 * scale)
-        : Math.max(insets.bottom, Math.round(8 * scale));
+        : Math.max(insets.bottom || 0, Math.round(8 * scale));
 
     const baseHeight = Math.round(62 * scale);
     const height = baseHeight + paddingBottom;
@@ -70,13 +68,10 @@ const TabNavigator = () => {
     const iconFocused = Math.round(28 * scale);
     const labelSize = Math.max(10, Math.round(12 * scale));
 
-    // ✅ como ahora son 4 tabs, reducimos un poquito márgenes
     const itemMarginX = Math.max(4, Math.round(6 * scale));
     const itemPaddingY = Math.max(4, Math.round(6 * scale));
 
     return {
-      side,
-      bottom,
       paddingTop,
       paddingBottom,
       height,
@@ -136,9 +131,9 @@ const TabNavigator = () => {
           shadowColor: "#000000",
 
           position: "absolute",
-          bottom: metrics.bottom,
-          left: metrics.side,
-          right: metrics.side,
+          bottom: 0,
+          left: 0,
+          right: 0,
 
           borderTopLeftRadius: 25,
           borderTopRightRadius: 25,
@@ -173,7 +168,7 @@ const TabNavigator = () => {
       <Tab.Screen
         name="Camion"
         component={CamionProfileScreen}
-        options={{ tabBarLabel: "Camión" }} // si querés que se vea con acento
+        options={{ tabBarLabel: "Camión" }}
       />
 
       <Tab.Screen name="Perfil" component={PerfilScreen} />
