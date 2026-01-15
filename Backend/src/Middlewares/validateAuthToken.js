@@ -11,10 +11,19 @@ import { config } from "../config.js";
 export const validateAuthToken = (allowedRoles = []) => {
   return async (req, res, next) => {
     try {
-      const token = req.cookies?.authToken;
-      if (!token) {
-        return res.status(401).json({ message: "Cookies not found, please login" });
-      }
+      let token = req.cookies?.authToken;
+
+if (!token && req.headers.authorization) {
+  const authHeader = req.headers.authorization;
+  if (authHeader.startsWith("Bearer ")) {
+    token = authHeader.split(" ")[1];
+  }
+}
+
+if (!token) {
+  return res.status(401).json({ message: "Token not found, please login" });
+}
+
 
       const decoded = jwt.verify(token, config.JWT.secret);
       const { id, userType } = decoded;

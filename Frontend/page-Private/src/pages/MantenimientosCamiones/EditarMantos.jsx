@@ -128,6 +128,7 @@ export default function EditMantenimiento({ onClose }) {
 
       const response = await fetch(`${config.api.API_URL}/mantenimientos/${id}`, {
         method: 'PUT',
+         credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
         },

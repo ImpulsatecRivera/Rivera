@@ -8,6 +8,8 @@ import {
 import { config } from '../../config';
 import Swal from 'sweetalert2';
 import { useAuth } from '../../Context/authContext';
+import { api } from '../../Context/authContext';
+
  
 export default function PlanillaQuincenal() {
   const { id } = useParams();
@@ -81,9 +83,9 @@ export default function PlanillaQuincenal() {
 
   const cargarEmpleadosYMotoristas = async () => {
     try {
-      const resEmpleados = await fetch(`${config.api.API_URL}/empleados`, { credentials: 'include' });
-      const dataEmpleados = await resEmpleados.json();
-      
+    const resEmpleados = await api.get(`${config.api.API_URL}/empleados`);
+const dataEmpleados = resEmpleados.data;
+
       let empleadosArray = [];
       if (dataEmpleados?.data?.empleados) {
         empleadosArray = dataEmpleados.data.empleados;
@@ -93,8 +95,9 @@ export default function PlanillaQuincenal() {
       
       setEmpleados(empleadosArray);
 
-      const resMotoristas = await fetch(`${config.api.API_URL}/motoristas`, { credentials: 'include' });
-      const dataMotoristas = await resMotoristas.json();
+   const resMotoristas = await api.get(`${config.api.API_URL}/motoristas`);
+const dataMotoristas = resMotoristas.data;
+
       const motoristasArray = Array.isArray(dataMotoristas) ? dataMotoristas : [];
       
       setMotoristas(motoristasArray);
@@ -108,11 +111,9 @@ export default function PlanillaQuincenal() {
   const cargarPlanillaExistente = async (planillaId) => {
     setLoading(true);
     try {
-      const response = await fetch(
-        `${config.api.API_URL}/planillas/quincenal/${planillaId}`,
-        { credentials: 'include' }
-      );
-      const data = await response.json();
+      const response = await api.get(`${config.api.API_URL}/planillas/quincenal/${planillaId}`);
+const data = response.data;
+
       
       if (data.success && data.data) {
         const planillaConEmpleados = {
@@ -147,8 +148,9 @@ export default function PlanillaQuincenal() {
   const cargarUltimaPlanilla = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`${config.api.API_URL}/planillas/quincenal`, { credentials: 'include' });
-      const data = await response.json();
+      const response = await api.get(`${config.api.API_URL}/planillas/quincenal`);
+const data = response.data;
+
       
       if (data.success && Array.isArray(data.data) && data.data.length > 0) {
         const planillasOrdenadas = [...data.data].sort((a, b) => {
@@ -192,19 +194,15 @@ export default function PlanillaQuincenal() {
     try {
       const { año, mes, quincena } = infoPlanilla;
 
-      const response = await fetch(`${config.api.API_URL}/planillas/quincenal`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          año,
-          mes,
-          quincena,
-          empleados: []
-        })
-      });
+     const response = await api.post(`${config.api.API_URL}/planillas/quincenal`, {
+  año,
+  mes,
+  quincena,
+  empleados: []
+});
 
-      const data = await response.json();
+const data = response.data;
+
 
       if (data.success && data.data) {
         const planillaData = {
@@ -233,19 +231,15 @@ export default function PlanillaQuincenal() {
 
     while (intentos < maxIntentos) {
       try {
-        const response = await fetch(`${config.api.API_URL}/planillas/quincenal`, {
-          method: 'POST',
-          credentials: 'include',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            año,
-            mes,
-            quincena,
-            empleados: []
-          })
-        });
+        const response = await api.post(`${config.api.API_URL}/planillas/quincenal`, {
+  año,
+  mes,
+  quincena,
+  empleados: []
+});
 
-        const data = await response.json();
+const data = response.data;
+
 
         if (data.success && data.data) {
           return {
@@ -256,10 +250,12 @@ export default function PlanillaQuincenal() {
         }
 
         if (response.status === 400 && data.data?.planillaId) {
-          const planillaResponse = await fetch(
-            `${config.api.API_URL}/planillas/quincenal/${data.data.planillaId}`, { credentials: 'include' }
-          );
-          const planillaData = await planillaResponse.json();
+         const planillaResponse = await api.get(
+  `${config.api.API_URL}/planillas/quincenal/${data.data.planillaId}`
+);
+
+const planillaData = planillaResponse.data;
+
 
           if (planillaData.success && planillaData.data) {
             const planillaExistente = planillaData.data;
@@ -317,25 +313,22 @@ export default function PlanillaQuincenal() {
     }
 
     try {
-      const response = await fetch(
-        `${config.api.API_URL}/planillas/quincenal/${planilla._id}/empleado`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            empleadoId: empleadoSeleccionado._id,
-            viaticos: parseFloat(formEmpleado.viaticos) || 0,
-            trabajoSabadoDomingo: parseFloat(formEmpleado.trabajoSabadoDomingo) || 0,
-            otrosDescuentos: {
-              anticipos: parseFloat(formEmpleado.anticipos) || 0,
-              prestamos: parseFloat(formEmpleado.prestamos) || 0,
-              otros: parseFloat(formEmpleado.otros) || 0
-            }
-          })
-        }
-      );
+      const response = await api.post(
+  `${config.api.API_URL}/planillas/quincenal/${planilla._id}/empleado`,
+  {
+    empleadoId: empleadoSeleccionado._id,
+    viaticos: Number(formEmpleado.viaticos) || 0,
+    trabajoSabadoDomingo: Number(formEmpleado.trabajoSabadoDomingo) || 0,
+    otrosDescuentos: {
+      anticipos: Number(formEmpleado.anticipos) || 0,
+      prestamos: Number(formEmpleado.prestamos) || 0,
+      otros: Number(formEmpleado.otros) || 0
+    }
+  }
+);
 
-      const data = await response.json();
+const data = response.data;
+
       
       if (data.success && data.data) {
         const planillaActualizada = {
@@ -387,24 +380,22 @@ export default function PlanillaQuincenal() {
     }
 
     try {
-      const response = await fetch(
-        `${config.api.API_URL}/planillas/quincenal/${planilla._id}/empleado/${empleadoEditando._id}`,
-        {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            viaticos: parseFloat(formEmpleado.viaticos) || 0,
-            trabajoSabadoDomingo: parseFloat(formEmpleado.trabajoSabadoDomingo) || 0,
-            otrosDescuentos: {
-              anticipos: parseFloat(formEmpleado.anticipos) || 0,
-              prestamos: parseFloat(formEmpleado.prestamos) || 0,
-              otros: parseFloat(formEmpleado.otros) || 0
-            }
-          })
-        }
-      );
+   const response = await api.put(
+  `${config.api.API_URL}/planillas/quincenal/${planilla._id}/empleado/${empleadoEditando._id}`,
+  {
+    viaticos: Number(formEmpleado.viaticos) || 0,
+    trabajoSabadoDomingo: Number(formEmpleado.trabajoSabadoDomingo) || 0,
+    otrosDescuentos: {
+      anticipos: Number(formEmpleado.anticipos) || 0,
+      prestamos: Number(formEmpleado.prestamos) || 0,
+      otros: Number(formEmpleado.otros) || 0
+    }
+  }
+);
 
-      const data = await response.json();
+const data = response.data;
+
+
       
       if (data.success && data.data) {
         const planillaActualizada = {
@@ -454,14 +445,9 @@ export default function PlanillaQuincenal() {
     if (!result.isConfirmed) return;
 
     try {
-      const response = await fetch(
-        `${config.api.API_URL}/planillas/quincenal/${planilla._id}/empleado/${empleadoId}`,
-        {
-          method: 'DELETE'
-        }
-      );
+     const response = await api.delete(url);
+const data = response.data;
 
-      const data = await response.json();
       if (data.success && data.data) {
         const planillaActualizada = {
           ...data.data,
@@ -488,56 +474,52 @@ export default function PlanillaQuincenal() {
   };
 
   const cambiarEstadoPlanilla = async (nuevoEstado) => {
-    if (!planilla || !planilla._id) return;
+  if (!planilla || !planilla._id) return;
 
-    const result = await Swal.fire({
-      title: '¿Aprobar Planilla?',
-      text: 'Una vez aprobada, no se podrá editar',
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonColor: '#5D9646',
-      cancelButtonColor: '#6b7280',
-      confirmButtonText: 'Sí, aprobar',
-      cancelButtonText: 'Cancelar'
-    });
+  const result = await Swal.fire({
+    title: '¿Aprobar Planilla?',
+    text: 'Una vez aprobada, no se podrá editar',
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#5D9646',
+    cancelButtonColor: '#6b7280',
+    confirmButtonText: 'Sí, aprobar',
+    cancelButtonText: 'Cancelar'
+  });
 
-    if (!result.isConfirmed) return;
+  if (!result.isConfirmed) return;
 
-    try {
-      const response = await fetch(
-        `${config.api.API_URL}/planillas/quincenal/${planilla._id}/estado`,
-        {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ estado: nuevoEstado })
-        }
-      );
+  try {
+    const response = await api.patch(
+      `${config.api.API_URL}/planillas/quincenal/${planilla._id}/estado`,
+      { estado: nuevoEstado }
+    );
 
-      const data = await response.json();
-      if (data.success && data.data) {
-        const planillaActualizada = {
-          ...data.data,
-          empleados: Array.isArray(data.data.empleados) ? data.data.empleados : []
-        };
-        setPlanilla(planillaActualizada);
-        Swal.fire({
-          icon: 'success',
-          title: '¡Estado actualizado!',
-          text: `Planilla marcada como ${nuevoEstado}`,
-          timer: 2000,
-          showConfirmButton: false
-        });
-      } else {
-        throw new Error(data.message || 'Error al cambiar estado');
-      }
-    } catch (error) {
+    const data = response.data;
+
+    if (data.success && data.data) {
+      setPlanilla({
+        ...data.data,
+        empleados: Array.isArray(data.data.empleados) ? data.data.empleados : []
+      });
+
       Swal.fire({
-        icon: 'error',
-        title: 'Error',
-        text: error.message
+        icon: 'success',
+        title: '¡Estado actualizado!',
+        text: `Planilla marcada como ${nuevoEstado}`,
+        timer: 2000,
+        showConfirmButton: false
       });
     }
-  };
+  } catch (error) {
+    Swal.fire({
+      icon: 'error',
+      title: 'Error',
+      text: error.message
+    });
+  }
+};
+
 
   const limpiarFormulario = () => {
     setFormEmpleado({
