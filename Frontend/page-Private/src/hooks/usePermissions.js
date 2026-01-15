@@ -1,4 +1,4 @@
-import { useAuth } from '../context/authContext';
+import { useAuth } from '../Context/authContext';
 
 /**
  * Hook para verificar permisos basados en roles
