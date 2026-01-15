@@ -57,20 +57,23 @@ const app = express();
 app.use(express.json());
 app.use(cookieParser());
 
+const allowedOrigins = [
+  "https://rivera-test.vercel.app",
+  "http://localhost:5173",
+];
+
 app.use(
   cors({
-    origin: [
-      "https://verdant-sunshine-da6504.netlify.app",
-      "https://rivera-test.vercel.app",
-      "https://rivera-test-git-master-gabriel-contreras-projects-462b2f95.vercel.app",
-      "http://localhost:5173",
-      /^exp:\/\/.*$/,
-      /^http:\/\/.*\.exp\.direct.*$/,
-      /^https:\/\/.*\.exp\.direct.*$/,
-      /^http:\/\/localhost.*$/,
-      /^http:\/\/192\.168\..*$/,
-      /^http:\/\/10\.0\..*$/,
-    ],
+    origin: function (origin, callback) {
+      // requests sin origin (Postman, server-to-server)
+      if (!origin) return callback(null, true);
+
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+
+      return callback(null, false);
+    },
     credentials: true,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: [
@@ -79,13 +82,15 @@ app.use(
       "Accept",
       "Origin",
       "Cache-Control",
-      "cache-control",
       "Pragma",
-      "pragma",
     ],
-    exposedHeaders: ["Set-Cookie", "Clear-Site-Data"],
+    exposedHeaders: ["Set-Cookie"],
   })
 );
+
+// 👇 ESTO ES CLAVE EN CLOUD RUN
+app.options("*", cors());
+
 
 app.get("/test", (req, res) => {
   res.json({ message: "Test with cookieParser" });
