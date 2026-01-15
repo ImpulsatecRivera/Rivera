@@ -8,6 +8,7 @@ import {
 import { config } from '../../config';
 import Swal from 'sweetalert2';
 import { useAuth } from '../../Context/authContext';
+import { api } from '../../Context/authContext';
 
 export default function Planillas() {
   const navigate = useNavigate();
@@ -60,43 +61,47 @@ export default function Planillas() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const cargarPlanillas = async () => {
-    setLoading(true);
-    try {
-      const responseQuincenal = await fetch(`${config.api.API_URL}/planillas/quincenal`, { credentials: 'include' });
-      const dataQuincenal = await responseQuincenal.json();
-      
-      const responseSemanal = await fetch(`${config.api.API_URL}/planillas/semanal`, { credentials: 'include' });
-      const dataSemanal = await responseSemanal.json();
-      
-      const planillasQuincenales = (dataQuincenal.success && Array.isArray(dataQuincenal.data)) 
+ const cargarPlanillas = async () => {
+  setLoading(true);
+  try {
+    const responseQuincenal = await api.get(`${config.api.API_URL}/planillas/quincenal`);
+    const dataQuincenal = responseQuincenal.data;
+
+    const responseSemanal = await api.get(`${config.api.API_URL}/planillas/semanal`);
+    const dataSemanal = responseSemanal.data;
+
+    const planillasQuincenales =
+      (dataQuincenal.success && Array.isArray(dataQuincenal.data))
         ? dataQuincenal.data.map(p => ({ ...p, tipo: 'quincenal' }))
         : [];
-      
-      const planillasSemanales = (dataSemanal.success && Array.isArray(dataSemanal.data))
+
+    const planillasSemanales =
+      (dataSemanal.success && Array.isArray(dataSemanal.data))
         ? dataSemanal.data.map(p => ({ ...p, tipo: 'semanal' }))
         : [];
-      
-      const todasPlanillas = [...planillasQuincenales, ...planillasSemanales]
-        .sort((a, b) => {
-          const fechaA = new Date(a.fechaInicio || a.createdAt);
-          const fechaB = new Date(b.fechaInicio || b.createdAt);
-          return fechaB - fechaA;
-        });
-      
-      setPlanillas(todasPlanillas);
-    } catch (error) {
-      console.error('Error cargando planillas:', error);
-      setPlanillas([]);
-      Swal.fire({
-        icon: 'error',
-        title: 'Error',
-        text: 'No se pudieron cargar las planillas'
+
+    const todasPlanillas = [...planillasQuincenales, ...planillasSemanales]
+      .sort((a, b) => {
+        const fechaA = new Date(a.fechaInicio || a.createdAt);
+        const fechaB = new Date(b.fechaInicio || b.createdAt);
+        return fechaB - fechaA;
       });
-    } finally {
-      setLoading(false);
-    }
-  };
+
+    setPlanillas(todasPlanillas);
+
+  } catch (error) {
+    console.error('Error cargando planillas:', error);
+    setPlanillas([]);
+    Swal.fire({
+      icon: 'error',
+      title: 'Error',
+      text: 'No se pudieron cargar las planillas'
+    });
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   const formatearMoneda = (cantidad) => {
     return new Intl.NumberFormat('es-US', {
@@ -133,34 +138,41 @@ export default function Planillas() {
   };
 
   const handleCrearPlanilla = async (tipo) => {
-    setShowDropdown(false);
-    
-    if (tipo === 'quincenal') {
-      navigate('/planilla/quincenal');
-    } else if (tipo === 'semanal') {
-      try {
-        const response = await fetch(`${config.api.API_URL}/planillas/semanal?estado=pendiente&limit=1`, { credentials: 'include' });
-        const data = await response.json();
-        
-        if (data.success && data.data && data.data.length > 0) {
-          const planillaPendiente = data.data[0];
-          Swal.fire({
-            icon: 'info',
-            title: 'Planilla en proceso',
-            text: `Ya tienes una planilla semanal pendiente. Te llevaremos a editarla.`,
-            timer: 2000,
-            showConfirmButton: false
-          });
-          navigate(`/planilla/semanal/${planillaPendiente._id}`);
-        } else {
-          navigate('/planilla/semanal/nueva');
-        }
-      } catch (error) {
-        console.error('Error verificando planillas:', error);
+  setShowDropdown(false);
+
+  if (tipo === 'quincenal') {
+    navigate('/planilla/quincenal');
+  } else if (tipo === 'semanal') {
+    try {
+      const response = await api.get(
+        `${config.api.API_URL}/planillas/semanal?estado=pendiente&limit=1`
+      );
+
+      const data = response.data;
+
+      if (data.success && data.data && data.data.length > 0) {
+        const planillaPendiente = data.data[0];
+
+        Swal.fire({
+          icon: 'info',
+          title: 'Planilla en proceso',
+          text: 'Ya tienes una planilla semanal pendiente. Te llevaremos a editarla.',
+          timer: 2000,
+          showConfirmButton: false
+        });
+
+        navigate(`/planilla/semanal/${planillaPendiente._id}`);
+      } else {
         navigate('/planilla/semanal/nueva');
       }
+
+    } catch (error) {
+      console.error('Error verificando planillas:', error);
+      navigate('/planilla/semanal/nueva');
     }
-  };
+  }
+};
+
 
   const handleVerPlanilla = (planilla) => {
     if (planilla.tipo === 'semanal') {
@@ -171,114 +183,118 @@ export default function Planillas() {
   };
 
   const handleEliminar = async (planilla) => {
-    if (planilla.estado !== 'pendiente') {
-      Swal.fire({
-        icon: 'warning',
-        title: 'No se puede eliminar',
-        text: 'Solo se pueden eliminar planillas en estado pendiente'
-      });
-      return;
-    }
-
-    const result = await Swal.fire({
-      title: '¿Eliminar planilla?',
-      text: `${planilla.descripcion}`,
+  if (planilla.estado !== 'pendiente') {
+    Swal.fire({
       icon: 'warning',
-      showCancelButton: true,
-      confirmButtonColor: '#ef4444',
-      confirmButtonText: 'Sí, eliminar',
-      cancelButtonText: 'Cancelar'
+      title: 'No se puede eliminar',
+      text: 'Solo se pueden eliminar planillas en estado pendiente'
     });
+    return;
+  }
 
-    if (result.isConfirmed) {
-      try {
-        const endpoint = planilla.tipo === 'semanal' 
+  const result = await Swal.fire({
+    title: '¿Eliminar planilla?',
+    text: `${planilla.descripcion}`,
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#ef4444',
+    confirmButtonText: 'Sí, eliminar',
+    cancelButtonText: 'Cancelar'
+  });
+
+  if (result.isConfirmed) {
+    try {
+      const endpoint =
+        planilla.tipo === 'semanal'
           ? `${config.api.API_URL}/planillas/semanal/${planilla._id}`
           : `${config.api.API_URL}/planillas/quincenal/${planilla._id}`;
-        
-        const response = await fetch(endpoint, { method: 'DELETE', credentials: 'include' });
-        const data = await response.json();
 
-        if (data.success) {
-          await Swal.fire({
-            title: '¡Eliminada!',
-            text: 'La planilla ha sido eliminada',
-            icon: 'success',
-            timer: 2000,
-            showConfirmButton: false
-          });
-          cargarPlanillas();
-        } else {
-          throw new Error(data.message || 'Error al eliminar');
-        }
-      } catch (error) {
-        Swal.fire({
-          title: 'Error',
-          text: error.message,
-          icon: 'error'
+      const response = await api.delete(endpoint);
+      const data = response.data;
+
+      if (data.success) {
+        await Swal.fire({
+          title: '¡Eliminada!',
+          text: 'La planilla ha sido eliminada',
+          icon: 'success',
+          timer: 2000,
+          showConfirmButton: false
         });
-      }
-    }
-  };
 
-  const handleDescargarPDF = async (planilla) => {
-    try {
-      Swal.fire({
-        title: 'Generando PDF...',
-        text: 'Por favor espera',
-        allowOutsideClick: false,
-        didOpen: () => {
-          Swal.showLoading();
-        }
-      });
-
-      let endpoint;
-      let filename;
-      
-      if (planilla.tipo === 'semanal') {
-        endpoint = `${config.api.API_URL}/reportes/planilla/semanal/detallado/${planilla._id}`;
-        const fechaInicio = new Date(planilla.fechaInicio).toLocaleDateString('es-ES').replace(/\//g, '-');
-        const fechaFin = new Date(planilla.fechaFin).toLocaleDateString('es-ES').replace(/\//g, '-');
-        filename = `Planilla_Semanal_${fechaInicio}_al_${fechaFin}.pdf`;
+        cargarPlanillas();
       } else {
-        endpoint = `${config.api.API_URL}/reportes/planilla/quincenal/${planilla._id}`;
-        filename = `Planilla_${planilla.descripcion}_${planilla.año}_${planilla.mes}.pdf`;
+        throw new Error(data.message || 'Error al eliminar');
       }
-
-      const response = await fetch(endpoint, { credentials: 'include' });
-
-      if (!response.ok) {
-        throw new Error('Error al generar el PDF');
-      }
-
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = filename;
-      
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
-
-      Swal.fire({
-        icon: 'success',
-        title: '¡Descargado!',
-        text: 'El PDF se ha descargado correctamente',
-        timer: 2000,
-        showConfirmButton: false
-      });
 
     } catch (error) {
-      console.error('Error descargando PDF:', error);
       Swal.fire({
-        icon: 'error',
         title: 'Error',
-        text: 'No se pudo generar el PDF'
+        text: error.response?.data?.message || error.message || 'Error al eliminar',
+        icon: 'error'
       });
     }
-  };
+  }
+};
+
+  const handleDescargarPDF = async (planilla) => {
+  try {
+    Swal.fire({
+      title: 'Generando PDF...',
+      text: 'Por favor espera',
+      allowOutsideClick: false,
+      didOpen: () => {
+        Swal.showLoading();
+      }
+    });
+
+    let endpoint;
+    let filename;
+
+    if (planilla.tipo === 'semanal') {
+      endpoint = `${config.api.API_URL}/reportes/planilla/semanal/detallado/${planilla._id}`;
+      const fechaInicio = new Date(planilla.fechaInicio).toLocaleDateString('es-ES').replace(/\//g, '-');
+      const fechaFin = new Date(planilla.fechaFin).toLocaleDateString('es-ES').replace(/\//g, '-');
+      filename = `Planilla_Semanal_${fechaInicio}_al_${fechaFin}.pdf`;
+    } else {
+      endpoint = `${config.api.API_URL}/reportes/planilla/quincenal/${planilla._id}`;
+      filename = `Planilla_${planilla.descripcion}_${planilla.año}_${planilla.mes}.pdf`;
+    }
+
+    const response = await api.get(endpoint, {
+      responseType: 'blob'
+    });
+
+    const blob = response.data;
+
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+
+    Swal.fire({
+      icon: 'success',
+      title: '¡Descargado!',
+      text: 'El PDF se ha descargado correctamente',
+      timer: 2000,
+      showConfirmButton: false
+    });
+
+  } catch (error) {
+    console.error('Error descargando PDF:', error);
+
+    Swal.fire({
+      icon: 'error',
+      title: 'Error',
+      text: error.response?.data?.message || 'No se pudo generar el PDF'
+    });
+  }
+};
+
 
   const handleAbrirReporteMensual = (tipo) => {
     setTipoReporte(tipo);
@@ -299,230 +315,228 @@ export default function Planillas() {
   };
 
   const handleDescargarReporteMensual = async () => {
-    if (!mesSeleccionado || !añoSeleccionado) {
-      Swal.fire({
-        icon: 'warning',
-        title: 'Datos incompletos',
-        text: 'Por favor selecciona mes y año'
-      });
-      return;
-    }
+  if (!mesSeleccionado || !añoSeleccionado) {
+    Swal.fire({
+      icon: 'warning',
+      title: 'Datos incompletos',
+      text: 'Por favor selecciona mes y año'
+    });
+    return;
+  }
 
-    try {
-      Swal.fire({
-        title: 'Generando reporte mensual...',
-        text: 'Por favor espera',
-        allowOutsideClick: false,
-        didOpen: () => {
-          Swal.showLoading();
-        }
-      });
+  try {
+    Swal.fire({
+      title: 'Generando reporte mensual...',
+      text: 'Por favor espera',
+      allowOutsideClick: false,
+      didOpen: () => {
+        Swal.showLoading();
+      }
+    });
 
-      const endpoint = tipoReporte === 'semanal'
+    const endpoint =
+      tipoReporte === 'semanal'
         ? `${config.api.API_URL}/reportes/planilla/semanal/mensual/${mesSeleccionado}/${añoSeleccionado}`
         : `${config.api.API_URL}/reportes/planilla/quincenal/mensual/${mesSeleccionado}/${añoSeleccionado}`;
 
-      const response = await fetch(endpoint, { credentials: 'include' });
+    const response = await api.get(endpoint, {
+      responseType: 'blob'
+    });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Error al generar el reporte');
+    const blob = response.data;
+
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+
+    const meses = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+    const nombreMes = meses[parseInt(mesSeleccionado) - 1];
+
+    const prefijo = tipoReporte === 'semanal' ? 'Planilla_Extra' : 'Reporte_Mensual';
+    link.download = `${prefijo}_${nombreMes}_${añoSeleccionado}.pdf`;
+
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+
+    setShowReporteMensual(false);
+    setMesSeleccionado('');
+    setAñoSeleccionado('');
+    setTipoReporte('');
+
+    Swal.fire({
+      icon: 'success',
+      title: '¡Descargado!',
+      text: 'El reporte mensual se ha descargado correctamente',
+      timer: 2000,
+      showConfirmButton: false
+    });
+
+  } catch (error) {
+    console.error('Error descargando reporte mensual:', error);
+
+    Swal.fire({
+      icon: 'error',
+      title: 'Error',
+      text: error.response?.data?.message || 'No se pudo generar el reporte mensual'
+    });
+  }
+};
+
+
+ const handleDescargarReporteMultiMes = async () => {
+  if (!mesesSeleccionadosMulti.length || !añoMultiMes) {
+    Swal.fire({
+      icon: 'warning',
+      title: 'Datos incompletos',
+      text: 'Por favor selecciona al menos un mes y el año'
+    });
+    return;
+  }
+
+  if (mesesSeleccionadosMulti.length > 9) {
+    Swal.fire({
+      icon: 'warning',
+      title: 'Demasiados meses',
+      text: 'Solo puedes seleccionar hasta 9 meses'
+    });
+    return;
+  }
+
+  try {
+    Swal.fire({
+      title: 'Generando reporte consolidado...',
+      text: 'Por favor espera',
+      allowOutsideClick: false,
+      didOpen: () => {
+        Swal.showLoading();
       }
+    });
 
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      
-      const meses = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 
-                     'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
-      const nombreMes = meses[parseInt(mesSeleccionado) - 1];
-      
-      const prefijo = tipoReporte === 'semanal' ? 'Planilla_Extra' : 'Reporte_Mensual';
-      link.download = `${prefijo}_${nombreMes}_${añoSeleccionado}.pdf`;
-      
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
-
-      setShowReporteMensual(false);
-      setMesSeleccionado('');
-      setAñoSeleccionado('');
-      setTipoReporte('');
-
-      Swal.fire({
-        icon: 'success',
-        title: '¡Descargado!',
-        text: 'El reporte mensual se ha descargado correctamente',
-        timer: 2000,
-        showConfirmButton: false
-      });
-
-    } catch (error) {
-      console.error('Error descargando reporte mensual:', error);
-      Swal.fire({
-        icon: 'error',
-        title: 'Error',
-        text: error.message || 'No se pudo generar el reporte mensual'
-      });
-    }
-  };
-
-  const handleDescargarReporteMultiMes = async () => {
-    if (!mesesSeleccionadosMulti.length || !añoMultiMes) {
-      Swal.fire({
-        icon: 'warning',
-        title: 'Datos incompletos',
-        text: 'Por favor selecciona al menos un mes y el año'
-      });
-      return;
-    }
-
-    if (mesesSeleccionadosMulti.length > 9) {
-      Swal.fire({
-        icon: 'warning',
-        title: 'Demasiados meses',
-        text: 'Solo puedes seleccionar hasta 9 meses'
-      });
-      return;
-    }
-
-    try {
-      Swal.fire({
-        title: 'Generando reporte consolidado...',
-        text: 'Por favor espera',
-        allowOutsideClick: false,
-        didOpen: () => {
-          Swal.showLoading();
-        }
-      });
-
-      const endpoint = tipoReporte === 'semanal'
+    const endpoint =
+      tipoReporte === 'semanal'
         ? `${config.api.API_URL}/reportes/planilla/semanal/multiMes`
         : `${config.api.API_URL}/reportes/planilla/quincenal/multiMes`;
 
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          meses: mesesSeleccionadosMulti.sort((a, b) => a - b),
-          ano: parseInt(añoMultiMes)
-        })
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Error al generar el reporte');
+    const response = await api.post(
+      endpoint,
+      {
+        meses: mesesSeleccionadosMulti.sort((a, b) => a - b),
+        ano: parseInt(añoMultiMes)
+      },
+      {
+        responseType: 'blob'
       }
+    );
 
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      
-      const periodo = mesesSeleccionadosMulti.length === 3 ? 'Trimestre' :
-                     mesesSeleccionadosMulti.length === 6 ? 'Semestre' :
-                     mesesSeleccionadosMulti.length === 9 ? '9-Meses' : 
-                     `${mesesSeleccionadosMulti.length}-Meses`;
-      
-      link.download = `Planilla_Consolidado_${periodo}_${añoMultiMes}.pdf`;
-      
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
+    const blob = response.data;
 
-      setShowReporteMultiMes(false);
-      setMesesSeleccionadosMulti([]);
-      setAñoMultiMes('');
-      setTipoReporte('');
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
 
-      Swal.fire({
-        icon: 'success',
-        title: '¡Descargado!',
-        text: 'El reporte consolidado se ha descargado correctamente',
-        timer: 2000,
-        showConfirmButton: false
-      });
+    const periodo =
+      mesesSeleccionadosMulti.length === 3 ? 'Trimestre' :
+      mesesSeleccionadosMulti.length === 6 ? 'Semestre' :
+      mesesSeleccionadosMulti.length === 9 ? '9-Meses' :
+      `${mesesSeleccionadosMulti.length}-Meses`;
 
-    } catch (error) {
-      console.error('Error descargando reporte multi-mes:', error);
-      Swal.fire({
-        icon: 'error',
-        title: 'Error',
-        text: error.message || 'No se pudo generar el reporte consolidado'
-      });
-    }
-  };
+    link.download = `Planilla_Consolidado_${periodo}_${añoMultiMes}.pdf`;
 
-  const handleDescargarReporteAnual = async () => {
-    if (!añoAnual) {
-      Swal.fire({
-        icon: 'warning',
-        title: 'Datos incompletos',
-        text: 'Por favor selecciona el año'
-      });
-      return;
-    }
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
 
-    try {
-      Swal.fire({
-        title: 'Generando reporte anual...',
-        text: 'Por favor espera',
-        allowOutsideClick: false,
-        didOpen: () => {
-          Swal.showLoading();
-        }
-      });
+    setShowReporteMultiMes(false);
+    setMesesSeleccionadosMulti([]);
+    setAñoMultiMes('');
+    setTipoReporte('');
 
-      const endpoint = tipoReporte === 'semanal'
+    Swal.fire({
+      icon: 'success',
+      title: '¡Descargado!',
+      text: 'El reporte consolidado se ha descargado correctamente',
+      timer: 2000,
+      showConfirmButton: false
+    });
+
+  } catch (error) {
+    console.error('Error descargando reporte multi-mes:', error);
+
+    Swal.fire({
+      icon: 'error',
+      title: 'Error',
+      text: error.response?.data?.message || 'No se pudo generar el reporte consolidado'
+    });
+  }
+};
+
+
+ const handleDescargarReporteAnual = async () => {
+  if (!añoAnual) {
+    Swal.fire({
+      icon: 'warning',
+      title: 'Datos incompletos',
+      text: 'Por favor selecciona el año'
+    });
+    return;
+  }
+
+  try {
+    Swal.fire({
+      title: 'Generando reporte anual...',
+      text: 'Por favor espera',
+      allowOutsideClick: false,
+      didOpen: () => {
+        Swal.showLoading();
+      }
+    });
+
+    const endpoint =
+      tipoReporte === 'semanal'
         ? `${config.api.API_URL}/reportes/planilla/semanal/anual/${añoAnual}`
         : `${config.api.API_URL}/reportes/planilla/quincenal/anual/${añoAnual}`;
 
-      const response = await fetch(endpoint, { credentials: 'include' });
+    const response = await api.get(endpoint, {
+      responseType: 'blob'
+    });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Error al generar el reporte');
-      }
+    const blob = response.data;
 
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      
-      link.download = `Planilla_Anual_${añoAnual}.pdf`;
-      
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `Planilla_Anual_${añoAnual}.pdf`;
 
-      setShowReporteAnual(false);
-      setAñoAnual('');
-      setTipoReporte('');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
 
-      Swal.fire({
-        icon: 'success',
-        title: '¡Descargado!',
-        text: 'El reporte anual se ha descargado correctamente',
-        timer: 2000,
-        showConfirmButton: false
-      });
+    setShowReporteAnual(false);
+    setAñoAnual('');
+    setTipoReporte('');
 
-    } catch (error) {
-      console.error('Error descargando reporte anual:', error);
-      Swal.fire({
-        icon: 'error',
-        title: 'Error',
-        text: error.message || 'No se pudo generar el reporte anual'
-      });
-    }
-  };
+    Swal.fire({
+      icon: 'success',
+      title: '¡Descargado!',
+      text: 'El reporte anual se ha descargado correctamente',
+      timer: 2000,
+      showConfirmButton: false
+    });
+
+  } catch (error) {
+    console.error('Error descargando reporte anual:', error);
+
+    Swal.fire({
+      icon: 'error',
+      title: 'Error',
+      text: error.response?.data?.message || 'No se pudo generar el reporte anual'
+    });
+  }
+};
 
   const toggleMesSeleccionado = (mes) => {
     setMesesSeleccionadosMulti(prev => {
