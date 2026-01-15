@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Home, Clock, BarChart3, Wrench, Users, Fuel, Vault, Route, LogOut } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { useAuth } from "../../context/authContext";
+import { useAuth } from "../../Context/authContext";
 import Lottie from "lottie-react";
 import logoutAnim from "../../assets/lotties/Campervan _ Ignite Animation.json"; // ejemplo
 

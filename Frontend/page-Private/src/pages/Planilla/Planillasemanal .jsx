@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 import { config } from '../../config';
 import Swal from 'sweetalert2';
-import { useAuth } from '../../context/authContext';
+import { useAuth } from '../../Context/authContext';
 
 export default function PlanillaSemanal() {
   const { id } = useParams();
