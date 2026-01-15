@@ -2,7 +2,7 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App.jsx';
 import { BrowserRouter } from 'react-router-dom';
-import { AuthProvider } from './Context/authContext.jsx'; 
+import { AuthProvider } from './context/authContext.jsx'; 
 import axios from 'axios';
 
 // Ensure cookies are included on all axios requests by default

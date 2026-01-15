@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 import { config } from '../../config';
 import Swal from 'sweetalert2';
-import { useAuth } from '../../Context/authContext';
+import { useAuth } from '../../context/authContext';
 
 export default function Planillas() {
   const navigate = useNavigate();
