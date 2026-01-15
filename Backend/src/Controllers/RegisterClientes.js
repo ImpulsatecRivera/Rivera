@@ -158,11 +158,17 @@ RegsiterCliente.registrarCliente = async (req, res) => {
         console.log('Token generado exitosamente');
 
         // Establecer cookie con el token JWT
-        res.cookie("authToken", token, {
+        // ✅ Usar las mismas opciones que en Login.js para Vercel
+        const isProd = process.env.NODE_ENV === "production" || process.env.K_SERVICE;
+        const cookieOptions = {
+          path: "/",
           httpOnly: true,
-          sameSite: "Lax",
-          secure: process.env.NODE_ENV === 'production'
-        });
+          maxAge: 24 * 60 * 60 * 1000,
+          sameSite: "none",
+          secure: true,
+          ...(isProd && { partitioned: true })
+        };
+        res.cookie("authToken", token, cookieOptions);
 
         // Respuesta exitosa
         res.status(200).json({

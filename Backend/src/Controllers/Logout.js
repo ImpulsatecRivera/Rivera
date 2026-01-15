@@ -5,54 +5,29 @@ LogoutController.logout = async (req, res) => {
     console.log("🚪 [LOGOUT] Iniciando logout...");
     console.log("🍪 [LOGOUT] Cookies actuales:", req.cookies);
     
-    const isProd = process.env.NODE_ENV === "production";
+    const isProd = process.env.NODE_ENV === "production" || process.env.K_SERVICE;
 
-    // ✅ Función corregida para construir cookies de eliminación
-    const buildClearCookie = (name) => {
-      const parts = [
-        `${name}=`, // valor vacío
-        "Path=/",
-        "HttpOnly", // ✅ Mantener HttpOnly como en login
-        "Max-Age=0", // ✅ Eliminar inmediatamente
-        "Expires=Thu, 01 Jan 1970 00:00:00 GMT", // ✅ Fecha en el pasado
-        isProd ? "SameSite=None" : "SameSite=Lax",
-        isProd ? "Secure" : "",
-        // ✅ Partitioned solo si está en producción Y la cookie original lo tenía
-        ...(isProd ? ["Partitioned"] : []),
-      ].filter(Boolean);
-      return parts.join("; ");
-    };
-
-    // ✅ Lista de cookies a eliminar (sin duplicados)
-    const cookiesToClear = [
-      buildClearCookie("authToken"),
-      buildClearCookie("userType"), // Solo si lo usas
-    ];
-
-    console.log("🍪 [LOGOUT] Eliminando cookies:", cookiesToClear);
-
-    // ✅ Método 1: Usar setHeader con múltiples cookies
-    res.setHeader("Set-Cookie", cookiesToClear);
-    
-    // ✅ Método 2: Alternativo con res.clearCookie (más confiable)
+    // ✅ IMPORTANTE: Usar las MISMAS opciones que en Login para consistencia
     const cookieOptions = {
       path: "/",
       httpOnly: true,
-      sameSite: isProd ? "none" : "lax",
-      secure: isProd,
-      ...(isProd && { partitioned: true })
+      sameSite: "none", // Siempre "none" para Vercel cross-domain
+      secure: true,     // Siempre true en Vercel (HTTPS)
     };
-    
-    // Usar clearCookie como respaldo
-   res.clearCookie("authToken", {
-  path: "/",
-  sameSite: "none",
-  secure: true,
-});
 
+    // Para Vercel: agregar partitioned si está en producción
+    if (isProd) {
+      cookieOptions.partitioned = true;
+    }
+
+    console.log("🍪 [LOGOUT] Opciones de cookie:", cookieOptions);
+
+    // ✅ Método 1: Usar clearCookie con las opciones correctas
+    res.clearCookie("authToken", cookieOptions);
     res.clearCookie("userType", cookieOptions);
+    res.clearCookie("isLoggedIn", cookieOptions);
     
-    // ✅ Método 3: Header adicional para limpiar todas las cookies del sitio
+    // ✅ Método 2: Header adicional para Vercel (Clear-Site-Data)
     res.setHeader('Clear-Site-Data', '"cookies"');
     
     // ✅ Headers CORS para asegurar que el frontend reciba la respuesta
@@ -63,6 +38,7 @@ LogoutController.logout = async (req, res) => {
     }
 
     console.log("✅ [LOGOUT] Cookies eliminadas correctamente");
+    console.log("📋 Response headers:", res.getHeaders());
     
     return res.status(200).json({ 
       message: "Sesión cerrada correctamente",
