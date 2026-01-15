@@ -3,7 +3,7 @@ import { User, LogOut, Menu, X } from 'lucide-react';
 import Lottie from 'lottie-react';
 import avatarImg from '../../images/avatarDashboard.png';
 import { NavLink, useNavigate, useLocation } from "react-router-dom";
-import { useAuth } from "../../context/AuthContext";
+import { useAuth } from "../../Context/authContext";
 import logoutAnim from "../../assets/lotties/Campervan _ Ignite Animation.json"; // ejemplo
 
 const SidebarNav = () => {
