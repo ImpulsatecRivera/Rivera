@@ -44,7 +44,12 @@ LogoutController.logout = async (req, res) => {
     };
     
     // Usar clearCookie como respaldo
-    res.clearCookie("authToken", cookieOptions);
+   res.clearCookie("authToken", {
+  path: "/",
+  sameSite: "none",
+  secure: true,
+});
+
     res.clearCookie("userType", cookieOptions);
     
     // ✅ Método 3: Header adicional para limpiar todas las cookies del sitio
