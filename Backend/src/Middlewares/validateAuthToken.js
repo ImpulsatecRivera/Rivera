@@ -11,11 +11,6 @@ import { config } from "../config.js";
 export const validateAuthToken = (allowedRoles = []) => {
   return async (req, res, next) => {
     try {
-      // 👇 CLAVE PARA CORS
-      if (req.method === "OPTIONS") {
-        return next();
-      }
-
       const token = req.cookies?.authToken;
       if (!token) {
         return res.status(401).json({ message: "Cookies not found, please login" });
@@ -24,7 +19,7 @@ export const validateAuthToken = (allowedRoles = []) => {
       const decoded = jwt.verify(token, config.JWT.secret);
       const { id, userType } = decoded;
       const normalizedType = String(userType || '').trim().toLowerCase();
-      const normalizedSingular = normalizedType.replace(/s$/, '');
+      const normalizedSingular = normalizedType.replace(/s$/,'');
 
       // ADMIN -> normalized to 'admin'
       if (normalizedType === 'administrador' || normalizedType === 'admin' || normalizedType.startsWith('admin')) {

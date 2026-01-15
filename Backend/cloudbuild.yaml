@@ -29,13 +29,7 @@ steps:
       - '--platform'
       - 'managed'
       - '--allow-unauthenticated'
-      # En cloudbuild.yaml línea 32
-      - '--max-instances'
-      - '2'  # Evita escalado excesivo
-      - '--min-instances'
-      - '0' 
-      - '--set-env-vars'
-      - 'NODE_ENV=production'
+
 images:
   - 'gcr.io/$PROJECT_ID/rivera-test:$COMMIT_SHA'
   - 'gcr.io/$PROJECT_ID/rivera-test:latest'
