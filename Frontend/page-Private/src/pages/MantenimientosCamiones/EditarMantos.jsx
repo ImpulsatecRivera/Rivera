@@ -14,6 +14,8 @@ import {
   InputLabel
 } from "@mui/material";
 import { Add, Delete, ArrowBack } from "@mui/icons-material";
+import { api } from '../../Context/authContext';
+
 
 export default function EditMantenimiento({ onClose }) {
   const { id } = useParams();
@@ -37,42 +39,34 @@ export default function EditMantenimiento({ onClose }) {
 
   // Obtener datos
   useEffect(() => {
-    const url = `${config.api.API_URL}/mantenimientos/${id}`;
-    console.log('🔍 Intentando cargar desde URL:', url);
-    
-    fetch(url, { credentials: 'include' })
-      .then((response) => {
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        return response.json();
-      })
-      .then((result) => {
-        const data = result.data || result;
-        
-        if (!data || typeof data !== 'object') {
-          alert('No se pudieron cargar los datos del mantenimiento');
-          setLoading(false);
-          return;
-        }
+  const url = `${config.api.API_URL}/mantenimientos/${id}`;
+  console.log('🔍 Intentando cargar desde URL:', url);
 
-        console.log('✅ Datos cargados:', data);
-        
-        setManto({
-          fecha_mantenimiento: data.fecha_mantenimiento || "",
-          tipo_de_mantenimiento: data.tipo_de_mantenimiento || data.tipoMantenimiento || "",
-          descripcion: data.descripcion || "",
-          estado: data.estado || "pendiente",
-          detalles: Array.isArray(data.detalles) ? data.detalles : []
-        });
-        setLoading(false);
-      })
-      .catch((error) => {
-        console.error('❌ Error al cargar mantenimiento:', error);
-        alert(`Error al cargar los datos del mantenimiento.\n${error.message}`);
-        setLoading(false);
+  const cargarMantenimiento = async () => {
+    try {
+      const response = await api.get(url);
+      const data = response.data.data || response.data;
+
+      console.log('✅ Datos cargados:', data);
+
+      setManto({
+        fecha_mantenimiento: data.fecha_mantenimiento || "",
+        tipo_de_mantenimiento: data.tipo_de_mantenimiento || data.tipoMantenimiento || "",
+        descripcion: data.descripcion || "",
+        estado: data.estado || "pendiente",
+        detalles: Array.isArray(data.detalles) ? data.detalles : []
       });
-  }, [id]);
+    } catch (error) {
+      console.error('❌ Error al cargar mantenimiento:', error);
+      alert(`Error al cargar los datos del mantenimiento.\n${error.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  cargarMantenimiento();
+}, [id]);
+
 
   // Agregar detalle
   const addDetalle = () => {
@@ -126,16 +120,12 @@ export default function EditMantenimiento({ onClose }) {
 
       console.log('📤 Enviando payload:', payload);
 
-      const response = await fetch(`${config.api.API_URL}/mantenimientos/${id}`, {
-        method: 'PUT',
-         credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload)
-      });
+    const response = await api.put(
+  `${config.api.API_URL}/mantenimientos/${id}`,
+  payload
+);
 
-      const result = await response.json();
+const result = response.data;
       
       if (response.ok && result.success) {
         alert("✅ Mantenimiento actualizado exitosamente!");

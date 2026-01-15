@@ -7,6 +7,8 @@ import ReportesModal from "./ReportesModal";
 import { usePermissions } from '../../hooks/usePermissions';
 import { ProtectedAction } from '../../components/Auth';
 import Swal from 'sweetalert2';
+import { api } from '../../Context/authContext';
+
 
 const MantenimientosTable = () => {
   const navigate = useNavigate();
@@ -76,52 +78,56 @@ const MantenimientosTable = () => {
     fetchMantenimientos();
   }, []);
 
-  const fetchMantenimientos = async () => {
-    try {
-      setLoading(true);
-      const response = await fetch(`${config.api.API_URL}/mantenimientos`, { credentials: 'include' });
-      if (!response.ok) throw new Error('Error al cargar los mantenimientos');
-      const result = await response.json();
-      setMantenimientos(result.data || []);
-      setError(null);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
+ const fetchMantenimientos = async () => {
+  try {
+    setLoading(true);
+
+    const response = await api.get(`${config.api.API_URL}/mantenimientos`);
+    const result = response.data;
+
+    setMantenimientos(result.data || []);
+    setError(null);
+  } catch (err) {
+    setError(err.message || 'Error al cargar los mantenimientos');
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   const handleDelete = async (mantenimiento) => {
-    const result = await Swal.fire({
-      html: `<div style="text-align: center; padding: 20px 10px;">
-          <div style="width: 80px; height: 80px; border-radius: 50%; background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%); margin: 0 auto 24px; display: flex; align-items: center; justify-content: center;">
-            <svg width="40" height="40" fill="none" stroke="#ef4444" stroke-width="2.5"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2M10 11v6M14 11v6"/></svg>
-          </div>
-          <h2 style="font-size: 28px; font-weight: 700; margin: 0 0 12px 0;">¿Eliminar mantenimiento?</h2>
-          <p style="color: #6b7280;">Esta acción no se puede deshacer</p>
-        </div>`,
-      showCancelButton: true,
-      confirmButtonText: 'Sí, eliminar',
-      cancelButtonText: 'Cancelar',
-      confirmButtonColor: '#ef4444',
-      customClass: { popup: 'rounded-3xl' }
-    });
+  const result = await Swal.fire({ /* tu modal igual */ });
 
-    if (result.isConfirmed) {
-      try {
-        const response = await fetch(`${config.api.API_URL}/mantenimientos/${mantenimiento._id}`, { method: 'DELETE', credentials: 'include' });
-        const data = await response.json();
-        if (response.ok && data.success) {
-          await Swal.fire({ title: '¡Eliminado!', text: 'Mantenimiento eliminado exitosamente', icon: 'success', timer: 2000 });
-          fetchMantenimientos();
-        } else {
-          throw new Error(data.message || 'Error al eliminar');
-        }
-      } catch (error) {
-        Swal.fire({ title: 'Error', text: error.message, icon: 'error' });
+  if (result.isConfirmed) {
+    try {
+      const response = await api.delete(
+        `${config.api.API_URL}/mantenimientos/${mantenimiento._id}`
+      );
+
+      const data = response.data;
+
+      if (data.success) {
+        await Swal.fire({
+          title: '¡Eliminado!',
+          text: 'Mantenimiento eliminado exitosamente',
+          icon: 'success',
+          timer: 2000
+        });
+        fetchMantenimientos();
+      } else {
+        throw new Error(data.message || 'Error al eliminar');
       }
+
+    } catch (error) {
+      Swal.fire({
+        title: 'Error',
+        text: error.message,
+        icon: 'error'
+      });
     }
-  };
+  }
+};
+
 
   const calcularTotal = (detalles) => {
     if (!detalles || detalles.length === 0) return 0;

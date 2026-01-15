@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { X, Calendar, FileText, Download, ChevronDown, AlertCircle, CheckCircle } from 'lucide-react';
+import { api } from '../../Context/authContext';
+
 
 const ReportesModal = ({ isOpen, onClose, apiUrl }) => {
   const [tipoReporte, setTipoReporte] = useState('mensual');
@@ -95,8 +97,7 @@ const formatearFecha = (fechaString) => {
         const reporteUrl = `${apiUrl}/reporte/anual/${anoSeleccionado}`;
         
         try {
-          const checkResponse = await fetch(reporteUrl, { method: 'HEAD', credentials: 'include' });
-          
+await api.head(reporteUrl);          
           if (checkResponse.status === 404) {
             setGenerando(false);
             showCustomAlert(
@@ -130,8 +131,7 @@ const formatearFecha = (fechaString) => {
         const reporteUrl = `${apiUrl}/reporte/mensual-simple/${mesSeleccionado}/${anoSeleccionado}`;
         
         try {
-          const checkResponse = await fetch(reporteUrl, { method: 'HEAD', credentials: 'include' });
-          
+await api.head(reporteUrl);          
           if (checkResponse.status === 404) {
             setGenerando(false);
             const mesNombre = meses.find(m => m.value === parseInt(mesSeleccionado))?.label;
@@ -171,8 +171,7 @@ const formatearFecha = (fechaString) => {
         const reporteUrl = `${apiUrl}/reporte/rango-fechas/${fechaInicio}/${fechaFin}`;
         
         try {
-          const checkResponse = await fetch(reporteUrl, { method: 'HEAD', credentials: 'include' });
-          
+await api.head(reporteUrl);          
           if (checkResponse.status === 404) {
             setGenerando(false);
             showCustomAlert(
@@ -207,69 +206,77 @@ const formatearFecha = (fechaString) => {
           );
         }
       } else if (tipoReporte === 'multiple') {
-        const response = await fetch(`${apiUrl}/reporte/mensual-multiple`, {
-          method: 'POST',
-          credentials: 'include',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            meses: mesesSeleccionados.sort((a, b) => a - b),
-            ano: anoSeleccionado
-          })
-        });
-        
-        if (!response.ok) {
-          setGenerando(false);
-          
-          if (response.status === 404) {
-            const errorData = await response.json().catch(() => ({}));
-            const mesesSinDatosNombres = mesesSeleccionados.map(m => 
-              meses.find(mes => mes.value === m)?.label
-            );
-            showCustomAlert(
-              'info',
-              'Sin datos disponibles',
-              errorData.message || `Ninguno de los meses seleccionados tiene registros de mantenimiento para ${anoSeleccionado}.`,
-              mesesSinDatosNombres
-            );
-            return;
-          }
-          
-          if (response.status === 400) {
-            const errorData = await response.json().catch(() => ({}));
-            showCustomAlert(
-              'warning',
-              'Solicitud inválida',
-              errorData.message || 'Los datos enviados no son válidos.',
-              ['Verifica los meses seleccionados', 'Intenta nuevamente']
-            );
-            return;
-          }
-          
-          const errorData = await response.json().catch(() => ({}));
-          showCustomAlert(
-            'error',
-            'Error del servidor',
-            errorData.message || `El servidor respondió con un error (${response.status}).`,
-            ['Verifica tu conexión a internet', 'Si el problema persiste, contacta al administrador']
-          );
-          return;
-        }
-        
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `reporte-multiple-${anoSeleccionado}.pdf`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        window.URL.revokeObjectURL(url);
-        
-        setTimeout(() => {
-          setGenerando(false);
-          showCustomAlert('success', '¡Descarga completa!', 'El reporte de múltiples meses se ha descargado correctamente.');
-        }, 1000);
+  try {
+    const response = await api.post(
+      `${apiUrl}/reporte/mensual-multiple`,
+      {
+        meses: mesesSeleccionados.sort((a, b) => a - b),
+        ano: anoSeleccionado
+      },
+      {
+        responseType: 'blob' // 👈 importante para PDFs
       }
+    );
+
+    const blob = response.data;
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `reporte-multiple-${anoSeleccionado}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+
+    setTimeout(() => {
+      setGenerando(false);
+      showCustomAlert(
+        'success',
+        '¡Descarga completa!',
+        'El reporte de múltiples meses se ha descargado correctamente.'
+      );
+    }, 1000);
+
+  } catch (error) {
+    setGenerando(false);
+
+    const status = error.response?.status;
+    const errorData = error.response?.data || {};
+
+    if (status === 404) {
+      const mesesSinDatosNombres = mesesSeleccionados.map(m =>
+        meses.find(mes => mes.value === m)?.label
+      );
+
+      showCustomAlert(
+        'info',
+        'Sin datos disponibles',
+        errorData.message ||
+          `Ninguno de los meses seleccionados tiene registros de mantenimiento para ${anoSeleccionado}.`,
+        mesesSinDatosNombres
+      );
+      return;
+    }
+
+    if (status === 400) {
+      showCustomAlert(
+        'warning',
+        'Solicitud inválida',
+        errorData.message || 'Los datos enviados no son válidos.',
+        ['Verifica los meses seleccionados', 'Intenta nuevamente']
+      );
+      return;
+    }
+
+    showCustomAlert(
+      'error',
+      'Error del servidor',
+      errorData.message || `El servidor respondió con un error (${status || 'desconocido'}).`,
+      ['Verifica tu conexión a internet', 'Si el problema persiste, contacta al administrador']
+    );
+  }
+}
+
       
     } catch (error) {
       console.error('Error:', error);
