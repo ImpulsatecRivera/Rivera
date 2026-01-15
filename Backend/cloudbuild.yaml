@@ -15,7 +15,7 @@ steps:
       - 'push'
       - 'gcr.io/$PROJECT_ID/rivera-test:$COMMIT_SHA'
     
-  # Paso 3: Desplegar en Cloud Run con variables de entorno
+  # Paso 3: Desplegar en Cloud Run
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: gcloud
     args:
@@ -29,13 +29,13 @@ steps:
       - '--platform'
       - 'managed'
       - '--allow-unauthenticated'
+      # En cloudbuild.yaml línea 32
       - '--max-instances'
-      - '2'
+      - '2'  # Evita escalado excesivo
       - '--min-instances'
-      - '0'
+      - '0' 
       - '--set-env-vars'
-      - 'NODE_ENV=production,PORT=4000,JWT_SECRET=$$_JWT_SECRET,JWT_EXPIRES=$$_JWT_EXPIRES,DB_URI=$$_DB_URI,CLOUDINARY_NAME=$$_CLOUDINARY_NAME,CLOUDINARY_API_KEY=$$_CLOUDINARY_API_KEY,CLOUDINARY_API_SECRET=$$_CLOUDINARY_API_SECRET,USER_EMAIL=$$_USER_EMAIL,USER_PASS=$$_USER_PASS,ADMIN_EMAIL=$$_ADMIN_EMAIL,ADMIN_PASSWORD=$$_ADMIN_PASSWORD,TWILIO_ACCOUNT_SID=$$_TWILIO_ACCOUNT_SID,TWILIO_AUTH_TOKEN=$$_TWILIO_AUTH_TOKEN,TWILIO_PHONE_NUMBER=$$_TWILIO_PHONE_NUMBER,GOOGLE_CLIENT_ID=$$_GOOGLE_CLIENT_ID,GOOGLE_CLIENT_SECRET=$$_GOOGLE_CLIENT_SECRET,CAJA_CHICA_PASSWORD_REINTEGRO=$$_CAJA_CHICA_PASSWORD_REINTEGRO'
-
+      - 'NODE_ENV=production'
 images:
   - 'gcr.io/$PROJECT_ID/rivera-test:$COMMIT_SHA'
   - 'gcr.io/$PROJECT_ID/rivera-test:latest'
