@@ -2,8 +2,8 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { config } from '../../../config';
 import { useNavigate } from 'react-router-dom';
 import axios from "axios";
-import { api } from '../../../context/AuthContext';
-import { useAuth } from '../../../context/AuthContext';
+import { api } from '../../../Context/authContext';
+import { useAuth } from '../../../Context/authContext';
 import Swal from 'sweetalert2';
 
 const API_URL = config.api.API_URL;
