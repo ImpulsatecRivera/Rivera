@@ -10,32 +10,38 @@ export const api = axios.create({
   withCredentials: true
 });
 
-// ✅ INTERCEPTOR CORREGIDO
+// ✅ INTERCEPTOR REQUEST MEJORADO
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem("authToken");
+    const rawToken = localStorage.getItem("authToken");
     
-    if (token) {
-      try {
-        // Intenta parsear como JSON
-        const parsed = JSON.parse(token);
-        
-        // Si tiene propiedad 'token', úsala
-        if (parsed.token) {
+    if (!rawToken) {
+      return config; // No hay token, continuar sin header
+    }
+    
+    try {
+      // Intentar parsear como JSON
+      const parsed = JSON.parse(rawToken);
+      
+      if (parsed && typeof parsed === 'object') {
+        // Es un objeto - buscar la propiedad token
+        if (parsed.token && typeof parsed.token === 'string') {
           config.headers.Authorization = `Bearer ${parsed.token}`;
-        } 
-        // Si no tiene 'token' pero es un string directo después del parse
-        else if (typeof parsed === 'string') {
-          config.headers.Authorization = `Bearer ${parsed}`;
+        } else {
+          // Objeto sin token - datos corruptos
+          console.error('❌ Token corrupto en localStorage');
+          localStorage.clear();
+          if (!window.location.pathname.includes('/login')) {
+            window.location.href = '/login';
+          }
         }
-        // Si llegó hasta aquí y no encontró el token, loguea el problema
-        else {
-          console.error('❌ Token en formato incorrecto:', parsed);
-        }
-      } catch (error) {
-        // Si no es JSON, úsalo directamente como string
-        config.headers.Authorization = `Bearer ${token}`;
+      } else if (typeof parsed === 'string') {
+        // Es un string directo (token puro)
+        config.headers.Authorization = `Bearer ${parsed}`;
       }
+    } catch (error) {
+      // No es JSON - usar directamente como string
+      config.headers.Authorization = `Bearer ${rawToken}`;
     }
     
     return config;
@@ -141,18 +147,24 @@ export const AuthProvider = ({ children }) => {
         };
       }
 
-      if (data?.user) {
-        // ✅ Guardar usuario completo + token
+      if (data?.user && data?.token) {
+        // ✅ GUARDAR INMEDIATAMENTE antes de cualquier otra cosa
         const userDataWithToken = {
           ...data.user,
           token: data.token
         };
         
+        // ⚡ PRIMERO: Guardar en localStorage
         saveToStorage(userDataWithToken);
+        
+        // ⚡ SEGUNDO: Actualizar estado
         setUser(data.user);
         setUserRole(data.user.rol || null);
         setIsLoggedIn(true);
+        
+        // ⚡ TERCERO: Mostrar mensaje
         toast.success("Inicio de sesión exitoso.");
+        
         return { success: true, data };
       }
       
@@ -204,7 +216,8 @@ export const AuthProvider = ({ children }) => {
         validateStatus: (status) => status < 500
       });
       
-      if (data?.user) {
+      if (data?.user && data?.token) {
+        // ✅ Respuesta válida del servidor con token
         const userDataWithToken = {
           ...data.user,
           token: data.token
@@ -213,30 +226,40 @@ export const AuthProvider = ({ children }) => {
         setUser(data.user);
         setUserRole(data.user.rol || null);
         setIsLoggedIn(true);
-      } else {
+      } else if (data?.user) {
+        // ⚠️ Usuario sin token - usar datos guardados
         const savedUser = loadFromStorage();
-        const savedRole = loadRoleFromStorage();
-        if (savedUser) {
-          console.log("🔄 Usando datos guardados localmente");
+        if (savedUser && savedUser.token) {
           setUser(savedUser);
-          setUserRole(savedRole);
+          setUserRole(savedUser.rol || null);
           setIsLoggedIn(true);
         } else {
+          // Sin token válido - limpiar
+          console.log("⚠️ Usuario sin token - limpiando sesión");
+          clearStorage();
           setUser(null);
           setUserRole(null);
           setIsLoggedIn(false);
         }
+      } else {
+        // No hay usuario - limpiar
+        clearStorage();
+        setUser(null);
+        setUserRole(null);
+        setIsLoggedIn(false);
       }
     } catch (error) {
-      console.log("🔍 checkAuth: Verificando storage local...");
+      console.log("🔍 checkAuth error - verificando storage local...");
       const savedUser = loadFromStorage();
-      const savedRole = loadRoleFromStorage();
-      if (savedUser) {
+      
+      if (savedUser && savedUser.token) {
         console.log("📱 Usando sesión guardada localmente");
         setUser(savedUser);
-        setUserRole(savedRole);
+        setUserRole(savedUser.rol || null);
         setIsLoggedIn(true);
       } else {
+        console.log("⚠️ No hay token válido - limpiando");
+        clearStorage();
         setUser(null);
         setUserRole(null);
         setIsLoggedIn(false);
@@ -253,7 +276,7 @@ export const AuthProvider = ({ children }) => {
         timeout: 5000,
         validateStatus: (status) => status < 500
       });
-      if (data?.user) {
+      if (data?.user && data?.token) {
         const userDataWithToken = {
           ...data.user,
           token: data.token
@@ -270,20 +293,45 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // ===================== Interceptor 401 =====================
+  // ===================== Interceptor 401 MEJORADO =====================
   useEffect(() => {
-    const id = api.interceptors.response.use(
+    const responseInterceptor = api.interceptors.response.use(
       (r) => r,
-      (err) => {
-        if (err?.response?.status === 401) {
-          const url = err.config?.url;
+      async (err) => {
+        const originalRequest = err.config;
+        
+        // Si es 401 y NO es el endpoint de login o check-auth
+        if (err?.response?.status === 401 && !originalRequest._retry) {
+          const url = originalRequest?.url || '';
           
-          if (url?.includes('/check-auth')) {
-            console.log("🔄 401 en verificación inicial - ignorando");
+          // Ignorar 401 en check-auth (es esperado)
+          if (url.includes('/check-auth')) {
             return Promise.reject(err);
           }
           
-          console.log("🚫 401 en acción autenticada - limpiando");
+          // Ignorar 401 en login (credenciales incorrectas)
+          if (url.includes('/login') && !url.includes('check-auth')) {
+            return Promise.reject(err);
+          }
+          
+          // Para otros endpoints, intentar una vez más con el token del localStorage
+          originalRequest._retry = true;
+          
+          const rawToken = localStorage.getItem("authToken");
+          if (rawToken) {
+            try {
+              const parsed = JSON.parse(rawToken);
+              if (parsed?.token) {
+                originalRequest.headers.Authorization = `Bearer ${parsed.token}`;
+                return api(originalRequest);
+              }
+            } catch (e) {
+              // Token no es JSON válido
+            }
+          }
+          
+          // Si llegamos aquí, el token es inválido - limpiar sesión
+          console.log("🚫 401 - Token inválido - limpiando sesión");
           clearStorage();
           setUser(null);
           setUserRole(null);
@@ -291,10 +339,12 @@ export const AuthProvider = ({ children }) => {
           toast.error("Sesión expirada. Por favor inicia sesión nuevamente.");
           window.location.href = '/login';
         }
+        
         return Promise.reject(err);
       }
     );
-    return () => api.interceptors.response.eject(id);
+    
+    return () => api.interceptors.response.eject(responseInterceptor);
   }, []);
 
   // ===================== Efectos =====================
