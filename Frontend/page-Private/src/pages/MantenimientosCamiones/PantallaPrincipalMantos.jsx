@@ -78,6 +78,36 @@ const MantenimientosTable = () => {
     fetchMantenimientos();
   }, []);
 
+  const descargarReporteIndividual = async (id) => {
+  try {
+    const response = await api.get(`/reporte/individual/${id}`, {
+      responseType: 'blob'
+    });
+
+    const blob = new Blob([response.data], { type: 'application/pdf' });
+    const url = window.URL.createObjectURL(blob);
+
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `reporte-mantenimiento-${id}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+
+  } catch (error) {
+    console.error('Error descargando reporte individual:', error);
+
+    Swal.fire({
+      icon: 'error',
+      title: 'No autorizado',
+      text: error.response?.data?.message || 'No se pudo descargar el reporte',
+      confirmButtonColor: '#ef4444'
+    });
+  }
+};
+
  const fetchMantenimientos = async () => {
   try {
     setLoading(true);
@@ -329,8 +359,7 @@ const MantenimientosTable = () => {
                       <td className="py-5 px-6" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center justify-center gap-2">
                           <button
-                            onClick={() => window.open(`${config.api.API_URL}/reporte/individual/${mant._id}`, "_blank")}
-                            className="p-2 rounded-lg bg-[#5F8EAD] bg-opacity-20 hover:bg-[#5F8EAD] hover:bg-opacity-30 text-[#5F8EAD] transition-colors"
+                            onClick={() => descargarReporteIndividual(mant._id)}
                             title="Descargar PDF"
                           >
                             <Download size={18} />
