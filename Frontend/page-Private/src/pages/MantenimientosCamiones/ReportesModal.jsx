@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { X, Calendar, FileText, Download, ChevronDown, AlertCircle, CheckCircle } from 'lucide-react';
 import { api } from '../../Context/authContext';
 
-
 const ReportesModal = ({ isOpen, onClose, apiUrl }) => {
   const [tipoReporte, setTipoReporte] = useState('mensual');
   const [mesSeleccionado, setMesSeleccionado] = useState('');
@@ -44,13 +43,10 @@ const ReportesModal = ({ isOpen, onClose, apiUrl }) => {
     return new Date(year, month - 1, day);
   };
 
-  // Función para formatear fecha de forma consistente
- // Función para formatear fecha de forma consistente (SIN crear objeto Date)
-const formatearFecha = (fechaString) => {
-  // Si la fecha viene en formato YYYY-MM-DD del input
-  const [year, month, day] = fechaString.split('-');
-  return `${day}/${month}/${year}`;
-};
+  const formatearFecha = (fechaString) => {
+    const [year, month, day] = fechaString.split('-');
+    return `${day}/${month}/${year}`;
+  };
 
   const isButtonDisabled = () => {
     if (generando) return true;
@@ -94,46 +90,52 @@ const formatearFecha = (fechaString) => {
     
     try {
       if (tipoReporte === 'anual') {
-        const reporteUrl = `${apiUrl}/reporte/anual/${anoSeleccionado}`;
-        
         try {
-await api.head(reporteUrl);          
-          if (checkResponse.status === 404) {
-            setGenerando(false);
-            showCustomAlert(
-              'info',
-              'Sin datos disponibles',
-              `No hay registros de mantenimiento para el año ${anoSeleccionado}.`,
-              ['Verifica que existan mantenimientos registrados en ese año', 'Intenta con otro año']
-            );
-            return;
-          }
-
-          if (!checkResponse.ok) {
-            throw new Error('Error al verificar datos');
-          }
-
-          window.open(reporteUrl, '_blank');
+          const reporteUrl = `/reporte/anual/${anoSeleccionado}`;
+          
+          // Abrir en nueva ventana
+          window.open(`${apiUrl}${reporteUrl}`, '_blank');
+          
           setTimeout(() => {
             setGenerando(false);
             showCustomAlert('success', '¡Reporte generado!', 'El reporte anual está listo para visualizar.');
           }, 1000);
         } catch (error) {
           setGenerando(false);
-          showCustomAlert(
-            'error',
-            'Error de conexión',
-            'No se pudo conectar con el servidor.',
-            ['Verifica tu conexión a internet', 'Intenta nuevamente']
-          );
+          const status = error.response?.status;
+          
+          if (status === 404) {
+            showCustomAlert(
+              'info',
+              'Sin datos disponibles',
+              `No hay registros de mantenimiento para el año ${anoSeleccionado}.`,
+              ['Verifica que existan mantenimientos registrados en ese año', 'Intenta con otro año']
+            );
+          } else {
+            showCustomAlert(
+              'error',
+              'Error de conexión',
+              'No se pudo conectar con el servidor.',
+              ['Verifica tu conexión a internet', 'Intenta nuevamente']
+            );
+          }
         }
       } else if (tipoReporte === 'mensual') {
-        const reporteUrl = `${apiUrl}/reporte/mensual-simple/${mesSeleccionado}/${anoSeleccionado}`;
-        
         try {
-await api.head(reporteUrl);          
-          if (checkResponse.status === 404) {
+          const reporteUrl = `/reporte/mensual-simple/${mesSeleccionado}/${anoSeleccionado}`;
+          
+          // Abrir en nueva ventana
+          window.open(`${apiUrl}${reporteUrl}`, '_blank');
+          
+          setTimeout(() => {
             setGenerando(false);
+            showCustomAlert('success', '¡Reporte generado!', 'El reporte mensual está listo para visualizar.');
+          }, 1000);
+        } catch (error) {
+          setGenerando(false);
+          const status = error.response?.status;
+          
+          if (status === 404) {
             const mesNombre = meses.find(m => m.value === parseInt(mesSeleccionado))?.label;
             showCustomAlert(
               'info',
@@ -141,53 +143,22 @@ await api.head(reporteUrl);
               `No hay registros de mantenimiento para ${mesNombre} ${anoSeleccionado}.`,
               ['Verifica que existan mantenimientos registrados en ese período', 'Intenta con otro mes']
             );
-            return;
+          } else {
+            showCustomAlert(
+              'error',
+              'Error de conexión',
+              'No se pudo conectar con el servidor.',
+              ['Verifica tu conexión a internet', 'Intenta nuevamente']
+            );
           }
-
-          if (!checkResponse.ok) {
-            throw new Error('Error al verificar datos');
-          }
-
-          window.open(reporteUrl, '_blank');
-          setTimeout(() => {
-            setGenerando(false);
-            showCustomAlert('success', '¡Reporte generado!', 'El reporte mensual está listo para visualizar.');
-          }, 1000);
-        } catch (error) {
-          setGenerando(false);
-          showCustomAlert(
-            'error',
-            'Error de conexión',
-            'No se pudo conectar con el servidor.',
-            ['Verifica tu conexión a internet', 'Intenta nuevamente']
-          );
         }
       } else if (tipoReporte === 'semanal') {
-        console.log('=== DEBUG FECHAS ===');
-  console.log('fechaInicio (raw):', fechaInicio);
-  console.log('fechaFin (raw):', fechaFin);
-  console.log('URL que se enviará:', `${apiUrl}/reporte/rango-fechas/${fechaInicio}/${fechaFin}`);
-  console.log('==================');
-        const reporteUrl = `${apiUrl}/reporte/rango-fechas/${fechaInicio}/${fechaFin}`;
-        
         try {
-await api.head(reporteUrl);          
-          if (checkResponse.status === 404) {
-            setGenerando(false);
-            showCustomAlert(
-              'info',
-              'Sin datos disponibles',
-              'No hay registros de mantenimiento en el rango de fechas seleccionado.',
-              ['Verifica que existan mantenimientos registrados en ese período']
-            );
-            return;
-          }
-
-          if (!checkResponse.ok) {
-            throw new Error('Error al verificar datos');
-          }
-
-          window.open(reporteUrl, '_blank');
+          const reporteUrl = `/reporte/rango-fechas/${fechaInicio}/${fechaFin}`;
+          
+          // Abrir en nueva ventana
+          window.open(`${apiUrl}${reporteUrl}`, '_blank');
+          
           setTimeout(() => {
             setGenerando(false);
             showCustomAlert(
@@ -198,85 +169,94 @@ await api.head(reporteUrl);
           }, 1000);
         } catch (error) {
           setGenerando(false);
-          showCustomAlert(
-            'error',
-            'Error de conexión',
-            'No se pudo conectar con el servidor.',
-            ['Verifica tu conexión a internet', 'Intenta nuevamente']
-          );
+          const status = error.response?.status;
+          
+          if (status === 404) {
+            showCustomAlert(
+              'info',
+              'Sin datos disponibles',
+              'No hay registros de mantenimiento en el rango de fechas seleccionado.',
+              ['Verifica que existan mantenimientos registrados en ese período']
+            );
+          } else {
+            showCustomAlert(
+              'error',
+              'Error de conexión',
+              'No se pudo conectar con el servidor.',
+              ['Verifica tu conexión a internet', 'Intenta nuevamente']
+            );
+          }
         }
       } else if (tipoReporte === 'multiple') {
-  try {
-    const response = await api.post(
-      `${apiUrl}/reporte/mensual-multiple`,
-      {
-        meses: mesesSeleccionados.sort((a, b) => a - b),
-        ano: anoSeleccionado
-      },
-      {
-        responseType: 'blob' // 👈 importante para PDFs
+        try {
+          const response = await api.post(
+            '/reporte/mensual-multiple',
+            {
+              meses: mesesSeleccionados.sort((a, b) => a - b),
+              ano: anoSeleccionado
+            },
+            {
+              responseType: 'blob'
+            }
+          );
+
+          const blob = new Blob([response.data], { type: 'application/pdf' });
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `reporte-multiple-${anoSeleccionado}.pdf`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          window.URL.revokeObjectURL(url);
+
+          setTimeout(() => {
+            setGenerando(false);
+            showCustomAlert(
+              'success',
+              '¡Descarga completa!',
+              'El reporte de múltiples meses se ha descargado correctamente.'
+            );
+          }, 1000);
+
+        } catch (error) {
+          setGenerando(false);
+          const status = error.response?.status;
+          const errorData = error.response?.data || {};
+
+          if (status === 404) {
+            const mesesSinDatosNombres = mesesSeleccionados.map(m =>
+              meses.find(mes => mes.value === m)?.label
+            );
+
+            showCustomAlert(
+              'info',
+              'Sin datos disponibles',
+              errorData.message ||
+                `Ninguno de los meses seleccionados tiene registros de mantenimiento para ${anoSeleccionado}.`,
+              mesesSinDatosNombres
+            );
+            return;
+          }
+
+          if (status === 400) {
+            showCustomAlert(
+              'warning',
+              'Solicitud inválida',
+              errorData.message || 'Los datos enviados no son válidos.',
+              ['Verifica los meses seleccionados', 'Intenta nuevamente']
+            );
+            return;
+          }
+
+          showCustomAlert(
+            'error',
+            'Error del servidor',
+            errorData.message || `El servidor respondió con un error (${status || 'desconocido'}).`,
+            ['Verifica tu conexión a internet', 'Si el problema persiste, contacta al administrador']
+          );
+        }
       }
-    );
-
-    const blob = response.data;
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `reporte-multiple-${anoSeleccionado}.pdf`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    window.URL.revokeObjectURL(url);
-
-    setTimeout(() => {
-      setGenerando(false);
-      showCustomAlert(
-        'success',
-        '¡Descarga completa!',
-        'El reporte de múltiples meses se ha descargado correctamente.'
-      );
-    }, 1000);
-
-  } catch (error) {
-    setGenerando(false);
-
-    const status = error.response?.status;
-    const errorData = error.response?.data || {};
-
-    if (status === 404) {
-      const mesesSinDatosNombres = mesesSeleccionados.map(m =>
-        meses.find(mes => mes.value === m)?.label
-      );
-
-      showCustomAlert(
-        'info',
-        'Sin datos disponibles',
-        errorData.message ||
-          `Ninguno de los meses seleccionados tiene registros de mantenimiento para ${anoSeleccionado}.`,
-        mesesSinDatosNombres
-      );
-      return;
-    }
-
-    if (status === 400) {
-      showCustomAlert(
-        'warning',
-        'Solicitud inválida',
-        errorData.message || 'Los datos enviados no son válidos.',
-        ['Verifica los meses seleccionados', 'Intenta nuevamente']
-      );
-      return;
-    }
-
-    showCustomAlert(
-      'error',
-      'Error del servidor',
-      errorData.message || `El servidor respondió con un error (${status || 'desconocido'}).`,
-      ['Verifica tu conexión a internet', 'Si el problema persiste, contacta al administrador']
-    );
-  }
-}
-
       
     } catch (error) {
       console.error('Error:', error);
