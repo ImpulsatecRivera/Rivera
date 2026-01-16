@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { config } from '../../config';
 import {
   Box,
   TextField,
@@ -10,12 +9,10 @@ import {
   Paper,
   MenuItem,
   Select,
-  FormControl,
-  InputLabel
+  FormControl
 } from "@mui/material";
 import { Add, Delete, ArrowBack } from "@mui/icons-material";
 import { api } from '../../Context/authContext';
-
 
 export default function EditMantenimiento({ onClose }) {
   const { id } = useParams();
@@ -29,7 +26,6 @@ export default function EditMantenimiento({ onClose }) {
     detalles: []
   });
 
-  // Opciones de estado con colores corporativos
   const estadosDisponibles = [
     { value: 'pendiente', label: 'Pendiente', color: '#eab308' },
     { value: 'en_proceso', label: 'En Proceso', color: '#5F8EAD' },
@@ -37,38 +33,30 @@ export default function EditMantenimiento({ onClose }) {
     { value: 'cancelado', label: 'Cancelado', color: '#ef4444' }
   ];
 
-  // Obtener datos
   useEffect(() => {
-  const url = `${config.api.API_URL}/mantenimientos/${id}`;
-  console.log('🔍 Intentando cargar desde URL:', url);
+    const cargarMantenimiento = async () => {
+      try {
+        const { data } = await api.get(`/mantenimientos/${id}`);
+        const mantenimiento = data.data || data;
 
-  const cargarMantenimiento = async () => {
-    try {
-      const response = await api.get(url);
-      const data = response.data.data || response.data;
+        setManto({
+          fecha_mantenimiento: mantenimiento.fecha_mantenimiento || "",
+          tipo_de_mantenimiento: mantenimiento.tipo_de_mantenimiento || mantenimiento.tipoMantenimiento || "",
+          descripcion: mantenimiento.descripcion || "",
+          estado: mantenimiento.estado || "pendiente",
+          detalles: Array.isArray(mantenimiento.detalles) ? mantenimiento.detalles : []
+        });
+      } catch (error) {
+        console.error('❌ Error al cargar mantenimiento:', error);
+        alert(`Error al cargar los datos del mantenimiento.\n${error.response?.data?.message || error.message}`);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-      console.log('✅ Datos cargados:', data);
+    cargarMantenimiento();
+  }, [id]);
 
-      setManto({
-        fecha_mantenimiento: data.fecha_mantenimiento || "",
-        tipo_de_mantenimiento: data.tipo_de_mantenimiento || data.tipoMantenimiento || "",
-        descripcion: data.descripcion || "",
-        estado: data.estado || "pendiente",
-        detalles: Array.isArray(data.detalles) ? data.detalles : []
-      });
-    } catch (error) {
-      console.error('❌ Error al cargar mantenimiento:', error);
-      alert(`Error al cargar los datos del mantenimiento.\n${error.message}`);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  cargarMantenimiento();
-}, [id]);
-
-
-  // Agregar detalle
   const addDetalle = () => {
     const detallesActuales = manto?.detalles || [];
     setManto({
@@ -77,7 +65,6 @@ export default function EditMantenimiento({ onClose }) {
     });
   };
 
-  // Cambiar valor detalle
   const changeDetalle = (index, field, value) => {
     if (!manto?.detalles) return;
     const nuevos = [...manto.detalles];
@@ -85,14 +72,12 @@ export default function EditMantenimiento({ onClose }) {
     setManto({ ...manto, detalles: nuevos });
   };
 
-  // Eliminar detalle
   const removeDetalle = (index) => {
     if (!manto?.detalles) return;
     const nuevos = manto.detalles.filter((_, i) => i !== index);
     setManto({ ...manto, detalles: nuevos });
   };
 
-  // Calcular costo total
   const calcularTotal = () => {
     if (!manto?.detalles || !Array.isArray(manto.detalles)) return 0;
     return manto.detalles.reduce((acc, d) => {
@@ -100,7 +85,6 @@ export default function EditMantenimiento({ onClose }) {
     }, 0);
   };
 
-  // Guardar cambios
   const submitUpdate = async () => {
     try {
       const detallesConSubtotal = (manto?.detalles || []).map(detalle => ({
@@ -118,16 +102,9 @@ export default function EditMantenimiento({ onClose }) {
         detalles: detallesConSubtotal
       };
 
-      console.log('📤 Enviando payload:', payload);
-
-    const response = await api.put(
-  `${config.api.API_URL}/mantenimientos/${id}`,
-  payload
-);
-
-const result = response.data;
+      const { data } = await api.put(`/mantenimientos/${id}`, payload);
       
-      if (response.ok && result.success) {
+      if (data.success) {
         alert("✅ Mantenimiento actualizado exitosamente!");
         
         if (manto.estado === 'completado') {
@@ -136,11 +113,11 @@ const result = response.data;
         
         navigate('/mantenimientos');
       } else {
-        throw new Error(result.message || 'Error al actualizar');
+        throw new Error(data.message || 'Error al actualizar');
       }
     } catch (error) {
       console.error('Error al actualizar:', error);
-      alert(`❌ Error: ${error.message || 'Error al actualizar el mantenimiento'}`);
+      alert(`❌ Error: ${error.response?.data?.message || error.message || 'Error al actualizar el mantenimiento'}`);
     }
   };
 
