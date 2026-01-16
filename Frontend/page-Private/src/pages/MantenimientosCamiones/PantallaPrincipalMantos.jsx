@@ -81,14 +81,12 @@ const MantenimientosTable = () => {
  const fetchMantenimientos = async () => {
   try {
     setLoading(true);
-
-    const response = await api.get(`${config.api.API_URL}/mantenimientos`);
-    const result = response.data;
-
-    setMantenimientos(result.data || []);
+    const { data } = await api.get('/mantenimientos'); // ✅ Sin config.api.API_URL
+    setMantenimientos(data.data || data || []); // ✅ Más seguro
     setError(null);
   } catch (err) {
-    setError(err.message || 'Error al cargar los mantenimientos');
+    console.error('Error cargando mantenimientos:', err);
+    setError(err.response?.data?.message || err.message || 'Error al cargar los mantenimientos');
   } finally {
     setLoading(false);
   }
@@ -96,38 +94,88 @@ const MantenimientosTable = () => {
 
 
   const handleDelete = async (mantenimiento) => {
-  const result = await Swal.fire({ /* tu modal igual */ });
+  const result = await Swal.fire({
+    title: '¿Estás seguro?',
+    html: `
+      <div class="text-left">
+        <p class="text-gray-700 mb-4">Esta acción no se puede deshacer.</p>
+        <div class="bg-gray-50 rounded-lg p-4 border border-gray-200">
+          <p class="text-sm text-gray-600 mb-2">
+            <strong class="text-gray-800">Camión:</strong> ${mantenimiento.ciculatioCard?.licensePlate || 'N/A'}
+          </p>
+          <p class="text-sm text-gray-600 mb-2">
+            <strong class="text-gray-800">Tipo:</strong> ${tipoMantenimientoLabels[mantenimiento.tipo_de_mantenimiento] || 'N/A'}
+          </p>
+          <p class="text-sm text-gray-600 mb-2">
+            <strong class="text-gray-800">Fecha:</strong> ${formatearFecha(mantenimiento.fecha_mantenimiento)}
+          </p>
+          <p class="text-sm text-gray-600">
+            <strong class="text-gray-800">Total:</strong> ${formatearMoneda(calcularTotal(mantenimiento.detalles))}
+          </p>
+        </div>
+      </div>
+    `,
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#ef4444',
+    cancelButtonColor: '#6b7280',
+    confirmButtonText: 'Sí, eliminar',
+    cancelButtonText: 'Cancelar',
+    reverseButtons: true,
+    customClass: {
+      popup: 'rounded-2xl',
+      title: 'text-xl font-bold text-gray-800',
+      confirmButton: 'px-6 py-2.5 rounded-lg font-semibold',
+      cancelButton: 'px-6 py-2.5 rounded-lg font-semibold'
+    }
+  });
 
   if (result.isConfirmed) {
-    try {
-      const response = await api.delete(
-        `${config.api.API_URL}/mantenimientos/${mantenimiento._id}`
-      );
+    // Mostrar loading
+    Swal.fire({
+      title: 'Eliminando...',
+      text: 'Por favor espera',
+      allowOutsideClick: false,
+      allowEscapeKey: false,
+      didOpen: () => {
+        Swal.showLoading();
+      }
+    });
 
-      const data = response.data;
+    try {
+      const { data } = await api.delete(`/mantenimientos/${mantenimiento._id}`);
 
       if (data.success) {
         await Swal.fire({
           title: '¡Eliminado!',
-          text: 'Mantenimiento eliminado exitosamente',
+          text: 'El mantenimiento se ha eliminado correctamente',
           icon: 'success',
-          timer: 2000
+          timer: 2000,
+          showConfirmButton: false,
+          customClass: {
+            popup: 'rounded-2xl'
+          }
         });
         fetchMantenimientos();
       } else {
         throw new Error(data.message || 'Error al eliminar');
       }
-
     } catch (error) {
+      console.error('Error eliminando mantenimiento:', error);
       Swal.fire({
         title: 'Error',
-        text: error.message,
-        icon: 'error'
+        text: error.response?.data?.message || error.message || 'No se pudo eliminar el mantenimiento',
+        icon: 'error',
+        confirmButtonText: 'Entendido',
+        confirmButtonColor: '#ef4444',
+        customClass: {
+          popup: 'rounded-2xl',
+          confirmButton: 'px-6 py-2.5 rounded-lg font-semibold'
+        }
       });
     }
   }
 };
-
 
   const calcularTotal = (detalles) => {
     if (!detalles || detalles.length === 0) return 0;
