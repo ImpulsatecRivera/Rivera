@@ -225,73 +225,128 @@ const data = response.data;
   };
 
   const buscarPrimeraQuincenaDisponible = async () => {
-    let { año, mes, quincena } = infoPlanilla;
-    let intentos = 0;
-    const maxIntentos = 24;
+  let { año, mes, quincena } = infoPlanilla;
+  let intentos = 0;
+  const maxIntentos = 24;
 
-    while (intentos < maxIntentos) {
-      try {
-        const response = await api.post(`${config.api.API_URL}/planillas/quincenal`, {
-  año,
-  mes,
-  quincena,
-  empleados: []
-});
+  while (intentos < maxIntentos) {
+    try {
+      const response = await api.post(`${config.api.API_URL}/planillas/quincenal`, {
+        año,
+        mes,
+        quincena,
+        empleados: []
+      });
 
-const data = response.data;
+      const data = response.data;
 
-
-        if (data.success && data.data) {
-          return {
-            exito: true,
-            planilla: data.data,
-            mensaje: `Planilla creada: ${data.data.descripcion}`
-          };
-        }
-
-        if (response.status === 400 && data.data?.planillaId) {
-         const planillaResponse = await api.get(
-  `${config.api.API_URL}/planillas/quincenal/${data.data.planillaId}`
-);
-
-const planillaData = planillaResponse.data;
-
-
-          if (planillaData.success && planillaData.data) {
-            const planillaExistente = planillaData.data;
-
-            if (planillaExistente.estado === 'pendiente') {
-              return {
-                exito: true,
-                planilla: planillaExistente,
-                mensaje: `Planilla encontrada: ${planillaExistente.descripcion}`
-              };
-            }
-
-            const siguiente = calcularProximaQuincena({ año, mes, quincena });
-            año = siguiente.año;
-            mes = siguiente.mes;
-            quincena = siguiente.quincena;
-          }
-        } else {
-          const siguiente = calcularProximaQuincena({ año, mes, quincena });
-          año = siguiente.año;
-          mes = siguiente.mes;
-          quincena = siguiente.quincena;
-        }
-
-        intentos++;
-      } catch (error) {
-        console.error('Error buscando quincena disponible:', error);
-        intentos++;
+      if (data.success && data.data) {
+        return {
+          exito: true,
+          planilla: data.data,
+          mensaje: `Planilla creada: ${data.data.descripcion}`
+        };
       }
-    }
 
-    return {
-      exito: false,
-      mensaje: 'No se encontró ninguna quincena disponible'
-    };
+      // Si llegamos aquí sin error, avanzar a la siguiente quincena
+      const siguiente = calcularProximaQuincena({ año, mes, quincena });
+      año = siguiente.año;
+      mes = siguiente.mes;
+      quincena = siguiente.quincena;
+      intentos++;
+
+    } catch (error) {
+      console.error('Error buscando quincena disponible:', error);
+
+      // Manejar error 400 (planilla ya existe)
+      if (error.response && error.response.status === 400) {
+        const data = error.response.data;
+
+        if (data.data?.planillaId) {
+          try {
+            const planillaResponse = await api.get(
+              `${config.api.API_URL}/planillas/quincenal/${data.data.planillaId}`
+            );
+
+            const planillaData = planillaResponse.data;
+
+            if (planillaData.success && planillaData.data) {
+              const planillaExistente = planillaData.data;
+
+              if (planillaExistente.estado === 'pendiente') {
+                return {
+                  exito: true,
+                  planilla: planillaExistente,
+                  mensaje: `Planilla encontrada: ${planillaExistente.descripcion}`
+                };
+              }
+            }
+          } catch (getError) {
+            console.error('Error obteniendo planilla existente:', getError);
+          }
+        }
+      }
+
+      // Avanzar a la siguiente quincena
+      const siguiente = calcularProximaQuincena({ año, mes, quincena });
+      año = siguiente.año;
+      mes = siguiente.mes;
+      quincena = siguiente.quincena;
+      intentos++;
+    }
+  }
+
+  return {
+    exito: false,
+    mensaje: 'No se encontró ninguna quincena disponible'
   };
+};
+
+const eliminarEmpleadoDePlanilla = async (empleadoId) => {
+  if (!planilla || !planilla._id) return;
+
+  const result = await Swal.fire({
+    title: '¿Estás seguro?',
+    text: 'Se eliminará este empleado de la planilla',
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#ef4444',
+    cancelButtonColor: '#6b7280',
+    confirmButtonText: 'Sí, eliminar',
+    cancelButtonText: 'Cancelar'
+  });
+
+  if (!result.isConfirmed) return;
+
+  try {
+    const url = `${config.api.API_URL}/planillas/quincenal/${planilla._id}/empleado/${empleadoId}`;
+    const response = await api.delete(url);
+    const data = response.data;
+
+    if (data.success && data.data) {
+      const planillaActualizada = {
+        ...data.data,
+        empleados: Array.isArray(data.data.empleados) ? data.data.empleados : []
+      };
+      setPlanilla(planillaActualizada);
+      Swal.fire({
+        icon: 'success',
+        title: '¡Eliminado!',
+        text: 'Empleado eliminado de la planilla',
+        timer: 2000,
+        showConfirmButton: false
+      });
+    } else {
+      throw new Error(data.message || 'Error al eliminar empleado');
+    }
+  } catch (error) {
+    Swal.fire({
+      icon: 'error',
+      title: 'Error',
+      text: error.message
+    });
+  }
+};
 
   const agregarEmpleadoAPlanilla = async () => {
     if (!empleadoSeleccionado) {
@@ -428,50 +483,7 @@ const data = response.data;
     }
   };
 
-  const eliminarEmpleadoDePlanilla = async (empleadoId) => {
-    if (!planilla || !planilla._id) return;
-
-    const result = await Swal.fire({
-      title: '¿Estás seguro?',
-      text: 'Se eliminará este empleado de la planilla',
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonColor: '#ef4444',
-      cancelButtonColor: '#6b7280',
-      confirmButtonText: 'Sí, eliminar',
-      cancelButtonText: 'Cancelar'
-    });
-
-    if (!result.isConfirmed) return;
-
-    try {
-     const response = await api.delete(url);
-const data = response.data;
-
-      if (data.success && data.data) {
-        const planillaActualizada = {
-          ...data.data,
-          empleados: Array.isArray(data.data.empleados) ? data.data.empleados : []
-        };
-        setPlanilla(planillaActualizada);
-        Swal.fire({
-          icon: 'success',
-          title: '¡Eliminado!',
-          text: 'Empleado eliminado de la planilla',
-          timer: 2000,
-          showConfirmButton: false
-        });
-      } else {
-        throw new Error(data.message || 'Error al eliminar empleado');
-      }
-    } catch (error) {
-      Swal.fire({
-        icon: 'error',
-        title: 'Error',
-        text: error.message
-      });
-    }
-  };
+  
 
   const cambiarEstadoPlanilla = async (nuevoEstado) => {
   if (!planilla || !planilla._id) return;

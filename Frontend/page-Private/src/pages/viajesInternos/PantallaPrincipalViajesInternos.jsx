@@ -18,12 +18,6 @@ import { config } from "../../config";
 import ReportesViajesOperativosModal from "./ReportesViajesInternosModal";
 import { api } from "../../Context/authContext";
 
-
-const VIAJES_OPERATIVOS_ENDPOINT = `${config.api.API_URL}/viajes-operativos/listar`;
-const DELETE_ENDPOINT = `${config.api.API_URL}/viajes-operativos`;
-const COMPLETAR_TODOS_ENDPOINT = `${config.api.API_URL}/viajes-operativos/completar-todos`;
-const COMPLETAR_UNO_ENDPOINT = `${config.api.API_URL}/viajes-operativos/completar`;
-
 const ESTADOS = {
   TODOS: "Todos",
   PENDIENTE: "Pendiente",
@@ -102,29 +96,20 @@ export default function PantallaPrincipalViajesOperativos() {
 
   const [isReportesOpen, setIsReportesOpen] = useState(false);
 
- const fetchViajes = async () => {
-  try {
-    setLoading(true);
-    setError(null);
+  const fetchViajes = async () => {
+    try {
+      setLoading(true);
+      setError(null);
 
-    const response = await api.get(VIAJES_OPERATIVOS_ENDPOINT);
-
-    const rows =
-      response.data?.data ||
-      (Array.isArray(response.data) ? response.data : []);
-
-    setViajes(Array.isArray(rows) ? rows : []);
-  } catch (e) {
-    setError(
-      e.response?.data?.message ||
-      e.message ||
-      "Error al cargar"
-    );
-  } finally {
-    setLoading(false);
-  }
-};
-
+      const { data } = await api.get('/viajes-operativos/listar');
+      const rows = data?.data || (Array.isArray(data) ? data : []);
+      setViajes(Array.isArray(rows) ? rows : []);
+    } catch (e) {
+      setError(e.response?.data?.message || e.message || "Error al cargar");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     fetchViajes();
@@ -144,24 +129,26 @@ export default function PantallaPrincipalViajesOperativos() {
     if (!result.isConfirmed) return;
 
     try {
-      await api.put(COMPLETAR_TODOS_ENDPOINT);
+      const { data } = await api.put('/viajes-operativos/completar-todos');
 
-
-      const json = await res.json().catch(() => ({}));
-
-      if (!res.ok || json?.success === false)
-        throw new Error(json?.message || "Error al completar viajes");
+      if (!data?.success) {
+        throw new Error(data?.message || "Error al completar viajes");
+      }
 
       await Swal.fire({
         title: "¡Completados!",
-        text: json?.message || "Viajes completados exitosamente",
+        text: data?.message || "Viajes completados exitosamente",
         icon: "success",
         timer: 2000,
       });
 
       fetchViajes();
     } catch (err) {
-      Swal.fire({ title: "Error", text: err.message, icon: "error" });
+      Swal.fire({ 
+        title: "Error", 
+        text: err.response?.data?.message || err.message, 
+        icon: "error" 
+      });
     }
   };
 
@@ -184,15 +171,13 @@ export default function PantallaPrincipalViajesOperativos() {
     if (!result.isConfirmed) return;
 
     try {
-    await api.put(`${COMPLETAR_UNO_ENDPOINT}/${id}`, {
-  observacion: "Viaje completado manualmente desde el panel",
-});
+      const { data } = await api.put(`/viajes-operativos/completar/${id}`, {
+        observacion: "Viaje completado manualmente desde el panel",
+      });
 
-
-      const json = await res.json().catch(() => ({}));
-
-      if (!res.ok || json?.success === false)
-        throw new Error(json?.message || "Error al completar");
+      if (!data?.success) {
+        throw new Error(data?.message || "Error al completar");
+      }
 
       await Swal.fire({
         title: "¡Completado!",
@@ -203,7 +188,11 @@ export default function PantallaPrincipalViajesOperativos() {
 
       fetchViajes();
     } catch (err) {
-      Swal.fire({ title: "Error", text: err.message, icon: "error" });
+      Swal.fire({ 
+        title: "Error", 
+        text: err.response?.data?.message || err.message, 
+        icon: "error" 
+      });
     }
   };
 
@@ -226,25 +215,16 @@ export default function PantallaPrincipalViajesOperativos() {
     const año = fechaSalida.getFullYear();
 
     try {
-      const url = `${config.api.API_URL}/reportes-directos/individual/${encodeURIComponent(
-        clienteNombre
-      )}/${mes}/${año}`;
+      const url = `/reportes-directos/individual/${encodeURIComponent(clienteNombre)}/${mes}/${año}`;
       const nombreArchivo = `reporte-${clienteNombre}-${mes}-${año}.pdf`;
 
       console.log("📄 Descargando PDF desde:", url);
 
       const response = await api.get(url, {
-  responseType: "blob",
-});
+        responseType: "blob",
+      });
 
-const blob = response.data;
-
-
-      if (!res.ok) {
-        const json = await res.json().catch(() => ({}));
-        throw new Error(json?.message || "Error al generar el PDF");
-      }
-
+      const blob = new Blob([response.data], { type: 'application/pdf' });
       const downloadUrl = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = downloadUrl;
@@ -265,7 +245,7 @@ const blob = response.data;
       console.error("Error descargando PDF:", error);
       Swal.fire({
         title: "Error",
-        text: error.message || "No se pudo generar el PDF",
+        text: error.response?.data?.message || error.message || "No se pudo generar el PDF",
         icon: "error",
       });
     }
@@ -306,14 +286,11 @@ const blob = response.data;
     if (!result.isConfirmed) return;
 
     try {
-      await api.delete(`${DELETE_ENDPOINT}/${id}`);
-fetchViajes();
+      const { data } = await api.delete(`/viajes-operativos/${id}`);
 
-
-      const json = await res.json().catch(() => ({}));
-
-      if (!res.ok || json?.success === false)
-        throw new Error(json?.message || "Error al eliminar");
+      if (!data?.success) {
+        throw new Error(data?.message || "Error al eliminar");
+      }
 
       await Swal.fire({
         title: "¡Eliminado!",
@@ -324,7 +301,11 @@ fetchViajes();
 
       fetchViajes();
     } catch (err) {
-      Swal.fire({ title: "Error", text: err.message, icon: "error" });
+      Swal.fire({ 
+        title: "Error", 
+        text: err.response?.data?.message || err.message, 
+        icon: "error" 
+      });
     }
   };
 
@@ -408,7 +389,7 @@ fetchViajes();
   return (
     <div className="min-h-screen bg-white p-8">
       <div className="max-w-7xl mx-auto">
-        {/* Header - COLORES CAMBIADOS */}
+        {/* Header */}
         <div className="mb-6 flex items-start justify-between flex-wrap gap-3">
           <div>
             <h1 className="text-4xl font-bold text-[#34353A] mb-1">Viajes Operativos</h1>
@@ -454,7 +435,7 @@ fetchViajes();
           </div>
         </div>
 
-        {/* Tabs Estados - COLORES CAMBIADOS */}
+        {/* Tabs Estados */}
         <div className="mt-4 flex items-center gap-3 flex-wrap">
           {tabs.map((est) => (
             <button
@@ -472,7 +453,7 @@ fetchViajes();
           ))}
         </div>
 
-        {/* Búsqueda y Ordenar - COLORES CAMBIADOS */}
+        {/* Búsqueda y Ordenar */}
         <div className="bg-white rounded-2xl shadow-md mb-6 mt-6 p-5 border border-gray-100">
           <div className="flex items-center justify-between gap-4 flex-wrap">
             <div className="relative flex-1 min-w-[300px]">
@@ -503,7 +484,7 @@ fetchViajes();
           </div>
         </div>
 
-        {/* Tabla - COLORES CAMBIADOS */}
+        {/* Tabla */}
         <div className="bg-white rounded-2xl shadow-md overflow-hidden border border-gray-100">
           <div className="overflow-x-auto">
             <table className="w-full">
@@ -618,7 +599,7 @@ fetchViajes();
             </table>
           </div>
 
-          {/* Paginación - COLORES CAMBIADOS */}
+          {/* Paginación */}
           <div className="flex items-center justify-between px-6 py-5 border-t border-gray-200 bg-gray-50">
             <p className="text-sm text-gray-600 font-medium">
               Mostrando {sorted.length === 0 ? 0 : startIndex + 1} a{" "}
