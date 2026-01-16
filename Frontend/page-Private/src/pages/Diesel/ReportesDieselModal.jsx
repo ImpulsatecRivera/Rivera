@@ -3,14 +3,17 @@ import { X, Calendar, FileText, Download, ChevronDown } from "lucide-react";
 import Swal from "sweetalert2";
 import { api } from "../../Context/authContext";
 
+
 const ReportesDieselModal = ({ isOpen, onClose, apiUrl }) => {
   const [tipoReporte, setTipoReporte] = useState("todos");
   const [mesSeleccionado, setMesSeleccionado] = useState("");
+  const [semanaSeleccionada, setSemanaSeleccionada] = useState("");
   const [anoSeleccionado, setAnoSeleccionado] = useState(new Date().getFullYear());
   const [mesesSeleccionados, setMesesSeleccionados] = useState([]);
   const [generando, setGenerando] = useState(false);
   const [fechaInicio, setFechaInicio] = useState("");
-  const [fechaFin, setFechaFin] = useState("");
+const [fechaFin, setFechaFin] = useState("");
+
 
   const reporteBase = useMemo(() => `${apiUrl}/resumenReporte`, [apiUrl]);
 
@@ -29,6 +32,14 @@ const ReportesDieselModal = ({ isOpen, onClose, apiUrl }) => {
     { value: 12, label: "Diciembre" },
   ];
 
+  const semanas = [
+    { value: 1, label: "Semana 1 (1-7)" },
+    { value: 2, label: "Semana 2 (8-14)" },
+    { value: 3, label: "Semana 3 (15-21)" },
+    { value: 4, label: "Semana 4 (22-28)" },
+    { value: 5, label: "Semana 5 (29-31)" },
+  ];
+
   const anos = Array.from({ length: 10 }, (_, i) => new Date().getFullYear() - i);
 
   const toggleMes = (mes) => {
@@ -37,47 +48,34 @@ const ReportesDieselModal = ({ isOpen, onClose, apiUrl }) => {
     );
   };
 
-  // ✅ Obtener token correctamente
-  const getAuthToken = () => {
-    try {
-      const rawToken = localStorage.getItem('authToken');
-      if (!rawToken) return null;
-      
-      const parsed = JSON.parse(rawToken);
-      return parsed?.token || null;
-    } catch (error) {
-      console.error('Error obteniendo token:', error);
-      return null;
-    }
+  const descargarBlobComoPDF = async (response, filename) => {
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
   };
 
-  // ✅ Función para verificar si hay registros usando api
-  const verificarRegistros = async (url) => {
-    try {
-      await api.get(url);
-      return true;
-    } catch (e) {
-      if (e.response?.status === 404) return false;
-      throw new Error(
-        e.response?.data?.message ||
-        `Error del servidor: ${e.response?.status || e.message}`
-      );
-    }
-  };
+  // Función para verificar si hay registros
+ const verificarRegistros = async (url) => {
+  try {
+    await api.get(url);
+    return true;
+  } catch (e) {
+    if (e.response?.status === 404) return false;
+    throw new Error(
+      e.response?.data?.message ||
+      `Error del servidor: ${e.response?.status || e.message}`
+    );
+  }
+};
+
 
   const generarReporte = async () => {
-    const token = getAuthToken();
-    if (!token) {
-      Swal.fire({
-        icon: "error",
-        title: "No autorizado",
-        text: "No se encontró token de autenticación. Por favor inicia sesión nuevamente.",
-        confirmButtonColor: "#4F46E5",
-        confirmButtonText: "Entendido",
-      });
-      return;
-    }
-
     // Validaciones de campos requeridos
     if (tipoReporte === "mensual" && !mesSeleccionado) {
       Swal.fire({
@@ -91,28 +89,29 @@ const ReportesDieselModal = ({ isOpen, onClose, apiUrl }) => {
     }
 
     if (tipoReporte === "semanal") {
-      if (!fechaInicio || !fechaFin) {
-        Swal.fire({
-          icon: "warning",
-          title: "Fechas requeridas",
-          text: "Por favor selecciona la fecha de inicio y fin",
-          confirmButtonColor: "#4F46E5",
-          confirmButtonText: "Entendido",
-        });
-        return;
-      }
+  if (!fechaInicio || !fechaFin) {
+    Swal.fire({
+      icon: "warning",
+      title: "Fechas requeridas",
+      text: "Por favor selecciona la fecha de inicio y fin",
+      confirmButtonColor: "#4F46E5",
+      confirmButtonText: "Entendido",
+    });
+    return;
+  }
 
-      if (new Date(fechaFin) < new Date(fechaInicio)) {
-        Swal.fire({
-          icon: "warning",
-          title: "Rango inválido",
-          text: "La fecha fin no puede ser menor que la fecha inicio",
-          confirmButtonColor: "#4F46E5",
-          confirmButtonText: "Entendido",
-        });
-        return;
-      }
-    }
+  if (new Date(fechaFin) < new Date(fechaInicio)) {
+    Swal.fire({
+      icon: "warning",
+      title: "Rango inválido",
+      text: "La fecha fin no puede ser menor que la fecha inicio",
+      confirmButtonColor: "#4F46E5",
+      confirmButtonText: "Entendido",
+    });
+    return;
+  }
+}
+
 
     if (tipoReporte === "multiple" && mesesSeleccionados.length === 0) {
       Swal.fire({
@@ -140,7 +139,7 @@ const ReportesDieselModal = ({ isOpen, onClose, apiUrl }) => {
 
     try {
       if (tipoReporte === "todos") {
-        const url = `/resumenReporte/reportes/diesel/anual/${anoSeleccionado}`;
+        const url = `${reporteBase}/reportes/diesel/anual/${anoSeleccionado}`;
         
         try {
           const hayRegistros = await verificarRegistros(url);
@@ -157,7 +156,7 @@ const ReportesDieselModal = ({ isOpen, onClose, apiUrl }) => {
             return;
           }
 
-          window.open(`${apiUrl}${url}?token=${token}`, "_blank");
+          window.open(url, "_blank");
 
           Swal.fire({
             icon: "success",
@@ -174,7 +173,7 @@ const ReportesDieselModal = ({ isOpen, onClose, apiUrl }) => {
 
       if (tipoReporte === "mensual") {
         const mesNombre = meses.find(m => m.value === parseInt(mesSeleccionado))?.label;
-        const url = `/resumenReporte/reportes/diesel/mes/${mesSeleccionado}/${anoSeleccionado}`;
+        const url = `${reporteBase}/reportes/diesel/mes/${mesSeleccionado}/${anoSeleccionado}`;
         
         try {
           const hayRegistros = await verificarRegistros(url);
@@ -191,7 +190,7 @@ const ReportesDieselModal = ({ isOpen, onClose, apiUrl }) => {
             return;
           }
 
-          window.open(`${apiUrl}${url}?token=${token}`, "_blank");
+          window.open(url, "_blank");
 
           Swal.fire({
             icon: "success",
@@ -206,34 +205,35 @@ const ReportesDieselModal = ({ isOpen, onClose, apiUrl }) => {
         }
       }
 
-      if (tipoReporte === "semanal") {
-        const url = `/resumenReporte/reportes/diesel/semanal/0/0/0?fechaInicio=${fechaInicio}&fechaFin=${fechaFin}`;
+     if (tipoReporte === "semanal") {
+  const url = `${reporteBase}/reportes/diesel/semanal/0/0/0?fechaInicio=${fechaInicio}&fechaFin=${fechaFin}`;
+
         
         try {
           const hayRegistros = await verificarRegistros(url);
           
           if (!hayRegistros) {
-            Swal.fire({
-              icon: "info",
-              title: "Sin registros",
-              text: `No hay registros de diésel en el rango seleccionado`,
-              confirmButtonColor: "#4F46E5",
-              confirmButtonText: "Entendido",
-            });
-            setGenerando(false);
-            return;
-          }
+  Swal.fire({
+    icon: "info",
+    title: "Sin registros",
+    text: `No hay registros de diésel en el rango seleccionado`,
+    confirmButtonColor: "#4F46E5",
+    confirmButtonText: "Entendido",
+  });
+  setGenerando(false);
+  return;
+}
 
-          window.open(`${apiUrl}${url}&token=${token}`, "_blank");
+window.open(url, "_blank");
 
-          Swal.fire({
-            icon: "success",
-            title: "¡Reporte generado!",
-            html: `<strong>Reporte semanal</strong><br/>Del ${fechaInicio} al ${fechaFin}<br/>El PDF se ha abierto en una nueva pestaña`,
-            confirmButtonColor: "#4F46E5",
-            timer: 3000,
-            timerProgressBar: true,
-          });
+Swal.fire({
+  icon: "success",
+  title: "¡Reporte generado!",
+  html: `<strong>Reporte semanal</strong><br/>Del ${fechaInicio} al ${fechaFin}<br/>El PDF se ha abierto en una nueva pestaña`,
+  confirmButtonColor: "#4F46E5",
+  timer: 3000,
+  timerProgressBar: true,
+});
 
         } catch (error) {
           throw new Error(`Error al generar reporte semanal: ${error.message}`);
@@ -242,14 +242,15 @@ const ReportesDieselModal = ({ isOpen, onClose, apiUrl }) => {
 
       if (tipoReporte === "multiple") {
         try {
-          const response = await api.post(
-            `/resumenReporte/reportes/diesel/comparativo`,
-            {
-              meses: [...mesesSeleccionados].sort((a, b) => a - b),
-              ano: anoSeleccionado,
-            },
-            { responseType: "blob" }
-          );
+         const response = await api.post(
+  `${reporteBase}/reportes/diesel/comparativo`,
+  {
+    meses: [...mesesSeleccionados].sort((a, b) => a - b),
+    ano: anoSeleccionado,
+  },
+  { responseType: "blob" }
+);
+
 
           if (response.status === 404) {
             Swal.fire({
@@ -263,16 +264,21 @@ const ReportesDieselModal = ({ isOpen, onClose, apiUrl }) => {
             return;
           }
 
-          const blob = new Blob([response.data], { type: "application/pdf" });
-          const url = window.URL.createObjectURL(blob);
+          if (!response.ok) {
+            throw new Error(`Error del servidor: ${response.status}`);
+          }
 
-          const a = document.createElement("a");
-          a.href = url;
-          a.download = `reporte-diesel-comparativo-${anoSeleccionado}.pdf`;
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
-          window.URL.revokeObjectURL(url);
+         const blob = new Blob([response.data], { type: "application/pdf" });
+const url = window.URL.createObjectURL(blob);
+
+const a = document.createElement("a");
+a.href = url;
+a.download = `reporte-diesel-comparativo-${anoSeleccionado}.pdf`;
+document.body.appendChild(a);
+a.click();
+document.body.removeChild(a);
+window.URL.revokeObjectURL(url);
+
 
           const mesesNombres = mesesSeleccionados
             .sort((a, b) => a - b)
@@ -496,47 +502,49 @@ const ReportesDieselModal = ({ isOpen, onClose, apiUrl }) => {
           )}
 
           {/* Semanal */}
-          {tipoReporte === "semanal" && (
-            <div className="space-y-4">
-              <div className="bg-indigo-50 rounded-xl p-5 border border-indigo-100 mb-4">
-                <div className="flex items-start gap-3">
-                  <Calendar className="text-indigo-600 mt-1" size={20} />
-                  <div>
-                    <h3 className="font-semibold text-indigo-900 mb-1">Reporte Semanal</h3>
-                    <p className="text-sm text-indigo-700">
-                      Selecciona un rango de fechas para generar el reporte.
-                    </p>
-                  </div>
-                </div>
-              </div>
+          {/* Semanal */}
+{tipoReporte === "semanal" && (
+  <div className="space-y-4">
+    <div className="bg-indigo-50 rounded-xl p-5 border border-indigo-100 mb-4">
+      <div className="flex items-start gap-3">
+        <Calendar className="text-indigo-600 mt-1" size={20} />
+        <div>
+          <h3 className="font-semibold text-indigo-900 mb-1">Reporte Semanal</h3>
+          <p className="text-sm text-indigo-700">
+            Selecciona un rango de fechas para generar el reporte.
+          </p>
+        </div>
+      </div>
+    </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Fecha de inicio <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="date"
-                    value={fechaInicio}
-                    onChange={(e) => setFechaInicio(e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                  />
-                </div>
+    <div className="grid grid-cols-2 gap-4">
+      <div>
+        <label className="block text-sm font-semibold text-gray-700 mb-2">
+          Fecha de inicio <span className="text-red-500">*</span>
+        </label>
+        <input
+          type="date"
+          value={fechaInicio}
+          onChange={(e) => setFechaInicio(e.target.value)}
+          className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+        />
+      </div>
 
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Fecha de fin <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="date"
-                    value={fechaFin}
-                    onChange={(e) => setFechaFin(e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                  />
-                </div>
-              </div>
-            </div>
-          )}
+      <div>
+        <label className="block text-sm font-semibold text-gray-700 mb-2">
+          Fecha de fin <span className="text-red-500">*</span>
+        </label>
+        <input
+          type="date"
+          value={fechaFin}
+          onChange={(e) => setFechaFin(e.target.value)}
+          className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+        />
+      </div>
+    </div>
+  </div>
+)}
+
 
           {/* Multiple */}
           {tipoReporte === "multiple" && (
