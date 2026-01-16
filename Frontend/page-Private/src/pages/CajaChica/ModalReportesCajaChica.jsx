@@ -1,7 +1,10 @@
 import React, { useState } from 'react';
 import { X, Calendar, FileText, Download, ChevronDown, AlertCircle, CheckCircle, TrendingUp } from 'lucide-react';
+import { api } from "../../Context/authContext";
 
-const ReportesCajaChicaModal = ({ isOpen, onClose, apiUrl }) => {
+
+
+const ReportesCajaChicaModal = ({ isOpen, onClose }) => {
   const [tipoReporte, setTipoReporte] = useState('individual');
   const [mesSeleccionado, setMesSeleccionado] = useState('');
   const [anoSeleccionado, setAnoSeleccionado] = useState(new Date().getFullYear());
@@ -52,245 +55,124 @@ const ReportesCajaChicaModal = ({ isOpen, onClose, apiUrl }) => {
     setShowAlert(true);
   };
 
-  const getAuthToken = () => {
-    return localStorage.getItem('authToken');
-  };
+ 
 
   const parseDate = (dateString) => {
     const [year, month, day] = dateString.split('-');
     return new Date(year, month - 1, day);
   };
 
+ 
+
+
   const generarReporte = async () => {
-    const token = getAuthToken();
-    if (!token) {
-      showCustomAlert('error', 'No autorizado', 'No se encontró token de autenticación.');
-      return;
+  if (tipoReporte === 'mensual' && !mesSeleccionado) {
+    showCustomAlert('warning', 'Mes no seleccionado', 'Selecciona un mes.');
+    return;
+  }
+
+  if (tipoReporte === 'multiple' && mesesSeleccionados.length === 0) {
+    showCustomAlert('warning', 'Meses no seleccionados', 'Selecciona al menos un mes.');
+    return;
+  }
+
+  if (tipoReporte === 'diario' && !fechaSeleccionada) {
+    showCustomAlert('warning', 'Fecha no seleccionada', 'Selecciona una fecha.');
+    return;
+  }
+
+  if (tipoReporte === 'rango' && (!fechaInicio || !fechaFin)) {
+    showCustomAlert('warning', 'Rango incompleto', 'Selecciona fechas válidas.');
+    return;
+  }
+
+  if (tipoReporte === 'rango' && parseDate(fechaInicio) > parseDate(fechaFin)) {
+    showCustomAlert('warning', 'Rango inválido', 'La fecha inicio debe ser menor.');
+    return;
+  }
+
+  setGenerando(true);
+
+  try {
+    let response;
+    let filename = 'reporte-caja-chica.pdf';
+
+    /* ================= TODOS ================= */
+    if (tipoReporte === 'todos') {
+      response = await api.get('/reportesCajaChica/todos', {
+        responseType: 'blob',
+      });
+      filename = 'caja-chica-consolidado.pdf';
     }
 
-    if (tipoReporte === 'mensual' && !mesSeleccionado) {
-      showCustomAlert('warning', 'Mes no seleccionado', 'Por favor selecciona un mes para generar el reporte.');
-      return;
-    }
-    if (tipoReporte === 'multiple' && mesesSeleccionados.length === 0) {
-      showCustomAlert('warning', 'Meses no seleccionados', 'Por favor selecciona al menos un mes para continuar.');
-      return;
-    }
-    if (tipoReporte === 'diario' && !fechaSeleccionada) {
-      showCustomAlert('warning', 'Fecha no seleccionada', 'Por favor selecciona una fecha para el reporte diario.');
-      return;
-    }
-    if (tipoReporte === 'rango' && (!fechaInicio || !fechaFin)) {
-      showCustomAlert('warning', 'Rango incompleto', 'Por favor selecciona fecha de inicio y fin.');
-      return;
-    }
-    if (tipoReporte === 'rango' && parseDate(fechaInicio) > parseDate(fechaFin)) {
-      showCustomAlert('warning', 'Rango inválido', 'La fecha de inicio debe ser anterior a la fecha de fin.');
-      return;
-    }
-
-    setGenerando(true);
-    
-    try {
-      if (tipoReporte === 'todos') {
-        window.open(`${apiUrl}/reportesCajaChica/todos`, '_blank');
-        setTimeout(() => {
-          setGenerando(false);
-          showCustomAlert('success', '¡Reporte generado!', 'El reporte consolidado se ha abierto en una nueva pestaña.');
-        }, 1000);
-      } else if (tipoReporte === 'mensual') {
-        const reporteUrl = `${apiUrl}/reportesCajaChica/mensual-simple/${mesSeleccionado}/${anoSeleccionado}`;
-        
-        try {
-          const response = await fetch(reporteUrl, {
-            credentials: 'include',
-            headers: { 'Authorization': `Bearer ${token}` }
-          });
-          
-          if (response.ok) {
-            window.open(reporteUrl, '_blank');
-            setTimeout(() => {
-              setGenerando(false);
-              showCustomAlert('success', '¡Reporte generado!', 'El reporte mensual está listo para visualizar.');
-            }, 1000);
-          } else if (response.status === 404) {
-            setGenerando(false);
-            const errorData = await response.json();
-            const mesNombre = meses.find(m => m.value === parseInt(mesSeleccionado))?.label;
-            showCustomAlert(
-              'info',
-              'Sin datos disponibles',
-              errorData.message || `No hay movimientos para ${mesNombre} ${anoSeleccionado}.`,
-              ['Verifica que existan transacciones registradas en ese período']
-            );
-          } else {
-            setGenerando(false);
-            const errorData = await response.json().catch(() => ({}));
-            showCustomAlert(
-              'error',
-              'Error al generar reporte',
-              errorData.message || 'No se pudo generar el reporte.',
-              ['Verifica tu conexión a internet', 'Si el problema persiste, contacta al administrador']
-            );
-          }
-        } catch (error) {
-          setGenerando(false);
-          showCustomAlert(
-            'error',
-            'Error de conexión',
-            'No se pudo conectar con el servidor.',
-            ['Verifica tu conexión a internet']
-          );
-        }
-      } else if (tipoReporte === 'multiple') {
-        const response = await fetch(`${apiUrl}/reportesCajaChica/mensual-multiple`, {
-          method: 'POST',
-          credentials: 'include',
-          headers: { 
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify({
-            meses: mesesSeleccionados.sort((a, b) => a - b),
-            ano: anoSeleccionado
-          })
-        });
-        
-        if (!response.ok) {
-          setGenerando(false);
-          
-          if (response.status === 404) {
-            const errorData = await response.json().catch(() => ({}));
-            const mesesNombres = mesesSeleccionados.map(m => 
-              meses.find(mes => mes.value === m)?.label
-            );
-            showCustomAlert(
-              'info',
-              'Sin datos disponibles',
-              errorData.message || `No hay movimientos en los meses seleccionados para ${anoSeleccionado}.`,
-              mesesNombres
-            );
-            return;
-          }
-          
-          const errorData = await response.json().catch(() => ({}));
-          showCustomAlert(
-            'error',
-            'Error del servidor',
-            errorData.message || `Error al generar reporte (${response.status}).`,
-            ['Verifica tu conexión a internet']
-          );
-          return;
-        }
-        
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `reporte-caja-chica-multiple-${anoSeleccionado}.pdf`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        window.URL.revokeObjectURL(url);
-        
-        setTimeout(() => {
-          setGenerando(false);
-          showCustomAlert('success', '¡Descarga completa!', 'El reporte de múltiples meses se ha descargado correctamente.');
-        }, 1000);
-      } else if (tipoReporte === 'diario') {
-        const reporteUrl = `${apiUrl}/reportesCajaChica/diario/${fechaSeleccionada}`;
-        
-        try {
-          const response = await fetch(reporteUrl, {
-            credentials: 'include',
-            headers: { 'Authorization': `Bearer ${token}` }
-          });
-          
-          if (response.ok) {
-            window.open(reporteUrl, '_blank');
-            setTimeout(() => {
-              setGenerando(false);
-              const fecha = parseDate(fechaSeleccionada);
-              showCustomAlert('success', '¡Reporte generado!', `Reporte diario del ${fecha.toLocaleDateString('es-ES')} está listo.`);
-            }, 1000);
-          } else if (response.status === 404) {
-            setGenerando(false);
-            const errorData = await response.json();
-            showCustomAlert(
-              'info',
-              'Sin datos disponibles',
-              errorData.message || `No hay movimientos para el día seleccionado.`,
-              ['Verifica que existan transacciones en esa fecha']
-            );
-          } else {
-            setGenerando(false);
-            const errorData = await response.json().catch(() => ({}));
-            showCustomAlert('error', 'Error al generar reporte', errorData.message || 'No se pudo generar el reporte.');
-          }
-        } catch (error) {
-          setGenerando(false);
-          showCustomAlert('error', 'Error de conexión', 'No se pudo conectar con el servidor.');
-        }
-      } else if (tipoReporte === 'rango') {
-        const response = await fetch(`${apiUrl}/reportesCajaChica/rango-fechas`, {
-          method: 'POST',
-          credentials: 'include',
-          headers: { 
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify({
-            fechaInicio,
-            fechaFin
-          })
-        });
-        
-        if (!response.ok) {
-          setGenerando(false);
-          
-          if (response.status === 404) {
-            const errorData = await response.json().catch(() => ({}));
-            showCustomAlert(
-              'info',
-              'Sin datos disponibles',
-              errorData.message || 'No hay movimientos en el rango de fechas seleccionado.',
-              ['Verifica que existan transacciones en ese período']
-            );
-            return;
-          }
-          
-          const errorData = await response.json().catch(() => ({}));
-          showCustomAlert('error', 'Error del servidor', errorData.message || `Error al generar reporte (${response.status}).`);
-          return;
-        }
-        
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `reporte-caja-chica-${fechaInicio}_${fechaFin}.pdf`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        window.URL.revokeObjectURL(url);
-        
-        setTimeout(() => {
-          setGenerando(false);
-          showCustomAlert('success', '¡Descarga completa!', 'El reporte por rango de fechas se ha descargado correctamente.');
-        }, 1000);
-      }
-      
-    } catch (error) {
-      console.error('Error:', error);
-      setGenerando(false);
-      showCustomAlert(
-        'error',
-        'Error al generar reporte',
-        'Ocurrió un problema al procesar tu solicitud.',
-        ['Verifica tu conexión a internet']
+    /* ================= MENSUAL ================= */
+    if (tipoReporte === 'mensual') {
+      response = await api.get(
+        `/reportesCajaChica/mensual-simple/${mesSeleccionado}/${anoSeleccionado}`,
+        { responseType: 'blob' }
       );
+      filename = `caja-chica-${mesSeleccionado}-${anoSeleccionado}.pdf`;
     }
-  };
+
+    /* ================= MULTIPLE ================= */
+    if (tipoReporte === 'multiple') {
+      response = await api.post(
+        '/reportesCajaChica/mensual-multiple',
+        {
+          meses: mesesSeleccionados.sort((a, b) => a - b),
+          ano: anoSeleccionado,
+        },
+        { responseType: 'blob' }
+      );
+      filename = `caja-chica-multiple-${anoSeleccionado}.pdf`;
+    }
+
+    /* ================= DIARIO ================= */
+    if (tipoReporte === 'diario') {
+      response = await api.get(
+        `/reportesCajaChica/diario/${fechaSeleccionada}`,
+        { responseType: 'blob' }
+      );
+      filename = `caja-chica-${fechaSeleccionada}.pdf`;
+    }
+
+    /* ================= RANGO ================= */
+    if (tipoReporte === 'rango') {
+      response = await api.post(
+        '/reportesCajaChica/rango-fechas',
+        { fechaInicio, fechaFin },
+        { responseType: 'blob' }
+      );
+      filename = `caja-chica-${fechaInicio}_${fechaFin}.pdf`;
+    }
+
+    /* ================= DESCARGA ================= */
+    const blob = new Blob([response.data], { type: 'application/pdf' });
+    const url = window.URL.createObjectURL(blob);
+
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+
+    showCustomAlert('success', 'Reporte generado', 'El PDF se descargó correctamente.');
+  } catch (error) {
+    if (error.response?.status === 401) {
+      showCustomAlert('error', 'Sesión expirada', 'Vuelve a iniciar sesión.');
+    } else if (error.response?.status === 404) {
+      showCustomAlert('info', 'Sin datos', 'No hay registros para el período seleccionado.');
+    } else {
+      showCustomAlert('error', 'Error', 'No se pudo generar el reporte.');
+    }
+  } finally {
+    setGenerando(false);
+  }
+};
+
 
   if (!isOpen) return null;
 

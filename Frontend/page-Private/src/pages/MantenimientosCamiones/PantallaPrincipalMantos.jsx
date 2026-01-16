@@ -7,6 +7,8 @@ import ReportesModal from "./ReportesModal";
 import { usePermissions } from '../../hooks/usePermissions';
 import { ProtectedAction } from '../../components/Auth';
 import Swal from 'sweetalert2';
+import { api } from '../../Context/authContext';
+
 
 const MantenimientosTable = () => {
   const navigate = useNavigate();
@@ -76,52 +78,104 @@ const MantenimientosTable = () => {
     fetchMantenimientos();
   }, []);
 
-  const fetchMantenimientos = async () => {
-    try {
-      setLoading(true);
-      const response = await fetch(`${config.api.API_URL}/mantenimientos`, { credentials: 'include' });
-      if (!response.ok) throw new Error('Error al cargar los mantenimientos');
-      const result = await response.json();
-      setMantenimientos(result.data || []);
-      setError(null);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
+ const fetchMantenimientos = async () => {
+  try {
+    setLoading(true);
+    const { data } = await api.get('/mantenimientos'); // ✅ Sin config.api.API_URL
+    setMantenimientos(data.data || data || []); // ✅ Más seguro
+    setError(null);
+  } catch (err) {
+    console.error('Error cargando mantenimientos:', err);
+    setError(err.response?.data?.message || err.message || 'Error al cargar los mantenimientos');
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   const handleDelete = async (mantenimiento) => {
-    const result = await Swal.fire({
-      html: `<div style="text-align: center; padding: 20px 10px;">
-          <div style="width: 80px; height: 80px; border-radius: 50%; background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%); margin: 0 auto 24px; display: flex; align-items: center; justify-content: center;">
-            <svg width="40" height="40" fill="none" stroke="#ef4444" stroke-width="2.5"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2M10 11v6M14 11v6"/></svg>
-          </div>
-          <h2 style="font-size: 28px; font-weight: 700; margin: 0 0 12px 0;">¿Eliminar mantenimiento?</h2>
-          <p style="color: #6b7280;">Esta acción no se puede deshacer</p>
-        </div>`,
-      showCancelButton: true,
-      confirmButtonText: 'Sí, eliminar',
-      cancelButtonText: 'Cancelar',
-      confirmButtonColor: '#ef4444',
-      customClass: { popup: 'rounded-3xl' }
+  const result = await Swal.fire({
+    title: '¿Estás seguro?',
+    html: `
+      <div class="text-left">
+        <p class="text-gray-700 mb-4">Esta acción no se puede deshacer.</p>
+        <div class="bg-gray-50 rounded-lg p-4 border border-gray-200">
+          <p class="text-sm text-gray-600 mb-2">
+            <strong class="text-gray-800">Camión:</strong> ${mantenimiento.ciculatioCard?.licensePlate || 'N/A'}
+          </p>
+          <p class="text-sm text-gray-600 mb-2">
+            <strong class="text-gray-800">Tipo:</strong> ${tipoMantenimientoLabels[mantenimiento.tipo_de_mantenimiento] || 'N/A'}
+          </p>
+          <p class="text-sm text-gray-600 mb-2">
+            <strong class="text-gray-800">Fecha:</strong> ${formatearFecha(mantenimiento.fecha_mantenimiento)}
+          </p>
+          <p class="text-sm text-gray-600">
+            <strong class="text-gray-800">Total:</strong> ${formatearMoneda(calcularTotal(mantenimiento.detalles))}
+          </p>
+        </div>
+      </div>
+    `,
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#ef4444',
+    cancelButtonColor: '#6b7280',
+    confirmButtonText: 'Sí, eliminar',
+    cancelButtonText: 'Cancelar',
+    reverseButtons: true,
+    customClass: {
+      popup: 'rounded-2xl',
+      title: 'text-xl font-bold text-gray-800',
+      confirmButton: 'px-6 py-2.5 rounded-lg font-semibold',
+      cancelButton: 'px-6 py-2.5 rounded-lg font-semibold'
+    }
+  });
+
+  if (result.isConfirmed) {
+    // Mostrar loading
+    Swal.fire({
+      title: 'Eliminando...',
+      text: 'Por favor espera',
+      allowOutsideClick: false,
+      allowEscapeKey: false,
+      didOpen: () => {
+        Swal.showLoading();
+      }
     });
 
-    if (result.isConfirmed) {
-      try {
-        const response = await fetch(`${config.api.API_URL}/mantenimientos/${mantenimiento._id}`, { method: 'DELETE', credentials: 'include' });
-        const data = await response.json();
-        if (response.ok && data.success) {
-          await Swal.fire({ title: '¡Eliminado!', text: 'Mantenimiento eliminado exitosamente', icon: 'success', timer: 2000 });
-          fetchMantenimientos();
-        } else {
-          throw new Error(data.message || 'Error al eliminar');
-        }
-      } catch (error) {
-        Swal.fire({ title: 'Error', text: error.message, icon: 'error' });
+    try {
+      const { data } = await api.delete(`/mantenimientos/${mantenimiento._id}`);
+
+      if (data.success) {
+        await Swal.fire({
+          title: '¡Eliminado!',
+          text: 'El mantenimiento se ha eliminado correctamente',
+          icon: 'success',
+          timer: 2000,
+          showConfirmButton: false,
+          customClass: {
+            popup: 'rounded-2xl'
+          }
+        });
+        fetchMantenimientos();
+      } else {
+        throw new Error(data.message || 'Error al eliminar');
       }
+    } catch (error) {
+      console.error('Error eliminando mantenimiento:', error);
+      Swal.fire({
+        title: 'Error',
+        text: error.response?.data?.message || error.message || 'No se pudo eliminar el mantenimiento',
+        icon: 'error',
+        confirmButtonText: 'Entendido',
+        confirmButtonColor: '#ef4444',
+        customClass: {
+          popup: 'rounded-2xl',
+          confirmButton: 'px-6 py-2.5 rounded-lg font-semibold'
+        }
+      });
     }
-  };
+  }
+};
 
   const calcularTotal = (detalles) => {
     if (!detalles || detalles.length === 0) return 0;

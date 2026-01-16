@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { config } from "../../config";
 import Swal from "sweetalert2";
+import { api } from "../../Context/authContext";
 
 const REPORTES_BASE = `${config.api.API_URL}/reportes-directos`;
 
@@ -159,25 +160,20 @@ export default function ReportesViajesOperativosModal({ isOpen, onClose }) {
           throw new Error("Tipo de reporte no válido");
       }
 
-      const res = await fetch(url, {
-        method: "GET",
-        credentials: "include",
-      });
+      const response = await api.get(url, {
+  responseType: "blob",
+});
 
-      if (!res.ok) {
-        const json = await res.json().catch(() => ({}));
-        throw new Error(json?.message || "Error al generar el PDF");
-      }
+const blob = response.data;
+const downloadUrl = window.URL.createObjectURL(blob);
+const link = document.createElement("a");
+link.href = downloadUrl;
+link.download = nombreArchivo;
+document.body.appendChild(link);
+link.click();
+document.body.removeChild(link);
+window.URL.revokeObjectURL(downloadUrl);
 
-      const blob = await res.blob();
-      const downloadUrl = window.URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = downloadUrl;
-      link.download = nombreArchivo;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(downloadUrl);
 
       await Swal.fire({
         title: "¡Descargado!",

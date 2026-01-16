@@ -2,21 +2,64 @@ import React, { createContext, useContext, useState, useEffect } from "react";
 import axios from "axios";
 import { toast } from "react-toastify";
 import { config } from "../config";
+
 const API_URL = config.api.API_URL;
 
 export const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || `${API_URL}`,
-  withCredentials: true,
+  baseURL: API_URL,
+  withCredentials: true
 });
+
+// ✅ INTERCEPTOR REQUEST MEJORADO
+api.interceptors.request.use(
+  (config) => {
+    const rawToken = localStorage.getItem("authToken");
+    
+    if (!rawToken) {
+      return config; // No hay token, continuar sin header
+    }
+    
+    try {
+      // Intentar parsear como JSON
+      const parsed = JSON.parse(rawToken);
+      
+      if (parsed && typeof parsed === 'object') {
+        // Es un objeto - buscar la propiedad token
+        if (parsed.token && typeof parsed.token === 'string') {
+          config.headers.Authorization = `Bearer ${parsed.token}`;
+        } else {
+          // Objeto sin token - datos corruptos
+          console.error('❌ Token corrupto en localStorage');
+          localStorage.clear();
+          if (!window.location.pathname.includes('/login')) {
+            window.location.href = '/login';
+          }
+        }
+      } else if (typeof parsed === 'string') {
+        // Es un string directo (token puro)
+        config.headers.Authorization = `Bearer ${parsed}`;
+      }
+    } catch (error) {
+      // No es JSON - usar directamente como string
+      config.headers.Authorization = `Bearer ${rawToken}`;
+    }
+    
+    return config;
+  },
+  (error) => {
+    console.error('❌ Error en interceptor request:', error);
+    return Promise.reject(error);
+  }
+);
 
 const AuthContext = createContext();
 
-// ===================== Funciones de localStorage (más confiable) =====================
+// ===================== Funciones de localStorage =====================
 const saveToStorage = (userData, userType) => {
   try {
+    // ✅ Guardar objeto completo con token incluido
     localStorage.setItem("authToken", JSON.stringify(userData));
     if (userType) localStorage.setItem("userType", String(userType));
-    // ✅ Guardar rol si existe
     if (userData?.rol) {
       localStorage.setItem("userRole", String(userData.rol));
     }
@@ -63,12 +106,12 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [userRole, setUserRole] = useState(null);
 
-  // ===================== Funciones de verificación de permisos =====================
+  // ===================== Funciones de permisos =====================
   const hasRole = (requiredRoles) => {
     if (!Array.isArray(requiredRoles)) {
       requiredRoles = [requiredRoles];
     }
-    if (user?.userType === "Administrador") return true; // Admin siempre tiene acceso
+    if (user?.userType === "Administrador") return true;
     return requiredRoles.includes(userRole);
   };
 
@@ -96,21 +139,35 @@ export const AuthProvider = ({ children }) => {
     try {
       const { data } = await api.post("/login", { email, password });
 
-      // Si el backend devuelve un cliente, no permitir acceso a la app privada
       if (data?.userType === 'Cliente') {
-        // Devolver bandera para que el UI muestre el modal informativo y no navegue
-        return { success: false, isCliente: true, message: 'El acceso web no está disponible para usuarios con role Cliente. Por favor utiliza la plataforma de clientes.' };
+        return { 
+          success: false, 
+          isCliente: true, 
+          message: 'El acceso web no está disponible para usuarios con role Cliente. Por favor utiliza la plataforma de clientes.' 
+        };
       }
 
-      if (data?.user) {
-        // ✅ Guardar en storage para persistencia incluyendo rol
-        saveToStorage(data.user, data.userType || data.user.userType);
+      if (data?.user && data?.token) {
+        // ✅ GUARDAR INMEDIATAMENTE antes de cualquier otra cosa
+        const userDataWithToken = {
+          ...data.user,
+          token: data.token
+        };
+        
+        // ⚡ PRIMERO: Guardar en localStorage
+        saveToStorage(userDataWithToken);
+        
+        // ⚡ SEGUNDO: Actualizar estado
         setUser(data.user);
         setUserRole(data.user.rol || null);
         setIsLoggedIn(true);
+        
+        // ⚡ TERCERO: Mostrar mensaje
         toast.success("Inicio de sesión exitoso.");
+        
         return { success: true, data };
       }
+      
       toast.error("No se pudo iniciar sesión.");
       return { success: false };
     } catch (error) {
@@ -137,92 +194,72 @@ export const AuthProvider = ({ children }) => {
   // ===================== Logout =====================
   const logOut = async () => {
     try {
-      console.log("🚪 Iniciando logout...");
-      
-      // 1. Llamar al backend para limpiar cookies httpOnly
-      const response = await api.post("/logout", {}, {
-        validateStatus: (status) => status < 500 // No fallar en 4xx
-      });
-      
-      console.log("✅ Logout del servidor exitoso:", response.data);
-      
+      await api.post("/logout");
     } catch (error) {
       console.log("⚠️ Error en logout del servidor:", error.message);
-      // Continuar con limpieza local aunque falle el servidor
     } finally {
-      // 2. Limpiar estado local inmediatamente
       setUser(null);
       setUserRole(null);
       setIsLoggedIn(false);
       clearStorage();
-      
-      // 3. Verificar que las cookies se eliminaron
-      setTimeout(() => {
-        console.log("🔍 Verificando cookies después del logout...");
-        
-        // Si estás en desarrollo, puedes hacer una verificación adicional
-        if (process.env.NODE_ENV === "development") {
-          // Intentar hacer una petición autenticada para verificar que el logout funcionó
-          api.get("/login/check-auth", { timeout: 3000 })
-            .then((res) => {
-              if (res.data?.user) {
-                console.warn("⚠️ Usuario aún autenticado después del logout");
-              } else {
-                console.log("✅ Logout verificado - no hay sesión activa");
-              }
-            })
-            .catch(() => {
-              console.log("✅ Logout verificado - token inválido");
-            });
-        }
-      }, 500);
-      
       toast.success("Sesión cerrada.");
     }
   };
 
-  // ===================== Check Auth (Mejorado) =====================
+  // ===================== Check Auth =====================
   const checkAuth = async () => {
     setLoading(true);
     
     try {
       const { data } = await api.get("/login/check-auth", { 
         timeout: 10000,
-        validateStatus: (status) => status < 500 // No lanzar error en 401
+        validateStatus: (status) => status < 500
       });
       
-      if (data?.user) {
-        // ✅ Sesión válida - actualizar estado
-        saveToStorage(data.user, data.user.userType);
+      if (data?.user && data?.token) {
+        // ✅ Respuesta válida del servidor con token
+        const userDataWithToken = {
+          ...data.user,
+          token: data.token
+        };
+        saveToStorage(userDataWithToken);
         setUser(data.user);
         setUserRole(data.user.rol || null);
         setIsLoggedIn(true);
-      } else {
-        // ❌ No hay sesión válida - limpiar silenciosamente
+      } else if (data?.user) {
+        // ⚠️ Usuario sin token - usar datos guardados
         const savedUser = loadFromStorage();
-        const savedRole = loadRoleFromStorage();
-        if (savedUser) {
-          console.log("🔄 Usando datos guardados localmente");
+        if (savedUser && savedUser.token) {
           setUser(savedUser);
-          setUserRole(savedRole);
+          setUserRole(savedUser.rol || null);
           setIsLoggedIn(true);
         } else {
+          // Sin token válido - limpiar
+          console.log("⚠️ Usuario sin token - limpiando sesión");
+          clearStorage();
           setUser(null);
           setUserRole(null);
           setIsLoggedIn(false);
         }
+      } else {
+        // No hay usuario - limpiar
+        clearStorage();
+        setUser(null);
+        setUserRole(null);
+        setIsLoggedIn(false);
       }
     } catch (error) {
-      console.log("🔍 checkAuth: Verificando storage local...");
-      // Si falla la verificación, intentar cargar desde storage
+      console.log("🔍 checkAuth error - verificando storage local...");
       const savedUser = loadFromStorage();
-      const savedRole = loadRoleFromStorage();
-      if (savedUser) {
+      
+      if (savedUser && savedUser.token) {
         console.log("📱 Usando sesión guardada localmente");
         setUser(savedUser);
-        setUserRole(savedRole);
+        setUserRole(savedUser.rol || null);
         setIsLoggedIn(true);
       } else {
+        console.log("⚠️ No hay token válido - limpiando");
+        clearStorage();
         setUser(null);
         setUserRole(null);
         setIsLoggedIn(false);
@@ -239,8 +276,12 @@ export const AuthProvider = ({ children }) => {
         timeout: 5000,
         validateStatus: (status) => status < 500
       });
-      if (data?.user) {
-        saveToStorage(data.user, data.user.userType);
+      if (data?.user && data?.token) {
+        const userDataWithToken = {
+          ...data.user,
+          token: data.token
+        };
+        saveToStorage(userDataWithToken);
         setUser(data.user);
         setUserRole(data.user.rol || null);
         setIsLoggedIn(true);
@@ -252,29 +293,58 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // ===================== Interceptor 401 (Mejorado) =====================
+  // ===================== Interceptor 401 MEJORADO =====================
   useEffect(() => {
-    const id = api.interceptors.response.use(
+    const responseInterceptor = api.interceptors.response.use(
       (r) => r,
-      (err) => {
-        if (err?.response?.status === 401) {
-          const url = err.config?.url;
+      async (err) => {
+        const originalRequest = err.config;
+        
+        // Si es 401 y NO es el endpoint de login o check-auth
+        if (err?.response?.status === 401 && !originalRequest._retry) {
+          const url = originalRequest?.url || '';
           
-          // No limpiar si es verificación inicial
-          if (url?.includes('/check-auth')) {
-            console.log("🔄 401 en verificación inicial - ignorando");
+          // Ignorar 401 en check-auth (es esperado)
+          if (url.includes('/check-auth')) {
             return Promise.reject(err);
           }
           
-          console.log("🚫 401 en acción autenticada - limpiando");
+          // Ignorar 401 en login (credenciales incorrectas)
+          if (url.includes('/login') && !url.includes('check-auth')) {
+            return Promise.reject(err);
+          }
+          
+          // Para otros endpoints, intentar una vez más con el token del localStorage
+          originalRequest._retry = true;
+          
+          const rawToken = localStorage.getItem("authToken");
+          if (rawToken) {
+            try {
+              const parsed = JSON.parse(rawToken);
+              if (parsed?.token) {
+                originalRequest.headers.Authorization = `Bearer ${parsed.token}`;
+                return api(originalRequest);
+              }
+            } catch (e) {
+              // Token no es JSON válido
+            }
+          }
+          
+          // Si llegamos aquí, el token es inválido - limpiar sesión
+          console.log("🚫 401 - Token inválido - limpiando sesión");
           clearStorage();
           setUser(null);
+          setUserRole(null);
           setIsLoggedIn(false);
+          toast.error("Sesión expirada. Por favor inicia sesión nuevamente.");
+          window.location.href = '/login';
         }
+        
         return Promise.reject(err);
       }
     );
-    return () => api.interceptors.response.eject(id);
+    
+    return () => api.interceptors.response.eject(responseInterceptor);
   }, []);
 
   // ===================== Efectos =====================
@@ -305,7 +375,6 @@ export const AuthProvider = ({ children }) => {
       setUserRole,
       syncWithServer, 
       checkAuth,
-      // ✅ Funciones de permisos
       hasRole,
       canCreate,
       canEdit,

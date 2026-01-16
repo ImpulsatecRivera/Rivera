@@ -8,6 +8,7 @@ import {
 import { config } from '../../config';
 import Swal from 'sweetalert2';
 import { useAuth } from '../../Context/authContext';
+import { api } from '../../Context/authContext';
 
 export default function PlanillaSemanal() {
   const { id } = useParams();
@@ -48,8 +49,9 @@ export default function PlanillaSemanal() {
 
   const cargarPlanilla = async () => {
     try {
-      const response = await fetch(`${config.api.API_URL}/planillas/semanal/${id}`, { credentials: 'include' });
-      const data = await response.json();
+     const response = await api.get(`${config.api.API_URL}/planillas/semanal/${id}`);
+const data = response.data;
+
       
       if (data.success) {
         setPlanilla(data.data);
@@ -134,16 +136,9 @@ export default function PlanillaSemanal() {
         body = { anticipos: valor };
       }
 
-      const response = await fetch(endpoint, {
-        method: 'PATCH',
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(body)
-      });
+     const response = await api.patch(endpoint, body);
+const data = response.data;
 
-      const data = await response.json();
 
       if (data.success) {
         // Recargar planilla para ver cambios
@@ -212,17 +207,15 @@ export default function PlanillaSemanal() {
 
     if (descuento) {
       try {
-        const response = await fetch(
-          `${config.api.API_URL}/planillas/semanal/${planilla._id}/empleado/${empleadoId}/dia/${dia}/falta`,
-          {
-            method: 'POST',
-            credentials: 'include',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ descuentoFalta: parseFloat(descuento) })
-          }
-        );
+       const endpoint = `${config.api.API_URL}/planillas/semanal/${planilla._id}/empleado/${empleadoId}/dia/${dia}/falta`;
 
-        const data = await response.json();
+const response = await api.post(endpoint, {
+  descuentoFalta: parseFloat(descuento)
+});
+
+const data = response.data;
+
+
 
         if (data.success) {
           await cargarPlanilla();
@@ -258,12 +251,12 @@ export default function PlanillaSemanal() {
 
     if (result.isConfirmed) {
       try {
-        const response = await fetch(
-          `${config.api.API_URL}/planillas/semanal/${planilla._id}/empleado/${empleadoId}/dia/${dia}/falta`,
-          { method: 'DELETE', credentials: 'include' }
-        );
+     const endpoint = `${config.api.API_URL}/planillas/semanal/${planilla._id}/empleado/${empleadoId}/dia/${dia}/falta`;
 
-        const data = await response.json();
+const response = await api.delete(endpoint);
+const data = response.data;
+
+
 
         if (data.success) {
           await cargarPlanilla();
@@ -287,74 +280,54 @@ export default function PlanillaSemanal() {
   };
 
   const handleDescargarPDF = async () => {
-    try {
-      Swal.fire({
-        title: 'Generando PDF...',
-        text: 'Por favor espera',
-        allowOutsideClick: false,
-        didOpen: () => {
-          Swal.showLoading();
-        }
-      });
+  try {
+    Swal.fire({
+      title: 'Generando PDF...',
+      text: 'Por favor espera',
+      allowOutsideClick: false,
+      didOpen: () => Swal.showLoading()
+    });
 
-      console.log('🔍 Generando PDF para planilla:', planilla._id);
-      console.log('📡 Endpoint:', `${config.api.API_URL}/reportes/planilla/semanal/detallado/${planilla._id}`);
+    const endpoint = `${config.api.API_URL}/reportes/planilla/semanal/detallado/${planilla._id}`;
 
-      const response = await fetch(
-        `${config.api.API_URL}/reportes/planilla/semanal/detallado/${planilla._id}`, { credentials: 'include' }
-      );
+    const response = await api.get(endpoint, {
+      responseType: 'blob'
+    });
 
-      console.log('📊 Response status:', response.status, response.statusText);
+    const blob = response.data;
 
-      if (!response.ok) {
-        // Intentar leer el error del servidor
-        let errorMessage = 'Error al generar el PDF';
-        try {
-          const errorData = await response.json();
-          console.error('❌ Error del servidor:', errorData);
-          errorMessage = errorData.message || errorData.error || errorMessage;
-        } catch (e) {
-          console.error('❌ No se pudo parsear error del servidor');
-        }
-        throw new Error(errorMessage);
-      }
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
 
-      const blob = await response.blob();
-      console.log('📄 Blob recibido:', blob.size, 'bytes');
-      
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      
-      // Formatear nombre del archivo
-      const fechaInicio = new Date(planilla.fechaInicio).toLocaleDateString('es-ES').replace(/\//g, '-');
-      const fechaFin = new Date(planilla.fechaFin).toLocaleDateString('es-ES').replace(/\//g, '-');
-      
-      link.download = `Planilla_Semanal_${fechaInicio}_al_${fechaFin}.pdf`;
-      
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
+    const fechaInicio = new Date(planilla.fechaInicio).toLocaleDateString('es-ES').replace(/\//g, '-');
+    const fechaFin = new Date(planilla.fechaFin).toLocaleDateString('es-ES').replace(/\//g, '-');
 
-      Swal.fire({
-        icon: 'success',
-        title: '¡Descargado!',
-        text: 'El PDF se ha descargado correctamente',
-        timer: 2000,
-        showConfirmButton: false
-      });
+    link.href = url;
+    link.download = `Planilla_Semanal_${fechaInicio}_al_${fechaFin}.pdf`;
 
-    } catch (error) {
-      console.error('❌ Error completo:', error);
-      Swal.fire({
-        icon: 'error',
-        title: 'Error al generar PDF',
-        text: error.message,
-        footer: 'Revisa la consola para más detalles'
-      });
-    }
-  };
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+
+    Swal.fire({
+      icon: 'success',
+      title: '¡Descargado!',
+      text: 'El PDF se ha descargado correctamente',
+      timer: 2000,
+      showConfirmButton: false
+    });
+
+  } catch (error) {
+    console.error('Error descargando PDF:', error);
+    Swal.fire({
+      icon: 'error',
+      title: 'Error al generar PDF',
+      text: error.response?.data?.message || error.message
+    });
+  }
+};
+
 
   const handleCambiarEstado = async (nuevoEstado) => {
     // Validar que config esté disponible
@@ -404,16 +377,12 @@ export default function PlanillaSemanal() {
           body.fechaPago = new Date().toISOString();
         }
 
-        const response = await fetch(
-          `${config.api.API_URL}/planillas/semanal/${planilla._id}/estado`,
-          {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(body)
-          }
-        );
+        const endpoint = `${config.api.API_URL}/planillas/semanal/${planilla._id}/estado`;
 
-        const data = await response.json();
+const response = await api.patch(endpoint, body);
+const data = response.data;
+
+
 
         if (data.success) {
           await cargarPlanilla();

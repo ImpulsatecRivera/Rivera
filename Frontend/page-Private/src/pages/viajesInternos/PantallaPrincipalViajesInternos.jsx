@@ -16,11 +16,7 @@ import { useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
 import { config } from "../../config";
 import ReportesViajesOperativosModal from "./ReportesViajesInternosModal";
-
-const VIAJES_OPERATIVOS_ENDPOINT = `${config.api.API_URL}/viajes-operativos/listar`;
-const DELETE_ENDPOINT = `${config.api.API_URL}/viajes-operativos`;
-const COMPLETAR_TODOS_ENDPOINT = `${config.api.API_URL}/viajes-operativos/completar-todos`;
-const COMPLETAR_UNO_ENDPOINT = `${config.api.API_URL}/viajes-operativos/completar`;
+import { api } from "../../Context/authContext";
 
 const ESTADOS = {
   TODOS: "Todos",
@@ -105,18 +101,11 @@ export default function PantallaPrincipalViajesOperativos() {
       setLoading(true);
       setError(null);
 
-      const res = await fetch(VIAJES_OPERATIVOS_ENDPOINT, {
-        credentials: "include",
-      });
-      const json = await res.json().catch(() => ({}));
-
-      if (!res.ok || json?.success === false)
-        throw new Error(json?.message || "Error al cargar los viajes operativos");
-
-      const rows = json?.data || (Array.isArray(json) ? json : []);
+      const { data } = await api.get('/viajes-operativos/listar');
+      const rows = data?.data || (Array.isArray(data) ? data : []);
       setViajes(Array.isArray(rows) ? rows : []);
     } catch (e) {
-      setError(e.message || "Error al cargar");
+      setError(e.response?.data?.message || e.message || "Error al cargar");
     } finally {
       setLoading(false);
     }
@@ -140,26 +129,26 @@ export default function PantallaPrincipalViajesOperativos() {
     if (!result.isConfirmed) return;
 
     try {
-      const res = await fetch(COMPLETAR_TODOS_ENDPOINT, {
-        method: "PUT",
-        credentials: "include",
-      });
+      const { data } = await api.put('/viajes-operativos/completar-todos');
 
-      const json = await res.json().catch(() => ({}));
-
-      if (!res.ok || json?.success === false)
-        throw new Error(json?.message || "Error al completar viajes");
+      if (!data?.success) {
+        throw new Error(data?.message || "Error al completar viajes");
+      }
 
       await Swal.fire({
         title: "¡Completados!",
-        text: json?.message || "Viajes completados exitosamente",
+        text: data?.message || "Viajes completados exitosamente",
         icon: "success",
         timer: 2000,
       });
 
       fetchViajes();
     } catch (err) {
-      Swal.fire({ title: "Error", text: err.message, icon: "error" });
+      Swal.fire({ 
+        title: "Error", 
+        text: err.response?.data?.message || err.message, 
+        icon: "error" 
+      });
     }
   };
 
@@ -182,19 +171,13 @@ export default function PantallaPrincipalViajesOperativos() {
     if (!result.isConfirmed) return;
 
     try {
-      const res = await fetch(`${COMPLETAR_UNO_ENDPOINT}/${id}`, {
-        method: "PUT",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          observacion: "Viaje completado manualmente desde el panel",
-        }),
+      const { data } = await api.put(`/viajes-operativos/completar/${id}`, {
+        observacion: "Viaje completado manualmente desde el panel",
       });
 
-      const json = await res.json().catch(() => ({}));
-
-      if (!res.ok || json?.success === false)
-        throw new Error(json?.message || "Error al completar");
+      if (!data?.success) {
+        throw new Error(data?.message || "Error al completar");
+      }
 
       await Swal.fire({
         title: "¡Completado!",
@@ -205,7 +188,11 @@ export default function PantallaPrincipalViajesOperativos() {
 
       fetchViajes();
     } catch (err) {
-      Swal.fire({ title: "Error", text: err.message, icon: "error" });
+      Swal.fire({ 
+        title: "Error", 
+        text: err.response?.data?.message || err.message, 
+        icon: "error" 
+      });
     }
   };
 
@@ -228,24 +215,16 @@ export default function PantallaPrincipalViajesOperativos() {
     const año = fechaSalida.getFullYear();
 
     try {
-      const url = `${config.api.API_URL}/reportes-directos/individual/${encodeURIComponent(
-        clienteNombre
-      )}/${mes}/${año}`;
+      const url = `/reportes-directos/individual/${encodeURIComponent(clienteNombre)}/${mes}/${año}`;
       const nombreArchivo = `reporte-${clienteNombre}-${mes}-${año}.pdf`;
 
       console.log("📄 Descargando PDF desde:", url);
 
-      const res = await fetch(url, {
-        method: "GET",
-        credentials: "include",
+      const response = await api.get(url, {
+        responseType: "blob",
       });
 
-      if (!res.ok) {
-        const json = await res.json().catch(() => ({}));
-        throw new Error(json?.message || "Error al generar el PDF");
-      }
-
-      const blob = await res.blob();
+      const blob = new Blob([response.data], { type: 'application/pdf' });
       const downloadUrl = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = downloadUrl;
@@ -266,7 +245,7 @@ export default function PantallaPrincipalViajesOperativos() {
       console.error("Error descargando PDF:", error);
       Swal.fire({
         title: "Error",
-        text: error.message || "No se pudo generar el PDF",
+        text: error.response?.data?.message || error.message || "No se pudo generar el PDF",
         icon: "error",
       });
     }
@@ -307,15 +286,11 @@ export default function PantallaPrincipalViajesOperativos() {
     if (!result.isConfirmed) return;
 
     try {
-      const res = await fetch(`${DELETE_ENDPOINT}/${id}`, {
-        method: "DELETE",
-        credentials: "include",
-      });
+      const { data } = await api.delete(`/viajes-operativos/${id}`);
 
-      const json = await res.json().catch(() => ({}));
-
-      if (!res.ok || json?.success === false)
-        throw new Error(json?.message || "Error al eliminar");
+      if (!data?.success) {
+        throw new Error(data?.message || "Error al eliminar");
+      }
 
       await Swal.fire({
         title: "¡Eliminado!",
@@ -326,7 +301,11 @@ export default function PantallaPrincipalViajesOperativos() {
 
       fetchViajes();
     } catch (err) {
-      Swal.fire({ title: "Error", text: err.message, icon: "error" });
+      Swal.fire({ 
+        title: "Error", 
+        text: err.response?.data?.message || err.message, 
+        icon: "error" 
+      });
     }
   };
 
@@ -410,7 +389,7 @@ export default function PantallaPrincipalViajesOperativos() {
   return (
     <div className="min-h-screen bg-white p-8">
       <div className="max-w-7xl mx-auto">
-        {/* Header - COLORES CAMBIADOS */}
+        {/* Header */}
         <div className="mb-6 flex items-start justify-between flex-wrap gap-3">
           <div>
             <h1 className="text-4xl font-bold text-[#34353A] mb-1">Viajes Operativos</h1>
@@ -456,7 +435,7 @@ export default function PantallaPrincipalViajesOperativos() {
           </div>
         </div>
 
-        {/* Tabs Estados - COLORES CAMBIADOS */}
+        {/* Tabs Estados */}
         <div className="mt-4 flex items-center gap-3 flex-wrap">
           {tabs.map((est) => (
             <button
@@ -474,7 +453,7 @@ export default function PantallaPrincipalViajesOperativos() {
           ))}
         </div>
 
-        {/* Búsqueda y Ordenar - COLORES CAMBIADOS */}
+        {/* Búsqueda y Ordenar */}
         <div className="bg-white rounded-2xl shadow-md mb-6 mt-6 p-5 border border-gray-100">
           <div className="flex items-center justify-between gap-4 flex-wrap">
             <div className="relative flex-1 min-w-[300px]">
@@ -505,7 +484,7 @@ export default function PantallaPrincipalViajesOperativos() {
           </div>
         </div>
 
-        {/* Tabla - COLORES CAMBIADOS */}
+        {/* Tabla */}
         <div className="bg-white rounded-2xl shadow-md overflow-hidden border border-gray-100">
           <div className="overflow-x-auto">
             <table className="w-full">
@@ -620,7 +599,7 @@ export default function PantallaPrincipalViajesOperativos() {
             </table>
           </div>
 
-          {/* Paginación - COLORES CAMBIADOS */}
+          {/* Paginación */}
           <div className="flex items-center justify-between px-6 py-5 border-t border-gray-200 bg-gray-50">
             <p className="text-sm text-gray-600 font-medium">
               Mostrando {sorted.length === 0 ? 0 : startIndex + 1} a{" "}

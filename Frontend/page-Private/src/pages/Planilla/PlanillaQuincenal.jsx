@@ -8,6 +8,8 @@ import {
 import { config } from '../../config';
 import Swal from 'sweetalert2';
 import { useAuth } from '../../Context/authContext';
+import { api } from '../../Context/authContext';
+
  
 export default function PlanillaQuincenal() {
   const { id } = useParams();
@@ -81,9 +83,9 @@ export default function PlanillaQuincenal() {
 
   const cargarEmpleadosYMotoristas = async () => {
     try {
-      const resEmpleados = await fetch(`${config.api.API_URL}/empleados`, { credentials: 'include' });
-      const dataEmpleados = await resEmpleados.json();
-      
+    const resEmpleados = await api.get(`${config.api.API_URL}/empleados`);
+const dataEmpleados = resEmpleados.data;
+
       let empleadosArray = [];
       if (dataEmpleados?.data?.empleados) {
         empleadosArray = dataEmpleados.data.empleados;
@@ -93,8 +95,9 @@ export default function PlanillaQuincenal() {
       
       setEmpleados(empleadosArray);
 
-      const resMotoristas = await fetch(`${config.api.API_URL}/motoristas`, { credentials: 'include' });
-      const dataMotoristas = await resMotoristas.json();
+   const resMotoristas = await api.get(`${config.api.API_URL}/motoristas`);
+const dataMotoristas = resMotoristas.data;
+
       const motoristasArray = Array.isArray(dataMotoristas) ? dataMotoristas : [];
       
       setMotoristas(motoristasArray);
@@ -108,11 +111,9 @@ export default function PlanillaQuincenal() {
   const cargarPlanillaExistente = async (planillaId) => {
     setLoading(true);
     try {
-      const response = await fetch(
-        `${config.api.API_URL}/planillas/quincenal/${planillaId}`,
-        { credentials: 'include' }
-      );
-      const data = await response.json();
+      const response = await api.get(`${config.api.API_URL}/planillas/quincenal/${planillaId}`);
+const data = response.data;
+
       
       if (data.success && data.data) {
         const planillaConEmpleados = {
@@ -147,8 +148,9 @@ export default function PlanillaQuincenal() {
   const cargarUltimaPlanilla = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`${config.api.API_URL}/planillas/quincenal`, { credentials: 'include' });
-      const data = await response.json();
+      const response = await api.get(`${config.api.API_URL}/planillas/quincenal`);
+const data = response.data;
+
       
       if (data.success && Array.isArray(data.data) && data.data.length > 0) {
         const planillasOrdenadas = [...data.data].sort((a, b) => {
@@ -192,19 +194,15 @@ export default function PlanillaQuincenal() {
     try {
       const { año, mes, quincena } = infoPlanilla;
 
-      const response = await fetch(`${config.api.API_URL}/planillas/quincenal`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          año,
-          mes,
-          quincena,
-          empleados: []
-        })
-      });
+     const response = await api.post(`${config.api.API_URL}/planillas/quincenal`, {
+  año,
+  mes,
+  quincena,
+  empleados: []
+});
 
-      const data = await response.json();
+const data = response.data;
+
 
       if (data.success && data.data) {
         const planillaData = {
@@ -226,76 +224,132 @@ export default function PlanillaQuincenal() {
     }
   };
 
-  const buscarPrimeraQuincenaDisponible = async () => {
-    let { año, mes, quincena } = infoPlanilla;
-    let intentos = 0;
-    const maxIntentos = 24;
+// ✅ FUNCIÓN CORREGIDA - Recibe parámetros en lugar de usar estado
+const buscarPrimeraQuincenaDisponible = async (añoInicial, mesInicial, quincenaInicial) => {
+  let año = añoInicial;
+  let mes = mesInicial;
+  let quincena = quincenaInicial;
+  let intentos = 0;
+  const maxIntentos = 24;
 
-    while (intentos < maxIntentos) {
-      try {
-        const response = await fetch(`${config.api.API_URL}/planillas/quincenal`, {
-          method: 'POST',
-          credentials: 'include',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            año,
-            mes,
-            quincena,
-            empleados: []
-          })
-        });
+  while (intentos < maxIntentos) {
+    try {
+      const response = await api.post(`${config.api.API_URL}/planillas/quincenal`, {
+        año,
+        mes,
+        quincena,
+        empleados: []
+      });
 
-        const data = await response.json();
+      const data = response.data;
 
-        if (data.success && data.data) {
-          return {
-            exito: true,
-            planilla: data.data,
-            mensaje: `Planilla creada: ${data.data.descripcion}`
-          };
-        }
-
-        if (response.status === 400 && data.data?.planillaId) {
-          const planillaResponse = await fetch(
-            `${config.api.API_URL}/planillas/quincenal/${data.data.planillaId}`, { credentials: 'include' }
-          );
-          const planillaData = await planillaResponse.json();
-
-          if (planillaData.success && planillaData.data) {
-            const planillaExistente = planillaData.data;
-
-            if (planillaExistente.estado === 'pendiente') {
-              return {
-                exito: true,
-                planilla: planillaExistente,
-                mensaje: `Planilla encontrada: ${planillaExistente.descripcion}`
-              };
-            }
-
-            const siguiente = calcularProximaQuincena({ año, mes, quincena });
-            año = siguiente.año;
-            mes = siguiente.mes;
-            quincena = siguiente.quincena;
-          }
-        } else {
-          const siguiente = calcularProximaQuincena({ año, mes, quincena });
-          año = siguiente.año;
-          mes = siguiente.mes;
-          quincena = siguiente.quincena;
-        }
-
-        intentos++;
-      } catch (error) {
-        console.error('Error buscando quincena disponible:', error);
-        intentos++;
+      if (data.success && data.data) {
+        return {
+          exito: true,
+          planilla: data.data,
+          mensaje: `Planilla creada: ${data.data.descripcion}`
+        };
       }
-    }
 
-    return {
-      exito: false,
-      mensaje: 'No se encontró ninguna quincena disponible'
-    };
+      // Si llegamos aquí sin error, avanzar a la siguiente quincena
+      const siguiente = calcularProximaQuincena({ año, mes, quincena });
+      año = siguiente.año;
+      mes = siguiente.mes;
+      quincena = siguiente.quincena;
+      intentos++;
+
+    } catch (error) {
+      console.error('Error buscando quincena disponible:', error);
+
+      // Manejar error 400 (planilla ya existe)
+      if (error.response && error.response.status === 400) {
+        const data = error.response.data;
+
+        if (data.data?.planillaId) {
+          try {
+            const planillaResponse = await api.get(
+              `${config.api.API_URL}/planillas/quincenal/${data.data.planillaId}`
+            );
+
+            const planillaData = planillaResponse.data;
+
+            if (planillaData.success && planillaData.data) {
+              const planillaExistente = planillaData.data;
+
+              if (planillaExistente.estado === 'pendiente') {
+                return {
+                  exito: true,
+                  planilla: planillaExistente,
+                  mensaje: `Planilla encontrada: ${planillaExistente.descripcion}`
+                };
+              }
+            }
+          } catch (getError) {
+            console.error('Error obteniendo planilla existente:', getError);
+          }
+        }
+      }
+
+      // Avanzar a la siguiente quincena
+      const siguiente = calcularProximaQuincena({ año, mes, quincena });
+      año = siguiente.año;
+      mes = siguiente.mes;
+      quincena = siguiente.quincena;
+      intentos++;
+    }
+  }
+
+  return {
+    exito: false,
+    mensaje: 'No se encontró ninguna quincena disponible'
   };
+};
+
+const eliminarEmpleadoDePlanilla = async (empleadoId) => {
+  if (!planilla || !planilla._id) return;
+
+  const result = await Swal.fire({
+    title: '¿Estás seguro?',
+    text: 'Se eliminará este empleado de la planilla',
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#ef4444',
+    cancelButtonColor: '#6b7280',
+    confirmButtonText: 'Sí, eliminar',
+    cancelButtonText: 'Cancelar'
+  });
+
+  if (!result.isConfirmed) return;
+
+  try {
+    const url = `${config.api.API_URL}/planillas/quincenal/${planilla._id}/empleado/${empleadoId}`;
+    const response = await api.delete(url);
+    const data = response.data;
+
+    if (data.success && data.data) {
+      const planillaActualizada = {
+        ...data.data,
+        empleados: Array.isArray(data.data.empleados) ? data.data.empleados : []
+      };
+      setPlanilla(planillaActualizada);
+      Swal.fire({
+        icon: 'success',
+        title: '¡Eliminado!',
+        text: 'Empleado eliminado de la planilla',
+        timer: 2000,
+        showConfirmButton: false
+      });
+    } else {
+      throw new Error(data.message || 'Error al eliminar empleado');
+    }
+  } catch (error) {
+    Swal.fire({
+      icon: 'error',
+      title: 'Error',
+      text: error.message
+    });
+  }
+};
 
   const agregarEmpleadoAPlanilla = async () => {
     if (!empleadoSeleccionado) {
@@ -317,25 +371,22 @@ export default function PlanillaQuincenal() {
     }
 
     try {
-      const response = await fetch(
-        `${config.api.API_URL}/planillas/quincenal/${planilla._id}/empleado`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            empleadoId: empleadoSeleccionado._id,
-            viaticos: parseFloat(formEmpleado.viaticos) || 0,
-            trabajoSabadoDomingo: parseFloat(formEmpleado.trabajoSabadoDomingo) || 0,
-            otrosDescuentos: {
-              anticipos: parseFloat(formEmpleado.anticipos) || 0,
-              prestamos: parseFloat(formEmpleado.prestamos) || 0,
-              otros: parseFloat(formEmpleado.otros) || 0
-            }
-          })
-        }
-      );
+      const response = await api.post(
+  `${config.api.API_URL}/planillas/quincenal/${planilla._id}/empleado`,
+  {
+    empleadoId: empleadoSeleccionado._id,
+    viaticos: Number(formEmpleado.viaticos) || 0,
+    trabajoSabadoDomingo: Number(formEmpleado.trabajoSabadoDomingo) || 0,
+    otrosDescuentos: {
+      anticipos: Number(formEmpleado.anticipos) || 0,
+      prestamos: Number(formEmpleado.prestamos) || 0,
+      otros: Number(formEmpleado.otros) || 0
+    }
+  }
+);
 
-      const data = await response.json();
+const data = response.data;
+
       
       if (data.success && data.data) {
         const planillaActualizada = {
@@ -387,24 +438,22 @@ export default function PlanillaQuincenal() {
     }
 
     try {
-      const response = await fetch(
-        `${config.api.API_URL}/planillas/quincenal/${planilla._id}/empleado/${empleadoEditando._id}`,
-        {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            viaticos: parseFloat(formEmpleado.viaticos) || 0,
-            trabajoSabadoDomingo: parseFloat(formEmpleado.trabajoSabadoDomingo) || 0,
-            otrosDescuentos: {
-              anticipos: parseFloat(formEmpleado.anticipos) || 0,
-              prestamos: parseFloat(formEmpleado.prestamos) || 0,
-              otros: parseFloat(formEmpleado.otros) || 0
-            }
-          })
-        }
-      );
+   const response = await api.put(
+  `${config.api.API_URL}/planillas/quincenal/${planilla._id}/empleado/${empleadoEditando._id}`,
+  {
+    viaticos: Number(formEmpleado.viaticos) || 0,
+    trabajoSabadoDomingo: Number(formEmpleado.trabajoSabadoDomingo) || 0,
+    otrosDescuentos: {
+      anticipos: Number(formEmpleado.anticipos) || 0,
+      prestamos: Number(formEmpleado.prestamos) || 0,
+      otros: Number(formEmpleado.otros) || 0
+    }
+  }
+);
 
-      const data = await response.json();
+const data = response.data;
+
+
       
       if (data.success && data.data) {
         const planillaActualizada = {
@@ -437,107 +486,55 @@ export default function PlanillaQuincenal() {
     }
   };
 
-  const eliminarEmpleadoDePlanilla = async (empleadoId) => {
-    if (!planilla || !planilla._id) return;
-
-    const result = await Swal.fire({
-      title: '¿Estás seguro?',
-      text: 'Se eliminará este empleado de la planilla',
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonColor: '#ef4444',
-      cancelButtonColor: '#6b7280',
-      confirmButtonText: 'Sí, eliminar',
-      cancelButtonText: 'Cancelar'
-    });
-
-    if (!result.isConfirmed) return;
-
-    try {
-      const response = await fetch(
-        `${config.api.API_URL}/planillas/quincenal/${planilla._id}/empleado/${empleadoId}`,
-        {
-          method: 'DELETE'
-        }
-      );
-
-      const data = await response.json();
-      if (data.success && data.data) {
-        const planillaActualizada = {
-          ...data.data,
-          empleados: Array.isArray(data.data.empleados) ? data.data.empleados : []
-        };
-        setPlanilla(planillaActualizada);
-        Swal.fire({
-          icon: 'success',
-          title: '¡Eliminado!',
-          text: 'Empleado eliminado de la planilla',
-          timer: 2000,
-          showConfirmButton: false
-        });
-      } else {
-        throw new Error(data.message || 'Error al eliminar empleado');
-      }
-    } catch (error) {
-      Swal.fire({
-        icon: 'error',
-        title: 'Error',
-        text: error.message
-      });
-    }
-  };
+  
 
   const cambiarEstadoPlanilla = async (nuevoEstado) => {
-    if (!planilla || !planilla._id) return;
+  if (!planilla || !planilla._id) return;
 
-    const result = await Swal.fire({
-      title: '¿Aprobar Planilla?',
-      text: 'Una vez aprobada, no se podrá editar',
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonColor: '#5D9646',
-      cancelButtonColor: '#6b7280',
-      confirmButtonText: 'Sí, aprobar',
-      cancelButtonText: 'Cancelar'
-    });
+  const result = await Swal.fire({
+    title: '¿Aprobar Planilla?',
+    text: 'Una vez aprobada, no se podrá editar',
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#5D9646',
+    cancelButtonColor: '#6b7280',
+    confirmButtonText: 'Sí, aprobar',
+    cancelButtonText: 'Cancelar'
+  });
 
-    if (!result.isConfirmed) return;
+  if (!result.isConfirmed) return;
 
-    try {
-      const response = await fetch(
-        `${config.api.API_URL}/planillas/quincenal/${planilla._id}/estado`,
-        {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ estado: nuevoEstado })
-        }
-      );
+  try {
+    const response = await api.patch(
+      `${config.api.API_URL}/planillas/quincenal/${planilla._id}/estado`,
+      { estado: nuevoEstado }
+    );
 
-      const data = await response.json();
-      if (data.success && data.data) {
-        const planillaActualizada = {
-          ...data.data,
-          empleados: Array.isArray(data.data.empleados) ? data.data.empleados : []
-        };
-        setPlanilla(planillaActualizada);
-        Swal.fire({
-          icon: 'success',
-          title: '¡Estado actualizado!',
-          text: `Planilla marcada como ${nuevoEstado}`,
-          timer: 2000,
-          showConfirmButton: false
-        });
-      } else {
-        throw new Error(data.message || 'Error al cambiar estado');
-      }
-    } catch (error) {
+    const data = response.data;
+
+    if (data.success && data.data) {
+      setPlanilla({
+        ...data.data,
+        empleados: Array.isArray(data.data.empleados) ? data.data.empleados : []
+      });
+
       Swal.fire({
-        icon: 'error',
-        title: 'Error',
-        text: error.message
+        icon: 'success',
+        title: '¡Estado actualizado!',
+        text: `Planilla marcada como ${nuevoEstado}`,
+        timer: 2000,
+        showConfirmButton: false
       });
     }
-  };
+  } catch (error) {
+    Swal.fire({
+      icon: 'error',
+      title: 'Error',
+      text: error.message
+    });
+  }
+};
+
 
   const limpiarFormulario = () => {
     setFormEmpleado({
@@ -705,53 +702,61 @@ export default function PlanillaQuincenal() {
               )}
 
               {/* Botón Nueva Planilla */}
-              {planilla?.estado !== 'pendiente' && (
-                <button
-                  onClick={async () => {
-                    setLoading(true);
-                    const proximaQuincena = calcularProximaQuincena(planilla);
-                    setInfoPlanilla(proximaQuincena);
-                    
-                    const resultado = await buscarPrimeraQuincenaDisponible();
-                    
-                    if (resultado.exito) {
-                      const planillaConEmpleados = {
-                        ...resultado.planilla,
-                        empleados: Array.isArray(resultado.planilla.empleados) 
-                          ? resultado.planilla.empleados 
-                          : []
-                      };
-                      setPlanilla(planillaConEmpleados);
-                      
-                      setInfoPlanilla({
-                        año: resultado.planilla.año,
-                        mes: resultado.planilla.mes,
-                        quincena: resultado.planilla.quincena
-                      });
-                      
-                      Swal.fire({
-                        icon: 'success',
-                        title: '¡Planilla creada!',
-                        text: resultado.mensaje,
-                        timer: 2500,
-                        showConfirmButton: false
-                      });
-                    } else {
-                      Swal.fire({
-                        icon: 'error',
-                        title: 'Error',
-                        text: resultado.mensaje
-                      });
-                    }
-                    
-                    setLoading(false);
-                  }}
-                  className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-[#5F8EAD] to-[#5D9646] text-white rounded-xl hover:opacity-90 font-bold shadow-lg hover:shadow-xl transition-all transform hover:scale-105"
-                >
-                  <Plus size={22} />
-                  Nueva Planilla
-                </button>
-              )}
+             {/* Botón Nueva Planilla */}
+{planilla?.estado !== 'pendiente' && (
+  <button
+    onClick={async () => {
+      setLoading(true);
+      
+      // ✅ Calcular la próxima quincena
+      const proximaQuincena = calcularProximaQuincena(planilla);
+      
+      // ✅ Pasar los valores directamente a la función
+      const resultado = await buscarPrimeraQuincenaDisponible(
+        proximaQuincena.año,
+        proximaQuincena.mes,
+        proximaQuincena.quincena
+      );
+      
+      if (resultado.exito) {
+        const planillaConEmpleados = {
+          ...resultado.planilla,
+          empleados: Array.isArray(resultado.planilla.empleados) 
+            ? resultado.planilla.empleados 
+            : []
+        };
+        setPlanilla(planillaConEmpleados);
+        
+        // ✅ Actualizar el estado con los valores correctos
+        setInfoPlanilla({
+          año: resultado.planilla.año,
+          mes: resultado.planilla.mes,
+          quincena: resultado.planilla.quincena
+        });
+        
+        Swal.fire({
+          icon: 'success',
+          title: '¡Planilla creada!',
+          text: resultado.mensaje,
+          timer: 2500,
+          showConfirmButton: false
+        });
+      } else {
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: resultado.mensaje
+        });
+      }
+      
+      setLoading(false);
+    }}
+    className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-[#5F8EAD] to-[#5D9646] text-white rounded-xl hover:opacity-90 font-bold shadow-lg hover:shadow-xl transition-all transform hover:scale-105"
+  >
+    <Plus size={22} />
+    Nueva Planilla
+  </button>
+)}
             </div>
           </div>
 
