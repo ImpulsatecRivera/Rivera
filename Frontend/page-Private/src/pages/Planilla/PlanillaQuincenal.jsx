@@ -224,8 +224,11 @@ const data = response.data;
     }
   };
 
-  const buscarPrimeraQuincenaDisponible = async () => {
-  let { año, mes, quincena } = infoPlanilla;
+// ✅ FUNCIÓN CORREGIDA - Recibe parámetros en lugar de usar estado
+const buscarPrimeraQuincenaDisponible = async (añoInicial, mesInicial, quincenaInicial) => {
+  let año = añoInicial;
+  let mes = mesInicial;
+  let quincena = quincenaInicial;
   let intentos = 0;
   const maxIntentos = 24;
 
@@ -699,53 +702,61 @@ const data = response.data;
               )}
 
               {/* Botón Nueva Planilla */}
-              {planilla?.estado !== 'pendiente' && (
-                <button
-                  onClick={async () => {
-                    setLoading(true);
-                    const proximaQuincena = calcularProximaQuincena(planilla);
-                    setInfoPlanilla(proximaQuincena);
-                    
-                    const resultado = await buscarPrimeraQuincenaDisponible();
-                    
-                    if (resultado.exito) {
-                      const planillaConEmpleados = {
-                        ...resultado.planilla,
-                        empleados: Array.isArray(resultado.planilla.empleados) 
-                          ? resultado.planilla.empleados 
-                          : []
-                      };
-                      setPlanilla(planillaConEmpleados);
-                      
-                      setInfoPlanilla({
-                        año: resultado.planilla.año,
-                        mes: resultado.planilla.mes,
-                        quincena: resultado.planilla.quincena
-                      });
-                      
-                      Swal.fire({
-                        icon: 'success',
-                        title: '¡Planilla creada!',
-                        text: resultado.mensaje,
-                        timer: 2500,
-                        showConfirmButton: false
-                      });
-                    } else {
-                      Swal.fire({
-                        icon: 'error',
-                        title: 'Error',
-                        text: resultado.mensaje
-                      });
-                    }
-                    
-                    setLoading(false);
-                  }}
-                  className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-[#5F8EAD] to-[#5D9646] text-white rounded-xl hover:opacity-90 font-bold shadow-lg hover:shadow-xl transition-all transform hover:scale-105"
-                >
-                  <Plus size={22} />
-                  Nueva Planilla
-                </button>
-              )}
+             {/* Botón Nueva Planilla */}
+{planilla?.estado !== 'pendiente' && (
+  <button
+    onClick={async () => {
+      setLoading(true);
+      
+      // ✅ Calcular la próxima quincena
+      const proximaQuincena = calcularProximaQuincena(planilla);
+      
+      // ✅ Pasar los valores directamente a la función
+      const resultado = await buscarPrimeraQuincenaDisponible(
+        proximaQuincena.año,
+        proximaQuincena.mes,
+        proximaQuincena.quincena
+      );
+      
+      if (resultado.exito) {
+        const planillaConEmpleados = {
+          ...resultado.planilla,
+          empleados: Array.isArray(resultado.planilla.empleados) 
+            ? resultado.planilla.empleados 
+            : []
+        };
+        setPlanilla(planillaConEmpleados);
+        
+        // ✅ Actualizar el estado con los valores correctos
+        setInfoPlanilla({
+          año: resultado.planilla.año,
+          mes: resultado.planilla.mes,
+          quincena: resultado.planilla.quincena
+        });
+        
+        Swal.fire({
+          icon: 'success',
+          title: '¡Planilla creada!',
+          text: resultado.mensaje,
+          timer: 2500,
+          showConfirmButton: false
+        });
+      } else {
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: resultado.mensaje
+        });
+      }
+      
+      setLoading(false);
+    }}
+    className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-[#5F8EAD] to-[#5D9646] text-white rounded-xl hover:opacity-90 font-bold shadow-lg hover:shadow-xl transition-all transform hover:scale-105"
+  >
+    <Plus size={22} />
+    Nueva Planilla
+  </button>
+)}
             </div>
           </div>
 
