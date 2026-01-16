@@ -61,231 +61,147 @@ const ReportesModal = ({ isOpen, onClose, apiUrl }) => {
     setShowAlert(true);
   };
 
-  // ✅ Obtener token correctamente
-  const getAuthToken = () => {
-    try {
-      const rawToken = localStorage.getItem('authToken');
-      if (!rawToken) return null;
-      
-      const parsed = JSON.parse(rawToken);
-      return parsed?.token || null;
-    } catch (error) {
-      console.error('Error obteniendo token:', error);
-      return null;
+  const descargarPDF = async (url, nombreArchivo, successMessage) => {
+  try {
+    const response = await api.get(url, { responseType: 'blob' });
+
+    const blob = new Blob([response.data], { type: 'application/pdf' });
+    const blobUrl = window.URL.createObjectURL(blob);
+
+    const a = document.createElement('a');
+    a.href = blobUrl;
+    a.download = nombreArchivo;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+
+    window.URL.revokeObjectURL(blobUrl);
+
+    setTimeout(() => {
+      setGenerando(false);
+      showCustomAlert('success', '¡Reporte generado!', successMessage);
+    }, 800);
+
+  } catch (error) {
+    setGenerando(false);
+    const status = error.response?.status;
+
+    if (status === 404) {
+      showCustomAlert(
+        'info',
+        'Sin datos disponibles',
+        'No existen registros para el período seleccionado.'
+      );
+      return;
     }
-  };
+
+    showCustomAlert(
+      'error',
+      'Error del servidor',
+      'No se pudo generar el reporte.',
+      ['Verifica tu sesión', 'Intenta nuevamente']
+    );
+  }
+};
+
 
   const generarReporte = async () => {
-    const token = getAuthToken();
-    if (!token) {
-      showCustomAlert('error', 'No autorizado', 'No se encontró token de autenticación. Por favor inicia sesión nuevamente.');
-      return;
-    }
+  // Validaciones
+  if (tipoReporte === 'mensual' && !mesSeleccionado) {
+    showCustomAlert('warning', 'Mes no seleccionado', 'Selecciona un mes.');
+    return;
+  }
 
-    // Validaciones
-    if (tipoReporte === 'mensual' && !mesSeleccionado) {
-      showCustomAlert('warning', 'Mes no seleccionado', 'Por favor selecciona un mes para generar el reporte.');
+  if (tipoReporte === 'semanal') {
+    if (!fechaInicio || !fechaFin) {
+      showCustomAlert('warning', 'Fechas requeridas', 'Selecciona ambas fechas.');
       return;
     }
-    if (tipoReporte === 'semanal') {
-      if (!fechaInicio) {
-        showCustomAlert('warning', 'Fecha no seleccionada', 'Por favor selecciona una fecha de inicio.');
-        return;
-      }
-      if (!fechaFin) {
-        showCustomAlert('warning', 'Fecha no seleccionada', 'Por favor selecciona una fecha de fin.');
-        return;
-      }
-      if (parseDate(fechaInicio) > parseDate(fechaFin)) {
-        showCustomAlert('warning', 'Rango inválido', 'La fecha de inicio debe ser anterior a la fecha de fin.');
-        return;
-      }
-    }
-    if (tipoReporte === 'multiple' && mesesSeleccionados.length === 0) {
-      showCustomAlert('warning', 'Meses no seleccionados', 'Por favor selecciona al menos un mes para continuar.');
+    if (parseDate(fechaInicio) > parseDate(fechaFin)) {
+      showCustomAlert('warning', 'Rango inválido', 'La fecha inicial no puede ser mayor.');
       return;
     }
+  }
 
-    setGenerando(true);
-    
+  if (tipoReporte === 'multiple' && mesesSeleccionados.length === 0) {
+    showCustomAlert('warning', 'Meses requeridos', 'Selecciona al menos un mes.');
+    return;
+  }
+
+  setGenerando(true);
+
+  // ===== ANUAL =====
+  if (tipoReporte === 'anual') {
+    await descargarPDF(
+      `/reporte/anual/${anoSeleccionado}`,
+      `reporte-anual-${anoSeleccionado}.pdf`,
+      `El reporte anual ${anoSeleccionado} está listo.`
+    );
+    return;
+  }
+
+  // ===== MENSUAL =====
+  if (tipoReporte === 'mensual') {
+    await descargarPDF(
+      `/reporte/mensual-simple/${mesSeleccionado}/${anoSeleccionado}`,
+      `reporte-${mesSeleccionado}-${anoSeleccionado}.pdf`,
+      'El reporte mensual está listo.'
+    );
+    return;
+  }
+
+  // ===== RANGO FECHAS =====
+  if (tipoReporte === 'semanal') {
+    await descargarPDF(
+      `/reporte/rango-fechas/${fechaInicio}/${fechaFin}`,
+      `reporte-${fechaInicio}-al-${fechaFin}.pdf`,
+      `Reporte del ${formatearFecha(fechaInicio)} al ${formatearFecha(fechaFin)} listo.`
+    );
+    return;
+  }
+
+  // ===== MULTIPLE (YA ESTABA BIEN) =====
+  if (tipoReporte === 'multiple') {
     try {
-      if (tipoReporte === 'anual') {
-        try {
-          // ✅ Verificar primero con api
-          await api.get(`/reporte/anual/${anoSeleccionado}`);
-          
-          // Si no hay error, abrir en nueva ventana
-          window.open(`${apiUrl}/reporte/anual/${anoSeleccionado}?token=${token}`, '_blank');
-          
-          setTimeout(() => {
-            setGenerando(false);
-            showCustomAlert('success', '¡Reporte generado!', 'El reporte anual está listo para visualizar.');
-          }, 1000);
-        } catch (error) {
-          setGenerando(false);
-          
-          if (error.response?.status === 404) {
-            showCustomAlert(
-              'info',
-              'Sin datos disponibles',
-              `No hay registros de mantenimiento para el año ${anoSeleccionado}.`,
-              ['Verifica que existan mantenimientos registrados en ese año', 'Intenta con otro año']
-            );
-          } else {
-            showCustomAlert(
-              'error',
-              'Error de conexión',
-              'No se pudo conectar con el servidor.',
-              ['Verifica tu conexión a internet', 'Intenta nuevamente']
-            );
-          }
-        }
-      } else if (tipoReporte === 'mensual') {
-        try {
-          // ✅ Verificar primero con api
-          await api.get(`/reporte/mensual-simple/${mesSeleccionado}/${anoSeleccionado}`);
-          
-          // Si no hay error, abrir en nueva ventana
-          window.open(`${apiUrl}/reporte/mensual-simple/${mesSeleccionado}/${anoSeleccionado}?token=${token}`, '_blank');
-          
-          setTimeout(() => {
-            setGenerando(false);
-            showCustomAlert('success', '¡Reporte generado!', 'El reporte mensual está listo para visualizar.');
-          }, 1000);
-        } catch (error) {
-          setGenerando(false);
-          
-          if (error.response?.status === 404) {
-            const mesNombre = meses.find(m => m.value === parseInt(mesSeleccionado))?.label;
-            showCustomAlert(
-              'info',
-              'Sin datos disponibles',
-              `No hay registros de mantenimiento para ${mesNombre} ${anoSeleccionado}.`,
-              ['Verifica que existan mantenimientos registrados en ese período', 'Intenta con otro mes']
-            );
-          } else {
-            showCustomAlert(
-              'error',
-              'Error de conexión',
-              'No se pudo conectar con el servidor.',
-              ['Verifica tu conexión a internet', 'Intenta nuevamente']
-            );
-          }
-        }
-      } else if (tipoReporte === 'semanal') {
-        try {
-          // ✅ Verificar primero con api
-          await api.get(`/reporte/rango-fechas/${fechaInicio}/${fechaFin}`);
-          
-          // Si no hay error, abrir en nueva ventana
-          window.open(`${apiUrl}/reporte/rango-fechas/${fechaInicio}/${fechaFin}?token=${token}`, '_blank');
-          
-          setTimeout(() => {
-            setGenerando(false);
-            showCustomAlert(
-              'success', 
-              '¡Reporte generado!', 
-              `Reporte del ${formatearFecha(fechaInicio)} al ${formatearFecha(fechaFin)} está listo.`
-            );
-          }, 1000);
-        } catch (error) {
-          setGenerando(false);
-          
-          if (error.response?.status === 404) {
-            showCustomAlert(
-              'info',
-              'Sin datos disponibles',
-              'No hay registros de mantenimiento en el rango de fechas seleccionado.',
-              ['Verifica que existan mantenimientos registrados en ese período']
-            );
-          } else {
-            showCustomAlert(
-              'error',
-              'Error de conexión',
-              'No se pudo conectar con el servidor.',
-              ['Verifica tu conexión a internet', 'Intenta nuevamente']
-            );
-          }
-        }
-      } else if (tipoReporte === 'multiple') {
-        try {
-          const response = await api.post(
-            '/reporte/mensual-multiple',
-            {
-              meses: mesesSeleccionados.sort((a, b) => a - b),
-              ano: anoSeleccionado
-            },
-            {
-              responseType: 'blob'
-            }
-          );
+      const response = await api.post(
+        '/reporte/mensual-multiple',
+        {
+          meses: mesesSeleccionados.sort((a, b) => a - b),
+          ano: anoSeleccionado
+        },
+        { responseType: 'blob' }
+      );
 
-          const blob = new Blob([response.data], { type: 'application/pdf' });
-          const url = window.URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = `reporte-multiple-${anoSeleccionado}.pdf`;
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
-          window.URL.revokeObjectURL(url);
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
 
-          setTimeout(() => {
-            setGenerando(false);
-            showCustomAlert(
-              'success',
-              '¡Descarga completa!',
-              'El reporte de múltiples meses se ha descargado correctamente.'
-            );
-          }, 1000);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `reporte-multiple-${anoSeleccionado}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
 
-        } catch (error) {
-          setGenerando(false);
-          
-          if (error.response?.status === 404) {
-            const mesesSinDatosNombres = mesesSeleccionados.map(m =>
-              meses.find(mes => mes.value === m)?.label
-            );
+      setTimeout(() => {
+        setGenerando(false);
+        showCustomAlert(
+          'success',
+          '¡Descarga completa!',
+          'El reporte de múltiples meses se descargó correctamente.'
+        );
+      }, 800);
 
-            showCustomAlert(
-              'info',
-              'Sin datos disponibles',
-              `Ninguno de los meses seleccionados tiene registros de mantenimiento para ${anoSeleccionado}.`,
-              mesesSinDatosNombres
-            );
-            return;
-          }
-
-          if (error.response?.status === 400) {
-            showCustomAlert(
-              'warning',
-              'Solicitud inválida',
-              error.response.data?.message || 'Los datos enviados no son válidos.',
-              ['Verifica los meses seleccionados', 'Intenta nuevamente']
-            );
-            return;
-          }
-
-          showCustomAlert(
-            'error',
-            'Error del servidor',
-            error.response?.data?.message || `El servidor respondió con un error.`,
-            ['Verifica tu conexión a internet', 'Si el problema persiste, contacta al administrador']
-          );
-        }
-      }
-      
     } catch (error) {
-      console.error('Error:', error);
       setGenerando(false);
       showCustomAlert(
         'error',
-        'Error al generar reporte',
-        'Ocurrió un problema al procesar tu solicitud. Por favor intenta nuevamente.',
-        ['Verifica tu conexión a internet', 'Si el problema persiste, contacta al administrador']
+        'Error del servidor',
+        'No se pudo generar el reporte múltiple.'
       );
     }
-  };
+  }
+};
 
   if (!isOpen) return null;
 
@@ -310,7 +226,6 @@ const ReportesModal = ({ isOpen, onClose, apiUrl }) => {
           </div>
 
           <div className="p-6 overflow-y-auto max-h-[calc(90vh-180px)]">
-            {/* ... resto del contenido del modal igual ... */}
             {/* Selector de Tipo de Reporte */}
             <div className="mb-6">
               <label className="block text-sm font-semibold text-gray-700 mb-3">Tipo de Reporte</label>
@@ -369,7 +284,198 @@ const ReportesModal = ({ isOpen, onClose, apiUrl }) => {
               </div>
             </div>
 
-            {/* Resto de opciones según tipo... (mantener igual) */}
+            {/* Opciones según tipo seleccionado */}
+            {tipoReporte === 'anual' && (
+              <div className="space-y-4">
+                <div className="bg-indigo-50 rounded-xl p-5 border border-indigo-100 mb-4">
+                  <div className="flex items-start gap-3">
+                    <FileText className="text-indigo-600 mt-1" size={20} />
+                    <div>
+                      <h3 className="font-semibold text-indigo-900 mb-1">Reporte Anual por Camión</h3>
+                      <p className="text-sm text-indigo-700">
+                        Genera un reporte horizontal con tabla de todas las placas y sus montos por mes del año seleccionado.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Año</label>
+                  <div className="relative">
+                    <select
+                      value={anoSeleccionado}
+                      onChange={(e) => setAnoSeleccionado(Number(e.target.value))}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 appearance-none bg-white"
+                    >
+                      {anos.map(ano => (
+                        <option key={ano} value={ano}>{ano}</option>
+                      ))}
+                    </select>
+                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={20} />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {tipoReporte === 'mensual' && (
+              <div className="space-y-4">
+                <div className="bg-indigo-50 rounded-xl p-5 border border-indigo-100 mb-4">
+                  <div className="flex items-start gap-3">
+                    <Calendar className="text-indigo-600 mt-1" size={20} />
+                    <div>
+                      <h3 className="font-semibold text-indigo-900 mb-1">Reporte Mensual Individual</h3>
+                      <p className="text-sm text-indigo-700">
+                        Genera un reporte simple con la tabla de placas y montos de un mes específico.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Mes <span className="text-red-500">*</span>
+                    </label>
+                    <div className="relative">
+                      <select
+                        value={mesSeleccionado}
+                        onChange={(e) => setMesSeleccionado(e.target.value)}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 appearance-none bg-white"
+                      >
+                        <option value="">Seleccionar mes</option>
+                        {meses.map(m => (
+                          <option key={m.value} value={m.value}>{m.label}</option>
+                        ))}
+                      </select>
+                      <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={20} />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">Año</label>
+                    <div className="relative">
+                      <select
+                        value={anoSeleccionado}
+                        onChange={(e) => setAnoSeleccionado(Number(e.target.value))}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 appearance-none bg-white"
+                      >
+                        {anos.map(ano => (
+                          <option key={ano} value={ano}>{ano}</option>
+                        ))}
+                      </select>
+                      <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={20} />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {tipoReporte === 'semanal' && (
+              <div className="space-y-4">
+                <div className="bg-indigo-50 rounded-xl p-5 border border-indigo-100 mb-4">
+                  <div className="flex items-start gap-3">
+                    <Calendar className="text-indigo-600 mt-1" size={20} />
+                    <div>
+                      <h3 className="font-semibold text-indigo-900 mb-1">Reporte por Rango de Fechas</h3>
+                      <p className="text-sm text-indigo-700">
+                        Genera un reporte personalizado para cualquier período (semanal, quincenal, mensual, etc).
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">Fecha de Inicio</label>
+                    <input
+                      type="date"
+                      value={fechaInicio}
+                      onChange={(e) => setFechaInicio(e.target.value)}
+                      max={fechaFin || new Date().toISOString().split('T')[0]}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">Fecha de Fin</label>
+                    <input
+                      type="date"
+                      value={fechaFin}
+                      onChange={(e) => setFechaFin(e.target.value)}
+                      min={fechaInicio}
+                      max={new Date().toISOString().split('T')[0]}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white"
+                    />
+                  </div>
+                </div>
+
+                {fechaInicio && fechaFin && (
+                  <div className="bg-blue-50 rounded-lg p-4 border border-blue-100">
+                    <p className="text-sm text-blue-700">
+                      <span className="font-semibold">Período seleccionado:</span> {' '}
+                      {Math.ceil((parseDate(fechaFin) - parseDate(fechaInicio)) / (1000 * 60 * 60 * 24)) + 1} días
+                      {' '}({formatearFecha(fechaInicio)} - {formatearFecha(fechaFin)})
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {tipoReporte === 'multiple' && (
+              <div className="space-y-4">
+                <div className="bg-indigo-50 rounded-xl p-5 border border-indigo-100 mb-4">
+                  <div className="flex items-start gap-3">
+                    <Calendar className="text-indigo-600 mt-1" size={20} />
+                    <div>
+                      <h3 className="font-semibold text-indigo-900 mb-1">Reporte de Múltiples Meses</h3>
+                      <p className="text-sm text-indigo-700">
+                        Selecciona varios meses para generar un reporte combinado con tablas individuales.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mb-4">
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Año</label>
+                  <div className="relative">
+                    <select
+                      value={anoSeleccionado}
+                      onChange={(e) => setAnoSeleccionado(Number(e.target.value))}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 appearance-none bg-white"
+                    >
+                      {anos.map(ano => (
+                        <option key={ano} value={ano}>{ano}</option>
+                      ))}
+                    </select>
+                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={20} />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-3">
+                    Seleccionar Meses <span className="text-red-500">*</span>{" "}
+                    {mesesSeleccionados.length > 0 && (
+                      <span className="text-indigo-600">({mesesSeleccionados.length} seleccionados)</span>
+                    )}
+                  </label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {meses.map(mes => (
+                      <button
+                        key={mes.value}
+                        onClick={() => toggleMes(mes.value)}
+                        className={`px-4 py-3 rounded-lg text-sm font-semibold transition-all ${
+                          mesesSeleccionados.includes(mes.value)
+                            ? 'bg-indigo-600 text-white shadow-md'
+                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        }`}
+                      >
+                        {mes.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Footer con botones */}
@@ -401,10 +507,77 @@ const ReportesModal = ({ isOpen, onClose, apiUrl }) => {
         </div>
       </div>
 
-      {/* Custom Alert Modal (mantener igual) */}
+      {/* Custom Alert Modal */}
       {showAlert && (
         <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-[60] p-4 animate-fadeIn">
-          {/* ... contenido del alert igual ... */}
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden animate-slideUp">
+            {/* Alert Icon Header */}
+            <div className={`px-6 py-8 ${
+              alertData.type === 'success' ? 'bg-gradient-to-br from-green-50 to-emerald-50' :
+              alertData.type === 'error' ? 'bg-gradient-to-br from-red-50 to-rose-50' :
+              alertData.type === 'warning' ? 'bg-gradient-to-br from-amber-50 to-yellow-50' :
+              'bg-gradient-to-br from-blue-50 to-indigo-50'
+            }`}>
+              <div className="flex flex-col items-center text-center">
+                <div className={`w-16 h-16 rounded-full flex items-center justify-center mb-4 ${
+                  alertData.type === 'success' ? 'bg-green-100' :
+                  alertData.type === 'error' ? 'bg-red-100' :
+                  alertData.type === 'warning' ? 'bg-amber-100' :
+                  'bg-blue-100'
+                }`}>
+                  {alertData.type === 'success' ? (
+                    <CheckCircle className="text-green-600" size={32} />
+                  ) : alertData.type === 'error' ? (
+                    <X className="text-red-600" size={32} />
+                  ) : (
+                    <AlertCircle className={
+                      alertData.type === 'warning' ? 'text-amber-600' : 'text-blue-600'
+                    } size={32} />
+                  )}
+                </div>
+                <h3 className={`text-xl font-bold mb-2 ${
+                  alertData.type === 'success' ? 'text-green-900' :
+                  alertData.type === 'error' ? 'text-red-900' :
+                  alertData.type === 'warning' ? 'text-amber-900' :
+                  'text-blue-900'
+                }`}>
+                  {alertData.title}
+                </h3>
+                <p className="text-gray-600 text-sm">
+                  {alertData.message}
+                </p>
+              </div>
+            </div>
+
+            {/* Alert Details */}
+            {alertData.details && alertData.details.length > 0 && (
+              <div className="px-6 py-4 bg-gray-50 border-t border-gray-100">
+                <ul className="space-y-2">
+                  {alertData.details.map((detail, index) => (
+                    <li key={index} className="flex items-start gap-2 text-sm text-gray-600">
+                      <span className="text-gray-400 mt-0.5">•</span>
+                      <span>{detail}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* Alert Actions */}
+            <div className="px-6 py-4 bg-white border-t border-gray-100">
+              <button
+                onClick={() => setShowAlert(false)}
+                className={`w-full py-3 rounded-xl font-semibold transition-all ${
+                  alertData.type === 'success' ? 'bg-green-600 hover:bg-green-700 text-white' :
+                  alertData.type === 'error' ? 'bg-red-600 hover:bg-red-700 text-white' :
+                  alertData.type === 'warning' ? 'bg-amber-600 hover:bg-amber-700 text-white' :
+                  'bg-blue-600 hover:bg-blue-700 text-white'
+                }`}
+              >
+                Entendido
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
