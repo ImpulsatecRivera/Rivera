@@ -8,7 +8,7 @@ const CreateMantenimientoPage = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [camiones, setCamiones] = useState([]);
-  
+
   const [formData, setFormData] = useState({
     fecha_mantenimiento: '',
     tipo_de_mantenimiento: '',
@@ -57,10 +57,10 @@ const CreateMantenimientoPage = () => {
 
   const handleDetalleChange = (index, field, value) => {
     const newDetalles = [...formData.detalles];
-    newDetalles[index][field] = field === 'cantidad' || field === 'precioUnitario' 
-      ? parseFloat(value) || 0 
+    newDetalles[index][field] = field === 'cantidad' || field === 'precioUnitario'
+      ? parseFloat(value) || 0
       : value;
-    
+
     setFormData(prev => ({
       ...prev,
       detalles: newDetalles
@@ -89,7 +89,7 @@ const CreateMantenimientoPage = () => {
   };
 
   const calcularTotal = () => {
-    return formData.detalles.reduce((sum, detalle) => 
+    return formData.detalles.reduce((sum, detalle) =>
       sum + calcularSubtotal(detalle.cantidad, detalle.precioUnitario), 0
     );
   };
@@ -119,10 +119,10 @@ const CreateMantenimientoPage = () => {
       return;
     }
 
-    const detallesValidos = formData.detalles.every(d => 
+    const detallesValidos = formData.detalles.every(d =>
       d.concepto.trim() && d.cantidad > 0 && d.precioUnitario > 0
     );
-    
+
     if (!detallesValidos) {
       setError('Todos los detalles deben estar completos con valores válidos');
       return;
@@ -134,21 +134,21 @@ const CreateMantenimientoPage = () => {
 
       const fechaLocal = new Date(formData.fecha_mantenimiento + 'T12:00:00');
 
-const dataToSend = {
-  fecha_mantenimiento: fechaLocal.toISOString(),
-  mes: fechaLocal.getMonth() + 1,
-  ano: fechaLocal.getFullYear(),
-  tipo_de_mantenimiento: formData.tipo_de_mantenimiento,
-  descripcion: formData.descripcion,
-  ciculatioCard: formData.ciculatioCard,
-  estado: 'pendiente',
-  detalles: formData.detalles.map(d => ({
-    concepto: d.concepto,
-    cantidad: d.cantidad,
-    precioUnitario: d.precioUnitario,
-    subTotal: calcularSubtotal(d.cantidad, d.precioUnitario)
-  }))
-};
+      const dataToSend = {
+        fecha_mantenimiento: fechaLocal.toISOString(),
+        mes: fechaLocal.getMonth() + 1,
+        ano: fechaLocal.getFullYear(),
+        tipo_de_mantenimiento: formData.tipo_de_mantenimiento,
+        descripcion: formData.descripcion,
+        ciculatioCard: formData.ciculatioCard,
+        estado: 'pendiente',
+        detalles: formData.detalles.map(d => ({
+          concepto: d.concepto,
+          cantidad: d.cantidad,
+          precioUnitario: d.precioUnitario,
+          subTotal: calcularSubtotal(d.cantidad, d.precioUnitario)
+        }))
+      };
 
 
       console.log('Datos enviados al backend:', dataToSend);
@@ -156,7 +156,7 @@ const dataToSend = {
       const response = await fetch(`${config.api.API_URL}/mantenimientos`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify(dataToSend)
       });
@@ -167,7 +167,7 @@ const dataToSend = {
 
       const result = await response.json();
       console.log('Mantenimiento creado:', result);
-      
+
       navigate('/mantenimientos');
 
     } catch (err) {
@@ -190,7 +190,7 @@ const dataToSend = {
             <ArrowLeft size={20} />
             Volver a Mantenimientos
           </button>
-          
+
           <div className="flex items-center gap-4">
             <div className="bg-gradient-to-br from-[#34353A] to-[#5F8EAD] p-4 rounded-2xl shadow-lg">
               <Plus className="text-white" size={32} />
@@ -228,7 +228,7 @@ const dataToSend = {
               <Calendar className="text-[#5F8EAD]" size={22} />
               Información Básica
             </h3>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Fecha */}
               <div>
