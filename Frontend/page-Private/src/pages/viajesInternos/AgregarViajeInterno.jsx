@@ -12,12 +12,7 @@ import {
   Package,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { config } from "../../config";
-
-const VIAJES_OPERATIVOS_ENDPOINT = `${config.api.API_URL}/viajes-operativos/crear`;
-const CLIENTES_ENDPOINT = `${config.api.API_URL}/clientes`;
-const MOTORISTAS_ENDPOINT = `${config.api.API_URL}/motoristas`;
-const CAMIONES_ENDPOINT = `${config.api.API_URL}/camiones`;
+import { api } from "../../Context/authContext";
 
 const TIPO_CARGA = [
   { value: "general", label: "General" },
@@ -44,7 +39,6 @@ const getMotoristaTruckId = (m) => {
   if (m?.truck?._id) return String(m.truck._id);
   if (m?.camion?._id) return String(m.camion._id);
 
-  // Heuristic: look for keys that may contain truck info (prefer nested objects)
   for (const k of Object.keys(m)) {
     if (/(camion|truck|vehiculo|vehicle)/i.test(k)) {
       const v = m[k];
@@ -55,7 +49,6 @@ const getMotoristaTruckId = (m) => {
     }
   }
 
-  // Do NOT return the motorista's own _id as a truck id
   return "";
 };
 
@@ -117,21 +110,19 @@ export default function AgregarViajeOperativo() {
   }, []);
 
   useEffect(() => {
-  if (formData.rutaOrigen && formData.rutaDestino) {
-    setFormData((p) => ({
-      ...p,
-      rutaCompleta: `${formData.rutaOrigen}/${formData.rutaDestino}`,
-    }));
-  }
-}, [formData.rutaOrigen, formData.rutaDestino]);
+    if (formData.rutaOrigen && formData.rutaDestino) {
+      setFormData((p) => ({
+        ...p,
+        rutaCompleta: `${formData.rutaOrigen}/${formData.rutaDestino}`,
+      }));
+    }
+  }, [formData.rutaOrigen, formData.rutaDestino]);
 
   const fetchClientes = async () => {
     try {
       setLoadingClientes(true);
-      const res = await fetch(CLIENTES_ENDPOINT, { credentials: 'include' });
-      const json = await res.json().catch(() => ({}));
-      const rows = json?.data?.clientes || json?.data || (Array.isArray(json) ? json : []);
-
+      const { data } = await api.get('/clientes');
+      const rows = data?.data?.clientes || data?.data || (Array.isArray(data) ? data : []);
       const corporativos = rows.filter((c) => c?.tipoCliente === "corporativo");
       setClientes(corporativos);
     } catch (e) {
@@ -155,85 +146,71 @@ export default function AgregarViajeOperativo() {
   }, [clientes]);
 
   const crearClienteYSeleccionar = async () => {
-  const nombreEmpresa = (nuevoCliente.nombreEmpresa || "").trim();
-  const nombreComercial = (nuevoCliente.nombreComercial || nombreEmpresa).trim();
-  const ruc = (nuevoCliente.ruc || "").trim();
-  const email = (nuevoCliente.email || "").trim();
-  const phone = (nuevoCliente.phone || "").trim();
-  const address = (nuevoCliente.address || "").trim();
+    const nombreEmpresa = (nuevoCliente.nombreEmpresa || "").trim();
+    const nombreComercial = (nuevoCliente.nombreComercial || nombreEmpresa).trim();
+    const ruc = (nuevoCliente.ruc || "").trim();
+    const email = (nuevoCliente.email || "").trim();
+    const phone = (nuevoCliente.phone || "").trim();
+    const address = (nuevoCliente.address || "").trim();
 
-  if (!nombreEmpresa || !ruc || !email || !phone || !address) {
-    setError("Completa todos los campos obligatorios del cliente");
-    return;
-  }
+    if (!nombreEmpresa || !ruc || !email || !phone || !address) {
+      setError("Completa todos los campos obligatorios del cliente");
+      return;
+    }
 
-  setCreatingCliente(true);
-  setError(null);
-
-  try {
-    const payload = {
-      tipoCliente: "corporativo",
-      nombreEmpresa,
-      nombreComercial,
-      ruc,
-      email,
-      phone,
-      address,
-      terminosPago: "contado",
-      limiteCredito: 0,
-      estadoCorporativo: "activo",
-    };
-
-    const res = await fetch(CLIENTES_ENDPOINT, {
-      method: "POST",
-      credentials: 'include',
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-
-    const json = await res.json().catch(() => ({}));
-    if (!res.ok || json?.success === false)
-      throw new Error(json?.message || "Error al crear cliente");
-
-    const created = json?.data?.cliente || json?.data || json;
-    const newId = String(created?._id || created?.id || "");
-
-    if (!newId) throw new Error("No se pudo obtener el ID del cliente creado");
-
-    // Recargar clientes
-    await fetchClientes();
-
-    // Seleccionar el nuevo cliente
-    setFormData((p) => ({
-      ...p,
-      clienteId: newId,
-      clienteNombre: nombreComercial,
-    }));
-
-    // Limpiar formulario
-    setNuevoCliente({
-      nombreEmpresa: "",
-      nombreComercial: "",
-      ruc: "",
-      email: "",
-      phone: "",
-      address: "",
-    });
-
+    setCreatingCliente(true);
     setError(null);
-  } catch (e) {
-    setError(e.message || "Error creando cliente");
-  } finally {
-    setCreatingCliente(false);
-  }
-};
+
+    try {
+      const payload = {
+        tipoCliente: "corporativo",
+        nombreEmpresa,
+        nombreComercial,
+        ruc,
+        email,
+        phone,
+        address,
+        terminosPago: "contado",
+        limiteCredito: 0,
+        estadoCorporativo: "activo",
+      };
+
+      const { data } = await api.post('/clientes', payload);
+      const created = data?.data?.cliente || data?.data || data;
+      const newId = String(created?._id || created?.id || "");
+
+      if (!newId) throw new Error("No se pudo obtener el ID del cliente creado");
+
+      await fetchClientes();
+
+      setFormData((p) => ({
+        ...p,
+        clienteId: newId,
+        clienteNombre: nombreComercial,
+      }));
+
+      setNuevoCliente({
+        nombreEmpresa: "",
+        nombreComercial: "",
+        ruc: "",
+        email: "",
+        phone: "",
+        address: "",
+      });
+
+      setError(null);
+    } catch (e) {
+      setError(e.response?.data?.message || e.message || "Error creando cliente");
+    } finally {
+      setCreatingCliente(false);
+    }
+  };
 
   const fetchMotoristas = async () => {
     try {
       setLoadingMotoristas(true);
-      const res = await fetch(MOTORISTAS_ENDPOINT, { credentials: 'include' });
-      const json = await res.json().catch(() => ({}));
-      const rows = json?.data || (Array.isArray(json) ? json : []);
+      const { data } = await api.get('/motoristas');
+      const rows = data?.data || (Array.isArray(data) ? data : []);
       setMotoristas(Array.isArray(rows) ? rows : []);
     } catch (e) {
       console.error("Error cargando motoristas:", e);
@@ -258,12 +235,8 @@ export default function AgregarViajeOperativo() {
   const fetchCamiones = async () => {
     try {
       setLoadingCamiones(true);
-      const res = await fetch(CAMIONES_ENDPOINT, { credentials: 'include' });
-      const json = await res.json().catch(() => ({}));
-
-      const rows =
-        json?.data?.camiones || json?.camiones || json?.data || (Array.isArray(json) ? json : []);
-
+      const { data } = await api.get('/camiones');
+      const rows = data?.data?.camiones || data?.camiones || data?.data || (Array.isArray(data) ? data : []);
       setCamiones(Array.isArray(rows) ? rows : []);
     } catch (e) {
       console.error("Error cargando camiones:", e);
@@ -271,7 +244,6 @@ export default function AgregarViajeOperativo() {
       setLoadingCamiones(false);
     }
   };
-
 
   const camionesOptions = useMemo(() => {
     return (camiones || [])
@@ -299,18 +271,19 @@ export default function AgregarViajeOperativo() {
       clienteNombre: found?.nombre || p.clienteNombre,
     }));
   };
-const validar = () => {
-  if (!formData.clienteId) return "Selecciona un cliente";
-  if (!formData.conductorId) return "Selecciona un motorista";
-  if (!formData.truckId) return "Selecciona un camión";
-  if (!formData.departureTime) return "Ingresa fecha/hora de salida";
-  if (!formData.arrivalTime) return "Ingresa fecha/hora de llegada";
-  if (!formData.rutaOrigen) return "Ingresa origen";
-  if (!formData.rutaDestino) return "Ingresa destino";
-  if (!formData.montoAcordado || Number(formData.montoAcordado) <= 0)
-    return "Ingresa un monto válido";
-  return null;
-};
+
+  const validar = () => {
+    if (!formData.clienteId) return "Selecciona un cliente";
+    if (!formData.conductorId) return "Selecciona un motorista";
+    if (!formData.truckId) return "Selecciona un camión";
+    if (!formData.departureTime) return "Ingresa fecha/hora de salida";
+    if (!formData.arrivalTime) return "Ingresa fecha/hora de llegada";
+    if (!formData.rutaOrigen) return "Ingresa origen";
+    if (!formData.rutaDestino) return "Ingresa destino";
+    if (!formData.montoAcordado || Number(formData.montoAcordado) <= 0)
+      return "Ingresa un monto válido";
+    return null;
+  };
 
   const handleSubmit = async () => {
     const err = validar();
@@ -329,42 +302,36 @@ const validar = () => {
         truckId: formData.truckId,
         conductorId: formData.conductorId,
         codigoProgramacion: formData.codigoProgramacion || undefined,
-        tripDescription:
-          formData.tripDescription ||
-          `${formData.rutaCompleta} - ${formData.clienteNombre}`,
-       departureTime: new Date(formData.departureTime).toISOString(),
-arrivalTime: new Date(formData.arrivalTime).toISOString(),
-
+        tripDescription: formData.tripDescription || `${formData.rutaCompleta} - ${formData.clienteNombre}`,
+        departureTime: new Date(formData.departureTime).toISOString(),
+        arrivalTime: new Date(formData.arrivalTime).toISOString(),
         rutaOrigen: formData.rutaOrigen,
         rutaDestino: formData.rutaDestino,
         rutaCompleta: formData.rutaCompleta,
         distanciaTotal: Number(formData.distanciaTotal) || 0,
-        tiempoEstimado: Number(formData.tiempoEstimado) || 0,
+        tiempoEstimado: formData.tiempoEstimado || "00:00",
         cargaDescripcion: formData.cargaDescripcion || "Carga general",
         cargaPeso: Number(formData.cargaPeso) || 0,
         cargaTipo: formData.cargaTipo,
         montoAcordado: Number(formData.montoAcordado),
-         metodoPago: formData.metodoPago, //
+        metodoPago: formData.metodoPago,
         condiciones: formData.condiciones,
         observaciones: formData.observaciones || "",
       };
 
-      
-      const res = await fetch(VIAJES_OPERATIVOS_ENDPOINT, {
-        method: "POST",
-        credentials: 'include',
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(dataToSend),
-      });
+      console.log('📤 Enviando payload:', dataToSend);
 
-      const json = await res.json().catch(() => ({}));
-      if (!res.ok || json?.success === false)
-        throw new Error(json?.message || "Error al crear el viaje operativo");
+      const { data } = await api.post('/viajes-operativos/crear', dataToSend);
+
+      if (!data?.success) {
+        throw new Error(data?.message || "Error al crear el viaje operativo");
+      }
 
       navigate("/viajesInternos");
     } catch (e) {
-      setError(e.message || "Error al guardar");
-      console.error(e);
+      console.error('❌ Error completo:', e);
+      console.error('❌ Response data:', e.response?.data);
+      setError(e.response?.data?.message || e.message || "Error al guardar");
     } finally {
       setLoading(false);
     }
@@ -375,7 +342,7 @@ arrivalTime: new Date(formData.arrivalTime).toISOString(),
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-8">
       <div className="max-w-6xl mx-auto">
-        {/* Header - COLORES CAMBIADOS */}
+        {/* Header */}
         <div className="mb-8">
           <button
             onClick={() => navigate("/viajesInternos")}
@@ -410,7 +377,7 @@ arrivalTime: new Date(formData.arrivalTime).toISOString(),
             </div>
           )}
 
-          {/* Cliente Corporativo - COLORES CAMBIADOS */}
+          {/* Cliente Corporativo */}
           <div className="mb-8">
             <h3 className="text-xl font-bold text-[#34353A] mb-4 flex items-center gap-2">
               <User className="text-[#5F8EAD]" size={22} />
@@ -505,7 +472,7 @@ arrivalTime: new Date(formData.arrivalTime).toISOString(),
             </div>
           </div>
 
-          {/* Fechas y Horarios - COLORES CAMBIADOS */}
+          {/* Fechas y Horarios */}
           <div className="mb-8">
             <h3 className="text-xl font-bold text-[#34353A] mb-4 flex items-center gap-2">
               <Calendar className="text-[#5F8EAD]" size={22} />
@@ -541,7 +508,7 @@ arrivalTime: new Date(formData.arrivalTime).toISOString(),
             </div>
           </div>
 
-          {/* Ruta - COLORES CAMBIADOS */}
+          {/* Ruta */}
           <div className="mb-8">
             <h3 className="text-xl font-bold text-[#34353A] mb-4 flex items-center gap-2">
               <MapPin className="text-[#5D9646]" size={22} />
@@ -604,45 +571,42 @@ arrivalTime: new Date(formData.arrivalTime).toISOString(),
                 />
               </div>
 
-            <div>
-  <label className="block text-sm font-semibold text-[#34353A] mb-2">
-    Tiempo Estimado (HH:MM)
-  </label>
-  <input
-    type="text"
-    name="tiempoEstimado"
-    value={formData.tiempoEstimado}
-    onChange={(e) => {
-      let val = e.target.value.replace(/[^\d:]/g, '');
-      
-      // Auto-agregar ":" después de 2 dígitos
-      if (val.length === 2 && !val.includes(':')) {
-        val = val + ':';
-      }
-      
-      // Limitar formato HH:MM (máx 5 caracteres)
-      if (val.length <= 5) {
-        const parts = val.split(':');
-        if (parts.length <= 2) {
-          const horas = parts[0] ? parseInt(parts[0]) : 0;
-          const minutos = parts[1] ? parseInt(parts[1]) : 0;
-          
-          // Validar rangos: horas 0-99, minutos 0-59
-          if (horas <= 99 && (!parts[1] || minutos <= 59)) {
-            setFormData(prev => ({ ...prev, tiempoEstimado: val }));
-          }
-        }
-      }
-    }}
-    placeholder="Ej: 09:30"
-    maxLength="5"
-    className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#5F8EAD] focus:border-[#5F8EAD]"
-  />
-</div>
+              <div>
+                <label className="block text-sm font-semibold text-[#34353A] mb-2">
+                  Tiempo Estimado (HH:MM)
+                </label>
+                <input
+                  type="text"
+                  name="tiempoEstimado"
+                  value={formData.tiempoEstimado}
+                  onChange={(e) => {
+                    let val = e.target.value.replace(/[^\d:]/g, '');
+                    
+                    if (val.length === 2 && !val.includes(':')) {
+                      val = val + ':';
+                    }
+                    
+                    if (val.length <= 5) {
+                      const parts = val.split(':');
+                      if (parts.length <= 2) {
+                        const horas = parts[0] ? parseInt(parts[0]) : 0;
+                        const minutos = parts[1] ? parseInt(parts[1]) : 0;
+                        
+                        if (horas <= 99 && (!parts[1] || minutos <= 59)) {
+                          setFormData(prev => ({ ...prev, tiempoEstimado: val }));
+                        }
+                      }
+                    }
+                  }}
+                  placeholder="Ej: 09:30"
+                  maxLength="5"
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#5F8EAD] focus:border-[#5F8EAD]"
+                />
+              </div>
             </div>
           </div>
 
-          {/* Carga - COLORES CAMBIADOS */}
+          {/* Carga */}
           <div className="mb-8">
             <h3 className="text-xl font-bold text-[#34353A] mb-4 flex items-center gap-2">
               <Package className="text-[#5F8EAD]" size={22} />
@@ -664,26 +628,26 @@ arrivalTime: new Date(formData.arrivalTime).toISOString(),
                 />
               </div>
 
-            <div>
-  <label className="block text-sm font-semibold text-[#34353A] mb-2">
-    Peso (kg) - Máx: 6 digitos
-  </label>
-  <input
-    type="number"
-    name="cargaPeso"
-    value={formData.cargaPeso}
-    onChange={(e) => {
-      const val = e.target.value;
-      if (val === '' || (Number(val) >= 0 && val.length <= 6)) {
-        handleInputChange(e);
-      }
-    }}
-    placeholder="Ej: 15000"
-    max="999999"
-    min="0"
-    className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#5F8EAD] focus:border-[#5F8EAD]"
-  />
-</div>
+              <div>
+                <label className="block text-sm font-semibold text-[#34353A] mb-2">
+                  Peso (kg) - Máx: 6 dígitos
+                </label>
+                <input
+                  type="number"
+                  name="cargaPeso"
+                  value={formData.cargaPeso}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val === '' || (Number(val) >= 0 && val.length <= 6)) {
+                      handleInputChange(e);
+                    }
+                  }}
+                  placeholder="Ej: 15000"
+                  max="999999"
+                  min="0"
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#5F8EAD] focus:border-[#5F8EAD]"
+                />
+              </div>
 
               <div>
                 <label className="block text-sm font-semibold text-[#34353A] mb-2">
@@ -705,66 +669,63 @@ arrivalTime: new Date(formData.arrivalTime).toISOString(),
             </div>
           </div>
 
-          {/* Monto - COLORES CAMBIADOS */}
-          <div className="relative max-w-md">
-              <label className="block text-sm font-semibold text-[#34353A] mb-2">
-                  Monto acordado
+          {/* Monto */}
+          <div className="mb-8">
+            <h3 className="text-xl font-bold text-[#34353A] mb-4 flex items-center gap-2">
+              <DollarSign className="text-[#5F8EAD]" size={22} />
+              Información Financiera
+            </h3>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="relative">
+                <label className="block text-sm font-semibold text-[#34353A] mb-2">
+                  Monto acordado *
                 </label>
-  <DollarSign
-    className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
-    size={18}
-  />
-  <input
-    type="number"
-    name="montoAcordado"
-    min="0"
-    step="0.01"
-    value={formData.montoAcordado}
-    onChange={(e) => {
-      const val = e.target.value;
-      // Permitir hasta 8 dígitos antes del decimal (99,999,999.99)
-      const partes = val.split('.');
-      if (val === '' || (Number(val) >= 0 && partes[0].length <= 6)) {
-        handleInputChange(e);
-      }
-    }}
-    placeholder="Ej: 250.00"
-    max="99999999.99"
-    className="w-full pl-12 pr-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#5F8EAD] focus:border-[#5F8EAD]"
-  />
-</div>
-<br></br>
+                <DollarSign
+                  className="absolute left-4 top-11 text-gray-400"
+                  size={18}
+                />
+                <input
+                  type="number"
+                  name="montoAcordado"
+                  min="0"
+                  step="0.01"
+                  value={formData.montoAcordado}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    const partes = val.split('.');
+                    if (val === '' || (Number(val) >= 0 && partes[0].length <= 6)) {
+                      handleInputChange(e);
+                    }
+                  }}
+                  placeholder="Ej: 250.00"
+                  max="999999.99"
+                  className="w-full pl-12 pr-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#5F8EAD] focus:border-[#5F8EAD]"
+                />
+              </div>
 
-          {/* Método de Pago */}
-<div className="mb-8">
-  <h3 className="text-xl font-bold text-[#34353A] mb-4 flex items-center gap-2">
-    <DollarSign className="text-[#5F8EAD]" size={22} />
-    Método de Pago
-  </h3>
+              <div>
+                <label className="block text-sm font-semibold text-[#34353A] mb-2">
+                  Método de Pago *
+                </label>
+                <select
+                  name="metodoPago"
+                  value={formData.metodoPago}
+                  onChange={handleInputChange}
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl
+                           focus:outline-none focus:ring-2 focus:ring-[#5F8EAD]
+                           focus:border-[#5F8EAD] bg-white"
+                >
+                  <option value="credito">Crédito</option>
+                  <option value="efectivo">Efectivo</option>
+                  <option value="transferencia">Transferencia</option>
+                  <option value="cheque">Cheque</option>
+                </select>
+              </div>
+            </div>
+          </div>
 
-  <div className="max-w-md">
-    <label className="block text-sm font-semibold text-[#34353A] mb-2">
-      Seleccionar tipo de pago *
-    </label>
-
-    <select
-      name="metodoPago"
-      value={formData.metodoPago}
-      onChange={handleInputChange}
-      className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl
-                 focus:outline-none focus:ring-2 focus:ring-[#5F8EAD]
-                 focus:border-[#5F8EAD] bg-white"
-    >
-      <option value="credito">Crédito</option>
-      <option value="efectivo">Efectivo</option>
-      <option value="transferencia">Transferencia</option>
-      <option value="cheque">Cheque</option>
-    </select>
-  </div>
-</div>
-
-
-          {/* Conductor y Vehículo - COLORES CAMBIADOS */}
+          {/* Conductor y Vehículo */}
           <div className="mb-8">
             <h3 className="text-xl font-bold text-[#34353A] mb-4 flex items-center gap-2">
               <Truck className="text-[#5F8EAD]" size={22} />
@@ -784,21 +745,17 @@ arrivalTime: new Date(formData.arrivalTime).toISOString(),
                       const motorista = (motoristas || []).find((m) => String(m._id) === conductorId);
                       const camionObj = motorista?.camion || motorista?.truck || null;
 
-                      // Try several heuristics to detect a truck id associated to the motorista
                       let associatedTruckId = String(getMotoristaTruckId(motorista) || "") || (camionObj && (camionObj._id || camionObj.id) ? String(camionObj._id || camionObj.id) : "");
 
-                      // If not found, scan the loaded `camiones` for any truck that references this motorista
                       if (!associatedTruckId && Array.isArray(camiones) && camiones.length > 0 && motorista) {
                         const mid = String(motorista._id || motorista.id || "");
                         for (const c of camiones) {
                           try {
-                            // direct id match
                             if (String(c._id || c.id || "") === mid) {
                               associatedTruckId = String(c._id || c.id);
                               break;
                             }
 
-                            // check common driver fields on the camion object
                             const candidateFields = ["driverId", "motoristaId", "conductorId", "assignedDriver", "motorista", "driver", "conductor"];
                             for (const f of candidateFields) {
                               const v = c[f];
@@ -817,7 +774,6 @@ arrivalTime: new Date(formData.arrivalTime).toISOString(),
 
                             if (associatedTruckId) break;
 
-                            // deep scan: look for any field value equal to motorista id
                             for (const key of Object.keys(c || {})) {
                               const val = c[key];
                               if (!val) continue;
@@ -834,22 +790,13 @@ arrivalTime: new Date(formData.arrivalTime).toISOString(),
                             }
 
                             if (associatedTruckId) break;
-                          } catch (xx) {
-                            // ignore malformed camion entries
-                          }
+                          } catch (xx) {}
                         }
                       }
 
-                      // Fallback: if there is exactly one camion in the system, assume it's the one
                       if (!associatedTruckId && Array.isArray(camiones) && camiones.length === 1) {
                         associatedTruckId = String(camiones[0]._id || camiones[0].id || "");
                       }
-
-                      console.log("[DEBUG] motorista select -> conductorId:", conductorId);
-                      console.log("[DEBUG] motorista object:", motorista);
-                      console.log("[DEBUG] camionObj:", camionObj);
-                      console.log("[DEBUG] associatedTruckId:", associatedTruckId);
-                      console.log("[DEBUG] camiones currently:", (camiones || []).map((c) => ({ _id: c._id, placa: c.placa || c.plate || c.placaCamion })));
 
                       if (camionObj && (camionObj._id || camionObj.id || camionObj.placa || camionObj.plate)) {
                         const newCamion = {
@@ -883,30 +830,30 @@ arrivalTime: new Date(formData.arrivalTime).toISOString(),
                 </div>
 
                 <div>
-  <label className="block text-xs font-semibold text-gray-600 mb-1">
-    Camión * (asignado automáticamente)
-  </label>
-  <select
-    value={formData.truckId}
-    onChange={(e) => setFormData((p) => ({ ...p, truckId: e.target.value }))}
-    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl bg-gray-100 cursor-not-allowed text-gray-600"
-    disabled={true}
-  >
-    <option value="">
-      {loadingCamiones ? "Cargando camiones..." : formData.truckId ? "Camión asignado" : "Selecciona un motorista primero"}
-    </option>
-    {camionesOptions.map((c) => (
-      <option key={c.id} value={c.id}>
-        {c.label}
-      </option>
-    ))}
-  </select>
-</div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">
+                    Camión * (asignado automáticamente)
+                  </label>
+                  <select
+                    value={formData.truckId}
+                    onChange={(e) => setFormData((p) => ({ ...p, truckId: e.target.value }))}
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl bg-gray-100 cursor-not-allowed text-gray-600"
+                    disabled={true}
+                  >
+                    <option value="">
+                      {loadingCamiones ? "Cargando camiones..." : formData.truckId ? "Camión asignado" : "Selecciona un motorista primero"}
+                    </option>
+                    {camionesOptions.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
             </div>
           </div>
 
-          {/* Código Programación - COLORES CAMBIADOS */}
+          {/* Código Programación */}
           <div className="mb-8">
             <h3 className="text-xl font-bold text-[#34353A] mb-4">
               Código de Programación (Opcional)
@@ -922,9 +869,9 @@ arrivalTime: new Date(formData.arrivalTime).toISOString(),
             />
           </div>
 
-          {/* Observaciones - COLORES CAMBIADOS */}
+          {/* Observaciones */}
           <div className="mb-8">
-            <h3 className="text-xl font-bold text-[#34353A] mb-4">Direccion detallada del viaje</h3>
+            <h3 className="text-xl font-bold text-[#34353A] mb-4">Dirección detallada del viaje</h3>
 
             <textarea
               name="observaciones"
@@ -936,7 +883,7 @@ arrivalTime: new Date(formData.arrivalTime).toISOString(),
             />
           </div>
 
-          {/* Botones - COLORES CAMBIADOS */}
+          {/* Botones */}
           <div className="flex items-center gap-4">
             <button
               onClick={() => navigate("/viajesOperativos")}

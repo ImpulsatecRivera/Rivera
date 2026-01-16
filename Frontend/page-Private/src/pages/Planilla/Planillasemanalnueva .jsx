@@ -7,6 +7,8 @@ import {
 import { config } from '../../config';
 import Swal from 'sweetalert2';
 import { useAuth } from '../../Context/authContext';
+import { api } from '../../Context/authContext';
+
 
 export default function PlanillaSemanalNueva() {
   const navigate = useNavigate();
@@ -60,70 +62,56 @@ export default function PlanillaSemanalNueva() {
     }
   }, [fechaInicio]);
 
-  const cargarEmpleados = async () => {
-    try {
-      const resEmpleados = await fetch(`${config.api.API_URL}/empleados`, { credentials: 'include' });
-      const dataEmpleados = await resEmpleados.json();
+ const cargarEmpleados = async () => {
+  try {
+    const resEmpleados = await api.get(`${config.api.API_URL}/empleados`);
+    const resMotoristas = await api.get(`${config.api.API_URL}/motoristas`);
 
-      const resMotoristas = await fetch(`${config.api.API_URL}/motoristas`, { credentials: 'include' });
-      const dataMotoristas = await resMotoristas.json();
+    const dataEmpleados = resEmpleados.data;
+    const dataMotoristas = resMotoristas.data;
 
-      let empleados = [];
-      let motoristas = [];
+    let empleados = [];
+    let motoristas = [];
 
-      if (Array.isArray(dataEmpleados)) {
-        empleados = dataEmpleados;
-      } else if (dataEmpleados && dataEmpleados.empleados && Array.isArray(dataEmpleados.empleados)) {
-        empleados = dataEmpleados.empleados;
-      } else if (dataEmpleados && dataEmpleados.data) {
-        if (Array.isArray(dataEmpleados.data)) {
-          empleados = dataEmpleados.data;
-        } else if (typeof dataEmpleados.data === 'object') {
-          const keys = Object.keys(dataEmpleados.data);
-          for (const key of keys) {
-            if (Array.isArray(dataEmpleados.data[key])) {
-              empleados = dataEmpleados.data[key];
-              break;
-            }
-          }
-        }
-      }
+    if (Array.isArray(dataEmpleados)) empleados = dataEmpleados;
+    else if (dataEmpleados?.empleados) empleados = dataEmpleados.empleados;
+    else if (dataEmpleados?.data) empleados = Array.isArray(dataEmpleados.data)
+      ? dataEmpleados.data
+      : Object.values(dataEmpleados.data).find(v => Array.isArray(v)) || [];
 
-      if (Array.isArray(dataMotoristas)) {
-        motoristas = dataMotoristas;
-      } else if (dataMotoristas && dataMotoristas.motoristas && Array.isArray(dataMotoristas.motoristas)) {
-        motoristas = dataMotoristas.motoristas;
-      } else if (dataMotoristas && dataMotoristas.data && Array.isArray(dataMotoristas.data)) {
-        motoristas = dataMotoristas.data;
-      }
+    if (Array.isArray(dataMotoristas)) motoristas = dataMotoristas;
+    else if (dataMotoristas?.motoristas) motoristas = dataMotoristas.motoristas;
+    else if (dataMotoristas?.data) motoristas = dataMotoristas.data;
 
-      const todosEmpleados = [
-        ...empleados.map(e => ({
-          _id: e._id,
-          nombre: `${e.name || e.nombre || ''} ${e.lastName || e.apellido || ''}`.trim(),
-          tipo: 'empleado',
-          planillaTipo: e.planillaTipo || 'N/A',
-          salario: e.salary || e.salario || 0
-        })),
-        ...motoristas.map(m => ({
-          _id: m._id,
-          nombre: `${m.name || m.nombre || ''} ${m.lastName || m.apellido || ''}`.trim(),
-          tipo: 'motorista',
-          planillaTipo: m.planillaTipo || 'N/A',
-          salario: m.salary || m.salario || 0
-        }))
-      ];
+    const todosEmpleados = [
+      ...empleados.map(e => ({
+        _id: e._id,
+        nombre: `${e.name || e.nombre || ''} ${e.lastName || e.apellido || ''}`.trim(),
+        tipo: 'empleado',
+        planillaTipo: e.planillaTipo || 'N/A',
+        salario: e.salary || e.salario || 0
+      })),
+      ...motoristas.map(m => ({
+        _id: m._id,
+        nombre: `${m.name || m.nombre || ''} ${m.lastName || m.apellido || ''}`.trim(),
+        tipo: 'motorista',
+        planillaTipo: m.planillaTipo || 'N/A',
+        salario: m.salary || m.salario || 0
+      }))
+    ];
 
-      setEmpleadosDisponibles(todosEmpleados);
-    } catch (error) {
-      console.error('❌ Error cargando empleados:', error);
-      Swal.fire({
-        icon: 'error',
-        title: 'Error',
-        text: 'No se pudieron cargar los empleados: ' + error.message
-      });
-    }
-  };
+    setEmpleadosDisponibles(todosEmpleados);
+
+  } catch (error) {
+    console.error('❌ Error cargando empleados:', error);
+    Swal.fire({
+      icon: 'error',
+      title: 'Error',
+      text: 'No se pudieron cargar los empleados'
+    });
+  }
+};
+
 
   const toggleEmpleado = (empleado) => {
     if (empleadosSeleccionados.find(e => e._id === empleado._id)) {
@@ -134,80 +122,62 @@ export default function PlanillaSemanalNueva() {
   };
 
   const handleCrearPlanilla = async () => {
-    if (!fechaInicio || !fechaFin) {
-      Swal.fire({
-        icon: 'warning',
-        title: 'Campos incompletos',
-        text: 'Debes seleccionar las fechas de inicio y fin'
-      });
-      return;
-    }
+  if (!fechaInicio || !fechaFin) {
+    Swal.fire({
+      icon: 'warning',
+      title: 'Campos incompletos',
+      text: 'Debes seleccionar las fechas'
+    });
+    return;
+  }
 
-    if (!diasHabiles || diasHabiles < 20 || diasHabiles > 31) {
-      Swal.fire({
-        icon: 'warning',
-        title: 'Días hábiles inválidos',
-        text: 'Los días hábiles deben estar entre 20 y 31'
-      });
-      return;
-    }
+  setLoading(true);
 
-    setLoading(true);
-
-    try {
-      const responsePlanilla = await fetch(`${config.api.API_URL}/planillas/semanal`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          fechaInicio,
-          fechaFin,
-          diasHabiles: parseInt(diasHabiles)
-        })
-      });
-
-      const dataPlanilla = await responsePlanilla.json();
-
-      if (!dataPlanilla.success) {
-        throw new Error(dataPlanilla.message);
+  try {
+    const responsePlanilla = await api.post(
+      `${config.api.API_URL}/planillas/semanal`,
+      {
+        fechaInicio,
+        fechaFin,
+        diasHabiles: parseInt(diasHabiles)
       }
+    );
 
-      const planillaId = dataPlanilla.data._id;
+    const dataPlanilla = responsePlanilla.data;
 
-      if (empleadosSeleccionados.length > 0) {
-        for (const empleado of empleadosSeleccionados) {
-          await fetch(`${config.api.API_URL}/planillas/semanal/${planillaId}/empleado`, {
-            method: 'POST',
-            credentials: 'include',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              empleadoId: empleado._id
-            })
-          });
-        }
-      }
+    if (!dataPlanilla.success) throw new Error(dataPlanilla.message);
 
-      Swal.fire({
-        icon: 'success',
-        title: '¡Planilla Creada!',
-        text: `Se agregaron ${empleadosSeleccionados.length} empleados`,
-        timer: 2000,
-        showConfirmButton: false
-      });
+    const planillaId = dataPlanilla.data._id;
 
-      navigate(`/planilla/semanal/${planillaId}`);
-
-    } catch (error) {
-      console.error('Error creando planilla:', error);
-      Swal.fire({
-        icon: 'error',
-        title: 'Error',
-        text: error.message || 'No se pudo crear la planilla'
-      });
-    } finally {
-      setLoading(false);
+    for (const empleado of empleadosSeleccionados) {
+      await api.post(
+        `${config.api.API_URL}/planillas/semanal/${planillaId}/empleado`,
+        { empleadoId: empleado._id }
+      );
     }
-  };
+
+    Swal.fire({
+      icon: 'success',
+      title: '¡Planilla Creada!',
+      text: `Se agregaron ${empleadosSeleccionados.length} empleados`,
+      timer: 2000,
+      showConfirmButton: false
+    });
+
+    navigate(`/planilla/semanal/${planillaId}`);
+
+  } catch (error) {
+    console.error('Error creando planilla:', error);
+    Swal.fire({
+      icon: 'error',
+      title: 'Error',
+      text: error.message || 'No se pudo crear la planilla'
+    });
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   const empleadosFiltrados = empleadosDisponibles.filter(e =>
     e.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||

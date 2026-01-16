@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { ArrowLeft, Calendar, Save, AlertCircle, Fuel } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { config } from "../../config";
+import { api } from '../../Context/authContext';
 
 const AgregarDiesel = () => {
   const navigate = useNavigate();
@@ -32,12 +32,16 @@ const AgregarDiesel = () => {
     return `${yyyy}-${mm}-${dd}`;
   };
 
-  const normalizeDate = (dateStr) => {
-  if (!dateStr) return null;
-  // Fuerza hora segura para evitar desfase UTC
-  return new Date(dateStr + "T12:00:00.000Z").toISOString();
-};
-
+  // ✅ FUNCIÓN CORREGIDA - Convierte YYYY-MM-DD a fecha ISO con hora local del mediodía
+  const normalizeDateToISO = (dateStr) => {
+    if (!dateStr) return null;
+    
+    // Tomar la fecha YYYY-MM-DD y crear Date en zona horaria local
+    const [year, month, day] = dateStr.split('-');
+    const localDate = new Date(year, month - 1, day, 12, 0, 0, 0);
+    
+    return localDate.toISOString();
+  };
 
   useEffect(() => {
     fetchCamiones();
@@ -45,9 +49,8 @@ const AgregarDiesel = () => {
 
   const fetchCamiones = async () => {
     try {
-      const response = await fetch(`${config.api.API_URL}/camiones`, { credentials: 'include' });
-      const result = await response.json().catch(() => ({}));
-      setCamiones(result.data || []);
+      const { data } = await api.get('/camiones');
+      setCamiones(data?.data || []);
     } catch (err) {
       console.error("Error al cargar camiones:", err);
     }
@@ -98,38 +101,33 @@ const AgregarDiesel = () => {
     if (formData.fecha > getTodayISO()) return setError("La fecha no puede ser a futuro (solo hoy o fechas pasadas).");
     if (!formData.CicurlationCard) return setError("Debe seleccionar un camión");
     if (toNumber(formData.Galones) <= 0) return setError("Los galones deben ser mayores que 0");
-    if (totalCalculado <= 0) return setError("El total debe ser mayor que 0 (o ingresa el precio por galón)");
+    if (totalCalculado <= 0) return setError("El total debe ser mayor que 0");
 
     try {
       setLoading(true);
       setError(null);
 
       const payload = {
-  fecha: normalizeDate(formData.fecha),
-  Galones: toNumber(formData.Galones),
-  Total: totalCalculado,
-  CicurlationCard: formData.CicurlationCard,
-  estado: ESTADOS.PENDIENTE,
-};
+        fecha: normalizeDateToISO(formData.fecha), // ✅ Usa la función corregida
+        Galones: toNumber(formData.Galones),
+        Total: totalCalculado,
+        CicurlationCard: formData.CicurlationCard,
+        estado: ESTADOS.PENDIENTE,
+      };
 
+      console.log('📤 Enviando payload:', payload);
+      console.log('📅 Fecha original:', formData.fecha);
+      console.log('📅 Fecha convertida:', payload.fecha);
 
-      const response = await fetch(`${config.api.API_URL}/resumen`, {
-        method: "POST",
-        credentials: 'include',
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-
-      const result = await response.json().catch(() => ({}));
-
-      if (!response.ok) {
-        throw new Error(result?.message || "Error al crear el registro de diésel");
-      }
-
+      await api.post('/resumen', payload);
       navigate("/diesel");
+
     } catch (err) {
-      setError(err.message);
-      console.error("Error:", err);
+      console.error(err);
+      setError(
+        err.response?.data?.message ||
+        "Error al crear el registro de diésel"
+      );
     } finally {
       setLoading(false);
     }

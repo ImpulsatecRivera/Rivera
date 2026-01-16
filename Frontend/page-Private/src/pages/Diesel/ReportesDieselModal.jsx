@@ -1,8 +1,10 @@
 import React, { useMemo, useState } from "react";
 import { X, Calendar, FileText, Download, ChevronDown } from "lucide-react";
 import Swal from "sweetalert2";
+import { api } from "../../Context/authContext";
 
-const ReportesDieselModal = ({ isOpen, onClose, apiUrl }) => {
+
+const ReportesDieselModal = ({ isOpen, onClose }) => {
   const [tipoReporte, setTipoReporte] = useState("todos");
   const [mesSeleccionado, setMesSeleccionado] = useState("");
   const [semanaSeleccionada, setSemanaSeleccionada] = useState("");
@@ -13,7 +15,6 @@ const ReportesDieselModal = ({ isOpen, onClose, apiUrl }) => {
 const [fechaFin, setFechaFin] = useState("");
 
 
-  const reporteBase = useMemo(() => `${apiUrl}/resumenReporte`, [apiUrl]);
 
   const meses = [
     { value: 1, label: "Enero" },
@@ -46,9 +47,13 @@ const [fechaFin, setFechaFin] = useState("");
     );
   };
 
-  const descargarBlobComoPDF = async (response, filename) => {
-    const blob = await response.blob();
+  const descargarPDF = async (endpoint, filename, successHtml) => {
+  try {
+    const response = await api.get(endpoint, { responseType: "blob" });
+
+    const blob = new Blob([response.data], { type: "application/pdf" });
     const url = window.URL.createObjectURL(blob);
+
     const a = document.createElement("a");
     a.href = url;
     a.download = filename;
@@ -56,258 +61,176 @@ const [fechaFin, setFechaFin] = useState("");
     a.click();
     document.body.removeChild(a);
     window.URL.revokeObjectURL(url);
-  };
+
+    Swal.fire({
+      icon: "success",
+      title: "¡Reporte generado!",
+      html: successHtml,
+      confirmButtonColor: "#4F46E5",
+      timer: 3000,
+      timerProgressBar: true,
+    });
+
+  } catch (error) {
+    if (error.response?.status === 404) {
+      Swal.fire({
+        icon: "info",
+        title: "Sin registros",
+        text: "No hay datos para el período seleccionado",
+        confirmButtonColor: "#4F46E5",
+      });
+      return;
+    }
+
+    Swal.fire({
+      icon: "error",
+      title: "Error",
+      text: "No se pudo generar el reporte",
+      confirmButtonColor: "#4F46E5",
+    });
+  } finally {
+    setGenerando(false);
+  }
+};
+
 
   // Función para verificar si hay registros
-  const verificarRegistros = async (url) => {
-    try {
-      const response = await fetch(url, { credentials: 'include' });
-      if (!response.ok) {
-        if (response.status === 404) {
-          return false; // No hay registros
-        }
-        throw new Error(`Error del servidor: ${response.status}`);
-      }
-      return true; // Hay registros
-    } catch (error) {
-      throw error;
-    }
-  };
+
+
 
   const generarReporte = async () => {
-    // Validaciones de campos requeridos
-    if (tipoReporte === "mensual" && !mesSeleccionado) {
-      Swal.fire({
-        icon: "warning",
-        title: "Mes requerido",
-        text: "Por favor selecciona un mes para generar el reporte",
-        confirmButtonColor: "#4F46E5",
-        confirmButtonText: "Entendido",
-      });
-      return;
-    }
-
-    if (tipoReporte === "semanal") {
-  if (!fechaInicio || !fechaFin) {
+  // ===== VALIDACIONES =====
+  if (tipoReporte === "mensual" && !mesSeleccionado) {
     Swal.fire({
       icon: "warning",
-      title: "Fechas requeridas",
-      text: "Por favor selecciona la fecha de inicio y fin",
+      title: "Mes requerido",
+      text: "Selecciona un mes",
       confirmButtonColor: "#4F46E5",
-      confirmButtonText: "Entendido",
     });
     return;
   }
 
-  if (new Date(fechaFin) < new Date(fechaInicio)) {
-    Swal.fire({
-      icon: "warning",
-      title: "Rango inválido",
-      text: "La fecha fin no puede ser menor que la fecha inicio",
-      confirmButtonColor: "#4F46E5",
-      confirmButtonText: "Entendido",
-    });
-    return;
-  }
-}
-
-
-    if (tipoReporte === "multiple" && mesesSeleccionados.length === 0) {
+  if (tipoReporte === "semanal") {
+    if (!fechaInicio || !fechaFin) {
       Swal.fire({
         icon: "warning",
-        title: "Meses requeridos",
-        text: "Por favor selecciona al menos un mes para el reporte comparativo",
+        title: "Fechas requeridas",
+        text: "Selecciona fecha inicio y fin",
         confirmButtonColor: "#4F46E5",
-        confirmButtonText: "Entendido",
       });
       return;
     }
 
-    setGenerando(true);
+    if (new Date(fechaFin) < new Date(fechaInicio)) {
+      Swal.fire({
+        icon: "warning",
+        title: "Rango inválido",
+        text: "La fecha fin no puede ser menor",
+        confirmButtonColor: "#4F46E5",
+      });
+      return;
+    }
+  }
 
-    // Mensaje de procesamiento
+  if (tipoReporte === "multiple" && mesesSeleccionados.length === 0) {
     Swal.fire({
-      title: "Procesando...",
-      html: "Verificando datos y generando reporte",
-      allowOutsideClick: false,
-      allowEscapeKey: false,
-      didOpen: () => {
-        Swal.showLoading();
-      },
+      icon: "warning",
+      title: "Meses requeridos",
+      text: "Selecciona al menos un mes",
+      confirmButtonColor: "#4F46E5",
     });
+    return;
+  }
 
-    try {
-      if (tipoReporte === "todos") {
-        const url = `${reporteBase}/reportes/diesel/anual/${anoSeleccionado}`;
-        
-        try {
-          const hayRegistros = await verificarRegistros(url);
-          
-          if (!hayRegistros) {
-            Swal.fire({
-              icon: "info",
-              title: "Sin registros",
-              text: `No hay registros de diésel para el año ${anoSeleccionado}`,
-              confirmButtonColor: "#4F46E5",
-              confirmButtonText: "Entendido",
-            });
-            setGenerando(false);
-            return;
-          }
+  setGenerando(true);
 
-          window.open(url, "_blank");
-
-          Swal.fire({
-            icon: "success",
-            title: "¡Reporte generado!",
-            html: `<strong>Reporte Anual ${anoSeleccionado}</strong><br/>El PDF se ha abierto en una nueva pestaña`,
-            confirmButtonColor: "#4F46E5",
-            timer: 3000,
-            timerProgressBar: true,
-          });
-        } catch (error) {
-          throw new Error(`Error al generar reporte anual: ${error.message}`);
-        }
-      }
-
-      if (tipoReporte === "mensual") {
-        const mesNombre = meses.find(m => m.value === parseInt(mesSeleccionado))?.label;
-        const url = `${reporteBase}/reportes/diesel/mes/${mesSeleccionado}/${anoSeleccionado}`;
-        
-        try {
-          const hayRegistros = await verificarRegistros(url);
-          
-          if (!hayRegistros) {
-            Swal.fire({
-              icon: "info",
-              title: "Sin registros",
-              text: `No hay registros de diésel para ${mesNombre} ${anoSeleccionado}`,
-              confirmButtonColor: "#4F46E5",
-              confirmButtonText: "Entendido",
-            });
-            setGenerando(false);
-            return;
-          }
-
-          window.open(url, "_blank");
-
-          Swal.fire({
-            icon: "success",
-            title: "¡Reporte generado!",
-            html: `<strong>${mesNombre} ${anoSeleccionado}</strong><br/>El PDF se ha abierto en una nueva pestaña`,
-            confirmButtonColor: "#4F46E5",
-            timer: 3000,
-            timerProgressBar: true,
-          });
-        } catch (error) {
-          throw new Error(`Error al generar reporte mensual: ${error.message}`);
-        }
-      }
-
-     if (tipoReporte === "semanal") {
-  const url = `${reporteBase}/reportes/diesel/semanal/0/0/0?fechaInicio=${fechaInicio}&fechaFin=${fechaFin}`;
-
-        
-        try {
-          const hayRegistros = await verificarRegistros(url);
-          
-          if (!hayRegistros) {
   Swal.fire({
-    icon: "info",
-    title: "Sin registros",
-    text: `No hay registros de diésel en el rango seleccionado`,
-    confirmButtonColor: "#4F46E5",
-    confirmButtonText: "Entendido",
+    title: "Procesando...",
+    allowOutsideClick: false,
+    didOpen: () => Swal.showLoading(),
   });
-  setGenerando(false);
-  return;
-}
 
-window.open(url, "_blank");
+  // ===== ANUAL =====
+  if (tipoReporte === "todos") {
+    await descargarPDF(
+      `/resumenReporte/reportes/diesel/anual/${anoSeleccionado}`,
+      `reporte-diesel-anual-${anoSeleccionado}.pdf`,
+      `<strong>Reporte anual ${anoSeleccionado}</strong>`
+    );
+    return;
+  }
 
-Swal.fire({
-  icon: "success",
-  title: "¡Reporte generado!",
-  html: `<strong>Reporte semanal</strong><br/>Del ${fechaInicio} al ${fechaFin}<br/>El PDF se ha abierto en una nueva pestaña`,
-  confirmButtonColor: "#4F46E5",
-  timer: 3000,
-  timerProgressBar: true,
-});
+  // ===== MENSUAL =====
+  if (tipoReporte === "mensual") {
+    const mesNombre = meses.find(m => m.value === Number(mesSeleccionado))?.label;
 
-        } catch (error) {
-          throw new Error(`Error al generar reporte semanal: ${error.message}`);
-        }
-      }
+    await descargarPDF(
+      `/resumenReporte/reportes/diesel/mes/${mesSeleccionado}/${anoSeleccionado}`,
+      `reporte-diesel-${mesSeleccionado}-${anoSeleccionado}.pdf`,
+      `<strong>${mesNombre} ${anoSeleccionado}</strong>`
+    );
+    return;
+  }
 
-      if (tipoReporte === "multiple") {
-        try {
-          const response = await fetch(`${reporteBase}/reportes/diesel/comparativo`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              meses: [...mesesSeleccionados].sort((a, b) => a - b),
-              ano: anoSeleccionado,
-            }),
-          });
+  // ===== SEMANAL =====
+  if (tipoReporte === "semanal") {
+    await descargarPDF(
+      `/resumenReporte/reportes/diesel/semanal/0/0/0?fechaInicio=${fechaInicio}&fechaFin=${fechaFin}`,
+      `reporte-diesel-${fechaInicio}-al-${fechaFin}.pdf`,
+      `<strong>Del ${fechaInicio} al ${fechaFin}</strong>`
+    );
+    return;
+  }
 
-          if (response.status === 404) {
-            Swal.fire({
-              icon: "info",
-              title: "Sin registros",
-              text: `No hay registros de diésel para los meses seleccionados en ${anoSeleccionado}`,
-              confirmButtonColor: "#4F46E5",
-              confirmButtonText: "Entendido",
-            });
-            setGenerando(false);
-            return;
-          }
+  // ===== MULTIPLE =====
+  if (tipoReporte === "multiple") {
+    try {
+      const response = await api.post(
+        `/resumenReporte/reportes/diesel/comparativo`,
+        {
+          meses: [...mesesSeleccionados].sort((a, b) => a - b),
+          ano: anoSeleccionado,
+        },
+        { responseType: "blob" }
+      );
 
-          if (!response.ok) {
-            throw new Error(`Error del servidor: ${response.status}`);
-          }
+      const blob = new Blob([response.data], { type: "application/pdf" });
+      const url = window.URL.createObjectURL(blob);
 
-          await descargarBlobComoPDF(
-            response,
-            `reporte-diesel-comparativo-${anoSeleccionado}.pdf`
-          );
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `reporte-diesel-comparativo-${anoSeleccionado}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
 
-          const mesesNombres = mesesSeleccionados
-            .sort((a, b) => a - b)
-            .map(m => meses.find(mes => mes.value === m)?.label)
-            .join(", ");
+      const mesesNombres = mesesSeleccionados
+        .sort((a, b) => a - b)
+        .map(m => meses.find(ms => ms.value === m)?.label)
+        .join(", ");
 
-          Swal.fire({
-            icon: "success",
-            title: "¡Reporte descargado!",
-            html: `<strong>Reporte Comparativo ${anoSeleccionado}</strong><br/>${mesesNombres}<br/>El PDF se ha descargado correctamente`,
-            confirmButtonColor: "#4F46E5",
-            timer: 3000,
-            timerProgressBar: true,
-          });
-        } catch (error) {
-          throw new Error(`Error al generar reporte comparativo: ${error.message}`);
-        }
-      }
+      Swal.fire({
+        icon: "success",
+        title: "¡Reporte descargado!",
+        html: `<strong>${anoSeleccionado}</strong><br/>${mesesNombres}`,
+        confirmButtonColor: "#4F46E5",
+        timer: 3000,
+      });
 
-      setTimeout(() => {
-        setGenerando(false);
-        onClose();
-      }, 3000);
-
-    } catch (error) {
-      console.error("Error al generar reporte:", error);
-      
+    } catch {
       Swal.fire({
         icon: "error",
-        title: "Error al generar reporte",
-        html: `<strong>No se pudo generar el PDF</strong><br/>${error.message}<br/><br/>Por favor verifica tu conexión e intenta de nuevo`,
+        title: "Error",
+        text: "No se pudo generar el reporte comparativo",
         confirmButtonColor: "#4F46E5",
-        confirmButtonText: "Entendido",
       });
-
+    } finally {
       setGenerando(false);
     }
-  };
+  }
+};
+
 
   if (!isOpen) return null;
 

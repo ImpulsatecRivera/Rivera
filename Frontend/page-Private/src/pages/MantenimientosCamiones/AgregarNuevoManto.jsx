@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Calendar, Truck, FileText, Plus, Trash2, Save, AlertCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { config } from '../../config';
+import { api } from '../../Context/authContext';
+
 
 const CreateMantenimientoPage = () => {
   const navigate = useNavigate();
@@ -39,9 +41,9 @@ const CreateMantenimientoPage = () => {
 
   const fetchCamiones = async () => {
     try {
-      const response = await fetch(`${config.api.API_URL}/camiones`, { credentials: 'include' });
-      const result = await response.json();
-      setCamiones(result.data || []);
+      const response = await api.get(`${config.api.API_URL}/camiones`);
+setCamiones(response.data.data || []);
+
     } catch (err) {
       console.error('Error al cargar camiones:', err);
     }
@@ -153,19 +155,13 @@ const CreateMantenimientoPage = () => {
 
       console.log('Datos enviados al backend:', dataToSend);
 
-      const response = await fetch(`${config.api.API_URL}/mantenimientos`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(dataToSend)
-      });
+     const response = await api.post(
+  `${config.api.API_URL}/mantenimientos`,
+  dataToSend
+);
 
-      if (!response.ok) {
-        throw new Error('Error al crear el mantenimiento');
-      }
+const result = response.data;
 
-      const result = await response.json();
       console.log('Mantenimiento creado:', result);
 
       navigate('/mantenimientos');

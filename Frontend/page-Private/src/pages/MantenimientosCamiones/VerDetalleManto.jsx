@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Calendar, Truck, Wrench, FileText, DollarSign, Package, Loader2, AlertCircle } from 'lucide-react';
 import { config } from '../../config';
+import { api } from '../../Context/authContext';
 
 const MantenimientoDetailModal = ({ mantenimientoId, isOpen, onClose }) => {
   const [mantenimiento, setMantenimiento] = useState(null);
@@ -28,41 +29,40 @@ const MantenimientoDetailModal = ({ mantenimientoId, isOpen, onClose }) => {
   }, [isOpen, mantenimientoId]);
 
   const fetchMantenimientoById = async (id) => {
-    try {
-      setLoading(true);
-      setError(null);
-      
-      const response = await fetch(`${config.api.API_URL}/mantenimientos/${id}`, { credentials: 'include' });
-      
-      if (!response.ok) {
-        throw new Error('Error al cargar el mantenimiento');
-      }
-      
-      const result = await response.json();
-      const data = result.data || result;
-      
-      // Mapear los datos de la API a la estructura esperada por el componente
-      const mantenimientoMapeado = {
-        _id: data._id,
-        fecha_mantenimiento: data.fecha || data.fecha_mantenimiento,
-        mes: data.mes,
-        ano: data.ano,
-        tipo_de_mantenimiento: data.tipoMantenimiento || data.tipo_de_mantenimiento,
-        descripcion: data.descripcion,
-        ciculatioCard: data.camion || data.ciculatioCard,
-        detalles: data.detalles || []
-      };
-      
-      console.log('Mantenimiento cargado:', mantenimientoMapeado);
-      setMantenimiento(mantenimientoMapeado);
-      
-    } catch (err) {
-      setError(err.message);
-      console.error('Error:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
+  try {
+    setLoading(true);
+    setError(null);
+
+    const response = await api.get(
+      `${config.api.API_URL}/mantenimientos/${id}`
+    );
+
+    const data = response.data?.data || response.data;
+
+    const mantenimientoMapeado = {
+      _id: data._id,
+      fecha_mantenimiento: data.fecha || data.fecha_mantenimiento,
+      mes: data.mes,
+      ano: data.ano,
+      tipo_de_mantenimiento: data.tipoMantenimiento || data.tipo_de_mantenimiento,
+      descripcion: data.descripcion,
+      ciculatioCard: data.camion || data.ciculatioCard,
+      detalles: data.detalles || []
+    };
+
+    setMantenimiento(mantenimientoMapeado);
+
+  } catch (err) {
+    console.error(err);
+    setError(
+      err.response?.data?.message ||
+      'Error al cargar el mantenimiento'
+    );
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   const formatearFecha = (fecha) => {
     const date = new Date(fecha);

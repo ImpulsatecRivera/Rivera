@@ -1,10 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { ArrowLeft, Save, AlertCircle, Fuel } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
-import { config } from "../../config";
-
-const DIESEL_ENDPOINT = `${config.api.API_URL}/resumen`;
-const CAMIONES_ENDPOINT = `${config.api.API_URL}/camiones`;
+import { api } from "../../Context/authContext";
 
 const ESTADOS = {
   PENDIENTE: "Pendiente",
@@ -75,21 +72,19 @@ export default function EditDiesel() {
         setLoading(true);
         setError(null);
 
-        const resCam = await fetch(CAMIONES_ENDPOINT, { credentials: 'include' });
-        const jsonCam = await resCam.json().catch(() => ({}));
-        const camRows = jsonCam.data || (Array.isArray(jsonCam) ? jsonCam : []);
+        // 🔹 Camiones
+        const { data: camData } = await api.get('/camiones');
+        const camRows = camData?.data || [];
         setCamiones(camRows);
 
-      const res = await fetch(DIESEL_ENDPOINT, { credentials: 'include' });
-        const json = await res.json().catch(() => ({}));
-        if (!res.ok) throw new Error(json?.message || "Error al cargar diésel");
-
-        const rows = json.data || (Array.isArray(json) ? json : []);
+        // 🔹 Diesel
+        const { data: dieselData } = await api.get('/resumen');
+        const rows = dieselData?.data || [];
         const found = rows.find((r) => String(r?._id || r?.id) === String(id));
+        
         if (!found) throw new Error("No se encontró el registro de diésel");
 
         const fecha = found.fecha || found.date || found.createdAt || found.fecha_diesel;
-
         const cic =
           (typeof found.CicurlationCard === "object" && found.CicurlationCard?._id) ||
           found.CicurlationCard ||
@@ -106,9 +101,14 @@ export default function EditDiesel() {
         });
 
         setIsLocked(estadoBD === ESTADOS.COMPLETADO);
+
       } catch (e) {
         console.error(e);
-        setError(e.message || "Error al cargar");
+        setError(
+          e.response?.data?.message ||
+          e.message ||
+          "Error al cargar"
+        );
       } finally {
         setLoading(false);
       }
@@ -169,20 +169,17 @@ export default function EditDiesel() {
         estado: formData.estado,
       };
 
-      const res = await fetch(`${DIESEL_ENDPOINT}/${id}`, {
-        method: "PUT",
-        credentials: 'include',
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-
-      const json = await res.json().catch(() => ({}));
-      if (!res.ok || !json?.success) throw new Error(json?.message || "Error al actualizar");
+      // ✅ CORREGIDO - Axios ya devuelve data parseada
+      const { data } = await api.put(`/resumen/${id}`, payload);
+      
+      if (!data?.success) {
+        throw new Error(data?.message || "Error al actualizar");
+      }
 
       navigate("/diesel");
     } catch (e) {
       console.error(e);
-      setError(e.message || "Error al actualizar");
+      setError(e.response?.data?.message || e.message || "Error al actualizar");
     } finally {
       setSaving(false);
     }

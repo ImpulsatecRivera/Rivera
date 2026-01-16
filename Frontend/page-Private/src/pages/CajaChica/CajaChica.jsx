@@ -6,6 +6,7 @@ import './CajaChica.css';
 import ReportesCajaChicaModal from './ModalReportesCajaChica';
 import { usePermissions } from '../../hooks/usePermissions';
 import { ProtectedAction, RoleBadge } from '../../components/Auth';
+import { api } from "../../Context/authContext"
 
 
 export default function CajaChicaModern() {
@@ -62,43 +63,11 @@ export default function CajaChicaModern() {
     }
   };
 
-  const getAuthHeaders = () => {
-    const token = localStorage.getItem('token');
-    return {
-      'Authorization': `Bearer ${token}`
-    };
-  };
-
-  const handleAuthError = (response) => {
-    if (response.status === 401) {
-      Swal.fire({
-        title: 'Sesión expirada',
-        text: 'Tu sesión ha expirado. Por favor inicia sesión nuevamente.',
-        icon: 'warning',
-        confirmButtonText: 'Ir al login'
-      }).then(() => {
-        localStorage.removeItem('authToken');
-        window.location.href = '/login';
-      });
-      return true;
-    }
-    return false;
-  };
-
   const obtenerMovimientos = async () => {
     try {
-      const response = await fetch(`${config.api.API_URL}/cajaChica`, {
-        credentials: 'include',
-        headers: getAuthHeaders()
-      });
-      
-      if (handleAuthError(response)) return;
-      
-      const data = await response.json();
-      if (response.ok) {
-        setTransactions(data);
-        calcularEstadisticas(data);
-      }
+      const { data } = await api.get('/cajaChica');
+      setTransactions(data);
+      calcularEstadisticas(data);
     } catch (error) {
       console.error('Error obteniendo movimientos:', error);
     }
@@ -106,17 +75,8 @@ export default function CajaChicaModern() {
 
   const obtenerBalance = async () => {
     try {
-      const response = await fetch(`${config.api.API_URL}/cajaChica/balance`, {
-        credentials: 'include',
-        headers: getAuthHeaders()
-      });
-      
-      if (handleAuthError(response)) return;
-      
-      const data = await response.json();
-      if (response.ok) {
-        setBalance(data.currentBalance);
-      }
+      const { data } = await api.get('/cajaChica/balance');
+      setBalance(data.currentBalance);
     } catch (error) {
       console.error('Error obteniendo balance:', error);
     }
@@ -124,15 +84,8 @@ export default function CajaChicaModern() {
 
   const obtenerConfiguracion = async () => {
     try {
-      const response = await fetch(`${config.api.API_URL}/cajaChicaConfig`, {
-        credentials: 'include',
-        headers: getAuthHeaders()
-      });
-      
-      if (handleAuthError(response)) return;
-      
-      const data = await response.json();
-      if (response.ok && data.success) {
+      const { data } = await api.get('/cajaChicaConfig');
+      if (data.success) {
         setConfiguracion(data.data);
         setTempMaximo(data.data.maximoPermitido);
         setTempMinimo(data.data.minimoReintegro);
@@ -144,15 +97,8 @@ export default function CajaChicaModern() {
 
   const verificarReintegro = async () => {
     try {
-      const response = await fetch(`${config.api.API_URL}/cajaChicaConfig/verificar-reintegro`, {
-        credentials: 'include',
-        headers: getAuthHeaders()
-      });
-      
-      if (handleAuthError(response)) return;
-      
-      const data = await response.json();
-      if (response.ok && data.success) {
+      const { data } = await api.get('/cajaChicaConfig/verificar-reintegro');
+      if (data.success) {
         setEstadoReintegro(data.data);
       }
     } catch (error) {
@@ -162,29 +108,11 @@ export default function CajaChicaModern() {
 
   const descargarReporteIndividual = async (transaccionId) => {
     try {
-      const token = localStorage.getItem('authToken');
-      const response = await fetch(`${config.api.API_URL}/reportesCajaChica/individual/${transaccionId}`, {
-        method: 'GET',
-        credentials: 'include',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+      const response = await api.get(`/reportesCajaChica/individual/${transaccionId}`, {
+        responseType: 'blob'
       });
 
-      if (response.status === 401) {
-        Swal.fire({
-          title: 'No autorizado',
-          text: 'No tienes permisos para descargar este reporte',
-          icon: 'error'
-        });
-        return;
-      }
-
-      if (!response.ok) {
-        throw new Error('Error al descargar el reporte');
-      }
-
-      const blob = await response.blob();
+      const blob = new Blob([response.data], { type: 'application/pdf' });
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -204,7 +132,7 @@ export default function CajaChicaModern() {
       console.error('Error descargando reporte:', error);
       Swal.fire({
         title: 'Error',
-        text: 'No se pudo descargar el reporte',
+        text: error.response?.status === 401 ? 'No tienes permisos para descargar este reporte' : 'No se pudo descargar el reporte',
         icon: 'error'
       });
     }
@@ -265,40 +193,10 @@ export default function CajaChicaModern() {
     });
 
     try {
-      const token = localStorage.getItem('authToken');
       const formData = new FormData();
       formData.append('voucher', file);
 
-      const response = await fetch(
-        `${config.api.API_URL}/cajaChica/movements/${transaccion._id}/voucher`,
-        {
-          method: 'PATCH',
-          credentials: 'include',
-          headers: {
-            'Authorization': `Bearer ${token}`
-          },
-          body: formData
-        }
-      );
-
-      const contentType = response.headers.get('content-type');
-      
-      if (!response.ok) {
-        let errorMessage = 'Error al subir el comprobante';
-        
-        if (contentType && contentType.includes('application/json')) {
-          const errorData = await response.json();
-          errorMessage = errorData.message || errorMessage;
-        } else {
-          const errorText = await response.text();
-          console.error('❌ Error:', errorText.substring(0, 300));
-          errorMessage = 'Error en el servidor. Verifica la consola.';
-        }
-        
-        throw new Error(errorMessage);
-      }
-
-      const data = await response.json();
+      await api.patch(`/cajaChica/movements/${transaccion._id}/voucher`, formData);
 
       Swal.fire({
         title: '¡Comprobante subido!',
@@ -309,12 +207,11 @@ export default function CajaChicaModern() {
       });
 
       await cargarDatos();
-
     } catch (error) {
       console.error('💥 Error subiendo comprobante:', error);
       Swal.fire({
         title: 'Error',
-        text: error.message || 'No se pudo subir el comprobante',
+        text: error.response?.data?.message || 'No se pudo subir el comprobante',
         icon: 'error',
         confirmButtonText: 'OK'
       });
@@ -349,42 +246,9 @@ export default function CajaChicaModern() {
     });
 
     try {
-      const token = localStorage.getItem('authToken');
-
-      const response = await fetch(
-        `${config.api.API_URL}/cajaChica/${transaccion._id}/generar-vale`,
-        {
-          method: 'POST',
-          credentials: 'include',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify({
-  nombreBeneficiario: formValues
-})
-
-        }
-      );
-
-      const contentType = response.headers.get('content-type');
-      
-      if (!response.ok) {
-        let errorMessage = 'Error al generar el vale';
-        
-        if (contentType && contentType.includes('application/json')) {
-          const errorData = await response.json();
-          errorMessage = errorData.message || errorMessage;
-        } else {
-          const errorText = await response.text();
-          console.error('❌ Error:', errorText.substring(0, 300));
-          errorMessage = 'Error en el servidor. Verifica la consola.';
-        }
-        
-        throw new Error(errorMessage);
-      }
-
-      const data = await response.json();
+      const { data } = await api.post(`/cajaChica/${transaccion._id}/generar-vale`, {
+        nombreBeneficiario: formValues
+      });
       
       if (data.voucher) {
         window.open(data.voucher, '_blank', 'noopener,noreferrer');
@@ -404,12 +268,11 @@ export default function CajaChicaModern() {
       } else {
         throw new Error('La respuesta no contiene la URL del vale');
       }
-
     } catch (error) {
       console.error('💥 Error generando vale:', error);
       Swal.fire({
         title: 'Error',
-        text: error.message || 'No se pudo generar el vale',
+        text: error.response?.data?.message || 'No se pudo generar el vale',
         icon: 'error',
         confirmButtonText: 'OK'
       });
@@ -438,48 +301,16 @@ export default function CajaChicaModern() {
       }
     });
 
-    if (!codigoSeguridad) {
-      return;
-    }
+    if (!codigoSeguridad) return;
 
     try {
-      const token = localStorage.getItem('authToken');
-      
-      if (!token) {
-        Swal.fire({ 
-          title: 'Error', 
-          text: 'No se encontró token de autenticación. Por favor inicia sesión nuevamente.', 
-          icon: 'error' 
-        });
-        return;
-      }
-
-      const response = await fetch(`${config.api.API_URL}/cajaChicaConfig`, {
-        method: 'PUT',
-        credentials: 'include',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          maximoPermitido: tempMaximo,
-          minimoReintegro: tempMinimo,
-          password: codigoSeguridad
-        })
+      const { data } = await api.put('/cajaChicaConfig', {
+        maximoPermitido: tempMaximo,
+        minimoReintegro: tempMinimo,
+        password: codigoSeguridad
       });
       
-      const data = await response.json();
-      
-      if (response.status === 401) {
-        Swal.fire({ 
-          title: 'No autorizado', 
-          text: data.message || 'No tienes permisos para actualizar la configuración o el código de seguridad es incorrecto.', 
-          icon: 'error' 
-        });
-        return;
-      }
-      
-      if (response.ok && data.success) {
+      if (data.success) {
         setConfiguracion({ maximoPermitido: tempMaximo, minimoReintegro: tempMinimo });
         setShowConfigModal(false);
         await Swal.fire({
@@ -489,14 +320,12 @@ export default function CajaChicaModern() {
           timer: 2000
         });
         await cargarDatos();
-      } else {
-        throw new Error(data.message || 'Error al guardar configuración');
       }
     } catch (error) {
       console.error('Error completo:', error);
       Swal.fire({ 
-        title: 'Error', 
-        text: error.message || 'Error al guardar la configuración', 
+        title: error.response?.status === 401 ? 'No autorizado' : 'Error',
+        text: error.response?.data?.message || 'Error al guardar la configuración', 
         icon: 'error' 
       });
     }
@@ -533,9 +362,7 @@ export default function CajaChicaModern() {
       }
     });
 
-    if (!password) {
-      return;
-    }
+    if (!password) return;
 
     try {
       const formDataToSend = new FormData();
@@ -543,47 +370,28 @@ export default function CajaChicaModern() {
       formDataToSend.append('reason', descripcionIngreso);
       formDataToSend.append('password', password);
 
-      const token = localStorage.getItem('authToken');
-      const response = await fetch(`${config.api.API_URL}/cajaChica/ingreso`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        },
-        body: formDataToSend
+      const { data } = await api.post('/cajaChica/ingreso', formDataToSend);
+      
+      await Swal.fire({
+        title: '¡Ingreso Registrado!',
+        text: data.message,
+        icon: 'success',
+        timer: 2000
       });
-      const data = await response.json();
-      
-      if (response.status === 401) {
-        Swal.fire({ 
-          title: 'Código Incorrecto', 
-          text: data.message || 'El código de seguridad es incorrecto.', 
-          icon: 'error' 
-        });
-        return;
-      }
-      
-      if (response.ok) {
-        await Swal.fire({
-          title: '¡Ingreso Registrado!',
-          text: data.message,
-          icon: 'success',
-          timer: 2000
-        });
-        setShowIngresoModal(false);
-        setMontoIngreso('');
-        setDescripcionIngreso('');
-        await cargarDatos();
-      } else {
-        throw new Error(data.message || 'Error al registrar ingreso');
-      }
+      setShowIngresoModal(false);
+      setMontoIngreso('');
+      setDescripcionIngreso('');
+      await cargarDatos();
     } catch (error) {
-      Swal.fire({ title: 'Error', text: error.message, icon: 'error' });
+      Swal.fire({ 
+        title: error.response?.status === 401 ? 'Código Incorrecto' : 'Error',
+        text: error.response?.data?.message || 'Error al registrar ingreso', 
+        icon: 'error' 
+      });
     }
   };
 
   const registrarReintegro = async () => {
-    // Calcular el monto automático hasta el máximo permitido
     if (!configuracion) {
       Swal.fire({ title: 'Configuración faltante', text: 'Debes configurar el máximo permitido antes de realizar reintegros.', icon: 'warning' });
       return;
@@ -615,28 +423,18 @@ export default function CajaChicaModern() {
     if (!password) return;
 
     try {
-      const response = await fetch(`${config.api.API_URL}/cajaChicaConfig/registrar-reintegro`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
-        body: JSON.stringify({ password }) // no enviamos monto -> backend calcula hasta el máximo
-      });
+      const { data } = await api.post('/cajaChicaConfig/registrar-reintegro', { password });
 
-      const data = await response.json();
-
-      if (response.status === 401) {
-        Swal.fire({ title: 'Código Incorrecto', text: data.message || 'El código de seguridad es incorrecto.', icon: 'error' });
-        return;
-      }
-
-      if (response.ok && data.success) {
+      if (data.success) {
         await Swal.fire({ title: '¡Reintegro Registrado!', text: data.message, icon: 'success', timer: 2000 });
         await cargarDatos();
-      } else {
-        throw new Error(data.message || 'Error al registrar reintegro');
       }
     } catch (error) {
-      Swal.fire({ title: 'Error', text: error.message, icon: 'error' });
+      Swal.fire({ 
+        title: error.response?.status === 401 ? 'Código Incorrecto' : 'Error',
+        text: error.response?.data?.message || 'Error al registrar reintegro', 
+        icon: 'error' 
+      });
     }
   };
 
@@ -655,40 +453,29 @@ export default function CajaChicaModern() {
       formDataToSend.append('amount', formData.amount);
       formDataToSend.append('reason', formData.reason);
 
-      const token = localStorage.getItem('authToken');
-      const response = await fetch(`${config.api.API_URL}/cajaChica/egreso`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        },
-        body: formDataToSend
+      const { data } = await api.post('/cajaChica/egreso', formDataToSend);
+
+      await Swal.fire({
+        title: '¡Egreso Registrado!',
+        text: data.message,
+        icon: 'success',
+        timer: 2000
       });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        await Swal.fire({
-          title: '¡Egreso Registrado!',
-          text: data.message,
-          icon: 'success',
-          timer: 2000
-        });
-        limpiarFormulario();
-        await cargarDatos();
-      } else {
-        throw new Error(data.message || 'Error al registrar egreso');
-      }
+      limpiarFormulario();
+      await cargarDatos();
     } catch (error) {
-      Swal.fire({ title: 'Error', text: error.message, icon: 'error' });
+      Swal.fire({ 
+        title: 'Error', 
+        text: error.response?.data?.message || 'Error al registrar egreso', 
+        icon: 'error' 
+      });
     }
   };
 
   const calcularEstadisticas = (movimientos) => {
-    // Calcular totales solo para la semana actual (Lunes a Domingo)
     const now = new Date();
-    const day = now.getDay(); // 0 (Dom) .. 6 (Sáb)
-    const diffToMonday = (day === 0 ? -6 : 1 - day); // ajustar para obtener el lunes
+    const day = now.getDay();
+    const diffToMonday = (day === 0 ? -6 : 1 - day);
     const monday = new Date(now);
     monday.setDate(now.getDate() + diffToMonday);
     monday.setHours(0,0,0,0);
@@ -754,7 +541,7 @@ export default function CajaChicaModern() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-4 md:p-8">
       <div className="max-w-7xl mx-auto space-y-6">
-        {/* Header - COLORES CAMBIADOS */}
+        {/* Header */}
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold text-[#34353A]">Caja Chica</h1>
@@ -769,7 +556,7 @@ export default function CajaChicaModern() {
           </button>
         </div>
 
-        {/* Stats Cards - COLORES CAMBIADOS */}
+        {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
           <div className="md:col-span-2 bg-gradient-to-br from-[#34353A] to-[#5F8EAD] rounded-2xl p-6 text-white shadow-xl relative overflow-hidden">
             <div className="absolute top-0 right-0 w-64 h-64 bg-white opacity-5 rounded-full -mr-32 -mt-32"></div>
@@ -825,7 +612,7 @@ export default function CajaChicaModern() {
           </div>
         </div>
 
-        {/* Registrar Transacción - COLORES CAMBIADOS */}
+        {/* Registrar Transacción */}
         <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-200">
           <h3 className="text-lg font-semibold text-[#34353A] mb-4">Registrar Transacción</h3>
           <div className="space-y-4">
@@ -855,7 +642,7 @@ export default function CajaChicaModern() {
           </div>
         </div>
 
-        {/* Tabla Transacciones - COLORES CAMBIADOS */}
+        {/* Tabla Transacciones */}
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
           <div className="p-6 border-b border-slate-200">
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
@@ -983,7 +770,7 @@ export default function CajaChicaModern() {
           </div>
         </div>
 
-        {/* Modal Configuración - COLORES CAMBIADOS */}
+        {/* Modal Configuración */}
         {showConfigModal && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl">
@@ -1036,7 +823,7 @@ export default function CajaChicaModern() {
           </div>
         )}
 
-        {/* Modal Ingreso - COLORES CAMBIADOS */}
+        {/* Modal Ingreso */}
         {showIngresoModal && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl">
