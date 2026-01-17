@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Truck,
@@ -18,10 +18,12 @@ import {
   MoreVertical,
   ChevronRight
 } from 'lucide-react';
-import Spline from '@splinetool/react-spline';
 import Lottie from 'lottie-react';
 import { config } from '../../config';
 import { api } from '../../Context/authContext';
+
+// 🎨 Lazy load de Spline para optimizar
+const Spline = lazy(() => import('@splinetool/react-spline'));
 
 // 🎨 Importar animaciones Lottie
 import loadingTruckAnimation from '../../assets/lotties/ready, set, go!.json';
@@ -32,21 +34,21 @@ import moneyAnimation from '../../assets/lotties/Coins blow effect.json';
 import truckIconAnimation from '../../assets/lotties/ecommerce order fulfillment automation.json';
 import checkmarkAnimation from '../../assets/lotties/Success (1).json';
 
-//Nuevo: componente Modal del reporte consolidado
+// Modales
 import ModalResumenConsolidado from "./ModalResumenConsolidado";
-// Modal para generar reporte semanal (PDF)
 import ReportsPdfModal from '../../components/Dashboard/ReportsPdfModal';
-// Modal reporte mensual de gastos
 import ReportsGastosMesModal from '../../components/Dashboard/ReportsGastosMesModal';
 
 const ModernDashboard = () => {
-
-  //nuevo estado para el modal
+  // Estados de modales
   const [modalResumenOpen, setModalResumenOpen] = useState(false);
-  // nuevo estado para el modal PDF
   const [modalPdfOpen, setModalPdfOpen] = useState(false);
-  // nuevo estado para modal Mensual Gastos
   const [modalGastosMesOpen, setModalGastosMesOpen] = useState(false);
+
+  // 🚀 Estados de optimización de Spline
+  const [splineLoaded, setSplineLoaded] = useState(false);
+  const [showSpline, setShowSpline] = useState(false);
+  const [splineError, setSplineError] = useState(false);
 
   const navigate = useNavigate();
   const [selectedPeriod, setSelectedPeriod] = useState('30');
@@ -62,7 +64,17 @@ const ModernDashboard = () => {
   });
   const lottieRef = useRef();
 
+  // 🚀 Cargar Spline después de que el dashboard esté listo
+  useEffect(() => {
+    // Esperar a que el loading principal termine antes de cargar Spline
+    if (!loading) {
+      const splineTimer = setTimeout(() => {
+        setShowSpline(true);
+      }, 300); // Pequeño delay para mejor UX
 
+      return () => clearTimeout(splineTimer);
+    }
+  }, [loading]);
 
   useEffect(() => {
     cargarEstadisticas();
@@ -70,10 +82,9 @@ const ModernDashboard = () => {
 
   useEffect(() => {
     if (lottieRef.current) {
-      lottieRef.current.setSpeed(1); // ⏱ más lento
+      lottieRef.current.setSpeed(1);
     }
   }, []);
-
 
   const filtrarPorPeriodo = (items, campoFecha) => {
     const diasAtras = parseInt(selectedPeriod);
@@ -87,17 +98,13 @@ const ModernDashboard = () => {
   };
 
   const cargarEstadisticas = async () => {
-    const startTime = Date.now(); // ⏱ empieza a contar
+    const startTime = Date.now();
 
     try {
       setLoading(true);
 
-
-     const viajesRes = await api.get(`${config.api.API_URL}/viajes-operativos/listar`);
-let viajes = viajesRes.data?.data || [];
-
-
-
+      const viajesRes = await api.get(`${config.api.API_URL}/viajes-operativos/listar`);
+      let viajes = viajesRes.data?.data || [];
       viajes = filtrarPorPeriodo(viajes, 'departureTime');
 
       const viajesStats = {
@@ -113,10 +120,8 @@ let viajes = viajesRes.data?.data || [];
         ingresos: viajes.reduce((sum, v) => sum + (v?.montoAcordado || 0), 0)
       };
 
-   const mantoRes = await api.get(`${config.api.API_URL}/mantenimientos`);
-let mantenimientos = mantoRes.data?.data || [];
-
-
+      const mantoRes = await api.get(`${config.api.API_URL}/mantenimientos`);
+      let mantenimientos = mantoRes.data?.data || [];
       mantenimientos = filtrarPorPeriodo(mantenimientos, 'fecha_mantenimiento');
 
       const mantoStats = {
@@ -129,10 +134,8 @@ let mantenimientos = mantoRes.data?.data || [];
         }, 0)
       };
 
-     const dieselRes = await api.get(`${config.api.API_URL}/resumen`);
-let diesel = dieselRes.data?.data || (Array.isArray(dieselRes.data) ? dieselRes.data : []);
-
-
+      const dieselRes = await api.get(`${config.api.API_URL}/resumen`);
+      let diesel = dieselRes.data?.data || (Array.isArray(dieselRes.data) ? dieselRes.data : []);
       diesel = filtrarPorPeriodo(diesel, 'fecha');
 
       const dieselStats = {
@@ -150,14 +153,11 @@ let diesel = dieselRes.data?.data || (Array.isArray(dieselRes.data) ? dieselRes.
       };
 
       const cajaRes = await api.get(`${config.api.API_URL}/cajaChica`);
-let transacciones = Array.isArray(cajaRes.data) ? cajaRes.data : [];
-
-
+      let transacciones = Array.isArray(cajaRes.data) ? cajaRes.data : [];
       transacciones = filtrarPorPeriodo(transacciones, 'date');
 
-     const cajaBalanceRes = await api.get(`${config.api.API_URL}/cajaChica/balance`);
-const cajaBalanceData = cajaBalanceRes.data;
-
+      const cajaBalanceRes = await api.get(`${config.api.API_URL}/cajaChica/balance`);
+      const cajaBalanceData = cajaBalanceRes.data;
 
       const cajaStats = {
         balance: cajaBalanceData?.currentBalance || 0,
@@ -167,9 +167,7 @@ const cajaBalanceData = cajaBalanceRes.data;
       };
 
       const planillasRes = await api.get(`${config.api.API_URL}/planillas/quincenal`);
-let planillas = planillasRes.data?.data || [];
-
-
+      let planillas = planillasRes.data?.data || [];
       planillas = filtrarPorPeriodo(planillas, 'createdAt');
 
       const planillasStats = {
@@ -193,15 +191,13 @@ let planillas = planillasRes.data?.data || [];
       console.error('Error cargando estadísticas:', error);
     } finally {
       const elapsed = Date.now() - startTime;
-      const minDuration = 6000; // ⏱ 6 segundos
-
+      const minDuration = 6000;
       const remaining = Math.max(minDuration - elapsed, 0);
 
       setTimeout(() => {
         setLoading(false);
       }, remaining);
     }
-
   };
 
   const formatearMoneda = (cantidad) => {
@@ -352,7 +348,6 @@ let planillas = planillasRes.data?.data || [];
             autoplay={true}
             style={{ width: 250, height: 250, margin: '0 auto' }}
           />
-
           <p className="text-gray-600 font-medium text-lg mt-4">Cargando dashboard...</p>
           <p className="text-gray-400 text-sm mt-2">Obteniendo datos del sistema</p>
         </div>
@@ -362,19 +357,69 @@ let planillas = planillasRes.data?.data || [];
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Hero Banner con Spline */}
+      {/* 🚀 Hero Banner con Spline OPTIMIZADO */}
       <div className="relative h-[300px] overflow-hidden">
-        <div className="absolute inset-0" style={{ pointerEvents: 'auto' }}>
-          <Spline
-            scene="https://prod.spline.design/RPoeKCG7eSYlbZ4c/scene.splinecode"
-            style={{ width: '100%', height: '100%', pointerEvents: 'auto' }}
+        
+        {/* 🎨 Fondo placeholder elegante mientras carga Spline */}
+        <div 
+          className={`absolute inset-0 bg-gradient-to-br from-[#34353A] via-[#5F8EAD] to-[#5D9646] transition-opacity duration-1000 ${
+            splineLoaded ? 'opacity-0' : 'opacity-100'
+          }`}
+        >
+          {/* Patrón decorativo */}
+          <div 
+            className="absolute inset-0 opacity-10"
+            style={{
+              backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.4'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
+            }}
           />
+          
+          {/* Loading indicator sutil */}
+          {!splineLoaded && !splineError && (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="flex flex-col items-center gap-3">
+                <div className="relative">
+                  <div className="w-12 h-12 border-4 border-white/20 rounded-full"></div>
+                  <div className="absolute top-0 left-0 w-12 h-12 border-4 border-white border-t-transparent rounded-full animate-spin"></div>
+                </div>
+                <p className="text-white text-sm font-medium animate-pulse">
+                  Cargando escena 3D...
+                </p>
+              </div>
+            </div>
+          )}
         </div>
 
+        {/* 🚀 Spline con lazy loading y transición suave */}
+        {showSpline && (
+          <Suspense fallback={null}>
+            <div 
+              className={`absolute inset-0 transition-opacity duration-1000 ${
+                splineLoaded ? 'opacity-100' : 'opacity-0'
+              }`}
+              style={{ pointerEvents: splineLoaded ? 'auto' : 'none' }}
+            >
+              <Spline
+                scene="https://prod.spline.design/RPoeKCG7eSYlbZ4c/scene.splinecode"
+                style={{ width: '100%', height: '100%', pointerEvents: 'auto' }}
+                onLoad={() => {
+                  console.log('✅ Spline cargado exitosamente');
+                  setSplineLoaded(true);
+                }}
+                onError={(error) => {
+                  console.error('❌ Error cargando Spline:', error);
+                  setSplineError(true);
+                }}
+              />
+            </div>
+          </Suspense>
+        )}
+
+        {/* Gradient overlay (siempre visible) */}
         <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-gray-900/30 to-gray-50 pointer-events-none"></div>
 
+        {/* Contenido del hero */}
         <div className="relative z-10 h-full flex flex-col justify-between p-8 pointer-events-none">
-
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3 backdrop-blur-md bg-white/10 rounded-full px-5 py-2.5 border border-white/20 shadow-lg">
               <div className="w-2 h-2 bg-[#5D9646] rounded-full animate-pulse"></div>
@@ -446,7 +491,6 @@ let planillas = planillasRes.data?.data || [];
                 onMouseLeave={() => setHoveredCard(null)}
                 className="bg-white/95 backdrop-blur-xl rounded-2xl p-6 shadow-xl border border-gray-200 hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 cursor-pointer relative overflow-hidden"
               >
-                {/* Lottie de fondo en hover */}
                 {stat.lottie && hoveredCard === index && (
                   <div className="absolute top-0 right-0 opacity-10 pointer-events-none">
                     <Lottie
@@ -492,7 +536,6 @@ let planillas = planillasRes.data?.data || [];
 
         {/* Content Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-
           <div className="lg:col-span-2 bg-white rounded-2xl p-6 shadow-lg hover:shadow-xl transition-shadow">
             <div className="flex items-center justify-between mb-6">
               <div>
@@ -596,7 +639,6 @@ let planillas = planillasRes.data?.data || [];
                         opacity: totales.balance >= 0 ? 0.9 : 1
                       }}
                     >
-                      {/* Lottie en balance */}
                       <div className="absolute -top-8 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity">
                         <Lottie
                           animationData={totales.balance >= 0 ? successAnimation : warningAnimation}
@@ -690,7 +732,7 @@ let planillas = planillasRes.data?.data || [];
               </div>
             </div>
 
-            {/* Resumen por módulos CON ESTADO VACÍO */}
+            {/* Resumen por módulos */}
             <div className="space-y-3">
               <div className="bg-gradient-to-r from-[#5F8EAD] from-opacity-10 to-[#5F8EAD] to-opacity-5 rounded-xl p-4 border-2 border-[#5F8EAD] mb-4">
                 <div className="flex items-center justify-between">
@@ -774,7 +816,6 @@ let planillas = planillasRes.data?.data || [];
 
           {/* Sidebar Stats */}
           <div className="space-y-6">
-
             <div className="bg-white rounded-2xl p-5 shadow-lg hover:shadow-xl transition-shadow">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-bold text-[#34353A]">Alertas</h3>
@@ -851,7 +892,6 @@ let planillas = planillasRes.data?.data || [];
               </div>
             </div>
 
-
             <ModalResumenConsolidado
               isOpen={modalResumenOpen}
               onClose={() => setModalResumenOpen(false)}
@@ -868,7 +908,7 @@ let planillas = planillasRes.data?.data || [];
               onClose={() => setModalGastosMesOpen(false)}
             />
 
-            {/* Actividad Reciente CON LOTTIE CHECKMARK */}
+            {/* Actividad Reciente */}
             <div className="bg-white rounded-2xl p-5 shadow-lg hover:shadow-xl transition-shadow border-2 border-[#5F8EAD]">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-bold text-[#34353A] flex items-center gap-2">
@@ -883,7 +923,6 @@ let planillas = planillasRes.data?.data || [];
                   <div className="flex items-start gap-3 p-3 bg-[#5D9646] bg-opacity-10 rounded-lg hover:bg-[#5D9646] hover:bg-opacity-15 transition-colors relative group">
                     <div className="p-2 bg-[#5D9646] bg-opacity-20 rounded-lg relative">
                       <CheckCircle className="text-[#5D9646]" size={16} />
-                      {/* Lottie checkmark en hover */}
                       <div className="absolute -top-2 -right-2 opacity-0 group-hover:opacity-100 transition-opacity">
                         <Lottie
                           animationData={checkmarkAnimation}
@@ -963,7 +1002,6 @@ let planillas = planillasRes.data?.data || [];
                 )}
               </div>
             </div>
-
           </div>
         </div>
       </div>
