@@ -178,7 +178,7 @@ export default function Planillas() {
     if (planilla.tipo === 'semanal') {
       navigate(`/planilla/semanal/${planilla._id}`);
     } else {
-      navigate(`/planilla/quincenales/${planilla._id}`);
+      navigate(`/planilla/quincenal/${planilla._id}`);
     }
   };
 
