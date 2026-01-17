@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
-import { ArrowLeft, ChevronLeft, ChevronRight, AlertCircle, Truck } from 'lucide-react';
+import React, { useState } from 'react';
+import { ArrowLeft, ChevronLeft, ChevronRight, AlertCircle } from 'lucide-react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Lottie from 'lottie-react';
 import sandyLoadingAnimation from '../../assets/lotties/Sandy Loading.json';
-import { useTruckDetail } from '../../components/Camiones/hooks/HookVer'; // Ajusta la ruta según tu estructura
+import { useTruckDetail } from '../../components/Camiones/hooks/HookVer';
 import CamionFord from "../../images/CamionFord.jpg";
 
 const DetalleCamionenv = () => {
@@ -12,25 +12,6 @@ const DetalleCamionenv = () => {
   const { truck, loading, error, refetch } = useTruckDetail(truckId);
   
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
-  const [loadingProgress, setLoadingProgress] = useState({});
-
-  // Efecto para las animaciones de las barras de progreso
-  useEffect(() => {
-    if (truck?.stats) {
-      const timer = setTimeout(() => {
-        Object.keys(truck.stats).forEach((key, index) => {
-          setTimeout(() => {
-            setLoadingProgress((prev) => ({
-              ...prev,
-              [key]: truck.stats[key].percentage,
-            }));
-          }, index * 300);
-        });
-      }, 500);
-
-      return () => clearTimeout(timer);
-    }
-  }, [truck]);
 
   const nextImage = () => {
     if (truck?.images) {
@@ -110,11 +91,9 @@ const DetalleCamionenv = () => {
                 <h1 className="text-xl font-semibold text-gray-800">Información del vehículo</h1>
               </div>
               
-              {/* Enhanced Loading Screen with Lottie */}
               <div className="flex-1 flex items-center justify-center relative" 
                    style={{background: 'linear-gradient(135deg, #34353A 0%, #2a2b2f 100%)'}}>
                 
-                {/* Background Animation */}
                 <div className="absolute inset-0 overflow-hidden">
                   <div className="absolute top-10 left-10 w-20 h-20 rounded-full opacity-10 animate-pulse"
                        style={{backgroundColor: '#5F8EAD', animation: 'float 3s ease-in-out infinite'}}>
@@ -128,7 +107,6 @@ const DetalleCamionenv = () => {
                 </div>
 
                 <div className="text-center z-10">
-                  {/* Lottie Animation */}
                   <div className="relative mb-8">
                     <div className="w-40 h-40 mx-auto mb-6 flex items-center justify-center">
                       <Lottie 
@@ -140,7 +118,6 @@ const DetalleCamionenv = () => {
                     </div>
                   </div>
                   
-                  {/* Enhanced Loading Text */}
                   <div className="space-y-4 mb-8">
                     <h2 className="text-2xl font-bold text-white animate-pulse">
                       Cargando Camión
@@ -150,7 +127,6 @@ const DetalleCamionenv = () => {
                     </p>
                   </div>
                   
-                  {/* Advanced Progress Bar */}
                   <div className="w-80 mx-auto">
                     <div className="w-full bg-gray-600 rounded-full h-2 mb-4 overflow-hidden shadow-inner">
                       <div className="h-2 rounded-full relative overflow-hidden"
@@ -165,7 +141,6 @@ const DetalleCamionenv = () => {
                       </div>
                     </div>
                     
-                    {/* Dynamic Loading Steps */}
                     <div className="text-sm text-gray-400 animate-pulse">
                       <span className="inline-block" style={{animation: 'text-fade 3s ease-in-out infinite'}}>
                         Verificando datos del camión...
@@ -291,12 +266,12 @@ const DetalleCamionenv = () => {
             </div>
 
             <div className="flex flex-1 flex-col lg:flex-row overflow-hidden">
-              {/* Left Sidebar - Statistics */}
-              <div className="w-full lg:w-80 p-8 border-b lg:border-b-0 lg:border-r border-gray-200 bg-gray-50 flex-shrink-0">
+              {/* Left Sidebar - Statistics SIN BARRAS */}
+              <div className="w-full lg:w-80 p-8 border-b lg:border-b-0 lg:border-r border-gray-200 bg-gray-50 flex-shrink-0 overflow-y-auto">
                 <h2 className="text-xl font-semibold text-gray-800 mb-8">Estadísticas del vehículo</h2>
 
-                <div className="space-y-10">
-                  {Object.entries(truck.stats).map(([key, stat], index) => {
+                <div className="space-y-4">
+                  {Object.entries(truck.stats).map(([key, stat]) => {
                     const labels = {
                       kilometraje: "Kilometraje",
                       viajesRealizados: "Viajes realizados",
@@ -305,22 +280,29 @@ const DetalleCamionenv = () => {
                       vecesNoDisponible: "Veces no disponible",
                     };
 
-                    return (
-                      <div key={key} className="space-y-3">
-                        <div className="flex justify-between items-center">
-                          <span className="text-gray-700 font-medium text-base">{labels[key]}</span>
-                          <span className="font-bold text-gray-900 text-xl">{stat.value}</span>
-                        </div>
+                    const icons = {
+                      kilometraje: "📏",
+                      viajesRealizados: "🚚",
+                      visitasAlTaller: "🔧",
+                      combustible: "⛽",
+                      vecesNoDisponible: "⚠️",
+                    };
 
-                        {/* Progress Bar */}
-                        <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
-                          <div
-                            className="h-full bg-blue-500 rounded-full transition-all duration-1000 ease-out"
-                            style={{
-                              width: `${loadingProgress[key] || 0}%`,
-                              transitionDelay: `${index * 300}ms`,
-                            }}
-                          ></div>
+                    return (
+                      <div 
+                        key={key} 
+                        className="bg-white rounded-xl p-5 shadow-sm border border-gray-200 hover:shadow-md transition-all duration-200"
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <span className="text-3xl">{icons[key]}</span>
+                            <span className="text-gray-700 font-medium text-sm">
+                              {labels[key]}
+                            </span>
+                          </div>
+                          <span className="font-bold text-gray-900 text-xl">
+                            {stat.value}
+                          </span>
                         </div>
                       </div>
                     );
@@ -463,9 +445,8 @@ const DetalleCamionenv = () => {
           </div>
         </div>
       </div>
-      </div>
-//hola
-//comentarios
-    );}
+    </div>
+  );
+};
 
 export default DetalleCamionenv;

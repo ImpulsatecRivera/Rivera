@@ -2,8 +2,8 @@ import { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../Context/authContext";
 import axios from "axios";
-import illustration from "../images/verification-box.png";
-import Title from "../components/RecoverPassword/Title";
+import Lottie from "lottie-react";
+import verificationAnimation from "../assets/lotties/Two factor authentication.json"; // Asegúrate de tener este archivo
 import Button from "../components/Login/Button";
 import { config } from "../config";
 
@@ -20,7 +20,6 @@ const VerificationInput = () => {
   const location = useLocation();
   const { checkAuth, setUser, setIsLoggedIn } = useAuth();
 
-  // ✅ Extraer el recoveryToken del state
   const { method, contactInfo, email, maskedInfo, flow, recoveryToken } = location.state || {};
   const displayEmail = email || contactInfo;
 
@@ -37,14 +36,12 @@ const VerificationInput = () => {
       recoveryToken: recoveryToken ? "✅ Presente" : "❌ Faltante"
     });
 
-    // ✅ Validar que tenemos los datos necesarios
     if (!displayEmail) {
       console.error("❌ Email/contactInfo faltante, redirigiendo...");
       navigate("/recuperar");
       return;
     }
 
-    // ✅ Para flujos de recuperación normal, verificar que tenemos el recoveryToken
     if (flow !== "quickLogin" && !recoveryToken) {
       console.error("❌ Recovery token faltante para flujo de recuperación");
       setError("Sesión expirada. Solicita un nuevo código.");
@@ -109,12 +106,10 @@ const VerificationInput = () => {
       return;
     }
 
-    // 🔍 DEBUG: Mostrar todo el state que recibimos
     console.log("🔍 DEBUG - State completo recibido:", location.state);
     console.log("🔍 DEBUG - recoveryToken:", recoveryToken);
     console.log("🔍 DEBUG - Tipo de recoveryToken:", typeof recoveryToken);
 
-    // ✅ Validar que tenemos el token antes de proceder
     if (flow !== "quickLogin" && !recoveryToken) {
       console.error("❌ Token faltante - State actual:", location.state);
       setError("Token de sesión faltante. Solicita un nuevo código.");
@@ -131,24 +126,20 @@ const VerificationInput = () => {
           ? `${API_URL}/recovery/loginCode`
           : `${API_URL}/recovery/verifyCode`;
 
-      // ✅ Preparar payload correcto según el flujo
       let requestPayload;
       
       if (flow === "quickLogin") {
-        // Para quickLogin, usar verifiedToken (según tu backend)
         requestPayload = { 
           code: verificationCode,
-          verifiedToken: recoveryToken || "" // Usa verifiedToken para este flujo
+          verifiedToken: recoveryToken || ""
         };
       } else {
-        // Para verificación normal, usar recoveryToken
         requestPayload = { 
           code: verificationCode, 
-          recoveryToken: recoveryToken // ✅ Incluir el token de recuperación
+          recoveryToken: recoveryToken
         };
       }
 
-      // 🔍 DEBUG: Mostrar el payload completo que se va a enviar
       console.log("📤 DEBUG - Payload completo:", requestPayload);
       console.log("📤 DEBUG - Endpoint:", endpoint);
       console.log("📤 DEBUG - recoveryToken presente:", !!recoveryToken);
@@ -165,21 +156,19 @@ const VerificationInput = () => {
         if (flow === "quickLogin") {
           console.log("🚀 Flujo quickLogin exitoso");
           const userFromServer = response.data?.user;
-          // actualizamos el contexto directamente
           if (userFromServer && setUser && setIsLoggedIn) {
             setUser(userFromServer);
             setIsLoggedIn(true);
           }
           navigate("/dashboard", { replace: true });
         } else {
-          // ✅ Para flujo normal, pasar el token verificado al siguiente paso
           const verifiedToken = response.data.verifiedToken;
           navigate("/reset-password", {
             state: { 
               email: displayEmail, 
               method: method, 
               verified: true,
-              verifiedToken: verifiedToken // ✅ Pasar el token verificado
+              verifiedToken: verifiedToken
             },
           });
         }
@@ -187,7 +176,6 @@ const VerificationInput = () => {
     } catch (error) {
       console.error("❌ Error al verificar código:", error);
       
-      // ✅ Manejo mejorado de errores
       if (error.response?.status === 401) {
         const errorMsg = error.response?.data?.message;
         if (errorMsg?.includes("expirado")) {
@@ -225,7 +213,6 @@ const VerificationInput = () => {
         setError("Error al verificar el código. Inténtalo de nuevo.");
       }
       
-      // Limpiar código en caso de error
       setCode(["", "", "", "", ""]);
       inputRefs[0].current?.focus();
     } finally {
@@ -239,7 +226,6 @@ const VerificationInput = () => {
     setError("");
     
     try {
-      // ✅ Adaptar la petición según tu backend
       const resendPayload = {
         email: displayEmail,
         via: method === "sms" ? "sms" : "email"
@@ -257,10 +243,8 @@ const VerificationInput = () => {
       );
 
       if (response.data.success) {
-        // ✅ Actualizar el token si el backend devuelve uno nuevo
         const newRecoveryToken = response.data.recoveryToken;
         if (newRecoveryToken) {
-          // Actualizar el state de navegación con el nuevo token
           window.history.replaceState({
             ...location.state,
             recoveryToken: newRecoveryToken
@@ -281,100 +265,151 @@ const VerificationInput = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col lg:flex-row">
-      <div className="w-full lg:w-1/2 bg-white flex items-center justify-center p-10">
-        <img src={illustration} alt="Ilustración" className="max-w-xs w-full" />
+    <div className="min-h-screen flex flex-col lg:flex-row bg-white">
+      {/* Sección de ilustración */}
+      <div className="w-full lg:w-1/2 bg-gradient-to-br from-blue-50 to-indigo-50 flex items-center justify-center p-10">
+        <div className="w-full max-w-md">
+          <Lottie 
+            animationData={verificationAnimation} 
+            loop={true}
+            style={{ width: '100%', height: 'auto' }}
+          />
+        </div>
       </div>
 
-      <div className="w-full lg:w-1/2 bg-[#2c2c34] text-white flex flex-col justify-center items-center p-10 space-y-6">
-        <Title className="text-white">CÓDIGO DE VERIFICACIÓN</Title>
-        <p className="text-center text-sm max-w-sm">
-          Ingresa el código de 5 dígitos que enviamos a{" "}
-          <span className="text-[#a100f2] font-semibold">
-            {maskedInfo || displayEmail}
-          </span>
-        </p>
-
-        {flow === "quickLogin" && (
-          <div className="bg-[#a100f2]/20 border border-[#a100f2] rounded-lg p-2 text-center">
-            <p className="text-xs text-[#a100f2]">
-              ⚡ Acceso instantáneo - Te logearás automáticamente
+      {/* Sección de verificación */}
+      <div className="w-full lg:w-1/2 flex flex-col justify-center items-center p-8 lg:p-16">
+        <div className="w-full max-w-md space-y-8">
+          {/* Header */}
+          <div className="text-center space-y-3">
+            <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg className="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+              </svg>
+            </div>
+            
+            <h1 className="text-3xl font-semibold text-gray-900">
+              Verifica tu código
+            </h1>
+            
+            <p className="text-sm text-gray-600">
+              Ingresa el código de 5 dígitos que enviamos a{" "}
+              <span className="font-medium text-blue-600">
+                {maskedInfo || displayEmail}
+              </span>
             </p>
           </div>
-        )}
 
-        {/* ✅ Mostrar advertencia si falta el token */}
-        {flow !== "quickLogin" && !recoveryToken && (
-          <div className="bg-red-500/20 border border-red-400 rounded-lg p-2 text-center">
-            <p className="text-xs text-red-400">
-              ⚠️ Sesión expirada - Serás redirigido para solicitar un nuevo código
-            </p>
-          </div>
-        )}
-
-        <div className="flex space-x-3 mt-6">
-          {code.map((digit, index) => (
-            <input
-              key={index}
-              ref={inputRefs[index]}
-              type="text"
-              inputMode="numeric"
-              maxLength="1"
-              value={digit}
-              onChange={(e) => handleInputChange(index, e.target.value)}
-              onKeyDown={(e) => handleKeyDown(index, e)}
-              onPaste={handlePaste}
-              className={`
-                w-12 h-14 rounded-lg border-2 text-center text-xl font-semibold
-                bg-white text-[#2c2c34]
-                ${error ? "border-red-400 animate-shake" : "border-gray-300 focus:border-[#a100f2]"}
-                ${digit ? "bg-[#a100f2] !text-white border-[#a100f2]" : ""}
-                ${loading ? "opacity-50 cursor-not-allowed" : ""}
-              `}
-              disabled={loading}
-            />
-          ))}
-        </div>
-
-        {error && (
-          <div className="bg-red-500/20 border border-red-400 rounded-lg p-3 text-center max-w-sm">
-            <p className="text-red-400 text-sm">{error}</p>
-          </div>
-        )}
-
-        <div className="text-center">
-          {counter > 0 ? (
-            <p className="text-xs text-white">
-              Reenviar código en 00:{counter.toString().padStart(2, "0")}
-            </p>
-          ) : (
-            <button
-              onClick={handleResendCode}
-              disabled={loading}
-              className="text-xs text-[#a100f2] hover:text-[#7d00c1] underline disabled:opacity-50"
-            >
-              {loading ? "Enviando..." : "Reenviar código"}
-            </button>
+          {/* Alertas */}
+          {flow === "quickLogin" && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+              <p className="text-sm text-blue-700 text-center">
+                ⚡ Acceso instantáneo - Te logearás automáticamente
+              </p>
+            </div>
           )}
+
+          {flow !== "quickLogin" && !recoveryToken && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+              <p className="text-sm text-red-600 text-center">
+                ⚠️ Sesión expirada - Serás redirigido
+              </p>
+            </div>
+          )}
+
+          {/* Inputs del código */}
+          <div className="space-y-4">
+            <label className="text-sm font-medium text-gray-700 block text-center">
+              Código de verificación
+            </label>
+            
+            <div className="flex justify-center gap-3">
+              {code.map((digit, index) => (
+                <input
+                  key={index}
+                  ref={inputRefs[index]}
+                  type="text"
+                  inputMode="numeric"
+                  maxLength="1"
+                  value={digit}
+                  onChange={(e) => handleInputChange(index, e.target.value)}
+                  onKeyDown={(e) => handleKeyDown(index, e)}
+                  onPaste={handlePaste}
+                  className={`
+                    w-14 h-16 text-center text-2xl font-semibold rounded-lg
+                    border-2 transition-all outline-none
+                    ${error 
+                      ? "border-red-300 bg-red-50 text-red-600" 
+                      : digit 
+                        ? "border-blue-600 bg-blue-50 text-blue-700" 
+                        : "border-gray-200 bg-gray-50 text-gray-900"
+                    }
+                    ${!error && !digit ? "focus:border-blue-500 focus:bg-white" : ""}
+                    ${loading ? "opacity-50 cursor-not-allowed" : ""}
+                  `}
+                  disabled={loading}
+                />
+              ))}
+            </div>
+          </div>
+
+          {/* Error message */}
+          {error && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+              <p className="text-red-600 text-sm text-center">{error}</p>
+            </div>
+          )}
+
+          {/* Botón de verificar */}
+          <Button
+            onClick={handleVerify}
+            disabled={!isComplete || loading || (flow !== "quickLogin" && !recoveryToken)}
+            className={`
+              w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 rounded-lg
+              transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed
+              ${loading ? 'opacity-75' : ''}
+            `}
+          >
+            {loading ? (
+              <div className="flex items-center justify-center space-x-2">
+                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                <span>Verificando...</span>
+              </div>
+            ) : (
+              flow === "quickLogin" ? "Iniciar sesión" : "Verificar código"
+            )}
+          </Button>
+
+          {/* Reenviar código */}
+          <div className="text-center space-y-2">
+            {counter > 0 ? (
+              <p className="text-sm text-gray-600">
+                ¿No recibiste el código?{" "}
+                <span className="font-medium text-gray-900">
+                  Reenviar en {counter}s
+                </span>
+              </p>
+            ) : (
+              <button
+                onClick={handleResendCode}
+                disabled={loading}
+                className="text-sm text-blue-600 hover:text-blue-700 font-medium disabled:opacity-50 transition-colors"
+              >
+                {loading ? "Enviando..." : "Reenviar código"}
+              </button>
+            )}
+          </div>
+
+          {/* Cambiar información */}
+          <div className="text-center pt-4 border-t border-gray-200">
+            <button
+              onClick={() => navigate("/recuperar")}
+              className="text-sm text-gray-600 hover:text-gray-900 transition-colors"
+            >
+              ¿Información incorrecta? <span className="font-medium">Cambiar</span>
+            </button>
+          </div>
         </div>
-
-        <Button
-          onClick={handleVerify}
-          disabled={!isComplete || loading || (flow !== "quickLogin" && !recoveryToken)}
-          className={`
-            bg-[#a100f2] hover:bg-[#7d00c1] transition-colors
-            ${(!isComplete || loading || (flow !== "quickLogin" && !recoveryToken)) ? "opacity-50 cursor-not-allowed" : ""}
-          `}
-        >
-          {loading ? "Verificando..." : flow === "quickLogin" ? "Iniciar sesión" : "Confirmar"}
-        </Button>
-
-        <button
-          onClick={() => navigate("/recuperar")}
-          className="text-sm text-gray-400 hover:text-white underline transition-colors"
-        >
-          ¿Información incorrecta? Cambiar
-        </button>
       </div>
     </div>
   );

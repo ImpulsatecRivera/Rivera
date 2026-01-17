@@ -1,10 +1,8 @@
 import { useState } from "react";
 import axios from "axios";
-import Input from "../components/RecoverPassword/input";
 import Button from "../components/Login/Button";
-import candado from "../images/candado.png";
-import ilustracion from "../images/recover.png";
-import Title from "../components/RecoverPassword/Title";
+import ilustracion from "../assets/lotties/Login.json";
+import Lottie from "lottie-react"
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { config } from "../config";
@@ -23,7 +21,6 @@ const RecoverPassword = () => {
       id: "email",
       label: "Correo electrónico",
       placeholder: "ejemplo@email.com",
-      icon: "📧",
       description: "Recuperar y cambiar contraseña",
       flow: "reset"
     },
@@ -31,7 +28,6 @@ const RecoverPassword = () => {
       id: "sms",
       label: "SMS",
       placeholder: "7123-4567 o +503 7123-4567",
-      icon: "📱",
       description: "Recuperar y cambiar contraseña",
       flow: "reset"
     }
@@ -44,9 +40,7 @@ const RecoverPassword = () => {
       case "email":
         return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
       case "sms":
-        // Validación mejorada para números de El Salvador
         const cleanPhone = value.replace(/[\s\-()]/g, '');
-        // Acepta +503XXXXXXXX, 503XXXXXXXX o XXXXXXXX (8 dígitos empezando con 2, 6 o 7)
         return /^(\+?503)?[267]\d{7}$/.test(cleanPhone);
       default:
         return false;
@@ -54,17 +48,12 @@ const RecoverPassword = () => {
   };
 
   const normalizePhone = (phone) => {
-    // Limpiar el número de espacios, guiones y paréntesis
     let cleanPhone = phone.replace(/[\s\-()]/g, '');
     
-    // Si no empieza con +, procesar
     if (!cleanPhone.startsWith('+')) {
-      // Si empieza con 503, agregar +
       if (cleanPhone.startsWith('503')) {
         cleanPhone = '+' + cleanPhone;
-      } 
-      // Si no empieza con 503, agregar +503
-      else {
+      } else {
         cleanPhone = '+503' + cleanPhone;
       }
     }
@@ -107,24 +96,16 @@ const RecoverPassword = () => {
     setLoading(true);
     setError("");
 
-    
     try {
       const endpoint = `${API_URL}/recovery/requestCode`;
-
       let requestPayload;
-      
-      let selectedMethodK = "sms"
 
-      if (selectedMethodK === "email") {
-           console.log("📡 ifADSFASDF Iniciando solicitud de código...");
-
+      if (selectedMethod === "email") {
         requestPayload = { 
           email: contactInfo.trim().toLowerCase(), 
           via: "email" 
         };
       } else {
-          console.log("📡 elseASDFHASDF Iniciando solicitud de código...");
-        // Normalizar número de teléfono para SMS
         const normalizedPhone = normalizePhone(contactInfo.trim());
         requestPayload = { 
           phone: normalizedPhone, 
@@ -145,20 +126,16 @@ const RecoverPassword = () => {
 
       console.log("✅ Respuesta del servidor:", response.data);
 
-      // ✅ CRÍTICO: Extraer el recoveryToken de la respuesta
       const recoveryToken = response.data.recoveryToken;
       
       console.log("🔑 Token extraído:", recoveryToken);
-      console.log("🔑 Tipo de token:", typeof recoveryToken);
 
-      // ✅ Validar que el token existe antes de navegar
       if (!recoveryToken) {
         console.error("❌ ERROR: No se recibió recoveryToken del servidor");
         setError("Error del servidor: no se generó el token de verificación");
         return;
       }
 
-      // Navegar a verificación CON el token
       navigate("/verification-input", {
         state: {
           method: selectedMethod,
@@ -168,7 +145,7 @@ const RecoverPassword = () => {
           maskedInfo: maskContactInfo(selectedMethod, contactInfo),
           flow: "reset",
           verificationEndpoint: "/recovery/verifyCode",
-          recoveryToken: recoveryToken  // ✅ AÑADIR EL TOKEN AQUÍ
+          recoveryToken: recoveryToken
         }
       });
 
@@ -188,7 +165,6 @@ const RecoverPassword = () => {
       } else if (error.response?.status === 400) {
         const backendMessage = error.response?.data?.message || "Error de validación en el servidor";
         
-        // Mensajes más amigables para el usuario
         if (backendMessage.includes("Usuario no encontrado") || backendMessage.includes("Usuario no existente")) {
           if (selectedMethod === "email") {
             setError("No encontramos una cuenta con este email. Verifica que sea correcto.");
@@ -222,108 +198,129 @@ const RecoverPassword = () => {
   const selectedMethodData = recoveryMethods.find(method => method.id === selectedMethod);
 
   return (
-    <div className="min-h-screen flex flex-col lg:flex-row">
-      <div className="w-full lg:w-1/2 bg-white flex items-center justify-center p-10">
-        <img src={ilustracion} alt="Ilustración de recuperación" className="max-w-xs w-full" />
+    <div className="min-h-screen flex flex-col lg:flex-row bg-white">
+      {/* Sección de ilustración */}
+      <div className="w-full lg:w-1/2 bg-gradient-to-br from-blue-50 to-indigo-50 flex items-center justify-center p-10">
+        <div className="w-full max-w-lg">
+          <Lottie 
+            animationData={ilustracion} 
+            loop={true}
+            style={{ width: '100%', height: 'auto' }}
+          />
+        </div>
       </div>
 
-      <div className="w-full lg:w-1/2 bg-[#2c2c34] text-white flex flex-col justify-center items-center p-10 space-y-6">
-        <img src={candado} alt="Icono de candado" className="w-24 h-24 mb-4" />
-        <Title className="text-white">RECUPERAR ACCESO</Title>
-        <p className="text-center text-white text-sm max-w-sm">
-          Elige cómo quieres recuperar tu acceso. Te enviaremos un código para cambiar tu contraseña.
-        </p>
-
-        <form onSubmit={handleSubmit} className="w-full max-w-sm space-y-6">
-          {/* Selector de método estilo tabs */}
-          <div className="flex bg-gray-800/50 rounded-xl p-1 backdrop-blur-sm border border-gray-700/50">
-            {recoveryMethods.map((method) => (
-              <button
-                key={method.id}
-                type="button"
-                onClick={() => {
-                  setSelectedMethod(method.id);
-                  setContactInfo("");
-                  setError("");
-                }}
-                className={`flex-1 py-3 px-4 rounded-lg text-sm font-medium transition-all duration-300 flex items-center justify-center space-x-2 ${
-                  selectedMethod === method.id
-                    ? "bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg shadow-purple-500/30"
-                    : "text-gray-400 hover:text-white"
-                }`}
-              >
-                {method.id === "email" ? (
-                  <span className="material-icons">mail</span>
-                ) : (
-                  <span className="material-icons">phone</span>
-                )}
-                <span>{method.label}</span>
-              </button>
-            ))}
+      {/* Sección de formulario */}
+      <div className="w-full lg:w-1/2 flex flex-col justify-center items-center p-8 lg:p-16">
+        <div className="w-full max-w-md space-y-8">
+          {/* Header */}
+          <div className="text-center space-y-2">
+            <h1 className="text-3xl font-semibold text-gray-900">
+              Recuperar acceso
+            </h1>
+            <p className="text-gray-600 text-sm">
+              Selecciona cómo deseas recuperar tu cuenta
+            </p>
           </div>
 
-          {/* Input con animación */}
-          <AnimatePresence mode="wait">
-            {selectedMethod && (
-              <motion.div
-                key={selectedMethod}
-                initial={{ y: 10, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                exit={{ y: -10, opacity: 0 }}
-                transition={{ duration: 0.3 }}
-              >
-                <Input
-                  type={selectedMethod === "email" ? "email" : "tel"}
-                  placeholder={selectedMethodData?.placeholder}
-                  value={contactInfo}
-                  onChange={(e) => {
-                    setContactInfo(e.target.value);
-                    setError("");
-                  }}
-                  className="bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:border-[#a100f2]"
-                />
-                {/* Mostrar qué tipo de dato se espera */}
-                <p className="text-xs text-gray-400 mt-1">
-                  {selectedMethod === "email" 
-                    ? "Ingresa tu email registrado" 
-                    : "Ingresa tu número registrado (ej: 7123-4567)"}
-                </p>
-              </motion.div>
-            )}
-          </AnimatePresence>
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Selector de método */}
+            <div className="space-y-3">
+              <label className="text-sm font-medium text-gray-700">
+                Método de recuperación
+              </label>
+              <div className="grid grid-cols-2 gap-3">
+                {recoveryMethods.map((method) => (
+                  <button
+                    key={method.id}
+                    type="button"
+                    onClick={() => {
+                      setSelectedMethod(method.id);
+                      setContactInfo("");
+                      setError("");
+                    }}
+                    className={`py-3 px-4 rounded-lg text-sm font-medium transition-all duration-200 border-2 ${
+                      selectedMethod === method.id
+                        ? "border-blue-600 bg-blue-50 text-blue-700"
+                        : "border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:bg-gray-50"
+                    }`}
+                  >
+                    {method.label}
+                  </button>
+                ))}
+              </div>
+            </div>
 
-          {error && (
-            <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-3">
-              <p className="text-red-400 text-sm text-center">{error}</p>
+            {/* Input con animación */}
+            <AnimatePresence mode="wait">
+              {selectedMethod && (
+                <motion.div
+                  key={selectedMethod}
+                  initial={{ y: 10, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  exit={{ y: -10, opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="space-y-2"
+                >
+                  <label className="text-sm font-medium text-gray-700">
+                    {selectedMethod === "email" ? "Correo electrónico" : "Número de teléfono"}
+                  </label>
+                  <input
+                    type={selectedMethod === "email" ? "email" : "tel"}
+                    placeholder={selectedMethodData?.placeholder}
+                    value={contactInfo}
+                    onChange={(e) => {
+                      setContactInfo(e.target.value);
+                      setError("");
+                    }}
+                    className="w-full px-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:bg-white transition-all text-gray-900 placeholder-gray-400 outline-none"
+                  />
+                  <p className="text-xs text-gray-500">
+                    {selectedMethod === "email" 
+                      ? "Ingresa tu correo electrónico registrado" 
+                      : "Ingresa tu número registrado (ej: 7123-4567)"}
+                  </p>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* Error message */}
+            {error && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                <p className="text-red-600 text-sm">{error}</p>
+              </div>
+            )}
+
+            {/* Submit button */}
+            <Button
+              type="submit"
+              disabled={loading || !selectedMethod || !contactInfo}
+              className={`w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed ${
+                loading ? 'opacity-75' : ''
+              }`}
+            >
+              {loading ? (
+                <div className="flex items-center justify-center space-x-2">
+                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  <span>Enviando código...</span>
+                </div>
+              ) : (
+                "Continuar"
+              )}
+            </Button>
+          </form>
+
+          {/* Info adicional */}
+          {selectedMethod && (
+            <div className="text-center">
+              <p className="text-xs text-gray-500">
+                {selectedMethod === "email" 
+                  ? "Recibirás un código de verificación en tu correo electrónico"
+                  : "Recibirás un código de verificación vía SMS"}
+              </p>
             </div>
           )}
-
-          <Button
-            type="submit"
-            disabled={loading || !selectedMethod || !contactInfo}
-            className={`w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-400 hover:to-pink-400 text-white font-semibold py-3 rounded-xl shadow-lg shadow-purple-500/30 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 ${
-              loading ? 'opacity-50' : ''
-            }`}
-          >
-            {loading ? (
-              <div className="flex items-center justify-center space-x-2">
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                <span>Enviando...</span>
-              </div>
-            ) : (
-              `Enviar código ${selectedMethod === "sms" ? "por SMS" : "por email"}`
-            )}
-          </Button>
-        </form>
-
-        {/* Información adicional */}
-        {selectedMethod && (
-          <div className="text-center text-xs text-gray-400 max-w-sm">
-            {selectedMethod === "email" 
-              ? "📧 Recibirás el código en tu bandeja de entrada"
-              : "📱 Recibirás el código vía SMS en unos momentos"}
-          </div>
-        )}
+        </div>
       </div>
     </div>
   );
