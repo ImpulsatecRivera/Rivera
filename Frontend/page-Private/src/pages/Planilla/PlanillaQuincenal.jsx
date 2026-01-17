@@ -3,7 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import {
   Plus, Save, X, DollarSign, Calendar, FileText, Download,
   CheckCircle, Trash2, Lock, Check, AlertCircle, Clock, ChevronDown,
-  User, GripVertical, MousePointer
+  User, GripVertical, MousePointer, ChevronLeft, ChevronRight, Users, Truck,
+  Search, Menu
 } from 'lucide-react';
 import { config } from '../../config';
 import Swal from 'sweetalert2';
@@ -24,8 +25,16 @@ export default function PlanillaQuincenal() {
   const [planilla, setPlanilla] = useState(null);
   const [loading, setLoading] = useState(false);
   const [empleados, setEmpleados] = useState([]);
+  const [motoristas, setMotoristas] = useState([]);
   
-  // Estado para nueva fila
+  const [panelAbierto, setPanelAbierto] = useState(() => {
+    const guardado = localStorage.getItem('panelPlanillaAbierto');
+    return guardado !== null ? JSON.parse(guardado) : true;
+  });
+  
+  const [busqueda, setBusqueda] = useState('');
+  const [esMobil, setEsMobil] = useState(window.innerWidth < 1024);
+  
   const [mostrarNuevaFila, setMostrarNuevaFila] = useState(false);
   const [nuevaFila, setNuevaFila] = useState({
     empleadoId: '',
@@ -36,11 +45,9 @@ export default function PlanillaQuincenal() {
     otros: 0
   });
 
-  // Estado para drag & drop
   const [empleadoArrastrando, setEmpleadoArrastrando] = useState(null);
   const [isDraggingOver, setIsDraggingOver] = useState(false);
 
-  // Estado para edición inline
   const [filaEditando, setFilaEditando] = useState(null);
   const [datosEdicion, setDatosEdicion] = useState({});
 
@@ -49,6 +56,37 @@ export default function PlanillaQuincenal() {
     mes: 12,
     quincena: 1
   });
+
+  useEffect(() => {
+    const handleResize = () => {
+      const esMovilNuevo = window.innerWidth < 1024;
+      setEsMobil(esMovilNuevo);
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem('panelPlanillaAbierto', JSON.stringify(panelAbierto));
+  }, [panelAbierto]);
+
+  useEffect(() => {
+    const handleKeyPress = (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'b') {
+        e.preventDefault();
+        if (puedeEditar) {
+          setPanelAbierto(prev => !prev);
+        }
+      }
+      if (e.key === 'Escape' && panelAbierto && esMobil) {
+        setPanelAbierto(false);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyPress);
+    return () => window.removeEventListener('keydown', handleKeyPress);
+  }, [panelAbierto, esMobil]);
 
   const calcularProximaQuincena = (planillaActual) => {
     if (!planillaActual) {
@@ -76,7 +114,7 @@ export default function PlanillaQuincenal() {
   };
 
   useEffect(() => {
-    cargarEmpleados();
+    cargarPersonal();
     
     if (id) {
       cargarPlanillaExistente(id);
@@ -85,22 +123,58 @@ export default function PlanillaQuincenal() {
     }
   }, [id]);
 
-  const cargarEmpleados = async () => {
+  const cargarPersonal = async () => {
     try {
-      const resEmpleados = await api.get(`/empleados`);
-      const dataEmpleados = resEmpleados.data;
+      try {
+        const resEmpleados = await api.get(`/empleados`);
+        const dataEmpleados = resEmpleados.data;
 
-      let empleadosArray = [];
-      if (dataEmpleados?.data?.empleados) {
-        empleadosArray = dataEmpleados.data.empleados;
-      } else if (Array.isArray(dataEmpleados)) {
-        empleadosArray = dataEmpleados;
+        let empleadosArray = [];
+        if (dataEmpleados?.data?.empleados) {
+          empleadosArray = dataEmpleados.data.empleados;
+        } else if (Array.isArray(dataEmpleados)) {
+          empleadosArray = dataEmpleados;
+        } else if (dataEmpleados?.empleados) {
+          empleadosArray = dataEmpleados.empleados;
+        }
+        
+        const empleadosQuincenales = empleadosArray.filter(
+          emp => emp.planillaTipo === 'Quincenal'
+        );
+        setEmpleados(empleadosQuincenales);
+      } catch (error) {
+        console.error('❌ Error cargando empleados:', error);
+        setEmpleados([]);
       }
-      
-      setEmpleados(empleadosArray);
+
+      try {
+        const resMotoristas = await api.get(`/motoristas`);
+        const dataMotoristas = resMotoristas.data;
+
+        let motoristasArray = [];
+        if (dataMotoristas?.data?.motoristas) {
+          motoristasArray = dataMotoristas.data.motoristas;
+        } else if (Array.isArray(dataMotoristas)) {
+          motoristasArray = dataMotoristas;
+        } else if (dataMotoristas?.motoristas) {
+          motoristasArray = dataMotoristas.motoristas;
+        } else if (dataMotoristas?.data) {
+          motoristasArray = Array.isArray(dataMotoristas.data) ? dataMotoristas.data : [];
+        }
+        
+        const motoristasQuincenales = motoristasArray.filter(
+          mot => mot.planillaTipo === 'Quincenal'
+        );
+        setMotoristas(motoristasQuincenales);
+      } catch (error) {
+        console.error('❌ Error cargando motoristas:', error);
+        setMotoristas([]);
+      }
+
     } catch (error) {
-      console.error('❌ Error cargando empleados:', error);
+      console.error('❌ Error general cargando personal:', error);
       setEmpleados([]);
+      setMotoristas([]);
     }
   };
 
@@ -294,12 +368,11 @@ export default function PlanillaQuincenal() {
     };
   };
 
-  // Función para agregar empleado (click o drag)
-  const agregarEmpleadoPorClick = (empleado) => {
+  const agregarEmpleadoPorClick = (persona) => {
     if (!puedeEditar) return;
     
     setNuevaFila({
-      empleadoId: empleado._id,
+      empleadoId: persona._id,
       viaticos: 0,
       trabajoSabadoDomingo: 0,
       anticipos: 0,
@@ -307,6 +380,10 @@ export default function PlanillaQuincenal() {
       otros: 0
     });
     setMostrarNuevaFila(true);
+    
+    if (esMobil) {
+      setTimeout(() => setPanelAbierto(false), 300);
+    }
   };
 
   const agregarEmpleadoAPlanilla = async () => {
@@ -525,10 +602,9 @@ export default function PlanillaQuincenal() {
     }
   };
 
-  // Handlers para Drag & Drop
-  const handleDragStart = (e, empleado) => {
+  const handleDragStart = (e, persona) => {
     if (!puedeEditar) return;
-    setEmpleadoArrastrando(empleado);
+    setEmpleadoArrastrando(persona);
     e.dataTransfer.effectAllowed = 'move';
   };
 
@@ -598,9 +674,13 @@ export default function PlanillaQuincenal() {
     );
   };
 
-  // Empleados disponibles (que no están en la planilla)
-  const empleadosDisponibles = empleados.filter(
-    emp => !planilla?.empleados?.some(pe => pe.empleadoId === emp._id)
+  const personalDisponible = [
+    ...empleados.map(emp => ({ ...emp, tipo: 'empleado' })),
+    ...motoristas.map(mot => ({ ...mot, tipo: 'motorista' }))
+  ].filter(persona => !planilla?.empleados?.some(pe => pe.empleadoId === persona._id));
+
+  const personalFiltrado = personalDisponible.filter(persona =>
+    `${persona.name} ${persona.lastName}`.toLowerCase().includes(busqueda.toLowerCase())
   );
 
   const puedeEditar = planilla?.estado === 'pendiente';
@@ -617,85 +697,255 @@ export default function PlanillaQuincenal() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
+    <div className="min-h-screen bg-gray-50 flex relative">
       
-      {/* Sidebar con empleados disponibles */}
+      {/* Overlay oscuro en móvil */}
+      {esMobil && panelAbierto && puedeEditar && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
+          onClick={() => setPanelAbierto(false)}
+        />
+      )}
+
+      {/* 🎯 Sidebar con ancho dinámico que libera espacio */}
       {puedeEditar && (
-        <div className="w-80 bg-white border-r border-gray-300 flex flex-col overflow-hidden">
-          <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-[#5F8EAD] to-[#5D9646]">
-            <div className="flex items-center gap-2 text-white">
-              <User size={20} />
-              <h3 className="font-bold">Empleados Disponibles</h3>
+        <div className={`
+          ${esMobil ? 'fixed left-0 top-0 h-full z-50' : 'relative'}
+          bg-white flex flex-col overflow-hidden
+          transition-all duration-300 ease-in-out
+          ${esMobil ? 'shadow-2xl' : 'border-r border-gray-300 shadow-sm'}
+          ${esMobil 
+            ? (panelAbierto ? 'translate-x-0 w-80' : '-translate-x-full w-80')
+            : (panelAbierto ? 'w-80' : 'w-0')
+          }
+        `}>
+          {/* Header del panel */}
+          <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-[#5F8EAD] to-[#5D9646] min-w-[320px]">
+            <div className="flex items-center justify-between text-white mb-2">
+              <div className="flex items-center gap-2">
+                <Users size={20} />
+                <h3 className="font-bold text-lg">Personal Disponible</h3>
+              </div>
+              {esMobil && (
+                <button
+                  onClick={() => setPanelAbierto(false)}
+                  className="p-1.5 hover:bg-white hover:bg-opacity-20 rounded-lg transition-colors"
+                >
+                  <X size={18} />
+                </button>
+              )}
             </div>
-            <p className="text-xs text-white text-opacity-90 mt-1">
-              {empleadosDisponibles.length} empleados
+            
+            <p className="text-xs text-white text-opacity-90 mb-3">
+              {personalFiltrado.length} {personalFiltrado.length === 1 ? 'persona' : 'personas'} - Planilla Quincenal
             </p>
+            
+            <div className="flex gap-2 text-xs">
+              <div className="flex items-center gap-1 bg-white bg-opacity-20 px-2 py-1 rounded">
+                <User size={12} />
+                <span>{empleados.length} Empleados</span>
+              </div>
+              <div className="flex items-center gap-1 bg-white bg-opacity-20 px-2 py-1 rounded">
+                <Truck size={12} />
+                <span>{motoristas.length} Motoristas</span>
+              </div>
+            </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto p-3 space-y-2">
-            {empleadosDisponibles.length === 0 ? (
-              <div className="text-center py-12 text-gray-400">
-                <User size={48} className="mx-auto mb-3 opacity-50" />
-                <p className="text-sm">Todos los empleados están agregados</p>
-              </div>
-            ) : (
-              empleadosDisponibles.map((empleado) => (
-                <div
-                  key={empleado._id}
-                  draggable
-                  onDragStart={(e) => handleDragStart(e, empleado)}
-                  onClick={() => agregarEmpleadoPorClick(empleado)}
-                  className="bg-white border-2 border-gray-200 rounded-lg p-3 cursor-move hover:border-[#5F8EAD] hover:shadow-lg transition-all group"
+          {/* Barra de búsqueda */}
+          <div className="p-3 border-b border-gray-200 bg-gray-50 min-w-[320px]">
+            <div className="relative">
+              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Buscar por nombre..."
+                value={busqueda}
+                onChange={(e) => setBusqueda(e.target.value)}
+                className="w-full pl-10 pr-9 py-2 text-sm border border-gray-300 rounded-lg 
+                  focus:outline-none focus:ring-2 focus:ring-[#5F8EAD] focus:border-transparent
+                  transition-all"
+              />
+              {busqueda && (
+                <button
+                  onClick={() => setBusqueda('')}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 
+                    hover:text-gray-600 transition-colors"
                 >
-                  <div className="flex items-start gap-2">
-                    <GripVertical size={16} className="text-gray-400 mt-0.5 flex-shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-sm text-gray-900 truncate">
-                        {empleado.name} {empleado.lastName}
-                      </p>
-                      <p className="text-xs text-gray-600 mt-0.5">
-                        Quincenal: {formatearMoneda((empleado.salario || 0) / 2)}
-                      </p>
-                    </div>
-                    <MousePointer size={14} className="text-[#5F8EAD] opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
-                  </div>
-                  
-                  <div className="mt-2 pt-2 border-t border-gray-100">
-                    <p className="text-xs text-gray-500">
-                      🎯 <strong>Arrastrar</strong> a la tabla o hacer <strong>click</strong> para agregar
-                    </p>
-                  </div>
-                </div>
-              ))
+                  <X size={14} />
+                </button>
+              )}
+            </div>
+            {busqueda && (
+              <p className="text-xs text-gray-600 mt-2">
+                {personalFiltrado.length} resultado{personalFiltrado.length !== 1 ? 's' : ''}
+              </p>
             )}
           </div>
 
-          <div className="p-3 border-t border-gray-200 bg-gray-50">
+          {/* Contenido del panel */}
+          <div className="flex-1 overflow-y-auto p-3 space-y-2 min-w-[320px]">
+            {personalFiltrado.length === 0 ? (
+              <div className="text-center py-12 text-gray-400">
+                {busqueda ? (
+                  <>
+                    <Search size={48} className="mx-auto mb-3 opacity-50" />
+                    <p className="text-sm font-semibold">No se encontraron resultados</p>
+                    <p className="text-xs mt-2">Intenta con otro nombre</p>
+                  </>
+                ) : (
+                  <>
+                    <Users size={48} className="mx-auto mb-3 opacity-50" />
+                    <p className="text-sm font-semibold">Todo el personal está agregado</p>
+                    <p className="text-xs mt-2">No hay más personas disponibles</p>
+                  </>
+                )}
+              </div>
+            ) : (
+              <>
+                {/* Sección Empleados */}
+                {personalFiltrado.filter(p => p.tipo === 'empleado').length > 0 && (
+                  <>
+                    <div className="flex items-center gap-2 px-2 py-1.5 bg-blue-50 rounded-lg border border-blue-200">
+                      <User size={14} className="text-blue-600" />
+                      <span className="text-xs font-bold text-blue-900">
+                        EMPLEADOS ({personalFiltrado.filter(p => p.tipo === 'empleado').length})
+                      </span>
+                    </div>
+                    {personalFiltrado
+                      .filter(p => p.tipo === 'empleado')
+                      .map((persona) => (
+                        <div
+                          key={persona._id}
+                          draggable={!esMobil}
+                          onDragStart={(e) => !esMobil && handleDragStart(e, persona)}
+                          onClick={() => agregarEmpleadoPorClick(persona)}
+                          className="bg-white border-2 border-blue-200 rounded-lg p-3 
+                            cursor-pointer hover:border-[#5F8EAD] hover:shadow-lg 
+                            transition-all duration-200 group active:scale-95"
+                        >
+                          <div className="flex items-start gap-2">
+                            {!esMobil && (
+                              <GripVertical size={16} className="text-gray-400 mt-0.5 flex-shrink-0" />
+                            )}
+                            <div className="flex-1 min-w-0">
+                              <p className="font-semibold text-sm text-gray-900 truncate">
+                                {persona.name} {persona.lastName}
+                              </p>
+                              <p className="text-xs text-gray-600 mt-0.5">
+                                Quincenal: {formatearMoneda((persona.salario || 0) / 2)}
+                              </p>
+                            </div>
+                            <MousePointer size={14} className="text-[#5F8EAD] opacity-0 
+                              group-hover:opacity-100 transition-opacity flex-shrink-0" />
+                          </div>
+                        </div>
+                      ))}
+                  </>
+                )}
+
+                {/* Sección Motoristas */}
+                {personalFiltrado.filter(p => p.tipo === 'motorista').length > 0 && (
+                  <>
+                    <div className="flex items-center gap-2 px-2 py-1.5 bg-green-50 rounded-lg border border-green-200 mt-3">
+                      <Truck size={14} className="text-green-600" />
+                      <span className="text-xs font-bold text-green-900">
+                        MOTORISTAS ({personalFiltrado.filter(p => p.tipo === 'motorista').length})
+                      </span>
+                    </div>
+                    {personalFiltrado
+                      .filter(p => p.tipo === 'motorista')
+                      .map((persona) => (
+                        <div
+                          key={persona._id}
+                          draggable={!esMobil}
+                          onDragStart={(e) => !esMobil && handleDragStart(e, persona)}
+                          onClick={() => agregarEmpleadoPorClick(persona)}
+                          className="bg-white border-2 border-green-200 rounded-lg p-3 
+                            cursor-pointer hover:border-[#5D9646] hover:shadow-lg 
+                            transition-all duration-200 group active:scale-95"
+                        >
+                          <div className="flex items-start gap-2">
+                            {!esMobil && (
+                              <GripVertical size={16} className="text-gray-400 mt-0.5 flex-shrink-0" />
+                            )}
+                            <div className="flex-1 min-w-0">
+                              <p className="font-semibold text-sm text-gray-900 truncate">
+                                {persona.name} {persona.lastName}
+                              </p>
+                              <p className="text-xs text-gray-600 mt-0.5">
+                                Quincenal: {formatearMoneda((persona.salario || 0) / 2)}
+                              </p>
+                            </div>
+                            <MousePointer size={14} className="text-[#5D9646] opacity-0 
+                              group-hover:opacity-100 transition-opacity flex-shrink-0" />
+                          </div>
+                        </div>
+                      ))}
+                  </>
+                )}
+              </>
+            )}
+          </div>
+
+          {/* Footer del panel */}
+          <div className="p-3 border-t border-gray-200 bg-gray-50 min-w-[320px]">
             <div className="flex items-center gap-2 text-xs text-gray-600">
               <AlertCircle size={14} />
-              <span>Arrastra o haz click para agregar</span>
+              <span>
+                {esMobil ? 'Toca para agregar' : 'Arrastra o haz click para agregar'}
+              </span>
             </div>
+            {!esMobil && (
+              <div className="mt-2 text-xs text-gray-500 flex items-center gap-1">
+                <kbd className="px-1.5 py-0.5 bg-gray-200 rounded text-xs font-mono">Ctrl</kbd>
+                <span>+</span>
+                <kbd className="px-1.5 py-0.5 bg-gray-200 rounded text-xs font-mono">B</kbd>
+                <span>para mostrar/ocultar</span>
+              </div>
+            )}
           </div>
         </div>
       )}
 
-      {/* Contenido principal */}
-      <div className="flex-1 p-6 overflow-auto">
+      {/* Contenido principal - Se expande automáticamente */}
+      <div className="flex-1 p-4 lg:p-6 overflow-auto">
         <div className="max-w-[1600px] mx-auto">
           
-          {/* Header */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-5 mb-5">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="p-3 bg-[#5F8EAD] rounded-lg">
+          {/* Header con botón integrado */}
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 lg:p-5 mb-5">
+            <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
+              <div className="flex items-center gap-3 w-full lg:w-auto">
+                
+                {/* Botón de panel integrado */}
+                {puedeEditar && (
+                  <button
+                    onClick={() => setPanelAbierto(!panelAbierto)}
+                    className="p-3 bg-gradient-to-r from-[#5F8EAD] to-[#5D9646] 
+                      text-white rounded-lg hover:shadow-lg transition-all
+                      hover:scale-105 active:scale-95 relative flex-shrink-0"
+                    title={panelAbierto ? 'Ocultar panel' : 'Mostrar personal'}
+                  >
+                    <Users size={20} />
+                    {!panelAbierto && personalDisponible.length > 0 && (
+                      <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] 
+                        rounded-full w-5 h-5 flex items-center justify-center font-bold 
+                        animate-pulse shadow-md">
+                        {personalDisponible.length}
+                      </span>
+                    )}
+                  </button>
+                )}
+                
+                <div className="p-3 bg-[#5F8EAD] rounded-lg flex-shrink-0">
                   <FileText size={24} className="text-white" />
                 </div>
-                <div>
-                  <h1 className="text-2xl font-bold text-gray-900">
+                
+                <div className="flex-1 lg:flex-none">
+                  <h1 className="text-xl lg:text-2xl font-bold text-gray-900">
                     Planilla Quincenal
                   </h1>
-                  <div className="flex items-center gap-4 mt-1">
-                    <span className="text-sm text-gray-600">
+                  <div className="flex flex-wrap items-center gap-2 lg:gap-4 mt-1">
+                    <span className="text-xs lg:text-sm text-gray-600">
                       {planilla?.descripcion || `${infoPlanilla.quincena === 1 ? 'Primera' : 'Segunda'} quincena - ${getMesNombre(infoPlanilla.mes)} ${infoPlanilla.año}`}
                     </span>
                     {getEstadoBadge(planilla?.estado)}
@@ -703,14 +953,16 @@ export default function PlanillaQuincenal() {
                 </div>
               </div>
 
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3 w-full lg:w-auto">
                 {planilla?.estado === 'pendiente' && (
                   <button
                     onClick={() => cambiarEstadoPlanilla('aprobada')}
-                    className="flex items-center gap-2 px-4 py-2 bg-[#5D9646] text-white rounded-lg hover:bg-[#4a7835] font-semibold text-sm"
+                    className="flex items-center justify-center gap-2 px-4 py-2 bg-[#5D9646] 
+                      text-white rounded-lg hover:bg-[#4a7835] font-semibold text-sm 
+                      transition-colors flex-1 lg:flex-none"
                   >
                     <CheckCircle size={18} />
-                    Aprobar
+                    <span>Aprobar</span>
                   </button>
                 )}
 
@@ -754,10 +1006,12 @@ export default function PlanillaQuincenal() {
                       
                       setLoading(false);
                     }}
-                    className="flex items-center gap-2 px-4 py-2 bg-[#5F8EAD] text-white rounded-lg hover:bg-[#4a6d85] font-semibold text-sm"
+                    className="flex items-center justify-center gap-2 px-4 py-2 bg-[#5F8EAD] 
+                      text-white rounded-lg hover:bg-[#4a6d85] font-semibold text-sm
+                      transition-colors flex-1 lg:flex-none"
                   >
                     <Plus size={18} />
-                    Nueva Planilla
+                    <span>Nueva Planilla</span>
                   </button>
                 )}
               </div>
@@ -768,7 +1022,7 @@ export default function PlanillaQuincenal() {
           {!puedeEditar && (
             <div className="bg-amber-50 border-l-4 border-amber-500 p-4 mb-5 rounded-r-lg">
               <div className="flex items-center gap-3">
-                <Lock className="text-amber-700" size={20} />
+                <Lock className="text-amber-700 flex-shrink-0" size={20} />
                 <div>
                   <p className="font-semibold text-amber-900 text-sm">Planilla bloqueada</p>
                   <p className="text-xs text-amber-800">Esta planilla está {planilla?.estado} y no puede ser modificada</p>
@@ -790,14 +1044,14 @@ export default function PlanillaQuincenal() {
               <div className="bg-[#5F8EAD] bg-opacity-10 border-b-2 border-[#5F8EAD] p-3">
                 <div className="flex items-center justify-center gap-2 text-[#5F8EAD] font-semibold">
                   <Plus size={20} />
-                  <span>Suelta aquí para agregar empleado</span>
+                  <span>Suelta aquí para agregar a la planilla</span>
                 </div>
               </div>
             )}
 
             <div className="overflow-x-auto">
               <table className="w-full border-collapse">
-                {/* Header */}
+                {/* Header de la tabla */}
                 <thead>
                   <tr className="bg-gray-100 border-b-2 border-gray-300">
                     <th className="px-3 py-2 text-left text-xs font-bold text-gray-700 border-r border-gray-300 w-12">#</th>
@@ -980,7 +1234,7 @@ export default function PlanillaQuincenal() {
                     );
                   })}
 
-                  {/* Fila para agregar nuevo empleado (después de arrastrar/click) */}
+                  {/* Fila para agregar nuevo empleado */}
                   {mostrarNuevaFila && puedeEditar && (
                     <tr className="border-b-2 border-blue-400 bg-blue-50">
                       <td className="px-3 py-2 text-xs text-gray-700 border-r border-gray-200 text-center">
@@ -992,12 +1246,29 @@ export default function PlanillaQuincenal() {
                           onChange={(e) => setNuevaFila({ ...nuevaFila, empleadoId: e.target.value })}
                           className="w-full px-2 py-1 text-xs border border-blue-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 font-medium"
                         >
-                          <option value="">Seleccionar empleado...</option>
-                          {empleadosDisponibles.map(emp => (
-                            <option key={emp._id} value={emp._id}>
-                              {emp.name} {emp.lastName} - {formatearMoneda((emp.salario || 0) / 2)}
-                            </option>
-                          ))}
+                          <option value="">Seleccionar...</option>
+                          {empleados.filter(emp => !planilla?.empleados?.some(pe => pe.empleadoId === emp._id)).length > 0 && (
+                            <optgroup label="EMPLEADOS">
+                              {empleados
+                                .filter(emp => !planilla?.empleados?.some(pe => pe.empleadoId === emp._id))
+                                .map(emp => (
+                                  <option key={emp._id} value={emp._id}>
+                                    {emp.name} {emp.lastName} - {formatearMoneda((emp.salario || 0) / 2)}
+                                  </option>
+                                ))}
+                            </optgroup>
+                          )}
+                          {motoristas.filter(mot => !planilla?.empleados?.some(pe => pe.empleadoId === mot._id)).length > 0 && (
+                            <optgroup label="MOTORISTAS">
+                              {motoristas
+                                .filter(mot => !planilla?.empleados?.some(pe => pe.empleadoId === mot._id))
+                                .map(mot => (
+                                  <option key={mot._id} value={mot._id}>
+                                    {mot.name} {mot.lastName} - {formatearMoneda((mot.salario || 0) / 2)}
+                                  </option>
+                                ))}
+                            </optgroup>
+                          )}
                         </select>
                       </td>
                       <td className="px-3 py-2 text-xs text-right border-r border-gray-200 text-gray-400">-</td>
@@ -1094,12 +1365,14 @@ export default function PlanillaQuincenal() {
                       <td colSpan="15" className="px-6 py-16 text-center">
                         <div className="text-gray-400">
                           <FileText size={56} className="mx-auto mb-4 opacity-50" />
-                          <p className="text-base font-semibold mb-2">No hay empleados en esta planilla</p>
+                          <p className="text-base font-semibold mb-2">No hay personal en esta planilla</p>
                           {puedeEditar && (
                             <p className="text-sm text-gray-500">
-                              {empleadosDisponibles.length > 0 
-                                ? '← Arrastra un empleado desde el panel lateral o haz click en él'
-                                : 'No hay empleados disponibles para agregar'}
+                              {personalDisponible.length > 0 
+                                ? esMobil 
+                                  ? 'Usa el botón de Personal para agregar' 
+                                  : '← Arrastra una persona desde el panel lateral o haz click'
+                                : 'No hay personal disponible para agregar'}
                             </p>
                           )}
                         </div>
