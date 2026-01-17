@@ -1,17 +1,8 @@
 import { useState, useEffect } from 'react';
 import { config } from '../../../config';
+import { api } from '../../../Context/authContext'; // ✅ IMPORTAR API
 
 const API_URL = config.api.API_URL;
-
-// Función auxiliar para fetch con timeout usando AbortController
-const fetchWithTimeout = (url, options = {}, timeout = 10000) => {
-  const controller = new AbortController();
-  const id = setTimeout(() => controller.abort(), timeout);
-  return fetch(url, {
-    ...options,
-    signal: controller.signal,
-  }).finally(() => clearTimeout(id));
-};
 
 export const useTruckDetail = (truckId) => {
   const [truck, setTruck] = useState(null);
@@ -19,32 +10,18 @@ export const useTruckDetail = (truckId) => {
   const [error, setError] = useState(null);
   const [allDrivers, setAllDrivers] = useState([]);
 
-  // Función para obtener todos los motoristas
+  // ✅ USAR API EN LUGAR DE FETCH
   const fetchAllDrivers = async () => {
     try {
       console.log('=== OBTENIENDO LISTA DE MOTORISTAS ===');
       
-      const response = await fetchWithTimeout(
-        `${API_URL}/motoristas`,
-        {
-          method: 'GET',
-          credentials: 'include',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        },
-        5000
-      );
+      const response = await api.get('/motoristas', {
+        timeout: 5000
+      });
       
-      if (!response.ok) {
-        console.warn('No se pudo obtener lista de motoristas:', response.status);
-        return [];
-      }
-      
-      const motoristasData = await response.json();
-      console.log('Lista de motoristas obtenida:', motoristasData);
-      setAllDrivers(motoristasData);
-      return motoristasData;
+      console.log('Lista de motoristas obtenida:', response.data);
+      setAllDrivers(response.data);
+      return response.data;
       
     } catch (error) {
       console.error('Error al obtener motoristas:', error);
@@ -88,55 +65,22 @@ export const useTruckDetail = (truckId) => {
       console.log('=== OBTENIENDO DETALLE DEL CAMIÓN CON ESTADÍSTICAS ===');
       console.log('ID del camión:', truckId);
       
-      // NUEVO: Usar el endpoint que incluye estadísticas
-      const response = await fetchWithTimeout(
-        `${API_URL}/camiones/${truckId}/stats`,
-        {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        },
-        10000
-      );
+      // ✅ USAR API EN LUGAR DE FETCH
+      const response = await api.get(`/camiones/${truckId}/stats`, {
+        timeout: 10000
+      });
       
       console.log('=== RESPUESTA DEL SERVIDOR ===');
       console.log('Status:', response.status);
-      
-      if (!response.ok) {
-        let errorMessage = 'Error desconocido';
-        try {
-          const errorData = await response.json();
-          errorMessage = errorData.message || errorData.error || `Error ${response.status}`;
-        } catch {
-          errorMessage = `Error ${response.status}: ${response.statusText}`;
-        }
+      console.log('Datos del camión con estadísticas recibidos:', response.data);
 
-        switch (response.status) {
-          case 400:
-            throw new Error(errorMessage || 'Solicitud inválida');
-          case 401:
-            throw new Error('No autorizado para ver este camión');
-          case 403:
-            throw new Error('Acceso denegado');
-          case 404:
-            throw new Error('Camión no encontrado');
-          case 500:
-            throw new Error('Error interno del servidor');
-          default:
-            throw new Error(errorMessage);
-        }
-      }
-
-      const apiResponse = await response.json();
-      console.log('Datos del camión con estadísticas recibidos:', apiResponse);
+      const apiResponse = response.data;
 
       if (apiResponse && apiResponse.data) {
         console.log('=== ESTRUCTURA COMPLETA DE LA API ===');
         console.log('Data raw:', JSON.stringify(apiResponse, null, 2));
         console.log('Propiedades disponibles:', Object.keys(apiResponse));
         
-        // FIXED: Usar apiResponse.data en lugar de data directamente
         const data = apiResponse.data;
         console.log('=== DATOS DEL CAMIÓN EXTRAÍDOS ===');
         console.log('Truck data:', data);
@@ -158,22 +102,18 @@ export const useTruckDetail = (truckId) => {
         
         console.log('=== INICIANDO MAPEO DE DATOS ===');
         
-        // FIXED: Mapear los datos correctamente desde data (no apiResponse)
         const truckData = {
           // Datos básicos
           name: findValue(data, ['name', 'nombre', 'truck_name'], 'Sin nombre'),
           plate: findValue(data, ['licensePlate', 'placa', 'license_plate', 'plate']),
-          // FIXED: Manejar todas las variaciones de circulationCard que aparecen en tu JSON
           card: findValue(data, ['ciculatioCard', 'circulationCard', 'tarjeta_circulacion', 'circulation_card']), 
           year: findValue(data, ['age', 'año', 'year', 'model_year']),
-          // FIXED: Priorizar campos legacy que tienen más datos en tu JSON
           brand: findValue(data, ['marca', 'brand', 'manufacturer']),
           model: findValue(data, ['modelo', 'model']),
           
           // STATUS - Manejar todas las variaciones de estado
           status: (() => {
             console.log('=== MAPEANDO STATUS ===');
-            // Priorizar 'state' sobre 'estado' ya que es el más consistente en tu JSON
             const rawStatus = findValue(data, ['state', 'estado', 'status', 'condition'], null);
             console.log('Raw status encontrado:', rawStatus);
             
@@ -249,7 +189,7 @@ export const useTruckDetail = (truckId) => {
             return defaultImages;
           })(),
           
-          // ESTADÍSTICAS: Usar las estadísticas que vienen del backend
+          // ESTADÍSTICAS
           stats: (() => {
             console.log('=== MAPEANDO ESTADÍSTICAS ===');
             console.log('Stats del API:', data.stats);
@@ -275,19 +215,7 @@ export const useTruckDetail = (truckId) => {
 
         console.log('=== DATOS FINALES MAPEADOS ===');
         console.log('Truck Data Completo:', JSON.stringify(truckData, null, 2));
-        console.log('Nombre:', truckData.name);
-        console.log('Placa:', truckData.plate);
-        console.log('Tarjeta:', truckData.card);
-        console.log('Año:', truckData.year);
-        console.log('Marca:', truckData.brand);
-        console.log('Modelo:', truckData.model);
-        console.log('Estado:', truckData.status);
-        console.log('Motorista:', truckData.driver);
-        console.log('Proveedor:', truckData.supplier);
-        console.log('Estadísticas disponibles:', Object.keys(truckData.stats));
-
         
-        // Log detallado del combustible si está disponible
         if (truckData.stats.combustible?.details) {
           console.log('=== DETALLES DEL COMBUSTIBLE ===');
           console.log('Litros actuales:', truckData.stats.combustible.details.liters);
@@ -314,10 +242,29 @@ export const useTruckDetail = (truckId) => {
 
       let errorMessage = 'Error desconocido';
 
-      if (error.name === 'AbortError') {
+      // ✅ MANEJO DE ERRORES DE AXIOS
+      if (error.code === 'ECONNABORTED') {
         errorMessage = 'La solicitud tardó demasiado tiempo. Inténtalo de nuevo.';
-      } else if (error.name === 'TypeError' && error.message.includes('fetch')) {
+      } else if (error.code === 'ERR_NETWORK') {
         errorMessage = 'No se pudo conectar con el servidor. Verifica tu conexión.';
+      } else if (error.response) {
+        // Error con respuesta del servidor
+        switch (error.response.status) {
+          case 401:
+            errorMessage = 'No autorizado para ver este camión';
+            break;
+          case 403:
+            errorMessage = 'Acceso denegado';
+            break;
+          case 404:
+            errorMessage = 'Camión no encontrado';
+            break;
+          case 500:
+            errorMessage = 'Error interno del servidor';
+            break;
+          default:
+            errorMessage = error.response.data?.message || error.response.data?.error || `Error ${error.response.status}`;
+        }
       } else {
         errorMessage = error.message || 'Error al procesar la solicitud';
       }

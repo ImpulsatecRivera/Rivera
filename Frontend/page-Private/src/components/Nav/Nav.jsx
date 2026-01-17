@@ -5,6 +5,7 @@ import avatarImg from '../../images/avatarDashboard.png';
 import { NavLink, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../Context/authContext";
 import logoutAnim from "../../assets/lotties/Campervan _ Ignite Animation.json"; // ejemplo
+import logoRivera from "../../images/logo.png"; // 
 
 const SidebarNav = () => {
   const [activeItem, setActiveItem] = useState('Inicio');
@@ -344,14 +345,16 @@ const SidebarNav = () => {
           <Menu size={14} />
         </button>
 
-        <div className={`flex items-center justify-center transition-all duration-300 ${isTabletCollapsed ? 'py-4 px-2' : 'py-4 sm:py-6 lg:py-8 px-4'}`}>
-          <img
-            src={avatarImg}
-            alt="Avatar"
-            className={`profile-img rounded-full object-cover mx-auto transition-all duration-300 ${isTabletCollapsed ? 'w-8 h-8' : 'w-16 h-16 sm:w-20 sm:h-20 lg:w-24 lg:h-24'
-              }`}
-          />
-        </div>
+       <div className={`flex items-center justify-center transition-all duration-300 ${isTabletCollapsed ? 'py-4 px-2' : 'py-4 sm:py-6 lg:py-8 px-4'}`}>
+  <img
+    src={logoRivera}  
+    alt="Rivera Logo"  
+    className={`profile-img rounded-full object-cover mx-auto transition-all duration-300 ${
+      isTabletCollapsed ? 'w-8 h-8' : 'w-16 h-16 sm:w-20 sm:h-20 lg:w-24 lg:h-24'
+    }`}
+  />
+</div>
+
 
         <nav className={`flex-1 mt-2 sm:mt-4 lg:mt-6 transition-all duration-300 ${isTabletCollapsed ? 'px-2' : 'px-3 sm:px-4'}`}>
           <ul className="space-y-1 sm:space-y-2">
