@@ -1,12 +1,8 @@
 import React, { useState } from 'react';
 import { X, Calendar, FileText, Download, ChevronDown, AlertCircle, CheckCircle } from 'lucide-react';
+import { api } from '../../Context/authContext';
 
-/**
- * MODAL RESUMEN CONSOLIDADO
- * Modal para generar reportes consolidados por camión
- * Opciones: Mensual (con días trabajados), Multi-mes, Anual
- */
-const ModalResumenConsolidado = ({ isOpen, onClose, apiUrl }) => {
+const ModalResumenConsolidado = ({ isOpen, onClose }) => {
   // Estados principales
   const [tipoReporte, setTipoReporte] = useState('mensual');
   const [mesSeleccionado, setMesSeleccionado] = useState('');
@@ -38,9 +34,6 @@ const ModalResumenConsolidado = ({ isOpen, onClose, apiUrl }) => {
   // Años disponibles (últimos 10 años)
   const anos = Array.from({ length: 10 }, (_, i) => new Date().getFullYear() - i);
 
-  /**
-   * Toggle de selección de meses para multi-mes
-   */
   const toggleMes = (mes) => {
     if (mesesSeleccionados.includes(mes)) {
       setMesesSeleccionados(mesesSeleccionados.filter(m => m !== mes));
@@ -49,9 +42,6 @@ const ModalResumenConsolidado = ({ isOpen, onClose, apiUrl }) => {
     }
   };
 
-  /**
-   * Validar si el botón de generar debe estar deshabilitado
-   */
   const isButtonDisabled = () => {
     if (generando) return true;
     if (tipoReporte === 'mensual' && (!mesSeleccionado || !diasTrabajados)) return true;
@@ -59,18 +49,11 @@ const ModalResumenConsolidado = ({ isOpen, onClose, apiUrl }) => {
     return false;
   };
 
-  /**
-   * Mostrar alerta personalizada
-   */
   const showCustomAlert = (type, title, message, details = []) => {
     setAlertData({ type, title, message, details });
     setShowAlert(true);
   };
 
-  /**
-   * GENERAR REPORTE
-   * Lógica principal para generar el PDF según el tipo seleccionado
-   */
   const generarReporte = async () => {
     // Validaciones específicas por tipo
     if (tipoReporte === 'mensual') {
@@ -94,153 +77,128 @@ const ModalResumenConsolidado = ({ isOpen, onClose, apiUrl }) => {
     try {
       // REPORTE ANUAL
       if (tipoReporte === 'anual') {
-        const reporteUrl = `${apiUrl}/reporte-consolidado/anual/${anoSeleccionado}`;
-        
         try {
-          const response = await fetch(reporteUrl, { credentials: 'include' });
+          const response = await api.get(`/reporte-consolidado/anual/${anoSeleccionado}`, {
+            responseType: 'blob'
+          });
           
-          if (response.ok) {
-            window.open(reporteUrl, '_blank');
-            setTimeout(() => {
-              setGenerando(false);
-              showCustomAlert('success', '¡Reporte generado!', 'El reporte anual consolidado está listo.');
-            }, 1000);
-          } else if (response.status === 404) {
+          const blob = new Blob([response.data], { type: 'application/pdf' });
+          const url = window.URL.createObjectURL(blob);
+          window.open(url, '_blank');
+          
+          setTimeout(() => {
+            window.URL.revokeObjectURL(url);
             setGenerando(false);
-            const errorData = await response.json();
+            showCustomAlert('success', '¡Reporte generado!', 'El reporte anual consolidado está listo.');
+          }, 1000);
+        } catch (error) {
+          setGenerando(false);
+          if (error.response?.status === 404) {
             showCustomAlert(
               'info',
               'Sin datos disponibles',
-              errorData.message || `No hay registros para el año ${anoSeleccionado}.`,
+              error.response.data?.message || `No hay registros para el año ${anoSeleccionado}.`,
               ['Verifica que existan datos registrados en ese año', 'Intenta con otro año']
             );
           } else {
-            setGenerando(false);
-            const errorData = await response.json().catch(() => ({}));
             showCustomAlert(
               'error',
               'Error al generar reporte',
-              errorData.message || 'No se pudo generar el reporte.',
+              error.response?.data?.message || 'No se pudo generar el reporte.',
               ['Verifica tu conexión a internet', 'Si el problema persiste, contacta al administrador']
             );
           }
-        } catch (error) {
-          setGenerando(false);
-          showCustomAlert(
-            'error',
-            'Error de conexión',
-            'No se pudo conectar con el servidor.',
-            ['Verifica tu conexión a internet', 'Intenta nuevamente']
-          );
         }
       } 
       // REPORTE MENSUAL
       else if (tipoReporte === 'mensual') {
-        const reporteUrl = `${apiUrl}/reporte-consolidado/mensual/${mesSeleccionado}/${anoSeleccionado}/${diasTrabajados}`;
-        
         try {
-          const response = await fetch(reporteUrl, { credentials: 'include' });
+          const response = await api.get(
+            `/reporte-consolidado/mensual/${mesSeleccionado}/${anoSeleccionado}/${diasTrabajados}`,
+            { responseType: 'blob' }
+          );
           
-          if (response.ok) {
-            window.open(reporteUrl, '_blank');
-            setTimeout(() => {
-              setGenerando(false);
-              showCustomAlert('success', '¡Reporte generado!', 'El reporte mensual consolidado está listo.');
-            }, 1000);
-          } else if (response.status === 404) {
+          const blob = new Blob([response.data], { type: 'application/pdf' });
+          const url = window.URL.createObjectURL(blob);
+          window.open(url, '_blank');
+          
+          setTimeout(() => {
+            window.URL.revokeObjectURL(url);
             setGenerando(false);
-            const errorData = await response.json();
+            showCustomAlert('success', '¡Reporte generado!', 'El reporte mensual consolidado está listo.');
+          }, 1000);
+        } catch (error) {
+          setGenerando(false);
+          if (error.response?.status === 404) {
             const mesNombre = meses.find(m => m.value === parseInt(mesSeleccionado))?.label;
             showCustomAlert(
               'info',
               'Sin datos disponibles',
-              errorData.message || `No hay registros para ${mesNombre} ${anoSeleccionado}.`,
+              error.response.data?.message || `No hay registros para ${mesNombre} ${anoSeleccionado}.`,
               ['Verifica que existan datos registrados en ese período', 'Intenta con otro mes']
             );
           } else {
-            setGenerando(false);
-            const errorData = await response.json().catch(() => ({}));
             showCustomAlert(
               'error',
               'Error al generar reporte',
-              errorData.message || 'No se pudo generar el reporte.',
+              error.response?.data?.message || 'No se pudo generar el reporte.',
               ['Verifica tu conexión a internet', 'Si el problema persiste, contacta al administrador']
             );
           }
-        } catch (error) {
-          setGenerando(false);
-          showCustomAlert(
-            'error',
-            'Error de conexión',
-            'No se pudo conectar con el servidor.',
-            ['Verifica tu conexión a internet', 'Intenta nuevamente']
-          );
         }
       } 
       // REPORTE MULTI-MES
       else if (tipoReporte === 'multiple') {
-        const response = await fetch(`${apiUrl}/reporte-consolidado/multi-mes`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
+        try {
+          const response = await api.post('/reporte-consolidado/multi-mes', {
             meses: mesesSeleccionados.sort((a, b) => a - b),
             ano: anoSeleccionado
-          })
-        });
-        
-        if (!response.ok) {
-          setGenerando(false);
+          }, {
+            responseType: 'blob'
+          });
           
-          if (response.status === 404) {
-            const errorData = await response.json().catch(() => ({}));
+          const blob = new Blob([response.data], { type: 'application/pdf' });
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `reporte-consolidado-multi-${anoSeleccionado}.pdf`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          window.URL.revokeObjectURL(url);
+          
+          setTimeout(() => {
+            setGenerando(false);
+            showCustomAlert('success', '¡Descarga completa!', 'El reporte multi-mes se ha descargado correctamente.');
+          }, 1000);
+        } catch (error) {
+          setGenerando(false);
+          if (error.response?.status === 404) {
             const mesesSinDatosNombres = mesesSeleccionados.map(m => 
               meses.find(mes => mes.value === m)?.label
             );
             showCustomAlert(
               'info',
               'Sin datos disponibles',
-              errorData.message || `Ninguno de los meses seleccionados tiene registros para ${anoSeleccionado}.`,
+              error.response.data?.message || `Ninguno de los meses seleccionados tiene registros para ${anoSeleccionado}.`,
               mesesSinDatosNombres
             );
-            return;
-          }
-          
-          if (response.status === 400) {
-            const errorData = await response.json().catch(() => ({}));
+          } else if (error.response?.status === 400) {
             showCustomAlert(
               'warning',
               'Solicitud inválida',
-              errorData.message || 'Los datos enviados no son válidos.',
+              error.response.data?.message || 'Los datos enviados no son válidos.',
               ['Verifica los meses seleccionados', 'Intenta nuevamente']
             );
-            return;
+          } else {
+            showCustomAlert(
+              'error',
+              'Error del servidor',
+              error.response?.data?.message || `Error al generar el reporte.`,
+              ['Verifica tu conexión a internet', 'Si el problema persiste, contacta al administrador']
+            );
           }
-          
-          const errorData = await response.json().catch(() => ({}));
-          showCustomAlert(
-            'error',
-            'Error del servidor',
-            errorData.message || `El servidor respondió con un error (${response.status}).`,
-            ['Verifica tu conexión a internet', 'Si el problema persiste, contacta al administrador']
-          );
-          return;
         }
-        
-        // Descargar el PDF
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `reporte-consolidado-multi-${anoSeleccionado}.pdf`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        window.URL.revokeObjectURL(url);
-        
-        setTimeout(() => {
-          setGenerando(false);
-          showCustomAlert('success', '¡Descarga completa!', 'El reporte multi-mes se ha descargado correctamente.');
-        }, 1000);
       }
       
     } catch (error) {
