@@ -52,6 +52,13 @@ const getMotoristaTruckId = (m) => {
   return "";
 };
 
+const hhmmToMinutes = (hhmm) => {
+  if (!hhmm || !hhmm.includes(':')) return 0;
+  const [h, m] = hhmm.split(':').map(Number);
+  return (h || 0) * 60 + (m || 0);
+};
+
+
 export default function AgregarViajeOperativo() {
   const navigate = useNavigate();
 
@@ -309,7 +316,7 @@ export default function AgregarViajeOperativo() {
         rutaDestino: formData.rutaDestino,
         rutaCompleta: formData.rutaCompleta,
         distanciaTotal: Number(formData.distanciaTotal) || 0,
-        tiempoEstimado: formData.tiempoEstimado || "00:00",
+        tiempoEstimado: hhmmToMinutes(formData.tiempoEstimado),
         cargaDescripcion: formData.cargaDescripcion || "Carga general",
         cargaPeso: Number(formData.cargaPeso) || 0,
         cargaTipo: formData.cargaTipo,

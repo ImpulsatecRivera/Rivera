@@ -1,21 +1,13 @@
-// Versión mejorada del hook con mejor debugging y actualización de estado
 import { useState, useEffect } from 'react';
 import { config } from '../../../config';
+import { api } from '../../../Context/authContext'; // ✅ IMPORTAR API
 
 const API_URL = config.api.API_URL;
-
 
 const useTrucksData = () => {
   const [trucks, setTrucks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-
-  const fetchOptions = {
-    credentials: 'include',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-  };
 
   const normalizeTruckData = (truck) => {
     const id = truck.id || truck._id || truck.truck_id || truck.camion_id;
@@ -23,21 +15,17 @@ const useTrucksData = () => {
     return {
       ...truck,
       id: id,
-      _id: truck._id || id, // Mantener ambos para compatibilidad
+      _id: truck._id || id,
       name: truck.name || truck.nombre || 'Camión sin nombre',
       licensePlate: truck.licensePlate || truck.placa || 'N/A',
-      // Manejar todas las variaciones de estado que aparecen en tu JSON
       state: truck.state || truck.estado || 'SIN ESTADO',
       img: truck.img || truck.image || truck.foto || null,
-      // Priorizar campos nuevos sobre campos legacy
       brand: truck.brand || truck.marca || '',
       model: truck.model || truck.modelo || '',
       age: truck.age || truck.año || truck.year || '',
-      // Manejar todas las variaciones de circulationCard
       circulationCard: truck.circulationCard || truck.ciculatioCard || '',
-      ciculatioCard: truck.ciculatioCard || truck.circulationCard || '', // Mantener ambos
+      ciculatioCard: truck.ciculatioCard || truck.circulationCard || '',
       description: truck.description || truck.descripcion || '',
-      // Manejar nivel de gasolina con diferentes nombres
       gasolineLevel: truck.gasolineLevel || truck.nivelGasolina || 0,
       supplierId: truck.supplierId || '',
       driverId: truck.driverId || ''
@@ -51,17 +39,12 @@ const useTrucksData = () => {
       
       console.log('🚚 Iniciando petición a la API...');
       
-      const response = await fetch(`${API_URL}/camiones`, fetchOptions);
+      // ✅ USAR API EN LUGAR DE FETCH
+      const response = await api.get('/camiones');
       
-      console.log('📡 Status de la respuesta:', response.status);
-      console.log('📡 Response OK:', response.ok);
+      console.log('📡 Datos recibidos:', response.data);
       
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      
-      const data = await response.json();
-      console.log("📋 Datos recibidos del servidor:", data);
+      const data = response.data;
 
       // Manejar diferentes formatos de respuesta
       let camiones = [];
@@ -100,8 +83,12 @@ const useTrucksData = () => {
     } catch (err) {
       console.error('❌ Error detallado:', err);
       
-      if (err.message.includes('fetch')) {
-        setError('No se puede conectar al servidor. Verifica que esté ejecutándose en http://localhost:4000');
+      if (err.code === 'ERR_NETWORK' || err.code === 'ECONNREFUSED') {
+        setError('No se puede conectar al servidor. Verifica que esté ejecutándose.');
+      } else if (err.response?.status === 401) {
+        setError('No autorizado. Por favor inicia sesión nuevamente.');
+      } else if (err.response?.status === 403) {
+        setError('No tienes permisos para ver los camiones.');
       } else {
         setError(`Error al cargar camiones: ${err.message}`);
       }
@@ -115,43 +102,49 @@ const useTrucksData = () => {
     try {
       console.log(`🗑️ Eliminando camión con ID: ${truckId}`);
       
-      const response = await fetch(`${API_URL}camiones/${truckId}`, {
-        method: 'DELETE',
-        ...fetchOptions,
-      });
+      // ✅ USAR API Y CORREGIR LA URL (agregar /)
+      const response = await api.delete(`/camiones/${truckId}`);
 
-      if (response.ok) {
-        setTrucks(prevTrucks => prevTrucks.filter(t => t.id !== truckId));
-        console.log('✅ Camión eliminado exitosamente');
-        return { success: true };
-      } else {
-        const errorData = await response.json();
-        console.error('❌ Error al eliminar camión:', errorData);
+      console.log('✅ Camión eliminado exitosamente');
+      setTrucks(prevTrucks => prevTrucks.filter(t => t.id !== truckId && t._id !== truckId));
+      return { success: true };
+
+    } catch (error) {
+      console.error('❌ Error al eliminar camión:', error);
+      
+      if (error.response?.status === 404) {
         return { 
           success: false, 
-          error: 'Error al eliminar el camión. Inténtalo de nuevo.' 
+          error: 'Camión no encontrado.' 
+        };
+      } else if (error.response?.status === 401) {
+        return { 
+          success: false, 
+          error: 'No autorizado para eliminar este camión.' 
+        };
+      } else if (error.response?.status === 403) {
+        return { 
+          success: false, 
+          error: 'No tienes permisos para eliminar camiones.' 
+        };
+      } else {
+        return { 
+          success: false, 
+          error: error.response?.data?.message || 'Error al eliminar el camión. Inténtalo de nuevo.' 
         };
       }
-    } catch (error) {
-      console.error('❌ Error de conexión al eliminar camión:', error);
-      return { 
-        success: false, 
-        error: 'Error de conexión. Verifica tu conexión a internet.' 
-      };
     }
   };
 
   const updateTruckInState = (updatedTruck) => {
     console.log('🔄 Actualizando camión en estado:', updatedTruck);
     
-    // Normalizar el camión actualizado para mantener consistencia
     const normalizedUpdatedTruck = normalizeTruckData(updatedTruck);
     console.log('🔄 Camión normalizado para actualización:', normalizedUpdatedTruck);
     
     setTrucks(prevTrucks => {
       console.log('📋 Estado previo de camiones:', prevTrucks.length, 'camiones');
       
-      // Buscar el camión por ID y _id para mayor compatibilidad
       const truckIndex = prevTrucks.findIndex(t => 
         t.id === normalizedUpdatedTruck.id || 
         t._id === normalizedUpdatedTruck._id ||
@@ -209,7 +202,6 @@ const useTrucksData = () => {
     fetchTrucks();
   }, []);
 
-  // Debug mejorado
   useEffect(() => {
     console.log('📊 Estado actual:', {
       trucksCount: trucks.length,
@@ -238,7 +230,6 @@ const useTrucksData = () => {
     addTruckToState,
     getTruckById,
     existsTruckWithPlate,
-    fetchOptions,
     trucksCount: trucks.length,
     hasData: trucks.length > 0
   };
