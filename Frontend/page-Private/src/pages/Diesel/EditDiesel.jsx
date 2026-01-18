@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { ArrowLeft, Save, AlertCircle, Fuel } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import { api } from "../../Context/authContext";
+import Swal from 'sweetalert2'; // ✅ IMPORTAR
 
 const ESTADOS = {
   PENDIENTE: "Pendiente",
@@ -42,7 +43,6 @@ export default function EditDiesel() {
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState(null);
 
   const [camiones, setCamiones] = useState([]);
   const [isLocked, setIsLocked] = useState(false);
@@ -52,6 +52,7 @@ export default function EditDiesel() {
     CicurlationCard: "",
     Galones: "",
     Total: "",
+    numeroMarchamo: "", // ✅ NUEVO
     estado: ESTADOS.PENDIENTE,
   });
 
@@ -70,7 +71,6 @@ export default function EditDiesel() {
     const run = async () => {
       try {
         setLoading(true);
-        setError(null);
 
         // 🔹 Camiones
         const { data: camData } = await api.get('/camiones');
@@ -97,6 +97,7 @@ export default function EditDiesel() {
           CicurlationCard: cic,
           Galones: String(found.Galones ?? found.galones ?? 0),
           Total: String(found.Total ?? found.total ?? 0),
+          numeroMarchamo: found.numeroMarchamo || "", // ✅ NUEVO
           estado: estadoBD,
         });
 
@@ -104,11 +105,14 @@ export default function EditDiesel() {
 
       } catch (e) {
         console.error(e);
-        setError(
-          e.response?.data?.message ||
-          e.message ||
-          "Error al cargar"
-        );
+        Swal.fire({
+          icon: 'error',
+          title: 'Error al cargar datos',
+          text: e.response?.data?.message || e.message || "Error al cargar",
+          confirmButtonColor: '#ef4444'
+        }).then(() => {
+          navigate("/diesel");
+        });
       } finally {
         setLoading(false);
       }
@@ -137,10 +141,14 @@ export default function EditDiesel() {
     if (name === "fecha") {
       const today = getTodayISO();
       if (value && value > today) {
-        setError("No se permiten fechas futuras. Solo fechas pasadas o el día de hoy.");
+        Swal.fire({
+          icon: 'warning',
+          title: 'Fecha no válida',
+          text: 'No se permiten fechas futuras. Solo fechas pasadas o el día de hoy.',
+          confirmButtonColor: '#5F8EAD'
+        });
         return;
       }
-      if (error) setError(null);
     }
 
     setFormData((p) => ({ ...p, [name]: value }));
@@ -152,36 +160,143 @@ export default function EditDiesel() {
         throw new Error("Este registro ya está completado y no se puede editar.");
       }
 
-      setSaving(true);
-      setError(null);
+      // ✅ Validaciones con SweetAlert
+      if (!formData.fecha) {
+        Swal.fire({
+          icon: 'warning',
+          title: 'Campo requerido',
+          text: 'La fecha es requerida',
+          confirmButtonColor: '#5F8EAD'
+        });
+        return;
+      }
 
-      if (!formData.fecha) throw new Error("La fecha es requerida");
-      if (formData.fecha > getTodayISO()) throw new Error("La fecha no puede ser a futuro.");
-      if (!formData.CicurlationCard) throw new Error("Debe seleccionar un camión");
-      if (toNumber(formData.Galones) <= 0) throw new Error("Los galones deben ser mayores que 0");
-      if (toNumber(formData.Total) <= 0) throw new Error("El total debe ser mayor que 0");
+      if (formData.fecha > getTodayISO()) {
+        Swal.fire({
+          icon: 'warning',
+          title: 'Fecha no válida',
+          text: 'La fecha no puede ser a futuro.',
+          confirmButtonColor: '#5F8EAD'
+        });
+        return;
+      }
+
+      if (!formData.CicurlationCard) {
+        Swal.fire({
+          icon: 'warning',
+          title: 'Campo requerido',
+          text: 'Debe seleccionar un camión',
+          confirmButtonColor: '#5F8EAD'
+        });
+        return;
+      }
+
+      if (toNumber(formData.Galones) <= 0) {
+        Swal.fire({
+          icon: 'warning',
+          title: 'Galones inválidos',
+          text: 'Los galones deben ser mayores que 0',
+          confirmButtonColor: '#5F8EAD'
+        });
+        return;
+      }
+
+      if (toNumber(formData.Total) <= 0) {
+        Swal.fire({
+          icon: 'warning',
+          title: 'Total inválido',
+          text: 'El total debe ser mayor que 0',
+          confirmButtonColor: '#5F8EAD'
+        });
+        return;
+      }
+
+      // ✅ Confirmación antes de guardar
+      const confirmResult = await Swal.fire({
+        title: '¿Guardar cambios?',
+        text: formData.estado === ESTADOS.COMPLETADO
+          ? "El registro se marcará como completado y ya no podrás editarlo después"
+          : "Se actualizará la información del registro",
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#5F8EAD',
+        cancelButtonColor: '#6b7280',
+        confirmButtonText: 'Sí, guardar',
+        cancelButtonText: 'Cancelar'
+      });
+
+      if (!confirmResult.isConfirmed) return;
+
+      setSaving(true);
+
+      // ✅ Mostrar loading
+      Swal.fire({
+        title: 'Guardando cambios...',
+        html: 'Por favor espera un momento',
+        allowOutsideClick: false,
+        didOpen: () => {
+          Swal.showLoading();
+        }
+      });
 
       const payload = {
         fecha: formData.fecha,
         Galones: toNumber(formData.Galones),
         Total: toNumber(formData.Total),
         CicurlationCard: formData.CicurlationCard,
+        numeroMarchamo: formData.numeroMarchamo.trim() || null, // ✅ NUEVO
         estado: formData.estado,
       };
 
-      // ✅ CORREGIDO - Axios ya devuelve data parseada
+      console.log('📤 Payload enviado:', payload);
+
       const { data } = await api.put(`/resumen/${id}`, payload);
       
       if (!data?.success) {
         throw new Error(data?.message || "Error al actualizar");
       }
 
+      // ✅ Alert de éxito
+      await Swal.fire({
+        icon: 'success',
+        title: '¡Éxito!',
+        html: formData.estado === ESTADOS.COMPLETADO
+          ? '✅ Registro actualizado y marcado como completado'
+          : '✅ Registro actualizado exitosamente',
+        confirmButtonColor: '#5D9646',
+        timer: 3000,
+        timerProgressBar: true
+      });
+
       navigate("/diesel");
     } catch (e) {
       console.error(e);
-      setError(e.response?.data?.message || e.message || "Error al actualizar");
+      
+      Swal.fire({
+        icon: 'error',
+        title: 'Error al actualizar',
+        text: e.response?.data?.message || e.message || "Error al actualizar",
+        confirmButtonColor: '#ef4444'
+      });
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleCancelar = async () => {
+    const result = await Swal.fire({
+      title: '¿Cancelar edición?',
+      text: "Los cambios no guardados se perderán",
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#ef4444',
+      cancelButtonColor: '#6b7280',
+      confirmButtonText: 'Sí, salir',
+      cancelButtonText: 'Continuar editando'
+    });
+
+    if (result.isConfirmed) {
+      navigate("/diesel");
     }
   };
 
@@ -201,7 +316,7 @@ export default function EditDiesel() {
       <div className="max-w-4xl mx-auto">
         <div className="mb-8">
           <button
-            onClick={() => navigate("/diesel")}
+            onClick={handleCancelar}
             className="flex items-center gap-2 text-[#5F8EAD] hover:text-[#34353A] font-semibold mb-4 transition-colors"
           >
             <ArrowLeft size={20} />
@@ -226,17 +341,8 @@ export default function EditDiesel() {
         </div>
 
         <div className="bg-white rounded-3xl shadow-xl p-8">
-          {error && (
-            <div className="mb-6 bg-red-50 border-2 border-red-200 rounded-xl p-4 flex items-start gap-3">
-              <AlertCircle className="text-red-600 flex-shrink-0 mt-0.5" size={20} />
-              <div>
-                <p className="text-red-800 font-semibold">Error</p>
-                <p className="text-red-600 text-sm">{error}</p>
-              </div>
-            </div>
-          )}
-
           <div className="grid grid-cols-1 gap-4">
+            {/* Fecha */}
             <div>
               <label className="block text-sm font-semibold text-[#34353A] mb-2">Fecha</label>
               <input
@@ -252,6 +358,7 @@ export default function EditDiesel() {
               />
             </div>
 
+            {/* Camión */}
             <div>
               <label className="block text-sm font-semibold text-[#34353A] mb-2">Camión / Placa</label>
               <select
@@ -272,6 +379,26 @@ export default function EditDiesel() {
               </select>
             </div>
 
+            {/* ✅ NUEVO: Número de Marchamo */}
+            <div>
+              <label className="block text-sm font-semibold text-[#34353A] mb-2">
+                Número de Marchamo
+                <span className="text-gray-400 font-normal text-xs ml-2">(Opcional)</span>
+              </label>
+              <input
+                type="text"
+                name="numeroMarchamo"
+                value={formData.numeroMarchamo}
+                onChange={handleChange}
+                placeholder="Ej: M-12345-2024"
+                disabled={isLocked}
+                className={`w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#5F8EAD] focus:border-[#5F8EAD] ${
+                  isLocked ? "bg-gray-100 cursor-not-allowed" : ""
+                }`}
+              />
+            </div>
+
+            {/* Estado */}
             <div>
               <label className="block text-sm font-semibold text-[#34353A] mb-2">Estado del registro</label>
               <select
@@ -294,6 +421,7 @@ export default function EditDiesel() {
               )}
             </div>
 
+            {/* Galones */}
             <div>
               <label className="block text-sm font-semibold text-[#34353A] mb-2">Galones</label>
               <input
@@ -310,6 +438,7 @@ export default function EditDiesel() {
               />
             </div>
 
+            {/* Total */}
             <div>
               <label className="block text-sm font-semibold text-[#34353A] mb-2">Total (USD)</label>
               <input
@@ -330,9 +459,10 @@ export default function EditDiesel() {
               </p>
             </div>
 
+            {/* Botones */}
             <div className="flex items-center gap-4 pt-2">
               <button
-                onClick={() => navigate("/diesel")}
+                onClick={handleCancelar}
                 className="flex-1 px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-xl font-semibold hover:bg-gray-50 transition-colors"
               >
                 Cancelar

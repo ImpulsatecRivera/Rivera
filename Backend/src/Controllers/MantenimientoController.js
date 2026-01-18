@@ -1,10 +1,10 @@
 import MantenimientoCamiones from "../Models/MantenimientoCamiones.js";
 import camiones from "../Models/Camiones.js";
-import mongoose, { isValidObjectId } from 'mongoose'; // Cambiar a import, no require
+import Proveedores from "../Models/Proveedores.js"; // ← NUEVO: Importar modelo
+import mongoose, { isValidObjectId } from 'mongoose';
 
 const mantenimientoCon = {};
 
-//# obtener lista de mantenimientos de camiones
 //# obtener lista de mantenimientos de camiones
 mantenimientoCon.getMantenimineto = async(req, res) => {
     try {
@@ -12,6 +12,14 @@ mantenimientoCon.getMantenimineto = async(req, res) => {
             .populate({
                 path: "ciculatioCard",
                 select: "name brand model state age licensePlate"
+            })
+            .populate({
+                path: "proveedores",
+                select: "nombre telefono email direccion"
+            })
+            .populate({
+                path: "detalles.proveedor",
+                select: "nombre"
             });
         
         if(!manto || manto.length === 0) {
@@ -30,6 +38,8 @@ mantenimientoCon.getMantenimineto = async(req, res) => {
             tipo_de_mantenimiento: m.tipo_de_mantenimiento,
             descripcion: m.descripcion,
             detalles: m.detalles,
+            proveedores: m.proveedores, // ← NUEVO
+            costoTotal: m.costoTotal,
             estado: m.estado,  
             ciculatioCard: m.ciculatioCard,
             createdAt: m.createdAt,
@@ -76,6 +86,7 @@ const formateartipoMantenimiento = (tipo) => {
 };
 
 //# Obtener mantenimiento por ID con información detallada
+//# Obtener mantenimiento por ID con información detallada
 mantenimientoCon.obtenerMantoId = async(req, res) => {
     try {
         const { id } = req.params;
@@ -91,6 +102,14 @@ mantenimientoCon.obtenerMantoId = async(req, res) => {
             .populate({
                 path: "ciculatioCard",
                 select: "name brand model state age licensePlate description img"
+            })
+            .populate({
+                path: "proveedores",
+                select: "companyName telefono email direccion phone partDescription" // ← CAMBIO: companyName
+            })
+            .populate({
+                path: "detalles.proveedor",
+                select: "companyName telefono phone" // ← CAMBIO: companyName
             });
 
         if(!manto) {
@@ -134,15 +153,20 @@ mantenimientoCon.obtenerMantoId = async(req, res) => {
             tipoMantenimiento: manto.tipo_de_mantenimiento,
             tipoMantenimientoFormateado: formateartipoMantenimiento(manto.tipo_de_mantenimiento),
             descripcion: manto.descripcion,
+            estado: manto.estado,
             
-            // Detalles de costos
-           detalles: manto.detalles.map(detalle => ({
-    concepto: detalle.concepto,
-    cantidad: detalle.cantidad,
-    precioUnitario: detalle.precioUnitario,
-    subTotal: detalle.subTotal,  // ← Cambiar a camelCase
-    subtotalFormateado: `$${detalle.subTotal.toFixed(2)}`
-})),
+            // Proveedores
+            proveedores: manto.proveedores,
+            
+            // Detalles de costos con proveedor
+            detalles: manto.detalles.map(detalle => ({
+                concepto: detalle.concepto,
+                cantidad: detalle.cantidad,
+                precioUnitario: detalle.precioUnitario,
+                subTotal: detalle.subTotal,
+                subtotalFormateado: `$${detalle.subTotal.toFixed(2)}`,
+                proveedor: detalle.proveedor || null // ← Ya incluye el objeto completo del proveedor
+            })),
             
             // Resumen financiero
             resumen: {
@@ -173,6 +197,9 @@ mantenimientoCon.obtenerMantoId = async(req, res) => {
 };
 
 //# Método agregar mantenimiento
+//# Método agregar mantenimiento
+//# Método agregar mantenimiento
+//# Método agregar mantenimiento
 mantenimientoCon.postMantenimiento = async(req, res) => {
     try {
         const {
@@ -181,8 +208,19 @@ mantenimientoCon.postMantenimiento = async(req, res) => {
             tipo_de_mantenimiento,
             descripcion,
             detalles,
+            proveedores,
             estado
         } = req.body;
+
+        console.log('📥 POST /mantenimientos - Request recibido');
+
+        // Validar camión
+        if (!ciculatioCard || !mongoose.Types.ObjectId.isValid(ciculatioCard)) {
+            return res.status(400).json({
+                success: false,
+                message: 'ID de camión inválido o no proporcionado'
+            });
+        }
 
         const camionExist = await camiones.findById(ciculatioCard);
         if(!camionExist) {
@@ -192,22 +230,120 @@ mantenimientoCon.postMantenimiento = async(req, res) => {
             });
         }
 
+        // ✅ Filtrar y validar proveedores (array principal)
+        const proveedoresLimpios = Array.isArray(proveedores) 
+            ? [...new Set(proveedores.filter(p => {
+                if (!p || (typeof p === 'string' && p.trim() === '')) {
+                    return false;
+                }
+                return mongoose.Types.ObjectId.isValid(p);
+            }))]
+            : [];
+
+        console.log('🔍 Proveedores originales:', proveedores);
+        console.log('✅ Proveedores filtrados (únicos):', proveedoresLimpios);
+
+        if(proveedoresLimpios.length > 0) {
+            const proveedoresValidos = await Proveedores.find({
+                '_id': { $in: proveedoresLimpios }
+            });
+
+            console.log(`📊 Proveedores encontrados en DB: ${proveedoresValidos.length}/${proveedoresLimpios.length}`);
+
+            if(proveedoresValidos.length !== proveedoresLimpios.length) {
+                const idsEncontrados = proveedoresValidos.map(p => p._id.toString());
+                const idsNoEncontrados = proveedoresLimpios.filter(p => !idsEncontrados.includes(p.toString()));
+                
+                console.error('❌ IDs de proveedores no encontrados:', idsNoEncontrados);
+                
+                return res.status(404).json({
+                    success: false,
+                    message: 'Uno o más proveedores no existen en la base de datos',
+                    detalles: {
+                        proveedoresNoEncontrados: idsNoEncontrados,
+                        totalEnviados: proveedoresLimpios.length,
+                        totalEncontrados: proveedoresValidos.length
+                    }
+                });
+            }
+        }
+
+        // ✅ Validar proveedores en detalles - CON DEDUPLICACIÓN
+        if(!detalles || !Array.isArray(detalles) || detalles.length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'Debe proporcionar al menos un detalle de mantenimiento'
+            });
+        }
+
+        const proveedoresEnDetallesSinFiltrar = detalles
+            .filter(d => d.proveedor && typeof d.proveedor === 'string' && d.proveedor.trim() !== '')
+            .map(d => d.proveedor.trim())
+            .filter(p => mongoose.Types.ObjectId.isValid(p));
+
+        // ✅ CLAVE: Eliminar duplicados
+        const proveedoresEnDetalles = [...new Set(proveedoresEnDetallesSinFiltrar)];
+
+        console.log('🔍 Proveedores en detalles (con duplicados):', proveedoresEnDetallesSinFiltrar);
+        console.log('🔍 Proveedores en detalles (únicos):', proveedoresEnDetalles);
+
+        if(proveedoresEnDetalles.length > 0) {
+            const proveedoresDetalleValidos = await Proveedores.find({
+                '_id': { $in: proveedoresEnDetalles }
+            });
+
+            console.log(`📊 Proveedores de detalles en DB: ${proveedoresDetalleValidos.length}/${proveedoresEnDetalles.length}`);
+
+            if(proveedoresDetalleValidos.length !== proveedoresEnDetalles.length) {
+                const idsEncontrados = proveedoresDetalleValidos.map(p => p._id.toString());
+                const idsNoEncontrados = proveedoresEnDetalles.filter(p => !idsEncontrados.includes(p.toString()));
+                
+                console.error('❌ IDs de proveedores en detalles no encontrados:', idsNoEncontrados);
+                
+                return res.status(404).json({
+                    success: false,
+                    message: 'Uno o más proveedores en los detalles no existen',
+                    detalles: {
+                        proveedoresNoEncontrados: idsNoEncontrados,
+                        totalUnicos: proveedoresEnDetalles.length,
+                        totalEncontrados: proveedoresDetalleValidos.length
+                    }
+                });
+            }
+        }
+
+        // Procesar fecha
         const fecha = fecha_mantenimiento ? new Date(fecha_mantenimiento) : new Date();
         const mes = fecha.getMonth() + 1;
         const ano = fecha.getFullYear();
 
+        // Calcular detalles y costo total
         let costoTotal = 0;
-        const detalleCalculados = detalles?.map(detalle => {
-            const subtotal = detalle.subTotal || (detalle.cantidad * detalle.precioUnitario);
+        const detalleCalculados = detalles.map(detalle => {
+            const cantidad = Number(detalle.cantidad) || 1;
+            const precioUnitario = Number(detalle.precioUnitario) || 0;
+            const subtotal = detalle.subTotal || (cantidad * precioUnitario);
             costoTotal += subtotal;
+
+            let proveedorValido = null;
+            if (detalle.proveedor && typeof detalle.proveedor === 'string') {
+                const provTrimmed = detalle.proveedor.trim();
+                if (provTrimmed !== '' && mongoose.Types.ObjectId.isValid(provTrimmed)) {
+                    proveedorValido = provTrimmed;
+                }
+            }
 
             return {
                 concepto: detalle.concepto,
-                cantidad: detalle.cantidad || 1,
-                precioUnitario: detalle.precioUnitario || 0,
-                subTotal: subtotal
+                cantidad: cantidad,
+                precioUnitario: precioUnitario,
+                subTotal: subtotal,
+                proveedor: proveedorValido
             };
-        }) || [];
+        });
+
+        console.log('💰 Costo total calculado:', costoTotal);
+        console.log('📋 Detalles procesados:', detalleCalculados.length);
 
         const nuevoMantenimiento = new MantenimientoCamiones({
             ciculatioCard,
@@ -216,39 +352,67 @@ mantenimientoCon.postMantenimiento = async(req, res) => {
             ano,
             tipo_de_mantenimiento,
             descripcion,
+            proveedores: proveedoresLimpios,
             detalles: detalleCalculados,
             costoTotal,
-            estado
+            estado: estado || 'pendiente'
         });
 
         await nuevoMantenimiento.save();
-        await nuevoMantenimiento.populate('ciculatioCard', 'name brand model state licensePlate');
+        console.log('✅ Mantenimiento guardado con ID:', nuevoMantenimiento._id);
+        
+        await nuevoMantenimiento.populate([
+            { 
+                path: 'ciculatioCard', 
+                select: 'name brand model state licensePlate' 
+            },
+            { 
+                path: 'proveedores', 
+                select: 'companyName telefono email'
+            },
+            { 
+                path: 'detalles.proveedor', 
+                select: 'companyName'
+            }
+        ]);
 
         res.status(201).json({
             success: true,
             message: 'Mantenimiento registrado exitosamente',
             data: nuevoMantenimiento
         });
+
     } catch (error) {
-        console.error('Error al registrar el mantenimiento del camión:', error);
+        console.error('❌ ERROR COMPLETO:', error);
+        console.error('❌ Stack trace:', error.stack);
 
         if(error.name === 'ValidationError') {
             return res.status(400).json({
                 success: false,
-                message: 'Error de validación',
-                errors: Object.values(error.errors).map(e => e.message)
+                message: 'Error de validación de datos',
+                errors: Object.values(error.errors).map(e => ({
+                    field: e.path,
+                    message: e.message
+                }))
+            });
+        }
+
+        if(error.name === 'CastError') {
+            return res.status(400).json({
+                success: false,
+                message: 'Formato de ID inválido',
+                error: error.message
             });
         }
         
         res.status(500).json({
             success: false,
-            message: 'Error al registrar el mantenimiento',
+            message: 'Error interno al registrar el mantenimiento',
             error: error.message
         });
     }
 };
 
-//#Metodo actualizar la info del manto
 //# Método actualizar la info del mantenimiento
 //# Método actualizar la info del mantenimiento
 mantenimientoCon.ActualizarMantenimiento = async (req, res) => {
@@ -277,8 +441,11 @@ mantenimientoCon.ActualizarMantenimiento = async (req, res) => {
             tipo_de_mantenimiento,
             descripcion,
             detalles,
-            estado  // ← NUEVO: Recibir el estado
+            proveedores,
+            estado
         } = req.body;
+
+        console.log('📝 PUT /mantenimientos/:id - Actualizando mantenimiento:', id);
 
         // Actualizar fecha y calcular mes/año si se proporciona nueva fecha
         if(fecha_mantenimiento) {
@@ -298,7 +465,49 @@ mantenimientoCon.ActualizarMantenimiento = async (req, res) => {
             mantoExisting.descripcion = descripcion;
         }
 
-        // ← NUEVO: Actualizar estado del mantenimiento
+        // ✅ Actualizar proveedores con filtrado y deduplicación
+        if(proveedores !== undefined) {
+            const proveedoresLimpios = Array.isArray(proveedores) 
+                ? [...new Set(proveedores.filter(p => {
+                    if (!p || (typeof p === 'string' && p.trim() === '')) {
+                        return false;
+                    }
+                    return mongoose.Types.ObjectId.isValid(p);
+                }))]
+                : [];
+
+            console.log('🔍 Proveedores a actualizar (originales):', proveedores);
+            console.log('✅ Proveedores a actualizar (únicos y válidos):', proveedoresLimpios);
+
+            if(proveedoresLimpios.length > 0) {
+                const proveedoresValidos = await Proveedores.find({
+                    '_id': { $in: proveedoresLimpios }
+                });
+
+                console.log(`📊 Proveedores encontrados: ${proveedoresValidos.length}/${proveedoresLimpios.length}`);
+
+                if(proveedoresValidos.length !== proveedoresLimpios.length) {
+                    const idsEncontrados = proveedoresValidos.map(p => p._id.toString());
+                    const idsNoEncontrados = proveedoresLimpios.filter(p => !idsEncontrados.includes(p.toString()));
+                    
+                    console.error('❌ IDs de proveedores no encontrados:', idsNoEncontrados);
+                    
+                    return res.status(404).json({
+                        success: false,
+                        message: 'Uno o más proveedores no existen',
+                        detalles: {
+                            proveedoresNoEncontrados: idsNoEncontrados,
+                            totalEnviados: proveedoresLimpios.length,
+                            totalEncontrados: proveedoresValidos.length
+                        }
+                    });
+                }
+            }
+            
+            mantoExisting.proveedores = proveedoresLimpios;
+        }
+
+        // Actualizar estado del mantenimiento
         if(estado) {
             const estadoAnterior = mantoExisting.estado;
             mantoExisting.estado = estado;
@@ -312,36 +521,102 @@ mantenimientoCon.ActualizarMantenimiento = async (req, res) => {
                         { state: 'DISPONIBLE' },
                         { new: true }
                     );
-                    console.log(`Camión ${camionId} actualizado a DISPONIBLE`);
+                    console.log(`✅ Camión ${camionId} actualizado a DISPONIBLE`);
                 } catch (camionError) {
-                    console.error('Error al actualizar estado del camión:', camionError);
-                    // No fallar la actualización del mantenimiento si falla la del camión
+                    console.error('❌ Error al actualizar estado del camión:', camionError);
                 }
             }
         }
 
-        // Actualizar detalles y recalcular costo total si se proporcionan
+        // ✅ Actualizar detalles con filtrado y deduplicación de proveedores
         if(detalles && Array.isArray(detalles)) {
+            // Extraer proveedores de detalles
+            const proveedoresEnDetallesSinFiltrar = detalles
+                .filter(d => d.proveedor && typeof d.proveedor === 'string' && d.proveedor.trim() !== '')
+                .map(d => d.proveedor.trim())
+                .filter(p => mongoose.Types.ObjectId.isValid(p));
+
+            // ✅ CLAVE: Eliminar duplicados
+            const proveedoresEnDetalles = [...new Set(proveedoresEnDetallesSinFiltrar)];
+
+            console.log('🔍 Proveedores en detalles (con duplicados):', proveedoresEnDetallesSinFiltrar);
+            console.log('🔍 Proveedores en detalles (únicos):', proveedoresEnDetalles);
+
+            if(proveedoresEnDetalles.length > 0) {
+                const proveedoresDetalleValidos = await Proveedores.find({
+                    '_id': { $in: proveedoresEnDetalles }
+                });
+
+                console.log(`📊 Proveedores de detalles en DB: ${proveedoresDetalleValidos.length}/${proveedoresEnDetalles.length}`);
+
+                if(proveedoresDetalleValidos.length !== proveedoresEnDetalles.length) {
+                    const idsEncontrados = proveedoresDetalleValidos.map(p => p._id.toString());
+                    const idsNoEncontrados = proveedoresEnDetalles.filter(p => !idsEncontrados.includes(p.toString()));
+                    
+                    console.error('❌ IDs de proveedores en detalles no encontrados:', idsNoEncontrados);
+                    
+                    return res.status(404).json({
+                        success: false,
+                        message: 'Uno o más proveedores en los detalles no existen',
+                        detalles: {
+                            proveedoresNoEncontrados: idsNoEncontrados,
+                            totalUnicos: proveedoresEnDetalles.length,
+                            totalEncontrados: proveedoresDetalleValidos.length
+                        }
+                    });
+                }
+            }
+
             let costoTotal = 0;
             const detalleCalculados = detalles.map(detalle => {
-                const subtotal = detalle.subTotal || (detalle.cantidad * detalle.precioUnitario);
+                const cantidad = Number(detalle.cantidad) || 1;
+                const precioUnitario = Number(detalle.precioUnitario) || 0;
+                const subtotal = detalle.subTotal || (cantidad * precioUnitario);
                 costoTotal += subtotal;
+
+                // ✅ Solo incluir proveedor si es válido
+                let proveedorValido = null;
+                if (detalle.proveedor && typeof detalle.proveedor === 'string') {
+                    const provTrimmed = detalle.proveedor.trim();
+                    if (provTrimmed !== '' && mongoose.Types.ObjectId.isValid(provTrimmed)) {
+                        proveedorValido = provTrimmed;
+                    }
+                }
 
                 return {
                     concepto: detalle.concepto,
-                    cantidad: detalle.cantidad || 1,
-                    precioUnitario: detalle.precioUnitario || 0,
-                    subTotal: subtotal
+                    cantidad: cantidad,
+                    precioUnitario: precioUnitario,
+                    subTotal: subtotal,
+                    proveedor: proveedorValido
                 };
             });
 
             mantoExisting.detalles = detalleCalculados;
             mantoExisting.costoTotal = costoTotal;
+            
+            console.log('💰 Costo total recalculado:', costoTotal);
         }
 
         // Guardar los cambios
         await mantoExisting.save();
-        await mantoExisting.populate('ciculatioCard', 'name brand model state licensePlate');
+        console.log('✅ Mantenimiento actualizado exitosamente');
+        
+        // Populate con proveedores
+        await mantoExisting.populate([
+            { 
+                path: 'ciculatioCard', 
+                select: 'name brand model state licensePlate' 
+            },
+            { 
+                path: 'proveedores', 
+                select: 'companyName telefono email' // ← CAMBIO: companyName
+            },
+            { 
+                path: 'detalles.proveedor', 
+                select: 'companyName' // ← CAMBIO: companyName
+            }
+        ]);
 
         res.status(200).json({
             success: true,
@@ -350,13 +625,25 @@ mantenimientoCon.ActualizarMantenimiento = async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Error al actualizar mantenimiento:', error);
+        console.error('❌ Error al actualizar mantenimiento:', error);
+        console.error('❌ Stack trace:', error.stack);
 
         if(error.name === 'ValidationError') {
             return res.status(400).json({
                 success: false,
                 message: 'Error de validación',
-                errors: Object.values(error.errors).map(e => e.message)
+                errors: Object.values(error.errors).map(e => ({
+                    field: e.path,
+                    message: e.message
+                }))
+            });
+        }
+
+        if(error.name === 'CastError') {
+            return res.status(400).json({
+                success: false,
+                message: 'Formato de ID inválido',
+                error: error.message
             });
         }
 
@@ -367,7 +654,6 @@ mantenimientoCon.ActualizarMantenimiento = async (req, res) => {
         });
     }
 };
-
 //# Método para eliminar registro del mantenimiento
 mantenimientoCon.DeleteManto = async(req, res) => {
     try {

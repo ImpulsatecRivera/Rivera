@@ -13,11 +13,13 @@ import {
 } from "@mui/material";
 import { Add, Delete, ArrowBack } from "@mui/icons-material";
 import { api } from '../../Context/authContext';
+import Swal from 'sweetalert2'; // ← IMPORTAR SWEETALERT2
 
 export default function EditMantenimiento({ onClose }) {
   const { id } = useParams();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
+  const [proveedores, setProveedores] = useState([]);
   const [manto, setManto] = useState({
     fecha_mantenimiento: "",
     tipo_de_mantenimiento: "",
@@ -34,34 +36,68 @@ export default function EditMantenimiento({ onClose }) {
   ];
 
   useEffect(() => {
-    const cargarMantenimiento = async () => {
-      try {
-        const { data } = await api.get(`/mantenimientos/${id}`);
-        const mantenimiento = data.data || data;
-
-        setManto({
-          fecha_mantenimiento: mantenimiento.fecha_mantenimiento || "",
-          tipo_de_mantenimiento: mantenimiento.tipo_de_mantenimiento || mantenimiento.tipoMantenimiento || "",
-          descripcion: mantenimiento.descripcion || "",
-          estado: mantenimiento.estado || "pendiente",
-          detalles: Array.isArray(mantenimiento.detalles) ? mantenimiento.detalles : []
-        });
-      } catch (error) {
-        console.error('❌ Error al cargar mantenimiento:', error);
-        alert(`Error al cargar los datos del mantenimiento.\n${error.response?.data?.message || error.message}`);
-      } finally {
-        setLoading(false);
-      }
-    };
-
+    cargarProveedores();
     cargarMantenimiento();
   }, [id]);
+
+  const cargarProveedores = async () => {
+    try {
+      const { data } = await api.get('/proveedores');
+      const proveedoresData = data.data || data || [];
+      console.log('✅ Proveedores cargados:', proveedoresData);
+      setProveedores(proveedoresData);
+    } catch (error) {
+      console.error('❌ Error al cargar proveedores:', error);
+      Swal.fire({
+        icon: 'error',
+        title: 'Error al cargar proveedores',
+        text: 'No se pudieron cargar los proveedores. Por favor recarga la página.',
+        confirmButtonColor: '#5F8EAD'
+      });
+    }
+  };
+
+  const cargarMantenimiento = async () => {
+    try {
+      const { data } = await api.get(`/mantenimientos/${id}`);
+      const mantenimiento = data.data || data;
+
+      console.log('📦 Mantenimiento cargado:', mantenimiento);
+
+      setManto({
+        fecha_mantenimiento: mantenimiento.fecha_mantenimiento || "",
+        tipo_de_mantenimiento: mantenimiento.tipo_de_mantenimiento || mantenimiento.tipoMantenimiento || "",
+        descripcion: mantenimiento.descripcion || "",
+        estado: mantenimiento.estado || "pendiente",
+        detalles: Array.isArray(mantenimiento.detalles) 
+          ? mantenimiento.detalles.map(d => ({
+              concepto: d.concepto || "",
+              cantidad: d.cantidad || 1,
+              precioUnitario: d.precioUnitario || 0,
+              proveedor: d.proveedor?._id || d.proveedor || ""
+            }))
+          : []
+      });
+    } catch (error) {
+      console.error('❌ Error al cargar mantenimiento:', error);
+      Swal.fire({
+        icon: 'error',
+        title: 'Error al cargar datos',
+        html: `No se pudieron cargar los datos del mantenimiento.<br><small>${error.response?.data?.message || error.message}</small>`,
+        confirmButtonColor: '#ef4444'
+      }).then(() => {
+        navigate('/mantenimientos');
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const addDetalle = () => {
     const detallesActuales = manto?.detalles || [];
     setManto({
       ...manto,
-      detalles: [...detallesActuales, { concepto: "", cantidad: 1, precioUnitario: 0 }]
+      detalles: [...detallesActuales, { concepto: "", cantidad: 1, precioUnitario: 0, proveedor: "" }]
     });
   };
 
@@ -72,10 +108,33 @@ export default function EditMantenimiento({ onClose }) {
     setManto({ ...manto, detalles: nuevos });
   };
 
-  const removeDetalle = (index) => {
+  const removeDetalle = async (index) => {
     if (!manto?.detalles) return;
-    const nuevos = manto.detalles.filter((_, i) => i !== index);
-    setManto({ ...manto, detalles: nuevos });
+    
+    // ✅ Confirmación antes de eliminar
+    const result = await Swal.fire({
+      title: '¿Eliminar este detalle?',
+      text: "Esta acción no se puede deshacer",
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#ef4444',
+      cancelButtonColor: '#6b7280',
+      confirmButtonText: 'Sí, eliminar',
+      cancelButtonText: 'Cancelar'
+    });
+
+    if (result.isConfirmed) {
+      const nuevos = manto.detalles.filter((_, i) => i !== index);
+      setManto({ ...manto, detalles: nuevos });
+      
+      Swal.fire({
+        icon: 'success',
+        title: 'Eliminado',
+        text: 'El detalle ha sido eliminado',
+        timer: 1500,
+        showConfirmButton: false
+      });
+    }
   };
 
   const calcularTotal = () => {
@@ -87,37 +146,175 @@ export default function EditMantenimiento({ onClose }) {
 
   const submitUpdate = async () => {
     try {
+      // ✅ Validaciones con SweetAlert
+      if (!manto.fecha_mantenimiento) {
+        Swal.fire({
+          icon: 'warning',
+          title: 'Campo requerido',
+          text: 'La fecha es requerida',
+          confirmButtonColor: '#5F8EAD'
+        });
+        return;
+      }
+      
+      if (!manto.tipo_de_mantenimiento) {
+        Swal.fire({
+          icon: 'warning',
+          title: 'Campo requerido',
+          text: 'El tipo de mantenimiento es requerido',
+          confirmButtonColor: '#5F8EAD'
+        });
+        return;
+      }
+      
+      if (!manto.descripcion.trim()) {
+        Swal.fire({
+          icon: 'warning',
+          title: 'Campo requerido',
+          text: 'La descripción es requerida',
+          confirmButtonColor: '#5F8EAD'
+        });
+        return;
+      }
+
+      if (!manto.detalles || manto.detalles.length === 0) {
+        Swal.fire({
+          icon: 'warning',
+          title: 'Sin detalles',
+          text: 'Debe agregar al menos un detalle al mantenimiento',
+          confirmButtonColor: '#5F8EAD'
+        });
+        return;
+      }
+
+      // Validar que todos los detalles estén completos
+      const detallesIncompletos = manto.detalles.some(d => 
+        !d.concepto.trim() || d.cantidad <= 0 || d.precioUnitario <= 0
+      );
+
+      if (detallesIncompletos) {
+        Swal.fire({
+          icon: 'warning',
+          title: 'Detalles incompletos',
+          text: 'Todos los detalles deben tener concepto, cantidad y precio válidos',
+          confirmButtonColor: '#5F8EAD'
+        });
+        return;
+      }
+
+      // ✅ Confirmación antes de guardar
+      const confirmResult = await Swal.fire({
+        title: '¿Guardar cambios?',
+        text: manto.estado === 'completado' 
+          ? "El mantenimiento se marcará como completado y el camión estará disponible" 
+          : "Se actualizará la información del mantenimiento",
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#5F8EAD',
+        cancelButtonColor: '#6b7280',
+        confirmButtonText: 'Sí, guardar',
+        cancelButtonText: 'Cancelar'
+      });
+
+      if (!confirmResult.isConfirmed) return;
+
+      // Mostrar loading
+      Swal.fire({
+        title: 'Guardando cambios...',
+        html: 'Por favor espera un momento',
+        allowOutsideClick: false,
+        didOpen: () => {
+          Swal.showLoading();
+        }
+      });
+
       const detallesConSubtotal = (manto?.detalles || []).map(detalle => ({
-        concepto: detalle.concepto,
+        concepto: detalle.concepto.trim(),
         cantidad: Number(detalle.cantidad) || 1,
         precioUnitario: Number(detalle.precioUnitario) || 0,
-        subTotal: (Number(detalle.cantidad) || 1) * (Number(detalle.precioUnitario) || 0)
+        subTotal: (Number(detalle.cantidad) || 1) * (Number(detalle.precioUnitario) || 0),
+        proveedor: (detalle.proveedor && detalle.proveedor.trim() !== '') ? detalle.proveedor.trim() : null
       }));
+
+      // ✅ Extraer proveedores únicos de los detalles
+      const proveedoresUnicos = [...new Set(
+        detallesConSubtotal
+          .map(d => d.proveedor)
+          .filter(p => p !== null && p !== '')
+      )];
 
       const payload = {
         fecha_mantenimiento: manto.fecha_mantenimiento,
         tipo_de_mantenimiento: manto.tipo_de_mantenimiento,
         descripcion: manto.descripcion,
         estado: manto.estado,
+        proveedores: proveedoresUnicos,
         detalles: detallesConSubtotal
       };
+
+      console.log('📤 Payload enviado:', payload);
 
       const { data } = await api.put(`/mantenimientos/${id}`, payload);
       
       if (data.success) {
-        alert("✅ Mantenimiento actualizado exitosamente!");
-        
-        if (manto.estado === 'completado') {
-          alert("🚛 El camión ha sido actualizado a estado DISPONIBLE");
-        }
+        // ✅ Alert de éxito
+        await Swal.fire({
+          icon: 'success',
+          title: '¡Éxito!',
+          html: manto.estado === 'completado' 
+            ? '✅ Mantenimiento actualizado exitosamente<br>🚛 El camión ha sido actualizado a estado DISPONIBLE' 
+            : '✅ Mantenimiento actualizado exitosamente',
+          confirmButtonColor: '#5D9646',
+          timer: 3000,
+          timerProgressBar: true
+        });
         
         navigate('/mantenimientos');
       } else {
         throw new Error(data.message || 'Error al actualizar');
       }
     } catch (error) {
-      console.error('Error al actualizar:', error);
-      alert(`❌ Error: ${error.response?.data?.message || error.message || 'Error al actualizar el mantenimiento'}`);
+      console.error('❌ Error al actualizar:', error);
+      console.error('❌ Response:', error.response?.data);
+      
+      let errorMessage = 'Ocurrió un error al actualizar el mantenimiento';
+      let errorDetails = '';
+      
+      if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+        
+        // Mostrar detalles de proveedores no encontrados si existen
+        if (error.response.data?.detalles?.proveedoresNoEncontrados) {
+          errorDetails = `<br><br><small><b>Proveedores no encontrados:</b><br>${error.response.data.detalles.proveedoresNoEncontrados.join('<br>')}</small>`;
+        }
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      Swal.fire({
+        icon: 'error',
+        title: 'Error al actualizar',
+        html: errorMessage + errorDetails,
+        confirmButtonColor: '#ef4444'
+      });
+    }
+  };
+
+  const handleCancelar = async () => {
+    // ✅ Confirmación antes de cancelar
+    const result = await Swal.fire({
+      title: '¿Cancelar edición?',
+      text: "Los cambios no guardados se perderán",
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#ef4444',
+      cancelButtonColor: '#6b7280',
+      confirmButtonText: 'Sí, salir',
+      cancelButtonText: 'Continuar editando'
+    });
+
+    if (result.isConfirmed) {
+      navigate('/mantenimientos');
     }
   };
 
@@ -131,7 +328,9 @@ export default function EditMantenimiento({ onClose }) {
         minHeight: '400px',
         fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
       }}>
-        <Typography sx={{ color: '#5F8EAD', fontSize: '16px', mb: 2, fontWeight: 600 }}>Cargando mantenimiento...</Typography>
+        <Typography sx={{ color: '#5F8EAD', fontSize: '16px', mb: 2, fontWeight: 600 }}>
+          Cargando mantenimiento...
+        </Typography>
         <Typography sx={{ color: '#999', fontSize: '14px' }}>ID: {id}</Typography>
       </Box>
     );
@@ -155,7 +354,7 @@ export default function EditMantenimiento({ onClose }) {
       }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
           <IconButton 
-            onClick={() => navigate('/mantenimientos')} 
+            onClick={handleCancelar} // ✅ Cambiado para usar confirmación
             sx={{ 
               color: '#5F8EAD',
               '&:hover': { backgroundColor: '#5F8EAD', backgroundOpacity: 0.1 }
@@ -367,7 +566,7 @@ export default function EditMantenimiento({ onClose }) {
               key={i}
               sx={{
                 display: 'grid',
-                gridTemplateColumns: '2fr 100px 120px 40px',
+                gridTemplateColumns: '2fr 1.5fr 100px 120px 40px',
                 gap: 2,
                 alignItems: 'start',
                 p: 2,
@@ -391,6 +590,35 @@ export default function EditMantenimiento({ onClose }) {
                   }
                 }}
               />
+              
+              {/* Select de proveedor */}
+              <FormControl fullWidth>
+                <Select
+                  value={d?.proveedor || ""}
+                  onChange={(e) => changeDetalle(i, "proveedor", e.target.value)}
+                  displayEmpty
+                  sx={{
+                    borderRadius: '6px',
+                    backgroundColor: '#fff',
+                    fontSize: '13px',
+                    '& fieldset': { borderColor: '#e5e7eb' },
+                    '&:hover fieldset': { borderColor: '#5F8EAD' },
+                    '&.Mui-focused fieldset': { borderColor: '#5F8EAD', borderWidth: '2px' }
+                  }}
+                >
+                  <MenuItem value="">
+                    <Typography sx={{ fontSize: '13px', color: '#9ca3af' }}>Sin proveedor</Typography>
+                  </MenuItem>
+                  {proveedores.map((prov) => (
+                    <MenuItem key={prov._id} value={prov._id}>
+                      <Typography sx={{ fontSize: '13px' }}>
+                        {prov.companyName || prov.nombre || 'Sin nombre'}
+                      </Typography>
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+
               <TextField
                 placeholder="Cant."
                 type="number"
@@ -461,7 +689,7 @@ export default function EditMantenimiento({ onClose }) {
       <Box sx={{ mt: 4, display: 'flex', gap: 2 }}>
         <Button
           fullWidth
-          onClick={() => navigate('/mantenimientos')}
+          onClick={handleCancelar} // ✅ Cambiado para usar confirmación
           sx={{
             textTransform: 'none',
             fontSize: '16px',
