@@ -6,8 +6,6 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
-    "sdkVersion": "52.0.0",
-    "newArchEnabled": true,
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
@@ -21,7 +19,6 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true,
       "package": "com.kenik_capibara.movilempleado"
     },
     "web": {
@@ -31,6 +28,9 @@
       "eas": {
         "projectId": "a7ff8d77-25c0-4e04-9dbe-a108fd76e5a8"
       }
-    }
+    },
+    "plugins": [
+      "expo-asset"
+    ]
   }
 }
