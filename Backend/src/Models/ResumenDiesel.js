@@ -35,9 +35,14 @@ const ResumenDieselSchema = new mongoose.Schema({
     enum: ["Pendiente", "Completado"],
     default: "Pendiente",
   },
-  // ✅ NUEVO CAMPO: Comprobante de gasolina
   comprobante: {
     type: String,
+    default: null,
+  },
+  // ✅ NUEVO CAMPO: Número de marchamo
+  numeroMarchamo: {
+    type: String,
+    trim: true,
     default: null,
   },
 }, {
@@ -49,6 +54,7 @@ const ResumenDieselSchema = new mongoose.Schema({
 ResumenDieselSchema.index({ CicurlationCard: 1, fecha: -1 });
 ResumenDieselSchema.index({ mes: 1, ano: 1 });
 ResumenDieselSchema.index({ estado: 1 });
+ResumenDieselSchema.index({ numeroMarchamo: 1 }); // ✅ Nuevo índice
 
 const ResumenDiesel = mongoose.model("ResumenDiesel", ResumenDieselSchema);
 

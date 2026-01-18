@@ -16,7 +16,6 @@ import { usePermissions } from "../../hooks/usePermissions";
 import { ProtectedAction, RoleBadge } from "../../components/Auth";
 import { api } from "../../Context/authContext";
 
-
 import DieselDetailModal from "./DieselDetailModal";
 import ReportesDieselModal from "./ReportesDieselModal";
 
@@ -70,6 +69,9 @@ const PantallaPrincipalDiesel = () => {
 
   const pickEstado = (row) => row?.estado || row?.Estado || row?.status || row?.Status || "Pendiente";
 
+  // ✅ NUEVO: Helper para obtener número de marchamo
+  const pickMarchamo = (row) => row?.numeroMarchamo || null;
+
   const normalize = (v) => String(v || "").trim().toLowerCase();
 
   const canonEstado = (row) => {
@@ -106,26 +108,23 @@ const PantallaPrincipalDiesel = () => {
   };
 
   const fetchDiesel = async () => {
-  try {
-    setLoading(true);
+    try {
+      setLoading(true);
 
-    const res = await api.get(
-      `${config.api.API_URL}/resumen`
-    );
+      const res = await api.get(`${config.api.API_URL}/resumen`);
 
-    setDiesel(res.data?.data || []);
-    setError(null);
-
-  } catch (e) {
-    setError(
-      e.response?.data?.message ||
-      e.message ||
-      "Error al cargar los registros de diésel"
-    );
-  } finally {
-    setLoading(false);
-  }
-};
+      setDiesel(res.data?.data || []);
+      setError(null);
+    } catch (e) {
+      setError(
+        e.response?.data?.message ||
+          e.message ||
+          "Error al cargar los registros de diésel"
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     fetchDiesel();
@@ -155,27 +154,23 @@ const PantallaPrincipalDiesel = () => {
       const id = row?._id || row?.id;
       if (!id) throw new Error("No se encontró el ID del registro");
 
-await api.delete(
-  `${config.api.API_URL}/resumen/${id}`
-);
+      await api.delete(`${config.api.API_URL}/resumen/${id}`);
 
-await Swal.fire({
-  title: "¡Eliminado!",
-  text: "Registro eliminado exitosamente",
-  icon: "success",
-  timer: 2000,
-});
+      await Swal.fire({
+        title: "¡Eliminado!",
+        text: "Registro eliminado exitosamente",
+        icon: "success",
+        timer: 2000,
+      });
 
-fetchDiesel();
-
+      fetchDiesel();
     } catch (e) {
-  Swal.fire({
-    title: "Error",
-    text: e.response?.data?.message || e.message,
-    icon: "error",
-  });
-}
-
+      Swal.fire({
+        title: "Error",
+        text: e.response?.data?.message || e.message,
+        icon: "error",
+      });
+    }
   };
 
   const openDetail = (id) => {
@@ -205,7 +200,8 @@ fetchDiesel();
       if (!s) return true;
       const placa = String(pickPlaca(row)).toLowerCase();
       const fechaTxt = String(formatearFecha(pickFecha(row))).toLowerCase();
-      return placa.includes(s) || fechaTxt.includes(s);
+      const marchamo = String(pickMarchamo(row) || "").toLowerCase(); // ✅ NUEVO: Buscar por marchamo
+      return placa.includes(s) || fechaTxt.includes(s) || marchamo.includes(s);
     });
   }, [diesel, searchTerm, estadoFiltro]);
 
@@ -245,7 +241,10 @@ fetchDiesel();
         <div className="text-center">
           <p className="text-red-600 font-semibold mb-2">Error al cargar los datos</p>
           <p className="text-gray-600">{error}</p>
-          <button onClick={fetchDiesel} className="mt-4 px-6 py-2 bg-gradient-to-r from-[#34353A] to-[#5F8EAD] text-white rounded-lg hover:opacity-90">
+          <button
+            onClick={fetchDiesel}
+            className="mt-4 px-6 py-2 bg-gradient-to-r from-[#34353A] to-[#5F8EAD] text-white rounded-lg hover:opacity-90"
+          >
             Reintentar
           </button>
         </div>
@@ -319,7 +318,7 @@ fetchDiesel();
               <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
               <input
                 type="text"
-                placeholder="Buscar por placa o fecha..."
+                placeholder="Buscar por placa, fecha o marchamo..." // ✅ ACTUALIZADO
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#5F8EAD]"
@@ -368,6 +367,7 @@ fetchDiesel();
                   <th className="text-left py-5 px-6 text-white font-semibold text-sm">#</th>
                   <th className="text-left py-5 px-6 text-white font-semibold text-sm">Fecha</th>
                   <th className="text-left py-5 px-6 text-white font-semibold text-sm">Placa</th>
+                  <th className="text-left py-5 px-6 text-white font-semibold text-sm">Marchamo</th> {/* ✅ NUEVA COLUMNA */}
                   <th className="text-left py-5 px-6 text-white font-semibold text-sm">Estado</th>
                   <th className="text-right py-5 px-6 text-white font-semibold text-sm">Galones</th>
                   <th className="text-right py-5 px-6 text-white font-semibold text-sm">Total</th>
@@ -383,6 +383,7 @@ fetchDiesel();
                   const galones = pickGalones(row);
                   const total = pickTotal(row);
                   const estado = canonEstado(row);
+                  const marchamo = pickMarchamo(row); // ✅ NUEVO
                   const isCompletado = estado === ESTADOS.COMPLETADO;
 
                   return (
@@ -394,6 +395,17 @@ fetchDiesel();
                       <td className="py-5 px-6 text-gray-700 font-semibold">{startIndex + idx + 1}</td>
                       <td className="py-5 px-6 text-[#34353A] font-semibold">{formatearFecha(fecha)}</td>
                       <td className="py-5 px-6 text-gray-600">{placa}</td>
+
+                      {/* ✅ NUEVA CELDA: Marchamo */}
+                      <td className="py-5 px-6 text-gray-600">
+                        {marchamo ? (
+                          <span className="inline-flex px-2 py-1 bg-[#5F8EAD] bg-opacity-10 text-[#5F8EAD] rounded-lg text-xs font-semibold">
+                            {marchamo}
+                          </span>
+                        ) : (
+                          <span className="text-gray-400 text-xs">Sin marchamo</span>
+                        )}
+                      </td>
 
                       <td className="py-5 px-6">
                         <span className={`inline-flex px-3 py-1 rounded-full text-xs font-semibold ${estadoBadge(estado)}`}>
@@ -426,7 +438,7 @@ fetchDiesel();
                             </ProtectedAction>
                           )}
 
-                          <ProtectedAction 
+                          <ProtectedAction
                             action="delete"
                             fallback={
                               <button
@@ -454,7 +466,7 @@ fetchDiesel();
 
                 {currentRows.length === 0 && (
                   <tr>
-                    <td colSpan={7} className="py-10 text-center text-gray-500">
+                    <td colSpan={8} className="py-10 text-center text-gray-500"> {/* ✅ ACTUALIZADO colSpan a 8 */}
                       No hay registros para mostrar.
                     </td>
                   </tr>
@@ -516,17 +528,9 @@ fetchDiesel();
         </div>
       </div>
 
-      <DieselDetailModal
-        dieselId={selectedDieselId}
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-      />
+      <DieselDetailModal dieselId={selectedDieselId} isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
 
-      <ReportesDieselModal
-        isOpen={isReportesModalOpen}
-        onClose={() => setIsReportesModalOpen(false)}
-        apiUrl={config.api.API_URL}
-      />
+      <ReportesDieselModal isOpen={isReportesModalOpen} onClose={() => setIsReportesModalOpen(false)} apiUrl={config.api.API_URL} />
     </div>
   );
 };

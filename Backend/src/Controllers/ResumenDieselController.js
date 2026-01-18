@@ -52,7 +52,8 @@ ResumenCon.getResumen = async (req, res) => {
       mes: m.mes,
       ano: m.ano,
       estado: m.estado || ESTADOS.PENDIENTE,
-      comprobante: m.comprobante || null, // ✅ NUEVO: URL del comprobante
+      comprobante: m.comprobante || null,
+      numeroMarchamo: m.numeroMarchamo || null, // ✅ NUEVO
     }));
 
     return res.status(200).json({
@@ -73,12 +74,13 @@ ResumenCon.getResumen = async (req, res) => {
 // ============================
 ResumenCon.AgregarDiesel = async (req, res) => {
   try {
-    const { fecha, Galones, Total, CicurlationCard, estado } = req.body;
+    const { fecha, Galones, Total, CicurlationCard, estado, numeroMarchamo } = req.body; // ✅ AGREGADO numeroMarchamo
 
     console.log('📥 AGREGAR DIESEL - Datos recibidos:');
     console.log('   - CicurlationCard:', CicurlationCard);
     console.log('   - Galones:', Galones);
     console.log('   - Total:', Total);
+    console.log('   - NumeroMarchamo:', numeroMarchamo); // ✅ NUEVO LOG
     console.log('   - hasFile:', !!req.file);
 
     if (!CicurlationCard) {
@@ -133,6 +135,7 @@ ResumenCon.AgregarDiesel = async (req, res) => {
       Total,
       estado: canonEstado(estado || ESTADOS.PENDIENTE),
       comprobante: comprobanteUrl,
+      numeroMarchamo: numeroMarchamo || null, // ✅ NUEVO CAMPO
     });
 
     await nuevoResumen.save();
@@ -235,7 +238,10 @@ ResumenCon.PutDiesel = async (req, res) => {
       });
     }
 
-    const { fecha, Galones, Total, CicurlationCard, estado } = req.body;
+    const { fecha, Galones, Total, CicurlationCard, estado, numeroMarchamo } = req.body; // ✅ AGREGADO numeroMarchamo
+
+    console.log('📝 ACTUALIZAR DIESEL - Datos recibidos:');
+    console.log('   - NumeroMarchamo:', numeroMarchamo); // ✅ NUEVO LOG
 
     // Cambiar camión (opcional)
     if (CicurlationCard !== undefined) {
@@ -265,6 +271,14 @@ ResumenCon.PutDiesel = async (req, res) => {
 
     // Total (opcional)
     if (Total !== undefined) DieselExisting.Total = Total;
+
+    // ✅ Número de Marchamo (opcional)
+    if (numeroMarchamo !== undefined) {
+      DieselExisting.numeroMarchamo = numeroMarchamo && numeroMarchamo.trim() !== '' 
+        ? numeroMarchamo.trim() 
+        : null;
+      console.log('✅ Número de marchamo actualizado:', DieselExisting.numeroMarchamo);
+    }
 
     // ✅ Estado (opcional)
     if (estado !== undefined) {
@@ -317,6 +331,8 @@ ResumenCon.PutDiesel = async (req, res) => {
 
     await DieselExisting.save();
     await DieselExisting.populate("CicurlationCard", "name gasolineLevel licensePlate brand model");
+
+    console.log('✅ Resumen de diesel actualizado exitosamente');
 
     return res.status(200).json({
       success: true,
@@ -395,6 +411,7 @@ ResumenCon.DeleteResumen = async (req, res) => {
         Galones_Ingresados: ResumenEliminado.Galones,
         fecha_diesel: ResumenEliminado.fecha,
         costoTotal: ResumenEliminado.Total,
+        numeroMarchamo: ResumenEliminado.numeroMarchamo || null, // ✅ NUEVO
       },
     });
   } catch (error) {
