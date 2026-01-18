@@ -1,0 +1,181 @@
+/* ========================================
+   ESTILOS PARA PÁGINA DE VENTAS
+   COLORES CORPORATIVOS RIVERA TRANSPORTES
+   ======================================== */
+
+/* Responsive Alert */
+@media (max-width: 640px) {
+  .swal-responsive {
+    width: 95% !important;
+    margin: 0 auto !important;
+  }
+
+  .swal-responsive .swal2-popup {
+    padding: 1rem !important;
+  }
+
+  .swal-responsive .swal2-html-container {
+    padding: 0.5rem !important;
+  }
+}
+
+/* ========================================
+   ANIMACIONES
+   ======================================== */
+
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Estilos para tabla */
+table {
+  border-collapse: collapse;
+}
+
+/* Scroll personalizado */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Grados */
+.bg-gradient-to-br {
+  background-image: linear-gradient(to bottom right, var(--tw-gradient-stops));
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .text-3xl {
+    font-size: 1.875rem;
+  }
+
+  .text-2xl {
+    font-size: 1.5rem;
+  }
+
+  .text-lg {
+    font-size: 1.125rem;
+  }
+
+  .px-8 {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+
+  .p-8 {
+    padding: 1rem;
+  }
+
+  .gap-6 {
+    gap: 1rem;
+  }
+
+  .overflow-x-auto {
+    overflow-x: auto;
+  }
+}
+
+/* Estilos para estado de venta */
+.badge-completado {
+  background-color: rgba(93, 150, 70, 0.2);
+  color: #5D9646;
+  border: 1px solid #5D9646;
+  border-radius: 0.5rem;
+  padding: 0.25rem 0.75rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.badge-pendiente {
+  background-color: rgba(251, 191, 36, 0.2);
+  color: #b45309;
+  border: 1px solid #fbbf24;
+  border-radius: 0.5rem;
+  padding: 0.25rem 0.75rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+/* Botones de acción */
+.action-btn {
+  padding: 0.5rem;
+  border-radius: 0.5rem;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.action-btn:hover {
+  transform: scale(1.1);
+}
+
+/* Estadísticas */
+.stat-card {
+  border-radius: 1rem;
+  padding: 1.5rem;
+  border: 1px solid #e2e8f0;
+  transition: all 0.3s ease;
+}
+
+.stat-card:hover {
+  box-shadow: 0 10px 25px rgba(95, 142, 173, 0.1);
+  border-color: #5F8EAD;
+}
+
+/* Cards gradient */
+.gradient-card {
+  background: linear-gradient(135deg, #34353A 0%, #5F8EAD 100%);
+}
+
+.gradient-card-green {
+  background: linear-gradient(135deg, #5D9646 0%, #6ba655 100%);
+}
+
+/* Tablas responsivas */
+@media (max-width: 1024px) {
+  table {
+    font-size: 0.875rem;
+  }
+
+  th, td {
+    padding: 0.75rem !important;
+  }
+
+  .px-6 {
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+  }
+}

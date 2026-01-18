@@ -36,6 +36,8 @@ import MantenimientosTable from "./pages/MantenimientosCamiones/PantallaPrincipa
 import CreateMantenimientoPage from "./pages/MantenimientosCamiones/AgregarNuevoManto";
 import EditMantenimiento from "./pages/MantenimientosCamiones/EditarMantos";
 import CajaChica from "./pages/CajaChica/CajaChica";
+import Ventas from "./pages/Ventas/Ventas";
+import AgregarVenta from "./pages/Ventas/AgregarVenta";
 import Planilla from "./pages/Planilla/Planilla";
 import PlanillaQuincenal from "./pages/Planilla/PlanillaQuincenal";
 import VerPlanillaQuincenal from "./pages/Planilla/VerPlanillasQuincenales";
@@ -81,8 +83,8 @@ function App() {
     "/planilla/semanal/:id",
     "/viajesInternos/agregar",
     "/viajesInternos/programacion",
-    
-
+    "/agregar-venta",
+    "/agregar-venta/:id"
   ];
 
   useEffect(() => {
@@ -150,6 +152,11 @@ function App() {
 
         {/* Caja Chica */}
         <Route path="/CajaChica" element={<CajaChica />} />
+
+        {/* Ventas */}
+        <Route path="/ventas" element={<Ventas />} />
+        <Route path="/agregar-venta" element={<AgregarVenta />} />
+        <Route path="/agregar-venta/:id" element={<AgregarVenta />} />
 
         {/* Diesel */}
         <Route path="/diesel" element={<PantallaPrincipalDiesel />} />
