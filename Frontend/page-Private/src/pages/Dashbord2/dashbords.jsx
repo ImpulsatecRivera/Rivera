@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, lazy, Suspense } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Truck,
@@ -22,9 +22,6 @@ import Lottie from 'lottie-react';
 import { config } from '../../config';
 import { api } from '../../Context/authContext';
 
-// 🎨 Lazy load de Spline para optimizar
-const Spline = lazy(() => import('@splinetool/react-spline'));
-
 // 🎨 Importar animaciones Lottie
 import loadingTruckAnimation from '../../assets/lotties/ready, set, go!.json';
 import emptyBoxAnimation from '../../assets/lotties/empty.json';
@@ -33,6 +30,9 @@ import warningAnimation from '../../assets/lotties/Alert Notification Character.
 import moneyAnimation from '../../assets/lotties/Coins blow effect.json';
 import truckIconAnimation from '../../assets/lotties/ecommerce order fulfillment automation.json';
 import checkmarkAnimation from '../../assets/lotties/Success (1).json';
+
+// Importar tu logo
+import logo from '../../images/logo.png';
 
 // Modales
 import ModalResumenConsolidado from "./ModalResumenConsolidado";
@@ -44,11 +44,6 @@ const ModernDashboard = () => {
   const [modalResumenOpen, setModalResumenOpen] = useState(false);
   const [modalPdfOpen, setModalPdfOpen] = useState(false);
   const [modalGastosMesOpen, setModalGastosMesOpen] = useState(false);
-
-  // 🚀 Estados de optimización de Spline
-  const [splineLoaded, setSplineLoaded] = useState(false);
-  const [showSpline, setShowSpline] = useState(false);
-  const [splineError, setSplineError] = useState(false);
 
   const navigate = useNavigate();
   const [selectedPeriod, setSelectedPeriod] = useState('30');
@@ -63,18 +58,6 @@ const ModernDashboard = () => {
     flota: { total: 25, operando: 23 }
   });
   const lottieRef = useRef();
-
-  // 🚀 Cargar Spline después de que el dashboard esté listo
-  useEffect(() => {
-    // Esperar a que el loading principal termine antes de cargar Spline
-    if (!loading) {
-      const splineTimer = setTimeout(() => {
-        setShowSpline(true);
-      }, 300); // Pequeño delay para mejor UX
-
-      return () => clearTimeout(splineTimer);
-    }
-  }, [loading]);
 
   useEffect(() => {
     cargarEstadisticas();
@@ -357,106 +340,61 @@ const ModernDashboard = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* 🚀 Hero Banner con Spline OPTIMIZADO */}
+      {/* 🎨 Hero Banner con Logo sobre Fondo Blanco LIMPIO */}
       <div className="relative h-[300px] overflow-hidden">
         
-        {/* 🎨 Fondo placeholder elegante mientras carga Spline */}
-        <div 
-          className={`absolute inset-0 bg-gradient-to-br from-[#34353A] via-[#5F8EAD] to-[#5D9646] transition-opacity duration-1000 ${
-            splineLoaded ? 'opacity-0' : 'opacity-100'
-          }`}
-        >
-          {/* Patrón decorativo */}
-          <div 
-            className="absolute inset-0 opacity-10"
-            style={{
-              backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.4'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
-            }}
-          />
-          
-          {/* Loading indicator sutil */}
-          {!splineLoaded && !splineError && (
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="flex flex-col items-center gap-3">
-                <div className="relative">
-                  <div className="w-12 h-12 border-4 border-white/20 rounded-full"></div>
-                  <div className="absolute top-0 left-0 w-12 h-12 border-4 border-white border-t-transparent rounded-full animate-spin"></div>
-                </div>
-                <p className="text-white text-sm font-medium animate-pulse">
-                  Cargando escena 3D...
-                </p>
-              </div>
-            </div>
-          )}
+        {/* 🎨 Fondo blanco 100% limpio - SIN PATRÓN */}
+        <div className="absolute inset-0 bg-white">
+          {/* 🎨 Logo centrado - SOLO LA IMAGEN */}
+          <div className="absolute inset-0 flex items-center justify-center">
+            <img 
+              src={logo} 
+              alt="Logo Rivera" 
+              className="h-32 w-auto object-contain hover:scale-105 transition-transform duration-300"
+            />
+          </div>
         </div>
 
-        {/* 🚀 Spline con lazy loading y transición suave */}
-        {showSpline && (
-          <Suspense fallback={null}>
-            <div 
-              className={`absolute inset-0 transition-opacity duration-1000 ${
-                splineLoaded ? 'opacity-100' : 'opacity-0'
-              }`}
-              style={{ pointerEvents: splineLoaded ? 'auto' : 'none' }}
-            >
-              <Spline
-                scene="https://prod.spline.design/RPoeKCG7eSYlbZ4c/scene.splinecode"
-                style={{ width: '100%', height: '100%', pointerEvents: 'auto' }}
-                onLoad={() => {
-                  console.log('✅ Spline cargado exitosamente');
-                  setSplineLoaded(true);
-                }}
-                onError={(error) => {
-                  console.error('❌ Error cargando Spline:', error);
-                  setSplineError(true);
-                }}
-              />
-            </div>
-          </Suspense>
-        )}
-
-        {/* Gradient overlay (siempre visible) */}
-        <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-gray-900/30 to-gray-50 pointer-events-none"></div>
+        {/* Gradient overlay suave solo en los bordes para transición */}
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-gray-50 pointer-events-none"></div>
 
         {/* Contenido del hero */}
         <div className="relative z-10 h-full flex flex-col justify-between p-8 pointer-events-none">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3 backdrop-blur-md bg-white/10 rounded-full px-5 py-2.5 border border-white/20 shadow-lg">
+            <div className="flex items-center gap-3 bg-white/90 backdrop-blur-sm rounded-full px-5 py-2.5 border border-gray-200 shadow-lg">
               <div className="w-2 h-2 bg-[#5D9646] rounded-full animate-pulse"></div>
-              <Activity className="text-white" size={18} />
-              <span className="text-white font-semibold text-sm">Sistema en vivo</span>
+              <Activity className="text-[#34353A]" size={18} />
+              <span className="text-[#34353A] font-semibold text-sm">Sistema en vivo</span>
             </div>
 
             <div className="flex items-center gap-3">
-              <div className="backdrop-blur-md bg-white/10 rounded-full px-5 py-2.5 border border-white/20 shadow-lg pointer-events-auto cursor-pointer hover:bg-white/15 transition-all">
+              <div className="bg-white/90 backdrop-blur-sm rounded-full px-5 py-2.5 border border-gray-200 shadow-lg pointer-events-auto cursor-pointer hover:bg-gray-50 transition-all">
                 <div className="flex items-center gap-2">
-                  <Truck className="text-white" size={16} />
-                  <span className="text-white font-bold text-sm">{estadisticas.flota.operando}/{estadisticas.flota.total}</span>
+                  <Truck className="text-[#34353A]" size={16} />
+                  <span className="text-[#34353A] font-bold text-sm">{estadisticas.flota.operando}/{estadisticas.flota.total}</span>
                 </div>
               </div>
 
-              <div className={`backdrop-blur-md rounded-full px-5 py-2.5 border shadow-lg pointer-events-auto cursor-pointer transition-all ${totales.balance >= 0
-                  ? 'bg-[#5D9646]/20 border-[#5D9646]/30 hover:bg-[#5D9646]/25'
-                  : 'bg-red-500/20 border-red-400/30 hover:bg-red-500/25'
+              <div className={`backdrop-blur-sm rounded-full px-5 py-2.5 border shadow-lg pointer-events-auto cursor-pointer transition-all ${totales.balance >= 0
+                  ? 'bg-[#5D9646]/10 border-[#5D9646]/30 hover:bg-[#5D9646]/20'
+                  : 'bg-red-500/10 border-red-400/30 hover:bg-red-500/20'
                 }`}>
                 <div className="flex items-center gap-2">
-                  <TrendingUp className={totales.balance >= 0 ? 'text-green-300' : 'text-red-300'} size={16} />
-                  <span className="text-white font-bold text-sm">{formatearMoneda(totales.balance)}</span>
+                  <TrendingUp className={totales.balance >= 0 ? 'text-[#5D9646]' : 'text-red-600'} size={16} />
+                  <span className={`font-bold text-sm ${totales.balance >= 0 ? 'text-[#5D9646]' : 'text-red-600'}`}>
+                    {formatearMoneda(totales.balance)}
+                  </span>
                 </div>
               </div>
             </div>
           </div>
 
           <div>
-            <div className="backdrop-blur-xl bg-gradient-to-r from-black/40 via-black/30 to-transparent rounded-2xl px-8 py-5 border border-white/10 inline-block shadow-2xl">
-              <h1 className="text-6xl font-bold text-white mb-2" style={{
-                textShadow: '0 4px 20px rgba(0,0,0,0.5), 0 2px 8px rgba(0,0,0,0.3)'
-              }}>
+            <div className="bg-white/90 backdrop-blur-sm rounded-2xl px-8 py-5 border border-gray-200 inline-block shadow-lg">
+              <h1 className="text-6xl font-bold text-[#34353A] mb-2">
                 Dashboard
               </h1>
-              <p className="text-white/95 text-base font-medium" style={{
-                textShadow: '0 2px 10px rgba(0,0,0,0.4)'
-              }}>
+              <p className="text-gray-600 text-base font-medium">
                 {new Date().toLocaleDateString('es-ES', {
                   weekday: 'long',
                   day: 'numeric',
@@ -540,16 +478,7 @@ const ModernDashboard = () => {
             <div className="flex items-center justify-between mb-6">
               <div>
                 <h3 className="text-xl font-bold text-[#34353A]">Resumen Financiero</h3>
-                <p className="text-gray-500 text-sm mt-1">
-                  {loading ? (
-                    <span className="inline-flex items-center gap-2">
-                      <div className="w-3 h-3 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
-                      Actualizando datos...
-                    </span>
-                  ) : (
-                    `Balance del período seleccionado`
-                  )}
-                </p>
+                <p className="text-gray-500 text-sm mt-1">Balance del período seleccionado</p>
               </div>
 
               <div className="flex items-center gap-3">
