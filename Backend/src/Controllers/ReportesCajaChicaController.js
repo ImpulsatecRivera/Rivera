@@ -60,17 +60,31 @@ const convertirImagenABase64 = (rutaImagen) => {
 
 // Cargar logo una vez
 const logoBase64 = convertirImagenABase64(RUTA_LOGO);
-const PUPPETEER_CONFIG = {
-    headless: 'new',
-    executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/chromium',
-    args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-        '--disable-gpu',
-        '--single-process',
-        '--no-zygote'
-    ]
+const PUPPETEER_CONFIG = () => {
+    if (IS_PRODUCTION || IS_CLOUD_RUN) {
+        // Configuración para Cloud Run
+        return {
+            headless: 'new',
+            executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/chromium',
+            args: [
+                '--no-sandbox',
+                '--disable-setuid-sandbox',
+                '--disable-dev-shm-usage',
+                '--disable-gpu',
+                '--single-process',
+                '--no-zygote'
+            ]
+        };
+    } else {
+        // Configuración para desarrollo local
+        return {
+            headless: 'new',
+            args: [
+                '--no-sandbox',
+                '--disable-setuid-sandbox'
+            ]
+        };
+    }
 };
 const ReportesCajaChicaController = {};
 

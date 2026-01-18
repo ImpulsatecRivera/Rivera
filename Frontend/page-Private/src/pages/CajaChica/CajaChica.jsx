@@ -762,26 +762,28 @@ export default function CajaChicaModern() {
                 )}
               </div>
 
-              {necesitaReintegro && (
-                <button
-                  onClick={registrarReintegro}
-                  onMouseEnter={() => setHoveredButton('reintegro')}
-                  onMouseLeave={() => setHoveredButton(null)}
-                  className="bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 rounded-xl font-medium transition-all flex items-center gap-2 hover:scale-105 relative overflow-hidden"
-                >
-                  {hoveredButton === 'reintegro' && (
-                    <div className="absolute inset-0 opacity-30 pointer-events-none">
-                      <Lottie
-                        animationData={warningAnimation}
-                        loop={true}
-                        style={{ width: '100%', height: '100%' }}
-                      />
-                    </div>
-                  )}
-                  <RefreshCw size={16} className={hoveredButton === 'reintegro' ? 'animate-spin' : ''} />
-                  <span className="relative z-10">Reintegrar</span>
-                </button>
-              )}
+              <button
+                onClick={registrarReintegro}
+                onMouseEnter={() => setHoveredButton('reintegro')}
+                onMouseLeave={() => setHoveredButton(null)}
+                className={`text-white px-4 py-2 rounded-xl font-medium transition-all flex items-center gap-2 hover:scale-105 relative overflow-hidden ${
+                  necesitaReintegro 
+                    ? 'bg-amber-500 hover:bg-amber-600' 
+                    : 'bg-[#5D9646] hover:bg-[#4a7335]'
+                }`}
+              >
+                {hoveredButton === 'reintegro' && (
+                  <div className="absolute inset-0 opacity-30 pointer-events-none">
+                    <Lottie
+                      animationData={warningAnimation}
+                      loop={true}
+                      style={{ width: '100%', height: '100%' }}
+                    />
+                  </div>
+                )}
+                <RefreshCw size={16} className={hoveredButton === 'reintegro' ? 'animate-spin' : ''} />
+                <span className="relative z-10">Reintegrar</span>
+              </button>
             </div>
 
             {/* Barra de progreso */}
@@ -826,7 +828,7 @@ export default function CajaChicaModern() {
               <div className="bg-[#5D9646]/10 p-2 rounded-lg">
                 <ArrowUpRight className="text-[#5D9646]" size={16} />
               </div>
-              <p className="text-xs text-gray-500 font-medium">Ingresos Semana</p>
+              <p className="text-xs text-gray-500 font-medium">Dinero Reintegrado Semana</p>
             </div>
             <p className="text-2xl font-bold text-[#34353A] relative z-10">{formatearMoneda(stats.totalIngresos)}</p>
           </div>
@@ -863,7 +865,7 @@ export default function CajaChicaModern() {
               <div className="bg-[#5F8EAD]/10 p-2 rounded-lg">
                 <TrendingUp className="text-[#5F8EAD]" size={16} />
               </div>
-              <p className="text-xs text-gray-500 font-medium">Ingresos Hoy</p>
+              <p className="text-xs text-gray-500 font-medium">Dinero Reintegrado Hoy</p>
             </div>
             <p className="text-2xl font-bold text-[#34353A]">{formatearMoneda(stats.ingresosHoy)}</p>
           </div>
@@ -1257,14 +1259,37 @@ export default function CajaChicaModern() {
           <div className="flex items-center gap-2">
             <span className="text-sm text-gray-600 font-medium">$</span>
             <input
-              type="number"
-              step="50"
-              min="100"
-              max="10000"
+              type="text"
               value={tempMaximo}
               onChange={(e) => {
-                const value = Math.max(100, Math.min(10000, Number(e.target.value)));
-                setTempMaximo(value);
+                const value = e.target.value;
+                // Solo permitir números mientras escribe, sin validar min/max
+                const numValue = value.replace(/[^0-9]/g, '');
+                setTempMaximo(numValue);
+              }}
+              onBlur={(e) => {
+                // Validar solo cuando pierde el foco
+                const value = e.target.value.trim();
+                if (value === '' || value === '0') {
+                  setTempMaximo(100);
+                } else {
+                  const numValue = Number(value);
+                  const finalValue = Math.max(100, Math.min(10000, numValue));
+                  setTempMaximo(finalValue);
+                }
+              }}
+              onKeyDown={(e) => {
+                // Al presionar Enter, validar
+                if (e.key === 'Enter') {
+                  const value = e.target.value.trim();
+                  if (value === '' || value === '0') {
+                    setTempMaximo(100);
+                  } else {
+                    const numValue = Number(value);
+                    const finalValue = Math.max(100, Math.min(10000, numValue));
+                    setTempMaximo(finalValue);
+                  }
+                }
               }}
               className="flex-1 px-4 py-3 text-lg font-semibold border-2 border-gray-200 rounded-xl focus:border-[#5F8EAD] focus:outline-none transition-colors"
               placeholder="1000"
@@ -1359,14 +1384,37 @@ export default function CajaChicaModern() {
           <div className="flex items-center gap-2">
             <span className="text-sm text-gray-600 font-medium">$</span>
             <input
-              type="number"
-              step="50"
-              min="0"
-              max="5000"
+              type="text"
               value={tempMinimo}
               onChange={(e) => {
-                const value = Math.max(0, Math.min(5000, Number(e.target.value)));
-                setTempMinimo(value);
+                const value = e.target.value;
+                // Solo permitir números mientras escribe, sin validar min/max
+                const numValue = value.replace(/[^0-9]/g, '');
+                setTempMinimo(numValue);
+              }}
+              onBlur={(e) => {
+                // Validar solo cuando pierde el foco
+                const value = e.target.value.trim();
+                if (value === '') {
+                  setTempMinimo(0);
+                } else {
+                  const numValue = Number(value);
+                  const finalValue = Math.max(0, Math.min(5000, numValue));
+                  setTempMinimo(finalValue);
+                }
+              }}
+              onKeyDown={(e) => {
+                // Al presionar Enter, validar
+                if (e.key === 'Enter') {
+                  const value = e.target.value.trim();
+                  if (value === '') {
+                    setTempMinimo(0);
+                  } else {
+                    const numValue = Number(value);
+                    const finalValue = Math.max(0, Math.min(5000, numValue));
+                    setTempMinimo(finalValue);
+                  }
+                }
               }}
               className="flex-1 px-4 py-3 text-lg font-semibold border-2 border-gray-200 rounded-xl focus:border-amber-500 focus:outline-none transition-colors"
               placeholder="100"
