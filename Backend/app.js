@@ -45,6 +45,8 @@ import reportesViajesDirectoRoutes from "./src/Routes/ReportesViajesDirectoRoute
 import ReporteViajesYGastosSemanalesRoutes from "./src/Routes/ReporteViajesYGastosSemanales.js";
 import ReportesGastosMesRoutes from "./src/Routes/ReportesGastosMesRoutes.js";
 
+import ventasRoutes from "./src/Routes/VentasRoutes.js";
+import reportesVentasRoutes from "./src/Routes/ReportesVentasRoutes.js";
 //Nuevo: reporte consolidado
 import ReporteConsolidadoRoutes from "./src/Routes/Reporteconsolidadoroutes.js";
 
@@ -128,6 +130,8 @@ app.use("/api/reportes/planilla/quincenal", validateAuthToken(["admin"]), Report
 app.use("/api/planillas/semanal",PlanillaSemanalRoutes);
 app.use("/api/reportes/planilla/semanal",validateAuthToken(["admin"]), ReportesPlanillaSemanalRoutes);
 
+app.use("/api/ventas", ventasRoutes);
+
 app.use("/api/auto-update", autoUpdateRoutes);
 app.use("/api/call", callRoutes);
 
@@ -144,5 +148,7 @@ app.use("/api/reporte/gastosMes", ReportesGastosMesRoutes);
 
 // Nuevo: reporte consolidado
 app.use("/api/reporte-consolidado", ReporteConsolidadoRoutes);
+
+app.use("/api/reportesVentas", reportesVentasRoutes);
 
 export default app;

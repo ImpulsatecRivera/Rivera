@@ -1,10 +1,21 @@
 import React, { useState, useEffect } from "react";
-import { Home, BarChart3, Wrench, Fuel, Vault, Route, LogOut, ChevronLeft, ChevronRight } from "lucide-react";
+import { 
+  Home, 
+  BarChart3, 
+  Wrench, 
+  Fuel, 
+  Vault, 
+  Route, 
+  LogOut, 
+  ChevronLeft, 
+  ChevronRight,
+  Receipt // ⭐ NUEVO ÍCONO
+} from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../Context/authContext";
 import Lottie from "lottie-react";
 import logoutAnim from "../../assets/lotties/Campervan _ Ignite Animation.json";
-import logoRivera from "../../images/logo.png"; // 
+import logoRivera from "../../images/logo.png";
 
 const SidebarNav = () => {
   const navigate = useNavigate();
@@ -18,11 +29,14 @@ const SidebarNav = () => {
 
   const navItems = [
     { id: "home", route: "/home", icon: Home, label: "Inicio" },
-    ...(user?.userType === "Administrador" ? [{ id: "planilla", route: "/planilla", icon: BarChart3, label: "Planilla" }] : []),
+    ...(user?.userType === "Administrador" ? [
+      { id: "planilla", route: "/planilla", icon: BarChart3, label: "Planilla" }
+    ] : []),
     { id: "maintenance", route: "/mantenimientos", icon: Wrench, label: "Mantenimientos" },
     { id: "diesel", route: "/diesel", icon: Fuel, label: "Diesel" },
     { id: "viajesInternos", route: "/viajesInternos", icon: Route, label: "Viajes" },
     { id: "CajaChica", route: "/CajaChica", icon: Vault, label: "Caja Chica" },
+    { id: "ventas", route: "/ventas", icon: Receipt, label: "Ventas" }, // ⭐ NUEVO
   ];
 
   useEffect(() => {
@@ -94,26 +108,25 @@ const SidebarNav = () => {
           )}
         </button>
 
-        {/* Header/Logo Area - CON TU LOGO */}
-       <div className="px-6 py-6 relative z-10">
-  <div className={`flex items-center gap-3 ${!isExpanded && 'justify-center'}`}>
-    {/* Logo más grande */}
-    <div className="w-14 h-14 bg-white/5 rounded-xl flex items-center justify-center 
-                  border border-[#5F8EAD]/20 shadow-lg overflow-hidden p-2">
-      <img 
-        src={logoRivera} 
-        alt="Rivera Logo" 
-        className="w-full h-full object-contain"
-      />
-    </div>
-    {isExpanded && (
-      <div>
-        <h2 className="font-bold text-xl text-white">Rivera</h2>
-        <p className="text-xs text-gray-400">Distribuidora y Transportes</p>
-      </div>
-    )}
-  </div>
-</div>
+        {/* Header/Logo Area */}
+        <div className="px-6 py-6 relative z-10">
+          <div className={`flex items-center gap-3 ${!isExpanded && 'justify-center'}`}>
+            <div className="w-14 h-14 bg-white/5 rounded-xl flex items-center justify-center 
+                          border border-[#5F8EAD]/20 shadow-lg overflow-hidden p-2">
+              <img 
+                src={logoRivera} 
+                alt="Rivera Logo" 
+                className="w-full h-full object-contain"
+              />
+            </div>
+            {isExpanded && (
+              <div>
+                <h2 className="font-bold text-xl text-white">Rivera</h2>
+                <p className="text-xs text-gray-400">Distribuidora y Transportes</p>
+              </div>
+            )}
+          </div>
+        </div>
 
         {/* Navigation Items */}
         <nav className="flex-1 px-3 space-y-1 relative z-10">
@@ -235,7 +248,7 @@ const SidebarNav = () => {
 
       <div className="flex-1 bg-white">{/* contenido */}</div>
 
-      {/* Modal de confirmación - ORIGINAL */}
+      {/* Modal de confirmación */}
       {showLogoutModal && (
         <div
           className="
@@ -245,7 +258,6 @@ const SidebarNav = () => {
             overflow-hidden
           "
         >
-          {/* LOTTIE FONDO */}
           <Lottie
             animationData={logoutAnim}
             loop
@@ -253,7 +265,6 @@ const SidebarNav = () => {
             className="absolute inset-0 opacity-10 pointer-events-none"
           />
 
-          {/* CONTENIDO */}
           <div className="relative z-10">
             <h3 className="text-lg font-semibold text-gray-900 text-center">
               Cerrar sesión
