@@ -38,17 +38,31 @@ const convertirImagenABase64 = (rutaImagen) => {
 
 // Ruta al logo
 const RUTA_LOGO = path.join(process.cwd(), 'src', 'imagenes', 'imagen_15.png');
-const PUPPETEER_CONFIG = {
-    headless: 'new',
-    executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/chromium',
-    args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-        '--disable-gpu',
-        '--single-process',
-        '--no-zygote'
-    ]
+const PUPPETEER_CONFIG = () => {
+    if (IS_PRODUCTION || IS_CLOUD_RUN) {
+        // Configuración para Cloud Run
+        return {
+            headless: 'new',
+            executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/chromium',
+            args: [
+                '--no-sandbox',
+                '--disable-setuid-sandbox',
+                '--disable-dev-shm-usage',
+                '--disable-gpu',
+                '--single-process',
+                '--no-zygote'
+            ]
+        };
+    } else {
+        // Configuración para desarrollo local
+        return {
+            headless: 'new',
+            args: [
+                '--no-sandbox',
+                '--disable-setuid-sandbox'
+            ]
+        };
+    }
 };
 const formatearFecha = (fecha) => {
     const date = new Date(fecha);
