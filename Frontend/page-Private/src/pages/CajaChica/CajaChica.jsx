@@ -1,41 +1,185 @@
-import React, { useState, useEffect } from 'react';
-import { TrendingDown, Download, Search, FileText, Loader2, Plus, Settings, Upload } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { 
+  TrendingDown, Download, Search, FileText, Loader2, Plus, Settings, 
+  Upload, X, ChevronDown, ChevronUp, Calendar, DollarSign, 
+  ArrowUpRight, ArrowDownRight, Eye, Check, AlertCircle, TrendingUp,
+  Filter, RefreshCw, Maximize2, Sparkles
+} from 'lucide-react';
+import Lottie from 'lottie-react';
 import { config } from '../../config';
 import Swal from 'sweetalert2';
 import './CajaChica.css';
 import ReportesCajaChicaModal from './ModalReportesCajaChica';
 import { usePermissions } from '../../hooks/usePermissions';
-import { ProtectedAction, RoleBadge } from '../../components/Auth';
-import { api } from "../../Context/authContext"
+import { api } from "../../Context/authContext";
 
+// 🎨 Importar animaciones Lottie
+import loadingAnimation from '../../assets/lotties/Sandy Loading.json';
+import emptyBoxAnimation from '../../assets/lotties/empty.json';
+import successAnimation from '../../assets/lotties/Thumbs up birdie.json';
+import warningAnimation from '../../assets/lotties/Alert Notification Character.json';
+import moneyAnimation from '../../assets/lotties/Piggy Bank - Coin In.json';
+
+const showLottieAlert = (type, title, text = '') => {
+  let lottieData;
+  let lottieSize = 150;
+  let confirmButtonColor = '#5F8EAD';
+
+  switch (type) {
+    case 'success':
+      lottieData = successAnimation;
+      lottieSize = 180;
+      confirmButtonColor = '#5D9646';
+      break;
+    case 'warning':
+      lottieData = warningAnimation;
+      lottieSize = 180;
+      confirmButtonColor = '#f59e0b';
+      break;
+    case 'error':
+      lottieData = warningAnimation;
+      lottieSize = 180;
+      confirmButtonColor = '#ef4444';
+      break;
+    case 'money':
+      lottieData = moneyAnimation;
+      lottieSize = 200;
+      confirmButtonColor = '#5D9646';
+      break;
+    default:
+      lottieData = successAnimation;
+  }
+
+  Swal.fire({
+    title: title,
+    html: `
+      <div id="lottie-container" style="margin: 20px auto;"></div>
+      ${text ? `<p style="color: #64748b; font-size: 15px; margin-top: 15px; line-height: 1.5;">${text}</p>` : ''}
+    `,
+    showConfirmButton: true,
+    confirmButtonText: 'Entendido ✓',
+    confirmButtonColor: confirmButtonColor,
+    allowOutsideClick: false,
+    customClass: {
+      popup: 'rounded-3xl shadow-2xl',
+      title: 'text-2xl font-bold text-gray-800 mb-2',
+      confirmButton: 'px-8 py-3 rounded-xl font-semibold shadow-lg hover:scale-105 transition-all duration-200'
+    },
+    didOpen: () => {
+      const container = document.getElementById('lottie-container');
+      if (container) {
+        Lottie.loadAnimation({
+          container: container,
+          animationData: lottieData,
+          loop: type === 'success' ? false : true,
+          autoplay: true,
+          renderer: 'svg'
+        });
+        
+        container.style.width = `${lottieSize}px`;
+        container.style.height = `${lottieSize}px`;
+      }
+    }
+  });
+};
+
+const showLottieToast = (type, title, duration = 3000) => {
+  let lottieData;
+  let background = '#fff';
+  
+  switch (type) {
+    case 'success':
+      lottieData = successAnimation;
+      background = 'linear-gradient(135deg, #5D9646 0%, #5F8EAD 100%)';
+      break;
+    case 'error':
+      lottieData = warningAnimation;
+      background = 'linear-gradient(135deg, #ef4444 0%, #f59e0b 100%)';
+      break;
+    case 'warning':
+      lottieData = warningAnimation;
+      background = 'linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%)';
+      break;
+    case 'info':
+      lottieData = successAnimation;
+      background = 'linear-gradient(135deg, #5F8EAD 0%, #34353A 100%)';
+      break;
+    default:
+      lottieData = successAnimation;
+  }
+
+  Swal.fire({
+    title: title,
+    html: '<div id="toast-lottie-container" style="width: 80px; height: 80px; margin: 10px auto;"></div>',
+    toast: true,
+    position: 'top-end',
+    showConfirmButton: false,
+    timer: duration,
+    timerProgressBar: true,
+    background: background,
+    color: '#fff',
+    customClass: {
+      popup: 'rounded-2xl shadow-2xl',
+      title: 'text-base font-bold'
+    },
+    didOpen: (toast) => {
+      const container = document.getElementById('toast-lottie-container');
+      if (container) {
+        Lottie.loadAnimation({
+          container: container,
+          animationData: lottieData,
+          loop: false,
+          autoplay: true,
+          renderer: 'svg'
+        });
+      }
+      
+      toast.addEventListener('mouseenter', Swal.stopTimer);
+      toast.addEventListener('mouseleave', Swal.resumeTimer);
+    }
+  });
+};
 
 export default function CajaChicaModern() {
   const { canCreate, canDelete } = usePermissions();
   
   const [balance, setBalance] = useState(0);
-  const [activeTab, setActiveTab] = useState('all');
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [configuracion, setConfiguracion] = useState(null);
   const [estadoReintegro, setEstadoReintegro] = useState(null);
-  const [showConfigModal, setShowConfigModal] = useState(false);
-  const [showIngresoModal, setShowIngresoModal] = useState(false);
+  
+  // Estados para panels expandibles
+  const [showConfigPanel, setShowConfigPanel] = useState(false);
+  const [showIngresoForm, setShowIngresoForm] = useState(false);
+  const [showEgresoForm, setShowEgresoForm] = useState(false);
+  const [expandedTransaction, setExpandedTransaction] = useState(null);
+  const [filterType, setFilterType] = useState('all');
+  const [searchTerm, setSearchTerm] = useState('');
+  
+  // Estados para hover en botones
+  const [hoveredButton, setHoveredButton] = useState(null);
+  const [hoveredStat, setHoveredStat] = useState(null);
+  
+  // Form states
   const [tempMaximo, setTempMaximo] = useState(1000);
   const [tempMinimo, setTempMinimo] = useState(100);
   const [montoIngreso, setMontoIngreso] = useState('');
   const [descripcionIngreso, setDescripcionIngreso] = useState('');
+  const [montoEgreso, setMontoEgreso] = useState('');
+  const [descripcionEgreso, setDescripcionEgreso] = useState('');
   const [showReportesModal, setShowReportesModal] = useState(false);
 
-  const [formData, setFormData] = useState({
-    amount: '',
-    operationType: 'egreso',
-    reason: ''
-  });
+  // Refs para Lottie
+  const loadingLottieRef = useRef();
+  const moneyLottieRef = useRef();
 
   const [stats, setStats] = useState({
     totalIngresos: 0,
     totalGastos: 0,
-    totalTransacciones: 0
+    totalTransacciones: 0,
+    ingresosHoy: 0,
+    gastosHoy: 0
   });
 
   useEffect(() => {
@@ -53,11 +197,7 @@ export default function CajaChicaModern() {
       ]);
     } catch (error) {
       console.error('Error cargando datos:', error);
-      Swal.fire({
-        title: 'Error',
-        text: 'Error al cargar los datos de caja chica',
-        icon: 'error'
-      });
+      showLottieToast('error', '❌ Error al cargar datos');
     } finally {
       setLoading(false);
     }
@@ -106,374 +246,10 @@ export default function CajaChicaModern() {
     }
   };
 
-  const descargarReporteIndividual = async (transaccionId) => {
-    try {
-      const response = await api.get(`/reportesCajaChica/individual/${transaccionId}`, {
-        responseType: 'blob'
-      });
-
-      const blob = new Blob([response.data], { type: 'application/pdf' });
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `reporte_individual_${transaccionId}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-
-      Swal.fire({
-        title: 'Descarga exitosa',
-        text: 'El reporte se ha descargado correctamente',
-        icon: 'success',
-        timer: 2000
-      });
-    } catch (error) {
-      console.error('Error descargando reporte:', error);
-      Swal.fire({
-        title: 'Error',
-        text: error.response?.status === 401 ? 'No tienes permisos para descargar este reporte' : 'No se pudo descargar el reporte',
-        icon: 'error'
-      });
-    }
-  };
-
-  const subirComprobante = async (transaccion) => {
-    const { value: file } = await Swal.fire({
-      title: 'Subir Comprobante',
-      html: `
-        <div class="px-4 py-2">
-          <p class="text-sm text-gray-600 mb-4">Selecciona una imagen o PDF del comprobante</p>
-          <label for="swal-input-file" class="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-[#5F8EAD] hover:bg-gray-50 transition-all">
-            <div class="flex flex-col items-center justify-center pt-5 pb-6">
-              <svg class="w-10 h-10 mb-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-              </svg>
-              <p class="mb-2 text-sm text-gray-500">
-                <span class="font-semibold">Click para seleccionar</span> o arrastra
-              </p>
-              <p class="text-xs text-gray-400">Imágenes (JPG, PNG) o PDF (MAX. 10MB)</p>
-            </div>
-            <input type="file" id="swal-input-file" accept="image/*,.pdf" class="hidden" onchange="document.getElementById('file-name').textContent = this.files[0]?.name || 'Sin archivos seleccionados'; document.getElementById('file-name').className = this.files[0] ? 'text-base font-semibold text-center text-[#5F8EAD] mt-3 break-all px-2' : 'text-sm text-center text-gray-500 mt-2';">
-          </label>
-          <p id="file-name" class="text-sm text-center text-gray-500 mt-2">Sin archivos seleccionados</p>
-        </div>
-      `,
-      showCancelButton: true,
-      confirmButtonText: 'Subir',
-      cancelButtonText: 'Cancelar',
-      confirmButtonColor: '#5F8EAD',
-      cancelButtonColor: '#64748b',
-      width: '90%',
-      maxWidth: '500px',
-      customClass: {
-        container: 'swal-responsive',
-        popup: 'rounded-2xl',
-        title: 'text-xl font-bold text-gray-800',
-        confirmButton: 'px-6 py-2.5 rounded-lg font-medium',
-        cancelButton: 'px-6 py-2.5 rounded-lg font-medium'
-      },
-      preConfirm: () => {
-        const fileInput = document.getElementById('swal-input-file');
-        if (!fileInput.files[0]) {
-          Swal.showValidationMessage('Debes seleccionar un archivo');
-          return false;
-        }
-        return fileInput.files[0];
-      }
-    });
-
-    if (!file) return;
-
-    Swal.fire({
-      title: 'Subiendo comprobante...',
-      text: 'Por favor espera',
-      allowOutsideClick: false,
-      didOpen: () => Swal.showLoading()
-    });
-
-    try {
-      const formData = new FormData();
-      formData.append('voucher', file);
-
-      await api.patch(`/cajaChica/movements/${transaccion._id}/voucher`, formData);
-
-      Swal.fire({
-        title: '¡Comprobante subido!',
-        text: 'El comprobante se ha subido correctamente',
-        icon: 'success',
-        timer: 2000,
-        showConfirmButton: false
-      });
-
-      await cargarDatos();
-    } catch (error) {
-      console.error('💥 Error subiendo comprobante:', error);
-      Swal.fire({
-        title: 'Error',
-        text: error.response?.data?.message || 'No se pudo subir el comprobante',
-        icon: 'error',
-        confirmButtonText: 'OK'
-      });
-    }
-  };
-
-  const generarVale = async (transaccion) => {
-    const { value: formValues } = await Swal.fire({
-      title: 'Generar Vale',
-      input: 'text',
-      inputLabel: 'Nombre del beneficiario',
-      inputPlaceholder: 'Ingresa el nombre completo',
-      showCancelButton: true,
-      confirmButtonText: 'Generar',
-      cancelButtonText: 'Cancelar',
-      confirmButtonColor: '#5F8EAD',
-      cancelButtonColor: '#64748b',
-      inputValidator: (value) => {
-        if (!value) {
-          return 'Debes ingresar el nombre del beneficiario';
-        }
-      }
-    });
-
-    if (!formValues) return;
-
-    Swal.fire({
-      title: 'Generando vale...',
-      text: 'Por favor espera',
-      allowOutsideClick: false,
-      didOpen: () => Swal.showLoading()
-    });
-
-    try {
-      const { data } = await api.post(`/cajaChica/${transaccion._id}/generar-vale`, {
-        nombreBeneficiario: formValues
-      });
-      
-      if (data.voucher) {
-        window.open(data.voucher, '_blank', 'noopener,noreferrer');
-
-        Swal.fire({
-          title: '¡Vale generado!',
-          html: `
-            <p><strong>Número de vale:</strong> ${data.vale || 'N/A'}</p>
-            <p class="text-sm text-gray-500 mt-2">${data.message}</p>
-          `,
-          icon: 'success',
-          timer: 3000,
-          showConfirmButton: false
-        });
-
-        await cargarDatos();
-      } else {
-        throw new Error('La respuesta no contiene la URL del vale');
-      }
-    } catch (error) {
-      console.error('💥 Error generando vale:', error);
-      Swal.fire({
-        title: 'Error',
-        text: error.response?.data?.message || 'No se pudo generar el vale',
-        icon: 'error',
-        confirmButtonText: 'OK'
-      });
-    }
-  };
-
-  const guardarConfiguracion = async () => {
-    const { value: codigoSeguridad } = await Swal.fire({
-      title: '🔒 Código de Seguridad',
-      text: 'Ingresa el código de seguridad de Caja Chica',
-      input: 'password',
-      inputPlaceholder: 'Ingresa tu código',
-      inputAttributes: {
-        autocapitalize: 'off',
-        autocorrect: 'off'
-      },
-      showCancelButton: true,
-      confirmButtonText: 'Confirmar',
-      cancelButtonText: 'Cancelar',
-      confirmButtonColor: '#5F8EAD',
-      cancelButtonColor: '#64748b',
-      inputValidator: (value) => {
-        if (!value) {
-          return 'Debes ingresar el código de seguridad';
-        }
-      }
-    });
-
-    if (!codigoSeguridad) return;
-
-    try {
-      const { data } = await api.put('/cajaChicaConfig', {
-        maximoPermitido: tempMaximo,
-        minimoReintegro: tempMinimo,
-        password: codigoSeguridad
-      });
-      
-      if (data.success) {
-        setConfiguracion({ maximoPermitido: tempMaximo, minimoReintegro: tempMinimo });
-        setShowConfigModal(false);
-        await Swal.fire({
-          title: '¡Configuración Guardada!',
-          text: 'Los límites se han actualizado correctamente',
-          icon: 'success',
-          timer: 2000
-        });
-        await cargarDatos();
-      }
-    } catch (error) {
-      console.error('Error completo:', error);
-      Swal.fire({ 
-        title: error.response?.status === 401 ? 'No autorizado' : 'Error',
-        text: error.response?.data?.message || 'Error al guardar la configuración', 
-        icon: 'error' 
-      });
-    }
-  };
-
-  const registrarIngreso = async () => {
-    if (!montoIngreso || !descripcionIngreso) {
-      Swal.fire({
-        title: 'Campos incompletos',
-        text: 'Por favor completa todos los campos',
-        icon: 'warning'
-      });
-      return;
-    }
-
-    const { value: password } = await Swal.fire({
-      title: '🔒 Código de Seguridad',
-      text: 'Ingresa el código de seguridad de Caja Chica',
-      input: 'password',
-      inputPlaceholder: 'Ingresa tu código',
-      inputAttributes: {
-        autocapitalize: 'off',
-        autocorrect: 'off'
-      },
-      showCancelButton: true,
-      confirmButtonText: 'Confirmar',
-      cancelButtonText: 'Cancelar',
-      confirmButtonColor: '#5D9646',
-      cancelButtonColor: '#64748b',
-      inputValidator: (value) => {
-        if (!value) {
-          return 'Debes ingresar el código de seguridad';
-        }
-      }
-    });
-
-    if (!password) return;
-
-    try {
-      const formDataToSend = new FormData();
-      formDataToSend.append('amount', montoIngreso);
-      formDataToSend.append('reason', descripcionIngreso);
-      formDataToSend.append('password', password);
-
-      const { data } = await api.post('/cajaChica/ingreso', formDataToSend);
-      
-      await Swal.fire({
-        title: '¡Ingreso Registrado!',
-        text: data.message,
-        icon: 'success',
-        timer: 2000
-      });
-      setShowIngresoModal(false);
-      setMontoIngreso('');
-      setDescripcionIngreso('');
-      await cargarDatos();
-    } catch (error) {
-      Swal.fire({ 
-        title: error.response?.status === 401 ? 'Código Incorrecto' : 'Error',
-        text: error.response?.data?.message || 'Error al registrar ingreso', 
-        icon: 'error' 
-      });
-    }
-  };
-
-  const registrarReintegro = async () => {
-    if (!configuracion) {
-      Swal.fire({ title: 'Configuración faltante', text: 'Debes configurar el máximo permitido antes de realizar reintegros.', icon: 'warning' });
-      return;
-    }
-
-    const montoSugerido = (configuracion?.maximoPermitido || 0) - balance;
-
-    if (!montoSugerido || montoSugerido <= 0) {
-      Swal.fire({ title: 'No es necesario', text: 'El balance ya alcanza o supera el máximo permitido. No se registrará ningún reintegro.', icon: 'info' });
-      return;
-    }
-
-    const { value: password } = await Swal.fire({
-      title: '🔒 Código de Seguridad',
-      html: `Se generará un reintegro automático por <strong>$${montoSugerido.toFixed(2)}</strong> (no superará el máximo permitido). Ingresa el código de seguridad para confirmar.`,
-      input: 'password',
-      inputPlaceholder: 'Ingresa tu código',
-      inputAttributes: { autocapitalize: 'off', autocorrect: 'off' },
-      showCancelButton: true,
-      confirmButtonText: 'Confirmar',
-      cancelButtonText: 'Cancelar',
-      confirmButtonColor: '#5D9646',
-      cancelButtonColor: '#64748b',
-      inputValidator: (value) => {
-        if (!value) return 'Debes ingresar el código de seguridad';
-      }
-    });
-
-    if (!password) return;
-
-    try {
-      const { data } = await api.post('/cajaChicaConfig/registrar-reintegro', { password });
-
-      if (data.success) {
-        await Swal.fire({ title: '¡Reintegro Registrado!', text: data.message, icon: 'success', timer: 2000 });
-        await cargarDatos();
-      }
-    } catch (error) {
-      Swal.fire({ 
-        title: error.response?.status === 401 ? 'Código Incorrecto' : 'Error',
-        text: error.response?.data?.message || 'Error al registrar reintegro', 
-        icon: 'error' 
-      });
-    }
-  };
-
-  const registrarEgreso = async () => {
-    if (!formData.amount || !formData.reason) {
-      Swal.fire({
-        title: 'Campos incompletos',
-        text: 'Por favor completa todos los campos',
-        icon: 'warning'
-      });
-      return;
-    }
-
-    try {
-      const formDataToSend = new FormData();
-      formDataToSend.append('amount', formData.amount);
-      formDataToSend.append('reason', formData.reason);
-
-      const { data } = await api.post('/cajaChica/egreso', formDataToSend);
-
-      await Swal.fire({
-        title: '¡Egreso Registrado!',
-        text: data.message,
-        icon: 'success',
-        timer: 2000
-      });
-      limpiarFormulario();
-      await cargarDatos();
-    } catch (error) {
-      Swal.fire({ 
-        title: 'Error', 
-        text: error.response?.data?.message || 'Error al registrar egreso', 
-        icon: 'error' 
-      });
-    }
-  };
-
   const calcularEstadisticas = (movimientos) => {
     const now = new Date();
+    const hoy = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    
     const day = now.getDay();
     const diffToMonday = (day === 0 ? -6 : 1 - day);
     const monday = new Date(now);
@@ -488,13 +264,352 @@ export default function CajaChicaModern() {
       return d >= monday && d <= sunday;
     });
 
+    const movimientosHoy = movimientos.filter(m => {
+      const d = new Date(m.date);
+      return d >= hoy;
+    });
+
     const ingresos = movimientosSemana.filter(m => m.type === 'income').reduce((sum, m) => sum + m.amount, 0);
     const gastos = movimientosSemana.filter(m => m.type === 'expense').reduce((sum, m) => sum + m.amount, 0);
-    setStats({ totalIngresos: ingresos, totalGastos: gastos, totalTransacciones: movimientosSemana.length });
+    const ingresosHoy = movimientosHoy.filter(m => m.type === 'income').reduce((sum, m) => sum + m.amount, 0);
+    const gastosHoy = movimientosHoy.filter(m => m.type === 'expense').reduce((sum, m) => sum + m.amount, 0);
+    
+    setStats({ 
+      totalIngresos: ingresos, 
+      totalGastos: gastos, 
+      totalTransacciones: movimientosSemana.length,
+      ingresosHoy,
+      gastosHoy
+    });
   };
 
-  const limpiarFormulario = () => {
-    setFormData({ amount: '', operationType: 'egreso', reason: '' });
+  const guardarConfiguracion = async () => {
+    const { value: codigoSeguridad } = await Swal.fire({
+      title: '🔒 Código de Seguridad',
+      text: 'Ingresa el código para guardar la configuración',
+      input: 'password',
+      inputPlaceholder: 'Código de seguridad',
+      showCancelButton: true,
+      confirmButtonText: 'Confirmar',
+      cancelButtonText: 'Cancelar',
+      confirmButtonColor: '#5F8EAD',
+      cancelButtonColor: '#64748b',
+      customClass: {
+        popup: 'rounded-2xl',
+        confirmButton: 'rounded-xl px-6 py-2.5 font-semibold',
+        cancelButton: 'rounded-xl px-6 py-2.5 font-semibold'
+      },
+      inputValidator: (value) => !value && 'Debes ingresar el código de seguridad'
+    });
+
+    if (!codigoSeguridad) return;
+
+    try {
+      const { data } = await api.put('/cajaChicaConfig', {
+        maximoPermitido: tempMaximo,
+        minimoReintegro: tempMinimo,
+        password: codigoSeguridad
+      });
+      
+      if (data.success) {
+        setConfiguracion({ maximoPermitido: tempMaximo, minimoReintegro: tempMinimo });
+        setShowConfigPanel(false);
+        
+        // 🎨 Alert con Lottie de Success
+        showLottieAlert(
+          'success',
+          '¡Configuración Guardada! ✅',
+          `Máximo: ${formatearMoneda(tempMaximo)} | Mínimo: ${formatearMoneda(tempMinimo)}`
+        );
+        
+        await cargarDatos();
+      }
+    } catch (error) {
+      showLottieAlert(
+        'error',
+        error.response?.status === 401 ? '🔒 Código Incorrecto' : '❌ Error',
+        error.response?.data?.message || 'No se pudo guardar la configuración'
+      );
+    }
+  };
+
+  const registrarIngreso = async () => {
+    if (!montoIngreso || !descripcionIngreso) {
+      showLottieAlert('warning', '⚠️ Campos Incompletos', 'Por favor completa todos los campos requeridos');
+      return;
+    }
+
+    const { value: password } = await Swal.fire({
+      title: '🔒 Confirmar Ingreso',
+      text: `Ingreso de ${formatearMoneda(parseFloat(montoIngreso))}`,
+      input: 'password',
+      inputPlaceholder: 'Código de seguridad',
+      showCancelButton: true,
+      confirmButtonText: 'Confirmar',
+      cancelButtonText: 'Cancelar',
+      confirmButtonColor: '#5D9646',
+      cancelButtonColor: '#64748b',
+      customClass: {
+        popup: 'rounded-2xl',
+        confirmButton: 'rounded-xl px-6 py-2.5 font-semibold',
+        cancelButton: 'rounded-xl px-6 py-2.5 font-semibold'
+      },
+      inputValidator: (value) => !value && 'Debes ingresar el código de seguridad'
+    });
+
+    if (!password) return;
+
+    try {
+      const formDataToSend = new FormData();
+      formDataToSend.append('amount', montoIngreso);
+      formDataToSend.append('reason', descripcionIngreso);
+      formDataToSend.append('password', password);
+
+      await api.post('/cajaChica/ingreso', formDataToSend);
+      
+      // 🎨 Alert con Lottie de Money
+      showLottieAlert(
+        'money',
+        '¡Ingreso Registrado! 💰',
+        `Se agregaron ${formatearMoneda(parseFloat(montoIngreso))} a caja chica exitosamente`
+      );
+      
+      setShowIngresoForm(false);
+      setMontoIngreso('');
+      setDescripcionIngreso('');
+      await cargarDatos();
+    } catch (error) {
+      showLottieAlert(
+        'error',
+        error.response?.status === 401 ? '🔒 Código Incorrecto' : '❌ Error',
+        error.response?.data?.message || 'No se pudo registrar el ingreso'
+      );
+    }
+  };
+
+  const registrarEgreso = async () => {
+    if (!montoEgreso || !descripcionEgreso) {
+      showLottieAlert('warning', '⚠️ Campos Incompletos', 'Por favor completa todos los campos requeridos');
+      return;
+    }
+
+    try {
+      const formDataToSend = new FormData();
+      formDataToSend.append('amount', montoEgreso);
+      formDataToSend.append('reason', descripcionEgreso);
+
+      await api.post('/cajaChica/egreso', formDataToSend);
+
+      // 🎨 Alert con Lottie de Success
+      showLottieAlert(
+        'success',
+        '¡Egreso Registrado! ✅',
+        `Se registró el gasto de ${formatearMoneda(parseFloat(montoEgreso))} correctamente`
+      );
+      
+      setShowEgresoForm(false);
+      setMontoEgreso('');
+      setDescripcionEgreso('');
+      await cargarDatos();
+    } catch (error) {
+      showLottieAlert(
+        'error',
+        '❌ Error al Registrar',
+        error.response?.data?.message || 'No se pudo registrar el egreso'
+      );
+    }
+  };
+
+  const registrarReintegro = async () => {
+    if (!configuracion) {
+      showLottieAlert('warning', '⚠️ Configuración Faltante', 'Debes configurar los límites de caja chica primero');
+      return;
+    }
+
+    const montoSugerido = (configuracion?.maximoPermitido || 0) - balance;
+
+    if (montoSugerido <= 0) {
+      showLottieAlert('success', '✅ Balance Óptimo', 'El balance actual ya alcanza el máximo permitido');
+      return;
+    }
+
+    const { value: password } = await Swal.fire({
+      title: '🔒 Confirmar Reintegro',
+      html: `
+        <div class="text-center">
+          <p class="text-gray-600 mb-2">Se reintegrará automáticamente:</p>
+          <p class="text-3xl font-bold text-[#5D9646]">${formatearMoneda(montoSugerido)}</p>
+          <p class="text-sm text-gray-500 mt-2">Balance final: ${formatearMoneda(configuracion.maximoPermitido)}</p>
+        </div>
+      `,
+      input: 'password',
+      inputPlaceholder: 'Código de seguridad',
+      showCancelButton: true,
+      confirmButtonText: 'Confirmar Reintegro',
+      cancelButtonText: 'Cancelar',
+      confirmButtonColor: '#5D9646',
+      cancelButtonColor: '#64748b',
+      customClass: {
+        popup: 'rounded-2xl',
+        confirmButton: 'rounded-xl px-6 py-2.5 font-semibold',
+        cancelButton: 'rounded-xl px-6 py-2.5 font-semibold'
+      },
+      inputValidator: (value) => !value && 'Debes ingresar el código de seguridad'
+    });
+
+    if (!password) return;
+
+    try {
+      await api.post('/cajaChicaConfig/registrar-reintegro', { password });
+
+      // 🎨 Alert con Lottie de Money
+      showLottieAlert(
+        'money',
+        '¡Reintegro Exitoso! 💸',
+        `Se agregaron ${formatearMoneda(montoSugerido)} a caja chica. Balance actualizado a ${formatearMoneda(configuracion.maximoPermitido)}`
+      );
+      
+      await cargarDatos();
+    } catch (error) {
+      showLottieAlert(
+        'error',
+        error.response?.status === 401 ? '🔒 Código Incorrecto' : '❌ Error',
+        error.response?.data?.message || 'No se pudo registrar el reintegro'
+      );
+    }
+  };
+
+  const descargarReporteIndividual = async (transaccionId) => {
+    try {
+      const response = await api.get(`/reportesCajaChica/individual/${transaccionId}`, {
+        responseType: 'blob'
+      });
+
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `reporte_${transaccionId}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+
+      // 🎨 Toast con Lottie de Success
+      showLottieToast('success', '✅ Reporte descargado exitosamente', 2500);
+    } catch (error) {
+      showLottieToast('error', '❌ Error al descargar el reporte', 3000);
+    }
+  };
+
+  const subirComprobante = async (transaccion) => {
+    const { value: file } = await Swal.fire({
+      title: '📎 Subir Comprobante',
+      html: `
+        <div class="px-4 py-2">
+          <label for="swal-input-file" class="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-[#5F8EAD] hover:bg-gray-50 transition-all">
+            <div class="flex flex-col items-center justify-center pt-5 pb-6">
+              <svg class="w-10 h-10 mb-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+              </svg>
+              <p class="text-sm text-gray-500">Click para seleccionar archivo</p>
+              <p class="text-xs text-gray-400 mt-1">JPG, PNG o PDF (MAX. 10MB)</p>
+            </div>
+            <input type="file" id="swal-input-file" accept="image/*,.pdf" class="hidden" onchange="document.getElementById('file-name').textContent = this.files[0]?.name || 'Sin archivo';">
+          </label>
+          <p id="file-name" class="text-sm text-center text-gray-500 mt-2">Sin archivo seleccionado</p>
+        </div>
+      `,
+      showCancelButton: true,
+      confirmButtonText: 'Subir Archivo',
+      cancelButtonText: 'Cancelar',
+      confirmButtonColor: '#5F8EAD',
+      cancelButtonColor: '#64748b',
+      customClass: {
+        popup: 'rounded-2xl',
+        confirmButton: 'rounded-xl px-6 py-2.5 font-semibold',
+        cancelButton: 'rounded-xl px-6 py-2.5 font-semibold'
+      },
+      preConfirm: () => {
+        const fileInput = document.getElementById('swal-input-file');
+        if (!fileInput.files[0]) {
+          Swal.showValidationMessage('Por favor selecciona un archivo');
+          return false;
+        }
+        return fileInput.files[0];
+      }
+    });
+
+    if (!file) return;
+
+    try {
+      const formData = new FormData();
+      formData.append('voucher', file);
+
+      await api.patch(`/cajaChica/movements/${transaccion._id}/voucher`, formData);
+
+      // 🎨 Alert con Lottie de Success
+      showLottieAlert(
+        'success', 
+        '¡Comprobante Subido! 📎', 
+        'El archivo se guardó correctamente en el sistema'
+      );
+
+      await cargarDatos();
+    } catch (error) {
+      showLottieAlert(
+        'error', 
+        '❌ Error al Subir', 
+        'No se pudo guardar el comprobante. Intenta nuevamente.'
+      );
+    }
+  };
+
+  const generarVale = async (transaccion) => {
+    const { value: formValues } = await Swal.fire({
+      title: '📄 Generar Vale',
+      input: 'text',
+      inputLabel: 'Nombre completo del beneficiario',
+      inputPlaceholder: 'Ej: Juan Pérez García',
+      showCancelButton: true,
+      confirmButtonText: 'Generar Vale',
+      cancelButtonText: 'Cancelar',
+      confirmButtonColor: '#5F8EAD',
+      cancelButtonColor: '#64748b',
+      customClass: {
+        popup: 'rounded-2xl',
+        confirmButton: 'rounded-xl px-6 py-2.5 font-semibold',
+        cancelButton: 'rounded-xl px-6 py-2.5 font-semibold'
+      },
+      inputValidator: (value) => !value && 'Por favor ingresa el nombre del beneficiario'
+    });
+
+    if (!formValues) return;
+
+    try {
+      const { data } = await api.post(`/cajaChica/${transaccion._id}/generar-vale`, {
+        nombreBeneficiario: formValues
+      });
+      
+      if (data.voucher) {
+        window.open(data.voucher, '_blank', 'noopener,noreferrer');
+
+        // 🎨 Alert con Lottie de Success
+        showLottieAlert(
+          'success',
+          '¡Vale Generado! 📄',
+          `Vale #${data.vale || 'N/A'} creado exitosamente y listo para descargar`
+        );
+
+        await cargarDatos();
+      }
+    } catch (error) {
+      showLottieAlert(
+        'error', 
+        '❌ Error al Generar', 
+        'No se pudo crear el vale. Intenta nuevamente.'
+      );
+    }
   };
 
   const formatearFecha = (fecha) => {
@@ -507,369 +622,985 @@ export default function CajaChicaModern() {
     return new Intl.NumberFormat('es-US', { style: 'currency', currency: 'USD' }).format(cantidad);
   };
 
+  const abrirArchivo = (url) => {
+    if (!url) {
+      showLottieAlert('warning', '⚠️ Archivo No Disponible', 'El archivo solicitado no se encontró en el sistema');
+      return;
+    }
+    window.open(url, '_blank', 'noopener,noreferrer');
+  };
+
   const filteredTransactions = transactions.filter(tx => {
-    if (activeTab === 'all') return true;
-    if (activeTab === 'income') return tx.type === 'income';
-    if (activeTab === 'expense') return tx.type === 'expense';
+    const matchesSearch = tx.reason.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         (tx.employeeId?.name || 'Admin').toLowerCase().includes(searchTerm.toLowerCase());
+    
+    if (!matchesSearch) return false;
+
+    const now = new Date();
+    const txDate = new Date(tx.date);
+
+    if (filterType === 'week') {
+      const day = now.getDay();
+      const diffToMonday = (day === 0 ? -6 : 1 - day);
+      const monday = new Date(now);
+      monday.setDate(now.getDate() + diffToMonday);
+      monday.setHours(0,0,0,0);
+      return txDate >= monday;
+    }
+
+    if (filterType === 'month') {
+      const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+      return txDate >= firstDay;
+    }
+
     return true;
   });
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <Loader2 className="w-12 h-12 animate-spin text-[#5F8EAD] mx-auto mb-4" />
-          <p className="text-gray-600 font-medium">Cargando caja chica...</p>
+          <Lottie
+            lottieRef={loadingLottieRef}
+            animationData={loadingAnimation}
+            loop={true}
+            autoplay={true}
+            style={{ width: 250, height: 250, margin: '0 auto' }}
+          />
+          <p className="text-gray-600 font-medium text-lg mt-4">Cargando caja chica...</p>
+          <p className="text-gray-400 text-sm mt-2">Obteniendo datos financieros</p>
         </div>
       </div>
     );
-  };
+  }
 
-  const abrirArchivo = (url) => {
-    if (!url || typeof url !== 'string') {
-      Swal.fire({
-        title: 'Archivo no disponible',
-        text: 'No existe un archivo válido para mostrar',
-        icon: 'warning'
-      });
-      return;
-    }
-
-    window.open(url, '_blank', 'noopener,noreferrer');
-  };
+  const porcentajeBalance = configuracion ? (balance / configuracion.maximoPermitido) * 100 : 0;
+  const necesitaReintegro = configuracion && balance < configuracion.minimoReintegro;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-4 md:p-8">
-      <div className="max-w-7xl mx-auto space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-[#34353A]">Caja Chica</h1>
-            <p className="text-slate-500 mt-1">Gestiona tus transacciones diarias</p>
-          </div>
-          <button
-            onClick={() => setShowConfigModal(true)}
-            className="flex items-center gap-2 bg-[#34353A] text-white px-4 py-2.5 rounded-xl font-medium hover:opacity-90 transition-colors"
-          >
-            <Settings size={18} />
-            Configurar
-          </button>
-        </div>
-
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          <div className="md:col-span-2 bg-gradient-to-br from-[#34353A] to-[#5F8EAD] rounded-2xl p-6 text-white shadow-xl relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-64 h-64 bg-white opacity-5 rounded-full -mr-32 -mt-32"></div>
-            <div className="absolute bottom-0 left-0 w-48 h-48 bg-white opacity-5 rounded-full -ml-24 -mb-24"></div>
-            <div className="relative z-10">
-              <p className="text-white/80 text-sm font-medium mb-2">Balance Total</p>
-              <h2 className="text-5xl font-bold mb-4">{formatearMoneda(balance)}</h2>
-              {configuracion && (
-                <div className="flex items-center gap-2 text-sm">
-                  <div className="bg-white/20 backdrop-blur-sm px-3 py-1.5 rounded-lg">
-                    <span className="text-white/90">
-                      {((balance / configuracion.maximoPermitido) * 100).toFixed(1)}% del límite ({formatearMoneda(configuracion.maximoPermitido)})
-                    </span>
+    <div className="min-h-screen bg-gray-50 relative">
+      {/* Header Sticky */}
+      <div className="sticky top-0 z-40 bg-white border-b border-gray-200 shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 md:px-8 py-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl md:text-3xl font-bold text-[#34353A]">💰 Caja Chica</h1>
+              <p className="text-sm text-gray-500 mt-1">Gestión de movimientos financieros</p>
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setShowReportesModal(true)}
+                onMouseEnter={() => setHoveredButton('reportes')}
+                onMouseLeave={() => setHoveredButton(null)}
+                className="hidden md:flex items-center gap-2 bg-[#5D9646] text-white px-4 py-2.5 rounded-xl font-medium hover:opacity-90 transition-all hover:scale-105 relative overflow-hidden"
+              >
+                {hoveredButton === 'reportes' && (
+                  <div className="absolute inset-0 opacity-20 pointer-events-none">
+                    <Lottie
+                      animationData={successAnimation}
+                      loop={true}
+                      style={{ width: '100%', height: '100%' }}
+                    />
                   </div>
-                </div>
+                )}
+                <FileText size={18} />
+                <span className="relative z-10">Reportes</span>
+              </button>
+              
+              <button
+                onClick={() => setShowConfigPanel(!showConfigPanel)}
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium transition-all hover:scale-105 ${
+                  showConfigPanel 
+                    ? 'bg-[#34353A] text-white' 
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                <Settings size={18} className={showConfigPanel ? 'animate-spin' : ''} />
+                <span className="hidden md:inline">Config</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="max-w-7xl mx-auto px-4 md:px-8 py-6 space-y-6">
+        {/* Balance Principal con Lottie Animation */}
+        <div className="bg-gradient-to-br from-[#34353A] via-[#5F8EAD] to-[#5D9646] rounded-3xl p-6 md:p-8 text-white shadow-2xl relative overflow-hidden">
+          {/* Lottie de fondo decorativo */}
+          <div className="absolute top-0 right-0 opacity-10 pointer-events-none">
+            <Lottie
+              animationData={moneyAnimation}
+              loop={true}
+              style={{ width: 300, height: 300 }}
+            />
+          </div>
+          
+          <div className="absolute top-0 right-0 w-64 h-64 bg-white opacity-5 rounded-full -mr-32 -mt-32"></div>
+          <div className="absolute bottom-0 left-0 w-48 h-48 bg-white opacity-5 rounded-full -ml-24 -mb-24"></div>
+          
+          <div className="relative z-10">
+            <div className="flex items-start justify-between mb-6">
+              <div>
+                <p className="text-white/70 text-sm font-medium mb-2 flex items-center gap-2">
+                  <Sparkles size={16} />
+                  Balance Disponible
+                </p>
+                <h2 className="text-4xl md:text-6xl font-bold mb-2">{formatearMoneda(balance)}</h2>
+                {configuracion && (
+                  <div className="flex items-center gap-2 text-sm">
+                    <span className="text-white/80">
+                      {porcentajeBalance.toFixed(1)}% del límite máximo
+                    </span>
+                    {necesitaReintegro && (
+                      <span className="bg-amber-500/20 text-amber-200 px-2 py-1 rounded-lg text-xs font-semibold flex items-center gap-1 animate-pulse">
+                        <AlertCircle size={14} />
+                        Requiere reintegro
+                      </span>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {necesitaReintegro && (
+                <button
+                  onClick={registrarReintegro}
+                  onMouseEnter={() => setHoveredButton('reintegro')}
+                  onMouseLeave={() => setHoveredButton(null)}
+                  className="bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 rounded-xl font-medium transition-all flex items-center gap-2 hover:scale-105 relative overflow-hidden"
+                >
+                  {hoveredButton === 'reintegro' && (
+                    <div className="absolute inset-0 opacity-30 pointer-events-none">
+                      <Lottie
+                        animationData={warningAnimation}
+                        loop={true}
+                        style={{ width: '100%', height: '100%' }}
+                      />
+                    </div>
+                  )}
+                  <RefreshCw size={16} className={hoveredButton === 'reintegro' ? 'animate-spin' : ''} />
+                  <span className="relative z-10">Reintegrar</span>
+                </button>
               )}
             </div>
+
+            {/* Barra de progreso */}
+            {configuracion && (
+              <div className="space-y-2">
+                <div className="flex justify-between text-xs text-white/60">
+                  <span>Mínimo: {formatearMoneda(configuracion.minimoReintegro)}</span>
+                  <span>Máximo: {formatearMoneda(configuracion.maximoPermitido)}</span>
+                </div>
+                <div className="w-full h-3 bg-white/10 rounded-full overflow-hidden backdrop-blur-sm">
+                  <div 
+                    className={`h-full transition-all duration-500 ${
+                      porcentajeBalance < 30 ? 'bg-amber-400' :
+                      porcentajeBalance < 70 ? 'bg-[#5D9646]' :
+                      'bg-emerald-400'
+                    }`}
+                    style={{ width: `${Math.min(porcentajeBalance, 100)}%` }}
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Quick Stats con Lottie */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div 
+            className="bg-white rounded-2xl p-4 shadow-sm border border-gray-200 hover:shadow-lg transition-all cursor-pointer hover:scale-105 relative overflow-hidden"
+            onMouseEnter={() => setHoveredStat('ingresos')}
+            onMouseLeave={() => setHoveredStat(null)}
+          >
+            {hoveredStat === 'ingresos' && (
+              <div className="absolute top-0 right-0 opacity-10 pointer-events-none">
+                <Lottie
+                  animationData={successAnimation}
+                  loop={false}
+                  style={{ width: 80, height: 80 }}
+                />
+              </div>
+            )}
+            <div className="flex items-center gap-2 mb-2 relative z-10">
+              <div className="bg-[#5D9646]/10 p-2 rounded-lg">
+                <ArrowUpRight className="text-[#5D9646]" size={16} />
+              </div>
+              <p className="text-xs text-gray-500 font-medium">Ingresos Semana</p>
+            </div>
+            <p className="text-2xl font-bold text-[#34353A] relative z-10">{formatearMoneda(stats.totalIngresos)}</p>
           </div>
 
           <div 
-            onClick={() => setShowIngresoModal(true)}
-            className="bg-white rounded-2xl p-6 shadow-sm border border-slate-200 hover:shadow-lg hover:scale-105 transition-all cursor-pointer"
+            className="bg-white rounded-2xl p-4 shadow-sm border border-gray-200 hover:shadow-lg transition-all cursor-pointer hover:scale-105 relative overflow-hidden"
+            onMouseEnter={() => setHoveredStat('gastos')}
+            onMouseLeave={() => setHoveredStat(null)}
           >
-            <div className="flex items-center justify-between mb-3">
-              <p className="text-slate-600 text-sm font-medium">Ingresos (Semana)</p>
-              <div className="bg-[#5D9646] bg-opacity-20 p-2 rounded-lg">
-                <Plus className="text-[#5D9646]" size={18} />
+            {hoveredStat === 'gastos' && (
+              <div className="absolute top-0 right-0 opacity-10 pointer-events-none">
+                <Lottie
+                  animationData={warningAnimation}
+                  loop={true}
+                  style={{ width: 80, height: 80 }}
+                />
               </div>
+            )}
+            <div className="flex items-center gap-2 mb-2 relative z-10">
+              <div className="bg-red-50 p-2 rounded-lg">
+                <ArrowDownRight className="text-red-600" size={16} />
+              </div>
+              <p className="text-xs text-gray-500 font-medium">Gastos Semana</p>
             </div>
-            <h3 className="text-2xl font-bold text-[#34353A] mb-2">{formatearMoneda(stats.totalIngresos)}</h3>
-            <p className="text-sm font-medium text-[#5D9646]">Click para agregar</p>
+            <p className="text-2xl font-bold text-[#34353A] relative z-10">{formatearMoneda(stats.totalGastos)}</p>
           </div>
 
-          <div
-            onClick={() => registrarReintegro()}
-            className={`bg-white rounded-2xl p-6 shadow-sm border border-slate-200 transition-all cursor-pointer hover:shadow-lg hover:scale-105`}
+          <div 
+            className="bg-white rounded-2xl p-4 shadow-sm border border-gray-200 hover:shadow-lg transition-all cursor-pointer hover:scale-105"
+            onMouseEnter={() => setHoveredStat('ingresosHoy')}
+            onMouseLeave={() => setHoveredStat(null)}
           >
-            <div className="flex items-center justify-between mb-3">
-              <p className="text-slate-600 text-sm font-medium">Gastos (Semana)</p>
-              <TrendingDown
-                className={'text-amber-600'}
-                size={18}
-              />
+            <div className="flex items-center gap-2 mb-2">
+              <div className="bg-[#5F8EAD]/10 p-2 rounded-lg">
+                <TrendingUp className="text-[#5F8EAD]" size={16} />
+              </div>
+              <p className="text-xs text-gray-500 font-medium">Ingresos Hoy</p>
             </div>
+            <p className="text-2xl font-bold text-[#34353A]">{formatearMoneda(stats.ingresosHoy)}</p>
+          </div>
 
-            <h3 className="text-2xl font-bold text-[#34353A] mb-2">
-              {formatearMoneda(stats.totalGastos)}
-            </h3>
-
-            <p className={`text-sm font-medium text-amber-600`}>
-              Click para reintegrar
-            </p>
+          <div 
+            className="bg-white rounded-2xl p-4 shadow-sm border border-gray-200 hover:shadow-lg transition-all cursor-pointer hover:scale-105"
+            onMouseEnter={() => setHoveredStat('gastosHoy')}
+            onMouseLeave={() => setHoveredStat(null)}
+          >
+            <div className="flex items-center gap-2 mb-2">
+              <div className="bg-amber-50 p-2 rounded-lg">
+                <TrendingDown className="text-amber-600" size={16} />
+              </div>
+              <p className="text-xs text-gray-500 font-medium">Gastos Hoy</p>
+            </div>
+            <p className="text-2xl font-bold text-[#34353A]">{formatearMoneda(stats.gastosHoy)}</p>
           </div>
         </div>
 
-        {/* Registrar Transacción */}
-        <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-200">
-          <h3 className="text-lg font-semibold text-[#34353A] mb-4">Registrar Transacción</h3>
-          <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <input
-                type="number"
-                step="0.01"
-                placeholder="0.00"
-                value={formData.amount}
-                onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
-                className="px-4 py-3 border-2 border-slate-200 rounded-xl focus:border-[#5F8EAD] focus:outline-none transition-colors"
-              />
-              <input
-                type="text"
-                placeholder="Descripción"
-                value={formData.reason}
-                onChange={(e) => setFormData({ ...formData, reason: e.target.value })}
-                className="px-4 py-3 border-2 border-slate-200 rounded-xl focus:border-[#5F8EAD] focus:outline-none transition-colors"
-              />
-            </div>
+        {/* Quick Actions Cards con Lottie */}
+        <div className="grid md:grid-cols-2 gap-4">
+          {/* Card Ingreso */}
+          <div className={`bg-white rounded-2xl border-2 transition-all ${
+            showIngresoForm ? 'border-[#5D9646] shadow-lg scale-105' : 'border-gray-200 shadow-sm hover:shadow-md'
+          }`}>
             <button
-              onClick={registrarEgreso}
-              className="w-full bg-gradient-to-r from-[#34353A] to-[#5F8EAD] text-white py-3 rounded-xl font-medium hover:opacity-90 hover:scale-[1.02] transition-all duration-200"
+              onClick={() => {
+                setShowIngresoForm(!showIngresoForm);
+                setShowEgresoForm(false);
+              }}
+              className="w-full p-4 flex items-center justify-between"
             >
-              📤 Registrar Egreso
+              <div className="flex items-center gap-3">
+                <div className={`bg-[#5D9646]/10 p-3 rounded-xl transition-all ${
+                  showIngresoForm ? 'bg-[#5D9646] scale-110' : ''
+                }`}>
+                  <Plus className={`${showIngresoForm ? 'text-white' : 'text-[#5D9646]'}`} size={24} />
+                </div>
+                <div className="text-left">
+                  <h3 className="font-bold text-[#34353A]">Registrar Ingreso</h3>
+                  <p className="text-sm text-gray-500">Agregar fondos a caja chica</p>
+                </div>
+              </div>
+              {showIngresoForm ? <ChevronUp className="text-gray-400" /> : <ChevronDown className="text-gray-400" />}
             </button>
+
+            {showIngresoForm && (
+              <div className="px-4 pb-4 space-y-3 border-t border-gray-100 pt-4">
+                <input
+                  type="number"
+                  step="0.01"
+                  placeholder="Monto"
+                  value={montoIngreso}
+                  onChange={(e) => setMontoIngreso(e.target.value)}
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-[#5D9646] focus:outline-none transition-colors"
+                />
+                <input
+                  type="text"
+                  placeholder="Descripción del ingreso"
+                  value={descripcionIngreso}
+                  onChange={(e) => setDescripcionIngreso(e.target.value)}
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-[#5D9646] focus:outline-none transition-colors"
+                />
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => {
+                      setShowIngresoForm(false);
+                      setMontoIngreso('');
+                      setDescripcionIngreso('');
+                    }}
+                    className="flex-1 px-4 py-3 border-2 border-gray-300 text-gray-700 rounded-xl font-medium hover:bg-gray-50 transition-colors"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={registrarIngreso}
+                    onMouseEnter={() => setHoveredButton('submitIngreso')}
+                    onMouseLeave={() => setHoveredButton(null)}
+                    className="flex-1 px-4 py-3 bg-[#5D9646] text-white rounded-xl font-medium hover:opacity-90 transition-all hover:scale-105 relative overflow-hidden"
+                  >
+                    {hoveredButton === 'submitIngreso' && (
+                      <div className="absolute inset-0 opacity-20 pointer-events-none">
+                        <Lottie
+                          animationData={successAnimation}
+                          loop={false}
+                          style={{ width: '100%', height: '100%' }}
+                        />
+                      </div>
+                    )}
+                    <span className="relative z-10">Registrar</span>
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Card Egreso */}
+          <div className={`bg-white rounded-2xl border-2 transition-all ${
+            showEgresoForm ? 'border-red-500 shadow-lg scale-105' : 'border-gray-200 shadow-sm hover:shadow-md'
+          }`}>
+            <button
+              onClick={() => {
+                setShowEgresoForm(!showEgresoForm);
+                setShowIngresoForm(false);
+              }}
+              className="w-full p-4 flex items-center justify-between"
+            >
+              <div className="flex items-center gap-3">
+                <div className={`bg-red-50 p-3 rounded-xl transition-all ${
+                  showEgresoForm ? 'bg-red-500 scale-110' : ''
+                }`}>
+                  <TrendingDown className={`${showEgresoForm ? 'text-white' : 'text-red-600'}`} size={24} />
+                </div>
+                <div className="text-left">
+                  <h3 className="font-bold text-[#34353A]">Registrar Egreso</h3>
+                  <p className="text-sm text-gray-500">Registrar gasto o salida</p>
+                </div>
+              </div>
+              {showEgresoForm ? <ChevronUp className="text-gray-400" /> : <ChevronDown className="text-gray-400" />}
+            </button>
+
+            {showEgresoForm && (
+              <div className="px-4 pb-4 space-y-3 border-t border-gray-100 pt-4">
+                <input
+                  type="number"
+                  step="0.01"
+                  placeholder="Monto"
+                  value={montoEgreso}
+                  onChange={(e) => setMontoEgreso(e.target.value)}
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-red-500 focus:outline-none transition-colors"
+                />
+                <input
+                  type="text"
+                  placeholder="Descripción del egreso"
+                  value={descripcionEgreso}
+                  onChange={(e) => setDescripcionEgreso(e.target.value)}
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-red-500 focus:outline-none transition-colors"
+                />
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => {
+                      setShowEgresoForm(false);
+                      setMontoEgreso('');
+                      setDescripcionEgreso('');
+                    }}
+                    className="flex-1 px-4 py-3 border-2 border-gray-300 text-gray-700 rounded-xl font-medium hover:bg-gray-50 transition-colors"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={registrarEgreso}
+                    onMouseEnter={() => setHoveredButton('submitEgreso')}
+                    onMouseLeave={() => setHoveredButton(null)}
+                    className="flex-1 px-4 py-3 bg-red-500 text-white rounded-xl font-medium hover:opacity-90 transition-all hover:scale-105 relative overflow-hidden"
+                  >
+                    {hoveredButton === 'submitEgreso' && (
+                      <div className="absolute inset-0 opacity-30 pointer-events-none">
+                        <Lottie
+                          animationData={warningAnimation}
+                          loop={true}
+                          style={{ width: '100%', height: '100%' }}
+                        />
+                      </div>
+                    )}
+                    <span className="relative z-10">Registrar</span>
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Tabla Transacciones */}
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-          <div className="p-6 border-b border-slate-200">
+        {/* Transacciones */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+          <div className="p-6 border-b border-gray-200">
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
               <div>
-                <h3 className="text-lg font-semibold text-[#34353A]">
-                  Últimas Transacciones
-                </h3>
-                <p className="text-sm text-slate-500 mt-1">
-                  Historial completo de movimientos
-                </p>
+                <h3 className="text-lg font-bold text-[#34353A]">Historial de Transacciones</h3>
+                <p className="text-sm text-gray-500 mt-1">{filteredTransactions.length} movimientos</p>
               </div>
 
-              <button
-                onClick={() => setShowReportesModal(true)}
-                className="flex items-center gap-2 bg-[#5D9646] text-white px-4 py-2.5 rounded-xl font-medium hover:opacity-90 transition-all"
-              >
-                <FileText size={18} />
-                Generar Reportes
-              </button>
-            </div>
+              <div className="flex flex-col sm:flex-row gap-2">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                  <input
+                    type="text"
+                    placeholder="Buscar..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10 pr-4 py-2 border-2 border-gray-200 rounded-xl focus:border-[#5F8EAD] focus:outline-none transition-colors w-full sm:w-auto"
+                  />
+                </div>
 
-            <div className="flex gap-2 mt-4">
-              {['all', 'income', 'expense'].map((tab) => (
+                <select
+                  value={filterType}
+                  onChange={(e) => setFilterType(e.target.value)}
+                  className="px-4 py-2 border-2 border-gray-200 rounded-xl focus:border-[#5F8EAD] focus:outline-none transition-colors"
+                >
+                  <option value="all">Todas</option>
+                  <option value="week">Esta semana</option>
+                  <option value="month">Este mes</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          {/* Timeline de transacciones */}
+          <div className="divide-y divide-gray-100">
+            {filteredTransactions.length === 0 ? (
+              <div className="p-12 text-center">
+                <Lottie
+                  animationData={emptyBoxAnimation}
+                  loop={false}
+                  style={{ width: 200, height: 200, margin: '0 auto' }}
+                />
+                <p className="text-gray-600 font-medium mt-4">No hay transacciones</p>
+                <p className="text-sm text-gray-400 mt-2">Comienza registrando un movimiento</p>
+              </div>
+            ) : (
+              filteredTransactions.map((tx, index) => (
+                <div key={tx._id} className="hover:bg-gray-50 transition-colors">
+                  <button
+                    onClick={() => setExpandedTransaction(expandedTransaction === tx._id ? null : tx._id)}
+                    className="w-full p-4 flex items-center gap-4"
+                  >
+                    {/* Indicador visual */}
+                    <div className="flex-shrink-0">
+                      <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
+                        tx.type === 'income' 
+                          ? 'bg-[#5D9646]/10' 
+                          : 'bg-red-50'
+                      }`}>
+                        {tx.type === 'income' ? (
+                          <ArrowUpRight className="text-[#5D9646]" size={20} />
+                        ) : (
+                          <ArrowDownRight className="text-red-600" size={20} />
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Info principal */}
+                    <div className="flex-1 text-left">
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <p className="font-semibold text-[#34353A]">{tx.reason}</p>
+                          <p className="text-sm text-gray-500">{formatearFecha(tx.date)}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className={`text-lg font-bold ${
+                            tx.type === 'income' ? 'text-[#5D9646]' : 'text-red-600'
+                          }`}>
+                            {tx.type === 'income' ? '+' : '-'}{formatearMoneda(tx.amount)}
+                          </p>
+                          <p className="text-xs text-gray-500">Balance: {formatearMoneda(tx.currentBalance)}</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {expandedTransaction === tx._id ? (
+                      <ChevronUp className="text-gray-400 flex-shrink-0" size={20} />
+                    ) : (
+                      <ChevronDown className="text-gray-400 flex-shrink-0" size={20} />
+                    )}
+                  </button>
+
+                  {/* Detalles expandibles */}
+                  {expandedTransaction === tx._id && (
+                    <div className="px-4 pb-4 space-y-3 bg-gray-50 border-t border-gray-100">
+                      <div className="grid grid-cols-2 gap-4 pt-4">
+                        <div>
+                          <p className="text-xs text-gray-500 mb-1">Usuario</p>
+                          <p className="font-medium text-[#34353A]">{tx.employeeId?.name || 'Admin'}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-gray-500 mb-1">Tipo</p>
+                          <span className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${
+                            tx.type === 'income' 
+                              ? 'bg-[#5D9646]/20 text-[#5D9646]' 
+                              : 'bg-red-100 text-red-700'
+                          }`}>
+                            {tx.type === 'income' ? 'Ingreso' : 'Egreso'}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="flex flex-wrap gap-2 pt-2">
+                        {tx.voucher ? (
+                          <button
+                            onClick={() => abrirArchivo(tx.voucher)}
+                            className="flex items-center gap-2 px-4 py-2 bg-[#5F8EAD]/10 text-[#5F8EAD] rounded-lg hover:bg-[#5F8EAD]/20 transition-all font-medium hover:scale-105"
+                          >
+                            <Eye size={16} />
+                            Ver comprobante
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => subirComprobante(tx)}
+                            className="flex items-center gap-2 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-all font-medium hover:scale-105"
+                          >
+                            <Upload size={16} />
+                            Subir comprobante
+                          </button>
+                        )}
+
+                        {tx.type === 'expense' && (
+                          <>
+                            {tx.ticket ? (
+                              <button
+                                onClick={() => abrirArchivo(tx.ticket)}
+                                className="flex items-center gap-2 px-4 py-2 bg-[#5D9646]/10 text-[#5D9646] rounded-lg hover:bg-[#5D9646]/20 transition-all font-medium hover:scale-105"
+                              >
+                                <FileText size={16} />
+                                Ver vale #{tx.vale}
+                              </button>
+                            ) : (
+                              <button
+                                onClick={() => generarVale(tx)}
+                                className="flex items-center gap-2 px-4 py-2 bg-amber-50 text-amber-700 rounded-lg hover:bg-amber-100 transition-all font-medium hover:scale-105"
+                              >
+                                <FileText size={16} />
+                                Generar vale
+                              </button>
+                            )}
+                          </>
+                        )}
+
+                        <button
+                          onClick={() => descargarReporteIndividual(tx._id)}
+                          className="flex items-center gap-2 px-4 py-2 bg-[#5D9646]/10 text-[#5D9646] rounded-lg hover:bg-[#5D9646]/20 transition-all font-medium hover:scale-105"
+                        >
+                          <Download size={16} />
+                          Descargar reporte
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Panel lateral de configuración con Lottie */}
+      {/* Panel lateral de configuración MEJORADO */}
+<div className={`fixed top-0 right-0 h-full w-full md:w-[480px] bg-white shadow-2xl transform transition-transform duration-300 z-50 ${
+  showConfigPanel ? 'translate-x-0' : 'translate-x-full'
+}`}>
+  <div className="h-full flex flex-col">
+    {/* Header del panel */}
+    <div className="bg-gradient-to-r from-[#34353A] to-[#5F8EAD] p-6 text-white relative overflow-hidden">
+      <div className="absolute top-0 right-0 opacity-10 pointer-events-none">
+        <Lottie
+          animationData={moneyAnimation}
+          loop={true}
+          style={{ width: 150, height: 150 }}
+        />
+      </div>
+      <div className="flex items-center justify-between mb-2 relative z-10">
+        <h2 className="text-2xl font-bold">⚙️ Configuración</h2>
+        <button
+          onClick={() => setShowConfigPanel(false)}
+          className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+        >
+          <X size={24} />
+        </button>
+      </div>
+      <p className="text-white/80 text-sm relative z-10">Ajusta los límites de caja chica</p>
+    </div>
+
+    {/* Contenido del panel */}
+    <div className="flex-1 overflow-y-auto p-6 space-y-6">
+      
+      {/* 💵 Máximo Permitido */}
+      <div className="space-y-4">
+        <label className="block text-sm font-bold text-[#34353A] flex items-center gap-2">
+          <div className="bg-[#5F8EAD]/10 p-2 rounded-lg">
+            <TrendingUp className="text-[#5F8EAD]" size={18} />
+          </div>
+          Límite Máximo
+        </label>
+        
+        {/* Vista previa grande */}
+        <div className="bg-gradient-to-br from-[#5F8EAD]/10 to-[#5F8EAD]/5 rounded-2xl p-6 border-2 border-[#5F8EAD]/20">
+          <p className="text-sm text-gray-600 mb-2">Balance máximo permitido</p>
+          <p className="text-4xl font-bold text-[#5F8EAD]">{formatearMoneda(tempMaximo)}</p>
+        </div>
+
+        {/* Input directo con botones de incremento */}
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-gray-600 font-medium">$</span>
+            <input
+              type="number"
+              step="50"
+              min="100"
+              max="10000"
+              value={tempMaximo}
+              onChange={(e) => {
+                const value = Math.max(100, Math.min(10000, Number(e.target.value)));
+                setTempMaximo(value);
+              }}
+              className="flex-1 px-4 py-3 text-lg font-semibold border-2 border-gray-200 rounded-xl focus:border-[#5F8EAD] focus:outline-none transition-colors"
+              placeholder="1000"
+            />
+          </div>
+
+          {/* Botones de incremento rápido */}
+          <div className="grid grid-cols-4 gap-2">
+            {[100, 500, 1000, 2500].map((increment) => (
+              <button
+                key={increment}
+                onClick={() => {
+                  const newValue = Math.min(10000, tempMaximo + increment);
+                  setTempMaximo(newValue);
+                }}
+                className="px-3 py-2 bg-[#5F8EAD]/10 text-[#5F8EAD] rounded-lg text-sm font-semibold hover:bg-[#5F8EAD]/20 transition-all hover:scale-105"
+              >
+                +${increment}
+              </button>
+            ))}
+          </div>
+
+          {/* Presets comunes */}
+          <div className="space-y-2">
+            <p className="text-xs text-gray-500 font-medium">Valores comunes:</p>
+            <div className="grid grid-cols-3 gap-2">
+              {[1000, 2500, 5000].map((preset) => (
                 <button
-                  key={tab}
-                  onClick={() => setActiveTab(tab)}
-                  className={`px-4 py-2 rounded-lg font-medium transition-all ${
-                    activeTab === tab
-                      ? 'bg-[#34353A] text-white'
-                      : 'text-slate-600 hover:bg-slate-100'
+                  key={preset}
+                  onClick={() => setTempMaximo(preset)}
+                  className={`px-3 py-2 rounded-lg text-sm font-semibold transition-all hover:scale-105 ${
+                    tempMaximo === preset
+                      ? 'bg-[#5F8EAD] text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                   }`}
                 >
-                  {tab === 'all' ? 'Todas' : tab === 'income' ? 'Ingresos' : 'Gastos'}
+                  ${preset}
                 </button>
               ))}
             </div>
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gradient-to-r from-[#34353A] to-[#5F8EAD] border-b-2 border-[#5D9646]">
-                <tr>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-white uppercase">Fecha</th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-white uppercase">Descripción</th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-white uppercase">Tipo</th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-white uppercase">Usuario</th>
-                  <th className="px-6 py-4 text-right text-xs font-semibold text-white uppercase">Monto</th>
-                  <th className="px-6 py-4 text-right text-xs font-semibold text-white uppercase">Balance</th>
-                  <th className="px-6 py-4 text-center text-xs font-semibold text-white uppercase">Acciones</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-200">
-                {filteredTransactions.map((tx) => (
-                  <tr key={tx._id} className="hover:bg-slate-50 transition-colors">
-                    <td className="px-6 py-4 text-slate-600 text-sm">{formatearFecha(tx.date)}</td>
-                    <td className="px-6 py-4"><span className="font-medium text-[#34353A]">{tx.reason}</span></td>
-                    <td className="px-6 py-4">
-                      <span className={`px-3 py-1 rounded-full text-sm font-medium ${tx.type === 'income' ? 'bg-[#5D9646] bg-opacity-20 text-[#5D9646] border border-[#5D9646]' : 'bg-rose-100 text-rose-700 border border-rose-200'}`}>
-                        {tx.type === 'income' ? 'Ingreso' : 'Egreso'}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-slate-600 text-sm">{tx.employeeId?.name || 'Admin'}</td>
-                    <td className={`px-6 py-4 text-right font-semibold ${tx.type === 'income' ? 'text-[#5D9646]' : 'text-rose-600'}`}>
-                      {tx.type === 'income' ? '+' : '-'}{formatearMoneda(tx.amount)}
-                    </td>
-                    <td className="px-6 py-4 text-right text-[#34353A] font-mono text-sm font-semibold">{formatearMoneda(tx.currentBalance)}</td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center justify-center gap-2">
-                        {tx.voucher ? (
-                          <button
-                            onClick={() => abrirArchivo(tx.voucher)}
-                            title="Ver comprobante"
-                            className="p-2 rounded-lg bg-[#5F8EAD] bg-opacity-20 hover:bg-[#5F8EAD] hover:bg-opacity-30 text-[#5F8EAD] transition-all hover:scale-110"
-                          >
-                            <Search size={18} />
-                          </button>
-                        ) : (
-                          <button
-                            onClick={() => subirComprobante(tx)}
-                            title="Subir comprobante"
-                            className="p-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 transition-all hover:scale-110"
-                          >
-                            <Upload size={18} />
-                          </button>
-                        )}
-                        
-                        {tx.type === 'expense' && (
-                          <>
-                            {tx.ticket && (
-                              <button
-                                onClick={() => abrirArchivo(tx.ticket)}
-                                title={`Ver vale ${tx.vale || 'generado'}`}
-                                className="p-2 rounded-lg transition-all hover:scale-110 bg-[#5D9646] bg-opacity-20 hover:bg-[#5D9646] hover:bg-opacity-30 text-[#5D9646] relative"
-                              >
-                                <FileText size={18} />
-                                <span className="absolute -top-1 -right-1 w-3 h-3 bg-[#5D9646] rounded-full border-2 border-white"></span>
-                              </button>
-                            )}
-                            
-                            {!tx.ticket && (
-                              <button
-                                onClick={() => generarVale(tx)}
-                                title="Generar vale"
-                                className="p-2 rounded-lg transition-all hover:scale-110 bg-amber-100 hover:bg-amber-200 text-amber-700"
-                              >
-                                <FileText size={18} />
-                              </button>
-                            )}
-                          </>
-                        )}
-                        
-                        <button
-                          onClick={() => descargarReporteIndividual(tx._id)}
-                          title="Descargar reporte individual"
-                          className="p-2 rounded-lg bg-[#5D9646] bg-opacity-20 hover:bg-[#5D9646] hover:bg-opacity-30 text-[#5D9646] transition-all hover:scale-110"
-                        >
-                          <Download size={18} />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          {/* Slider */}
+          <div className="space-y-2">
+            <input
+              type="range"
+              min="100"
+              max="10000"
+              step="50"
+              value={tempMaximo}
+              onChange={(e) => setTempMaximo(Number(e.target.value))}
+              className="w-full h-2 accent-[#5F8EAD] cursor-pointer"
+              style={{
+                background: `linear-gradient(to right, #5F8EAD ${((tempMaximo - 100) / (10000 - 100)) * 100}%, #e5e7eb ${((tempMaximo - 100) / (10000 - 100)) * 100}%)`
+              }}
+            />
+            <div className="flex justify-between text-xs text-gray-400">
+              <span>$100</span>
+              <span>$10,000</span>
+            </div>
           </div>
         </div>
-
-        {/* Modal Configuración */}
-        {showConfigModal && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl">
-              <h2 className="text-2xl font-bold text-[#34353A] mb-6">⚙️ Configuración de Caja Chica</h2>
-              <div className="space-y-6">
-                <div>
-                  <label className="block text-sm font-semibold text-[#34353A] mb-3">
-                    Máximo Permitido: {'$' + tempMaximo.toFixed(2)}
-                  </label>
-                  <input
-                    type="number" min="100" max="10000" step="0.01"
-                    value={tempMaximo}
-                    onChange={(e) => setTempMaximo(Number(e.target.value))}
-                    className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:border-[#5F8EAD] focus:outline-none transition-colors"
-                  />
-                  <div className="flex justify-between text-xs text-slate-500 mt-1">
-                    <span className="text-xs">mín 100</span><span className="text-xs">máx 10000</span>
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-[#34353A] mb-3">
-                    Mínimo para Reintegro: {'$' + tempMinimo.toFixed(2)}
-                  </label>
-                  <input
-                    type="number" min="0" max="10000" step="0.01"
-                    value={tempMinimo}
-                    onChange={(e) => setTempMinimo(Number(e.target.value))}
-                    className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:border-amber-500 focus:outline-none transition-colors"
-                  />
-                  <div className="flex justify-between text-xs text-slate-500 mt-1">
-                    <span className="text-xs">mín 0</span><span className="text-xs">máx 10000</span>
-                  </div>
-                </div>
-              </div>
-              <div className="flex gap-3 mt-8">
-                <button
-                  onClick={() => setShowConfigModal(false)}
-                  className="flex-1 px-4 py-3 border-2 border-slate-300 text-slate-700 rounded-xl font-medium hover:bg-slate-50 transition-colors"
-                >
-                  Cancelar
-                </button>
-                <button
-                  onClick={guardarConfiguracion}
-                  className="flex-1 px-4 py-3 bg-gradient-to-r from-[#34353A] to-[#5F8EAD] text-white rounded-xl font-medium hover:opacity-90 transition-all"
-                >
-                  Guardar
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Modal Ingreso */}
-        {showIngresoModal && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl">
-              <h2 className="text-2xl font-bold text-[#34353A] mb-6">💰 Registrar Ingreso</h2>
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-semibold text-[#34353A] mb-2">Monto</label>
-                  <input
-                    type="number" step="0.01" placeholder="0.00"
-                    value={montoIngreso}
-                    onChange={(e) => setMontoIngreso(e.target.value)}
-                    className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:border-[#5D9646] focus:outline-none transition-colors"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-[#34353A] mb-2">Descripción</label>
-                  <input
-                    type="text" placeholder="Concepto del ingreso"
-                    value={descripcionIngreso}
-                    onChange={(e) => setDescripcionIngreso(e.target.value)}
-                    className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:border-[#5D9646] focus:outline-none transition-colors"
-                  />
-                </div>
-              </div>
-              <div className="flex gap-3 mt-6">
-                <button
-                  onClick={() => {
-                    setShowIngresoModal(false);
-                    setMontoIngreso('');
-                    setDescripcionIngreso('');
-                  }}
-                  className="flex-1 px-4 py-3 border-2 border-slate-300 text-slate-700 rounded-xl font-medium hover:bg-slate-50 transition-colors"
-                >
-                  Cancelar
-                </button>
-                <button
-                  onClick={registrarIngreso}
-                  className="flex-1 px-4 py-3 bg-gradient-to-r from-[#5D9646] to-[#5F8EAD] text-white rounded-xl font-medium hover:opacity-90 transition-all"
-                >
-                  Registrar
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
+
+      {/* Separador visual */}
+      <div className="relative">
+        <div className="absolute inset-0 flex items-center">
+          <div className="w-full border-t border-gray-200"></div>
+        </div>
+        <div className="relative flex justify-center">
+          <span className="bg-white px-3 text-sm text-gray-400">●</span>
+        </div>
+      </div>
+
+      {/* ⚠️ Mínimo para Reintegro */}
+      <div className="space-y-4">
+        <label className="block text-sm font-bold text-[#34353A] flex items-center gap-2">
+          <div className="bg-amber-50 p-2 rounded-lg">
+            <AlertCircle className="text-amber-600" size={18} />
+          </div>
+          Límite Mínimo (Alerta de Reintegro)
+        </label>
+        
+        {/* Vista previa grande */}
+        <div className="bg-gradient-to-br from-amber-50 to-amber-50/50 rounded-2xl p-6 border-2 border-amber-200">
+          <p className="text-sm text-amber-700 mb-2">Se alertará al llegar a:</p>
+          <p className="text-4xl font-bold text-amber-600">{formatearMoneda(tempMinimo)}</p>
+        </div>
+
+        {/* Input directo con botones de incremento */}
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-gray-600 font-medium">$</span>
+            <input
+              type="number"
+              step="50"
+              min="0"
+              max="5000"
+              value={tempMinimo}
+              onChange={(e) => {
+                const value = Math.max(0, Math.min(5000, Number(e.target.value)));
+                setTempMinimo(value);
+              }}
+              className="flex-1 px-4 py-3 text-lg font-semibold border-2 border-gray-200 rounded-xl focus:border-amber-500 focus:outline-none transition-colors"
+              placeholder="100"
+            />
+          </div>
+
+          {/* Botones de incremento rápido */}
+          <div className="grid grid-cols-4 gap-2">
+            {[50, 100, 250, 500].map((increment) => (
+              <button
+                key={increment}
+                onClick={() => {
+                  const newValue = Math.min(5000, tempMinimo + increment);
+                  setTempMinimo(newValue);
+                }}
+                className="px-3 py-2 bg-amber-50 text-amber-700 rounded-lg text-sm font-semibold hover:bg-amber-100 transition-all hover:scale-105"
+              >
+                +${increment}
+              </button>
+            ))}
+          </div>
+
+          {/* Presets comunes */}
+          <div className="space-y-2">
+            <p className="text-xs text-gray-500 font-medium">Valores comunes:</p>
+            <div className="grid grid-cols-3 gap-2">
+              {[100, 300, 500].map((preset) => (
+                <button
+                  key={preset}
+                  onClick={() => setTempMinimo(preset)}
+                  className={`px-3 py-2 rounded-lg text-sm font-semibold transition-all hover:scale-105 ${
+                    tempMinimo === preset
+                      ? 'bg-amber-500 text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  ${preset}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Slider */}
+          <div className="space-y-2">
+            <input
+              type="range"
+              min="0"
+              max="5000"
+              step="50"
+              value={tempMinimo}
+              onChange={(e) => setTempMinimo(Number(e.target.value))}
+              className="w-full h-2 accent-amber-500 cursor-pointer"
+              style={{
+                background: `linear-gradient(to right, #f59e0b ${(tempMinimo / 5000) * 100}%, #e5e7eb ${(tempMinimo / 5000) * 100}%)`
+              }}
+            />
+            <div className="flex justify-between text-xs text-gray-400">
+              <span>$0</span>
+              <span>$5,000</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Validación visual */}
+      {tempMinimo >= tempMaximo && (
+        <div className="bg-red-50 border-2 border-red-200 rounded-xl p-4 flex items-start gap-3">
+          <AlertCircle className="text-red-500 flex-shrink-0 mt-0.5" size={20} />
+          <div>
+            <p className="text-sm font-semibold text-red-800">⚠️ Configuración Inválida</p>
+            <p className="text-xs text-red-600 mt-1">
+              El mínimo debe ser menor que el máximo
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Preview del impacto */}
+      <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl p-5 border-2 border-gray-200">
+        <div className="flex items-center gap-2 mb-4">
+          <Sparkles className="text-[#5F8EAD]" size={18} />
+          <p className="text-sm font-bold text-[#34353A]">Resumen de Configuración</p>
+        </div>
+        
+        <div className="space-y-3">
+          {/* Rango operativo */}
+          <div className="flex justify-between items-center">
+            <span className="text-xs text-gray-600">Rango operativo:</span>
+            <span className="text-sm font-bold text-[#34353A]">
+              {formatearMoneda(tempMinimo)} - {formatearMoneda(tempMaximo)}
+            </span>
+          </div>
+
+          {/* Monto de reintegro sugerido */}
+          <div className="flex justify-between items-center">
+            <span className="text-xs text-gray-600">Reintegro sugerido:</span>
+            <span className="text-sm font-bold text-[#5D9646]">
+              {formatearMoneda(tempMaximo - balance)}
+            </span>
+          </div>
+
+          {/* Diferencia entre máximo y mínimo */}
+          <div className="flex justify-between items-center">
+            <span className="text-xs text-gray-600">Margen de seguridad:</span>
+            <span className="text-sm font-bold text-amber-600">
+              {formatearMoneda(tempMaximo - tempMinimo)}
+            </span>
+          </div>
+
+          {/* Balance actual */}
+          <div className="pt-3 border-t border-gray-300 flex justify-between items-center">
+            <span className="text-xs text-gray-600">Balance actual:</span>
+            <span className={`text-sm font-bold ${
+              balance < tempMinimo ? 'text-red-600' : 
+              balance > tempMaximo ? 'text-amber-600' : 
+              'text-[#5D9646]'
+            }`}>
+              {formatearMoneda(balance)}
+            </span>
+          </div>
+
+          {/* Indicador visual del balance */}
+          <div className="pt-2">
+            <div className="relative h-3 bg-gray-200 rounded-full overflow-hidden">
+              {/* Zona de alerta (mínimo) */}
+              <div 
+                className="absolute h-full bg-red-300 opacity-30"
+                style={{ width: `${(tempMinimo / tempMaximo) * 100}%` }}
+              />
+              {/* Zona óptima */}
+              <div 
+                className="absolute h-full bg-[#5D9646] opacity-20"
+                style={{ 
+                  left: `${(tempMinimo / tempMaximo) * 100}%`,
+                  width: `${((tempMaximo - tempMinimo) / tempMaximo) * 100}%` 
+                }}
+              />
+              {/* Indicador del balance actual */}
+              <div 
+                className="absolute h-full w-1 bg-[#34353A] shadow-lg"
+                style={{ left: `${Math.min(100, (balance / tempMaximo) * 100)}%` }}
+              />
+            </div>
+            <div className="flex justify-between text-xs text-gray-400 mt-1">
+              <span>Mínimo</span>
+              <span>Balance</span>
+              <span>Máximo</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Comparación con configuración actual */}
+      {configuracion && (tempMaximo !== configuracion.maximoPermitido || tempMinimo !== configuracion.minimoReintegro) && (
+        <div className="bg-blue-50 border-2 border-blue-200 rounded-xl p-4">
+          <div className="flex items-start gap-3">
+            <div className="bg-blue-100 p-2 rounded-lg">
+              <AlertCircle className="text-blue-600" size={16} />
+            </div>
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-blue-900 mb-2">Cambios pendientes</p>
+              <div className="space-y-1 text-xs text-blue-700">
+                {tempMaximo !== configuracion.maximoPermitido && (
+                  <p>• Máximo: {formatearMoneda(configuracion.maximoPermitido)} → {formatearMoneda(tempMaximo)}</p>
+                )}
+                {tempMinimo !== configuracion.minimoReintegro && (
+                  <p>• Mínimo: {formatearMoneda(configuracion.minimoReintegro)} → {formatearMoneda(tempMinimo)}</p>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+
+    {/* Footer del panel */}
+    <div className="p-6 border-t border-gray-200 bg-gray-50 space-y-3">
+      {/* Botón para resetear a valores actuales */}
+      {configuracion && (tempMaximo !== configuracion.maximoPermitido || tempMinimo !== configuracion.minimoReintegro) && (
+        <button
+          onClick={() => {
+            setTempMaximo(configuracion.maximoPermitido);
+            setTempMinimo(configuracion.minimoReintegro);
+            showLottieToast('info', 'ℹ️ Valores restaurados', 2000);
+          }}
+          className="w-full px-4 py-2.5 bg-gray-200 text-gray-700 rounded-xl font-medium hover:bg-gray-300 transition-colors text-sm flex items-center justify-center gap-2"
+        >
+          <RefreshCw size={16} />
+          Restaurar valores actuales
+        </button>
+      )}
+
+      <div className="flex gap-3">
+        <button
+          onClick={() => setShowConfigPanel(false)}
+          className="flex-1 px-4 py-3 border-2 border-gray-300 text-gray-700 rounded-xl font-medium hover:bg-gray-100 transition-colors"
+        >
+          Cancelar
+        </button>
+        <button
+          onClick={guardarConfiguracion}
+          disabled={tempMinimo >= tempMaximo}
+          onMouseEnter={() => setHoveredButton('saveConfig')}
+          onMouseLeave={() => setHoveredButton(null)}
+          className={`flex-1 px-4 py-3 rounded-xl font-medium transition-all flex items-center justify-center gap-2 hover:scale-105 relative overflow-hidden ${
+            tempMinimo >= tempMaximo
+              ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+              : 'bg-gradient-to-r from-[#34353A] to-[#5F8EAD] text-white hover:opacity-90'
+          }`}
+        >
+          {hoveredButton === 'saveConfig' && tempMinimo < tempMaximo && (
+            <div className="absolute inset-0 opacity-20 pointer-events-none">
+              <Lottie
+                animationData={successAnimation}
+                loop={false}
+                style={{ width: '100%', height: '100%' }}
+              />
+            </div>
+          )}
+          <Check size={18} className="relative z-10" />
+          <span className="relative z-10">Guardar Cambios</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+      {/* Overlay cuando el panel está abierto */}
+      {showConfigPanel && (
+        <div
+          onClick={() => setShowConfigPanel(false)}
+          className="fixed inset-0 bg-black/50 z-40 backdrop-blur-sm"
+        />
+      )}
 
       <ReportesCajaChicaModal
         isOpen={showReportesModal}

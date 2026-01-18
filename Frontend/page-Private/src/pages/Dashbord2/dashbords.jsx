@@ -18,7 +18,6 @@ import {
   MoreVertical,
   ChevronRight
 } from 'lucide-react';
-import Spline from '@splinetool/react-spline';
 import Lottie from 'lottie-react';
 import { config } from '../../config';
 import { api } from '../../Context/authContext';
@@ -32,20 +31,18 @@ import moneyAnimation from '../../assets/lotties/Coins blow effect.json';
 import truckIconAnimation from '../../assets/lotties/ecommerce order fulfillment automation.json';
 import checkmarkAnimation from '../../assets/lotties/Success (1).json';
 
-//Nuevo: componente Modal del reporte consolidado
+// Importar tu logo
+import logo from '../../images/logo.png';
+
+// Modales
 import ModalResumenConsolidado from "./ModalResumenConsolidado";
-// Modal para generar reporte semanal (PDF)
 import ReportsPdfModal from '../../components/Dashboard/ReportsPdfModal';
-// Modal reporte mensual de gastos
 import ReportsGastosMesModal from '../../components/Dashboard/ReportsGastosMesModal';
 
 const ModernDashboard = () => {
-
-  //nuevo estado para el modal
+  // Estados de modales
   const [modalResumenOpen, setModalResumenOpen] = useState(false);
-  // nuevo estado para el modal PDF
   const [modalPdfOpen, setModalPdfOpen] = useState(false);
-  // nuevo estado para modal Mensual Gastos
   const [modalGastosMesOpen, setModalGastosMesOpen] = useState(false);
 
   const navigate = useNavigate();
@@ -62,18 +59,15 @@ const ModernDashboard = () => {
   });
   const lottieRef = useRef();
 
-
-
   useEffect(() => {
     cargarEstadisticas();
   }, [selectedPeriod]);
 
   useEffect(() => {
     if (lottieRef.current) {
-      lottieRef.current.setSpeed(1); // ⏱ más lento
+      lottieRef.current.setSpeed(1);
     }
   }, []);
-
 
   const filtrarPorPeriodo = (items, campoFecha) => {
     const diasAtras = parseInt(selectedPeriod);
@@ -87,17 +81,13 @@ const ModernDashboard = () => {
   };
 
   const cargarEstadisticas = async () => {
-    const startTime = Date.now(); // ⏱ empieza a contar
+    const startTime = Date.now();
 
     try {
       setLoading(true);
 
-
-     const viajesRes = await api.get(`${config.api.API_URL}/viajes-operativos/listar`);
-let viajes = viajesRes.data?.data || [];
-
-
-
+      const viajesRes = await api.get(`${config.api.API_URL}/viajes-operativos/listar`);
+      let viajes = viajesRes.data?.data || [];
       viajes = filtrarPorPeriodo(viajes, 'departureTime');
 
       const viajesStats = {
@@ -113,10 +103,8 @@ let viajes = viajesRes.data?.data || [];
         ingresos: viajes.reduce((sum, v) => sum + (v?.montoAcordado || 0), 0)
       };
 
-   const mantoRes = await api.get(`${config.api.API_URL}/mantenimientos`);
-let mantenimientos = mantoRes.data?.data || [];
-
-
+      const mantoRes = await api.get(`${config.api.API_URL}/mantenimientos`);
+      let mantenimientos = mantoRes.data?.data || [];
       mantenimientos = filtrarPorPeriodo(mantenimientos, 'fecha_mantenimiento');
 
       const mantoStats = {
@@ -129,10 +117,8 @@ let mantenimientos = mantoRes.data?.data || [];
         }, 0)
       };
 
-     const dieselRes = await api.get(`${config.api.API_URL}/resumen`);
-let diesel = dieselRes.data?.data || (Array.isArray(dieselRes.data) ? dieselRes.data : []);
-
-
+      const dieselRes = await api.get(`${config.api.API_URL}/resumen`);
+      let diesel = dieselRes.data?.data || (Array.isArray(dieselRes.data) ? dieselRes.data : []);
       diesel = filtrarPorPeriodo(diesel, 'fecha');
 
       const dieselStats = {
@@ -150,14 +136,11 @@ let diesel = dieselRes.data?.data || (Array.isArray(dieselRes.data) ? dieselRes.
       };
 
       const cajaRes = await api.get(`${config.api.API_URL}/cajaChica`);
-let transacciones = Array.isArray(cajaRes.data) ? cajaRes.data : [];
-
-
+      let transacciones = Array.isArray(cajaRes.data) ? cajaRes.data : [];
       transacciones = filtrarPorPeriodo(transacciones, 'date');
 
-     const cajaBalanceRes = await api.get(`${config.api.API_URL}/cajaChica/balance`);
-const cajaBalanceData = cajaBalanceRes.data;
-
+      const cajaBalanceRes = await api.get(`${config.api.API_URL}/cajaChica/balance`);
+      const cajaBalanceData = cajaBalanceRes.data;
 
       const cajaStats = {
         balance: cajaBalanceData?.currentBalance || 0,
@@ -167,9 +150,7 @@ const cajaBalanceData = cajaBalanceRes.data;
       };
 
       const planillasRes = await api.get(`${config.api.API_URL}/planillas/quincenal`);
-let planillas = planillasRes.data?.data || [];
-
-
+      let planillas = planillasRes.data?.data || [];
       planillas = filtrarPorPeriodo(planillas, 'createdAt');
 
       const planillasStats = {
@@ -193,15 +174,13 @@ let planillas = planillasRes.data?.data || [];
       console.error('Error cargando estadísticas:', error);
     } finally {
       const elapsed = Date.now() - startTime;
-      const minDuration = 6000; // ⏱ 6 segundos
-
+      const minDuration = 6000;
       const remaining = Math.max(minDuration - elapsed, 0);
 
       setTimeout(() => {
         setLoading(false);
       }, remaining);
     }
-
   };
 
   const formatearMoneda = (cantidad) => {
@@ -352,7 +331,6 @@ let planillas = planillasRes.data?.data || [];
             autoplay={true}
             style={{ width: 250, height: 250, margin: '0 auto' }}
           />
-
           <p className="text-gray-600 font-medium text-lg mt-4">Cargando dashboard...</p>
           <p className="text-gray-400 text-sm mt-2">Obteniendo datos del sistema</p>
         </div>
@@ -362,56 +340,61 @@ let planillas = planillasRes.data?.data || [];
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Hero Banner con Spline */}
+      {/* 🎨 Hero Banner con Logo sobre Fondo Blanco LIMPIO */}
       <div className="relative h-[300px] overflow-hidden">
-        <div className="absolute inset-0" style={{ pointerEvents: 'auto' }}>
-          <Spline
-            scene="https://prod.spline.design/RPoeKCG7eSYlbZ4c/scene.splinecode"
-            style={{ width: '100%', height: '100%', pointerEvents: 'auto' }}
-          />
+        
+        {/* 🎨 Fondo blanco 100% limpio - SIN PATRÓN */}
+        <div className="absolute inset-0 bg-white">
+          {/* 🎨 Logo centrado - SOLO LA IMAGEN */}
+          <div className="absolute inset-0 flex items-center justify-center">
+            <img 
+              src={logo} 
+              alt="Logo Rivera" 
+              className="h-32 w-auto object-contain hover:scale-105 transition-transform duration-300"
+            />
+          </div>
         </div>
 
-        <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-gray-900/30 to-gray-50 pointer-events-none"></div>
+        {/* Gradient overlay suave solo en los bordes para transición */}
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-gray-50 pointer-events-none"></div>
 
+        {/* Contenido del hero */}
         <div className="relative z-10 h-full flex flex-col justify-between p-8 pointer-events-none">
-
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3 backdrop-blur-md bg-white/10 rounded-full px-5 py-2.5 border border-white/20 shadow-lg">
+            <div className="flex items-center gap-3 bg-white/90 backdrop-blur-sm rounded-full px-5 py-2.5 border border-gray-200 shadow-lg">
               <div className="w-2 h-2 bg-[#5D9646] rounded-full animate-pulse"></div>
-              <Activity className="text-white" size={18} />
-              <span className="text-white font-semibold text-sm">Sistema en vivo</span>
+              <Activity className="text-[#34353A]" size={18} />
+              <span className="text-[#34353A] font-semibold text-sm">Sistema en vivo</span>
             </div>
 
             <div className="flex items-center gap-3">
-              <div className="backdrop-blur-md bg-white/10 rounded-full px-5 py-2.5 border border-white/20 shadow-lg pointer-events-auto cursor-pointer hover:bg-white/15 transition-all">
+              <div className="bg-white/90 backdrop-blur-sm rounded-full px-5 py-2.5 border border-gray-200 shadow-lg pointer-events-auto cursor-pointer hover:bg-gray-50 transition-all">
                 <div className="flex items-center gap-2">
-                  <Truck className="text-white" size={16} />
-                  <span className="text-white font-bold text-sm">{estadisticas.flota.operando}/{estadisticas.flota.total}</span>
+                  <Truck className="text-[#34353A]" size={16} />
+                  <span className="text-[#34353A] font-bold text-sm">{estadisticas.flota.operando}/{estadisticas.flota.total}</span>
                 </div>
               </div>
 
-              <div className={`backdrop-blur-md rounded-full px-5 py-2.5 border shadow-lg pointer-events-auto cursor-pointer transition-all ${totales.balance >= 0
-                  ? 'bg-[#5D9646]/20 border-[#5D9646]/30 hover:bg-[#5D9646]/25'
-                  : 'bg-red-500/20 border-red-400/30 hover:bg-red-500/25'
+              <div className={`backdrop-blur-sm rounded-full px-5 py-2.5 border shadow-lg pointer-events-auto cursor-pointer transition-all ${totales.balance >= 0
+                  ? 'bg-[#5D9646]/10 border-[#5D9646]/30 hover:bg-[#5D9646]/20'
+                  : 'bg-red-500/10 border-red-400/30 hover:bg-red-500/20'
                 }`}>
                 <div className="flex items-center gap-2">
-                  <TrendingUp className={totales.balance >= 0 ? 'text-green-300' : 'text-red-300'} size={16} />
-                  <span className="text-white font-bold text-sm">{formatearMoneda(totales.balance)}</span>
+                  <TrendingUp className={totales.balance >= 0 ? 'text-[#5D9646]' : 'text-red-600'} size={16} />
+                  <span className={`font-bold text-sm ${totales.balance >= 0 ? 'text-[#5D9646]' : 'text-red-600'}`}>
+                    {formatearMoneda(totales.balance)}
+                  </span>
                 </div>
               </div>
             </div>
           </div>
 
           <div>
-            <div className="backdrop-blur-xl bg-gradient-to-r from-black/40 via-black/30 to-transparent rounded-2xl px-8 py-5 border border-white/10 inline-block shadow-2xl">
-              <h1 className="text-6xl font-bold text-white mb-2" style={{
-                textShadow: '0 4px 20px rgba(0,0,0,0.5), 0 2px 8px rgba(0,0,0,0.3)'
-              }}>
+            <div className="bg-white/90 backdrop-blur-sm rounded-2xl px-8 py-5 border border-gray-200 inline-block shadow-lg">
+              <h1 className="text-6xl font-bold text-[#34353A] mb-2">
                 Dashboard
               </h1>
-              <p className="text-white/95 text-base font-medium" style={{
-                textShadow: '0 2px 10px rgba(0,0,0,0.4)'
-              }}>
+              <p className="text-gray-600 text-base font-medium">
                 {new Date().toLocaleDateString('es-ES', {
                   weekday: 'long',
                   day: 'numeric',
@@ -446,7 +429,6 @@ let planillas = planillasRes.data?.data || [];
                 onMouseLeave={() => setHoveredCard(null)}
                 className="bg-white/95 backdrop-blur-xl rounded-2xl p-6 shadow-xl border border-gray-200 hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 cursor-pointer relative overflow-hidden"
               >
-                {/* Lottie de fondo en hover */}
                 {stat.lottie && hoveredCard === index && (
                   <div className="absolute top-0 right-0 opacity-10 pointer-events-none">
                     <Lottie
@@ -492,21 +474,11 @@ let planillas = planillasRes.data?.data || [];
 
         {/* Content Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-
           <div className="lg:col-span-2 bg-white rounded-2xl p-6 shadow-lg hover:shadow-xl transition-shadow">
             <div className="flex items-center justify-between mb-6">
               <div>
                 <h3 className="text-xl font-bold text-[#34353A]">Resumen Financiero</h3>
-                <p className="text-gray-500 text-sm mt-1">
-                  {loading ? (
-                    <span className="inline-flex items-center gap-2">
-                      <div className="w-3 h-3 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
-                      Actualizando datos...
-                    </span>
-                  ) : (
-                    `Balance del período seleccionado`
-                  )}
-                </p>
+                <p className="text-gray-500 text-sm mt-1">Balance del período seleccionado</p>
               </div>
 
               <div className="flex items-center gap-3">
@@ -596,7 +568,6 @@ let planillas = planillasRes.data?.data || [];
                         opacity: totales.balance >= 0 ? 0.9 : 1
                       }}
                     >
-                      {/* Lottie en balance */}
                       <div className="absolute -top-8 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity">
                         <Lottie
                           animationData={totales.balance >= 0 ? successAnimation : warningAnimation}
@@ -690,7 +661,7 @@ let planillas = planillasRes.data?.data || [];
               </div>
             </div>
 
-            {/* Resumen por módulos CON ESTADO VACÍO */}
+            {/* Resumen por módulos */}
             <div className="space-y-3">
               <div className="bg-gradient-to-r from-[#5F8EAD] from-opacity-10 to-[#5F8EAD] to-opacity-5 rounded-xl p-4 border-2 border-[#5F8EAD] mb-4">
                 <div className="flex items-center justify-between">
@@ -774,7 +745,6 @@ let planillas = planillasRes.data?.data || [];
 
           {/* Sidebar Stats */}
           <div className="space-y-6">
-
             <div className="bg-white rounded-2xl p-5 shadow-lg hover:shadow-xl transition-shadow">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-bold text-[#34353A]">Alertas</h3>
@@ -851,7 +821,6 @@ let planillas = planillasRes.data?.data || [];
               </div>
             </div>
 
-
             <ModalResumenConsolidado
               isOpen={modalResumenOpen}
               onClose={() => setModalResumenOpen(false)}
@@ -868,7 +837,7 @@ let planillas = planillasRes.data?.data || [];
               onClose={() => setModalGastosMesOpen(false)}
             />
 
-            {/* Actividad Reciente CON LOTTIE CHECKMARK */}
+            {/* Actividad Reciente */}
             <div className="bg-white rounded-2xl p-5 shadow-lg hover:shadow-xl transition-shadow border-2 border-[#5F8EAD]">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-bold text-[#34353A] flex items-center gap-2">
@@ -883,7 +852,6 @@ let planillas = planillasRes.data?.data || [];
                   <div className="flex items-start gap-3 p-3 bg-[#5D9646] bg-opacity-10 rounded-lg hover:bg-[#5D9646] hover:bg-opacity-15 transition-colors relative group">
                     <div className="p-2 bg-[#5D9646] bg-opacity-20 rounded-lg relative">
                       <CheckCircle className="text-[#5D9646]" size={16} />
-                      {/* Lottie checkmark en hover */}
                       <div className="absolute -top-2 -right-2 opacity-0 group-hover:opacity-100 transition-opacity">
                         <Lottie
                           animationData={checkmarkAnimation}
@@ -963,7 +931,6 @@ let planillas = planillasRes.data?.data || [];
                 )}
               </div>
             </div>
-
           </div>
         </div>
       </div>
