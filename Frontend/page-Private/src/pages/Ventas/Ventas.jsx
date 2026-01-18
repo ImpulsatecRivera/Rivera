@@ -506,13 +506,26 @@ export default function Ventas() {
                                 </p>
                             </div>
 
-                            <button
-                                onClick={() => setShowReportesModal(true)}
-                                className="flex items-center gap-2 bg-[#5D9646] text-white px-4 py-2.5 rounded-xl font-medium hover:opacity-90 transition-all"
-                            >
-                                <FileText size={18} />
-                                Generar Reportes
-                            </button>
+                            <div className="flex flex-col sm:flex-row gap-2">
+                                <div className="relative">
+                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                                    <input
+                                        type="text"
+                                        placeholder="Buscar por cliente o descripción..."
+                                        value={searchTerm}
+                                        onChange={(e) => setSearchTerm(e.target.value)}
+                                        className="pl-10 pr-4 py-2 border-2 border-gray-200 rounded-xl focus:border-[#5F8EAD] focus:outline-none transition-colors w-full sm:w-64"
+                                    />
+                                </div>
+
+                                <button
+                                    onClick={() => setShowReportesModal(true)}
+                                    className="flex items-center justify-center gap-2 bg-[#5D9646] text-white px-4 py-2.5 rounded-xl font-medium hover:opacity-90 transition-all"
+                                >
+                                    <FileText size={18} />
+                                    Generar Reportes
+                                </button>
+                            </div>
                         </div>
                     </div>
 
