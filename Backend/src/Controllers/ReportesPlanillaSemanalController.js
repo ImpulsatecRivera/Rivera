@@ -143,7 +143,7 @@ ReportesPlanillaSemanalController.generarPDFSemanalDetallado = async (req, res) 
         const logoBase64 = convertirImagenABase64(RUTA_LOGO);
         const html = generarHTMLSemanalDetallado(planilla, logoBase64);
 
-        browser = await puppeteer.launch(PUPPETEER_CONFIG);
+        browser = await puppeteer.launch(PUPPETEER_CONFIG());
 
         const page = await browser.newPage();
         await page.setContent(html, { waitUntil: 'networkidle0' });
@@ -209,7 +209,7 @@ ReportesPlanillaSemanalController.generarPDFMensual = async (req, res) => {
         const logoBase64 = convertirImagenABase64(RUTA_LOGO);
         const html = generarHTMLMensual(planillas, mesNum, anoNum, logoBase64);
 
-        browser = await puppeteer.launch(PUPPETEER_CONFIG);
+        browser = await puppeteer.launch(PUPPETEER_CONFIG());
 
         const page = await browser.newPage();
         await page.setContent(html, { waitUntil: 'networkidle0' });
@@ -295,7 +295,7 @@ ReportesPlanillaSemanalController.generarPDFMultiMes = async (req, res) => {
         const logoBase64 = convertirImagenABase64(RUTA_LOGO);
         const html = generarHTMLMultiMes(planillasPorMes, anoNum, logoBase64);
 
-        browser = await puppeteer.launch(PUPPETEER_CONFIG);
+        browser = await puppeteer.launch(PUPPETEER_CONFIG());
 
         const page = await browser.newPage();
         await page.setContent(html, { waitUntil: 'networkidle0' });
@@ -367,7 +367,7 @@ ReportesPlanillaSemanalController.generarPDFAnual = async (req, res) => {
         const logoBase64 = convertirImagenABase64(RUTA_LOGO);
         const html = generarHTMLAnual(planillasPorMes, anoNum, logoBase64);
 
-        browser = await puppeteer.launch(PUPPETEER_CONFIG);
+        browser = await puppeteer.launch(PUPPETEER_CONFIG());
 
         const page = await browser.newPage();
         await page.setContent(html, { waitUntil: 'networkidle0' });

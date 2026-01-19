@@ -329,7 +329,7 @@ ReportesPlanillasController.generarPDFQuincenal = async (req, res) => {
         </html>
         `;
 
-        browser = await puppeteer.launch(PUPPETEER_CONFIG);
+        browser = await puppeteer.launch(PUPPETEER_CONFIG());
 
         const page = await browser.newPage();
         await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
@@ -576,7 +576,7 @@ ReportesPlanillasController.generarPDFMensual = async (req, res) => {
         </html>
         `;
 
-        browser = await puppeteer.launch(PUPPETEER_CONFIG);
+        browser = await puppeteer.launch(PUPPETEER_CONFIG());
 
         const page = await browser.newPage();
         await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
@@ -845,7 +845,7 @@ ReportesPlanillasController.generarPDFMultiMes = async (req, res) => {
         </html>
         `;
 
-        browser = await puppeteer.launch(PUPPETEER_CONFIG);
+        browser = await puppeteer.launch(PUPPETEER_CONFIG());
 
         const page = await browser.newPage();
         await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
@@ -1226,7 +1226,7 @@ ReportesPlanillasController.generarPDFAnual = async (req, res) => {
         </html>
         `;
 
-        browser = await puppeteer.launch(PUPPETEER_CONFIG);
+        browser = await puppeteer.launch(PUPPETEER_CONFIG());
 
         const page = await browser.newPage();
         await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
