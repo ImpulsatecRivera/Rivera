@@ -43,19 +43,35 @@ const convertirImagenABase64 = (rutaImagen) => {
 
 // Ruta al logo
 const RUTA_LOGO = path.join(process.cwd(), 'src', 'imagenes', 'imagen_15.png');
-
+// Detectar entorno de ejecución
+const IS_CLOUD_RUN = process.env.K_SERVICE !== undefined;
+const IS_PRODUCTION = process.env.NODE_ENV === 'production';
 // Puppeteer config para Cloud Run
-const PUPPETEER_CONFIG = {
-    headless: 'new',
-    executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/chromium',
-    args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-        '--disable-gpu',
-        '--single-process',
-        '--no-zygote'
-    ]
+const PUPPETEER_CONFIG = () => {
+    if (IS_PRODUCTION || IS_CLOUD_RUN) {
+        // Configuración para Cloud Run
+        return {
+            headless: 'new',
+            executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/chromium',
+            args: [
+                '--no-sandbox',
+                '--disable-setuid-sandbox',
+                '--disable-dev-shm-usage',
+                '--disable-gpu',
+                '--single-process',
+                '--no-zygote'
+            ]
+        };
+    } else {
+        // Configuración para desarrollo local
+        return {
+            headless: 'new',
+            args: [
+                '--no-sandbox',
+                '--disable-setuid-sandbox'
+            ]
+        };
+    }
 };
 
 /**
@@ -313,7 +329,7 @@ ReportesPlanillasController.generarPDFQuincenal = async (req, res) => {
         </html>
         `;
 
-        browser = await puppeteer.launch(PUPPETEER_CONFIG);
+        browser = await puppeteer.launch(PUPPETEER_CONFIG());
 
         const page = await browser.newPage();
         await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
@@ -560,7 +576,7 @@ ReportesPlanillasController.generarPDFMensual = async (req, res) => {
         </html>
         `;
 
-        browser = await puppeteer.launch(PUPPETEER_CONFIG);
+        browser = await puppeteer.launch(PUPPETEER_CONFIG());
 
         const page = await browser.newPage();
         await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
@@ -829,7 +845,7 @@ ReportesPlanillasController.generarPDFMultiMes = async (req, res) => {
         </html>
         `;
 
-        browser = await puppeteer.launch(PUPPETEER_CONFIG);
+        browser = await puppeteer.launch(PUPPETEER_CONFIG());
 
         const page = await browser.newPage();
         await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
@@ -1210,7 +1226,7 @@ ReportesPlanillasController.generarPDFAnual = async (req, res) => {
         </html>
         `;
 
-        browser = await puppeteer.launch(PUPPETEER_CONFIG);
+        browser = await puppeteer.launch(PUPPETEER_CONFIG());
 
         const page = await browser.newPage();
         await page.setContent(htmlContent, { waitUntil: 'networkidle0' });

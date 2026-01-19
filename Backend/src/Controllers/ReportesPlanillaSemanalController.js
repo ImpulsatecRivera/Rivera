@@ -44,21 +44,37 @@ const convertirImagenABase64 = (rutaImagen) => {
         return null;
     }
 };
-
+// Detectar entorno de ejecución
+const IS_CLOUD_RUN = process.env.K_SERVICE !== undefined;
+const IS_PRODUCTION = process.env.NODE_ENV === 'production';
 // OPCIÓN 1: Desde la raíz del proyecto (RECOMENDADO)
 // Asumiendo que ejecutas el servidor desde C:\Users\djpoc\Desktop\Rivera\Backend
 const RUTA_LOGO = path.join(process.cwd(), 'src', 'imagenes', 'imagen_15.png');
-const PUPPETEER_CONFIG = {
-    headless: 'new',
-    executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/chromium',
-    args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-        '--disable-gpu',
-        '--single-process',
-        '--no-zygote'
-    ]
+const PUPPETEER_CONFIG = () => {
+    if (IS_PRODUCTION || IS_CLOUD_RUN) {
+        // Configuración para Cloud Run
+        return {
+            headless: 'new',
+            executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/chromium',
+            args: [
+                '--no-sandbox',
+                '--disable-setuid-sandbox',
+                '--disable-dev-shm-usage',
+                '--disable-gpu',
+                '--single-process',
+                '--no-zygote'
+            ]
+        };
+    } else {
+        // Configuración para desarrollo local
+        return {
+            headless: 'new',
+            args: [
+                '--no-sandbox',
+                '--disable-setuid-sandbox'
+            ]
+        };
+    }
 };
 // OPCIÓN 2: Si no funciona la opción 1, usa ruta absoluta directa:
 // const RUTA_LOGO = 'C:\\Users\\djpoc\\Desktop\\Rivera\\Backend\\src\\imagenes\\imagen_15.png';
@@ -127,7 +143,7 @@ ReportesPlanillaSemanalController.generarPDFSemanalDetallado = async (req, res) 
         const logoBase64 = convertirImagenABase64(RUTA_LOGO);
         const html = generarHTMLSemanalDetallado(planilla, logoBase64);
 
-        browser = await puppeteer.launch(PUPPETEER_CONFIG);
+        browser = await puppeteer.launch(PUPPETEER_CONFIG());
 
         const page = await browser.newPage();
         await page.setContent(html, { waitUntil: 'networkidle0' });
@@ -193,7 +209,7 @@ ReportesPlanillaSemanalController.generarPDFMensual = async (req, res) => {
         const logoBase64 = convertirImagenABase64(RUTA_LOGO);
         const html = generarHTMLMensual(planillas, mesNum, anoNum, logoBase64);
 
-        browser = await puppeteer.launch(PUPPETEER_CONFIG);
+        browser = await puppeteer.launch(PUPPETEER_CONFIG());
 
         const page = await browser.newPage();
         await page.setContent(html, { waitUntil: 'networkidle0' });
@@ -279,7 +295,7 @@ ReportesPlanillaSemanalController.generarPDFMultiMes = async (req, res) => {
         const logoBase64 = convertirImagenABase64(RUTA_LOGO);
         const html = generarHTMLMultiMes(planillasPorMes, anoNum, logoBase64);
 
-        browser = await puppeteer.launch(PUPPETEER_CONFIG);
+        browser = await puppeteer.launch(PUPPETEER_CONFIG());
 
         const page = await browser.newPage();
         await page.setContent(html, { waitUntil: 'networkidle0' });
@@ -351,7 +367,7 @@ ReportesPlanillaSemanalController.generarPDFAnual = async (req, res) => {
         const logoBase64 = convertirImagenABase64(RUTA_LOGO);
         const html = generarHTMLAnual(planillasPorMes, anoNum, logoBase64);
 
-        browser = await puppeteer.launch(PUPPETEER_CONFIG);
+        browser = await puppeteer.launch(PUPPETEER_CONFIG());
 
         const page = await browser.newPage();
         await page.setContent(html, { waitUntil: 'networkidle0' });
