@@ -648,7 +648,7 @@ const diasDiferencia =
     const comparativo = periodo.toLowerCase() === 'semanal';
     const htmlContent = generarHTMLConsolidado(titulo, columnas, clientesData, landscape, comparativo);
 
-    browser = await puppeteer.launch(PUPPETEER_CONFIG);
+    browser = await puppeteer.launch(PUPPETEER_CONFIG());
 
     const page = await browser.newPage();
     await page.setContent(htmlContent, { waitUntil: "networkidle0" });
@@ -1181,7 +1181,7 @@ ReportesViajesDirecto.generarPDFResumenMensualV2 = async (req, res) => {
 </html>
 `;
 
-    browser = await puppeteer.launch(PUPPETEER_CONFIG);
+    browser = await puppeteer.launch(PUPPETEER_CONFIG());
     const page = await browser.newPage();
     await page.setContent(htmlContent, { waitUntil: "networkidle0" });
 
@@ -1477,7 +1477,7 @@ ReportesViajesDirecto.generarPDFResumenMensual = async (req, res) => {
 </html>
 `;
 
-    browser = await puppeteer.launch(PUPPETEER_CONFIG);
+    browser = await puppeteer.launch(PUPPETEER_CONFIG());
 
     const page = await browser.newPage();
     await page.setContent(htmlContent, { waitUntil: "networkidle0" });
@@ -1670,7 +1670,7 @@ ReportesViajesDirecto.generarPDFResumenPorMetodoPago = async (req, res) => {
 </html>
 `;
 
-    browser = await puppeteer.launch(PUPPETEER_CONFIG);
+    browser = await puppeteer.launch(PUPPETEER_CONFIG());
     const page = await browser.newPage();
     await page.setContent(htmlContent, { waitUntil: "networkidle0" });
 
@@ -1958,7 +1958,7 @@ ReportesViajesDirecto.generarPDFComparativoEfectivo = async (req, res) => {
 </html>
 `;
 
-    browser = await puppeteer.launch(PUPPETEER_CONFIG);
+    browser = await puppeteer.launch(PUPPETEER_CONFIG());
     const page = await browser.newPage();
     await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
 
@@ -2293,7 +2293,7 @@ ReportesViajesDirecto.generarPDFClienteIndividual = async (req, res) => {
 </html>
 `;
 
-    browser = await puppeteer.launch(PUPPETEER_CONFIG);
+    browser = await puppeteer.launch(PUPPETEER_CONFIG());
 
     const page = await browser.newPage();
     await page.setContent(htmlContent, { waitUntil: "networkidle0" });
@@ -2602,7 +2602,7 @@ ReportesViajesDirecto.generarPDFCreditoFiscal = async (req, res) => {
 </html>
 `;
 
-    browser = await puppeteer.launch(PUPPETEER_CONFIG);
+    browser = await puppeteer.launch(PUPPETEER_CONFIG());
 
     const page = await browser.newPage();
     await page.setContent(htmlContent, { waitUntil: "networkidle0" });
@@ -2835,7 +2835,7 @@ ReportesViajesDirecto.generarPDFConsolidadoAnual = async (req, res) => {
 </html>
 `;
 
-    browser = await puppeteer.launch(PUPPETEER_CONFIG);
+    browser = await puppeteer.launch(PUPPETEER_CONFIG());
 
     const page = await browser.newPage();
     await page.setContent(htmlContent, { waitUntil: "networkidle0" });
