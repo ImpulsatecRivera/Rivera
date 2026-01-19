@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, Calendar, FileText, Download, ChevronDown, AlertCircle, CheckCircle } from 'lucide-react';
 import { api } from '../../Context/authContext';
+import Swal from 'sweetalert2';
 
 const ReportesModal = ({ isOpen, onClose, apiUrl }) => {
   const [tipoReporte, setTipoReporte] = useState('mensual');
@@ -63,6 +64,20 @@ const ReportesModal = ({ isOpen, onClose, apiUrl }) => {
 
   const descargarPDF = async (url, nombreArchivo, successMessage) => {
   try {
+    // Mostrar alerta de procesando
+    Swal.fire({
+      title: 'Procesando...',
+      html: '<div style="text-align: center;"><div style="border: 4px solid #f3f3f3; border-top: 4px solid #5F8EAD; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 0 auto;"></div><p style="margin-top: 10px; color: #666;">Generando reporte, por favor espera</p></div>',
+      allowOutsideClick: false,
+      allowEscapeKey: false,
+      showConfirmButton: false,
+      didOpen: () => {
+        const style = document.createElement('style');
+        style.textContent = '@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }';
+        document.head.appendChild(style);
+      }
+    });
+
     const response = await api.get(url, { responseType: 'blob' });
 
     const blob = new Blob([response.data], { type: 'application/pdf' });
@@ -77,30 +92,40 @@ const ReportesModal = ({ isOpen, onClose, apiUrl }) => {
 
     window.URL.revokeObjectURL(blobUrl);
 
-    setTimeout(() => {
-      setGenerando(false);
-      showCustomAlert('success', '¡Reporte generado!', successMessage);
-    }, 800);
+    // Cerrar alerta de procesando y mostrar éxito
+    Swal.fire({
+      icon: 'success',
+      title: '¡Reporte generado!',
+      text: successMessage,
+      confirmButtonText: 'OK',
+      confirmButtonColor: '#5F8EAD',
+      timer: 3000,
+      timerProgressBar: true
+    });
+
+    setGenerando(false);
 
   } catch (error) {
     setGenerando(false);
     const status = error.response?.status;
 
     if (status === 404) {
-      showCustomAlert(
-        'info',
-        'Sin datos disponibles',
-        'No existen registros para el período seleccionado.'
-      );
+      Swal.fire({
+        icon: 'info',
+        title: 'Sin datos disponibles',
+        text: 'No existen registros para el período seleccionado.',
+        confirmButtonColor: '#5F8EAD'
+      });
       return;
     }
 
-    showCustomAlert(
-      'error',
-      'Error del servidor',
-      'No se pudo generar el reporte.',
-      ['Verifica tu sesión', 'Intenta nuevamente']
-    );
+    Swal.fire({
+      icon: 'error',
+      title: 'Error del servidor',
+      text: 'No se pudo generar el reporte.',
+      html: '<p>Verifica tu sesión e intenta nuevamente</p>',
+      confirmButtonColor: '#5F8EAD'
+    });
   }
 };
 
@@ -160,9 +185,23 @@ const ReportesModal = ({ isOpen, onClose, apiUrl }) => {
     return;
   }
 
-  // ===== MULTIPLE (YA ESTABA BIEN) =====
+  // ===== MULTIPLE =====
   if (tipoReporte === 'multiple') {
     try {
+      // Mostrar alerta de procesando
+      Swal.fire({
+        title: 'Procesando...',
+        html: '<div style="text-align: center;"><div style="border: 4px solid #f3f3f3; border-top: 4px solid #5F8EAD; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 0 auto;"></div><p style="margin-top: 10px; color: #666;">Generando reporte, por favor espera</p></div>',
+        allowOutsideClick: false,
+        allowEscapeKey: false,
+        showConfirmButton: false,
+        didOpen: () => {
+          const style = document.createElement('style');
+          style.textContent = '@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }';
+          document.head.appendChild(style);
+        }
+      });
+
       const response = await api.post(
         '/reporte/mensual-multiple',
         {
@@ -183,22 +222,27 @@ const ReportesModal = ({ isOpen, onClose, apiUrl }) => {
       document.body.removeChild(a);
       window.URL.revokeObjectURL(url);
 
-      setTimeout(() => {
-        setGenerando(false);
-        showCustomAlert(
-          'success',
-          '¡Descarga completa!',
-          'El reporte de múltiples meses se descargó correctamente.'
-        );
-      }, 800);
+      // Cerrar alerta de procesando y mostrar éxito
+      Swal.fire({
+        icon: 'success',
+        title: '¡Reporte generado!',
+        text: 'El reporte de múltiples meses se descargó correctamente.',
+        confirmButtonText: 'OK',
+        confirmButtonColor: '#5F8EAD',
+        timer: 3000,
+        timerProgressBar: true
+      });
+
+      setGenerando(false);
 
     } catch (error) {
       setGenerando(false);
-      showCustomAlert(
-        'error',
-        'Error del servidor',
-        'No se pudo generar el reporte múltiple.'
-      );
+      Swal.fire({
+        icon: 'error',
+        title: 'Error del servidor',
+        text: 'No se pudo generar el reporte múltiple.',
+        confirmButtonColor: '#5F8EAD'
+      });
     }
   }
 };
