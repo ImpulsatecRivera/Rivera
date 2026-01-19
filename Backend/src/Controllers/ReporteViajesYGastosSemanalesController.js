@@ -568,7 +568,7 @@ ReporteViajesYGastosSemanalesController.generarPDFSemanal = async (req, res) => 
         </html>
         `;
 
-        browser = await puppeteer.launch(PUPPETEER_CONFIG);
+        browser = await puppeteer.launch(PUPPETEER_CONFIG());
 
         const page = await browser.newPage();
         await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
