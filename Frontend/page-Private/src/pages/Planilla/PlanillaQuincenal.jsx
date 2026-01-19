@@ -51,11 +51,17 @@ export default function PlanillaQuincenal() {
   const [filaEditando, setFilaEditando] = useState(null);
   const [datosEdicion, setDatosEdicion] = useState({});
 
-  const [infoPlanilla, setInfoPlanilla] = useState({
-    año: 2025,
-    mes: 12,
-    quincena: 1
-  });
+  // Inicializar infoPlanilla siempre con la primera quincena de enero del año actual
+  const obtenerInfoPlanillaInicial = () => {
+    const hoy = new Date();
+    return {
+      año: hoy.getFullYear(),
+      mes: 1,
+      quincena: 1
+    };
+  };
+
+  const [infoPlanilla, setInfoPlanilla] = useState(obtenerInfoPlanillaInicial());
 
   useEffect(() => {
     const handleResize = () => {
@@ -366,6 +372,48 @@ export default function PlanillaQuincenal() {
       exito: false,
       mensaje: 'No se encontró ninguna quincena disponible'
     };
+  };
+
+  const handleCargarDatosAnteriores = async () => {
+    if (!planilla || !planilla._id) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: 'No se pudo identificar la planilla actual'
+      });
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await api.post(
+        `/planillas/quincenal/${planilla._id}/copiar-datos-anteriores`
+      );
+
+      if (response.data.success) {
+        setPlanilla({
+          ...response.data.data,
+          empleados: Array.isArray(response.data.data.empleados) ? response.data.data.empleados : []
+        });
+
+        Swal.fire({
+          icon: 'success',
+          title: 'Datos Cargados',
+          text: 'Los datos de la planilla anterior se han cargado exitosamente',
+          timer: 2000,
+          showConfirmButton: false
+        });
+      }
+    } catch (error) {
+      console.error('Error cargando datos anteriores:', error);
+      Swal.fire({
+        icon: 'error',
+        title: 'Error al cargar datos',
+        text: error.response?.data?.message || 'No se pudo cargar los datos de la planilla anterior'
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const agregarEmpleadoPorClick = (persona) => {
@@ -954,7 +1002,30 @@ export default function PlanillaQuincenal() {
               </div>
 
               <div className="flex items-center gap-3 w-full lg:w-auto">
-                {planilla?.estado === 'pendiente' && (
+                {planilla?.estado === 'pendiente' && planilla?.empleados?.length === 0 && (
+                  <button
+                    onClick={handleCargarDatosAnteriores}
+                    disabled={loading}
+                    className="flex items-center justify-center gap-2 px-4 py-2 bg-[#5F8EAD] 
+                      text-white rounded-lg hover:bg-[#4a6a89] font-semibold text-sm 
+                      transition-colors flex-1 lg:flex-none disabled:opacity-50 disabled:cursor-not-allowed"
+                    title="Cargar empleados de la planilla anterior"
+                  >
+                    {loading ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                        <span>Cargando...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Plus size={18} />
+                        <span>Cargar Datos Anteriores</span>
+                      </>
+                    )}
+                  </button>
+                )}
+
+                {planilla?.estado === 'pendiente' && planilla?.empleados?.length > 0 && (
                   <button
                     onClick={() => cambiarEstadoPlanilla('aprobada')}
                     className="flex items-center justify-center gap-2 px-4 py-2 bg-[#5D9646] 

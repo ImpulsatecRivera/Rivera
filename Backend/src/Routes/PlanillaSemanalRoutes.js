@@ -332,4 +332,27 @@ router.post('/:id/empleado/:empleadoId/dia/:dia/falta',validateAuthToken(["admin
  */
 router.delete('/:id/empleado/:empleadoId/dia/:dia/falta',validateAuthToken(["admin"]), PlanillaSemanalController.desmarcarFaltaInjustificada);
 
+/**
+ * GET /api/planillas/semanal/ultima
+ * Obtener la última planilla semanal creada
+ * 
+ * Retorna: La planilla semanal más reciente con todos sus empleados
+ */
+router.get('/ultima', validateAuthToken(["admin"]), PlanillaSemanalController.obtenerUltima);
+
+/**
+ * POST /api/planillas/semanal/:id/copiar-datos-anteriores
+ * Copiar empleados y estructura de la planilla anterior
+ * 
+ * Parámetros:
+ * - id: ObjectId de la planilla nueva donde copiar los datos
+ * 
+ * Funcionalidad:
+ * - Busca la última planilla anterior a la actual
+ * - Copia los empleados manteniendo su salario y estructura
+ * - Reinicia anticipos y valores de viaticos
+ * - Genera nuevos días para la nueva semana
+ */
+router.post('/:id/copiar-datos-anteriores', validateAuthToken(["admin"]), PlanillaSemanalController.copiarDatosAnteriores);
+
 export default router;
