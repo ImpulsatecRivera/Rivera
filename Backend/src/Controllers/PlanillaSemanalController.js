@@ -11,6 +11,44 @@ import { isValidObjectId } from 'mongoose';
 const PlanillaSemanalController = {};
 
 /**
+ * Obtener el día de la semana ajustado a zona horaria de El Salvador (CST, UTC-6)
+ * El Salvador no observa horario de verano, siempre está en UTC-6
+ * 0 = domingo, 1 = lunes, 2 = martes, ... 6 = sábado
+ */
+function getDayInSalvadorTimeZone(date) {
+    const EL_SALVADOR_OFFSET = -6 * 60 * 60 * 1000; // UTC-6 en milisegundos
+    
+    // Convertir la fecha a UTC
+    const utcTime = date.getTime();
+    
+    // Convertir a zona horaria de El Salvador
+    const salvadorTime = new Date(utcTime + EL_SALVADOR_OFFSET);
+    
+    return salvadorTime.getUTCDay();
+}
+
+/**
+ * Convertir una fecha en formato string YYYY-MM-DD a Date object
+ * La fecha se interpreta como si estuviera en zona horaria de El Salvador
+ * Esto es importante porque el frontend envía fechas sin especificar zona horaria
+ */
+function dateStringToSalvadorDate(dateString) {
+    // Parsear el string YYYY-MM-DD
+    const [year, month, day] = dateString.split('-');
+    
+    // Crear fecha a las 00:00:00 UTC
+    const utcDate = new Date(Date.UTC(parseInt(year), parseInt(month) - 1, parseInt(day), 0, 0, 0, 0));
+    
+    // Ajustar a zona horaria de El Salvador (UTC-6)
+    // Si queremos que las 00:00:00 en El Salvador sean esa fecha
+    // entonces en UTC deben ser 06:00:00 de ese día
+    const EL_SALVADOR_OFFSET = -6 * 60 * 60 * 1000;
+    const correctedDate = new Date(utcDate.getTime() - EL_SALVADOR_OFFSET);
+    
+    return correctedDate;
+}
+
+/**
  * Redondear correctamente valores monetarios a 2 decimales
  */
 const redondearDinero = (valor) => {
@@ -144,12 +182,12 @@ PlanillaSemanalController.crear = async (req, res) => {
             });
         }
 
-        // Convertir fechas forzando zona horaria local (El Salvador)
-        const inicio = new Date(fechaInicio + 'T00:00:00');
-        const fin = new Date(fechaFin + 'T23:59:59');
+        // Convertir fechas interpretando como zona horaria de El Salvador
+        const inicio = dateStringToSalvadorDate(fechaInicio);
+        const fin = dateStringToSalvadorDate(fechaFin);
 
         // Validar que fechaInicio sea lunes
-        if (inicio.getDay() !== 1) {
+        if (getDayInSalvadorTimeZone(inicio) !== 1) {
             return res.status(400).json({
                 success: false,
                 message: 'La fecha de inicio debe ser un lunes'
@@ -157,7 +195,7 @@ PlanillaSemanalController.crear = async (req, res) => {
         }
 
         // Validar que fechaFin sea sábado
-        if (fin.getDay() !== 6) {
+        if (getDayInSalvadorTimeZone(fin) !== 6) {
             return res.status(400).json({
                 success: false,
                 message: 'La fecha de fin debe ser un sábado'
@@ -208,10 +246,23 @@ PlanillaSemanalController.crear = async (req, res) => {
         });
 
         if (planillaExistente) {
-            return res.status(400).json({
-                success: false,
-                message: 'Ya existe una planilla para este período o uno que se solapa'
-            });
+            // Mensaje más detallado
+            if (planillaExistente.fechaInicio.getTime() === inicio.getTime() && 
+                planillaExistente.fechaFin.getTime() === fin.getTime()) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Ya existe una planilla semanal para exactamente este período (del ' + 
+                             inicio.toLocaleDateString('es-ES') + ' al ' + fin.toLocaleDateString('es-ES') + ')'
+                });
+            } else {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Ya existe una planilla semanal que se solapa con el período solicitado. ' +
+                             'La planilla existente es del ' + planillaExistente.fechaInicio.toLocaleDateString('es-ES') + 
+                             ' al ' + planillaExistente.fechaFin.toLocaleDateString('es-ES') + 
+                             '. Por favor, elige un período diferente.'
+                });
+            }
         }
 
         // Crear nueva planilla
@@ -639,7 +690,7 @@ PlanillaSemanalController.cambiarEstado = async (req, res) => {
             if (!planilla.empleados || planilla.empleados.length === 0) {
                 return res.status(400).json({
                     success: false,
-                    message: 'No se puede cambiar el estado a "' + estado + '" porque la planilla no tiene empleados'
+                    message: `No se puede cambiar el estado a "${estado}" porque la planilla no tiene empleados asignados. Añade al menos un empleado antes de proceder.`
                 });
             }
         }
@@ -1231,6 +1282,193 @@ PlanillaSemanalController.desmarcarFaltaInjustificada = async (req, res) => {
         res.status(500).json({
             success: false,
             message: 'Error al desmarcar falta injustificada',
+            error: error.message
+        });
+    }
+};
+
+/**
+ * Obtener la última planilla semanal creada
+ * GET /api/planillas/semanal/ultima
+ */
+PlanillaSemanalController.obtenerUltima = async (req, res) => {
+    try {
+        const ultimaPlanilla = await PlanillaSemanal.findOne()
+            .sort({ createdAt: -1, fechaInicio: -1 })
+            .populate('empleados.empleadoId');
+
+        if (!ultimaPlanilla) {
+            return res.status(404).json({
+                success: false,
+                message: 'No hay planillas semanales previas'
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            message: 'Última planilla semanal obtenida',
+            data: ultimaPlanilla
+        });
+    } catch (error) {
+        console.error('Error al obtener última planilla semanal:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error al obtener última planilla semanal',
+            error: error.message
+        });
+    }
+};
+
+/**
+ * Copiar empleados de la última planilla semanal a una nueva
+ * POST /api/planillas/semanal/:id/copiar-datos-anteriores
+ */
+PlanillaSemanalController.copiarDatosAnteriores = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        if (!isValidObjectId(id)) {
+            return res.status(400).json({
+                success: false,
+                message: 'ID de planilla inválido'
+            });
+        }
+
+        // Obtener la planilla actual
+        const planillaActual = await PlanillaSemanal.findById(id);
+        if (!planillaActual) {
+            return res.status(404).json({
+                success: false,
+                message: 'Planilla semanal no encontrada'
+            });
+        }
+
+        if (planillaActual.estado === 'pagada') {
+            return res.status(400).json({
+                success: false,
+                message: 'No se pueden agregar empleados a una planilla pagada'
+            });
+        }
+
+        // Obtener la última planilla anterior (por fecha)
+        const ultimaPlanilla = await PlanillaSemanal.findOne({
+            _id: { $ne: id },
+            fechaInicio: { $lt: planillaActual.fechaInicio }
+        }).sort({ fechaInicio: -1 });
+
+        if (!ultimaPlanilla) {
+            return res.status(400).json({
+                success: false,
+                message: 'No se detectan planillas anteriores. Esta es la primera planilla en el sistema. Agrega empleados manualmente.'
+            });
+        }
+
+        if (!ultimaPlanilla.empleados || ultimaPlanilla.empleados.length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'La planilla anterior no tiene empleados para copiar'
+            });
+        }
+
+        // Obtener solo los IDs de empleados de la planilla anterior
+        const empleadosIds = ultimaPlanilla.empleados.map(emp => emp.empleadoId.toString());
+
+        let empleadosAgregados = 0;
+        let empleadosOmitidos = 0;
+        const errores = [];
+
+        // Agregar cada empleado usando la misma lógica que agregarEmpleado
+        for (const empleadoId of empleadosIds) {
+            try {
+                // Verificar si el empleado ya está en la planilla actual
+                const empleadoExiste = planillaActual.empleados.some(
+                    emp => emp.empleadoId.toString() === empleadoId
+                );
+
+                if (empleadoExiste) {
+                    empleadosOmitidos++;
+                    continue;
+                }
+
+                // Buscar el empleado en la base de datos
+                let empleadoData = await Empleado.findById(empleadoId);
+                let tipoEmpleado = 'empleado';
+
+                if (!empleadoData) {
+                    empleadoData = await Motorista.findById(empleadoId);
+                    tipoEmpleado = 'motorista';
+                }
+
+                if (!empleadoData) {
+                    errores.push(`Empleado ${empleadoId} no encontrado`);
+                    empleadosOmitidos++;
+                    continue;
+                }
+
+                const nombreCompleto = `${empleadoData.name} ${empleadoData.lastName || ''}`.trim();
+                const salarioMensual = obtenerSalarioValido(empleadoData, nombreCompleto, tipoEmpleado);
+                const planillaTipo = empleadoData.planillaTipo || '';
+
+                // Generar días de la semana con fechas
+                const dias = generarDiasSemana(planillaActual.fechaInicio);
+
+                // Si planillaTipo es "Semanal", calcular base diaria automáticamente
+                if (planillaTipo === 'Semanal' && salarioMensual > 0) {
+                    const baseDiaria = redondearDinero(salarioMensual / planillaActual.diasHabiles);
+                    dias.forEach(dia => {
+                        dia.base = baseDiaria;
+                    });
+                }
+
+                const nuevoEmpleado = {
+                    empleadoId,
+                    tipo: tipoEmpleado,
+                    nombreCompleto,
+                    planillaTipo,
+                    dias,
+                    totalBase: 0,
+                    totalViaticos: 0,
+                    anticipos: 0,
+                    totalDescuentos: 0,
+                    totalAPagar: 0
+                };
+
+                // Calcular totales iniciales
+                const totales = calcularTotalesEmpleado(nuevoEmpleado);
+                nuevoEmpleado.totalBase = totales.totalBase;
+                nuevoEmpleado.totalViaticos = totales.totalViaticos;
+                nuevoEmpleado.totalDescuentos = totales.totalDescuentos;
+                nuevoEmpleado.totalAPagar = totales.totalAPagar;
+
+                planillaActual.empleados.push(nuevoEmpleado);
+                empleadosAgregados++;
+
+            } catch (error) {
+                console.error(`Error al agregar empleado ${empleadoId}:`, error);
+                errores.push(`Error al agregar empleado ${empleadoId}: ${error.message}`);
+                empleadosOmitidos++;
+            }
+        }
+
+        // Recalcular totales generales de la planilla
+        planillaActual.totales = calcularTotalesGenerales(planillaActual.empleados);
+        await planillaActual.save();
+
+        res.status(200).json({
+            success: true,
+            message: `Empleados copiados exitosamente. ${empleadosAgregados} agregados, ${empleadosOmitidos} omitidos.`,
+            data: planillaActual,
+            detalles: {
+                empleadosAgregados,
+                empleadosOmitidos,
+                errores: errores.length > 0 ? errores : undefined
+            }
+        });
+    } catch (error) {
+        console.error('Error al copiar datos anteriores:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error al copiar datos anteriores',
             error: error.message
         });
     }

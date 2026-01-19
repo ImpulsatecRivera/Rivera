@@ -9,6 +9,7 @@ import { config } from '../../config';
 import Swal from 'sweetalert2';
 import { useAuth } from '../../Context/authContext';
 import { api } from '../../Context/authContext';
+import { formatearFechaEnSalvador } from '../../utils/timezoneUtils';
 
 export default function Planillas() {
   const navigate = useNavigate();
@@ -252,8 +253,8 @@ export default function Planillas() {
 
     if (planilla.tipo === 'semanal') {
       endpoint = `${config.api.API_URL}/reportes/planilla/semanal/detallado/${planilla._id}`;
-      const fechaInicio = new Date(planilla.fechaInicio).toLocaleDateString('es-ES').replace(/\//g, '-');
-      const fechaFin = new Date(planilla.fechaFin).toLocaleDateString('es-ES').replace(/\//g, '-');
+      const fechaInicio = formatearFechaEnSalvador(planilla.fechaInicio).replace(/\//g, '-');
+      const fechaFin = formatearFechaEnSalvador(planilla.fechaFin).replace(/\//g, '-');
       filename = `Planilla_Semanal_${fechaInicio}_al_${fechaFin}.pdf`;
     } else {
       endpoint = `${config.api.API_URL}/reportes/planilla/quincenal/${planilla._id}`;
@@ -1442,7 +1443,7 @@ export default function Planillas() {
                         <td className="px-6 py-4 text-gray-600 font-medium">
                           {planilla.año && planilla.mes 
                             ? `${planilla.año} - Mes ${planilla.mes}` 
-                            : new Date(planilla.fechaInicio).toLocaleDateString('es-ES')}
+                            : formatearFechaEnSalvador(planilla.fechaInicio)}
                         </td>
                         <td className="px-6 py-4 text-center">
                           <span className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-[#5F8EAD] bg-opacity-20 text-[#5F8EAD] font-bold">

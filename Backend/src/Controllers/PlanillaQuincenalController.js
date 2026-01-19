@@ -223,14 +223,25 @@ const calcularTotalesGenerales = (empleados) => {
  */
 PlanillaQuincenalController.crear = async (req, res) => {
     try {
-        const { año, mes, quincena, empleados } = req.body;
+        let { año, mes, quincena, empleados } = req.body;
 
-        // Validaciones básicas
+        // Si no se proporcionan año/mes/quincena, verificar si es la primera planilla
         if (!año || !mes || !quincena) {
-            return res.status(400).json({
-                success: false,
-                message: "Año, mes y quincena son requeridos"
-            });
+            const ultimaPlanilla = await PlanillaQuincenal.findOne()
+                .sort({ año: -1, mes: -1, quincena: -1 });
+
+            if (ultimaPlanilla) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Año, mes y quincena son requeridos"
+                });
+            } else {
+                // Es la primera planilla - asignar automáticamente enero del año actual
+                const ahora = new Date();
+                año = ahora.getFullYear();
+                mes = 1;
+                quincena = 1;
+            }
         }
 
         if (![1, 2].includes(parseInt(quincena))) {
@@ -944,6 +955,203 @@ PlanillaQuincenalController.obtenerPorEmpleado = async (req, res) => {
         res.status(500).json({
             success: false,
             message: "Error al obtener las planillas",
+            error: error.message
+        });
+    }
+};
+
+/**
+ * Obtener la última planilla quincenal creada
+ * GET /api/planillas/quincenal/ultima
+ */
+PlanillaQuincenalController.obtenerUltima = async (req, res) => {
+    try {
+        const ultimaPlanilla = await PlanillaQuincenal.findOne()
+            .sort({ año: -1, mes: -1, quincena: -1 })
+            .populate('empleados.empleadoId');
+
+        if (!ultimaPlanilla) {
+            // Si no hay planillas, retornar la primera planilla quincenal (2026, enero, quincena 1)
+            return res.status(200).json({
+                success: true,
+                message: 'Primera planilla quincenal del sistema',
+                data: {
+                    año: 2026,
+                    mes: 1,
+                    quincena: 1,
+                    empleados: [],
+                    isNewSystem: true
+                }
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            message: 'Última planilla quincenal obtenida',
+            data: ultimaPlanilla
+        });
+    } catch (error) {
+        console.error('Error al obtener última planilla quincenal:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error al obtener última planilla quincenal',
+            error: error.message
+        });
+    }
+};
+
+/**
+ * Copiar empleados de la última planilla quincenal a una nueva
+ * POST /api/planillas/quincenal/:id/copiar-datos-anteriores
+ */
+PlanillaQuincenalController.copiarDatosAnteriores = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        if (!isValidObjectId(id)) {
+            return res.status(400).json({
+                success: false,
+                message: 'ID de planilla inválido'
+            });
+        }
+
+        // Obtener la planilla actual
+        const planillaActual = await PlanillaQuincenal.findById(id);
+        if (!planillaActual) {
+            return res.status(404).json({
+                success: false,
+                message: 'Planilla quincenal no encontrada'
+            });
+        }
+
+        if (planillaActual.estado === 'pagada') {
+            return res.status(400).json({
+                success: false,
+                message: 'No se pueden agregar empleados a una planilla pagada'
+            });
+        }
+
+        // Obtener la última planilla anterior (por año, mes y quincena)
+        const ultimaPlanilla = await PlanillaQuincenal.findOne({
+            $or: [
+                {
+                    año: planillaActual.año,
+                    mes: planillaActual.mes,
+                    quincena: { $lt: planillaActual.quincena }
+                },
+                {
+                    año: planillaActual.año,
+                    mes: { $lt: planillaActual.mes }
+                },
+                {
+                    año: { $lt: planillaActual.año }
+                }
+            ]
+        }).sort({ año: -1, mes: -1, quincena: -1 });
+
+        if (!ultimaPlanilla) {
+            return res.status(400).json({
+                success: false,
+                message: 'No se detectan planillas anteriores. Esta es la primera planilla en el sistema. Agrega empleados manualmente.'
+            });
+        }
+
+        if (!ultimaPlanilla.empleados || ultimaPlanilla.empleados.length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'La planilla anterior no tiene empleados para copiar'
+            });
+        }
+
+        // Obtener solo los IDs de empleados de la planilla anterior
+        const empleadosIds = ultimaPlanilla.empleados.map(emp => emp.empleadoId.toString());
+
+        let empleadosAgregados = 0;
+        let empleadosOmitidos = 0;
+        const errores = [];
+
+        // Agregar cada empleado usando la misma lógica que agregarEmpleado
+        for (const empleadoId of empleadosIds) {
+            try {
+                // Verificar si el empleado ya está en la planilla actual
+                const empleadoExiste = planillaActual.empleados.some(
+                    emp => emp.empleadoId.toString() === empleadoId
+                );
+
+                if (empleadoExiste) {
+                    empleadosOmitidos++;
+                    continue;
+                }
+
+                // Buscar el empleado en la base de datos
+                let empleadoData = await Empleado.findById(empleadoId);
+                let tipoEmpleado = 'Empleado';
+
+                if (!empleadoData) {
+                    empleadoData = await Motorista.findById(empleadoId);
+                    tipoEmpleado = 'Motorista';
+                }
+
+                if (!empleadoData) {
+                    errores.push(`Empleado ${empleadoId} no encontrado`);
+                    empleadosOmitidos++;
+                    continue;
+                }
+
+                const nombreCompleto = `${empleadoData.name} ${empleadoData.lastName || ''}`.trim();
+                const salarioMensual = obtenerSalarioValido(empleadoData, nombreCompleto, tipoEmpleado);
+                const salarioQuincenal = redondearDinero(salarioMensual / 2);
+
+                const nuevoEmpleado = {
+                    empleadoId,
+                    tipoEmpleado,
+                    nombreCompleto,
+                    salarioQuincenal,
+                    viaticos: 0,
+                    trabajoSabadoDomingo: 0,
+                    descuentosLey: {},
+                    otrosDescuentos: {
+                        anticipos: 0,
+                        prestamos: 0,
+                        otros: 0
+                    }
+                };
+
+                // Calcular totales
+                const totales = calcularTotalesEmpleado(nuevoEmpleado);
+                nuevoEmpleado.totalSalarioMasViaticos = totales.totalSalarioMasViaticos;
+                nuevoEmpleado.totalDescuentos = totales.totalDescuentos;
+                nuevoEmpleado.totalAPagar = totales.totalAPagar;
+
+                planillaActual.empleados.push(nuevoEmpleado);
+                empleadosAgregados++;
+
+            } catch (error) {
+                console.error(`Error al agregar empleado ${empleadoId}:`, error);
+                errores.push(`Error al agregar empleado ${empleadoId}: ${error.message}`);
+                empleadosOmitidos++;
+            }
+        }
+
+        // Recalcular totales generales de la planilla
+        planillaActual.totales = calcularTotalesGenerales(planillaActual.empleados);
+        await planillaActual.save();
+
+        res.status(200).json({
+            success: true,
+            message: `Empleados copiados exitosamente. ${empleadosAgregados} agregados, ${empleadosOmitidos} omitidos.`,
+            data: planillaActual,
+            detalles: {
+                empleadosAgregados,
+                empleadosOmitidos,
+                errores: errores.length > 0 ? errores : undefined
+            }
+        });
+    } catch (error) {
+        console.error('Error al copiar datos anteriores:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error al copiar datos anteriores',
             error: error.message
         });
     }
