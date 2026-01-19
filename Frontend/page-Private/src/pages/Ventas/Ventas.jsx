@@ -29,13 +29,7 @@ export default function Ventas() {
 
     const itemsPerPage = 8;
 
-    const ESTADOS_OPCIONES = {
-        TODOS: 'Todos',
-        PENDIENTE: 'Pendiente',
-        PAGADA: 'Pagada',
-        ANULADA: 'Anulada'
-    };
-
+   
     useEffect(() => {
         cargarVentas();
         cargarClientes();
@@ -95,9 +89,6 @@ export default function Ventas() {
         }
     };
 
-    const handleRefresh = () => {
-        cargarVentas();
-    };
 
     const getNombreCliente = (cliente) => {
         if (!cliente) return 'Sin nombre';
@@ -356,18 +347,6 @@ export default function Ventas() {
         }
     };
 
-    const abrirArchivo = (url) => {
-        if (!url || typeof url !== 'string') {
-            Swal.fire({
-                title: 'Archivo no disponible',
-                text: 'No existe un archivo válido para mostrar',
-                icon: 'warning'
-            });
-            return;
-        }
-
-        window.open(url, '_blank', 'noopener,noreferrer');
-    };
 
     const openDetailModal = (ventaId) => {
         setSelectedVentaId(ventaId);

@@ -57,7 +57,9 @@ const convertirImagenABase64 = (rutaImagen) => {
         return null;
     }
 };
-
+// Detectar entorno de ejecución
+const IS_CLOUD_RUN = process.env.K_SERVICE !== undefined;
+const IS_PRODUCTION = process.env.NODE_ENV === 'production';
 // Cargar logo una vez
 const logoBase64 = convertirImagenABase64(RUTA_LOGO);
 const PUPPETEER_CONFIG = () => {
