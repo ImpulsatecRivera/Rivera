@@ -3,7 +3,6 @@ import {
   ArrowLeft,
   Save,
   AlertCircle,
-  Upload,
   Loader2
 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";

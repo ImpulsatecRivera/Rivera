@@ -4,11 +4,13 @@ FROM node:20-slim
 # Establece el directorio de trabajo
 WORKDIR /app
 
-# Instalar dependencias del sistema necesarias para Chromium/Headless
+# Instalar Chromium y todas las dependencias necesarias para Puppeteer
 RUN apt-get update \
 	&& apt-get install -y --no-install-recommends \
+	   chromium \
 	   ca-certificates \
 	   fonts-liberation \
+	   fonts-noto-color-emoji \
 	   libnss3 \
 	   libatk1.0-0 \
 	   libatk-bridge2.0-0 \
@@ -25,15 +27,12 @@ RUN apt-get update \
 	   libgbm1 \
 	   libgtk-3-0 \
 	   libxkbcommon0 \
+	   libpango-1.0-0 \
+	   libcairo2 \
 	&& rm -rf /var/lib/apt/lists/*
 
 # Copiar archivos de dependencias primero para aprovechar cache de Docker
 COPY package*.json ./
-
-# Asegurar que Puppeteer descargue Chromium durante npm install
-# ✅ Instalar Chromium y configurar Puppeteer
-RUN apt-get update && apt-get install -y chromium \
-    && rm -rf /var/lib/apt/lists/*
 
 # ✅ Variables críticas para Puppeteer
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
