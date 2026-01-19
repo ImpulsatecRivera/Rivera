@@ -2,4 +2,9 @@ runtime: nodejs20
 entrypoint: npm start
 
 env: standard
-instance_class: F1  # F1 es la más barata, ideal para pruebas
+instance_class: F1  # La más pequeña y económica
+
+env_variables:
+  NODE_ENV: 'production'
+  PUPPETEER_SKIP_CHROMIUM_DOWNLOAD: 'true'
+  PUPPETEER_EXECUTABLE_PATH: '/usr/bin/chromium'
