@@ -308,7 +308,7 @@ ReportesGastosMesController.generarPDFMensualConsolidado = async (req, res) => {
     `;
 
     // Generar PDF con puppeteer
-    const browser = await puppeteer.launch(PUPPETEER_CONFIG);
+    const browser = await puppeteer.launch(PUPPETEER_CONFIG());
     const page = await browser.newPage();
     await page.setContent(html, { waitUntil: 'networkidle0' });
     const pdfBuffer = await page.pdf({ format: 'A4', printBackground: true });

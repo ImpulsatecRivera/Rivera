@@ -304,7 +304,7 @@ ReportesVentasController.generarPDFInformeMensual = async (req, res) => {
 </html>
     `;
 
-        browser = await puppeteer.launch(PUPPETEER_CONFIG);
+        browser = await puppeteer.launch(PUPPETEER_CONFIG());
         const page = await browser.newPage();
         await page.setContent(html, { waitUntil: 'networkidle0' });
 
@@ -568,7 +568,7 @@ ReportesVentasController.generarPDFResumenMensual = async (req, res) => {
 </html>
     `;
 
-        browser = await puppeteer.launch(PUPPETEER_CONFIG);
+        browser = await puppeteer.launch(PUPPETEER_CONFIG());
         const page = await browser.newPage();
         await page.setContent(html, { waitUntil: 'networkidle0' });
 
@@ -847,7 +847,7 @@ ReportesVentasController.generarPDFComparativoAnual = async (req, res) => {
 </html>
     `;
 
-        browser = await puppeteer.launch(PUPPETEER_CONFIG);
+        browser = await puppeteer.launch(PUPPETEER_CONFIG());
         const page = await browser.newPage();
         await page.setContent(html, { waitUntil: 'networkidle0' });
 

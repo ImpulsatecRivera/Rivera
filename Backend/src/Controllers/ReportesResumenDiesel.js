@@ -326,7 +326,7 @@ ReportesRoutes.generarPDFIndividual = async (req, res) => {
         </html>
         `;
 
-        browser = await puppeteer.launch(PUPPETEER_CONFIG);
+        browser = await puppeteer.launch(PUPPETEER_CONFIG());
 
         const page = await browser.newPage();
         await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
@@ -569,7 +569,7 @@ ReportesRoutes.generarPDFMensualSimple = async (req, res) => {
         </html>
         `;
 
-        browser = await puppeteer.launch(PUPPETEER_CONFIG);
+        browser = await puppeteer.launch(PUPPETEER_CONFIG());
 
         const page = await browser.newPage();
         await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
@@ -822,7 +822,7 @@ ReportesRoutes.generarPDFMensualDetallado = async (req, res) => {
         </html>
         `;
 
-        browser = await puppeteer.launch(PUPPETEER_CONFIG);
+        browser = await puppeteer.launch(PUPPETEER_CONFIG());
 
         const page = await browser.newPage();
         await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
@@ -1156,7 +1156,7 @@ ReportesRoutes.generarPDFMultiplesMeses = async (req, res) => {
         </html>
         `;
 
-        browser = await puppeteer.launch(PUPPETEER_CONFIG);
+        browser = await puppeteer.launch(PUPPETEER_CONFIG());
 
         const page = await browser.newPage();
         await page.setContent(htmlContent, { waitUntil: ['networkidle0', 'load', 'domcontentloaded'] });
@@ -1504,7 +1504,7 @@ ReportesRoutes.generarPDFAnual = async (req, res) => {
         </html>
         `;
 
-        browser = await puppeteer.launch(PUPPETEER_CONFIG);
+        browser = await puppeteer.launch(PUPPETEER_CONFIG());
 
         const page = await browser.newPage();
         await page.setContent(htmlContent, { waitUntil: ['networkidle0', 'load', 'domcontentloaded'] });
@@ -1906,7 +1906,7 @@ ReportesRoutes.generarPDFSemanal = async (req, res) => {
         </html>
         `;
 
-        browser = await puppeteer.launch(PUPPETEER_CONFIG);
+        browser = await puppeteer.launch(PUPPETEER_CONFIG());
 
         const page = await browser.newPage();
         await page.setContent(htmlContent, { waitUntil: ['networkidle0', 'load', 'domcontentloaded'] });

@@ -354,7 +354,7 @@ ReportesCajaChicaController.generarPDFIndividual = async (req, res) => {
         </html>
         `;
 
-        browser = await puppeteer.launch(PUPPETEER_CONFIG);
+        browser = await puppeteer.launch(PUPPETEER_CONFIG());
 
         const page = await browser.newPage();
         await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
@@ -655,7 +655,7 @@ ReportesCajaChicaController.generarPDFTodosMovimientos = async (req, res) => {
         </html>
         `;
 
-        browser = await puppeteer.launch(PUPPETEER_CONFIG);
+        browser = await puppeteer.launch(PUPPETEER_CONFIG());
 
         const page = await browser.newPage();
         await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
@@ -994,7 +994,7 @@ ReportesCajaChicaController.generarPDFMensualSimple = async (req, res) => {
         </html>
         `;
 
-        browser = await puppeteer.launch(PUPPETEER_CONFIG);
+        browser = await puppeteer.launch(PUPPETEER_CONFIG());
 
         const page = await browser.newPage();
         await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
@@ -1300,7 +1300,7 @@ ReportesCajaChicaController.generarPDFMultiplesMeses = async (req, res) => {
         </html>
         `;
 
-        browser = await puppeteer.launch(PUPPETEER_CONFIG);
+        browser = await puppeteer.launch(PUPPETEER_CONFIG());
 
         const page = await browser.newPage();
         await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
@@ -1647,7 +1647,7 @@ ReportesCajaChicaController.generarPDFDiario = async (req, res) => {
         </html>
         `;
 
-        browser = await puppeteer.launch(PUPPETEER_CONFIG);
+        browser = await puppeteer.launch(PUPPETEER_CONFIG());
 
         const page = await browser.newPage();
         await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
@@ -2020,7 +2020,7 @@ ReportesCajaChicaController.generarPDFRangoFechas = async (req, res) => {
         </html>
         `;
 
-        browser = await puppeteer.launch(PUPPETEER_CONFIG);
+        browser = await puppeteer.launch(PUPPETEER_CONFIG());
 
         const page = await browser.newPage();
         await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
