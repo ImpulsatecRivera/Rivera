@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Calendar, Truck, Wrench, FileText, DollarSign, Package, Loader2, AlertCircle } from 'lucide-react';
-import { config } from '../../config';
+import { X, Calendar, Truck, Wrench, FileText, DollarSign, Package, Loader2, AlertCircle, Users } from 'lucide-react';
 import { api } from '../../Context/authContext';
 
 const MantenimientoDetailModal = ({ mantenimientoId, isOpen, onClose }) => {
@@ -21,7 +20,6 @@ const MantenimientoDetailModal = ({ mantenimientoId, isOpen, onClose }) => {
     'otros': 'Otros'
   };
 
-  // Fetch mantenimiento por ID cuando se abre el modal
   useEffect(() => {
     if (isOpen && mantenimientoId) {
       fetchMantenimientoById(mantenimientoId);
@@ -29,40 +27,41 @@ const MantenimientoDetailModal = ({ mantenimientoId, isOpen, onClose }) => {
   }, [isOpen, mantenimientoId]);
 
   const fetchMantenimientoById = async (id) => {
-  try {
-    setLoading(true);
-    setError(null);
+    try {
+      setLoading(true);
+      setError(null);
 
-    const response = await api.get(
-      `${config.api.API_URL}/mantenimientos/${id}`
-    );
+      // ✅ CAMBIO: Usar ruta relativa
+      const response = await api.get(`/mantenimientos/${id}`);
 
-    const data = response.data?.data || response.data;
+      const data = response.data?.data || response.data;
 
-    const mantenimientoMapeado = {
-      _id: data._id,
-      fecha_mantenimiento: data.fecha || data.fecha_mantenimiento,
-      mes: data.mes,
-      ano: data.ano,
-      tipo_de_mantenimiento: data.tipoMantenimiento || data.tipo_de_mantenimiento,
-      descripcion: data.descripcion,
-      ciculatioCard: data.camion || data.ciculatioCard,
-      detalles: data.detalles || []
-    };
+      const mantenimientoMapeado = {
+        _id: data._id,
+        fecha_mantenimiento: data.fecha || data.fecha_mantenimiento,
+        mes: data.mes,
+        ano: data.ano,
+        tipo_de_mantenimiento: data.tipoMantenimiento || data.tipo_de_mantenimiento,
+        descripcion: data.descripcion,
+        estado: data.estado,
+        ciculatioCard: data.camion || data.ciculatioCard,
+        proveedores: data.proveedores || [], // ← NUEVO
+        detalles: data.detalles || []
+      };
 
-    setMantenimiento(mantenimientoMapeado);
+      console.log('📦 Mantenimiento cargado:', mantenimientoMapeado);
+      setMantenimiento(mantenimientoMapeado);
 
-  } catch (err) {
-    console.error(err);
-    setError(
-      err.response?.data?.message ||
-      'Error al cargar el mantenimiento'
-    );
-  } finally {
-    setLoading(false);
-  }
-};
-
+    } catch (err) {
+      console.error('❌ Error al cargar mantenimiento:', err);
+      setError(
+        err.response?.data?.message ||
+        'Error al cargar el mantenimiento'
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const formatearFecha = (fecha) => {
     const date = new Date(fecha);
@@ -97,6 +96,16 @@ const MantenimientoDetailModal = ({ mantenimientoId, isOpen, onClose }) => {
     }
   };
 
+  const getEstadoConfig = (estado) => {
+    const configs = {
+      'pendiente': { color: 'bg-yellow-100 text-yellow-800 border-yellow-200', label: 'Pendiente', icon: '⏳' },
+      'en_proceso': { color: 'bg-blue-100 text-blue-800 border-blue-200', label: 'En Proceso', icon: '🔧' },
+      'completado': { color: 'bg-green-100 text-green-800 border-green-200', label: 'Completado', icon: '✅' },
+      'cancelado': { color: 'bg-red-100 text-red-800 border-red-200', label: 'Cancelado', icon: '❌' }
+    };
+    return configs[estado] || configs.pendiente;
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -110,7 +119,7 @@ const MantenimientoDetailModal = ({ mantenimientoId, isOpen, onClose }) => {
       {/* Modal */}
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
         <div 
-          className="bg-white rounded-3xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden pointer-events-auto transform transition-all"
+          className="bg-white rounded-3xl shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden pointer-events-auto transform transition-all"
           onClick={(e) => e.stopPropagation()}
         >
           {loading ? (
@@ -149,6 +158,10 @@ const MantenimientoDetailModal = ({ mantenimientoId, isOpen, onClose }) => {
                       </div>
                       <span className="text-white text-sm font-semibold px-3 py-1 bg-white bg-opacity-20 rounded-lg backdrop-blur-sm">
                         {tipoMantenimientoLabels[mantenimiento.tipo_de_mantenimiento]}
+                      </span>
+                      {/* ← NUEVO: Badge de estado */}
+                      <span className={`text-xs font-semibold px-3 py-1 rounded-lg backdrop-blur-sm border-2 ${getEstadoConfig(mantenimiento.estado).color}`}>
+                        {getEstadoConfig(mantenimiento.estado).icon} {getEstadoConfig(mantenimiento.estado).label}
                       </span>
                     </div>
                     <h2 className="text-3xl font-bold text-white mb-1">
@@ -209,6 +222,30 @@ const MantenimientoDetailModal = ({ mantenimientoId, isOpen, onClose }) => {
                   </div>
                 </div>
 
+                {/* ← NUEVO: Proveedores */}
+                {mantenimiento.proveedores && mantenimiento.proveedores.length > 0 && (
+                  <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl p-5 border border-purple-100 mb-6">
+                    <div className="flex items-start gap-3">
+                      <div className="bg-purple-100 p-2.5 rounded-xl">
+                        <Users className="text-purple-600" size={20} />
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-gray-500 text-xs font-semibold uppercase tracking-wide mb-2">Proveedores</p>
+                        <div className="flex flex-wrap gap-2">
+                          {mantenimiento.proveedores.map((proveedor, idx) => (
+                            <span 
+                              key={idx}
+                              className="px-3 py-1.5 bg-purple-100 text-purple-700 rounded-lg text-sm font-semibold border border-purple-200"
+                            >
+                              {proveedor.companyName || proveedor.nombre || 'Proveedor'}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 {/* Descripción */}
                 <div className="bg-gray-50 rounded-2xl p-6 mb-6 border border-gray-200">
                   <div className="flex items-start gap-3 mb-3">
@@ -232,34 +269,47 @@ const MantenimientoDetailModal = ({ mantenimientoId, isOpen, onClose }) => {
                   </div>
                   
                   <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
-                    <table className="w-full">
-                      <thead>
-                        <tr className="bg-gradient-to-r from-gray-50 to-gray-100 border-b border-gray-200">
-                          <th className="text-left py-4 px-6 text-gray-600 font-semibold text-sm">Concepto</th>
-                          <th className="text-center py-4 px-6 text-gray-600 font-semibold text-sm">Cantidad</th>
-                          <th className="text-right py-4 px-6 text-gray-600 font-semibold text-sm">Precio Unit.</th>
-                          <th className="text-right py-4 px-6 text-gray-600 font-semibold text-sm">Subtotal</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {mantenimiento.detalles && mantenimiento.detalles.length > 0 ? (
-                          mantenimiento.detalles.map((detalle, index) => (
-                            <tr key={index} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
-                              <td className="py-4 px-6 text-gray-800 font-medium">{detalle.concepto}</td>
-                              <td className="py-4 px-6 text-center text-gray-700">{detalle.cantidad}</td>
-                              <td className="py-4 px-6 text-right text-gray-700">{formatearMoneda(detalle.precioUnitario)}</td>
-                              <td className="py-4 px-6 text-right text-gray-900 font-bold">{formatearMoneda(detalle.subTotal || detalle.subtotal)}</td>
-                            </tr>
-                          ))
-                        ) : (
-                          <tr>
-                            <td colSpan="4" className="py-8 text-center text-gray-500">
-                              No hay detalles registrados
-                            </td>
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead>
+                          <tr className="bg-gradient-to-r from-gray-50 to-gray-100 border-b border-gray-200">
+                            <th className="text-left py-4 px-6 text-gray-600 font-semibold text-sm">Concepto</th>
+                            <th className="text-left py-4 px-4 text-gray-600 font-semibold text-sm">Proveedor</th>
+                            <th className="text-center py-4 px-4 text-gray-600 font-semibold text-sm">Cant.</th>
+                            <th className="text-right py-4 px-4 text-gray-600 font-semibold text-sm">P. Unit.</th>
+                            <th className="text-right py-4 px-6 text-gray-600 font-semibold text-sm">Subtotal</th>
                           </tr>
-                        )}
-                      </tbody>
-                    </table>
+                        </thead>
+                        <tbody>
+                          {mantenimiento.detalles && mantenimiento.detalles.length > 0 ? (
+                            mantenimiento.detalles.map((detalle, index) => (
+                              <tr key={index} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                                <td className="py-4 px-6 text-gray-800 font-medium">{detalle.concepto}</td>
+                                {/* ← NUEVO: Columna de proveedor */}
+                                <td className="py-4 px-4">
+                                  {detalle.proveedor ? (
+                                    <span className="inline-block px-2 py-1 bg-purple-100 text-purple-700 rounded text-xs font-semibold">
+                                      {detalle.proveedor.companyName || detalle.proveedor.nombre || 'Proveedor'}
+                                    </span>
+                                  ) : (
+                                    <span className="text-gray-400 text-xs italic">Sin proveedor</span>
+                                  )}
+                                </td>
+                                <td className="py-4 px-4 text-center text-gray-700">{detalle.cantidad}</td>
+                                <td className="py-4 px-4 text-right text-gray-700">{formatearMoneda(detalle.precioUnitario)}</td>
+                                <td className="py-4 px-6 text-right text-gray-900 font-bold">{formatearMoneda(detalle.subTotal || detalle.subtotal)}</td>
+                              </tr>
+                            ))
+                          ) : (
+                            <tr>
+                              <td colSpan="5" className="py-8 text-center text-gray-500">
+                                No hay detalles registrados
+                              </td>
+                            </tr>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
                 </div>
 
