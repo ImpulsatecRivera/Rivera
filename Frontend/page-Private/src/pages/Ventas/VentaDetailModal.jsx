@@ -58,12 +58,9 @@ const VentaDetailModal = ({ ventaId, isOpen, onClose }) => {
   const formatearFecha = (fecha) => {
     if (!fecha) return "N/A";
     return new Date(fecha).toLocaleDateString("es-ES", {
-      weekday: "long",
       year: "numeric",
       month: "long",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit"
+      day: "numeric"
     });
   };
 
