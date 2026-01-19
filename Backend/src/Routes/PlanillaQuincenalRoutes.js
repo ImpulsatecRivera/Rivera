@@ -210,4 +210,27 @@ router.patch('/:id/estado',validateAuthToken(["admin"]), PlanillaQuincenalContro
  */
 router.delete('/:id',validateAuthToken(["admin"]), PlanillaQuincenalController.eliminar);
 
+/**
+ * GET /api/planillas/quincenal/ultima
+ * Obtener la última planilla quincenal creada
+ * 
+ * Retorna: La planilla quincenal más reciente o información de la primera planilla (2026-01-Q1)
+ * si no hay planillas registradas
+ */
+router.get('/ultima', validateAuthToken(["admin"]), PlanillaQuincenalController.obtenerUltima);
+
+/**
+ * POST /api/planillas/quincenal/:id/copiar-datos-anteriores
+ * Copiar empleados y estructura de la planilla anterior
+ * 
+ * Parámetros:
+ * - id: ObjectId de la planilla nueva donde copiar los datos
+ * 
+ * Funcionalidad:
+ * - Busca la última planilla anterior a la actual
+ * - Copia los empleados manteniendo su salario y estructura
+ * - Reinicia viáticos y otros descuentos
+ */
+router.post('/:id/copiar-datos-anteriores', validateAuthToken(["admin"]), PlanillaQuincenalController.copiarDatosAnteriores);
+
 export default router;

@@ -3,12 +3,13 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { 
   Save, ArrowLeft, Calendar, Users, DollarSign, 
   CheckCircle, Lock, AlertCircle, Download, Edit2,
-  Plus, Trash2, X, Check, Clock, FileText
+  Plus, Trash2, X, Check, Clock, FileText, GripVertical, MousePointer
 } from 'lucide-react';
 import { config } from '../../config';
 import Swal from 'sweetalert2';
 import { useAuth } from '../../Context/authContext';
 import { api } from '../../Context/authContext';
+import { formatearFechaEnSalvador } from '../../utils/timezoneUtils';
 
 export default function PlanillaSemanal() {
   const { id } = useParams();
@@ -26,6 +27,11 @@ export default function PlanillaSemanal() {
   const [editandoCelda, setEditandoCelda] = useState(null); // { empleadoId, dia, campo }
   const [valorTemp, setValorTemp] = useState('');
   const [guardando, setGuardando] = useState(false);
+  const [empleadosDisponibles, setEmpleadosDisponibles] = useState([]);
+  const [busquedaEmpleados, setBusquedaEmpleados] = useState('');
+  const [empleadoArrastrando, setEmpleadoArrastrando] = useState(null);
+  const [isDraggingOver, setIsDraggingOver] = useState(false);
+  const [datosAnterioresCargados, setDatosAnterioresCargados] = useState(false);
   const inputRef = useRef(null);
 
   const diasSemana = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado'];
@@ -41,6 +47,12 @@ export default function PlanillaSemanal() {
   }, [id]);
 
   useEffect(() => {
+    if (planilla) {
+      cargarEmpleadosDisponibles();
+    }
+  }, [planilla]);
+
+  useEffect(() => {
     if (editandoCelda && inputRef.current) {
       inputRef.current.focus();
       inputRef.current.select();
@@ -49,10 +61,9 @@ export default function PlanillaSemanal() {
 
   const cargarPlanilla = async () => {
     try {
-     const response = await api.get(`${config.api.API_URL}/planillas/semanal/${id}`);
-const data = response.data;
+      const response = await api.get(`${config.api.API_URL}/planillas/semanal/${id}`);
+      const data = response.data;
 
-      
       if (data.success) {
         setPlanilla(data.data);
       } else {
@@ -71,6 +82,57 @@ const data = response.data;
     }
   };
 
+  const cargarEmpleadosDisponibles = async () => {
+    try {
+      const resEmpleados = await api.get(`${config.api.API_URL}/empleados`);
+      const resMotoristas = await api.get(`${config.api.API_URL}/motoristas`);
+
+      const dataEmpleados = resEmpleados.data;
+      const dataMotoristas = resMotoristas.data;
+
+      let empleados = [];
+      let motoristas = [];
+
+      if (Array.isArray(dataEmpleados)) empleados = dataEmpleados;
+      else if (dataEmpleados?.empleados) empleados = dataEmpleados.empleados;
+      else if (dataEmpleados?.data) empleados = Array.isArray(dataEmpleados.data)
+        ? dataEmpleados.data
+        : Object.values(dataEmpleados.data).find(v => Array.isArray(v)) || [];
+
+      if (Array.isArray(dataMotoristas)) motoristas = dataMotoristas;
+      else if (dataMotoristas?.motoristas) motoristas = dataMotoristas.motoristas;
+      else if (dataMotoristas?.data) motoristas = dataMotoristas.data;
+
+      // Combinar y filtrar empleados que no estén ya en la planilla
+      const todosPosibles = [
+        ...empleados.map(e => ({
+          _id: e._id,
+          nombre: `${e.name || e.nombre || ''} ${e.lastName || e.apellido || ''}`.trim(),
+          tipo: 'empleado',
+          planillaTipo: e.planillaTipo || 'N/A',
+          salario: e.salary || e.salario || 0
+        })),
+        ...motoristas.map(m => ({
+          _id: m._id,
+          nombre: `${m.name || m.nombre || ''} ${m.lastName || m.apellido || ''}`.trim(),
+          tipo: 'motorista',
+          planillaTipo: m.planillaTipo || 'N/A',
+          salario: m.salary || m.salario || 0
+        }))
+      ];
+
+      // Obtener IDs de empleados ya en la planilla
+      const empleadosEnPlanilla = planilla?.empleados?.map(e => e.empleadoId) || [];
+
+      // Filtrar para mostrar solo los que no están
+      const disponibles = todosPosibles.filter(e => !empleadosEnPlanilla.includes(e._id));
+
+      setEmpleadosDisponibles(disponibles);
+    } catch (error) {
+      console.error('Error cargando empleados disponibles:', error);
+    }
+  };
+
   const formatearMoneda = (cantidad) => {
     return new Intl.NumberFormat('es-US', {
       style: 'currency',
@@ -80,13 +142,148 @@ const data = response.data;
   };
 
   const formatearFecha = (fecha) => {
-    if (!fecha) return '';
-    const date = new Date(fecha);
-    return date.toLocaleDateString('es-ES', { 
-      weekday: 'short', 
-      day: '2-digit', 
-      month: '2-digit' 
+    return formatearFechaEnSalvador(fecha, 'es-ES');
+  };
+
+  const handleAgregarEmpleado = async (empleado) => {
+    try {
+      const response = await api.post(
+        `${config.api.API_URL}/planillas/semanal/${planilla._id}/empleado`,
+        { empleadoId: empleado._id }
+      );
+
+      const data = response.data;
+
+      if (data.success) {
+        // Actualizar planilla sin recargar todo
+        setPlanilla(data.data);
+        
+        // Actualizar empleados disponibles
+        const empleadosEnPlanilla = data.data?.empleados?.map(e => e.empleadoId) || [];
+        setEmpleadosDisponibles(prev => prev.filter(e => !empleadosEnPlanilla.includes(e._id)));
+        
+        Swal.fire({
+          icon: 'success',
+          title: '¡Éxito!',
+          text: `${empleado.nombre} agregado a la planilla`,
+          timer: 2000,
+          showConfirmButton: false
+        });
+      } else {
+        throw new Error(data.message);
+      }
+    } catch (error) {
+      console.error('Error al agregar empleado:', error);
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: error.response?.data?.message || error.message || 'No se pudo agregar el empleado'
+      });
+    }
+  };
+
+  const handleCargarDatosAnteriores = async () => {
+    try {
+      Swal.fire({
+        title: 'Cargando datos...',
+        text: 'Por favor espera',
+        allowOutsideClick: false,
+        didOpen: () => {
+          Swal.showLoading();
+        }
+      });
+
+      const response = await api.post(
+        `${config.api.API_URL}/planillas/semanal/${planilla._id}/copiar-datos-anteriores`
+      );
+
+      if (response.data.success) {
+        setPlanilla(response.data.data);
+        setDatosAnterioresCargados(true);
+        
+        Swal.fire({
+          icon: 'success',
+          title: 'Datos Cargados',
+          text: 'Los empleados de la planilla anterior se han cargado exitosamente',
+          timer: 2000,
+          showConfirmButton: false
+        });
+      }
+    } catch (error) {
+      console.error('Error cargando datos anteriores:', error);
+      Swal.fire({
+        icon: 'error',
+        title: 'Error al cargar datos',
+        text: error.response?.data?.message || 'No se pudo cargar los datos de la planilla anterior'
+      });
+    }
+  };
+
+  const handleEliminarEmpleado = async (empleadoId, nombreCompleto) => {
+    const result = await Swal.fire({
+      title: '¿Eliminar empleado?',
+      text: `Se eliminará a ${nombreCompleto} de esta planilla`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#ef4444',
+      cancelButtonColor: '#6b7280',
+      confirmButtonText: 'Sí, eliminar',
+      cancelButtonText: 'Cancelar'
     });
+
+    if (!result.isConfirmed) return;
+
+    try {
+      const response = await api.delete(
+        `${config.api.API_URL}/planillas/semanal/${planilla._id}/empleado/${empleadoId}`
+      );
+
+      if (response.data.success) {
+        setPlanilla(response.data.data);
+        
+        Swal.fire({
+          icon: 'success',
+          title: '¡Eliminado!',
+          text: `${nombreCompleto} ha sido removido`,
+          timer: 1500,
+          showConfirmButton: false
+        });
+      }
+    } catch (error) {
+      console.error('Error al eliminar empleado:', error);
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: error.response?.data?.message || error.message
+      });
+    }
+  };
+
+  const handleDragStart = (e, empleado) => {
+    if (planilla.estado === 'pagada') return;
+    setEmpleadoArrastrando(empleado);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleDragOver = (e) => {
+    if (planilla.estado === 'pagada') return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    setIsDraggingOver(true);
+  };
+
+  const handleDragLeave = () => {
+    setIsDraggingOver(false);
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    setIsDraggingOver(false);
+    
+    if (planilla.estado === 'pagada' || !empleadoArrastrando) return;
+    
+    handleAgregarEmpleado(empleadoArrastrando);
+    setEmpleadoArrastrando(null);
   };
 
   const handleClickCelda = (empleadoId, dia, campo, valorActual) => {
@@ -397,10 +594,13 @@ const data = response.data;
           throw new Error(data.message);
         }
       } catch (error) {
+        console.error('Error cambiando estado:', error);
+        const errorMessage = error.response?.data?.message || error.message || 'No se pudo cambiar el estado';
         Swal.fire({
           icon: 'error',
-          title: 'Error',
-          text: error.message
+          title: 'Error al cambiar estado',
+          text: errorMessage,
+          confirmButtonColor: '#5F8EAD'
         });
       }
     }
@@ -467,7 +667,7 @@ const data = response.data;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-indigo-50 p-6">
-      <div className="max-w-[1800px] mx-auto space-y-6">
+      <div className="max-w-[2000px] mx-auto space-y-6">
         
         {/* HEADER */}
         <div className="bg-white rounded-2xl p-6 border-2 border-gray-100 shadow-sm">
@@ -489,7 +689,18 @@ const data = response.data;
               </div>
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 flex-wrap justify-end">
+              {/* Botón cargar datos anteriores */}
+              {planilla.estado === 'pendiente' && !datosAnterioresCargados && planilla.empleados.length === 0 && (
+                <button
+                  onClick={handleCargarDatosAnteriores}
+                  className="flex items-center gap-2 px-5 py-2.5 bg-cyan-600 text-white rounded-xl hover:bg-cyan-700 font-semibold transition-all shadow-lg hover:shadow-xl"
+                >
+                  <Download size={20} />
+                  <span>Cargar Datos Anteriores</span>
+                </button>
+              )}
+
               {/* Estado */}
               <div className={`flex items-center gap-2 px-4 py-2 rounded-xl border-2 ${estadoConfig.bg} ${estadoConfig.text} ${estadoConfig.border}`}>
                 <EstadoIcon size={20} />
@@ -587,28 +798,113 @@ const data = response.data;
           </div>
         </div>
 
-        {/* NOTA INFORMATIVA */}
-        {estaEditable && (
-          <div className="bg-blue-50 border-2 border-blue-200 rounded-xl p-4">
-            <div className="flex items-start gap-3">
-              <AlertCircle className="text-blue-600 flex-shrink-0 mt-0.5" size={20} />
-              <div className="text-sm text-blue-800">
-                <p className="font-semibold mb-1">💡 Instrucciones de Edición:</p>
-                <ul className="list-disc list-inside space-y-1">
-                  <li><strong>Click en celdas azules</strong> para editar viáticos diarios</li>
-                  <li><strong>Click en celda de Anticipos</strong> para editar el monto total</li>
-                  <li><strong>Click derecho en día</strong> para marcar/desmarcar falta injustificada</li>
-                  <li><strong>Enter</strong> para guardar, <strong>Escape</strong> para cancelar</li>
-                </ul>
+        {/* LAYOUT CON SIDEBAR */}
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+          
+          {/* SIDEBAR - EMPLEADOS DISPONIBLES */}
+          <div className="lg:col-span-1">
+            <div className="bg-white rounded-2xl p-6 border-2 border-gray-100 shadow-sm sticky top-6">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="p-3 bg-[#5D9646] bg-opacity-20 rounded-xl">
+                  <Users className="text-[#5D9646]" size={24} />
+                </div>
+                <h2 className="text-lg font-bold text-[#34353A]">Empleados</h2>
+              </div>
+
+              {/* Búsqueda */}
+              <div className="relative mb-4">
+                <input
+                  type="text"
+                  placeholder="Buscar..."
+                  value={busquedaEmpleados}
+                  onChange={(e) => setBusquedaEmpleados(e.target.value)}
+                  className="w-full px-3 py-2 border-2 border-gray-200 rounded-lg focus:border-[#5D9646] focus:outline-none transition-colors text-sm"
+                />
+              </div>
+
+              {/* Lista de empleados disponibles */}
+              <div className="space-y-2 max-h-[600px] overflow-y-auto pr-2">
+                {empleadosDisponibles
+                  .filter(e => e.nombre.toLowerCase().includes(busquedaEmpleados.toLowerCase()))
+                  .map((empleado) => (
+                    <div
+                      key={empleado._id}
+                      draggable
+                      onDragStart={(e) => handleDragStart(e, empleado)}
+                      onClick={() => handleAgregarEmpleado(empleado)}
+                      className="bg-white border-2 border-[#5D9646] border-opacity-40 rounded-lg p-3 
+                        cursor-pointer hover:border-[#5D9646] hover:shadow-lg hover:border-opacity-100
+                        transition-all duration-200 group active:scale-95"
+                    >
+                      <div className="flex items-start gap-2">
+                        <GripVertical size={16} className="text-gray-400 mt-0.5 flex-shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <p className="font-semibold text-sm text-[#34353A] truncate">
+                            {empleado.nombre}
+                          </p>
+                          <p className="text-xs text-gray-600 mt-0.5">
+                            {empleado.tipo === 'motorista' ? '🚗 Motorista' : '👤 Empleado'}
+                          </p>
+                        </div>
+                        <MousePointer size={14} className="text-[#5D9646] opacity-0 
+                          group-hover:opacity-100 transition-opacity flex-shrink-0" />
+                      </div>
+                    </div>
+                  ))}
+
+                {empleadosDisponibles.filter(e => e.nombre.toLowerCase().includes(busquedaEmpleados.toLowerCase())).length === 0 && (
+                  <div className="text-center py-8">
+                    <Users className="mx-auto text-gray-300 mb-2" size={32} />
+                    <p className="text-sm text-gray-500 font-medium">
+                      {empleadosDisponibles.length === 0 ? 'Todos están agregados' : 'No encontrado'}
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
           </div>
-        )}
 
-        {/* TABLA TIPO EXCEL */}
-        <div className="bg-white rounded-xl border-2 border-gray-300 shadow-lg overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full border-collapse" style={{ fontSize: '11px' }}>
+          {/* CONTENIDO PRINCIPAL */}
+          <div className="lg:col-span-3 space-y-6">
+            {/* NOTA INFORMATIVA */}
+            {estaEditable && (
+              <div className="bg-blue-50 border-2 border-blue-200 rounded-xl p-4">
+                <div className="flex items-start gap-3">
+                  <AlertCircle className="text-blue-600 flex-shrink-0 mt-0.5" size={20} />
+                  <div className="text-sm text-blue-800">
+                    <p className="font-semibold mb-1">💡 Instrucciones de Edición:</p>
+                    <ul className="list-disc list-inside space-y-1">
+                      <li><strong>Click en celdas azules</strong> para editar viáticos diarios</li>
+                      <li><strong>Click en celda de Anticipos</strong> para editar el monto total</li>
+                      <li><strong>Click derecho en día</strong> para marcar/desmarcar falta injustificada</li>
+                      <li><strong>Enter</strong> para guardar, <strong>Escape</strong> para cancelar</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* TABLA TIPO EXCEL */}
+            <div 
+              className={`bg-white rounded-xl border-2 shadow-lg overflow-hidden transition-all ${
+                isDraggingOver 
+                  ? 'border-[#5D9646] shadow-2xl ring-4 ring-[#5D9646] ring-opacity-30' 
+                  : 'border-gray-300'
+              }`}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+            >
+              {isDraggingOver && (
+                <div className="bg-[#5D9646] bg-opacity-10 border-b-2 border-[#5D9646] p-3">
+                  <div className="flex items-center justify-center gap-2 text-[#5D9646] font-semibold">
+                    <Plus size={20} />
+                    <span>Suelta aquí para agregar a la planilla</span>
+                  </div>
+                </div>
+              )}
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse" style={{ fontSize: '11px' }}>
               <thead>
                 {/* FILA 1: Encabezados principales */}
                 <tr className="bg-gray-200 border-b-2 border-gray-400">
@@ -642,6 +938,7 @@ const data = response.data;
                   <th rowSpan={2} className="px-2 py-2 text-center text-[10px] font-bold text-gray-800 uppercase min-w-[80px]">
                     Total a Pagar
                   </th>
+                  {estaEditable && <th rowSpan={2} className="px-2 py-2 text-center text-[10px] font-bold text-red-800 uppercase min-w-[60px]">Eliminar</th>}
                 </tr>
 
                 {/* FILA 2: Sub-encabezados (Base/Viático) */}
@@ -811,11 +1108,24 @@ const data = response.data;
                     </td>
 
                     {/* TOTAL A PAGAR */}
-                    <td className="px-1 py-1 text-center bg-green-50">
+                    <td className="px-1 py-1 text-center bg-green-50 border-r border-gray-400">
                       <span className="font-bold text-green-700 text-[11px]">
                         ${(empleado.totalAPagar || 0).toFixed(2)}
                       </span>
                     </td>
+
+                    {/* BOTÓN ELIMINAR */}
+                    {estaEditable && (
+                      <td className="px-1 py-1 text-center bg-red-50">
+                        <button
+                          onClick={() => handleEliminarEmpleado(empleado.empleadoId, empleado.nombreCompleto)}
+                          className="p-1.5 bg-red-500 text-white rounded hover:bg-red-600 transition-colors"
+                          title="Eliminar empleado"
+                        >
+                          <Trash2 size={12} />
+                        </button>
+                      </td>
+                    )}
                   </tr>
                 ))}
 
@@ -838,26 +1148,28 @@ const data = response.data;
               </tbody>
             </table>
           </div>
-        </div>
+            </div>
 
-        {/* LEYENDA */}
-        <div className="bg-white rounded-xl p-3 border border-gray-200">
-          <div className="flex items-center justify-center gap-6 text-xs">
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded bg-gray-50 border border-gray-300"></div>
-              <span className="text-gray-600">No editable</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded bg-blue-50 border border-blue-300"></div>
-              <span className="text-gray-600">Viáticos (Click para editar)</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded bg-amber-50 border border-amber-300"></div>
-              <span className="text-gray-600">Anticipos (Click para editar)</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded bg-red-50 border border-red-300"></div>
-              <span className="text-gray-600">Falta (Click derecho)</span>
+            {/* LEYENDA */}
+            <div className="bg-white rounded-xl p-3 border border-gray-200">
+              <div className="flex items-center justify-center gap-6 text-xs flex-wrap">
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded bg-gray-50 border border-gray-300"></div>
+                  <span className="text-gray-600">No editable</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded bg-blue-50 border border-blue-300"></div>
+                  <span className="text-gray-600">Viáticos (Click para editar)</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded bg-amber-50 border border-amber-300"></div>
+                  <span className="text-gray-600">Anticipos (Click para editar)</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded bg-red-50 border border-red-300"></div>
+                  <span className="text-gray-600">Falta (Click derecho)</span>
+                </div>
+              </div>
             </div>
           </div>
         </div>

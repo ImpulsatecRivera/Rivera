@@ -8,6 +8,7 @@ import {
 import { config } from '../../config';
 import Swal from 'sweetalert2';
 import { api } from '../../Context/authContext';
+import { formatearFechaEnSalvador } from '../../utils/timezoneUtils';
 
 
 export default function VerPlanillaQuincenal() {
@@ -164,11 +165,7 @@ const blob = new Blob([response.data], { type: 'application/pdf' });
   };
 
   const formatearFecha = (fecha) => {
-    return new Date(fecha).toLocaleDateString('es-ES', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
+    return formatearFechaEnSalvador(fecha, 'es-ES');
   };
 
   const getEstadoBadge = (estado) => {
