@@ -44,7 +44,9 @@ const convertirImagenABase64 = (rutaImagen) => {
         return null;
     }
 };
-
+// Detectar entorno de ejecución
+const IS_CLOUD_RUN = process.env.K_SERVICE !== undefined;
+const IS_PRODUCTION = process.env.NODE_ENV === 'production';
 // OPCIÓN 1: Desde la raíz del proyecto (RECOMENDADO)
 // Asumiendo que ejecutas el servidor desde C:\Users\djpoc\Desktop\Rivera\Backend
 const RUTA_LOGO = path.join(process.cwd(), 'src', 'imagenes', 'imagen_15.png');

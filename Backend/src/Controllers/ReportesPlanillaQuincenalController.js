@@ -43,7 +43,9 @@ const convertirImagenABase64 = (rutaImagen) => {
 
 // Ruta al logo
 const RUTA_LOGO = path.join(process.cwd(), 'src', 'imagenes', 'imagen_15.png');
-
+// Detectar entorno de ejecución
+const IS_CLOUD_RUN = process.env.K_SERVICE !== undefined;
+const IS_PRODUCTION = process.env.NODE_ENV === 'production';
 // Puppeteer config para Cloud Run
 const PUPPETEER_CONFIG = () => {
     if (IS_PRODUCTION || IS_CLOUD_RUN) {
