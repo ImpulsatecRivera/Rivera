@@ -96,10 +96,29 @@ const formatearFecha = (fecha) => {
 const formatearRangoFechas = (inicio, fin) => {
     const meses = ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO', 
                    'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
+
     const fechaInicio = new Date(inicio);
     const fechaFin = new Date(fin);
-    
-    return `DEL ${fechaInicio.getDate()} AL ${fechaFin.getDate()} DE ${meses[fechaInicio.getMonth()]} ${fechaInicio.getFullYear()}`;
+
+    const diaInicio = fechaInicio.getDate();
+    const diaFin = fechaFin.getDate();
+    const mesInicio = meses[fechaInicio.getMonth()];
+    const mesFin = meses[fechaFin.getMonth()];
+    const anioInicio = fechaInicio.getFullYear();
+    const anioFin = fechaFin.getFullYear();
+
+    // Mismo mes y mismo año: formato compacto
+    if (fechaInicio.getMonth() === fechaFin.getMonth() && anioInicio === anioFin) {
+        return `DEL ${diaInicio} AL ${diaFin} DE ${mesInicio} ${anioInicio}`;
+    }
+
+    // Mismo año pero meses distintos
+    if (anioInicio === anioFin) {
+        return `DEL ${diaInicio} DE ${mesInicio} AL ${diaFin} DE ${mesFin} ${anioInicio}`;
+    }
+
+    // Diferente año
+    return `DEL ${diaInicio} DE ${mesInicio} ${anioInicio} AL ${diaFin} DE ${mesFin} ${anioFin}`;
 };
 
 ReportesPlanillaSemanalController.generarPDFSemanalDetallado = async (req, res) => {
@@ -241,6 +260,219 @@ ReportesPlanillaSemanalController.generarPDFMensual = async (req, res) => {
         res.status(500).json({
             success: false,
             message: 'Error al generar el reporte mensual',
+            error: error.message
+        });
+    }
+};
+
+// Reporte mensual solo de viáticos (viajes extra)
+ReportesPlanillaSemanalController.generarPDFMensualViaticos = async (req, res) => {
+    let browser;
+    try {
+        const { mes, ano } = req.params;
+
+        const mesNum = parseInt(mes);
+        const anoNum = parseInt(ano);
+
+        if (mesNum < 1 || mesNum > 12) {
+            return res.status(400).json({
+                success: false,
+                message: 'Mes inválido (debe ser entre 1 y 12)'
+            });
+        }
+
+        const planillas = await PlanillaSemanal.find({
+            fechaInicio: {
+                $gte: new Date(anoNum, mesNum - 1, 1),
+                $lt: new Date(anoNum, mesNum, 1)
+            }
+        }).sort({ fechaInicio: 1 });
+
+        if (!planillas || planillas.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'No se encontraron planillas para este mes'
+            });
+        }
+
+        const logoBase64 = convertirImagenABase64(RUTA_LOGO);
+        const html = generarHTMLMensualViaticos(planillas, mesNum, anoNum, logoBase64);
+
+        browser = await puppeteer.launch(PUPPETEER_CONFIG());
+
+        const page = await browser.newPage();
+        await page.setContent(html, { waitUntil: 'networkidle0' });
+
+        const pdfBuffer = await page.pdf({
+            format: 'Legal',
+            landscape: true,
+            printBackground: true,
+            margin: {
+                top: '10mm',
+                right: '10mm',
+                bottom: '10mm',
+                left: '10mm'
+            }
+        });
+
+        await browser.close();
+
+        const nombreMes = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
+                          'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'][mesNum - 1];
+
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename=viaticos-extra-${nombreMes}-${anoNum}.pdf`);
+        res.send(pdfBuffer);
+
+    } catch (error) {
+        if (browser) await browser.close();
+        console.error('Error al generar PDF mensual de viáticos:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error al generar el reporte mensual de viáticos',
+            error: error.message
+        });
+    }
+};
+
+// Reporte consolidado de múltiples meses solo viáticos
+ReportesPlanillaSemanalController.generarPDFMultiMesViaticos = async (req, res) => {
+    let browser;
+    try {
+        const { meses, ano } = req.body;
+
+        if (!Array.isArray(meses) || meses.length === 0 || meses.length > 9) {
+            return res.status(400).json({
+                success: false,
+                message: 'Debe proporcionar entre 1 y 9 meses'
+            });
+        }
+
+        const mesesValidos = meses.every(m => m >= 1 && m <= 12);
+        if (!mesesValidos) {
+            return res.status(400).json({
+                success: false,
+                message: 'Todos los meses deben estar entre 1 y 12'
+            });
+        }
+
+        const anoNum = parseInt(ano);
+        const planillasPorMes = [];
+
+        for (const mes of meses) {
+            const planillas = await PlanillaSemanal.find({
+                fechaInicio: {
+                    $gte: new Date(anoNum, mes - 1, 1),
+                    $lt: new Date(anoNum, mes, 1)
+                }
+            }).sort({ fechaInicio: 1 });
+
+            planillasPorMes.push({ mes, planillas });
+        }
+
+        const hayPlanillas = planillasPorMes.some(p => p.planillas && p.planillas.length > 0);
+        if (!hayPlanillas) {
+            return res.status(404).json({
+                success: false,
+                message: 'No se encontraron planillas en los meses seleccionados'
+            });
+        }
+
+        const logoBase64 = convertirImagenABase64(RUTA_LOGO);
+        const html = generarHTMLMultiMesViaticos(planillasPorMes, anoNum, logoBase64);
+
+        browser = await puppeteer.launch(PUPPETEER_CONFIG());
+        const page = await browser.newPage();
+        await page.setContent(html, { waitUntil: 'networkidle0' });
+
+        const pdfBuffer = await page.pdf({
+            format: 'Legal',
+            landscape: true,
+            printBackground: true,
+            margin: {
+                top: '10mm',
+                right: '10mm',
+                bottom: '10mm',
+                left: '10mm'
+            }
+        });
+
+        await browser.close();
+
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename=viaticos-extra-multimes-${anoNum}.pdf`);
+        res.send(pdfBuffer);
+
+    } catch (error) {
+        if (browser) await browser.close();
+        console.error('Error al generar PDF multi-mes de viáticos:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error al generar el reporte multi-mes de viáticos',
+            error: error.message
+        });
+    }
+};
+
+// Reporte anual solo viáticos
+ReportesPlanillaSemanalController.generarPDFAnualViaticos = async (req, res) => {
+    let browser;
+    try {
+        const { ano } = req.params;
+        const anoNum = parseInt(ano);
+
+        const planillasPorMes = [];
+
+        for (let mes = 1; mes <= 12; mes++) {
+            const planillas = await PlanillaSemanal.find({
+                fechaInicio: {
+                    $gte: new Date(anoNum, mes - 1, 1),
+                    $lt: new Date(anoNum, mes, 1)
+                }
+            }).sort({ fechaInicio: 1 });
+
+            planillasPorMes.push({ mes, planillas });
+        }
+
+        const hayPlanillas = planillasPorMes.some(p => p.planillas && p.planillas.length > 0);
+        if (!hayPlanillas) {
+            return res.status(404).json({
+                success: false,
+                message: 'No se encontraron planillas para este año'
+            });
+        }
+
+        const logoBase64 = convertirImagenABase64(RUTA_LOGO);
+        const html = generarHTMLMultiMesViaticos(planillasPorMes, anoNum, logoBase64, true);
+
+        browser = await puppeteer.launch(PUPPETEER_CONFIG());
+        const page = await browser.newPage();
+        await page.setContent(html, { waitUntil: 'networkidle0' });
+
+        const pdfBuffer = await page.pdf({
+            format: 'Legal',
+            landscape: true,
+            printBackground: true,
+            margin: {
+                top: '10mm',
+                right: '10mm',
+                bottom: '10mm',
+                left: '10mm'
+            }
+        });
+
+        await browser.close();
+
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename=viaticos-extra-anual-${anoNum}.pdf`);
+        res.send(pdfBuffer);
+
+    } catch (error) {
+        if (browser) await browser.close();
+        console.error('Error al generar PDF anual de viáticos:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error al generar el reporte anual de viáticos',
             error: error.message
         });
     }
@@ -789,6 +1021,139 @@ function generarHTMLMensual(planillas, mes, ano, logoBase64) {
     `;
 }
 
+// Variante mensual que consolida solo viáticos por semana
+function generarHTMLMensualViaticos(planillas, mes, ano, logoBase64) {
+    const meses = ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO',
+                   'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
+    const titulo = `VIÁTICOS DE EXTRA ${meses[mes - 1]} ${ano}`;
+
+    const empleadosMap = new Map();
+
+    planillas.forEach(planilla => {
+        planilla.empleados.forEach(emp => {
+            const key = emp.empleadoId.toString();
+            if (!empleadosMap.has(key)) {
+                empleadosMap.set(key, {
+                    nombreCompleto: emp.nombreCompleto,
+                    semanas: []
+                });
+            }
+
+            empleadosMap.get(key).semanas.push({
+                rango: formatearRangoFechas(planilla.fechaInicio, planilla.fechaFin),
+                total: emp.totalViaticos || 0
+            });
+        });
+    });
+
+    let filasEmpleados = '';
+    let numeroEmpleado = 1;
+    const maxSemanas = planillas.length;
+
+    empleadosMap.forEach((data) => {
+        let totalEmpleado = 0;
+        let columnasSemanales = '';
+
+        for (let i = 0; i < maxSemanas; i++) {
+            if (i < data.semanas.length) {
+                const monto = data.semanas[i].total;
+                totalEmpleado += monto;
+                columnasSemanales += `<td>$ ${monto.toFixed(2)}</td>`;
+            } else {
+                columnasSemanales += `<td>$ -</td>`;
+            }
+        }
+
+        filasEmpleados += `
+            <tr>
+                <td>${numeroEmpleado}</td>
+                <td style="text-align: left; padding-left: 10px;">${data.nombreCompleto}</td>
+                ${columnasSemanales}
+                <td style="font-weight: bold; background-color: #e8f4e8;">$ ${totalEmpleado.toFixed(2)}</td>
+            </tr>
+        `;
+
+        numeroEmpleado++;
+    });
+
+    let totalesPorSemana = '';
+    let totalGeneral = 0;
+
+    for (let i = 0; i < maxSemanas; i++) {
+        let totalSemana = 0;
+        empleadosMap.forEach((data) => {
+            if (i < data.semanas.length) {
+                totalSemana += data.semanas[i].total;
+            }
+        });
+
+        totalGeneral += totalSemana;
+        totalesPorSemana += `<td style="font-weight: bold;">$ ${totalSemana.toFixed(2)}</td>`;
+    }
+
+    let headersSemanales = '';
+    planillas.forEach((planilla) => {
+        headersSemanales += `<th style="background-color: #5F8EAD; color: white;">${formatearRangoFechas(planilla.fechaInicio, planilla.fechaFin)}</th>`;
+    });
+
+    const filaTotales = `
+        <tr style="font-weight: bold; background-color: #5D9646; color: white;">
+            <td colspan="2">TOTAL</td>
+            ${totalesPorSemana}
+            <td>$ ${totalGeneral.toFixed(2)}</td>
+        </tr>
+    `;
+
+    return `
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <style>
+                * { margin: 0; padding: 0; box-sizing: border-box; }
+                body { font-family: Arial, sans-serif; font-size: 10px; padding: 10px; color: #34353A; }
+                .header { text-align: center; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 3px solid #5F8EAD; }
+                .header .logo-container { margin-bottom: 8px; }
+                .header .logo-container img { max-width: 180px; height: auto; }
+                h1 { text-align: center; font-size: 12px; margin-bottom: 5px; font-weight: bold; color: #34353A; }
+                table { width: 100%; border-collapse: collapse; margin-bottom: 15px; }
+                th, td { border: 1px solid #5F8EAD; padding: 5px 3px; text-align: center; font-size: 9px; }
+                th { background-color: #34353A; color: white; font-weight: bold; font-size: 8px; }
+                .footer { margin-top: 20px; font-size: 8px; text-align: center; color: #5F8EAD; border-top: 2px solid #5D9646; padding-top: 10px; }
+            </style>
+        </head>
+        <body>
+            <div class="header">
+                <div class="logo-container">
+                    ${logoBase64 ? `<img src="${logoBase64}" alt="Rivera Logo" />` : '<p>RIVERA - Distribuidora y Transportes</p>'}
+                </div>
+                <h1>${titulo}</h1>
+            </div>
+            
+            <table>
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>NOMBRE</th>
+                        ${headersSemanales}
+                        <th style="background-color: #5D9646;">TOTAL</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${filasEmpleados}
+                    ${filaTotales}
+                </tbody>
+            </table>
+            
+            <div class="footer">
+                <p>Documento generado el ${new Date().toLocaleDateString('es-ES')} a las ${new Date().toLocaleTimeString('es-ES')}</p>
+                <p><strong>Rivera Distribuidora y Transportes</strong> - Sistema de Gestión © ${new Date().getFullYear()}</p>
+            </div>
+        </body>
+        </html>
+    `;
+}
+
 function generarHTMLMultiMes(planillasPorMes, ano, logoBase64) {
     const meses = ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO',
                    'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
@@ -944,6 +1309,147 @@ function generarHTMLMultiMes(planillasPorMes, ano, logoBase64) {
                     border-top: 2px solid #5D9646;
                     padding-top: 10px;
                 }
+            </style>
+        </head>
+        <body>
+            <div class="header">
+                <div class="logo-container">
+                    ${logoBase64 ? `<img src="${logoBase64}" alt="Rivera Logo" />` : '<p>RIVERA - Distribuidora y Transportes</p>'}
+                </div>
+                <h1>${titulo}</h1>
+            </div>
+            
+            <table>
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>NOMBRE</th>
+                        ${headersMeses}
+                        <th style="background-color: #5D9646;">TOTAL</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${filasEmpleados}
+                    ${filaTotales}
+                </tbody>
+            </table>
+            
+            <div class="footer">
+                <p>Documento generado el ${new Date().toLocaleDateString('es-ES')} a las ${new Date().toLocaleTimeString('es-ES')}</p>
+                <p><strong>Rivera Distribuidora y Transportes</strong> - Sistema de Gestión © ${new Date().getFullYear()}</p>
+            </div>
+        </body>
+        </html>
+    `;
+}
+
+// Consolidado multi-mes solo de viáticos (sirve también para anual usando esAnual=true)
+function generarHTMLMultiMesViaticos(planillasPorMes, ano, logoBase64, esAnual = false) {
+    const meses = ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO',
+                   'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
+
+    const mesesIncluidos = esAnual
+        ? 'ENERO A DICIEMBRE'
+        : planillasPorMes.map(p => meses[p.mes - 1]).join(', ');
+
+    const titulo = esAnual
+        ? `VIÁTICOS CONSOLIDADOS AÑO ${ano}`
+        : `VIÁTICOS CONSOLIDADOS ${mesesIncluidos} ${ano}`;
+
+    const empleadosMap = new Map();
+
+    planillasPorMes.forEach(({ mes, planillas }) => {
+        planillas.forEach(planilla => {
+            planilla.empleados.forEach(emp => {
+                const key = emp.empleadoId.toString();
+
+                if (!empleadosMap.has(key)) {
+                    empleadosMap.set(key, {
+                        nombreCompleto: emp.nombreCompleto,
+                        meses: new Map()
+                    });
+                }
+
+                const empleadoData = empleadosMap.get(key);
+                if (!empleadoData.meses.has(mes)) {
+                    empleadoData.meses.set(mes, 0);
+                }
+
+                empleadoData.meses.set(mes, empleadoData.meses.get(mes) + (emp.totalViaticos || 0));
+            });
+        });
+    });
+
+    let filasEmpleados = '';
+    let numeroEmpleado = 1;
+    let totalesPorMes = new Map();
+
+    planillasPorMes.forEach(({ mes }) => {
+        totalesPorMes.set(mes, 0);
+    });
+
+    empleadosMap.forEach((data) => {
+        let totalEmpleado = 0;
+        let columnasMeses = '';
+
+        planillasPorMes.forEach(({ mes }) => {
+            const monto = data.meses.get(mes) || 0;
+            totalEmpleado += monto;
+            totalesPorMes.set(mes, totalesPorMes.get(mes) + monto);
+
+            columnasMeses += `<td>$ ${monto > 0 ? monto.toFixed(2) : '-'}</td>`;
+        });
+
+        filasEmpleados += `
+            <tr>
+                <td>${numeroEmpleado}</td>
+                <td style="text-align: left; padding-left: 10px;">${data.nombreCompleto}</td>
+                ${columnasMeses}
+                <td style="font-weight: bold; background-color: #e8f4e8;">$ ${totalEmpleado.toFixed(2)}</td>
+            </tr>
+        `;
+
+        numeroEmpleado++;
+    });
+
+    let headersMeses = '';
+    planillasPorMes.forEach(({ mes }) => {
+        headersMeses += `<th style="background-color: #5F8EAD; color: white;">${meses[mes - 1]}</th>`;
+    });
+
+    let columnaTotales = '';
+    let granTotal = 0;
+
+    planillasPorMes.forEach(({ mes }) => {
+        const total = totalesPorMes.get(mes) || 0;
+        granTotal += total;
+        columnaTotales += `<td style="font-weight: bold;">$ ${total.toFixed(2)}</td>`;
+    });
+
+    const filaTotales = `
+        <tr style="font-weight: bold; background-color: #5D9646; color: white;">
+            <td colspan="2">TOTAL</td>
+            ${columnaTotales}
+            <td>$ ${granTotal.toFixed(2)}</td>
+        </tr>
+    `;
+
+    return `
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <style>
+                * { margin: 0; padding: 0; box-sizing: border-box; }
+                body { font-family: Arial, sans-serif; font-size: 10px; padding: 10px; color: #34353A; }
+                .header { text-align: center; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 3px solid #5F8EAD; }
+                .header .logo-container { margin-bottom: 8px; }
+                .header .logo-container img { max-width: 180px; height: auto; }
+                h1 { text-align: center; font-size: 12px; margin-bottom: 5px; font-weight: bold; color: #34353A; }
+                table { width: 100%; border-collapse: collapse; margin-bottom: 15px; }
+                th, td { border: 1px solid #5F8EAD; padding: 5px 3px; text-align: center; font-size: 9px; }
+                th { background-color: #34353A; color: white; font-weight: bold; }
+                .footer { margin-top: 20px; font-size: 8px; text-align: center; color: #5F8EAD; border-top: 2px solid #5D9646; padding-top: 10px; }
             </style>
         </head>
         <body>

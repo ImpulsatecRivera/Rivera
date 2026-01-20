@@ -147,9 +147,12 @@ export default function PlanillaSemanalNueva() {
   };
 
   const calcularTotalEstimado = () => {
-    return empleadosSeleccionados.reduce((total, emp) => {
-      return total + (parseFloat(calcularBaseDiaria(emp.salario)) * 6);
-    }, 0);
+    // Solo incluir empleados que ganan semanalmente
+    return empleadosSeleccionados
+      .filter(emp => emp.planillaTipo === 'Semanal')
+      .reduce((total, emp) => {
+        return total + (parseFloat(calcularBaseDiaria(emp.salario)) * 6);
+      }, 0);
   };
 
   const handleCrearPlanilla = async () => {
@@ -574,8 +577,14 @@ export default function PlanillaSemanalNueva() {
                           <Plus size={16} className="text-[#5D9646] opacity-0 group-hover:opacity-100 transition-opacity" />
                         </div>
                         <div className="text-xs text-gray-600 font-medium mt-2 flex items-center gap-1">
-                          <DollarSign size={12} />
-                          Base: {formatearMoneda(calcularBaseDiaria(empleado.salario))} /día
+                          {empleado.planillaTipo === 'Semanal' ? (
+                            <>
+                              <DollarSign size={12} />
+                              Base: {formatearMoneda(calcularBaseDiaria(empleado.salario))} /día
+                            </>
+                          ) : (
+                            <span className="text-gray-400 italic">No aplica base</span>
+                          )}
                         </div>
                       </div>
                     ))}

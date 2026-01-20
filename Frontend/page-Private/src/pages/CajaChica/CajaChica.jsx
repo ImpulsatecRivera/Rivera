@@ -828,7 +828,7 @@ export default function CajaChicaModern() {
               <div className="bg-[#5D9646]/10 p-2 rounded-lg">
                 <ArrowUpRight className="text-[#5D9646]" size={16} />
               </div>
-              <p className="text-xs text-gray-500 font-medium">Dinero Reintegrado Semana</p>
+              <p className="text-xs text-gray-500 font-medium">Reintegrado Semana</p>
             </div>
             <p className="text-2xl font-bold text-[#34353A] relative z-10">{formatearMoneda(stats.totalIngresos)}</p>
           </div>
@@ -865,7 +865,7 @@ export default function CajaChicaModern() {
               <div className="bg-[#5F8EAD]/10 p-2 rounded-lg">
                 <TrendingUp className="text-[#5F8EAD]" size={16} />
               </div>
-              <p className="text-xs text-gray-500 font-medium">Dinero Reintegrado Hoy</p>
+              <p className="text-xs text-gray-500 font-medium">Reintegrado Hoy</p>
             </div>
             <p className="text-2xl font-bold text-[#34353A]">{formatearMoneda(stats.ingresosHoy)}</p>
           </div>
