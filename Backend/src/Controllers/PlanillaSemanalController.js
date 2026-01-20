@@ -11,41 +11,36 @@ import { isValidObjectId } from 'mongoose';
 const PlanillaSemanalController = {};
 
 /**
- * Obtener el día de la semana ajustado a zona horaria de El Salvador (CST, UTC-6)
- * El Salvador no observa horario de verano, siempre está en UTC-6
+ * Obtener el día de la semana en UTC
  * 0 = domingo, 1 = lunes, 2 = martes, ... 6 = sábado
  */
-function getDayInSalvadorTimeZone(date) {
-    const EL_SALVADOR_OFFSET = -6 * 60 * 60 * 1000; // UTC-6 en milisegundos
-    
-    // Convertir la fecha a UTC
-    const utcTime = date.getTime();
-    
-    // Convertir a zona horaria de El Salvador
-    const salvadorTime = new Date(utcTime + EL_SALVADOR_OFFSET);
-    
-    return salvadorTime.getUTCDay();
+function getDayInUTC(date) {
+    return date.getUTCDay();
 }
 
 /**
- * Convertir una fecha en formato string YYYY-MM-DD a Date object
- * La fecha se interpreta como si estuviera en zona horaria de El Salvador
- * Esto es importante porque el frontend envía fechas sin especificar zona horaria
+ * Convertir una fecha a Date object
+ * Maneja tanto strings ISO completos como YYYY-MM-DD
  */
-function dateStringToSalvadorDate(dateString) {
-    // Parsear el string YYYY-MM-DD
-    const [year, month, day] = dateString.split('-');
+function parseDateToUTC(dateInput) {
+    // Si ya es un Date object, devolverlo
+    if (dateInput instanceof Date) {
+        return dateInput;
+    }
     
-    // Crear fecha a las 00:00:00 UTC
-    const utcDate = new Date(Date.UTC(parseInt(year), parseInt(month) - 1, parseInt(day), 0, 0, 0, 0));
+    // Si es un string ISO completo (con T y hora)
+    if (typeof dateInput === 'string' && dateInput.includes('T')) {
+        return new Date(dateInput);
+    }
     
-    // Ajustar a zona horaria de El Salvador (UTC-6)
-    // Si queremos que las 00:00:00 en El Salvador sean esa fecha
-    // entonces en UTC deben ser 06:00:00 de ese día
-    const EL_SALVADOR_OFFSET = -6 * 60 * 60 * 1000;
-    const correctedDate = new Date(utcDate.getTime() - EL_SALVADOR_OFFSET);
+    // Si es formato YYYY-MM-DD simple
+    if (typeof dateInput === 'string' && dateInput.match(/^\d{4}-\d{2}-\d{2}$/)) {
+        const [year, month, day] = dateInput.split('-').map(Number);
+        return new Date(Date.UTC(year, month - 1, day, 12, 0, 0, 0));
+    }
     
-    return correctedDate;
+    // Fallback: intentar parsear como Date
+    return new Date(dateInput);
 }
 
 /**
@@ -182,20 +177,28 @@ PlanillaSemanalController.crear = async (req, res) => {
             });
         }
 
-        // Convertir fechas interpretando como zona horaria de El Salvador
-        const inicio = dateStringToSalvadorDate(fechaInicio);
-        const fin = dateStringToSalvadorDate(fechaFin);
+        // Convertir fechas usando UTC
+        const inicio = parseDateToUTC(fechaInicio);
+        const fin = parseDateToUTC(fechaFin);
 
-        // Validar que fechaInicio sea lunes
-        if (getDayInSalvadorTimeZone(inicio) !== 1) {
+        // Validar que las fechas sean válidas
+        if (isNaN(inicio.getTime()) || isNaN(fin.getTime())) {
+            return res.status(400).json({
+                success: false,
+                message: 'Las fechas proporcionadas no son válidas'
+            });
+        }
+
+        // Validar que fechaInicio sea lunes (usando UTC)
+        if (getDayInUTC(inicio) !== 1) {
             return res.status(400).json({
                 success: false,
                 message: 'La fecha de inicio debe ser un lunes'
             });
         }
 
-        // Validar que fechaFin sea sábado
-        if (getDayInSalvadorTimeZone(fin) !== 6) {
+        // Validar que fechaFin sea sábado (usando UTC)
+        if (getDayInUTC(fin) !== 6) {
             return res.status(400).json({
                 success: false,
                 message: 'La fecha de fin debe ser un sábado'
@@ -203,23 +206,20 @@ PlanillaSemanalController.crear = async (req, res) => {
         }
 
         // Validar que el periodo no supere una semana (lunes a sábado)
-        // Comparamos las fechas en 00:00:00 para contar días enteros
-        const inicioDia = new Date(fechaInicio + 'T00:00:00');
-        const finDia = new Date(fechaFin + 'T00:00:00');
-        const msPorDia = 24 * 60 * 60 * 1000;
-        const diasIncl = Math.round((finDia - inicioDia) / msPorDia) + 1;
+        const unDiaMs = 24 * 60 * 60 * 1000;
+        const diasDiferencia = Math.round((fin.getTime() - inicio.getTime()) / unDiaMs);
 
-        if (isNaN(diasIncl) || diasIncl < 1) {
+        if (diasDiferencia < 0) {
             return res.status(400).json({
                 success: false,
-                message: 'La fecha de fin debe ser posterior o igual a la fecha de inicio'
+                message: 'La fecha de fin debe ser posterior a la fecha de inicio'
             });
         }
 
-        if (diasIncl > 6) {
+        if (diasDiferencia !== 5) {
             return res.status(400).json({
                 success: false,
-                message: 'El período debe cubrir como máximo una semana (lunes a sábado, 6 días)'
+                message: 'El período debe ser exactamente de lunes a sábado (5 días de diferencia)'
             });
         }
 
@@ -246,7 +246,6 @@ PlanillaSemanalController.crear = async (req, res) => {
         });
 
         if (planillaExistente) {
-            // Mensaje más detallado
             if (planillaExistente.fechaInicio.getTime() === inicio.getTime() && 
                 planillaExistente.fechaFin.getTime() === fin.getTime()) {
                 return res.status(400).json({
