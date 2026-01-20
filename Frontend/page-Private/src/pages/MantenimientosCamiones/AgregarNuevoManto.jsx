@@ -10,11 +10,7 @@ const CreateMantenimientoPage = () => {
   const [camiones, setCamiones] = useState([]);
   const [proveedores, setProveedores] = useState([]);
   const [loadingProveedores, setLoadingProveedores] = useState(true);
-<<<<<<< HEAD
-=======
-  
 
->>>>>>> master
   const [formData, setFormData] = useState({
     fecha_mantenimiento: '',
     tipo_de_mantenimiento: '',
@@ -342,15 +338,14 @@ const CreateMantenimientoPage = () => {
         timer: 3000,
         timerProgressBar: true
       });
-<<<<<<< HEAD
 
-=======
+
       
 const result = response.data;
 
       console.log('Mantenimiento creado:', result);
 
->>>>>>> master
+
       navigate('/mantenimientos');
 
     } catch (err) {
