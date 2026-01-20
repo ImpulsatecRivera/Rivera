@@ -98,16 +98,6 @@ const EditEmployeeModal = ({ isOpen, onClose, onSave, employee, uploading }) => 
         [name]: value
       };
       
-      // Email auto-generado cuando cambian nombre/apellido
-      if (name === 'name' || name === 'lastName') {
-        const currentName = name === 'name' ? value : (prev.name || employee?.name || '');
-        const currentLastName = name === 'lastName' ? value : (prev.lastName || employee?.lastName || '');
-        
-        if (currentName.trim() || currentLastName.trim()) {
-          newFormData.email = generateEmail(currentName, currentLastName);
-        }
-      }
-      
       return newFormData;
     });
   };
@@ -201,8 +191,11 @@ const EditEmployeeModal = ({ isOpen, onClose, onSave, employee, uploading }) => 
       console.log('✅ Agregando planillaTipo:', formData.planillaTipo.trim());
     }
 
-    // ⚠️ Email: tu backend lo regenera cuando cambias name/lastName.
-    // Por eso solo lo mostramos, pero NO lo enviamos para evitar conflictos/duplicados.
+    // ✅ Email ahora es editable y se envía
+    if (formData.email && formData.email.trim()) {
+      formDataToSend.append('email', formData.email.trim());
+      console.log('✅ Agregando email:', formData.email.trim());
+    }
 
     if (formData.img instanceof File) {
       formDataToSend.append('img', formData.img);
@@ -402,22 +395,16 @@ const EditEmployeeModal = ({ isOpen, onClose, onSave, employee, uploading }) => 
             <div className="grid grid-cols-2 gap-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Email {formData.name || formData.lastName ? '(actualizándose automáticamente)' : '(actual)'}
+                  Email
                 </label>
                 <input
                   type="email"
                   name="email"
                   value={formData.email}
-                  readOnly
+                  onChange={handleInputChange}
                   placeholder={employee?.email || "Email del empleado"}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-gray-50 text-sm text-gray-700 cursor-not-allowed"
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 text-base text-gray-900 bg-white"
                 />
-                <p className="text-xs text-gray-500 mt-1">
-                  {formData.name || formData.lastName 
-                    ? 'El email se actualiza automáticamente al cambiar nombre/apellido' 
-                    : 'Email actual del empleado'
-                  }
-                </p>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Teléfono</label>

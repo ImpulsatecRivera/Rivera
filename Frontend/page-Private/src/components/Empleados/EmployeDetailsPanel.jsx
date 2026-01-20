@@ -53,9 +53,15 @@ const EmployeeDetailPanel = ({
 
   const formatDate = (dateValue) => {
     if (!dateValue) return 'No especificado';
-    const d = new Date(dateValue);
-    if (Number.isNaN(d.getTime())) return 'No especificado';
-    return d.toLocaleDateString();
+    try {
+      // Extraer fecha directamente sin crear Date object para evitar problemas de timezone
+      const dateStr = String(dateValue).substring(0, 10); // Obtener YYYY-MM-DD
+      const [year, month, day] = dateStr.split('-');
+      if (!year || !month || !day) return 'No especificado';
+      return `${day}/${month}/${year}`;
+    } catch {
+      return 'No especificado';
+    }
   };
 
   // Formatea el tipo de planilla a un label legible (Semanal | Quincenal | Mensual)

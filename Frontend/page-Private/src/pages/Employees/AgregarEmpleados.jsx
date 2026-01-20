@@ -68,22 +68,9 @@ const AgregarEmpleado = () => {
   const { imagePreview, handleImageChange, removeImage, setImagePreview } =
     useImageUpload();
 
-  // Generar email automáticamente cuando cambien nombre o apellido
-  useEffect(() => {
-    const email = generateEmail(formData.name, formData.lastName);
-    setFormData((prev) => ({
-      ...prev,
-      email: email,
-    }));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [formData.name, formData.lastName]);
-
   // Manejo de cambios en inputs
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-
-    // No permitir editar email
-    if (name === "email") return;
 
     // Formatear inputs específicos
     const formattedValue = formatInput(name, value);
@@ -154,6 +141,13 @@ const AgregarEmpleado = () => {
     // Validación base (tu utilidad)
     const formErrors = validateEmployeeForm(formData);
 
+    // ✅ Validar email requerido y formato correcto
+    if (!formData.email || formData.email.trim() === "") {
+      formErrors.email = "El correo electrónico es requerido";
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      formErrors.email = "Formato de correo electrónico inválido";
+    }
+
     // ✅ FIX: validar salario correcto (antes estaba como salary)
     if (
       !formData.salario ||
@@ -184,6 +178,7 @@ const AgregarEmpleado = () => {
         const fieldNames = {
           name: "Nombre",
           lastName: "Apellido",
+          email: "Correo electrónico",
           dui: "DUI",
           birthDate: "Fecha de nacimiento",
           password: "Contraseña",
@@ -214,7 +209,11 @@ const AgregarEmpleado = () => {
       formDataToSend.append("email", formData.email.trim());
 
       formDataToSend.append("dui", formData.dui.trim());
-      formDataToSend.append("birthDate", formData.birthDate);
+      // ✅ Convertir fecha a formato YYYY-MM-DD para evitar problemas de zona horaria
+      const birthDateStr = formData.birthDate instanceof Date 
+        ? formData.birthDate.toISOString().split('T')[0]
+        : String(formData.birthDate).split('T')[0];
+      formDataToSend.append("birthDate", birthDateStr);
       formDataToSend.append("password", formData.password);
       formDataToSend.append("phone", formData.phone.trim());
       formDataToSend.append("address", formData.address.trim());
@@ -378,8 +377,9 @@ const AgregarEmpleado = () => {
                     onChange={handleInputChange}
                     icon={Mail}
                     label="Correo electrónico"
-                    badge="Auto-generado"
-                    readOnly
+                    placeholder="Ingrese el correo electrónico"
+                    required
+                    error={errors.email}
                   />
                 </div>
 

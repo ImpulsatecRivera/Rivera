@@ -15,6 +15,39 @@ const useDataCliente = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState('Newest');
 
+  const normalizeClient = (client, index = 0) => {
+    const contactoPrincipal = client?.contactoPrincipal || {};
+    return {
+      ...client,
+      _id: client?._id || client?.id || `temp-${index}`,
+      tipoCliente: client?.tipoCliente || 'natural',
+      // Naturales
+      firstName: client?.firstName || client?.firtsName || '',
+      lastName: client?.lastName || '',
+      idNumber: client?.idNumber || '',
+      birthDate: client?.birthDate || null,
+      // Corporativos
+      nombreEmpresa: client?.nombreEmpresa || '',
+      nombreComercial: client?.nombreComercial || '',
+      ruc: client?.ruc || '',
+      giroNegocio: client?.giroNegocio || '',
+      terminosPago: client?.terminosPago || 'contado',
+      direccionFacturacion: client?.direccionFacturacion || '',
+      contactoPrincipal: {
+        nombre: contactoPrincipal.nombre || '',
+        cargo: contactoPrincipal.cargo || '',
+        telefono: contactoPrincipal.telefono || '',
+        email: contactoPrincipal.email || ''
+      },
+      contactosAdicionales: client?.contactosAdicionales || [],
+      // Comunes
+      email: client?.email || '',
+      phone: client?.phone || '',
+      address: client?.address || '',
+      img: client?.img || ''
+    };
+  };
+
   // Cargar clientes al montar el componente
   useEffect(() => {
     fetchClients();
@@ -72,20 +105,7 @@ const useDataCliente = () => {
       // Normalizar los datos de clientes
       const normalizedClients = clientsArray.map((client, index) => {
         console.log(`🔄 Normalizando cliente ${index + 1}:`, client);
-        
-        return {
-          ...client,
-          // Normalizar el campo firstName (tu API tiene "firtsName" con typo)
-          firstName: client.firstName || client.firtsName || '',
-          // Asegurar que todos los campos existan
-          lastName: client.lastName || '',
-          email: client.email || '',
-          idNumber: client.idNumber || '',
-          birthDate: client.birthDate || null,
-          phone: client.phone || '',
-          address: client.address || '',
-          _id: client._id || client.id || `temp-${index}`
-        };
+        return normalizeClient(client, index);
       });
 
       console.log("✅ Clientes normalizados:", normalizedClients);
@@ -119,16 +139,7 @@ const useDataCliente = () => {
       const response = await axios.post(`${API_URL}/clientes`, clientData, { withCredentials: true });
       
       const newClient = response.data.data || response.data;
-      const normalizedClient = {
-        ...newClient,
-        firstName: newClient.firstName || newClient.firtsName || '',
-        lastName: newClient.lastName || '',
-        email: newClient.email || '',
-        idNumber: newClient.idNumber || '',
-        birthDate: newClient.birthDate || null,
-        phone: newClient.phone || '',
-        address: newClient.address || ''
-      };
+      const normalizedClient = normalizeClient(newClient);
       
       setClients(prev => Array.isArray(prev) ? [...prev, normalizedClient] : [normalizedClient]);
       console.log('✅ Cliente agregado exitosamente');
@@ -146,19 +157,20 @@ const useDataCliente = () => {
   const updateClient = async (clientId, updateData) => {
     try {
       console.log(`📝 Actualizando cliente ${clientId}:`, updateData);
-      const response = await axios.put(`${API_URL}/clientes/${clientId}`, updateData, { withCredentials: true });
+      const tipo = updateData?.tipoCliente || selectedClient?.tipoCliente;
+      const isCorp = tipo === 'corporativo';
+      const url = isCorp
+        ? `${API_URL}/clientes/corporativo/${clientId}`
+        : `${API_URL}/clientes/${clientId}`;
+
+      const response = await axios.put(url, updateData, { withCredentials: true });
       
-      const updatedClientData = response.data.cliente || response.data.data || { ...selectedClient, ...updateData };
-      const updatedClient = {
-        ...updatedClientData,
-        firstName: updatedClientData.firstName || updatedClientData.firtsName || '',
-        lastName: updatedClientData.lastName || '',
-        email: updatedClientData.email || '',
-        idNumber: updatedClientData.idNumber || '',
-        birthDate: updatedClientData.birthDate || null,
-        phone: updatedClientData.phone || '',
-        address: updatedClientData.address || ''
-      };
+      const updatedClientData =
+        response.data?.cliente ||
+        response.data?.data?.cliente ||
+        response.data?.data ||
+        { ...selectedClient, ...updateData };
+      const updatedClient = normalizeClient(updatedClientData);
       
       setClients(prev => 
         Array.isArray(prev) 
@@ -207,22 +219,42 @@ const useDataCliente = () => {
   };
 
   // Función para filtrar clientes - WITH SAFETY CHECK
-  const filteredClients = Array.isArray(clients) ? clients.filter((client) =>
-    [client.firstName, client.lastName, client.idNumber, client.email]
+  const filteredClients = Array.isArray(clients) ? clients.filter((client) => {
+    const haystack = [
+      client.firstName,
+      client.lastName,
+      client.idNumber,
+      client.email,
+      client.nombreEmpresa,
+      client.nombreComercial,
+      client.ruc,
+      client.contactoPrincipal?.nombre,
+      client.contactoPrincipal?.email,
+      client.contactoPrincipal?.telefono
+    ]
+      .filter(Boolean)
       .join(' ')
-      .toLowerCase()
-      .includes(searchTerm.toLowerCase())
-  ) : [];
+      .toLowerCase();
+
+    return haystack.includes(searchTerm.toLowerCase());
+  }) : [];
 
   // Función para ordenar clientes - WITH SAFETY CHECK
   const sortedClients = Array.isArray(filteredClients) ? [...filteredClients].sort((a, b) => {
+    const nombreA = a?.tipoCliente === 'corporativo'
+      ? (a.nombreComercial || a.nombreEmpresa || '')
+      : `${a.firstName || ''} ${a.lastName || ''}`.trim();
+    const nombreB = b?.tipoCliente === 'corporativo'
+      ? (b.nombreComercial || b.nombreEmpresa || '')
+      : `${b.firstName || ''} ${b.lastName || ''}`.trim();
+
     switch (sortBy) {
       case 'Newest':
         return new Date(b.createdAt || b._id) - new Date(a.createdAt || a._id);
       case 'Oldest':
         return new Date(a.createdAt || a._id) - new Date(b.createdAt || b._id);
       case 'Name':
-        return `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`);
+        return nombreA.localeCompare(nombreB);
       case 'Email':
         return a.email.localeCompare(b.email);
       default:

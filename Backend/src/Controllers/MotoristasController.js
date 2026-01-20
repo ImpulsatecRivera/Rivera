@@ -195,12 +195,14 @@ motoristasCon.post = async (req, res) => {
     const {
       name,
       lastName,
+      email,
       id,
       birthDate,
       password,
       phone,
       address,
       circulationCard,
+      fechaVencimientoLicencia,
       planillaTipo,
       salario, // ✅ Nuevo (requerido por schema)
     } = req.body;
@@ -219,6 +221,7 @@ motoristasCon.post = async (req, res) => {
     if (!phone?.trim()) return res.status(400).json({ message: "El teléfono es obligatorio" });
     if (!address?.trim()) return res.status(400).json({ message: "La dirección es obligatoria" });
     if (!circulationCard?.trim()) return res.status(400).json({ message: "La tarjeta de circulación es obligatoria" });
+    if (!fechaVencimientoLicencia) return res.status(400).json({ message: "La fecha de vencimiento de la licencia es obligatoria" });
     if (!planillaTipo?.trim()) return res.status(400).json({ message: "El tipo de planilla es obligatorio" });
 
     const salarioNum = Number(salario);
@@ -231,11 +234,20 @@ motoristasCon.post = async (req, res) => {
       return res.status(400).json({ message: "La imagen (img) es obligatoria" });
     }
 
-    const email = await generarEmail(name.trim(), lastName.trim());
+    // ✅ Validar email proporcionado por el usuario
+    if (!email || email.trim() === "") {
+      return res.status(400).json({ message: "El correo electrónico es obligatorio" });
+    }
 
-    const validarMotorista = await motoristalModel.findOne({ email });
+    const emailLimpio = email.trim().toLowerCase();
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(emailLimpio)) {
+      return res.status(400).json({ message: "Formato de correo electrónico no válido" });
+    }
+
+    const validarMotorista = await motoristalModel.findOne({ email: emailLimpio });
     if (validarMotorista) {
-      return res.status(400).json({ message: "Motorista ya registrado" });
+      return res.status(400).json({ message: "Este correo electrónico ya está registrado" });
     }
 
     // ✅ Subir a Cloudinary
@@ -249,13 +261,14 @@ motoristasCon.post = async (req, res) => {
     const newmotorista = new motoristalModel({
       name: name.trim(),
       lastName: lastName.trim(),
-      email,
+      email: emailLimpio,
       id: id.trim(),
-      birthDate,
+      birthDate: birthDate || new Date(),
       password: contraHash,
       phone: phone.trim(),
       address: address.trim(),
       circulationCard: circulationCard.trim(),
+      fechaVencimientoLicencia: fechaVencimientoLicencia || new Date(),
       planillaTipo: planillaTipo.trim(),
       salario: salarioNum, // ✅ GUARDAR
       img: result.secure_url, // ✅ SIEMPRE lleno
@@ -292,10 +305,12 @@ motoristasCon.put = async (req, res) => {
     const {
       name,
       lastName,
+      email,
       password,
       phone,
       address,
       circulationCard,
+      fechaVencimientoLicencia,
       planillaTipo,
       salario, // ✅ Nuevo
     } = req.body;
@@ -337,6 +352,7 @@ motoristasCon.put = async (req, res) => {
       phone: phone?.trim() || motoristaExistente.phone,
       address: address?.trim() || motoristaExistente.address,
       circulationCard: circulationCard?.trim() || motoristaExistente.circulationCard,
+      fechaVencimientoLicencia: fechaVencimientoLicencia || motoristaExistente.fechaVencimientoLicencia,
       planillaTipo: planillaTipo?.trim() || motoristaExistente.planillaTipo,
       salario: salarioFinal, // ✅ Guardar salario
       img: imgUrl?.trim() || motoristaExistente.img,
@@ -345,11 +361,26 @@ motoristasCon.put = async (req, res) => {
       birthDate: motoristaExistente.birthDate,
     };
 
-    // ✅ Si cambian nombre/apellido => regenerar email
-    if (name?.trim() || lastName?.trim()) {
-      const nombreFinal = name?.trim() || motoristaExistente.name;
-      const apellidoFinal = lastName?.trim() || motoristaExistente.lastName;
-      updateData.email = await generarEmail(nombreFinal, apellidoFinal);
+    // ✅ Actualizar email si se proporciona
+    if (email && email.trim() !== "") {
+      const emailLimpio = email.trim().toLowerCase();
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      
+      if (!emailRegex.test(emailLimpio)) {
+        return res.status(400).json({ message: "Formato de correo electrónico no válido" });
+      }
+      
+      // Verificar que el nuevo email no esté duplicado (excluyendo el motorista actual)
+      const emailDuplicado = await motoristalModel.findOne({
+        email: emailLimpio,
+        _id: { $ne: motoristaId }
+      });
+      
+      if (emailDuplicado) {
+        return res.status(400).json({ message: "Este correo electrónico ya está registrado" });
+      }
+      
+      updateData.email = emailLimpio;
     }
 
     // ✅ Password opcional
