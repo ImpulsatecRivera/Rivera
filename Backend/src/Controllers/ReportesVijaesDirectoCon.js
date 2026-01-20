@@ -193,7 +193,7 @@ const procesarDatosClientes = (datos, columnas) => {
   });
 };
 
-const generarHTMLConsolidado = (titulo, columnas, clientesData, landscape = true, comparativo = false) => {
+const generarHTMLConsolidado = (titulo, columnas, clientesData, landscape = false, comparativo = false) => {
   const logoBase64 = convertirImagenABase64(RUTA_LOGO);
   const fontSize = columnas.length > 20 ? '7px' : columnas.length > 15 ? '8px' : '10px';
   const cellPadding = columnas.length > 20 ? '3px' : columnas.length > 15 ? '4px' : '6px';
@@ -276,9 +276,9 @@ const generarHTMLConsolidado = (titulo, columnas, clientesData, landscape = true
     .cliente-cell { 
       text-align: left; 
       font-weight: bold; 
-      min-width: ${landscape ? '100px' : '120px'}; 
-      max-width: ${landscape ? '150px' : '180px'};
-      font-size: ${landscape ? '9px' : '10px'};
+      min-width: 100px; 
+      max-width: 150px;
+      font-size: 9px;
       background: #f9fafb;
       color: #111;
     }
@@ -2053,241 +2053,299 @@ ReportesViajesDirecto.generarPDFClienteIndividual = async (req, res) => {
 <head>
   <meta charset="UTF-8">
   <style>
-    * { margin:0; padding:0; box-sizing:border-box; }
-    body { 
-      font-family: Arial, sans-serif; 
-      padding:0; 
-      color:#34353A; 
-      background:#FFFFFF; 
+    * { 
+      margin: 0; 
+      padding: 0; 
+      box-sizing: border-box; 
     }
-    
+    body { 
+      font-family: Arial, 'Courier New', monospace;
+      padding: 30px;
+      color: #34353A;
+      background: #fff;
+    }
     .header {
-      padding: 40px;
       text-align: center;
-      border-bottom: 3px solid #5F8EAD;
-      margin-bottom: 35px;
+      margin-bottom: 30px;
+      border-bottom: 3px solid #34353A;
+      padding-bottom: 15px;
     }
     .header .logo-container {
-      margin-bottom: 20px;
+      margin-bottom: 8px;
+      display: flex;
+      justify-content: center;
     }
     .header .logo-container img {
-      max-width: 180px;
+      max-width: 120px;
       height: auto;
       background: white;
-      padding: 10px;
-      border-radius: 8px;
-    }
-    .header h1 { 
-      color: #34353A; 
-      font-size: 28px; 
-      margin-bottom: 8px; 
-      font-weight: bold; 
-      text-transform: uppercase; 
-      letter-spacing: 2px;
-    }
-    .header .subtitle { 
-      color: #34353A; 
-      font-size: 16px; 
-      font-weight: normal; 
-    }
-    
-    .container { 
-      padding: 0 40px 40px 40px; 
-    }
-    
-    .section { 
-      margin-bottom:30px; 
-      background:#f8fafc; 
-      padding:25px; 
-      border-radius:8px; 
-      border-left:5px solid #5F8EAD; 
-    }
-    .section-title { 
-      color:#5F8EAD; 
-      font-size:18px; 
-      font-weight:700; 
-      margin-bottom:15px; 
-      text-transform: uppercase;
-      letter-spacing: 1px;
-    }
-    .info-grid { 
-      display:grid; 
-      grid-template-columns: repeat(2, 1fr); 
-      gap:15px; 
-      margin-top:10px; 
-    }
-    .info-item { 
-      background:white; 
-      padding:15px; 
-      border-radius:6px; 
-      border:1px solid #5F8EAD; 
-    }
-    .info-item label { 
-      display:block; 
-      font-weight:600; 
-      color:#5F8EAD; 
-      font-size:11px; 
-      margin-bottom:8px; 
-      text-transform:uppercase; 
-      letter-spacing: 1px;
-    }
-    .info-item .value { 
-      color:#34353A; 
-      font-size:15px; 
-      font-weight:500; 
-    }
-    table { 
-      width:100%; 
-      border-collapse:collapse; 
-      margin-top:15px; 
-      background:white; 
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-    }
-    thead { 
-      background:#34353A; 
-      color:white; 
-    }
-    th { 
-      padding:14px; 
-      text-align:left; 
-      font-weight:600; 
-      font-size:12px; 
-      text-transform:uppercase; 
-      border: 1px solid #5F8EAD;
-      border-bottom: 3px solid #5D9646;
-    }
-    td { 
-      padding:14px; 
-      border: 1px solid #5F8EAD; 
-      font-size:13px; 
-    }
-    tbody tr:hover {
-      background: #f9fafb;
-    }
-    .text-right { text-align:right; }
-    .total-section { 
-      margin-top:25px; 
-      background:#5D9646; 
-      color:white; 
-      padding:25px; 
-      border-radius:8px; 
-      border-top: 2px solid #5D9646;
-    }
-    .total-grid { 
-      display:grid; 
-      grid-template-columns: repeat(2, 1fr); 
-      gap:20px; 
-    }
-    .total-item { 
-      text-align:center; 
-      padding: 15px;
-      background: rgba(255, 255, 255, 0.1);
+      padding: 2px;
       border-radius: 4px;
+      border: 1px solid #ddd;
     }
-    .total-item label { 
-      font-size:12px; 
-      opacity:0.9; 
-      margin-bottom:8px; 
-      display: block;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-    }
-    .total-item .value { 
-      font-size:24px; 
-      font-weight:700; 
-    }
-    .total-item:last-child .value {
-      color: white;
-    }
-    .footer { 
-      margin-top:35px; 
-      text-align:center; 
-      color:#5F8EAD; 
-      font-size:11px; 
-      border-top: 2px solid #5D9646; 
-      padding-top:20px; 
-    }
-    .footer p {
-      margin: 4px 0;
-    }
-    .footer .company {
+    .header h1 {
+      font-size: 16px;
+      font-weight: bold;
+      letter-spacing: 3px;
+      margin-bottom: 4px;
       color: #34353A;
-      font-weight: 600;
+    }
+    .header .subtitle {
+      font-size: 10px;
+      font-weight: bold;
+      margin-top: 4px;
+      color: #5F8EAD;
+    }
+    .header .total-info {
+      text-align: right;
+      font-size: 12px;
+      font-weight: bold;
+      margin-top: 6px;
+      color: #5F8EAD;
+    }
+    
+    .stats-summary {
+      margin-bottom: 10px;
+      padding: 6px;
+      background: #f5f9fc;
+      border: 2px solid #5F8EAD;
+    }
+    .stats-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 3px 0;
+      border-bottom: 1px solid #e2e8f0;
+      font-size: 9px;
+      color: #34353A;
+    }
+    .stats-row:last-child {
+      border-bottom: none;
+    }
+    
+    .section-title {
+      background: linear-gradient(135deg, #5F8EAD 0%, #34353A 100%);
+      color: #fff;
+      padding: 8px 12px;
+      font-size: 11px;
+      font-weight: bold;
+      letter-spacing: 2px;
+      margin: 20px 0 10px 0;
+      text-transform: uppercase;
+    }
+    
+    table.info-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 20px;
+      border: 3px solid #34353A;
+    }
+    table.info-table thead {
+      background: linear-gradient(135deg, #5F8EAD 0%, #34353A 100%);
+      color: #fff;
+    }
+    table.info-table th {
+      padding: 6px 4px;
+      text-align: center;
+      font-size: 9px;
+      font-weight: bold;
+      border: 2px solid #34353A;
+      text-transform: uppercase;
+    }
+    table.info-table td {
+      padding: 6px 8px;
+      border: 1px solid #34353A;
+      font-size: 8px;
+      background: #fff;
+      color: #34353A;
+    }
+    table.info-table .col-label {
+      width: 200px;
+      font-weight: bold;
+      text-align: left;
+      padding-left: 15px;
+      background: #f5f5f5;
+    }
+    table.info-table .col-value {
+      text-align: left;
+      padding-left: 15px;
+    }
+    
+    table.details-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 20px;
+      border: 3px solid #34353A;
+    }
+    table.details-table thead {
+      background: linear-gradient(135deg, #5F8EAD 0%, #34353A 100%);
+      color: #fff;
+    }
+    table.details-table th {
+      padding: 8px 6px;
+      text-align: center;
+      font-size: 9px;
+      font-weight: bold;
+      border: 2px solid #34353A;
+      text-transform: uppercase;
+    }
+    table.details-table td {
+      padding: 6px 8px;
+      border: 1px solid #34353A;
+      font-size: 8px;
+      background: #fff;
+      color: #34353A;
+    }
+    table.details-table .text-right {
+      text-align: right;
+    }
+    table.details-table .text-center {
+      text-align: center;
+    }
+    
+    .footer-section {
+      font-size: 11px;
+      margin-top: 20px;
+      padding: 12px;
+      background: #f9f9f9;
+      border: 2px solid #34353A;
+      text-align: center;
+    }
+    .footer-section .balance-final {
+      font-size: 18px;
+      font-weight: bold;
+      margin: 8px 0;
+      padding: 10px;
+      background: #fff;
+      border: 2px solid #5F8EAD;
+      color: #5F8EAD;
+    }
+    .footer-section .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+      margin-top: 10px;
+    }
+    .footer-section .stat-item {
+      font-size: 9px;
+      padding: 5px;
+    }
+    .footer-info {
+      margin-top: 30px;
+      text-align: center;
+      font-size: 10px;
+      color: #34353A;
+      border-top: 1px solid #ccc;
+      padding-top: 15px;
     }
   </style>
 </head>
 <body>
   <div class="header">
     <div class="logo-container">
-      ${logoBase64 ? `<img src="${logoBase64}" alt="Rivera Logo" />` : '<p style="color: white;">RIVERA</p>'}
+      ${logoBase64 ? `<img src="${logoBase64}" alt="Rivera Logo" style="max-width:100px;height:auto;"/>` : '<p style="color:#34353A">RIVERA</p>'}
     </div>
-    <h1>Reporte de Viajes</h1>
-    <p class="subtitle">Detalle Individual por Cliente</p>
+    <h1>REPORTE DE VIAJES</h1>
+    <div class="subtitle">DETALLE INDIVIDUAL POR CLIENTE</div>
+    <div class="total-info">$ ${montoTotalGeneral.toFixed(2)}</div>
   </div>
 
-  <div class="container">
-    <div class="section">
-      <h2 class="section-title">Información del Cliente</h2>
-      <div class="info-grid">
-        <div class="info-item">
-          <label>Cliente</label>
-          <div class="value">${decodeURIComponent(clienteNombre)}</div>
-        </div>
-        <div class="info-item">
-          <label>Período</label>
-          <div class="value">${obtenerNombreMes(mesNum)} ${anoNum}</div>
-        </div>
+  <div class="stats-summary">
+    <div class="stats-row">
+      <span>CLIENTE:</span>
+      <span>${decodeURIComponent(clienteNombre).toUpperCase()}</span>
+    </div>
+    <div class="stats-row">
+      <span>PERÍODO:</span>
+      <span>${obtenerNombreMes(mesNum).toUpperCase()} ${anoNum}</span>
+    </div>
+    <div class="stats-row">
+      <span>TOTAL VIAJES:</span>
+      <span>${totalViajes}</span>
+    </div>
+    <div class="stats-row">
+      <span>TOTAL RUTAS:</span>
+      <span>${rutasArray.length}</span>
+    </div>
+    <div class="stats-row">
+      <span>MONTO TOTAL:</span>
+      <span><strong>$ ${montoTotalGeneral.toFixed(2)}</strong></span>
+    </div>
+  </div>
+
+  <div class="section-title">Información del Cliente</div>
+
+  <table class="info-table">
+    <thead>
+      <tr>
+        <th class="col-label">DETALLE</th>
+        <th class="col-value">INFORMACIÓN</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="col-label">CLIENTE:</td>
+        <td class="col-value">${decodeURIComponent(clienteNombre).toUpperCase()}</td>
+      </tr>
+      <tr>
+        <td class="col-label">PERÍODO:</td>
+        <td class="col-value">${obtenerNombreMes(mesNum).toUpperCase()} ${anoNum}</td>
+      </tr>
+      <tr>
+        <td class="col-label">TOTAL DE VIAJES:</td>
+        <td class="col-value">${totalViajes} VIAJES</td>
+      </tr>
+      <tr>
+        <td class="col-label">RUTAS DIFERENTES:</td>
+        <td class="col-value">${rutasArray.length} RUTAS</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="section-title">Desglose de Rutas y Viajes</div>
+
+  <table class="details-table">
+    <thead>
+      <tr>
+        <th style="width: 5%;">#</th>
+        <th style="width: 25%;">RUTA</th>
+        <th style="width: 20%;">ORIGEN</th>
+        <th style="width: 20%;">DESTINO</th>
+        <th style="width: 10%;">VIAJES</th>
+        <th style="width: 10%;">$/VIAJE</th>
+        <th style="width: 10%;">TOTAL</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${rutasArray.map((ruta, index) => `
+        <tr>
+          <td class="text-center"><strong>${index + 1}</strong></td>
+          <td><strong>${ruta.rutaCompleta.toUpperCase()}</strong></td>
+          <td>${ruta.origen.toUpperCase()}</td>
+          <td>${ruta.destino.toUpperCase()}</td>
+          <td class="text-center">${ruta.cantidadViajes}</td>
+          <td class="text-right">$${ruta.montoPorViaje.toFixed(2)}</td>
+          <td class="text-right"><strong>$${ruta.montoTotal.toFixed(2)}</strong></td>
+        </tr>
+      `).join("")}
+    </tbody>
+  </table>
+
+  <div class="footer-section">
+    <div>MONTO TOTAL FACTURADO</div>
+    <div class="balance-final">$ ${montoTotalGeneral.toFixed(2)}</div>
+    <div class="stats-grid">
+      <div class="stat-item">
+        <strong>Total Viajes:</strong> ${totalViajes}
+      </div>
+      <div class="stat-item">
+        <strong>Promedio por Viaje:</strong> $${(montoTotalGeneral / totalViajes).toFixed(2)}
       </div>
     </div>
+  </div>
 
-    <div class="section">
-      <h2 class="section-title">Rutas y Viajes</h2>
-      <table>
-        <thead>
-          <tr>
-            <th>#</th>
-            <th>Ruta</th>
-            <th>Origen</th>
-            <th>Destino</th>
-            <th class="text-right">Viajes</th>
-            <th class="text-right">$ por Viaje</th>
-            <th class="text-right">Total</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${rutasArray.map((ruta, index) => `
-            <tr>
-              <td><strong>${index + 1}</strong></td>
-              <td><strong>${ruta.rutaCompleta}</strong></td>
-              <td>${ruta.origen}</td>
-              <td>${ruta.destino}</td>
-              <td class="text-right">${ruta.cantidadViajes}</td>
-              <td class="text-right">$${ruta.montoPorViaje.toFixed(2)}</td>
-              <td class="text-right"><strong>$${ruta.montoTotal.toFixed(2)}</strong></td>
-            </tr>
-          `).join("")}
-        </tbody>
-      </table>
-
-      <div class="total-section">
-        <div class="total-grid">
-          <div class="total-item">
-            <label>Total de Viajes</label>
-            <div class="value">${totalViajes}</div>
-          </div>
-          <div class="total-item">
-            <label>Monto Total</label>
-            <div class="value">$${montoTotalGeneral.toFixed(2)}</div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="footer">
-      <p>Documento generado el ${formatearFecha(new Date())} a las ${formatearHora(new Date())}</p>
-      <p class="company">Rivera Distribuidora y Transportes</p>
-      <p>Sistema de Gestión de Viajes Operativos</p>
-    </div>
+  <div class="footer-info">
+    <p>Documento generado el ${formatearFecha(new Date())} a las ${formatearHora(new Date())}</p>
+    <p>Rivera Distribuidora y Transportes © ${new Date().getFullYear()}</p>
   </div>
 </body>
 </html>
@@ -2301,7 +2359,7 @@ ReportesViajesDirecto.generarPDFClienteIndividual = async (req, res) => {
     const pdfBuffer = await page.pdf({
       format: "A4",
       printBackground: true,
-      margin: { top: "0px", right: "0px", bottom: "0px", left: "0px" },
+      margin: { top: "20px", right: "20px", bottom: "20px", left: "20px" },
     });
 
     await browser.close();

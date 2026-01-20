@@ -94,6 +94,8 @@ ReportesRoutes.generarPDFIndividual = async (req, res) => {
 
         const logoBase64 = convertirImagenABase64(RUTA_LOGO);
 
+        const costoPorGalon = (resumen.Total / resumen.Galones).toFixed(2);
+
         const htmlContent = `
         <!DOCTYPE html>
         <html lang="es">
@@ -106,221 +108,222 @@ ReportesRoutes.generarPDFIndividual = async (req, res) => {
                     box-sizing: border-box;
                 }
                 body {
-                    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-                    padding: 0;
+                    font-family: Arial, 'Courier New', monospace;
+                    padding: 30px;
                     color: #34353A;
-                    background: #FFFFFF;
+                    background: #fff;
                 }
-                .page-wrapper {
-                    padding: 50px;
-                }
-                
-                /* HEADER */
                 .header {
-                    background: linear-gradient(135deg, #34353A 0%, #5F8EAD 100%);
-                    padding: 40px;
-                    margin: -50px -50px 40px -50px;
                     text-align: center;
-                    border-bottom: 5px solid #5D9646;
+                    margin-bottom: 30px;
+                    border-bottom: 3px solid #34353A;
+                    padding-bottom: 15px;
                 }
                 .header .logo-container {
-                    margin-bottom: 25px;
+                    margin-bottom: 8px;
+                    display: flex;
+                    justify-content: center;
                 }
                 .header .logo-container img {
-    width: 220px !important;
-    height: auto !important;
-    max-width: 220px !important;
-    display: block !important;
-    margin: 0 auto !important;
-}
+                    max-width: 120px;
+                    height: auto;
+                    background: white;
+                    padding: 2px;
+                    border-radius: 4px;
+                    border: 1px solid #ddd;
+                }
                 .header h1 {
-                    color: #FFFFFF;
-                    font-size: 30px;
-                    font-weight: 300;
-                    text-transform: uppercase;
+                    font-size: 16px;
+                    font-weight: bold;
                     letter-spacing: 3px;
-                    margin-bottom: 10px;
+                    margin-bottom: 4px;
+                    color: #34353A;
                 }
                 .header .subtitle {
-                    color: rgba(255, 255, 255, 0.9);
-                    font-size: 16px;
-                    letter-spacing: 1px;
-                }
-                
-                /* INFO SECTION */
-                .info-section {
-                    margin-bottom: 40px;
-                    background: #FFFFFF;
-                    border: 2px solid #e5e7eb;
-                    border-left: 5px solid #5F8EAD;
-                }
-                .info-grid {
-                    display: grid;
-                    grid-template-columns: repeat(2, 1fr);
-                    gap: 0;
-                }
-                .info-item {
-                    padding: 20px;
-                    border-bottom: 1px solid #e5e7eb;
-                    border-right: 1px solid #e5e7eb;
-                }
-                .info-item:nth-child(2n) {
-                    border-right: none;
-                }
-                .info-item:nth-last-child(-n+2) {
-                    border-bottom: none;
-                }
-                .info-item label {
-                    display: block;
-                    font-size: 11px;
+                    font-size: 10px;
+                    font-weight: bold;
+                    margin-top: 4px;
                     color: #5F8EAD;
-                    font-weight: 600;
-                    text-transform: uppercase;
-                    letter-spacing: 1px;
-                    margin-bottom: 8px;
                 }
-                .info-item .value {
-                    font-size: 16px;
-                    font-weight: 500;
-                    color: #34353A;
+                .header .total-info {
+                    text-align: right;
+                    font-size: 12px;
+                    font-weight: bold;
+                    margin-top: 6px;
+                    color: #5F8EAD;
                 }
                 
-                /* DETAIL BOX */
-                .detail-box {
-                    max-width: 600px;
-                    margin: 40px auto;
-                    background: #FFFFFF;
-                    border: 2px solid #e5e7eb;
-                    overflow: hidden;
+                .stats-summary {
+                    margin-bottom: 10px;
+                    padding: 6px;
+                    background: #f5f9fc;
+                    border: 2px solid #5F8EAD;
                 }
-                .detail-header {
-                    background: #34353A;
-                    color: #FFFFFF;
-                    padding: 15px 25px;
-                    border-bottom: 3px solid #5D9646;
-                }
-                .detail-header h3 {
-                    font-size: 16px;
-                    font-weight: 600;
-                    text-transform: uppercase;
-                    letter-spacing: 1px;
-                }
-                .detail-content {
-                    padding: 30px;
-                }
-                .detail-row {
+                .stats-row {
                     display: flex;
                     justify-content: space-between;
-                    padding: 15px 0;
-                    border-bottom: 1px solid #e5e7eb;
-                    font-size: 15px;
-                }
-                .detail-row:last-child {
-                    border-bottom: none;
-                    margin-top: 20px;
-                    padding: 25px;
-                    background: #34353A;
-                    color: #FFFFFF;
-                    font-weight: 700;
-                    font-size: 20px;
-                    margin: 20px -30px -30px -30px;
-                }
-                .detail-row label {
-                    font-weight: 600;
-                    color: #5F8EAD;
-                }
-                .detail-row .value {
-                    font-weight: 600;
+                    padding: 3px 0;
+                    border-bottom: 1px solid #e2e8f0;
+                    font-size: 9px;
                     color: #34353A;
                 }
-                .detail-row:last-child label,
-                .detail-row:last-child .value {
-                    color: #FFFFFF;
-                }
-                .detail-row:last-child .value {
-                    color: #5D9646;
-                    font-size: 24px;
+                .stats-row:last-child {
+                    border-bottom: none;
                 }
                 
-                /* FOOTER */
-                .footer {
-                    margin-top: 60px;
-                    padding-top: 30px;
-                    border-top: 3px solid #34353A;
+                table {
+                    width: 100%;
+                    border-collapse: collapse;
+                    margin-bottom: 20px;
+                    border: 3px solid #34353A;
+                }
+                thead {
+                    background: linear-gradient(135deg, #5F8EAD 0%, #34353A 100%);
+                    color: #fff;
+                }
+                th {
+                    padding: 6px 4px;
+                    text-align: center;
+                    font-size: 9px;
+                    font-weight: bold;
+                    border: 2px solid #34353A;
+                    text-transform: uppercase;
+                }
+                td {
+                    padding: 4px 4px;
+                    border: 1px solid #34353A;
+                    font-size: 8px;
+                    background: #fff;
+                    color: #34353A;
+                }
+                .col-label {
+                    width: 200px;
+                    font-weight: bold;
+                    text-align: left;
+                    padding-left: 15px;
+                    background: #f5f5f5;
+                }
+                .col-value {
+                    text-align: left;
+                    padding-left: 15px;
+                }
+                
+                .footer-section {
+                    font-size: 11px;
+                    margin-top: 20px;
+                    padding: 12px;
+                    background: #f9f9f9;
+                    border: 2px solid #34353A;
                     text-align: center;
                 }
-                .footer p {
-                    color: #6b7280;
-                    font-size: 11px;
-                    margin: 5px 0;
-                    line-height: 1.6;
+                .footer-section .balance-final {
+                    font-size: 18px;
+                    font-weight: bold;
+                    margin: 8px 0;
+                    padding: 10px;
+                    background: #fff;
+                    border: 2px solid #5F8EAD;
+                    color: #5F8EAD;
                 }
-                .footer .company {
+                .footer-info {
+                    margin-top: 30px;
+                    text-align: center;
+                    font-size: 10px;
                     color: #34353A;
-                    font-weight: 600;
+                    border-top: 1px solid #ccc;
+                    padding-top: 15px;
                 }
             </style>
         </head>
         <body>
-            <div class="page-wrapper">
-                <div class="header">
-                    <div class="logo-container">
-                        ${logoBase64 ? `<img src="${logoBase64}" alt="Rivera Logo" />` : '<p style="color: white; font-size: 24px;">RIVERA</p>'}
-                    </div>
-                    <h1>Comprobante de Diesel</h1>
-                    <p class="subtitle">Registro de Consumo de Combustible</p>
+            <div class="header">
+                <div class="logo-container">
+                    ${logoBase64 ? `<img src="${logoBase64}" alt="Rivera Logo" style="max-width:100px;height:auto;"/>` : '<p style="color:#34353A">RIVERA</p>'}
                 </div>
+                <h1>COMPROBANTE DE DIESEL</h1>
+                <div class="subtitle">REGISTRO DE CONSUMO DE COMBUSTIBLE</div>
+                <div class="total-info">$ ${resumen.Total.toFixed(2)}</div>
+            </div>
 
-                <div class="info-section">
-                    <div class="info-grid">
-                        <div class="info-item">
-                            <label>Vehículo</label>
-                            <div class="value">${resumen.CicurlationCard.name}</div>
-                        </div>
-                        <div class="info-item">
-                            <label>Placa</label>
-                            <div class="value">${resumen.CicurlationCard.licensePlate}</div>
-                        </div>
-                        <div class="info-item">
-                            <label>Fecha</label>
-                            <div class="value">${new Date(resumen.fecha).toLocaleDateString('es-ES', {
-                                year: 'numeric',
-                                month: 'long',
-                                day: 'numeric'
-                            })}</div>
-                        </div>
-                        <div class="info-item">
-                            <label>Período</label>
-                            <div class="value">${obtenerNombreMes(resumen.mes)} ${resumen.ano}</div>
-                        </div>
-                    </div>
+            <div class="stats-summary">
+                <div class="stats-row">
+                    <span>VEHÍCULO:</span>
+                    <span>${resumen.CicurlationCard.name}</span>
                 </div>
+                <div class="stats-row">
+                    <span>PLACA:</span>
+                    <span>${resumen.CicurlationCard.licensePlate}</span>
+                </div>
+                <div class="stats-row">
+                    <span>GALONES CONSUMIDOS:</span>
+                    <span>${resumen.Galones.toFixed(2)} gal</span>
+                </div>
+                <div class="stats-row">
+                    <span>COSTO POR GALÓN:</span>
+                    <span>$ ${costoPorGalon}</span>
+                </div>
+                <div class="stats-row">
+                    <span>TOTAL A PAGAR:</span>
+                    <span>$ ${resumen.Total.toFixed(2)}</span>
+                </div>
+            </div>
 
-                <div class="detail-box">
-                    <div class="detail-header">
-                        <h3>Detalles del Consumo</h3>
-                    </div>
-                    <div class="detail-content">
-                        <div class="detail-row">
-                            <label>Galones</label>
-                            <span class="value">${resumen.Galones.toFixed(2)} gal</span>
-                        </div>
-                        <div class="detail-row">
-                            <label>Costo por Galón</label>
-                            <span class="value">$ ${(resumen.Total / resumen.Galones).toFixed(2)}</span>
-                        </div>
-                        <div class="detail-row">
-                            <label>TOTAL A PAGAR</label>
-                            <span class="value">$ ${resumen.Total.toFixed(2)}</span>
-                        </div>
-                    </div>
-                </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th class="col-label">DETALLE</th>
+                        <th class="col-value">INFORMACIÓN</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td class="col-label">FECHA:</td>
+                        <td class="col-value">${new Date(resumen.fecha).toLocaleDateString('es-ES', {
+                            weekday: 'long',
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric'
+                        }).toUpperCase()}</td>
+                    </tr>
+                    <tr>
+                        <td class="col-label">HORA:</td>
+                        <td class="col-value">${new Date(resumen.fecha).toLocaleTimeString('es-ES')}</td>
+                    </tr>
+                    <tr>
+                        <td class="col-label">PERÍODO:</td>
+                        <td class="col-value">${obtenerNombreMes(resumen.mes).toUpperCase()} ${resumen.ano}</td>
+                    </tr>
+                    <tr>
+                        <td class="col-label">VEHÍCULO:</td>
+                        <td class="col-value">${resumen.CicurlationCard.name.toUpperCase()}</td>
+                    </tr>
+                    <tr>
+                        <td class="col-label">PLACA:</td>
+                        <td class="col-value">${resumen.CicurlationCard.licensePlate.toUpperCase()}</td>
+                    </tr>
+                    <tr>
+                        <td class="col-label">GALONES:</td>
+                        <td class="col-value">${resumen.Galones.toFixed(2)} gal</td>
+                    </tr>
+                    <tr>
+                        <td class="col-label">PRECIO POR GALÓN:</td>
+                        <td class="col-value">$ ${costoPorGalon}</td>
+                    </tr>
+                    <tr>
+                        <td class="col-label">ID DE REGISTRO:</td>
+                        <td class="col-value">${resumen._id}</td>
+                    </tr>
+                </tbody>
+            </table>
 
-                <div class="footer">
-                    <p>Documento generado el ${new Date().toLocaleDateString('es-ES')} a las ${new Date().toLocaleTimeString('es-ES')}</p>
-                    <p class="company">Rivera Distribuidora y Transportes</p>
-                    <p>Sistema de Gestión de Combustible</p>
-                </div>
+            <div class="footer-section">
+                <div>TOTAL A PAGAR</div>
+                <div class="balance-final">$ ${resumen.Total.toFixed(2)}</div>
+            </div>
+
+            <div class="footer-info">
+                <p>Documento generado el ${new Date().toLocaleDateString('es-ES')} a las ${new Date().toLocaleTimeString('es-ES')}</p>
+                <p>Rivera Distribuidora y Transportes © ${new Date().getFullYear()}</p>
             </div>
         </body>
         </html>
@@ -335,10 +338,10 @@ ReportesRoutes.generarPDFIndividual = async (req, res) => {
             format: 'A4',
             printBackground: true,
             margin: {
-                top: '0px',
-                right: '0px',
-                bottom: '0px',
-                left: '0px'
+                top: '20px',
+                right: '20px',
+                bottom: '20px',
+                left: '20px'
             }
         });
 

@@ -8,13 +8,8 @@ const CreateMantenimientoPage = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [camiones, setCamiones] = useState([]);
-<<<<<<< HEAD
   const [proveedores, setProveedores] = useState([]);
   const [loadingProveedores, setLoadingProveedores] = useState(true);
-  
-=======
-
->>>>>>> master
   const [formData, setFormData] = useState({
     fecha_mantenimiento: '',
     tipo_de_mantenimiento: '',
@@ -300,30 +295,12 @@ const CreateMantenimientoPage = () => {
 
       const fechaLocal = new Date(formData.fecha_mantenimiento + 'T12:00:00');
 
-<<<<<<< HEAD
       // Filtrar proveedores vacíos, null, undefined
       const proveedoresUnicos = [...new Set(
         formData.detalles
           .map(d => d.proveedor)
           .filter(p => p && typeof p === 'string' && p.trim() !== '')
       )];
-=======
-      const dataToSend = {
-        fecha_mantenimiento: fechaLocal.toISOString(),
-        mes: fechaLocal.getMonth() + 1,
-        ano: fechaLocal.getFullYear(),
-        tipo_de_mantenimiento: formData.tipo_de_mantenimiento,
-        descripcion: formData.descripcion,
-        ciculatioCard: formData.ciculatioCard,
-        estado: 'pendiente',
-        detalles: formData.detalles.map(d => ({
-          concepto: d.concepto,
-          cantidad: d.cantidad,
-          precioUnitario: d.precioUnitario,
-          subTotal: calcularSubtotal(d.cantidad, d.precioUnitario)
-        }))
-      };
->>>>>>> master
 
       const dataToSend = {
         fecha_mantenimiento: fechaLocal.toISOString(),
@@ -349,9 +326,8 @@ const CreateMantenimientoPage = () => {
 
       const response = await api.post('/mantenimientos', dataToSend);
 
-<<<<<<< HEAD
       console.log('✅ Respuesta del servidor:', response.data);
-      
+
       // ✅ Alert de éxito
       await Swal.fire({
         icon: 'success',
@@ -361,13 +337,7 @@ const CreateMantenimientoPage = () => {
         timer: 3000,
         timerProgressBar: true
       });
-      
-=======
-const result = response.data;
 
-      console.log('Mantenimiento creado:', result);
-
->>>>>>> master
       navigate('/mantenimientos');
 
     } catch (err) {
