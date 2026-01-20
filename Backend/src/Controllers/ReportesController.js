@@ -125,128 +125,164 @@ ReportesRoutes.generarPDFIndividual = async (req, res) => {
                     box-sizing: border-box;
                 }
                 body {
-                    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-                    padding: 0;
+                    font-family: Arial, 'Courier New', monospace;
+                    padding: 30px;
                     color: #34353A;
-                    background: #FFFFFF;
+                    background: #fff;
                 }
-                .page-wrapper {
-                    padding: 50px;
-                }
-                
-                /* HEADER PRINCIPAL */
                 .header {
-                    background: linear-gradient(135deg, #34353A 0%, #5F8EAD 100%);
-                    padding: 40px 50px;
-                    margin: -50px -50px 40px -50px;
-                    position: relative;
-                    overflow: hidden;
-                }
-                .header::before {
-                    content: '';
-                    position: absolute;
-                    top: 0;
-                    right: 0;
-                    width: 300px;
-                    height: 100%;
-                    background: linear-gradient(90deg, transparent, rgba(93, 150, 70, 0.1));
-                }
-                .header-content {
-                    position: relative;
-                    z-index: 1;
+                    text-align: center;
+                    margin-bottom: 30px;
+                    border-bottom: 3px solid #34353A;
+                    padding-bottom: 15px;
                 }
                 .header .logo-container {
-                    margin-bottom: 25px;
+                    margin-bottom: 8px;
+                    display: flex;
+                    justify-content: center;
                 }
                 .header .logo-container img {
-                    max-width: 220px;
+                    max-width: 120px;
                     height: auto;
-                    
+                    background: white;
+                    padding: 2px;
+                    border-radius: 4px;
+                    border: 1px solid #ddd;
                 }
                 .header h1 {
-                    color: #FFFFFF;
-                    font-size: 34px;
-                    margin-bottom: 8px;
-                    font-weight: 300;
-                    letter-spacing: 2px;
+                    font-size: 16px;
+                    font-weight: bold;
+                    letter-spacing: 3px;
+                    margin-bottom: 4px;
+                    color: #34353A;
                 }
                 .header .subtitle {
-                    color: rgba(255, 255, 255, 0.9);
-                    font-size: 16px;
-                    font-weight: 300;
-                    letter-spacing: 1px;
+                    font-size: 10px;
+                    font-weight: bold;
+                    margin-top: 4px;
+                    color: #5F8EAD;
                 }
-                .id-badge {
-                    display: inline-block;
-                    background: rgba(93, 150, 70, 0.2);
-                    border: 1px solid #5D9646;
-                    padding: 8px 20px;
-                    border-radius: 4px;
-                    font-size: 11px;
-                    color: #FFFFFF;
-                    margin-top: 15px;
-                    font-family: 'Courier New', monospace;
-                    letter-spacing: 1px;
+                .header .info-id {
+                    text-align: right;
+                    font-size: 9px;
+                    font-weight: bold;
+                    margin-top: 6px;
+                    color: #5F8EAD;
+                }
+                
+                /* STATS SUMMARY */
+                .stats-summary {
+                    margin-bottom: 20px;
+                    padding: 10px;
+                    background: #f5f9fc;
+                    border: 2px solid #5F8EAD;
+                }
+                .stats-row {
+                    display: flex;
+                    justify-content: space-between;
+                    padding: 4px 0;
+                    border-bottom: 1px solid #e2e8f0;
+                    font-size: 9px;
+                    color: #34353A;
+                }
+                .stats-row:last-child {
+                    border-bottom: none;
+                }
+                .stats-row strong {
+                    font-weight: bold;
                 }
                 
                 /* SECCIONES */
-                .section {
-                    margin-bottom: 40px;
-                    page-break-inside: avoid;
-                }
-                .section-header {
-                    background: #34353A;
-                    color: #FFFFFF;
-                    padding: 15px 25px;
-                    margin-bottom: 20px;
-                    border-left: 5px solid #5D9646;
-                }
                 .section-title {
-                    font-size: 18px;
-                    font-weight: 600;
-                    letter-spacing: 1px;
+                    background: linear-gradient(135deg, #5F8EAD 0%, #34353A 100%);
+                    color: #fff;
+                    padding: 8px 12px;
+                    font-size: 11px;
+                    font-weight: bold;
+                    letter-spacing: 2px;
+                    margin: 20px 0 10px 0;
                     text-transform: uppercase;
                 }
                 
-                /* GRID DE INFORMACIÓN */
-                .info-grid {
-                    display: grid;
-                    grid-template-columns: repeat(2, 1fr);
-                    gap: 15px;
-                    background: #FFFFFF;
+                /* TABLA DE INFORMACIÓN */
+                table.info-table {
+                    width: 100%;
+                    border-collapse: collapse;
+                    margin-bottom: 20px;
+                    border: 3px solid #34353A;
                 }
-                .info-item {
-                    padding: 20px;
-                    border: 1px solid #e5e7eb;
-                    background: #FFFFFF;
+                table.info-table thead {
+                    background: linear-gradient(135deg, #5F8EAD 0%, #34353A 100%);
+                    color: #fff;
                 }
-                .info-item label {
-                    display: block;
-                    font-weight: 600;
-                    color: #5F8EAD;
-                    font-size: 11px;
-                    margin-bottom: 8px;
+                table.info-table th {
+                    padding: 6px 4px;
+                    text-align: center;
+                    font-size: 9px;
+                    font-weight: bold;
+                    border: 2px solid #34353A;
                     text-transform: uppercase;
-                    letter-spacing: 1px;
                 }
-                .info-item .value {
+                table.info-table td {
+                    padding: 6px 8px;
+                    border: 1px solid #34353A;
+                    font-size: 8px;
+                    background: #fff;
                     color: #34353A;
-                    font-size: 16px;
-                    font-weight: 400;
                 }
-                .full-width {
-                    grid-column: 1 / -1;
+                table.info-table .col-label {
+                    width: 200px;
+                    font-weight: bold;
+                    text-align: left;
+                    padding-left: 15px;
+                    background: #f5f5f5;
+                }
+                table.info-table .col-value {
+                    text-align: left;
+                    padding-left: 15px;
+                }
+                
+                /* TABLA DE DETALLES */
+                table.details-table {
+                    width: 100%;
+                    border-collapse: collapse;
+                    margin-bottom: 20px;
+                    border: 3px solid #34353A;
+                }
+                table.details-table thead {
+                    background: linear-gradient(135deg, #5F8EAD 0%, #34353A 100%);
+                    color: #fff;
+                }
+                table.details-table th {
+                    padding: 8px 6px;
+                    text-align: center;
+                    font-size: 9px;
+                    font-weight: bold;
+                    border: 2px solid #34353A;
+                    text-transform: uppercase;
+                }
+                table.details-table td {
+                    padding: 6px 8px;
+                    border: 1px solid #34353A;
+                    font-size: 8px;
+                    background: #fff;
+                    color: #34353A;
+                }
+                table.details-table .text-right {
+                    text-align: right;
+                }
+                table.details-table .text-center {
+                    text-align: center;
                 }
                 
                 /* BADGES */
                 .badge {
                     display: inline-block;
-                    padding: 8px 16px;
+                    padding: 4px 10px;
                     border-radius: 3px;
-                    font-size: 12px;
-                    font-weight: 600;
+                    font-size: 8px;
+                    font-weight: bold;
                     text-transform: uppercase;
-                    letter-spacing: 0.5px;
                 }
                 .badge-preventivo {
                     background: #5D9646;
@@ -289,264 +325,189 @@ ReportesRoutes.generarPDFIndividual = async (req, res) => {
                     color: #FFFFFF;
                 }
                 
-                /* TABLA */
-                table {
-                    width: 100%;
-                    border-collapse: collapse;
-                    background: #FFFFFF;
-                }
-                thead {
-                    background: #34353A;
-                    color: #FFFFFF;
-                }
-                th {
-                    padding: 16px;
-                    text-align: left;
-                    font-weight: 600;
-                    font-size: 12px;
-                    text-transform: uppercase;
-                    letter-spacing: 1px;
-                    border-bottom: 3px solid #5D9646;
-                }
-                td {
-                    padding: 16px;
-                    border-bottom: 1px solid #e5e7eb;
-                    font-size: 14px;
-                    color: #34353A;
-                }
-                tbody tr:hover {
-                    background: #f9fafb;
-                }
-                tbody tr:last-child td {
-                    border-bottom: none;
-                }
-                .text-right {
-                    text-align: right;
-                }
-                
-                /* SECCIÓN DE TOTALES */
-                .total-section {
-                    margin-top: 30px;
-                    background: #34353A;
-                    padding: 30px;
-                    border-top: 5px solid #5D9646;
-                }
-                .total-grid {
-                    display: grid;
-                    grid-template-columns: repeat(3, 1fr);
-                    gap: 25px;
-                    margin-bottom: 25px;
-                }
-                .total-item {
-                    text-align: center;
-                    padding: 20px;
-                    background: rgba(95, 142, 173, 0.1);
-                    border-radius: 4px;
-                }
-                .total-item label {
-                    display: block;
+                /* FOOTER SECTION */
+                .footer-section {
                     font-size: 11px;
-                    color: rgba(255, 255, 255, 0.7);
-                    margin-bottom: 10px;
-                    text-transform: uppercase;
-                    letter-spacing: 1px;
-                }
-                .total-item .value {
-                    font-size: 24px;
-                    font-weight: 600;
-                    color: #FFFFFF;
-                }
-                .grand-total {
-                    border-top: 2px solid rgba(93, 150, 70, 0.3);
-                    padding-top: 25px;
+                    margin-top: 20px;
+                    padding: 12px;
+                    background: #f9f9f9;
+                    border: 2px solid #34353A;
                     text-align: center;
                 }
-                .grand-total label {
-                    font-size: 13px;
-                    color: rgba(255, 255, 255, 0.8);
-                    margin-bottom: 10px;
-                    text-transform: uppercase;
-                    letter-spacing: 2px;
-                }
-                .grand-total .amount {
-                    font-size: 42px;
-                    font-weight: 700;
-                    color: #5D9646;
-                }
-                
-                /* FOOTER */
-                .footer {
-                    margin-top: 60px;
-                    padding-top: 30px;
-                    border-top: 3px solid #34353A;
-                    text-align: center;
-                }
-                .footer-content {
-                    color: #6b7280;
-                    font-size: 11px;
-                    line-height: 1.8;
-                }
-                .footer-content p {
-                    margin: 5px 0;
-                }
-                .timestamp {
-                    font-weight: 600;
+                .footer-section .balance-final {
+                    font-size: 18px;
+                    font-weight: bold;
+                    margin: 8px 0;
+                    padding: 10px;
+                    background: #fff;
+                    border: 2px solid #5F8EAD;
                     color: #5F8EAD;
                 }
-                .company-name {
-                    font-weight: 600;
+                .footer-info {
+                    margin-top: 30px;
+                    text-align: center;
+                    font-size: 10px;
                     color: #34353A;
+                    border-top: 1px solid #ccc;
+                    padding-top: 15px;
                 }
             </style>
         </head>
         <body>
-            <div class="page-wrapper">
-                <div class="header">
-                    <div class="header-content">
-                        <div class="logo-container">
-                            ${logoBase64 ? `<img src="${logoBase64}" alt="Rivera Logo" />` : '<p style="color: white; font-size: 24px; font-weight: 300;">RIVERA</p>'}
-                        </div>
-                        <h1>REPORTE DE MANTENIMIENTO</h1>
-                        <p class="subtitle">Registro Detallado de Servicio Vehicular</p>
-                        <div class="id-badge">ID: ${manto._id}</div>
-                    </div>
+            <div class="header">
+                <div class="logo-container">
+                    ${logoBase64 ? `<img src="${logoBase64}" alt="Rivera Logo" style="max-width:100px;height:auto;"/>` : '<p style="color:#34353A">RIVERA</p>'}
                 </div>
+                <h1>REPORTE DE MANTENIMIENTO</h1>
+                <div class="subtitle">REGISTRO DETALLADO DE SERVICIO VEHICULAR</div>
+                <div class="info-id">ID: ${manto._id}</div>
+            </div>
 
-                <div class="section">
-                    <div class="section-header">
-                        <h2 class="section-title">Información del Vehículo</h2>
-                    </div>
-                    <div class="info-grid">
-                        <div class="info-item">
-                            <label>Nombre del Vehículo</label>
-                            <div class="value">${manto.ciculatioCard.name}</div>
-                        </div>
-                        <div class="info-item">
-                            <label>Placas</label>
-                            <div class="value">${manto.ciculatioCard.licensePlate}</div>
-                        </div>
-                        <div class="info-item">
-                            <label>Marca</label>
-                            <div class="value">${manto.ciculatioCard.brand}</div>
-                        </div>
-                        <div class="info-item">
-                            <label>Modelo</label>
-                            <div class="value">${manto.ciculatioCard.model}</div>
-                        </div>
-                        <div class="info-item">
-                            <label>Estado</label>
-                            <div class="value">${manto.ciculatioCard.state}</div>
-                        </div>
-                        <div class="info-item">
-                            <label>Año</label>
-                            <div class="value">${manto.ciculatioCard.age || 'N/A'}</div>
-                        </div>
-                        ${manto.ciculatioCard.description ? `
-                        <div class="info-item full-width">
-                            <label>Descripción</label>
-                            <div class="value">${manto.ciculatioCard.description}</div>
-                        </div>
-                        ` : ''}
-                    </div>
+            <div class="stats-summary">
+                <div class="stats-row">
+                    <span><strong>VEHÍCULO:</strong></span>
+                    <span>${manto.ciculatioCard.name} - ${manto.ciculatioCard.licensePlate}</span>
                 </div>
-
-                <div class="section">
-                    <div class="section-header">
-                        <h2 class="section-title">Detalles del Mantenimiento</h2>
-                    </div>
-                    <div class="info-grid">
-                        <div class="info-item">
-                            <label>Fecha de Mantenimiento</label>
-                            <div class="value">${new Date(manto.fecha_mantenimiento).toLocaleDateString('es-ES', {
-                                year: 'numeric',
-                                month: 'long',
-                                day: 'numeric'
-                            })}</div>
-                        </div>
-                        <div class="info-item">
-                            <label>Período</label>
-                            <div class="value">${obtenerNombreMes(manto.mes)} ${manto.ano}</div>
-                        </div>
-                        <div class="info-item">
-                            <label>Tipo de Mantenimiento</label>
-                            <div class="value">
-                                <span class="badge badge-${manto.tipo_de_mantenimiento}">
-                                    ${manto.tipo_de_mantenimiento}
-                                </span>
-                            </div>
-                        </div>
-                        <div class="info-item">
-                            <label>Cantidad de Items</label>
-                            <div class="value">${manto.detalles.length} ${manto.detalles.length === 1 ? 'item' : 'items'}</div>
-                        </div>
-                        <div class="info-item full-width">
-                            <label>Descripción del Trabajo Realizado</label>
-                            <div class="value">${manto.descripcion}</div>
-                        </div>
-                    </div>
+                <div class="stats-row">
+                    <span><strong>FECHA:</strong></span>
+                    <span>${new Date(manto.fecha_mantenimiento).toLocaleDateString('es-ES')}</span>
                 </div>
-
-                <div class="section">
-                    <div class="section-header">
-                        <h2 class="section-title">Desglose de Costos</h2>
-                    </div>
-                    <table>
-                        <thead>
-                            <tr>
-                                <th style="width: 8%;">#</th>
-                                <th style="width: 42%;">Concepto</th>
-                                <th class="text-right" style="width: 15%;">Cantidad</th>
-                                <th class="text-right" style="width: 17.5%;">Precio Unit.</th>
-                                <th class="text-right" style="width: 17.5%;">Subtotal</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${manto.detalles.map((detalle, index) => `
-                                <tr>
-                                    <td><strong>${index + 1}</strong></td>
-                                    <td><strong>${detalle.concepto}</strong></td>
-                                    <td class="text-right">${detalle.cantidad}</td>
-                                    <td class="text-right">$${detalle.precioUnitario.toFixed(2)}</td>
-                                    <td class="text-right"><strong>$${detalle.subTotal.toFixed(2)}</strong></td>
-                                </tr>
-                            `).join('')}
-                        </tbody>
-                    </table>
-
-                    <div class="total-section">
-                        <div class="total-grid">
-                            <div class="total-item">
-                                <label>Total Items</label>
-                                <div class="value">${manto.detalles.length}</div>
-                            </div>
-                            <div class="total-item">
-                                <label>Subtotal</label>
-                                <div class="value">$${totalDetalle.toFixed(2)}</div>
-                            </div>
-                            <div class="total-item">
-                                <label>Costo Promedio</label>
-                                <div class="value">$${(totalDetalle / manto.detalles.length).toFixed(2)}</div>
-                            </div>
-                        </div>
-                        <div class="grand-total">
-                            <label>COSTO TOTAL</label>
-                            <div class="amount">$${totalDetalle.toFixed(2)}</div>
-                        </div>
-                    </div>
+                <div class="stats-row">
+                    <span><strong>TIPO:</strong></span>
+                    <span>${manto.tipo_de_mantenimiento.toUpperCase()}</span>
                 </div>
+                <div class="stats-row">
+                    <span><strong>TOTAL ITEMS:</strong></span>
+                    <span>${manto.detalles.length}</span>
+                </div>
+                <div class="stats-row">
+                    <span><strong>COSTO TOTAL:</strong></span>
+                    <span><strong>$ ${totalDetalle.toFixed(2)}</strong></span>
+                </div>
+            </div>
 
-                <div class="footer">
-                    <div class="footer-content">
-                        <p class="timestamp">Documento generado el ${new Date().toLocaleDateString('es-ES', {
+            <div class="section-title">Información del Vehículo</div>
+
+            <table class="info-table">
+                <thead>
+                    <tr>
+                        <th class="col-label">DETALLE</th>
+                        <th class="col-value">INFORMACIÓN</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td class="col-label">NOMBRE DEL VEHÍCULO:</td>
+                        <td class="col-value">${manto.ciculatioCard.name.toUpperCase()}</td>
+                    </tr>
+                    <tr>
+                        <td class="col-label">PLACAS:</td>
+                        <td class="col-value">${manto.ciculatioCard.licensePlate.toUpperCase()}</td>
+                    </tr>
+                    <tr>
+                        <td class="col-label">MARCA:</td>
+                        <td class="col-value">${manto.ciculatioCard.brand.toUpperCase()}</td>
+                    </tr>
+                    <tr>
+                        <td class="col-label">MODELO:</td>
+                        <td class="col-value">${manto.ciculatioCard.model.toUpperCase()}</td>
+                    </tr>
+                    <tr>
+                        <td class="col-label">ESTADO:</td>
+                        <td class="col-value">${manto.ciculatioCard.state.toUpperCase()}</td>
+                    </tr>
+                    <tr>
+                        <td class="col-label">AÑO:</td>
+                        <td class="col-value">${manto.ciculatioCard.age || 'N/A'}</td>
+                    </tr>
+                    ${manto.ciculatioCard.description ? `
+                    <tr>
+                        <td class="col-label">DESCRIPCIÓN:</td>
+                        <td class="col-value">${manto.ciculatioCard.description.toUpperCase()}</td>
+                    </tr>
+                    ` : ''}
+                </tbody>
+            </table>
+
+            <div class="section-title">Detalles del Mantenimiento</div>
+
+            <table class="info-table">
+                <thead>
+                    <tr>
+                        <th class="col-label">DETALLE</th>
+                        <th class="col-value">INFORMACIÓN</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td class="col-label">FECHA DE MANTENIMIENTO:</td>
+                        <td class="col-value">${new Date(manto.fecha_mantenimiento).toLocaleDateString('es-ES', {
+                            weekday: 'long',
                             year: 'numeric',
                             month: 'long',
                             day: 'numeric'
-                        })} a las ${new Date().toLocaleTimeString('es-ES')}</p>
-                        <p class="company-name">Rivera Distribuidora y Transportes</p>
-                        <p>Sistema de Gestión de Mantenimiento Vehicular</p>
-                        <p>© ${new Date().getFullYear()} Todos los derechos reservados</p>
-                    </div>
+                        }).toUpperCase()}</td>
+                    </tr>
+                    <tr>
+                        <td class="col-label">PERÍODO:</td>
+                        <td class="col-value">${obtenerNombreMes(manto.mes).toUpperCase()} ${manto.ano}</td>
+                    </tr>
+                    <tr>
+                        <td class="col-label">TIPO DE MANTENIMIENTO:</td>
+                        <td class="col-value">
+                            <span class="badge badge-${manto.tipo_de_mantenimiento}">
+                                ${manto.tipo_de_mantenimiento.toUpperCase()}
+                            </span>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="col-label">CANTIDAD DE ITEMS:</td>
+                        <td class="col-value">${manto.detalles.length} ${manto.detalles.length === 1 ? 'ITEM' : 'ITEMS'}</td>
+                    </tr>
+                    <tr>
+                        <td class="col-label">DESCRIPCIÓN:</td>
+                        <td class="col-value">${manto.descripcion.toUpperCase()}</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="section-title">Desglose de Costos</div>
+
+            <table class="details-table">
+                <thead>
+                    <tr>
+                        <th style="width: 5%;">#</th>
+                        <th style="width: 45%;">CONCEPTO</th>
+                        <th style="width: 15%;">CANTIDAD</th>
+                        <th style="width: 17.5%;">PRECIO UNIT.</th>
+                        <th style="width: 17.5%;">SUBTOTAL</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${manto.detalles.map((detalle, index) => `
+                        <tr>
+                            <td class="text-center"><strong>${index + 1}</strong></td>
+                            <td>${detalle.concepto.toUpperCase()}</td>
+                            <td class="text-center">${detalle.cantidad}</td>
+                            <td class="text-right">$${detalle.precioUnitario.toFixed(2)}</td>
+                            <td class="text-right"><strong>$${detalle.subTotal.toFixed(2)}</strong></td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+
+            <div class="footer-section">
+                <div>COSTO TOTAL DEL MANTENIMIENTO</div>
+                <div class="balance-final">$ ${totalDetalle.toFixed(2)}</div>
+                <div style="margin-top: 10px; font-size: 9px;">
+                    <div>Total de Items: ${manto.detalles.length}</div>
+                    <div>Costo Promedio por Item: $${(totalDetalle / manto.detalles.length).toFixed(2)}</div>
                 </div>
+            </div>
+
+            <div class="footer-info">
+                <p>Documento generado el ${new Date().toLocaleDateString('es-ES')} a las ${new Date().toLocaleTimeString('es-ES')}</p>
+                <p>Rivera Distribuidora y Transportes © ${new Date().getFullYear()}</p>
             </div>
         </body>
         </html>
@@ -561,10 +522,10 @@ ReportesRoutes.generarPDFIndividual = async (req, res) => {
             format: 'A4',
             printBackground: true,
             margin: {
-                top: '0px',
-                right: '0px',
-                bottom: '0px',
-                left: '0px'
+                top: '20px',
+                right: '20px',
+                bottom: '20px',
+                left: '20px'
             }
         });
 
@@ -1160,7 +1121,7 @@ ReportesRoutes.generarPDFMultiplesMeses = async (req, res) => {
                             `).join('') : '<tr><td colspan="3" style="text-align: center; color: #6b7280;">Sin registros</td></tr>'}
                             ${datosTabla.length > 0 ? `
                             <tr class="total-row">
-                                <td colspan="2" style="text-align: left; padding-left: 8px;"><strong>TALLER</strong></td>
+                                <td colspan="2" style="text-align: left; padding-left: 8px;"><strong>TOTAL</strong></td>
                                 <td class="col-monto"><strong>$ ${totalMes.toFixed(2)}</strong></td>
                             </tr>
                             ` : ''}
@@ -1176,7 +1137,7 @@ ReportesRoutes.generarPDFMultiplesMeses = async (req, res) => {
 
         const logoHTML = logoBase64 
             ? `<img src="${logoBase64}" alt="Rivera Logo" />` 
-            : '<div style="color: white; font-size: 24px; font-weight: 300;">RIVERA - Distribuidora y Transportes</div>';
+            : '<div style="color: #34353A; font-size: 24px; font-weight: bold;">RIVERA - Distribuidora y Transportes</div>';
 
         const htmlContent = `<!DOCTYPE html>
 <html lang="es">
@@ -1381,8 +1342,8 @@ ReportesRoutes.generarPDFMultiplesMeses = async (req, res) => {
         await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
 
         const pdfBuffer = await page.pdf({
-            format: 'Legal',
-            landscape: true,
+            format: 'A4',
+            landscape: false,  // ← CAMBIADO A VERTICAL
             printBackground: true,
             margin: { top: '10mm', right: '10mm', bottom: '10mm', left: '10mm' }
         });
