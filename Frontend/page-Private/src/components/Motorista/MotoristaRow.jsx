@@ -18,6 +18,7 @@ const MotoristaRow = ({
   selectedMotorista,
   selectMotorista,
   isLicenseValid,
+  getLicenseStatus,
 }) => {
   const isSelected =
     selectedMotorista &&
@@ -89,7 +90,15 @@ const MotoristaRow = ({
       <div className="flex items-center truncate">
         <Calendar className={`w-4 h-4 mr-2 ${isSelected ? 'text-white' : 'text-gray-400'}`} />
         <span className="truncate">
-          {motorista.birthDate ? new Date(motorista.birthDate).toLocaleDateString() : 'No disponible'}
+          {motorista.birthDate ? (() => {
+            try {
+              const dateStr = String(motorista.birthDate).substring(0, 10);
+              const [year, month, day] = dateStr.split('-');
+              return `${day}/${month}/${year}`;
+            } catch {
+              return 'No disponible';
+            }
+          })() : 'No disponible'}
         </span>
       </div>
 
@@ -133,23 +142,40 @@ const MotoristaRow = ({
           {/* Vigencia */}
           <div className="flex items-center truncate">
             <Shield className={`w-4 h-4 mr-2 ${isSelected ? 'text-white' : 'text-gray-400'}`} />
-            {isLicenseValid(motorista) ? (
-              <span
-                className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
-                  isSelected ? 'bg-white bg-opacity-20 text-white' : 'bg-green-100 text-green-800'
-                }`}
-              >
-                Vigente
-              </span>
-            ) : (
-              <span
-                className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
-                  isSelected ? 'bg-white bg-opacity-20 text-white' : 'bg-red-100 text-red-800'
-                }`}
-              >
-                Vencido
-              </span>
-            )}
+            {(() => {
+              const status = getLicenseStatus(motorista);
+              if (status === 'Vigente') {
+                return (
+                  <span
+                    className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
+                      isSelected ? 'bg-white bg-opacity-20 text-white' : 'bg-green-100 text-green-800'
+                    }`}
+                  >
+                    Vigente
+                  </span>
+                );
+              } else if (status === 'Próxima a vencer') {
+                return (
+                  <span
+                    className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
+                      isSelected ? 'bg-white bg-opacity-20 text-white' : 'bg-yellow-100 text-yellow-800'
+                    }`}
+                  >
+                    Próxima a vencer
+                  </span>
+                );
+              } else {
+                return (
+                  <span
+                    className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
+                      isSelected ? 'bg-white bg-opacity-20 text-white' : 'bg-red-100 text-red-800'
+                    }`}
+                  >
+                    Vencida
+                  </span>
+                );
+              }
+            })()}
           </div>
         </>
       )}

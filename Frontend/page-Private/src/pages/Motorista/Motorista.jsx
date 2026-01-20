@@ -50,7 +50,8 @@ const Motorista = () => {
     selectMotorista,
     closeDetailView,
     handleRefresh,
-    isLicenseValid
+    isLicenseValid,
+    getLicenseStatus
   } = useMotoristaManagement();
 
   // Estados para paginación
@@ -139,6 +140,7 @@ const Motorista = () => {
             selectedMotorista={selectedMotorista}
             selectMotorista={selectMotorista}
             isLicenseValid={isLicenseValid}
+            getLicenseStatus={getLicenseStatus}
           />
         ))}
       </div>
@@ -199,6 +201,7 @@ const Motorista = () => {
                 closeDetailView={closeDetailView}
                 handleOptionsClick={handleOptionsClick}
                 isLicenseValid={isLicenseValid}
+                getLicenseStatus={getLicenseStatus}
               />
             </div>
           )}
@@ -213,6 +216,7 @@ const Motorista = () => {
                     closeDetailView={closeDetailView}
                     handleOptionsClick={handleOptionsClick}
                     isLicenseValid={isLicenseValid}
+                    getLicenseStatus={getLicenseStatus}
                   />
                 </div>
               </div>

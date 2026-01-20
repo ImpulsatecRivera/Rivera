@@ -16,6 +16,7 @@ import ResetPassword from "./pages/ResetPassword";
 import Dashboard from "./pages/Dashboard/Dashboard";
 import ReportsPage from "./pages/Dashboard/ReportsPage";
 import ClientManagementInterface from "./pages/Clientes";
+import AddClienteForm from "./pages/Clientes/AgregarCliente";
 import Employee from "./pages/Employees/Employee";
 import AddEmployeeForm from "./pages/Employees/AgregarEmpleados";
 import MotoristaManagementInterface from "./pages/Motorista/Motorista";
@@ -67,6 +68,7 @@ function App() {
   const splashRoutes = [
     "/empleados/agregarEmployee",
     "/motoristas/agregarMotorista",
+    "/clientes/agregarCliente",
     "/camiones/aggCamion",
     "/proveedores/agregarProveedor",
     "/camiones/editarCamion/:id",
@@ -195,6 +197,7 @@ function App() {
 
         {/* Clientes */}
         <Route path="/clientes" element={<ClientManagementInterface />} />
+        <Route path="/clientes/agregarCliente" element={<AddClienteForm />} />
 
         {/* Empleados */}
         <Route path="/empleados" element={<Employee />} />

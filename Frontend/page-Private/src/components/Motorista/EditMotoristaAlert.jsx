@@ -10,6 +10,7 @@ const EditMotoristaAlert = ({ isOpen, onClose, onSave, motorista, uploading = fa
     password: '',
     circulationCard: '',
     email: '',
+    fechaVencimientoLicencia: '',
     // ✅ CAMPOS DEL MODEL
     planillaTipo: '',
     salario: '',
@@ -46,6 +47,7 @@ const EditMotoristaAlert = ({ isOpen, onClose, onSave, motorista, uploading = fa
         circulationCard: '',
         // email se muestra (y puede auto-actualizarse si cambias nombre/apellido)
         email: motorista.email || generateEmail(name, lastName) || '',
+        fechaVencimientoLicencia: motorista.fechaVencimientoLicencia || '',
         // ✅ model
         planillaTipo: motorista.planillaTipo || '',
         salario:
@@ -64,21 +66,9 @@ const EditMotoristaAlert = ({ isOpen, onClose, onSave, motorista, uploading = fa
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [motorista, isOpen]);
 
-  // ✅ Email autogenerado si cambias nombre/apellido (sin editar manual)
-  useEffect(() => {
-    if (!isOpen) return;
-    const baseName = formData.name || motorista?.name || '';
-    const baseLast = formData.lastName || motorista?.lastName || '';
-    const email = generateEmail(baseName, baseLast);
-    setFormData((prev) => ({ ...prev, email }));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [formData.name, formData.lastName, isOpen]);
-
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     let formattedValue = value;
-
-    if (name === 'email') return;
 
     if (name === 'circulationCard') {
       formattedValue = value.replace(/[^a-zA-Z0-9-]/g, '').toUpperCase();
@@ -162,8 +152,6 @@ const EditMotoristaAlert = ({ isOpen, onClose, onSave, motorista, uploading = fa
   };
 
   if (!isOpen) return null;
-
-  const showAutoEmailHint = Boolean(formData.name || formData.lastName);
 
   return (
     <div
@@ -307,21 +295,16 @@ const EditMotoristaAlert = ({ isOpen, onClose, onSave, motorista, uploading = fa
           <div className="grid grid-cols-2 gap-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Email {showAutoEmailHint ? '(actualizándose automáticamente)' : '(actual)'}
+                Email
               </label>
               <input
                 type="email"
                 name="email"
                 value={formData.email}
-                readOnly
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-gray-50 text-sm text-gray-700 cursor-not-allowed"
+                onChange={handleInputChange}
+                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 text-base text-gray-900 bg-white"
                 placeholder={motorista?.email || "Email"}
               />
-              <p className="text-xs text-gray-500 mt-1">
-                {showAutoEmailHint
-                  ? 'El email se actualiza automáticamente al cambiar nombre/apellido'
-                  : 'Email actual del motorista'}
-              </p>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Fecha de nacimiento</label>
@@ -393,6 +376,25 @@ const EditMotoristaAlert = ({ isOpen, onClose, onSave, motorista, uploading = fa
                 maxLength={15}
               />
             </div>
+          </div>
+
+          {/* Fecha de Vencimiento de la Licencia */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Fecha de vencimiento de la licencia</label>
+            <input
+              type="date"
+              name="fechaVencimientoLicencia"
+              value={
+                formData.fechaVencimientoLicencia
+                  ? new Date(formData.fechaVencimientoLicencia).toISOString().split('T')[0]
+                  : ''
+              }
+              onChange={(e) => {
+                const dateValue = e.target.value ? new Date(e.target.value + 'T00:00:00') : '';
+                setFormData(prev => ({ ...prev, fechaVencimientoLicencia: dateValue }));
+              }}
+              className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 text-base text-gray-900 bg-white"
+            />
           </div>
 
           {/* ✅ Planilla / Salario */}

@@ -320,6 +320,7 @@ empleadosCon.post = async (req, res) => {
         const { 
             name, 
             lastName, 
+            email,
             dui, 
             birthDate, 
             password, 
@@ -446,15 +447,21 @@ empleadosCon.post = async (req, res) => {
             });
         }
 
-        // Generar email automático
-        let email;
-        try {
-            email = await generarEmail(name, lastName);
-        } catch (emailError) {
+        // ✅ Validar email proporcionado por el usuario
+        if (!email || email.trim() === "") {
             return res.status(400).json({
                 success: false,
-                message: "Error al generar email",
-                error: emailError.message
+                message: "Email requerido",
+                error: "El correo electrónico es obligatorio"
+            });
+        }
+
+        const emailLimpio = email.trim().toLowerCase();
+        if (!validateEmail(emailLimpio)) {
+            return res.status(400).json({
+                success: false,
+                message: "Email inválido",
+                error: "Formato de correo electrónico no válido"
             });
         }
 
@@ -463,7 +470,7 @@ empleadosCon.post = async (req, res) => {
         const existingEmployee = await empleadosModel.findOne({
             $or: [
                 { dui: duiFormateado },
-                { email }
+                { email: emailLimpio }
             ]
         });
 
@@ -517,9 +524,9 @@ empleadosCon.post = async (req, res) => {
         const newEmpleado = new empleadosModel({
             name: name.trim(),
             lastName: lastName.trim(),
-            email,
+            email: emailLimpio,
             dui: duiFormateado,
-            birthDate: new Date(birthDate),
+            birthDate: birthDate || new Date(),
             password: hashedPassword,
             phone: formatPhone(phone),
             address: address.trim(),
@@ -613,7 +620,8 @@ empleadosCon.put = async (req, res) => {
 
         const { 
             name, 
-            lastName, 
+            lastName,
+            email,
             dui, 
             birthDate, 
             password, 
@@ -749,26 +757,39 @@ empleadosCon.put = async (req, res) => {
         if (name) datosActualizados.name = name.trim();
         if (lastName) datosActualizados.lastName = lastName.trim();
         if (dui) datosActualizados.dui = formatDUI(dui);
-        if (birthDate) datosActualizados.birthDate = new Date(birthDate);
+        if (birthDate) datosActualizados.birthDate = birthDate;
         if (phone) datosActualizados.phone = formatPhone(phone);
         if (address !== undefined) datosActualizados.address = address.trim();
         if (salario !== undefined) datosActualizados.salario = Number(salario);
         if (rolNormalizado !== undefined) datosActualizados.rol = rolNormalizado;
         if (planillaTipoNormalizado !== undefined) datosActualizados.planillaTipo = planillaTipoNormalizado;
 
-        // Generar nuevo email si se proporcionan nombre o apellido
-        if (name || lastName) {
-            try {
-                const nombreFinal = name || empleadoExistente.name;
-                const apellidoFinal = lastName || empleadoExistente.lastName;
-                datosActualizados.email = await generarEmail(nombreFinal, apellidoFinal, id);
-            } catch (emailError) {
+        // ✅ Actualizar email si se proporciona
+        if (email && email.trim() !== "") {
+            const emailLimpio = email.trim().toLowerCase();
+            if (!validateEmail(emailLimpio)) {
                 return res.status(400).json({
                     success: false,
-                    message: "Error al generar email",
-                    error: emailError.message
+                    message: "Email inválido",
+                    error: "Formato de correo electrónico no válido"
                 });
             }
+            
+            // Verificar que el nuevo email no esté duplicado (excluyendo el empleado actual)
+            const emailDuplicado = await empleadosModel.findOne({
+                email: emailLimpio,
+                _id: { $ne: id }
+            });
+            
+            if (emailDuplicado) {
+                return res.status(409).json({
+                    success: false,
+                    message: "Email duplicado",
+                    error: "Ya existe otro empleado con este correo electrónico"
+                });
+            }
+            
+            datosActualizados.email = emailLimpio;
         }
 
         // Manejo de imagen si se proporciona
