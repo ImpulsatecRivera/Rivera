@@ -1,5 +1,22 @@
 import { Schema, model } from "mongoose";
 
+/**
+ * Obtener el día de la semana ajustado a zona horaria de El Salvador (CST, UTC-6)
+ * El Salvador no observa horario de verano, siempre está en UTC-6
+ * 0 = domingo, 1 = lunes, 2 = martes, ... 6 = sábado
+ */
+function getDayInSalvadorTimeZone(date) {
+    const EL_SALVADOR_OFFSET = -6 * 60 * 60 * 1000; // UTC-6 en milisegundos
+    
+    // Convertir la fecha a UTC
+    const utcTime = date.getTime();
+    
+    // Convertir a zona horaria de El Salvador
+    const salvadorTime = new Date(utcTime + EL_SALVADOR_OFFSET);
+    
+    return salvadorTime.getUTCDay();
+}
+
 const planillaSemanalSchema = new Schema({
     // Información del período
     fechaInicio: {
@@ -7,7 +24,7 @@ const planillaSemanalSchema = new Schema({
         required: true,
         validate: {
             validator: function (v) {
-                return v.getDay() === 1; // Debe ser lunes
+                return getDayInSalvadorTimeZone(v) === 1; // Debe ser lunes
             },
             message: 'La fecha de inicio debe ser un lunes'
         }
@@ -17,7 +34,7 @@ const planillaSemanalSchema = new Schema({
         required: true,
         validate: {
             validator: function (v) {
-                return v.getDay() === 6; // Debe ser sábado
+                return getDayInSalvadorTimeZone(v) === 6; // Debe ser sábado
             },
             message: 'La fecha de fin debe ser un sábado'
         }

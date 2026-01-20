@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
-  ArrowLeft, Calendar, Users, Plus, X, 
-  CheckCircle, AlertCircle, Search
+  ArrowLeft, Calendar, Plus, AlertCircle
 } from 'lucide-react';
 import { config } from '../../config';
 import Swal from 'sweetalert2';
 import { useAuth } from '../../Context/authContext';
 import { api } from '../../Context/authContext';
+import { getDayInSalvadorTimeZone, dateStringToSalvadorDate } from '../../utils/timezoneUtils';
 
 
 export default function PlanillaSemanalNueva() {
@@ -23,21 +23,13 @@ export default function PlanillaSemanalNueva() {
   const [fechaInicio, setFechaInicio] = useState('');
   const [fechaFin, setFechaFin] = useState('');
   const [diasHabiles, setDiasHabiles] = useState('26');
-  const [empleadosDisponibles, setEmpleadosDisponibles] = useState([]);
-  const [empleadosSeleccionados, setEmpleadosSeleccionados] = useState([]);
-  const [busqueda, setBusqueda] = useState('');
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    cargarEmpleados();
-  }, []);
-
-  useEffect(() => {
     if (fechaInicio) {
-      const [year, month, day] = fechaInicio.split('-');
-      const inicio = new Date(year, month - 1, day);
-      
-      const diaSemana = inicio.getDay();
+      // Usar la función de timezone para obtener el día en zona horaria de El Salvador
+      const inicio = dateStringToSalvadorDate(fechaInicio);
+      const diaSemana = getDayInSalvadorTimeZone(inicio);
       
       if (diaSemana !== 1) {
         Swal.fire({
@@ -51,8 +43,8 @@ export default function PlanillaSemanalNueva() {
         return;
       }
 
-      const fin = new Date(year, month - 1, day);
-      fin.setDate(fin.getDate() + 5);
+      // Calcular fecha fin (sábado, 5 días después)
+      const fin = new Date(inicio.getTime() + (5 * 24 * 60 * 60 * 1000));
       
       const finYear = fin.getFullYear();
       const finMonth = String(fin.getMonth() + 1).padStart(2, '0');
@@ -62,127 +54,91 @@ export default function PlanillaSemanalNueva() {
     }
   }, [fechaInicio]);
 
- const cargarEmpleados = async () => {
-  try {
-    const resEmpleados = await api.get(`${config.api.API_URL}/empleados`);
-    const resMotoristas = await api.get(`${config.api.API_URL}/motoristas`);
+  const handleCrearPlanilla = async () => {
+    if (!fechaInicio || !fechaFin) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'Campos incompletos',
+        text: 'Debes seleccionar las fechas'
+      });
+      return;
+    }
 
-    const dataEmpleados = resEmpleados.data;
-    const dataMotoristas = resMotoristas.data;
+    setLoading(true);
 
-    let empleados = [];
-    let motoristas = [];
+    try {
+      const responsePlanilla = await api.post(
+        `${config.api.API_URL}/planillas/semanal`,
+        {
+          fechaInicio,
+          fechaFin,
+          diasHabiles: Number.parseInt(diasHabiles)
+        }
+      );
 
-    if (Array.isArray(dataEmpleados)) empleados = dataEmpleados;
-    else if (dataEmpleados?.empleados) empleados = dataEmpleados.empleados;
-    else if (dataEmpleados?.data) empleados = Array.isArray(dataEmpleados.data)
-      ? dataEmpleados.data
-      : Object.values(dataEmpleados.data).find(v => Array.isArray(v)) || [];
+      const dataPlanilla = responsePlanilla.data;
 
-    if (Array.isArray(dataMotoristas)) motoristas = dataMotoristas;
-    else if (dataMotoristas?.motoristas) motoristas = dataMotoristas.motoristas;
-    else if (dataMotoristas?.data) motoristas = dataMotoristas.data;
+      if (!dataPlanilla.success) throw new Error(dataPlanilla.message);
 
-    const todosEmpleados = [
-      ...empleados.map(e => ({
-        _id: e._id,
-        nombre: `${e.name || e.nombre || ''} ${e.lastName || e.apellido || ''}`.trim(),
-        tipo: 'empleado',
-        planillaTipo: e.planillaTipo || 'N/A',
-        salario: e.salary || e.salario || 0
-      })),
-      ...motoristas.map(m => ({
-        _id: m._id,
-        nombre: `${m.name || m.nombre || ''} ${m.lastName || m.apellido || ''}`.trim(),
-        tipo: 'motorista',
-        planillaTipo: m.planillaTipo || 'N/A',
-        salario: m.salary || m.salario || 0
-      }))
-    ];
+      const planillaId = dataPlanilla.data._id;
 
-    setEmpleadosDisponibles(todosEmpleados);
+      // Mostrar opción de cargar datos de planilla anterior
+      Swal.fire({
+        icon: 'success',
+        title: '¡Planilla Creada!',
+        text: 'Ahora puedes cargar datos de la planilla anterior',
+        confirmButtonText: 'Cargar datos anteriores',
+        cancelButtonText: 'Continuar manualmente',
+        showCancelButton: true,
+        confirmButtonColor: '#5F8EAD'
+      }).then((result) => {
+        if (result.isConfirmed) {
+          handleCargarDatosAnteriores(planillaId);
+        } else {
+          navigate(`/planilla/semanal/${planillaId}`);
+        }
+      });
 
-  } catch (error) {
-    console.error('❌ Error cargando empleados:', error);
-    Swal.fire({
-      icon: 'error',
-      title: 'Error',
-      text: 'No se pudieron cargar los empleados'
-    });
-  }
-};
-
-
-  const toggleEmpleado = (empleado) => {
-    if (empleadosSeleccionados.find(e => e._id === empleado._id)) {
-      setEmpleadosSeleccionados(empleadosSeleccionados.filter(e => e._id !== empleado._id));
-    } else {
-      setEmpleadosSeleccionados([...empleadosSeleccionados, empleado]);
+    } catch (error) {
+      console.error('Error creando planilla:', error);
+      const errorMessage = error.response?.data?.message || error.message || 'No se pudo crear la planilla';
+      Swal.fire({
+        icon: 'error',
+        title: 'Error al crear planilla',
+        text: errorMessage,
+        confirmButtonColor: '#5F8EAD'
+      });
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleCrearPlanilla = async () => {
-  if (!fechaInicio || !fechaFin) {
-    Swal.fire({
-      icon: 'warning',
-      title: 'Campos incompletos',
-      text: 'Debes seleccionar las fechas'
-    });
-    return;
-  }
-
-  setLoading(true);
-
-  try {
-    const responsePlanilla = await api.post(
-      `${config.api.API_URL}/planillas/semanal`,
-      {
-        fechaInicio,
-        fechaFin,
-        diasHabiles: parseInt(diasHabiles)
-      }
-    );
-
-    const dataPlanilla = responsePlanilla.data;
-
-    if (!dataPlanilla.success) throw new Error(dataPlanilla.message);
-
-    const planillaId = dataPlanilla.data._id;
-
-    for (const empleado of empleadosSeleccionados) {
-      await api.post(
-        `${config.api.API_URL}/planillas/semanal/${planillaId}/empleado`,
-        { empleadoId: empleado._id }
+  const handleCargarDatosAnteriores = async (planillaId) => {
+    try {
+      const response = await api.post(
+        `${config.api.API_URL}/planillas/semanal/${planillaId}/copiar-datos-anteriores`
       );
+
+      if (response.data.success) {
+        Swal.fire({
+          icon: 'success',
+          title: 'Datos Cargados',
+          text: 'Los datos de la planilla anterior se han cargado exitosamente',
+          timer: 2000,
+          showConfirmButton: false
+        });
+
+        navigate(`/planilla/semanal/${planillaId}`);
+      }
+    } catch (error) {
+      console.error('Error cargando datos anteriores:', error);
+      Swal.fire({
+        icon: 'error',
+        title: 'Error al cargar datos',
+        text: error.response?.data?.message || 'No se pudo cargar los datos de la planilla anterior'
+      });
     }
-
-    Swal.fire({
-      icon: 'success',
-      title: '¡Planilla Creada!',
-      text: `Se agregaron ${empleadosSeleccionados.length} empleados`,
-      timer: 2000,
-      showConfirmButton: false
-    });
-
-    navigate(`/planilla/semanal/${planillaId}`);
-
-  } catch (error) {
-    console.error('Error creando planilla:', error);
-    Swal.fire({
-      icon: 'error',
-      title: 'Error',
-      text: error.message || 'No se pudo crear la planilla'
-    });
-  } finally {
-    setLoading(false);
-  }
-};
-
-
-  const empleadosFiltrados = empleadosDisponibles.filter(e =>
-    e.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
-    e.planillaTipo.toLowerCase().includes(busqueda.toLowerCase())
-  );
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-indigo-50 p-6">
@@ -199,15 +155,15 @@ export default function PlanillaSemanalNueva() {
             </button>
             <div>
               <h1 className="text-3xl font-bold text-[#34353A]">Nueva Planilla Semanal</h1>
-              <p className="text-gray-600 mt-1">Configura el período y selecciona empleados</p>
+              <p className="text-gray-600 mt-1">Configura el período para crear la planilla</p>
             </div>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 gap-6">
           
           {/* CONFIGURACIÓN */}
-          <div className="bg-white rounded-2xl p-6 border-2 border-gray-100 shadow-sm space-y-6">
+          <div className="bg-white rounded-2xl p-6 border-2 border-gray-100 shadow-sm space-y-6 max-w-xl">
             <div className="flex items-center gap-3 mb-4">
               <div className="p-3 bg-[#5F8EAD] bg-opacity-20 rounded-xl">
                 <Calendar className="text-[#5F8EAD]" size={24} />
@@ -278,86 +234,6 @@ export default function PlanillaSemanalNueva() {
                   </ul>
                 </div>
               </div>
-            </div>
-          </div>
-
-          {/* SELECCIÓN DE EMPLEADOS */}
-          <div className="bg-white rounded-2xl p-6 border-2 border-gray-100 shadow-sm">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-3">
-                <div className="p-3 bg-[#5D9646] bg-opacity-20 rounded-xl">
-                  <Users className="text-[#5D9646]" size={24} />
-                </div>
-                <h2 className="text-xl font-bold text-[#34353A]">Empleados</h2>
-              </div>
-              <div className="px-4 py-2 bg-[#5D9646] bg-opacity-20 rounded-xl">
-                <span className="font-bold text-[#5D9646]">
-                  {empleadosSeleccionados.length} seleccionados
-                </span>
-              </div>
-            </div>
-
-            {/* Búsqueda */}
-            <div className="relative mb-4">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
-              <input
-                type="text"
-                placeholder="Buscar empleado..."
-                value={busqueda}
-                onChange={(e) => setBusqueda(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:border-[#5F8EAD] focus:outline-none transition-colors"
-              />
-            </div>
-
-            {/* Lista de empleados */}
-            <div className="space-y-2 max-h-[500px] overflow-y-auto pr-2">
-              {empleadosFiltrados.map((empleado) => {
-                const estaSeleccionado = empleadosSeleccionados.find(e => e._id === empleado._id);
-                
-                return (
-                  <div
-                    key={empleado._id}
-                    onClick={() => toggleEmpleado(empleado)}
-                    className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${
-                      estaSeleccionado
-                        ? 'bg-[#5D9646] bg-opacity-10 border-[#5D9646] shadow-md'
-                        : 'bg-gray-50 border-gray-200 hover:border-[#5D9646] hover:bg-[#5D9646] hover:bg-opacity-5'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex-1">
-                        <p className="font-bold text-[#34353A]">{empleado.nombre}</p>
-                        <div className="flex items-center gap-3 mt-1">
-                          <span className={`text-xs px-2 py-1 rounded-lg font-semibold ${
-                            empleado.planillaTipo === 'Semanal'
-                              ? 'bg-[#5D9646] bg-opacity-20 text-[#5D9646]'
-                              : 'bg-[#5F8EAD] bg-opacity-20 text-[#5F8EAD]'
-                          }`}>
-                            {empleado.planillaTipo}
-                          </span>
-                          <span className="text-xs text-gray-500">
-                            {empleado.tipo === 'motorista' ? '🚗 Motorista' : '👤 Empleado'}
-                          </span>
-                        </div>
-                      </div>
-                      <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${
-                        estaSeleccionado
-                          ? 'bg-[#5D9646] border-[#5D9646]'
-                          : 'border-gray-300'
-                      }`}>
-                        {estaSeleccionado && <CheckCircle className="text-white" size={16} />}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-
-              {empleadosFiltrados.length === 0 && (
-                <div className="text-center py-12">
-                  <Users className="mx-auto text-gray-300 mb-3" size={48} />
-                  <p className="text-gray-500 font-medium">No se encontraron empleados</p>
-                </div>
-              )}
             </div>
           </div>
         </div>
