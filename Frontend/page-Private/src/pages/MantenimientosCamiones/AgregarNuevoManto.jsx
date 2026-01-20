@@ -10,7 +10,6 @@ const CreateMantenimientoPage = () => {
   const [camiones, setCamiones] = useState([]);
   const [proveedores, setProveedores] = useState([]);
   const [loadingProveedores, setLoadingProveedores] = useState(true);
-  
 
   const [formData, setFormData] = useState({
     fecha_mantenimiento: '',
@@ -329,7 +328,7 @@ const CreateMantenimientoPage = () => {
       const response = await api.post('/mantenimientos', dataToSend);
 
       console.log('✅ Respuesta del servidor:', response.data);
-      
+
       // ✅ Alert de éxito
       await Swal.fire({
         icon: 'success',
@@ -339,10 +338,13 @@ const CreateMantenimientoPage = () => {
         timer: 3000,
         timerProgressBar: true
       });
+
+
       
 const result = response.data;
 
       console.log('Mantenimiento creado:', result);
+
 
       navigate('/mantenimientos');
 
