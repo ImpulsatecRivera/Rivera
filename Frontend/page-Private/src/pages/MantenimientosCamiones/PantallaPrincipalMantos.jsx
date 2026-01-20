@@ -80,6 +80,20 @@ const MantenimientosTable = () => {
 
   const descargarReporteIndividual = async (id) => {
   try {
+    // Mostrar alerta de procesando
+    Swal.fire({
+      title: 'Procesando...',
+      html: '<div style="text-align: center;"><div style="border: 4px solid #f3f3f3; border-top: 4px solid #5F8EAD; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 0 auto;"></div><p style="margin-top: 10px; color: #666;">Generando reporte, por favor espera</p></div>',
+      allowOutsideClick: false,
+      allowEscapeKey: false,
+      showConfirmButton: false,
+      didOpen: () => {
+        const style = document.createElement('style');
+        style.textContent = '@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }';
+        document.head.appendChild(style);
+      }
+    });
+
     const response = await api.get(`/reporte/individual/${id}`, {
       responseType: 'blob'
     });
@@ -96,14 +110,25 @@ const MantenimientosTable = () => {
     document.body.removeChild(a);
     window.URL.revokeObjectURL(url);
 
+    // Cerrar alerta de procesando y mostrar éxito
+    Swal.fire({
+      icon: 'success',
+      title: '¡Reporte generado!',
+      text: 'El reporte individual se descargó correctamente',
+      confirmButtonText: 'OK',
+      confirmButtonColor: '#5F8EAD',
+      timer: 3000,
+      timerProgressBar: true
+    });
+
   } catch (error) {
     console.error('Error descargando reporte individual:', error);
 
     Swal.fire({
       icon: 'error',
-      title: 'No autorizado',
+      title: 'Error al generar reporte',
       text: error.response?.data?.message || 'No se pudo descargar el reporte',
-      confirmButtonColor: '#ef4444'
+      confirmButtonColor: '#5F8EAD'
     });
   }
 };
