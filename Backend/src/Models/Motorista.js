@@ -60,6 +60,10 @@ const motoristaSchema = new Schema({
         type: String,      // Tarjeta de circulación o licencia de conducir
         required: true     // Campo obligatorio para validar capacidad legal de conducir
     },
+    fechaVencimientoLicencia: {
+        type: Date,        // Fecha de vencimiento de la licencia de conducir
+        required: true     // Campo obligatorio para control de vigencia
+    },
     phoneVerified: { type: Boolean, default: false }, // ⭐ AGREGAR ESTO
     phoneVerifiedAt: { type: Date }, // ⭐ AGREGAR ESTO (opcional)
 
