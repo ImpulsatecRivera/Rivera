@@ -22,6 +22,7 @@ const DetailPanel = ({
   closeDetailView,
   handleOptionsClick,
   isLicenseValid,
+  getLicenseStatus,
 }) => {
   const [isLoading, setIsLoading] = useState(true);
 
@@ -39,9 +40,29 @@ const DetailPanel = ({
 
   const formatDate = (v) => {
     if (!v) return "No disponible";
-    const d = new Date(v);
-    if (Number.isNaN(d.getTime())) return "No disponible";
-    return d.toLocaleDateString();
+    try {
+      // Extraer fecha directamente sin crear Date object para evitar problemas de timezone
+      const dateStr = String(v).substring(0, 10); // Obtener YYYY-MM-DD
+      const [year, month, day] = dateStr.split('-');
+      if (!year || !month || !day) return "No disponible";
+      return `${day}/${month}/${year}`;
+    } catch {
+      return "No disponible";
+    }
+  };
+
+  const formatDateLocal = (v) => {
+    if (!v) return "No disponible";
+    try {
+      // Extraer solo la fecha sin convertir a Date para evitar problemas de zona horaria
+      const fechaStr = String(v).split('T')[0]; // YYYY-MM-DD
+      const [year, month, day] = fechaStr.split('-').map(Number);
+      const d = new Date(year, month - 1, day); // Crear fecha local
+      if (Number.isNaN(d.getTime())) return "No disponible";
+      return d.toLocaleDateString();
+    } catch (e) {
+      return "No disponible";
+    }
   };
 
   // ✅ Salario con fallbacks
@@ -466,17 +487,41 @@ const DetailPanel = ({
                   Estado de Licencia
                 </div>
                 <div className="bg-white p-3 rounded-lg border">
-                  {isLicenseValid?.(selectedMotorista) ? (
-                    <span className="inline-flex items-center px-3 py-2 rounded-full text-sm font-medium bg-green-100 text-green-800">
-                      <Shield className="w-4 h-4 mr-2" />
-                      Licencia Vigente
-                    </span>
-                  ) : (
-                    <span className="inline-flex items-center px-3 py-2 rounded-full text-sm font-medium bg-red-100 text-red-800">
-                      <Shield className="w-4 h-4 mr-2" />
-                      Licencia Vencida
-                    </span>
-                  )}
+                  {(() => {
+                    const status = getLicenseStatus?.(selectedMotorista) || 'Sin fecha';
+                    if (status === 'Vigente') {
+                      return (
+                        <span className="inline-flex items-center px-3 py-2 rounded-full text-sm font-medium bg-green-100 text-green-800">
+                          <Shield className="w-4 h-4 mr-2" />
+                          Licencia Vigente
+                        </span>
+                      );
+                    } else if (status === 'Próxima a vencer') {
+                      return (
+                        <span className="inline-flex items-center px-3 py-2 rounded-full text-sm font-medium bg-yellow-100 text-yellow-800">
+                          <Shield className="w-4 h-4 mr-2" />
+                          Próxima a vencer
+                        </span>
+                      );
+                    } else {
+                      return (
+                        <span className="inline-flex items-center px-3 py-2 rounded-full text-sm font-medium bg-red-100 text-red-800">
+                          <Shield className="w-4 h-4 mr-2" />
+                          Licencia Vencida
+                        </span>
+                      );
+                    }
+                  })()}
+                </div>
+              </div>
+
+              <div>
+                <div className="text-sm font-medium text-gray-700 mb-1">
+                  Fecha de Vencimiento de Licencia
+                </div>
+                <div className="text-sm text-gray-600 bg-white p-3 rounded-lg border flex items-center">
+                  <Calendar className="w-4 h-4 mr-2" style={{ color: "#34353A" }} />
+                  {formatDateLocal(selectedMotorista.fechaVencimientoLicencia)}
                 </div>
               </div>
             </div>
