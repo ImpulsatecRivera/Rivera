@@ -40,7 +40,7 @@ const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
 
 /* =========================
-   Tab Navigator RESPONSIVE CORREGIDO
+   Tab Navigator RESPONSIVE
 ========================= */
 const TabNavigator = () => {
   const insets = useSafeAreaInsets();
@@ -54,12 +54,14 @@ const TabNavigator = () => {
   }, [width]);
 
   const metrics = useMemo(() => {
+    const side = Math.max(8, Math.round(10 * scale));
+    const bottom = Platform.OS === "android" ? 0 : Math.max(8, Math.round(12 * scale));
     const paddingTop = Math.round(10 * scale);
 
     const paddingBottom =
       Platform.OS === "android"
         ? Math.round(8 * scale)
-        : Math.max(insets.bottom || 0, Math.round(8 * scale));
+        : Math.max(insets.bottom, Math.round(8 * scale));
 
     const baseHeight = Math.round(62 * scale);
     const height = baseHeight + paddingBottom;
@@ -68,10 +70,13 @@ const TabNavigator = () => {
     const iconFocused = Math.round(28 * scale);
     const labelSize = Math.max(10, Math.round(12 * scale));
 
+    // ✅ como ahora son 4 tabs, reducimos un poquito márgenes
     const itemMarginX = Math.max(4, Math.round(6 * scale));
     const itemPaddingY = Math.max(4, Math.round(6 * scale));
 
     return {
+      side,
+      bottom,
       paddingTop,
       paddingBottom,
       height,
@@ -168,7 +173,7 @@ const TabNavigator = () => {
       <Tab.Screen
         name="Camion"
         component={CamionProfileScreen}
-        options={{ tabBarLabel: "Camión" }}
+        options={{ tabBarLabel: "Camión" }} // si querés que se vea con acento
       />
 
       <Tab.Screen name="Perfil" component={PerfilScreen} />
