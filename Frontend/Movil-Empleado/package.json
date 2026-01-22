@@ -17,6 +17,7 @@
     "expo": "~52.0.0",
     "expo-asset": "~11.0.3",
     "expo-blur": "~14.0.3",
+    "expo-file-system": "~18.0.6",
     "expo-font": "~13.0.3",
     "expo-image-picker": "~16.0.6",
     "expo-linear-gradient": "~14.0.2",

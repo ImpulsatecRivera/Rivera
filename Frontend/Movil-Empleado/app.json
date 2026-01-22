@@ -1,10 +1,10 @@
 {
   "expo": {
-    "name": "movil-empleado",
+    "name": "Rivera - Empleado",
     "slug": "movil-empleado",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./src/images/imgLogo.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": false,
     "splash": {
@@ -17,7 +17,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
+        "foregroundImage": "./src/images/imgLogo.png",
         "backgroundColor": "#ffffff"
       },
       "package": "com.kenik_capibara.movilempleado"
