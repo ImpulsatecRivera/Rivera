@@ -25,9 +25,8 @@ const AssignmentFields = ({ register, errors, motoristasDisponibles, proveedores
         type="select"
         placeholder="Seleccionar motorista"
         options={motoristaOptions}
-        {...register("driverId", { required: true })}
+        {...register("driverId")}
         error={errors.driverId}
-        required
       />
 
       {/* Proveedor */}

@@ -87,17 +87,18 @@ const useTruckEdit = (fetchOptions, onUpdateSuccess) => {
     try {
       setSelectedTruck(truck);
       setEditLoading(true);
-      setShowEditModal(true);
+      // NO abrir el modal aún, esperar a que carguen los datos
       resetForm();
 
       console.log('=== CARGANDO DATOS PARA EDICIÓN ===');
       console.log('Camión seleccionado:', truck);
 
-      // ✅ USAR API EN LUGAR DE FETCH
-      const [truckResponse, proveedoresResponse, motoristasResponse] = await Promise.allSettled([
+      // ✅ USAR API EN LUGAR DE FETCH - Cargar también todos los camiones
+      const [truckResponse, proveedoresResponse, motoristasResponse, camionesResponse] = await Promise.allSettled([
         api.get(`/camiones/${truck.id}`),
         api.get('/proveedores'),
-        api.get('/motoristas')
+        api.get('/motoristas'),
+        api.get('/camiones')
       ]);
 
       // Verificar respuestas
@@ -105,9 +106,26 @@ const useTruckEdit = (fetchOptions, onUpdateSuccess) => {
         throw new Error(`Error al cargar datos del camión: ${truckResponse.reason?.message}`);
       }
       
-      const truckData = truckResponse.value.data;
+      // Extraer truckData correctamente - La API devuelve { message, data: {...} }
+      const apiResponse = truckResponse.value.data;
+      const truckData = apiResponse.data || apiResponse;
+      
       const proveedoresData = proveedoresResponse.status === 'fulfilled' ? proveedoresResponse.value.data : [];
       const motoristasData = motoristasResponse.status === 'fulfilled' ? motoristasResponse.value.data : [];
+      
+      // Extraer el array de camiones - manejar diferentes estructuras de respuesta
+      let camionesData = [];
+      if (camionesResponse.status === 'fulfilled') {
+        const camionesRaw = camionesResponse.value.data;
+        // Si la respuesta tiene un array directamente, usarlo; si no, buscar en propiedades comunes
+        if (Array.isArray(camionesRaw)) {
+          camionesData = camionesRaw;
+        } else if (camionesRaw?.data && Array.isArray(camionesRaw.data)) {
+          camionesData = camionesRaw.data;
+        } else if (camionesRaw?.camiones && Array.isArray(camionesRaw.camiones)) {
+          camionesData = camionesRaw.camiones;
+        }
+      }
 
       if (proveedoresResponse.status === 'rejected') {
         console.warn('Error al cargar proveedores:', proveedoresResponse.reason);
@@ -115,11 +133,70 @@ const useTruckEdit = (fetchOptions, onUpdateSuccess) => {
       if (motoristasResponse.status === 'rejected') {
         console.warn('Error al cargar motoristas:', motoristasResponse.reason);
       }
+      if (camionesResponse.status === 'rejected') {
+        console.warn('Error al cargar camiones:', camionesResponse.reason);
+      }
 
       console.log('Datos del camión cargados:', truckData);
+      console.log('Total de camiones cargados:', camionesData.length);
+      
+      // DEBUG: Imprimir TODAS las propiedades de truckData
+      console.log('%c=== TODAS LAS PROPIEDADES DE truckData ===', 'background: yellow; color: black; font-size: 14px; font-weight: bold;');
+      console.log('OBJETO COMPLETO EN JSON:', JSON.stringify(truckData, null, 2));
+      console.log('Claves disponibles:', Object.keys(truckData));
+      Object.entries(truckData).forEach(([key, value]) => {
+        if (typeof value === 'object') {
+          console.log(`${key}:`, value);
+        } else {
+          console.log(`${key}: "${value}"`);
+        }
+      });
+      console.log('%c=== FIN DE PROPIEDADES ===', 'background: yellow; color: black; font-size: 14px; font-weight: bold;');
+      
+      // Identificar el motorista actual del camión
+      const motoristaActualId = truckData.driverId?._id || truckData.driverId;
+      console.log('Motorista actual del camión:', motoristaActualId);
+      
+      // Crear un mapa de motoristas asignados a otros camiones
+      const motoristasAsignadosMap = new Map();
+      camionesData.forEach(camion => {
+        const camionId = camion._id || camion.id;
+        const currentTruckId = truck.id || truck._id;
+        const isCurrentTruck = camionId === currentTruckId;
+        
+        // Solo mapear camiones con motorista asignado que no sean el actual
+        if (!isCurrentTruck && camion.driverId) {
+          const driverId = camion.driverId?._id || camion.driverId;
+          const driverIdStr = typeof driverId === 'string' ? driverId : driverId?.toString();
+          if (driverIdStr) {
+            motoristasAsignadosMap.set(driverIdStr, {
+              camionId: camionId,
+              camionNombre: camion.name || camion.nombre || 'Camión sin nombre'
+            });
+          }
+        }
+      });
+
+      console.log('Motoristas asignados a otros camiones:', motoristasAsignadosMap.size);
+
+      // MOSTRAR TODOS los motoristas con metadata de asignación
+      const motoristasConMetadata = motoristasData.map(motorista => {
+        const motoristaId = motorista._id || motorista.id;
+        const isCurrentDriver = motoristaActualId && motoristaId === motoristaActualId;
+        const asignacionInfo = motoristasAsignadosMap.get(motoristaId);
+        
+        return {
+          ...motorista,
+          isCurrentDriver, // Es el motorista asignado a ESTE camión
+          isAsignado: !!asignacionInfo, // Está asignado a otro camión
+          asignacionInfo // Info del camión al que está asignado (si aplica)
+        };
+      });
+
+      console.log('Total de motoristas a mostrar:', motoristasConMetadata.length);
 
       // Establecer datos del formulario
-      setFormData({
+      const formDataToSet = {
         nombre: truckData.name || '',
         tarjetaCirculacion: truckData.ciculatioCard || truckData.circulationCard || '',
         placa: truckData.licensePlate || '',
@@ -131,7 +208,20 @@ const useTruckEdit = (fetchOptions, onUpdateSuccess) => {
         año: truckData.age || '',
         estado: normalizeState(truckData.state || truckData.estado),
         imagen: null
-      });
+      };
+      
+      console.log('=== DATOS FORMATEADOS PARA FORMULARIO ===');
+      console.log('FormData a establecer:', formDataToSet);
+      console.log('Nombre:', formDataToSet.nombre);
+      console.log('Placa:', formDataToSet.placa);
+      console.log('Marca:', formDataToSet.marca);
+      console.log('Modelo:', formDataToSet.modelo);
+      console.log('Año:', formDataToSet.año);
+      console.log('Estado:', formDataToSet.estado);
+      console.log('Proveedor ID:', formDataToSet.proveedor);
+      console.log('Motorista ID:', formDataToSet.motorista);
+      
+      setFormData(formDataToSet);
 
       // Establecer imagen actual
       const imageUrl = truckData.img || truckData.image || null;
@@ -147,9 +237,13 @@ const useTruckEdit = (fetchOptions, onUpdateSuccess) => {
         console.log('⚠️ No hay imagen para este camión');
       }
 
-      // Establecer listas
+      // Establecer listas - usar todos los motoristas con metadata
       setProveedores(Array.isArray(proveedoresData) ? proveedoresData : []);
-      setMotoristas(Array.isArray(motoristasData) ? motoristasData : []);
+      setMotoristas(Array.isArray(motoristasConMetadata) ? motoristasConMetadata : []);
+
+      // IMPORTANTE: Abrir el modal DESPUÉS de cargar todos los datos
+      setShowEditModal(true);
+      console.log('✅ Modal abierto con datos cargados');
 
       return { success: true };
     } catch (error) {
@@ -240,9 +334,16 @@ const useTruckEdit = (fetchOptions, onUpdateSuccess) => {
         
         const formDataToSend = new FormData();
         
-        formDataToSend.append('name', sanitizeValue(formData.nombre) || '');
-        formDataToSend.append('ciculatioCard', sanitizeValue(formData.tarjetaCirculacion) || '');
-        formDataToSend.append('licensePlate', sanitizeValue(formData.placa) || '');
+        // Agregar solo si no está vacío
+        const nombre = sanitizeValue(formData.nombre);
+        if (nombre) formDataToSend.append('name', nombre);
+        
+        const tarjeta = sanitizeValue(formData.tarjetaCirculacion);
+        if (tarjeta) formDataToSend.append('ciculatioCard', tarjeta);
+        
+        const placa = sanitizeValue(formData.placa);
+        if (placa) formDataToSend.append('licensePlate', placa);
+        
         formDataToSend.append('state', formData.estado || 'DISPONIBLE');
         
         const supplierId = sanitizeValue(formData.proveedor);
@@ -260,9 +361,15 @@ const useTruckEdit = (fetchOptions, onUpdateSuccess) => {
           formDataToSend.append('driverId', driverId);
         }
         
-        formDataToSend.append('brand', sanitizeValue(formData.marca) || '');
-        formDataToSend.append('model', sanitizeValue(formData.modelo) || '');
-        formDataToSend.append('age', sanitizeValue(formData.año) || '');
+        const marca = sanitizeValue(formData.marca);
+        if (marca) formDataToSend.append('brand', marca);
+        
+        const modelo = sanitizeValue(formData.modelo);
+        if (modelo) formDataToSend.append('model', modelo);
+        
+        const año = sanitizeValue(formData.año);
+        if (año) formDataToSend.append('age', año);
+        
         formDataToSend.append('img', formData.imagen);
 
         console.log('=== ENVIANDO FORMDATA ===');
@@ -280,29 +387,36 @@ const useTruckEdit = (fetchOptions, onUpdateSuccess) => {
         console.log('=== USANDO JSON SIN IMAGEN ===');
         
         const updateData = {
-          name: sanitizeValue(formData.nombre) || '',
-          ciculatioCard: sanitizeValue(formData.tarjetaCirculacion) || '',
-          licensePlate: sanitizeValue(formData.placa) || '',
-          brand: sanitizeValue(formData.marca) || '',
-          model: sanitizeValue(formData.modelo) || '',
-          age: sanitizeValue(formData.año) || '',
           state: formData.estado || 'DISPONIBLE'
         };
-
+        
+        // Agregar solo los campos que tienen valor
+        const nombre = sanitizeValue(formData.nombre);
+        if (nombre) updateData.name = nombre;
+        
+        const tarjeta = sanitizeValue(formData.tarjetaCirculacion);
+        if (tarjeta) updateData.ciculatioCard = tarjeta;
+        
+        const placa = sanitizeValue(formData.placa);
+        if (placa) updateData.licensePlate = placa;
+        
+        const marca = sanitizeValue(formData.marca);
+        if (marca) updateData.brand = marca;
+        
+        const modelo = sanitizeValue(formData.modelo);
+        if (modelo) updateData.model = modelo;
+        
+        const año = sanitizeValue(formData.año);
+        if (año) updateData.age = año;
+        
         const supplierId = sanitizeValue(formData.proveedor);
-        if (supplierId) {
-          updateData.supplierId = supplierId;
-        }
-
+        if (supplierId) updateData.supplierId = supplierId;
+        
         const description = sanitizeValue(formData.descripcion);
-        if (description) {
-          updateData.description = description;
-        }
-
+        if (description) updateData.description = description;
+        
         const driverId = sanitizeValue(formData.motorista);
-        if (driverId) {
-          updateData.driverId = driverId;
-        }
+        if (driverId) updateData.driverId = driverId;
 
         console.log('=== DATOS JSON A ENVIAR ===', updateData);
 
