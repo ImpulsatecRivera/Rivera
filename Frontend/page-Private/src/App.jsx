@@ -144,7 +144,7 @@ function App() {
         {/* Planillas */}
         <Route path="/planilla" element={<Planilla />} />
         <Route path="/planilla/quincenal" element={<PlanillaQuincenal />} />
-        <Route path="/planilla/quincenales/:id" element={<VerPlanillaQuincenal />} />
+        <Route path="/planilla/quincenal/:id" element={<PlanillaQuincenal />} />
         <Route path="/planilla/semanal/nueva" element={<PlanillaSemanalNueva />} />        
         <Route path="/planilla/semanal/:id" element={<PlanillaSemanal />} />
         <Route path="/no-access" element={<NoAccess />} />
