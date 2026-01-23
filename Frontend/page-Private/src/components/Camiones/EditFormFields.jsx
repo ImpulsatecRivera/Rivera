@@ -8,6 +8,16 @@ const EditFormFields = ({
   onInputChange,
   disabled = false
 }) => {
+  // Debug: ver qué datos recibe el componente
+  console.log('=== EditFormFields RECIBIENDO ===');
+  console.log('formData completo:', formData);
+  console.log('formData.nombre:', formData?.nombre);
+  console.log('formData.placa:', formData?.placa);
+  console.log('formData.marca:', formData?.marca);
+  console.log('formData.modelo:', formData?.modelo);
+  console.log('proveedores count:', proveedores?.length);
+  console.log('motoristas count:', motoristas?.length);
+  
   const inputClassName = `w-full p-4 border-2 border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-[#5F8EAD] focus:border-[#5F8EAD] transition-all duration-200 ${
     disabled ? 'bg-gray-100 cursor-not-allowed' : 'bg-white'
   }`;
@@ -128,12 +138,12 @@ const EditFormFields = ({
           className={inputClassName}
           placeholder="ABC-123"
           disabled={disabled}
-          maxLength={10}
+          maxLength={9}
           style={{ textTransform: 'uppercase' }}
         />
         <div className="flex justify-between mt-1">
           <span className="text-xs text-gray-500">Campo obligatorio</span>
-          {getCharCount(formData.placa, 10)}
+          {getCharCount(formData.placa, 9)}
         </div>
       </div>
 
@@ -272,18 +282,48 @@ const EditFormFields = ({
             disabled={disabled}
           >
             <option value="">Seleccionar motorista</option>
-            {motoristas.map((m) => (
-              <option key={m._id || m.id} value={m._id || m.id}>
-                {`${m.name || m.firstName || ''} ${m.lastName || m.apellido || ''}`.trim() || 'Motorista sin nombre'}
-              </option>
-            ))}
+            {motoristas.map((m) => {
+              const motoristaNombre = `${m.name || m.firstName || ''} ${m.lastName || m.apellido || ''}`.trim() || 'Motorista sin nombre';
+              const motoristaId = m._id || m.id;
+              
+              // Determinar el texto a mostrar basado en el estado
+              let displayText = motoristaNombre;
+              if (m.isCurrentDriver) {
+                displayText = `✓ ${motoristaNombre} (Asignado actualmente)`;
+              } else if (m.isAsignado && m.asignacionInfo) {
+                displayText = `${motoristaNombre} (Asignado a: ${m.asignacionInfo.camionNombre})`;
+              }
+              
+              return (
+                <option 
+                  key={motoristaId} 
+                  value={motoristaId}
+                  style={{
+                    backgroundColor: m.isCurrentDriver ? '#dbeafe' : (m.isAsignado ? '#fef3c7' : 'white'),
+                    fontWeight: m.isCurrentDriver ? 'bold' : 'normal',
+                    color: m.isCurrentDriver ? '#1e40af' : (m.isAsignado ? '#92400e' : 'inherit')
+                  }}
+                >
+                  {displayText}
+                </option>
+              );
+            })}
           </select>
           <ChevronDown className="absolute right-4 top-4 h-4 w-4 text-gray-400 pointer-events-none" />
         </div>
-        {motoristas.length === 0 && (
+        {motoristas.length === 0 ? (
           <span className="text-xs text-orange-500 mt-1 block">
             No hay motoristas disponibles
           </span>
+        ) : (
+          <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded-lg">
+            <p className="text-xs text-blue-800">
+              <span className="font-semibold">✓ Azul:</span> Motorista asignado a este camión
+              {motoristas.some(m => m.isAsignado) && (
+                <> • <span className="font-semibold text-yellow-700">⚠ Amarillo:</span> Asignado a otro camión</>
+              )}
+            </p>
+          </div>
         )}
       </div>
 

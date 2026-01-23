@@ -306,7 +306,6 @@ const FormAggCamion = ({ onNavigateBack, onSubmitSuccess }) => {
           brand: 'Marca',
           model: 'Modelo',
           age: 'Año',
-          gasolineLevel: 'Nivel de gasolina',
           driverId: 'Motorista',
           supplierId: 'Proveedor',
           img: 'Imagen del camión'
