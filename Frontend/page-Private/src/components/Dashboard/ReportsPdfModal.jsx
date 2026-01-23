@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { config } from '../../config';
+import Swal from 'sweetalert2';
 
 const ReportsPdfModal = ({ isOpen, onClose }) => {
   const [date, setDate] = useState('');
@@ -63,6 +64,34 @@ const ReportsPdfModal = ({ isOpen, onClose }) => {
 
     setError('');
     setLoading(true);
+
+        // Mostrar alerta de procesamiento
+        Swal.fire({
+          title: 'Generando reporte...',
+          html: `
+            <div style="display: flex; flex-direction: column; align-items: center; gap: 15px;">
+              <div class="spinner" style="
+                width: 50px;
+                height: 50px;
+                border: 4px solid #f3f3f3;
+                border-top: 4px solid #5F8EAD;
+                border-radius: 50%;
+                animation: spin 1s linear infinite;
+              "></div>
+              <p style="color: #666; font-size: 14px; margin: 0;">Por favor espera mientras se genera el PDF...</p>
+            </div>
+            <style>
+              @keyframes spin {
+                0% { transform: rotate(0deg); }
+                100% { transform: rotate(360deg); }
+              }
+            </style>
+          `,
+          showConfirmButton: false,
+          allowOutsideClick: false,
+          allowEscapeKey: false
+        });
+
     try {
       // date ya viene en formato 'YYYY-MM-DD' desde el input type=date (evitamos .toISOString() por TZ)
       const payload = {
@@ -98,8 +127,28 @@ const ReportsPdfModal = ({ isOpen, onClose }) => {
       window.URL.revokeObjectURL(url);
 
       setLoading(false);
+      
+            // Cerrar alerta de procesamiento y mostrar éxito
+            Swal.fire({
+              icon: 'success',
+              title: '¡Reporte generado!',
+              text: 'El PDF se ha descargado correctamente',
+              confirmButtonColor: '#5D9646',
+              timer: 2000,
+              showConfirmButton: false
+            });
+
       onClose();
     } catch (e) {
+      
+            // Cerrar alerta de procesamiento y mostrar error
+            Swal.fire({
+              icon: 'error',
+              title: 'Error',
+              text: e.message || 'Error al generar el PDF',
+              confirmButtonColor: '#ef4444'
+            });
+
       setLoading(false);
       setError(e.message || 'Error al generar el PDF');
     }

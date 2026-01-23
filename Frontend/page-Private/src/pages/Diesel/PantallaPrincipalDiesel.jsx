@@ -8,6 +8,7 @@ import {
   Edit,
   Trash2,
   Plus,
+  Check,
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import Swal from "sweetalert2";
@@ -131,24 +132,18 @@ const PantallaPrincipalDiesel = () => {
   }, [location.key]);
 
   const handleDelete = async (row) => {
-    const result = await Swal.fire({
-      html: `<div style="text-align:center;padding:20px 10px;">
-        <div style="width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,#fee2e2 0%,#fecaca 100%);margin:0 auto 24px;display:flex;align-items:center;justify-content:center;">
-          <svg width="40" height="40" fill="none" stroke="#ef4444" stroke-width="2.5">
-            <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2M10 11v6M14 11v6"/>
-          </svg>
-        </div>
-        <h2 style="font-size:28px;font-weight:700;margin:0 0 12px 0;">¿Eliminar registro?</h2>
-        <p style="color:#6b7280;">Esta acción no se puede deshacer</p>
-      </div>`,
+    const { isConfirmed } = await Swal.fire({
+      title: '¿Eliminar registro?',
+      text: 'Esta acción no se puede deshacer',
+      icon: 'warning',
       showCancelButton: true,
-      confirmButtonText: "Sí, eliminar",
-      cancelButtonText: "Cancelar",
-      confirmButtonColor: "#ef4444",
-      customClass: { popup: "rounded-3xl" },
+      confirmButtonColor: '#dc2626',
+      cancelButtonColor: '#64748b',
+      confirmButtonText: 'Sí, eliminar',
+      cancelButtonText: 'Cancelar'
     });
 
-    if (!result.isConfirmed) return;
+    if (!isConfirmed) return;
 
     try {
       const id = row?._id || row?.id;
@@ -169,6 +164,138 @@ const PantallaPrincipalDiesel = () => {
         title: "Error",
         text: e.response?.data?.message || e.message,
         icon: "error",
+      });
+    }
+  };
+
+  const descargarReporteIndividual = async (id) => {
+    // Mostrar alerta de procesando
+    Swal.fire({
+      title: 'Procesando...',
+      html: '<div style="text-align: center;"><div style="border: 4px solid #f3f3f3; border-top: 4px solid #5F8EAD; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 0 auto;"></div><p style="margin-top: 10px; color: #666;">Generando reporte, por favor espera</p></div>',
+      allowOutsideClick: false,
+      allowEscapeKey: false,
+      showConfirmButton: false,
+      didOpen: () => {
+        const style = document.createElement('style');
+        style.textContent = '@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }';
+        document.head.appendChild(style);
+      }
+    });
+
+    try {
+      const response = await api.get(`${DIESEL_REPORTE_ENDPOINT}/individual/${id}`, {
+        responseType: 'blob'
+      });
+
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `reporte-diesel-${id}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+
+      // Mostrar alerta de éxito
+      Swal.fire({
+        icon: 'success',
+        title: 'Reporte generado',
+        html: `<p style="color: #666;"><strong>Reporte Individual</strong></p><p style="color: #999; font-size: 14px;">reporte-diesel-${id}.pdf</p>`,
+        confirmButtonText: 'OK',
+        confirmButtonColor: '#5F8EAD',
+        timer: 3000,
+        timerProgressBar: true
+      });
+    } catch (error) {
+      console.error('Error descargando reporte:', error);
+      
+      let errorMessage = 'No se pudo generar el reporte. Intenta nuevamente.';
+      let errorDetails = '';
+      
+      const showError = (msg, details = '') => {
+        Swal.fire({
+          icon: 'error',
+          title: 'Error al generar reporte',
+          html: `<p style="color: #666;">${msg}</p>${details}`,
+          confirmButtonText: 'Cerrar',
+          confirmButtonColor: '#5F8EAD'
+        });
+      };
+
+      if (error.response) {
+        if (error.response.status === 404 || error.response.status === 400) {
+          if (error.response.data instanceof Blob) {
+            error.response.data.text().then(text => {
+              try {
+                const jsonData = JSON.parse(text);
+                errorMessage = jsonData.message || 'No se pudo generar el reporte';
+                if (error.response.status) {
+                  errorDetails = `<p style="color: #999; font-size: 12px; margin-top: 10px;">Status: ${error.response.status}</p>`;
+                }
+                showError(errorMessage, errorDetails);
+              } catch (e) {
+                errorMessage = 'No se pudo generar el reporte';
+                showError(errorMessage);
+              }
+            });
+            return;
+          } else if (typeof error.response.data === 'object') {
+            errorMessage = error.response.data.message || 'No se pudo generar el reporte';
+          }
+        } else {
+          errorMessage = error.response.data?.message || `Error: ${error.response.status}`;
+        }
+        
+        if (error.response.status) {
+          errorDetails = `<p style="color: #999; font-size: 12px; margin-top: 10px;">Status: ${error.response.status}</p>`;
+        }
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      showError(errorMessage, errorDetails);
+    }
+  };
+
+  const marcarComoCompletado = async (row) => {
+    const { isConfirmed } = await Swal.fire({
+      title: '¿Marcar como completado?',
+      text: 'Una vez completado, no se podrá editar',
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#16a34a',
+      cancelButtonColor: '#64748b',
+      confirmButtonText: 'Sí, completar',
+      cancelButtonText: 'Cancelar'
+    });
+
+    if (!isConfirmed) return;
+
+    try {
+      const id = row?._id || row?.id;
+      if (!id) throw new Error("No se encontró el ID del registro");
+
+      await api.put(`${config.api.API_URL}/resumen/${id}`, {
+        estado: "completado"
+      });
+
+      await Swal.fire({
+        title: "¡Completado!",
+        text: "Registro marcado como completado exitosamente",
+        icon: "success",
+        timer: 2000,
+        confirmButtonColor: "#5F8EAD",
+      });
+
+      fetchDiesel();
+    } catch (e) {
+      Swal.fire({
+        title: "Error",
+        text: e.response?.data?.message || e.message,
+        icon: "error",
+        confirmButtonColor: "#5F8EAD",
       });
     }
   };
@@ -419,41 +546,43 @@ const PantallaPrincipalDiesel = () => {
                       <td className="py-5 px-6" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center justify-center gap-2">
                           <button
-                            onClick={() => window.open(`${DIESEL_REPORTE_ENDPOINT}/individual/${id}`, "_blank")}
-                            className="p-2 rounded-lg bg-[#5F8EAD] bg-opacity-20 hover:bg-[#5F8EAD] hover:bg-opacity-30 text-[#5F8EAD] transition-colors"
+                            onClick={() => descargarReporteIndividual(id)}
+                            className="p-2 rounded-lg bg-[#5F8EAD] bg-opacity-20 hover:bg-[#5F8EAD] hover:bg-opacity-30 text-[#5F8EAD] transition-all hover:scale-110"
                             title="Descargar PDF"
                           >
                             <Download size={18} />
                           </button>
 
                           {!isCompletado && (
-                            <ProtectedAction action="edit">
-                              <button
-                                onClick={() => navigate(`/diesel/editar/${id}`)}
-                                className="p-2 rounded-lg bg-yellow-50 hover:bg-yellow-100 text-yellow-600 transition-colors"
-                                title="Editar"
-                              >
-                                <Edit size={18} />
-                              </button>
-                            </ProtectedAction>
+                            <>
+                              <ProtectedAction action="edit">
+                                <button
+                                  onClick={() => navigate(`/diesel/editar/${id}`)}
+                                  className="p-2 rounded-lg bg-blue-100 hover:bg-blue-200 text-blue-600 transition-all hover:scale-110"
+                                  title="Editar"
+                                >
+                                  <Edit size={18} />
+                                </button>
+                              </ProtectedAction>
+
+                              <ProtectedAction action="edit">
+                                <button
+                                  onClick={() => marcarComoCompletado(row)}
+                                  className="p-2 rounded-lg bg-emerald-100 hover:bg-emerald-200 text-emerald-600 transition-all hover:scale-110"
+                                  title="Marcar como completado"
+                                >
+                                  <Check size={18} />
+                                </button>
+                              </ProtectedAction>
+                            </>
                           )}
 
-                          <ProtectedAction
-                            action="delete"
-                            fallback={
-                              <button
-                                disabled
-                                className="p-2 rounded-lg bg-red-50 text-red-300 cursor-not-allowed opacity-50"
-                                title="No tienes permisos para eliminar"
-                              >
-                                <Trash2 size={18} />
-                              </button>
-                            }
-                          >
+                          <ProtectedAction action="delete">
                             <button
                               onClick={() => handleDelete(row)}
-                              className="p-2 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 transition-colors"
+                              className="p-2 rounded-lg bg-red-100 hover:bg-red-200 text-red-600 transition-all hover:scale-110 disabled:opacity-50 disabled:cursor-not-allowed"
                               title="Eliminar"
+                              disabled={isCompletado}
                             >
                               <Trash2 size={18} />
                             </button>

@@ -33,6 +33,9 @@ export default function Planillas() {
   const [showReporteMultiMes, setShowReporteMultiMes] = useState(false);
   const [showReporteAnual, setShowReporteAnual] = useState(false);
   const [tipoReporte, setTipoReporte] = useState('');
+  const [alcanceMensual, setAlcanceMensual] = useState('todo'); // todo | viaticos
+  const [alcanceMulti, setAlcanceMulti] = useState('todo'); // todo | viaticos
+  const [alcanceAnual, setAlcanceAnual] = useState('todo'); // todo | viaticos
   
   const [mesSeleccionado, setMesSeleccionado] = useState('');
   const [añoSeleccionado, setAñoSeleccionado] = useState('');
@@ -297,20 +300,23 @@ export default function Planillas() {
 };
 
 
-  const handleAbrirReporteMensual = (tipo) => {
+  const handleAbrirReporteMensual = (tipo, alcance = 'todo') => {
     setTipoReporte(tipo);
+    setAlcanceMensual(alcance);
     setShowReportesMenu(false);
     setShowReporteMensual(true);
   };
 
-  const handleAbrirReporteMultiMes = (tipo) => {
+  const handleAbrirReporteMultiMes = (tipo, alcance = 'todo') => {
     setTipoReporte(tipo);
+    setAlcanceMulti(alcance);
     setShowReportesMenu(false);
     setShowReporteMultiMes(true);
   };
 
-  const handleAbrirReporteAnual = (tipo) => {
+  const handleAbrirReporteAnual = (tipo, alcance = 'todo') => {
     setTipoReporte(tipo);
+    setAlcanceAnual(alcance);
     setShowReportesMenu(false);
     setShowReporteAnual(true);
   };
@@ -335,10 +341,14 @@ export default function Planillas() {
       }
     });
 
-    const endpoint =
-      tipoReporte === 'semanal'
-        ? `${config.api.API_URL}/reportes/planilla/semanal/mensual/${mesSeleccionado}/${añoSeleccionado}`
-        : `${config.api.API_URL}/reportes/planilla/quincenal/mensual/${mesSeleccionado}/${añoSeleccionado}`;
+    let endpoint;
+    if (tipoReporte === 'semanal' && alcanceMensual === 'viaticos') {
+      endpoint = `${config.api.API_URL}/reportes/planilla/semanal/mensual-viaticos/${mesSeleccionado}/${añoSeleccionado}`;
+    } else if (tipoReporte === 'semanal') {
+      endpoint = `${config.api.API_URL}/reportes/planilla/semanal/mensual/${mesSeleccionado}/${añoSeleccionado}`;
+    } else {
+      endpoint = `${config.api.API_URL}/reportes/planilla/quincenal/mensual/${mesSeleccionado}/${añoSeleccionado}`;
+    }
 
     const response = await api.get(endpoint, {
       responseType: 'blob'
@@ -353,7 +363,17 @@ export default function Planillas() {
     const meses = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
     const nombreMes = meses[parseInt(mesSeleccionado) - 1];
 
-    const prefijo = tipoReporte === 'semanal' ? 'Planilla_Extra' : 'Reporte_Mensual';
+    const prefijos = {
+      'semanal-todo': 'Planilla_Extra',
+      'semanal-viaticos': 'Viaticos_Extra',
+      'quincenal': 'Reporte_Mensual'
+    };
+
+    const clavePrefijo = tipoReporte === 'semanal'
+      ? `semanal-${alcanceMensual}`
+      : 'quincenal';
+
+    const prefijo = prefijos[clavePrefijo] || 'Reporte_Mensual';
     link.download = `${prefijo}_${nombreMes}_${añoSeleccionado}.pdf`;
 
     document.body.appendChild(link);
@@ -365,6 +385,7 @@ export default function Planillas() {
     setMesSeleccionado('');
     setAñoSeleccionado('');
     setTipoReporte('');
+    setAlcanceMensual('todo');
 
     Swal.fire({
       icon: 'success',
@@ -415,10 +436,14 @@ export default function Planillas() {
       }
     });
 
-    const endpoint =
-      tipoReporte === 'semanal'
-        ? `${config.api.API_URL}/reportes/planilla/semanal/multiMes`
-        : `${config.api.API_URL}/reportes/planilla/quincenal/multiMes`;
+    let endpoint;
+    if (tipoReporte === 'semanal' && alcanceMulti === 'viaticos') {
+      endpoint = `${config.api.API_URL}/reportes/planilla/semanal/multiMes-viaticos`;
+    } else if (tipoReporte === 'semanal') {
+      endpoint = `${config.api.API_URL}/reportes/planilla/semanal/multiMes`;
+    } else {
+      endpoint = `${config.api.API_URL}/reportes/planilla/quincenal/multiMes`;
+    }
 
     const response = await api.post(
       endpoint,
@@ -443,7 +468,11 @@ export default function Planillas() {
       mesesSeleccionadosMulti.length === 9 ? '9-Meses' :
       `${mesesSeleccionadosMulti.length}-Meses`;
 
-    link.download = `Planilla_Consolidado_${periodo}_${añoMultiMes}.pdf`;
+    const prefijo = tipoReporte === 'semanal' && alcanceMulti === 'viaticos'
+      ? 'Viaticos_Consolidado'
+      : 'Planilla_Consolidado';
+
+    link.download = `${prefijo}_${periodo}_${añoMultiMes}.pdf`;
 
     document.body.appendChild(link);
     link.click();
@@ -454,6 +483,7 @@ export default function Planillas() {
     setMesesSeleccionadosMulti([]);
     setAñoMultiMes('');
     setTipoReporte('');
+    setAlcanceMulti('todo');
 
     Swal.fire({
       icon: 'success',
@@ -495,10 +525,14 @@ export default function Planillas() {
       }
     });
 
-    const endpoint =
-      tipoReporte === 'semanal'
-        ? `${config.api.API_URL}/reportes/planilla/semanal/anual/${añoAnual}`
-        : `${config.api.API_URL}/reportes/planilla/quincenal/anual/${añoAnual}`;
+    let endpoint;
+    if (tipoReporte === 'semanal' && alcanceAnual === 'viaticos') {
+      endpoint = `${config.api.API_URL}/reportes/planilla/semanal/anual-viaticos/${añoAnual}`;
+    } else if (tipoReporte === 'semanal') {
+      endpoint = `${config.api.API_URL}/reportes/planilla/semanal/anual/${añoAnual}`;
+    } else {
+      endpoint = `${config.api.API_URL}/reportes/planilla/quincenal/anual/${añoAnual}`;
+    }
 
     const response = await api.get(endpoint, {
       responseType: 'blob'
@@ -509,7 +543,11 @@ export default function Planillas() {
     const url = window.URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `Planilla_Anual_${añoAnual}.pdf`;
+    const prefijo = tipoReporte === 'semanal' && alcanceAnual === 'viaticos'
+      ? 'Viaticos_Anual'
+      : 'Planilla_Anual';
+
+    link.download = `${prefijo}_${añoAnual}.pdf`;
 
     document.body.appendChild(link);
     link.click();
@@ -519,6 +557,7 @@ export default function Planillas() {
     setShowReporteAnual(false);
     setAñoAnual('');
     setTipoReporte('');
+    setAlcanceAnual('todo');
 
     Swal.fire({
       icon: 'success',
@@ -588,7 +627,16 @@ export default function Planillas() {
       : 0
   };
 
-  const añosDisponibles = [...new Set(planillas.map(p => p.año))].filter(Boolean).sort((a, b) => b - a);
+  // Extraer años de las planillas (del campo año o de fechaInicio)
+  const añosDisponibles = [...new Set(planillas.map(p => {
+    // Intentar obtener el año del campo año primero
+    if (p.año) return p.año;
+    // Si no existe, extraer del fechaInicio
+    if (p.fechaInicio) return new Date(p.fechaInicio).getFullYear();
+    // Si tampoco, intentar de createdAt
+    if (p.createdAt) return new Date(p.createdAt).getFullYear();
+    return null;
+  }))].filter(Boolean).sort((a, b) => b - a);
 
   if (loading) {
     return (
@@ -795,7 +843,9 @@ export default function Planillas() {
                 <div>
                   <h2 className="text-2xl font-bold text-[#34353A]">Reporte Mensual</h2>
                   <p className="text-sm text-gray-500 mt-1">
-                    {tipoReporte === 'semanal' ? '📅 Planillas Semanales' : '📆 Planillas Quincenales'}
+                    {tipoReporte === 'semanal' && alcanceMensual === 'viaticos' && 'Viáticos de planillas semanales'}
+                    {tipoReporte === 'semanal' && alcanceMensual === 'todo' && 'Planillas semanales'}
+                    {tipoReporte === 'quincenal' && 'Planillas quincenales'}
                   </p>
                 </div>
                 <button
@@ -860,6 +910,36 @@ export default function Planillas() {
                   </select>
                 </div>
 
+                {tipoReporte === 'semanal' && (
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Contenido
+                    </label>
+                    <div className="flex gap-3">
+                      <label className={`flex items-center gap-2 px-4 py-3 rounded-xl border-2 cursor-pointer ${alcanceMensual === 'todo' ? 'border-[#5F8EAD] bg-[#5F8EAD] bg-opacity-10 font-semibold' : 'border-gray-200 text-gray-700'}`}>
+                        <input
+                          type="radio"
+                          name="alcanceMensual"
+                          value="todo"
+                          checked={alcanceMensual === 'todo'}
+                          onChange={(e) => setAlcanceMensual(e.target.value)}
+                        />
+                        <span>Planilla completa</span>
+                      </label>
+                      <label className={`flex items-center gap-2 px-4 py-3 rounded-xl border-2 cursor-pointer ${alcanceMensual === 'viaticos' ? 'border-[#5D9646] bg-[#5D9646] bg-opacity-10 font-semibold' : 'border-gray-200 text-gray-700'}`}>
+                        <input
+                          type="radio"
+                          name="alcanceMensual"
+                          value="viaticos"
+                          checked={alcanceMensual === 'viaticos'}
+                          onChange={(e) => setAlcanceMensual(e.target.value)}
+                        />
+                        <span>Solo viáticos</span>
+                      </label>
+                    </div>
+                  </div>
+                )}
+
                 <div className="flex gap-3 pt-4">
                   <button
                     onClick={() => {
@@ -897,7 +977,9 @@ export default function Planillas() {
                 <div>
                   <h2 className="text-2xl font-bold text-[#34353A]">Reporte Multi-Mes</h2>
                   <p className="text-sm text-gray-500 mt-1">
-                    {tipoReporte === 'semanal' ? '📅 Planillas Semanales' : '📆 Planillas Quincenales'}
+                    {tipoReporte === 'semanal' && alcanceMulti === 'viaticos' && 'Viáticos de planillas semanales'}
+                    {tipoReporte === 'semanal' && alcanceMulti === 'todo' && 'Planillas semanales'}
+                    {tipoReporte === 'quincenal' && 'Planillas quincenales'}
                   </p>
                 </div>
                 <button
@@ -981,6 +1063,36 @@ export default function Planillas() {
                   )}
                 </div>
 
+                {tipoReporte === 'semanal' && (
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Contenido
+                    </label>
+                    <div className="flex gap-3 flex-wrap">
+                      <label className={`flex items-center gap-2 px-4 py-3 rounded-xl border-2 cursor-pointer ${alcanceMulti === 'todo' ? 'border-[#5F8EAD] bg-[#5F8EAD] bg-opacity-10 font-semibold' : 'border-gray-200 text-gray-700'}`}>
+                        <input
+                          type="radio"
+                          name="alcanceMulti"
+                          value="todo"
+                          checked={alcanceMulti === 'todo'}
+                          onChange={(e) => setAlcanceMulti(e.target.value)}
+                        />
+                        <span>Planilla completa</span>
+                      </label>
+                      <label className={`flex items-center gap-2 px-4 py-3 rounded-xl border-2 cursor-pointer ${alcanceMulti === 'viaticos' ? 'border-[#5D9646] bg-[#5D9646] bg-opacity-10 font-semibold' : 'border-gray-200 text-gray-700'}`}>
+                        <input
+                          type="radio"
+                          name="alcanceMulti"
+                          value="viaticos"
+                          checked={alcanceMulti === 'viaticos'}
+                          onChange={(e) => setAlcanceMulti(e.target.value)}
+                        />
+                        <span>Solo viáticos</span>
+                      </label>
+                    </div>
+                  </div>
+                )}
+
                 <div className="flex gap-3 pt-4">
                   <button
                     onClick={() => {
@@ -1018,7 +1130,9 @@ export default function Planillas() {
                 <div>
                   <h2 className="text-2xl font-bold text-[#34353A]">Reporte Anual</h2>
                   <p className="text-sm text-gray-500 mt-1">
-                    {tipoReporte === 'semanal' ? '📅 Planillas Semanales' : '📆 Planillas Quincenales'}
+                    {tipoReporte === 'semanal' && alcanceAnual === 'viaticos' && 'Viáticos de planillas semanales'}
+                    {tipoReporte === 'semanal' && alcanceAnual === 'todo' && 'Planillas semanales'}
+                    {tipoReporte === 'quincenal' && 'Planillas quincenales'}
                   </p>
                 </div>
                 <button
@@ -1057,9 +1171,39 @@ export default function Planillas() {
                   </select>
                 </div>
 
+                {tipoReporte === 'semanal' && (
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Contenido
+                    </label>
+                    <div className="flex gap-3">
+                      <label className={`flex items-center gap-2 px-4 py-3 rounded-xl border-2 cursor-pointer ${alcanceAnual === 'todo' ? 'border-[#5F8EAD] bg-[#5F8EAD] bg-opacity-10 font-semibold' : 'border-gray-200 text-gray-700'}`}>
+                        <input
+                          type="radio"
+                          name="alcanceAnual"
+                          value="todo"
+                          checked={alcanceAnual === 'todo'}
+                          onChange={(e) => setAlcanceAnual(e.target.value)}
+                        />
+                        <span>Planilla completa</span>
+                      </label>
+                      <label className={`flex items-center gap-2 px-4 py-3 rounded-xl border-2 cursor-pointer ${alcanceAnual === 'viaticos' ? 'border-[#5D9646] bg-[#5D9646] bg-opacity-10 font-semibold' : 'border-gray-200 text-gray-700'}`}>
+                        <input
+                          type="radio"
+                          name="alcanceAnual"
+                          value="viaticos"
+                          checked={alcanceAnual === 'viaticos'}
+                          onChange={(e) => setAlcanceAnual(e.target.value)}
+                        />
+                        <span>Solo viáticos</span>
+                      </label>
+                    </div>
+                  </div>
+                )}
+
                 <div className="p-4 bg-[#34353A] bg-opacity-10 rounded-xl border-2 border-[#34353A]">
                   <p className="text-sm font-semibold text-[#34353A] mb-2">
-                    📅 Reporte Completo del Año
+                    Reporte completo del año
                   </p>
                   <p className="text-xs text-gray-600">
                     Este reporte incluirá todos los meses del año seleccionado (Enero a Diciembre)

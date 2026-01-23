@@ -712,6 +712,172 @@ clienteCon.crearClienteCorporativo = async (req, res) => {
   }
 };
 
+// =====================================================
+// PUT: Actualizar cliente corporativo (solo datos de negocio/contacto)
+// =====================================================
+clienteCon.actualizarClienteCorporativo = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const allowedTerminos = ['contado','credito_7','credito_15','credito_30','credito_60','otros'];
+
+    if (!isValidObjectId(id)) {
+      return res.status(400).json({
+        success: false,
+        message: "ID de cliente inválido",
+        error: "El ID proporcionado no tiene un formato válido"
+      });
+    }
+
+    const clienteActual = await clienteModel.findById(id);
+    if (!clienteActual) {
+      return res.status(404).json({
+        success: false,
+        message: "Cliente no encontrado"
+      });
+    }
+
+    if (clienteActual.tipoCliente !== 'corporativo') {
+      return res.status(400).json({
+        success: false,
+        message: "Solo se pueden actualizar clientes corporativos desde este endpoint"
+      });
+    }
+
+    const {
+      nombreEmpresa,
+      nombreComercial,
+      ruc,
+      giroNegocio,
+      email,
+      phone,
+      address,
+      direccionFacturacion,
+      contactoPrincipal,
+      contactosAdicionales,
+      terminosPago,
+      limiteCredito,
+      estadoCorporativo,
+      rutasFrecuentes,
+      notasInternas
+    } = req.body;
+
+    // Validaciones básicas (usa payload o valores existentes)
+    const requiredCorp = [
+      { key: 'nombreEmpresa', value: nombreEmpresa ?? clienteActual.nombreEmpresa },
+      { key: 'ruc', value: ruc ?? clienteActual.ruc },
+      { key: 'email', value: email ?? clienteActual.email },
+      { key: 'phone', value: phone ?? clienteActual.phone },
+      { key: 'address', value: address ?? clienteActual.address }
+    ];
+    const missing = requiredCorp.filter(f => !f.value || String(f.value).trim() === '').map(f => f.key);
+    if (missing.length) {
+      return res.status(400).json({
+        success: false,
+        message: "Faltan campos requeridos para cliente corporativo",
+        error: `Campos faltantes: ${missing.join(', ')}`
+      });
+    }
+
+    if (terminosPago && !allowedTerminos.includes(terminosPago)) {
+      return res.status(400).json({
+        success: false,
+        message: "Términos de pago inválidos",
+        error: `Valores permitidos: ${allowedTerminos.join(', ')}`
+      });
+    }
+
+    // Unicidad de email y RUC
+    if (email && email.toLowerCase() !== clienteActual.email) {
+      const emailExists = await clienteModel.findOne({
+        email: email.toLowerCase(),
+        _id: { $ne: id }
+      });
+      if (emailExists) {
+        return res.status(409).json({
+          success: false,
+          message: "Email duplicado",
+          error: "Ya existe otro cliente con este email"
+        });
+      }
+    }
+
+    if (ruc && ruc !== clienteActual.ruc) {
+      const rucExists = await clienteModel.findOne({
+        ruc,
+        tipoCliente: 'corporativo',
+        _id: { $ne: id }
+      });
+      if (rucExists) {
+        return res.status(409).json({
+          success: false,
+          message: "RUC/NIT duplicado",
+          error: "Ya existe otro cliente corporativo con este RUC"
+        });
+      }
+    }
+
+    const datosActualizados = {
+      tipoCliente: 'corporativo',
+      updatedAt: new Date()
+    };
+
+    if (nombreEmpresa !== undefined) datosActualizados.nombreEmpresa = nombreEmpresa.trim().toUpperCase();
+    if (nombreComercial !== undefined) datosActualizados.nombreComercial = (nombreComercial || nombreEmpresa || clienteActual.nombreEmpresa).trim().toUpperCase();
+    if (ruc !== undefined) datosActualizados.ruc = ruc.trim();
+    if (giroNegocio !== undefined) datosActualizados.giroNegocio = giroNegocio.trim();
+    if (email !== undefined) datosActualizados.email = email.toLowerCase().trim();
+    if (phone !== undefined) datosActualizados.phone = phone.trim();
+    if (address !== undefined) datosActualizados.address = address.trim();
+    if (direccionFacturacion !== undefined) datosActualizados.direccionFacturacion = direccionFacturacion.trim();
+    if (contactosAdicionales !== undefined) datosActualizados.contactosAdicionales = contactosAdicionales;
+    if (terminosPago !== undefined) datosActualizados.terminosPago = terminosPago;
+    if (limiteCredito !== undefined) datosActualizados.limiteCredito = limiteCredito;
+    if (estadoCorporativo !== undefined) datosActualizados.estadoCorporativo = estadoCorporativo;
+    if (rutasFrecuentes !== undefined) datosActualizados.rutasFrecuentes = rutasFrecuentes;
+    if (notasInternas !== undefined) datosActualizados.notasInternas = notasInternas;
+
+    if (contactoPrincipal && typeof contactoPrincipal === 'object') {
+      datosActualizados.contactoPrincipal = {
+        ...clienteActual.contactoPrincipal?.toObject?.() || clienteActual.contactoPrincipal || {},
+        nombre: contactoPrincipal.nombre?.trim() || '',
+        cargo: contactoPrincipal.cargo?.trim() || '',
+        telefono: contactoPrincipal.telefono?.trim() || '',
+        email: contactoPrincipal.email?.trim().toLowerCase() || ''
+      };
+    }
+
+    const clienteActualizado = await clienteModel.findByIdAndUpdate(
+      id,
+      datosActualizados,
+      { new: true, runValidators: true }
+    ).select('-password');
+
+    return res.status(200).json({
+      success: true,
+      message: "Cliente corporativo actualizado correctamente",
+      data: { cliente: clienteActualizado }
+    });
+
+  } catch (error) {
+    console.error('❌ Error en actualizarClienteCorporativo:', error);
+
+    if (error.code === 11000) {
+      const field = Object.keys(error.keyPattern)[0];
+      return res.status(409).json({
+        success: false,
+        message: "Datos duplicados",
+        error: `Ya existe un cliente con ese ${field}`
+      });
+    }
+
+    return res.status(500).json({
+      success: false,
+      message: "Error al actualizar cliente corporativo",
+      error: error.message
+    });
+  }
+};
+
 /**
  * Actualizar cliente existente con soporte para imagen de perfil
  * PUT /clientes/:id

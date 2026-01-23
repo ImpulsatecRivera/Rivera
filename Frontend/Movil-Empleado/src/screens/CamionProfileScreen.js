@@ -85,6 +85,7 @@ export default function CamionProfileScreen() {
   // Estados del formulario
   const [galones, setGalones] = useState('');
   const [total, setTotal] = useState('');
+  const [numeroMarchamo, setNumeroMarchamo] = useState('');
   const [comprobante, setComprobante] = useState(null);
 
   let tabBarHeight = 0;
@@ -158,6 +159,7 @@ export default function CamionProfileScreen() {
   const limpiarFormulario = () => {
     setGalones('');
     setTotal('');
+    setNumeroMarchamo('');
     setComprobante(null);
   };
 
@@ -205,6 +207,9 @@ export default function CamionProfileScreen() {
       formData.append('mes', mes.toString());
       formData.append('ano', ano.toString());
       formData.append('estado', 'pendiente'); // Estado por defecto
+      if (numeroMarchamo.trim()) {
+        formData.append('numeroMarchamo', numeroMarchamo.trim());
+      }
 
       console.log('📤 Registrando gas...');
 
@@ -253,15 +258,23 @@ export default function CamionProfileScreen() {
     const permitido = await pedirPermisosCamara();
     if (!permitido) return;
 
-    const result = await ImagePicker.launchCameraAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      quality: 0.8,
-      allowsEditing: true,
-      aspect: [4, 3],
-    });
+    try {
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ['images'],
+        quality: 0.8,
+        allowsEditing: true,
+        aspect: [4, 3],
+      });
 
-    if (!result.canceled) {
-      setComprobante(result.assets[0]);
+      console.log('📷 Resultado cámara:', result);
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        setComprobante(result.assets[0]);
+        console.log('✅ Comprobante guardado:', result.assets[0].uri);
+      }
+    } catch (error) {
+      console.error('❌ Error al tomar foto:', error);
+      Alert.alert('Error', 'No se pudo abrir la cámara');
     }
   };
 
@@ -270,15 +283,23 @@ export default function CamionProfileScreen() {
     const permitido = await pedirPermisosGaleria();
     if (!permitido) return;
 
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      quality: 0.8,
-      allowsEditing: true,
-      aspect: [4, 3],
-    });
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        quality: 0.8,
+        allowsEditing: true,
+        aspect: [4, 3],
+      });
 
-    if (!result.canceled) {
-      setComprobante(result.assets[0]);
+      console.log('🖼️ Resultado galería:', result);
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        setComprobante(result.assets[0]);
+        console.log('✅ Comprobante guardado:', result.assets[0].uri);
+      }
+    } catch (error) {
+      console.error('❌ Error al seleccionar imagen:', error);
+      Alert.alert('Error', 'No se pudo abrir la galería');
     }
   };
 
@@ -438,6 +459,18 @@ export default function CamionProfileScreen() {
                     keyboardType="decimal-pad"
                     value={total}
                     onChangeText={setTotal}
+                  />
+                </View>
+
+                {/* Campo Número de Marchamo */}
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>🏷️ Número de marchamo (opcional)</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Ej: M-12345"
+                    value={numeroMarchamo}
+                    onChangeText={setNumeroMarchamo}
+                    autoCapitalize="characters"
                   />
                 </View>
 

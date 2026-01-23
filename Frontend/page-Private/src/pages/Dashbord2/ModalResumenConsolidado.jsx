@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { X, Calendar, FileText, Download, ChevronDown, AlertCircle, CheckCircle } from 'lucide-react';
+import Swal from 'sweetalert2';
 import { api } from '../../Context/authContext';
 
 const ModalResumenConsolidado = ({ isOpen, onClose }) => {
@@ -73,7 +74,34 @@ const ModalResumenConsolidado = ({ isOpen, onClose }) => {
     }
 
     setGenerando(true);
-    
+
+    // Alerta de procesamiento estilo Ventas/Viajes
+    Swal.fire({
+      title: 'Generando reporte...',
+      html: `
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 15px;">
+          <div class="spinner" style="
+            width: 50px;
+            height: 50px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #5F8EAD;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+          "></div>
+          <p style="color: #666; font-size: 14px; margin: 0;">Por favor espera mientras se genera el PDF...</p>
+        </div>
+        <style>
+          @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+          }
+        </style>
+      `,
+      showConfirmButton: false,
+      allowOutsideClick: false,
+      allowEscapeKey: false
+    });
+
     try {
       // REPORTE ANUAL
       if (tipoReporte === 'anual') {
@@ -84,29 +112,41 @@ const ModalResumenConsolidado = ({ isOpen, onClose }) => {
           
           const blob = new Blob([response.data], { type: 'application/pdf' });
           const url = window.URL.createObjectURL(blob);
-          window.open(url, '_blank');
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `reporte-consolidado-anual-${anoSeleccionado}.pdf`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
           
           setTimeout(() => {
             window.URL.revokeObjectURL(url);
             setGenerando(false);
-            showCustomAlert('success', '¡Reporte generado!', 'El reporte anual consolidado está listo.');
-          }, 1000);
+            Swal.fire({
+              icon: 'success',
+              title: '¡Reporte generado!',
+              text: 'El reporte anual consolidado está listo.',
+              timer: 2000,
+              showConfirmButton: false
+            });
+          }, 600);
         } catch (error) {
           setGenerando(false);
+          Swal.close();
           if (error.response?.status === 404) {
-            showCustomAlert(
-              'info',
-              'Sin datos disponibles',
-              error.response.data?.message || `No hay registros para el año ${anoSeleccionado}.`,
-              ['Verifica que existan datos registrados en ese año', 'Intenta con otro año']
-            );
+            Swal.fire({
+              icon: 'info',
+              title: 'Sin datos disponibles',
+              text: error.response.data?.message || `No hay registros para el año ${anoSeleccionado}.`,
+              confirmButtonColor: '#5F8EAD'
+            });
           } else {
-            showCustomAlert(
-              'error',
-              'Error al generar reporte',
-              error.response?.data?.message || 'No se pudo generar el reporte.',
-              ['Verifica tu conexión a internet', 'Si el problema persiste, contacta al administrador']
-            );
+            Swal.fire({
+              icon: 'error',
+              title: 'Error al generar reporte',
+              text: error.response?.data?.message || 'No se pudo generar el reporte.',
+              confirmButtonColor: '#ef4444'
+            });
           }
         }
       } 
@@ -120,30 +160,42 @@ const ModalResumenConsolidado = ({ isOpen, onClose }) => {
           
           const blob = new Blob([response.data], { type: 'application/pdf' });
           const url = window.URL.createObjectURL(blob);
-          window.open(url, '_blank');
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `reporte-consolidado-mensual-${mesSeleccionado}-${anoSeleccionado}.pdf`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
           
           setTimeout(() => {
             window.URL.revokeObjectURL(url);
             setGenerando(false);
-            showCustomAlert('success', '¡Reporte generado!', 'El reporte mensual consolidado está listo.');
-          }, 1000);
+            Swal.fire({
+              icon: 'success',
+              title: '¡Reporte generado!',
+              text: 'El reporte mensual consolidado está listo.',
+              timer: 2000,
+              showConfirmButton: false
+            });
+          }, 600);
         } catch (error) {
           setGenerando(false);
+          Swal.close();
           if (error.response?.status === 404) {
             const mesNombre = meses.find(m => m.value === parseInt(mesSeleccionado))?.label;
-            showCustomAlert(
-              'info',
-              'Sin datos disponibles',
-              error.response.data?.message || `No hay registros para ${mesNombre} ${anoSeleccionado}.`,
-              ['Verifica que existan datos registrados en ese período', 'Intenta con otro mes']
-            );
+            Swal.fire({
+              icon: 'info',
+              title: 'Sin datos disponibles',
+              text: error.response.data?.message || `No hay registros para ${mesNombre} ${anoSeleccionado}.`,
+              confirmButtonColor: '#5F8EAD'
+            });
           } else {
-            showCustomAlert(
-              'error',
-              'Error al generar reporte',
-              error.response?.data?.message || 'No se pudo generar el reporte.',
-              ['Verifica tu conexión a internet', 'Si el problema persiste, contacta al administrador']
-            );
+            Swal.fire({
+              icon: 'error',
+              title: 'Error al generar reporte',
+              text: error.response?.data?.message || 'No se pudo generar el reporte.',
+              confirmButtonColor: '#ef4444'
+            });
           }
         }
       } 
@@ -169,34 +221,41 @@ const ModalResumenConsolidado = ({ isOpen, onClose }) => {
           
           setTimeout(() => {
             setGenerando(false);
-            showCustomAlert('success', '¡Descarga completa!', 'El reporte multi-mes se ha descargado correctamente.');
-          }, 1000);
+            Swal.fire({
+              icon: 'success',
+              title: '¡Descarga completa!',
+              text: 'El reporte multi-mes se ha descargado correctamente.',
+              timer: 2000,
+              showConfirmButton: false
+            });
+          }, 600);
         } catch (error) {
           setGenerando(false);
+          Swal.close();
           if (error.response?.status === 404) {
             const mesesSinDatosNombres = mesesSeleccionados.map(m => 
               meses.find(mes => mes.value === m)?.label
             );
-            showCustomAlert(
-              'info',
-              'Sin datos disponibles',
-              error.response.data?.message || `Ninguno de los meses seleccionados tiene registros para ${anoSeleccionado}.`,
-              mesesSinDatosNombres
-            );
+            Swal.fire({
+              icon: 'info',
+              title: 'Sin datos disponibles',
+              text: error.response.data?.message || `Ninguno de los meses seleccionados tiene registros para ${anoSeleccionado}.`,
+              confirmButtonColor: '#5F8EAD'
+            });
           } else if (error.response?.status === 400) {
-            showCustomAlert(
-              'warning',
-              'Solicitud inválida',
-              error.response.data?.message || 'Los datos enviados no son válidos.',
-              ['Verifica los meses seleccionados', 'Intenta nuevamente']
-            );
+            Swal.fire({
+              icon: 'warning',
+              title: 'Solicitud inválida',
+              text: error.response.data?.message || 'Los datos enviados no son válidos.',
+              confirmButtonColor: '#f59e0b'
+            });
           } else {
-            showCustomAlert(
-              'error',
-              'Error del servidor',
-              error.response?.data?.message || `Error al generar el reporte.`,
-              ['Verifica tu conexión a internet', 'Si el problema persiste, contacta al administrador']
-            );
+            Swal.fire({
+              icon: 'error',
+              title: 'Error del servidor',
+              text: error.response?.data?.message || `Error al generar el reporte.`,
+              confirmButtonColor: '#ef4444'
+            });
           }
         }
       }
@@ -204,12 +263,12 @@ const ModalResumenConsolidado = ({ isOpen, onClose }) => {
     } catch (error) {
       console.error('Error:', error);
       setGenerando(false);
-      showCustomAlert(
-        'error',
-        'Error al generar reporte',
-        'Ocurrió un problema al procesar tu solicitud. Por favor intenta nuevamente.',
-        ['Verifica tu conexión a internet', 'Si el problema persiste, contacta al administrador']
-      );
+      Swal.fire({
+        icon: 'error',
+        title: 'Error al generar reporte',
+        text: 'Ocurrió un problema al procesar tu solicitud. Por favor intenta nuevamente.',
+        confirmButtonColor: '#ef4444'
+      });
     }
   };
 

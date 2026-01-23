@@ -15,7 +15,7 @@ router.route("/")
 
 // 2. RUTAS ESPECÍFICAS PRIMERO (antes de las rutas con :id genérico)
 // Ruta para obtener todos los viajes programados (sin ID específico)
-router.get("/viajes-programados/todos",  motoristasCon.getAllViajesProgramados);
+router.get("/viajes-programados/todos",validateAuthToken(["admin","Operativo","Supervisor","motorista"]), motoristasCon.getAllViajesProgramados);
 
 // 3. RUTAS CON ID ESPECÍFICO (después de las rutas literales)
 // Rutas para viajes de un motorista específico

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, ChevronLeft, ChevronRight, Loader2, Download, Edit, Trash2, Plus } from "lucide-react";
+import { Search, ChevronLeft, ChevronRight, Loader2, Download, Edit, Trash2, Plus, Check } from "lucide-react";
 import { useNavigate } from 'react-router-dom';
 import { config } from '../../config';
 import MantenimientoDetailModal from "./VerDetalleManto";
@@ -144,6 +144,73 @@ const MantenimientosTable = () => {
     setError(err.response?.data?.message || err.message || 'Error al cargar los mantenimientos');
   } finally {
     setLoading(false);
+  }
+};
+
+const marcarComoCompletado = async (id) => {
+  const result = await Swal.fire({
+    title: '¿Marcar como completado?',
+    text: 'El mantenimiento se marcará como completado',
+    icon: 'question',
+    showCancelButton: true,
+    confirmButtonText: 'Sí, marcar completado',
+    confirmButtonColor: '#5D9646',
+    cancelButtonColor: '#6b7280',
+    cancelButtonText: 'Cancelar'
+  });
+
+  if (!result.isConfirmed) return;
+
+  try {
+    Swal.fire({
+      title: 'Actualizando...',
+      html: `
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 15px;">
+          <div class="spinner" style="
+            width: 50px;
+            height: 50px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #5F8EAD;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+          "></div>
+          <p style="color: #666; font-size: 14px; margin: 0;">Por favor espera...</p>
+        </div>
+        <style>
+          @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+          }
+        </style>
+      `,
+      showConfirmButton: false,
+      allowOutsideClick: false,
+      allowEscapeKey: false
+    });
+
+    const response = await api.put(`/mantenimientos/${id}`, {
+      estado: 'completado'
+    });
+
+    if (response.data.success) {
+      await fetchMantenimientos();
+      
+      Swal.fire({
+        icon: 'success',
+        title: '¡Completado!',
+        text: 'El mantenimiento ha sido marcado como completado',
+        timer: 2000,
+        showConfirmButton: false
+      });
+    }
+  } catch (error) {
+    console.error('Error marcando como completado:', error);
+    Swal.fire({
+      icon: 'error',
+      title: 'Error',
+      text: error.response?.data?.message || 'No se pudo marcar como completado',
+      confirmButtonColor: '#ef4444'
+    });
   }
 };
 
@@ -391,15 +458,25 @@ const MantenimientosTable = () => {
                           </button>
 
                           {mant.estado !== 'completado' && mant.estado !== 'cancelado' && (
-                            <ProtectedAction action="edit">
+                            <>
+                              <ProtectedAction action="edit">
+                                <button
+                                  onClick={() => navigate(`/mantenimientos/editar/${mant._id}`)}
+                                  className="p-2 rounded-lg bg-yellow-50 hover:bg-yellow-100 text-yellow-600 transition-colors"
+                                  title="Editar"
+                                >
+                                  <Edit size={18} />
+                                </button>
+                              </ProtectedAction>
+
                               <button
-                                onClick={() => navigate(`/mantenimientos/editar/${mant._id}`)}
-                                className="p-2 rounded-lg bg-yellow-50 hover:bg-yellow-100 text-yellow-600 transition-colors"
-                                title="Editar"
+                                onClick={() => marcarComoCompletado(mant._id)}
+                                className="p-2 rounded-lg bg-green-50 hover:bg-green-100 text-green-600 transition-colors"
+                                title="Marcar como completado"
                               >
-                                <Edit size={18} />
+                                <Check size={18} />
                               </button>
-                            </ProtectedAction>
+                            </>
                           )}
 
                           <ProtectedAction action="delete">
@@ -407,6 +484,8 @@ const MantenimientosTable = () => {
                               onClick={() => handleDelete(mant)}
                               className="p-2 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 transition-colors"
                               title="Eliminar"
+                              disabled={mant.estado === 'completado' || mant.estado === 'cancelado'}
+                              style={{ opacity: (mant.estado === 'completado' || mant.estado === 'cancelado') ? 0.5 : 1, cursor: (mant.estado === 'completado' || mant.estado === 'cancelado') ? 'not-allowed' : 'pointer' }}
                             >
                               <Trash2 size={18} />
                             </button>
