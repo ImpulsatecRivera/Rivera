@@ -267,45 +267,132 @@ export default function PantallaPrincipalViajesOperativos() {
     navigate(`/viajesOperativos/editar/${String(id)}`);
   };
 
-  const handleDelete = async (e, row) => {
+  const handleOpcionesViaje = async (e, row) => {
     e.stopPropagation();
 
     const id = row?._id || row?.id;
     if (!id) return;
 
+    const estado = canonEstado(row);
+    const esCompletado = normalize(estado) === "completado";
+
+    // Si está completado, solo permitir cancelar
+    if (esCompletado) {
+      const result = await Swal.fire({
+        title: "¿Cancelar este viaje?",
+        text: `Se marcará como cancelado: ${row?.rutaDirecta?.rutaCompleta || "Viaje"}`,
+        icon: "question",
+        showCancelButton: true,
+        confirmButtonText: "Sí, cancelar",
+        cancelButtonText: "No",
+        confirmButtonColor: "#ef4444",
+      });
+
+      if (!result.isConfirmed) return;
+
+      try {
+        const { data } = await api.patch(`/viajes-operativos/actualizar-estado/${id}`, {
+          estado: "cancelado",
+        });
+
+        if (!data?.success) {
+          throw new Error(data?.message || "Error al cancelar");
+        }
+
+        await Swal.fire({
+          title: "¡Cancelado!",
+          text: "Viaje marcado como cancelado",
+          icon: "success",
+          timer: 1500,
+        });
+
+        fetchViajes();
+      } catch (err) {
+        Swal.fire({
+          title: "Error",
+          text: err.response?.data?.message || err.message,
+          icon: "error",
+        });
+      }
+      return;
+    }
+
+    // Si NO está completado, mostrar ambas opciones
     const result = await Swal.fire({
-      title: "¿Eliminar viaje operativo?",
-      text: "Esta acción no se puede deshacer",
-      icon: "warning",
-      showCancelButton: true,
-      confirmButtonText: "Sí, eliminar",
-      cancelButtonText: "Cancelar",
-      confirmButtonColor: "#ef4444",
+      title: "¿Qué deseas hacer?",
+      text: `Viaje: ${row?.rutaDirecta?.rutaCompleta || "N/A"}`,
+      icon: "question",
+      showDenyButton: true,
+      confirmButtonText: "Eliminar viaje",
+      denyButtonText: "Cancelar viaje",
+      confirmButtonColor: "#dc2626",
+      denyButtonColor: "#ef4444",
     });
 
-    if (!result.isConfirmed) return;
+    // Si elige eliminar
+    if (result.isConfirmed) {
+      const confirmDelete = await Swal.fire({
+        title: "¿Estás seguro?",
+        text: "Esta acción eliminará permanentemente el viaje y no se puede deshacer",
+        icon: "warning",
+        showCancelButton: true,
+        confirmButtonText: "Sí, eliminar",
+        cancelButtonText: "Cancelar",
+        confirmButtonColor: "#dc2626",
+      });
 
-    try {
-      const { data } = await api.delete(`/viajes-operativos/${id}`);
+      if (!confirmDelete.isConfirmed) return;
 
-      if (!data?.success) {
-        throw new Error(data?.message || "Error al eliminar");
+      try {
+        // Intentar eliminar con la ruta general de viajes
+        const { data } = await api.delete(`/viajes/${id}`);
+
+        if (!data?.success) {
+          throw new Error(data?.message || "Error al eliminar");
+        }
+
+        await Swal.fire({
+          title: "¡Eliminado!",
+          text: "Viaje eliminado permanentemente",
+          icon: "success",
+          timer: 1500,
+        });
+
+        fetchViajes();
+      } catch (err) {
+        Swal.fire({
+          title: "Error",
+          text: err.response?.data?.message || err.message,
+          icon: "error",
+        });
       }
+    }
+    // Si elige cancelar
+    else if (result.isDenied) {
+      try {
+        const { data } = await api.patch(`/viajes-operativos/actualizar-estado/${id}`, {
+          estado: "cancelado",
+        });
 
-      await Swal.fire({
-        title: "¡Eliminado!",
-        text: "Viaje eliminado",
-        icon: "success",
-        timer: 1500,
-      });
+        if (!data?.success) {
+          throw new Error(data?.message || "Error al cancelar");
+        }
 
-      fetchViajes();
-    } catch (err) {
-      Swal.fire({ 
-        title: "Error", 
-        text: err.response?.data?.message || err.message, 
-        icon: "error" 
-      });
+        await Swal.fire({
+          title: "¡Cancelado!",
+          text: "Viaje marcado como cancelado",
+          icon: "success",
+          timer: 1500,
+        });
+
+        fetchViajes();
+      } catch (err) {
+        Swal.fire({
+          title: "Error",
+          text: err.response?.data?.message || err.message,
+          icon: "error",
+        });
+      }
     }
   };
 
@@ -582,6 +669,16 @@ export default function PantallaPrincipalViajesOperativos() {
                               <CheckCircle size={18} />
                             </button>
                           )}
+
+                          <button
+                            type="button"
+                            onClick={(e) => handleOpcionesViaje(e, row)}
+                            className="p-2 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            title="Eliminar o cancelar viaje"
+                            disabled={esCancelado}
+                          >
+                            <Trash2 size={18} />
+                          </button>
                         </div>
                       </td>
                     </tr>
