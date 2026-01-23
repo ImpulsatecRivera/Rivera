@@ -607,23 +607,47 @@ export default function PlanillaQuincenal() {
   const cambiarEstadoPlanilla = async (nuevoEstado) => {
     if (!planilla || !planilla._id) return;
 
+    const estados = {
+      'aprobada': {
+        title: '¿Aprobar Planilla?',
+        text: 'Una vez aprobada, no se podrá editar',
+        confirmText: 'Sí, aprobar',
+        color: '#5D9646'
+      },
+      'pagada': {
+        title: '¿Marcar como Pagada?',
+        text: 'Se registrará la fecha de pago actual',
+        confirmText: 'Sí, marcar pagada',
+        color: '#10b981'
+      }
+    };
+
+    const estadoConfig = estados[nuevoEstado];
+    if (!estadoConfig) return;
+
     const result = await Swal.fire({
-      title: '¿Aprobar Planilla?',
-      text: 'Una vez aprobada, no se podrá editar',
-      icon: 'warning',
+      title: estadoConfig.title,
+      text: estadoConfig.text,
+      icon: 'question',
       showCancelButton: true,
-      confirmButtonColor: '#5D9646',
-      cancelButtonColor: '#6b7280',
-      confirmButtonText: 'Sí, aprobar',
+      confirmButtonText: estadoConfig.confirmText,
+      confirmButtonColor: estadoConfig.color,
       cancelButtonText: 'Cancelar'
     });
 
     if (!result.isConfirmed) return;
 
     try {
+      const body = { estado: nuevoEstado };
+      
+      if (nuevoEstado === 'pagada') {
+        body.fechaPago = new Date().toISOString();
+        body.pagada = true;
+      }
+
       const response = await api.patch(
         `/planillas/quincenal/${planilla._id}/estado`,
-        { estado: nuevoEstado }
+        body
       );
 
       const data = response.data;
@@ -637,15 +661,20 @@ export default function PlanillaQuincenal() {
         Swal.fire({
           icon: 'success',
           title: '¡Estado actualizado!',
+          text: data.message,
           timer: 2000,
           showConfirmButton: false
         });
+      } else {
+        throw new Error(data.message || 'Error al cambiar estado');
       }
     } catch (error) {
+      console.error('Error cambiando estado:', error);
+      const errorMessage = error.response?.data?.message || error.message || 'No se pudo cambiar el estado';
       Swal.fire({
         icon: 'error',
         title: 'Error',
-        text: error.message
+        text: errorMessage
       });
     }
   };
@@ -1034,6 +1063,18 @@ export default function PlanillaQuincenal() {
                   >
                     <CheckCircle size={18} />
                     <span>Aprobar</span>
+                  </button>
+                )}
+
+                {planilla?.estado === 'aprobada' && (
+                  <button
+                    onClick={() => cambiarEstadoPlanilla('pagada')}
+                    className="flex items-center justify-center gap-2 px-4 py-2 bg-emerald-600 
+                      text-white rounded-lg hover:bg-emerald-700 font-semibold text-sm 
+                      transition-colors shadow-lg hover:shadow-xl flex-1 lg:flex-none"
+                  >
+                    <DollarSign size={18} />
+                    <span>Marcar Pagada</span>
                   </button>
                 )}
 
