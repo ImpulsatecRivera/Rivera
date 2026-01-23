@@ -25,15 +25,65 @@ export const useTruckForm = (onSuccess) => {
 
   const imagen = watch("img");
 
-  // Cargar motoristas
+  // Cargar motoristas sin camión asignado
   useEffect(() => {
-    fetch(API_URL_MOTORISTAS, { credentials: 'include' })
-      .then((res) => res.json())
-      .then((data) => {
-        console.log('Motoristas cargados:', data);
-        setMotoristasDisponibles(data);
-      })
-      .catch((err) => console.error("Error al cargar motoristas:", err));
+    const cargarMotoristasDisponibles = async () => {
+      try {
+        // Cargar motoristas y camiones en paralelo
+        const [motoristasRes, camionesRes] = await Promise.all([
+          fetch(API_URL_MOTORISTAS, { credentials: 'include' }),
+          fetch(API_URL_CAMIONES, { credentials: 'include' })
+        ]);
+
+        const motoristas = await motoristasRes.json();
+        const camiones = await camionesRes.json();
+
+        console.log('Motoristas cargados:', motoristas);
+        console.log('Camiones cargados (raw):', camiones);
+
+        // Extraer el array de camiones - manejar diferentes estructuras de respuesta
+        let camionesArray = [];
+        if (Array.isArray(camiones)) {
+          camionesArray = camiones;
+        } else if (camiones?.data && Array.isArray(camiones.data)) {
+          camionesArray = camiones.data;
+        } else if (camiones?.camiones && Array.isArray(camiones.camiones)) {
+          camionesArray = camiones.camiones;
+        }
+
+        console.log('Camiones array procesado:', camionesArray);
+        console.log('Total de camiones:', camionesArray.length);
+
+        // Obtener IDs de motoristas que ya tienen camión asignado
+        const motoristasAsignados = new Set(
+          camionesArray
+            .filter(camion => camion.driverId)
+            .map(camion => {
+              // Manejar tanto ObjectId como string
+              const driverId = camion.driverId?._id || camion.driverId;
+              return typeof driverId === 'string' ? driverId : driverId?.toString();
+            })
+            .filter(id => id) // Remover nulls/undefined
+        );
+
+        console.log('Motoristas con camión asignado:', Array.from(motoristasAsignados));
+
+        // Filtrar motoristas que NO tienen camión asignado
+        const motoristasLibres = motoristas.filter(motorista => {
+          const motoristaId = motorista._id || motorista.id;
+          const isAsignado = motoristasAsignados.has(motoristaId);
+          return !isAsignado;
+        });
+
+        console.log('Motoristas disponibles (sin camión):', motoristasLibres);
+        setMotoristasDisponibles(motoristasLibres);
+      } catch (err) {
+        console.error("Error al cargar motoristas disponibles:", err);
+        setMotoristasDisponibles([]);
+      }
+    };
+
+    cargarMotoristasDisponibles();
   }, []);
 
   // Cargar proveedores
@@ -90,6 +140,10 @@ export const useTruckForm = (onSuccess) => {
       });
       formData.append('img', imageFile);
 
+      // ✅ SIEMPRE AGREGAR NIVEL DE GASOLINA COMO 1 (campo no usado pero requerido)
+      formData.append('gasolineLevel', '1');
+      console.log('gasolineLevel: 1 (valor fijo)');
+
       // ✅ MAPEAR CAMPOS CORRECTAMENTE SEGÚN TU API
       const fieldMapping = {
         // Mapeo de nombres de formulario a nombres de API
@@ -125,46 +179,14 @@ export const useTruckForm = (onSuccess) => {
         driver: 'driverId'
       };
 
-      // ✅ AGREGAR CAMPOS MAPEADOS (excluyendo img)
+      // ✅ AGREGAR CAMPOS MAPEADOS (excluyendo img y gasolineLevel ya que se envía con valor fijo)
       Object.entries(data).forEach(([key, value]) => {
-        if (key !== 'img') {
+        if (key !== 'img' && key !== 'gasolineLevel') {
           // Usar el mapeo si existe, sino usar el key original
           const apiFieldName = fieldMapping[key] || key;
           
           // Validaciones específicas
-          if (apiFieldName === 'gasolineLevel') {
-            console.log('=== DEBUG NIVEL DE GASOLINA ===');
-            console.log('Valor original:', value);
-            console.log('Tipo original:', typeof value);
-            console.log('Es string vacío?', value === '');
-            console.log('Es undefined?', value === undefined);
-            console.log('Es null?', value === null);
-            
-            // Manejar casos especiales
-            let gasLevel;
-            if (value === '' || value === undefined || value === null || value === 'undefined') {
-              gasLevel = 0; // Valor por defecto
-              console.log('Usando valor por defecto: 0');
-            } else {
-              gasLevel = parseFloat(value);
-              console.log('Valor parseado:', gasLevel);
-              
-              if (isNaN(gasLevel)) {
-                gasLevel = 0;
-                console.log('NaN detectado, usando 0');
-              }
-            }
-            
-            // Validar rango
-            if (gasLevel < 0 || gasLevel > 100) {
-              console.error('Nivel de gasolina fuera de rango:', gasLevel);
-              throw new Error(`El nivel de gasolina debe estar entre 0 y 100. Valor recibido: ${gasLevel}`);
-            }
-            
-            console.log(`Valor final a enviar: ${gasLevel}`);
-            console.log('=== FIN DEBUG GASOLINA ===');
-            formData.append(apiFieldName, gasLevel.toString());
-          } else if (apiFieldName === 'age') {
+          if (apiFieldName === 'age') {
             // Asegurar que el año sea un número
             const year = parseInt(value) || new Date().getFullYear();
             console.log(`Agregando a FormData: ${apiFieldName} = ${year} (año)`);
