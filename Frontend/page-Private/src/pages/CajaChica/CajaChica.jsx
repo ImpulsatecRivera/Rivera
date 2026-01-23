@@ -480,6 +480,20 @@ export default function CajaChicaModern() {
   };
 
   const descargarReporteIndividual = async (transaccionId) => {
+    // Mostrar alerta de procesando
+    Swal.fire({
+      title: 'Procesando...',
+      html: '<div style="text-align: center;"><div style="border: 4px solid #f3f3f3; border-top: 4px solid #5F8EAD; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 0 auto;"></div><p style="margin-top: 10px; color: #666;">Generando reporte, por favor espera</p></div>',
+      allowOutsideClick: false,
+      allowEscapeKey: false,
+      showConfirmButton: false,
+      didOpen: () => {
+        const style = document.createElement('style');
+        style.textContent = '@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }';
+        document.head.appendChild(style);
+      }
+    });
+
     try {
       const response = await api.get(`/reportesCajaChica/individual/${transaccionId}`, {
         responseType: 'blob'
@@ -495,10 +509,67 @@ export default function CajaChicaModern() {
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
 
-      // 🎨 Toast con Lottie de Success
-      showLottieToast('success', '✅ Reporte descargado exitosamente', 2500);
+      // Mostrar alerta de éxito
+      Swal.fire({
+        icon: 'success',
+        title: 'Reporte generado',
+        html: `<p style="color: #666;"><strong>Reporte Individual</strong></p><p style="color: #999; font-size: 14px;">reporte_${transaccionId}.pdf</p>`,
+        confirmButtonText: 'OK',
+        confirmButtonColor: '#5F8EAD',
+        timer: 3000,
+        timerProgressBar: true
+      });
     } catch (error) {
-      showLottieToast('error', '❌ Error al descargar el reporte', 3000);
+      console.error('Error descargando reporte:', error);
+      
+      // Extraer el mensaje de error
+      let errorMessage = 'No se pudo generar el reporte. Intenta nuevamente.';
+      let errorDetails = '';
+      
+      const showError = (msg, details = '') => {
+        Swal.fire({
+          icon: 'error',
+          title: 'Error al generar reporte',
+          html: `<p style="color: #666;">${msg}</p>${details}`,
+          confirmButtonText: 'Cerrar',
+          confirmButtonColor: '#5F8EAD'
+        });
+      };
+
+      // Verificar si hay respuesta del servidor
+      if (error.response) {
+        if (error.response.status === 404 || error.response.status === 400) {
+          if (error.response.data instanceof Blob) {
+            error.response.data.text().then(text => {
+              try {
+                const jsonData = JSON.parse(text);
+                errorMessage = jsonData.message || 'No se pudo generar el reporte';
+                if (error.response.status) {
+                  errorDetails = `<p style="color: #999; font-size: 12px; margin-top: 10px;">Status: ${error.response.status}</p>`;
+                }
+                showError(errorMessage, errorDetails);
+              } catch (e) {
+                errorMessage = 'No se pudo generar el reporte';
+                showError(errorMessage);
+              }
+            });
+            return;
+          } else if (typeof error.response.data === 'object') {
+            errorMessage = error.response.data.message || 'No se pudo generar el reporte';
+          }
+        } else {
+          errorMessage = error.response.data?.message || `Error: ${error.response.status}`;
+        }
+        
+        if (error.response.status) {
+          errorDetails = `<p style="color: #999; font-size: 12px; margin-top: 10px;">Status: ${error.response.status}</p>`;
+        }
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      // Mostrar alerta de error
+      showError(errorMessage, errorDetails);
     }
   };
 
@@ -586,6 +657,20 @@ export default function CajaChicaModern() {
 
     if (!formValues) return;
 
+    // Mostrar alerta de procesando
+    Swal.fire({
+      title: 'Procesando...',
+      html: '<div style="text-align: center;"><div style="border: 4px solid #f3f3f3; border-top: 4px solid #5F8EAD; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 0 auto;"></div><p style="margin-top: 10px; color: #666;">Generando vale, por favor espera</p></div>',
+      allowOutsideClick: false,
+      allowEscapeKey: false,
+      showConfirmButton: false,
+      didOpen: () => {
+        const style = document.createElement('style');
+        style.textContent = '@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }';
+        document.head.appendChild(style);
+      }
+    });
+
     try {
       const { data } = await api.post(`/cajaChica/${transaccion._id}/generar-vale`, {
         nombreBeneficiario: formValues
@@ -594,21 +679,71 @@ export default function CajaChicaModern() {
       if (data.voucher) {
         window.open(data.voucher, '_blank', 'noopener,noreferrer');
 
-        // 🎨 Alert con Lottie de Success
-        showLottieAlert(
-          'success',
-          '¡Vale Generado! 📄',
-          `Vale #${data.vale || 'N/A'} creado exitosamente y listo para descargar`
-        );
-
-        await cargarDatos();
+        // Mostrar alerta de éxito
+        Swal.fire({
+          icon: 'success',
+          title: 'Vale generado',
+          html: `<p style="color: #666;"><strong>Vale #${data.vale || 'N/A'}</strong></p><p style="color: #999; font-size: 14px;">Creado exitosamente y listo para descargar</p>`,
+          confirmButtonText: 'OK',
+          confirmButtonColor: '#5F8EAD',
+          timer: 3000,
+          timerProgressBar: true
+        }).then(() => {
+          cargarDatos();
+        });
       }
     } catch (error) {
-      showLottieAlert(
-        'error', 
-        '❌ Error al Generar', 
-        'No se pudo crear el vale. Intenta nuevamente.'
-      );
+      console.error('Error generando vale:', error);
+      
+      // Extraer el mensaje de error
+      let errorMessage = 'No se pudo generar el vale. Intenta nuevamente.';
+      let errorDetails = '';
+      
+      const showError = (msg, details = '') => {
+        Swal.fire({
+          icon: 'error',
+          title: 'Error al generar vale',
+          html: `<p style="color: #666;">${msg}</p>${details}`,
+          confirmButtonText: 'Cerrar',
+          confirmButtonColor: '#5F8EAD'
+        });
+      };
+
+      // Verificar si hay respuesta del servidor
+      if (error.response) {
+        if (error.response.status === 404 || error.response.status === 400) {
+          // Si es un Blob, intentar convertirlo a texto y parsearlo
+          if (error.response.data instanceof Blob) {
+            error.response.data.text().then(text => {
+              try {
+                const jsonData = JSON.parse(text);
+                errorMessage = jsonData.message || 'No se pudo generar el vale';
+                if (error.response.status) {
+                  errorDetails = `<p style="color: #999; font-size: 12px; margin-top: 10px;">Status: ${error.response.status}</p>`;
+                }
+                showError(errorMessage, errorDetails);
+              } catch (e) {
+                errorMessage = 'No se pudo generar el vale';
+                showError(errorMessage);
+              }
+            });
+            return;
+          } else if (typeof error.response.data === 'object') {
+            errorMessage = error.response.data.message || 'No se pudo generar el vale';
+          }
+        } else {
+          errorMessage = error.response.data?.message || `Error: ${error.response.status}`;
+        }
+        
+        if (error.response.status) {
+          errorDetails = `<p style="color: #999; font-size: 12px; margin-top: 10px;">Status: ${error.response.status}</p>`;
+        }
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      // Mostrar alerta de error
+      showError(errorMessage, errorDetails);
     }
   };
 
