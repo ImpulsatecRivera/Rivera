@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, Calendar, FileText, Download, ChevronDown, AlertCircle, CheckCircle, TrendingUp } from 'lucide-react';
 import { api } from "../../Context/authContext";
+import Swal from 'sweetalert2';
 
 
 
@@ -93,6 +94,20 @@ const ReportesCajaChicaModal = ({ isOpen, onClose }) => {
 
   setGenerando(true);
 
+  // Mostrar alerta de procesando
+  Swal.fire({
+    title: 'Procesando...',
+    html: '<div style="text-align: center;"><div style="border: 4px solid #f3f3f3; border-top: 4px solid #5F8EAD; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 0 auto;"></div><p style="margin-top: 10px; color: #666;">Generando reporte, por favor espera</p></div>',
+    allowOutsideClick: false,
+    allowEscapeKey: false,
+    showConfirmButton: false,
+    didOpen: () => {
+      const style = document.createElement('style');
+      style.textContent = '@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }';
+      document.head.appendChild(style);
+    }
+  });
+
   try {
     let response;
     let filename = 'reporte-caja-chica.pdf';
@@ -159,17 +174,79 @@ const ReportesCajaChicaModal = ({ isOpen, onClose }) => {
     document.body.removeChild(a);
     window.URL.revokeObjectURL(url);
 
-    showCustomAlert('success', 'Reporte generado', 'El PDF se descargó correctamente.');
+    // Mostrar alerta de éxito
+    Swal.fire({
+      icon: 'success',
+      title: 'Reporte generado',
+      html: `<p style="color: #666;"><strong>Caja Chica</strong></p><p style="color: #999; font-size: 14px;">${filename}</p>`,
+      confirmButtonText: 'OK',
+      confirmButtonColor: '#5F8EAD',
+      timer: 3000,
+      timerProgressBar: true
+    }).then(() => {
+      setGenerando(false);
+      onClose();
+    });
   } catch (error) {
-    if (error.response?.status === 401) {
-      showCustomAlert('error', 'Sesión expirada', 'Vuelve a iniciar sesión.');
-    } else if (error.response?.status === 404) {
-      showCustomAlert('info', 'Sin datos', 'No hay registros para el período seleccionado.');
-    } else {
-      showCustomAlert('error', 'Error', 'No se pudo generar el reporte.');
+    console.error('Error generando reporte:', error);
+    
+    // Extraer el mensaje de error
+    let errorMessage = 'No se pudo generar el reporte. Intenta nuevamente.';
+    let errorDetails = '';
+    
+    const showError = (msg, details = '') => {
+      Swal.fire({
+        icon: 'error',
+        title: 'Error al generar reporte',
+        html: `<p style="color: #666;">${msg}</p>${details}`,
+        confirmButtonText: 'Cerrar',
+        confirmButtonColor: '#5F8EAD'
+      }).then(() => {
+        setGenerando(false);
+      });
+    };
+
+    // Verificar si hay respuesta del servidor
+    if (error.response) {
+      if (error.response.status === 401) {
+        errorMessage = 'Sesión expirada';
+        errorDetails = '<p style="color: #999; font-size: 12px; margin-top: 10px;">Vuelve a iniciar sesión</p>';
+      } else if (error.response.status === 404) {
+        errorMessage = 'Sin datos disponibles';
+        errorDetails = '<p style="color: #999; font-size: 12px; margin-top: 10px;">No hay registros para el período seleccionado</p>';
+      } else if (error.response.status === 400) {
+        // Si es un Blob, intentar convertirlo a texto y parsearlo
+        if (error.response.data instanceof Blob) {
+          error.response.data.text().then(text => {
+            try {
+              const jsonData = JSON.parse(text);
+              errorMessage = jsonData.message || 'No hay datos disponibles para este período';
+              if (error.response.status) {
+                errorDetails = `<p style="color: #999; font-size: 12px; margin-top: 10px;">Status: ${error.response.status}</p>`;
+              }
+              showError(errorMessage, errorDetails);
+            } catch (e) {
+              errorMessage = 'No hay datos disponibles para este período';
+              showError(errorMessage);
+            }
+          });
+          return;
+        } else if (typeof error.response.data === 'object') {
+          errorMessage = error.response.data.message || 'No hay datos disponibles para este período';
+        }
+      } else {
+        errorMessage = error.response.data?.message || `Error: ${error.response.status}`;
+      }
+      
+      if (error.response.status) {
+        errorDetails = `<p style="color: #999; font-size: 12px; margin-top: 10px;">Status: ${error.response.status}</p>`;
+      }
+    } else if (error.message) {
+      errorMessage = error.message;
     }
-  } finally {
-    setGenerando(false);
+    
+    // Mostrar alerta de error
+    showError(errorMessage, errorDetails);
   }
 };
 

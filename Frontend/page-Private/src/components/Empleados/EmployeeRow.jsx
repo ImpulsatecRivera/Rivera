@@ -3,9 +3,16 @@ import { User, Mail, IdCard, Calendar, Phone, MapPin } from "lucide-react";
 
 const safeDate = (v) => {
   if (!v) return "—";
-  const d = new Date(v);
-  return Number.isNaN(d.getTime()) ? "—" : d.toLocaleDateString();
-};
+  try {
+    // Extraer fecha directamente sin crear Date object para evitar problemas de timezone
+    const dateStr = String(v).substring(0, 10); // Obtener YYYY-MM-DD
+    const [year, month, day] = dateStr.split('-');
+    if (!year || !month || !day) return "—";
+    return `${day}/${month}/${year}`;
+  } catch {
+    return "—";
+  }
+};  
 
 const money = (n) => {
   const num = Number(n ?? 0);

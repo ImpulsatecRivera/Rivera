@@ -32,6 +32,10 @@ export default function PlanillaSemanal() {
   const [empleadoArrastrando, setEmpleadoArrastrando] = useState(null);
   const [isDraggingOver, setIsDraggingOver] = useState(false);
   const [datosAnterioresCargados, setDatosAnterioresCargados] = useState(false);
+  const [panelAbierto, setPanelAbierto] = useState(() => {
+    const guardado = localStorage.getItem('panelPlanillaSemanalAbierto');
+    return guardado !== null ? JSON.parse(guardado) : true;
+  });
   const inputRef = useRef(null);
 
   const diasSemana = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado'];
@@ -58,6 +62,10 @@ export default function PlanillaSemanal() {
       inputRef.current.select();
     }
   }, [editandoCelda]);
+
+  useEffect(() => {
+    localStorage.setItem('panelPlanillaSemanalAbierto', JSON.stringify(panelAbierto));
+  }, [panelAbierto]);
 
   const cargarPlanilla = async () => {
     try {
@@ -572,6 +580,7 @@ const data = response.data;
         
         if (nuevoEstado === 'pagada') {
           body.fechaPago = new Date().toISOString();
+          body.pagada = true;
         }
 
         const endpoint = `${config.api.API_URL}/planillas/semanal/${planilla._id}/estado`;
@@ -673,6 +682,26 @@ const data = response.data;
         <div className="bg-white rounded-2xl p-6 border-2 border-gray-100 shadow-sm">
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-4">
+              {/* Botón de panel */}
+              {estaEditable && planilla.estado !== 'pagada' && (
+                <button
+                  onClick={() => setPanelAbierto(!panelAbierto)}
+                  className="p-3 bg-gradient-to-r from-[#5F8EAD] to-[#5D9646] 
+                    text-white rounded-lg hover:shadow-lg transition-all
+                    hover:scale-105 active:scale-95 relative"
+                  title={panelAbierto ? 'Ocultar panel' : 'Mostrar empleados'}
+                >
+                  <Users size={20} />
+                  {!panelAbierto && empleadosDisponibles.length > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] 
+                      rounded-full w-5 h-5 flex items-center justify-center font-bold 
+                      animate-pulse shadow-md">
+                      {empleadosDisponibles.length}
+                    </span>
+                  )}
+                </button>
+              )}
+              
               <button
                 onClick={() => navigate('/planilla')}
                 className="p-3 hover:bg-gray-100 rounded-xl transition-colors"
@@ -799,73 +828,150 @@ const data = response.data;
         </div>
 
         {/* LAYOUT CON SIDEBAR */}
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        <div className={`grid grid-cols-1 gap-6 ${panelAbierto && planilla.estado !== 'pagada' ? 'lg:grid-cols-4' : ''}`}>
           
           {/* SIDEBAR - EMPLEADOS DISPONIBLES */}
-          <div className="lg:col-span-1">
-            <div className="bg-white rounded-2xl p-6 border-2 border-gray-100 shadow-sm sticky top-6">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="p-3 bg-[#5D9646] bg-opacity-20 rounded-xl">
-                  <Users className="text-[#5D9646]" size={24} />
+          {panelAbierto && planilla.estado !== 'pagada' && (
+            <div className="lg:col-span-1">
+              <div className="bg-white rounded-2xl p-5 border-2 border-gray-100 shadow-sm sticky top-6">
+                {/* Header */}
+                <div className="flex items-center gap-3 mb-3">
+                  <Users className="text-[#5F8EAD]" size={24} />
+                  <div className="flex-1">
+                    <h2 className="text-lg font-bold text-gray-900">Personal Disponible</h2>
+                    <p className="text-xs text-gray-500">
+                      {empleadosDisponibles.length} persona{empleadosDisponibles.length !== 1 ? 's' : ''} - Planilla Semanal
+                    </p>
+                  </div>
                 </div>
-                <h2 className="text-lg font-bold text-[#34353A]">Empleados</h2>
-              </div>
 
-              {/* Búsqueda */}
-              <div className="relative mb-4">
-                <input
-                  type="text"
-                  placeholder="Buscar..."
-                  value={busquedaEmpleados}
-                  onChange={(e) => setBusquedaEmpleados(e.target.value)}
-                  className="w-full px-3 py-2 border-2 border-gray-200 rounded-lg focus:border-[#5D9646] focus:outline-none transition-colors text-sm"
-                />
-              </div>
+                {/* Badges de conteo */}
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="flex items-center gap-1.5 bg-blue-50 text-blue-700 px-3 py-1.5 rounded-lg text-xs font-medium">
+                    <Users size={14} />
+                    <span>{empleadosDisponibles.filter(e => e.tipo !== 'motorista').length} Empleados</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 bg-green-50 text-green-700 px-3 py-1.5 rounded-lg text-xs font-medium">
+                    <Users size={14} />
+                    <span>{empleadosDisponibles.filter(e => e.tipo === 'motorista').length} Motoristas</span>
+                  </div>
+                </div>
 
-              {/* Lista de empleados disponibles */}
-              <div className="space-y-2 max-h-[600px] overflow-y-auto pr-2">
-                {empleadosDisponibles
-                  .filter(e => e.nombre.toLowerCase().includes(busquedaEmpleados.toLowerCase()))
-                  .map((empleado) => (
-                    <div
-                      key={empleado._id}
-                      draggable
-                      onDragStart={(e) => handleDragStart(e, empleado)}
-                      onClick={() => handleAgregarEmpleado(empleado)}
-                      className="bg-white border-2 border-[#5D9646] border-opacity-40 rounded-lg p-3 
-                        cursor-pointer hover:border-[#5D9646] hover:shadow-lg hover:border-opacity-100
-                        transition-all duration-200 group active:scale-95"
-                    >
-                      <div className="flex items-start gap-2">
-                        <GripVertical size={16} className="text-gray-400 mt-0.5 flex-shrink-0" />
-                        <div className="flex-1 min-w-0">
-                          <p className="font-semibold text-sm text-[#34353A] truncate">
-                            {empleado.nombre}
-                          </p>
-                          <p className="text-xs text-gray-600 mt-0.5">
-                            {empleado.tipo === 'motorista' ? '🚗 Motorista' : '👤 Empleado'}
-                          </p>
-                        </div>
-                        <MousePointer size={14} className="text-[#5D9646] opacity-0 
-                          group-hover:opacity-100 transition-opacity flex-shrink-0" />
+                {/* Búsqueda */}
+                <div className="relative mb-4">
+                  <input
+                    type="text"
+                    placeholder="Buscar por nombre..."
+                    value={busquedaEmpleados}
+                    onChange={(e) => setBusquedaEmpleados(e.target.value)}
+                    className="w-full px-3 py-2 border-2 border-gray-200 rounded-lg focus:border-[#5F8EAD] focus:outline-none transition-colors text-sm"
+                  />
+                </div>
+
+                {/* Lista de empleados disponibles */}
+                <div className="space-y-3 max-h-[500px] overflow-y-auto pr-2">
+                  {/* EMPLEADOS */}
+                  {empleadosDisponibles.filter(e => e.tipo !== 'motorista' && e.nombre.toLowerCase().includes(busquedaEmpleados.toLowerCase())).length > 0 && (
+                    <div>
+                      <div className="bg-blue-50 text-blue-700 px-3 py-1.5 rounded-lg mb-2">
+                        <span className="text-xs font-bold uppercase">
+                          EMPLEADOS ({empleadosDisponibles.filter(e => e.tipo !== 'motorista' && e.nombre.toLowerCase().includes(busquedaEmpleados.toLowerCase())).length})
+                        </span>
+                      </div>
+                      <div className="space-y-2">
+                        {empleadosDisponibles
+                          .filter(e => e.tipo !== 'motorista' && e.nombre.toLowerCase().includes(busquedaEmpleados.toLowerCase()))
+                          .map((empleado) => (
+                            <div
+                              key={empleado._id}
+                              draggable
+                              onDragStart={(e) => handleDragStart(e, empleado)}
+                              onClick={() => handleAgregarEmpleado(empleado)}
+                              className="bg-white border-2 border-blue-200 rounded-lg p-3 
+                                cursor-pointer hover:border-blue-400 hover:shadow-md
+                                transition-all duration-200 group active:scale-95"
+                            >
+                              <div className="flex items-start gap-2">
+                                <GripVertical size={16} className="text-gray-400 mt-0.5 flex-shrink-0" />
+                                <div className="flex-1 min-w-0">
+                                  <p className="font-semibold text-sm text-gray-900 truncate">
+                                    {empleado.nombre}
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
                       </div>
                     </div>
-                  ))}
+                  )}
 
-                {empleadosDisponibles.filter(e => e.nombre.toLowerCase().includes(busquedaEmpleados.toLowerCase())).length === 0 && (
-                  <div className="text-center py-8">
-                    <Users className="mx-auto text-gray-300 mb-2" size={32} />
-                    <p className="text-sm text-gray-500 font-medium">
-                      {empleadosDisponibles.length === 0 ? 'Todos están agregados' : 'No encontrado'}
+                  {/* MOTORISTAS */}
+                  {empleadosDisponibles.filter(e => e.tipo === 'motorista' && e.nombre.toLowerCase().includes(busquedaEmpleados.toLowerCase())).length > 0 && (
+                    <div>
+                      <div className="bg-green-50 text-green-700 px-3 py-1.5 rounded-lg mb-2">
+                        <span className="text-xs font-bold uppercase">
+                          MOTORISTAS ({empleadosDisponibles.filter(e => e.tipo === 'motorista' && e.nombre.toLowerCase().includes(busquedaEmpleados.toLowerCase())).length})
+                        </span>
+                      </div>
+                      <div className="space-y-2">
+                        {empleadosDisponibles
+                          .filter(e => e.tipo === 'motorista' && e.nombre.toLowerCase().includes(busquedaEmpleados.toLowerCase()))
+                          .map((empleado) => (
+                            <div
+                              key={empleado._id}
+                              draggable
+                              onDragStart={(e) => handleDragStart(e, empleado)}
+                              onClick={() => handleAgregarEmpleado(empleado)}
+                              className="bg-white border-2 border-green-200 rounded-lg p-3 
+                                cursor-pointer hover:border-green-400 hover:shadow-md
+                                transition-all duration-200 group active:scale-95"
+                            >
+                              <div className="flex items-start gap-2">
+                                <GripVertical size={16} className="text-gray-400 mt-0.5 flex-shrink-0" />
+                                <div className="flex-1 min-w-0">
+                                  <p className="font-semibold text-sm text-gray-900 truncate">
+                                    {empleado.nombre}
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Sin resultados */}
+                  {empleadosDisponibles.filter(e => e.nombre.toLowerCase().includes(busquedaEmpleados.toLowerCase())).length === 0 && (
+                    <div className="text-center py-8">
+                      <Users className="mx-auto text-gray-300 mb-2" size={32} />
+                      <p className="text-sm text-gray-500 font-medium">
+                        {empleadosDisponibles.length === 0 ? 'Todos están agregados' : 'No encontrado'}
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Instrucciones */}
+                {estaEditable && empleadosDisponibles.length > 0 && (
+                  <div className="mt-4 pt-4 border-t border-gray-200 space-y-2">
+                    <p className="text-xs text-gray-500 flex items-center gap-2">
+                      <span className="text-gray-400">ℹ️</span>
+                      Arrastra o haz click para agregar
+                    </p>
+                    <p className="text-xs text-gray-500 flex items-center gap-2">
+                      <kbd className="px-2 py-0.5 bg-gray-100 border border-gray-300 rounded text-[10px]">Ctrl</kbd>
+                      <span>+</span>
+                      <kbd className="px-2 py-0.5 bg-gray-100 border border-gray-300 rounded text-[10px]">B</kbd>
+                      <span>para mostrar/ocultar</span>
                     </p>
                   </div>
                 )}
               </div>
             </div>
-          </div>
+          )}
 
           {/* CONTENIDO PRINCIPAL */}
-          <div className="lg:col-span-3 space-y-6">
+          <div className={`space-y-6 ${panelAbierto && planilla.estado !== 'pagada' ? 'lg:col-span-3' : 'w-full'}`}>
             {/* NOTA INFORMATIVA */}
             {estaEditable && (
               <div className="bg-blue-50 border-2 border-blue-200 rounded-xl p-4">

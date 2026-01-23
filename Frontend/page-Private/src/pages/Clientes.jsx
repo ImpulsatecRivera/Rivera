@@ -1,5 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Phone, Mail, User, ArrowLeft, ChevronDown, ChevronLeft, ChevronRight, Users, MapPin, Calendar, CreditCard, Plus } from 'lucide-react';
+import { Search, Phone, Mail, User, ArrowLeft, ChevronLeft, ChevronRight, Users, MapPin, Calendar, CreditCard, Plus, MoreHorizontal, Building2, FileText, DollarSign } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import SweetAlertCliente from '../components/Clientes/SweetAlertCliente';
+import ConfirmDeleteClienteAlert from '../components/Clientes/ConfirmDeleteClienteAlert';
+import SuccessAlertCliente from '../components/Clientes/SuccessAlertCliente';
+import EditClienteCorporativoAlert from '../components/Clientes/EditClienteCorporativoAlert';
 import Lottie from 'lottie-react';
 import sandyLoadingAnimation from '../assets/lotties/Sandy Loading.json';
 import useClients from '../components/Clientes/hooks/useDataCliente'; // Ajusta la ruta según tu estructura
@@ -19,10 +24,22 @@ const Clientes= () => {
     setSortBy,
     selectClient,
     closeDetailView,
-    stats
+    stats,
+    deleteClient,
+    updateClient,
   } = useClients();
 
   const { canCreate, canEdit, canDelete } = usePermissions();
+
+  // Modales y navegación
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showOptionsAlert, setShowOptionsAlert] = useState(false);
+  const [showSuccessAlert, setShowSuccessAlert] = useState(false);
+  const [successType, setSuccessType] = useState('');
+  const [actionStatus, setActionStatus] = useState({ type: '', message: '' });
+  const [submitting, setSubmitting] = useState(false);
+  const navigate = useNavigate();
 
   // Estados para paginación
   const [currentPage, setCurrentPage] = useState(1);
@@ -31,17 +48,121 @@ const Clientes= () => {
   // Estado para la animación de carga del panel de detalles
   const [isDetailLoading, setIsDetailLoading] = useState(false);
 
+  // ✅ Estado para controlar qué tipo de cliente mostrar
+  const [tipoClienteActivo, setTipoClienteActivo] = useState('natural');
+
+  // ✅ Separar clientes por tipo
+  const clientesNaturales = clients.filter(c => c.tipoCliente === 'natural' || !c.tipoCliente);
+  const clientesCorporativos = clients.filter(c => c.tipoCliente === 'corporativo');
+  
+  // Clientes a mostrar según el tipo activo
+  const clientesMostrar = tipoClienteActivo === 'natural' ? clientesNaturales : clientesCorporativos;
+
+  // ✅ Helper para formatear fechas sin timezone
+  const formatFecha = (v) => {
+    if (!v) return 'No disponible';
+    try {
+      const dateStr = String(v).substring(0, 10);
+      const [year, month, day] = dateStr.split('-');
+      if (!year || !month || !day) return 'No disponible';
+      return `${day}/${month}/${year}`;
+    } catch {
+      return 'No disponible';
+    }
+  };
+
+  const openCreateCorporate = () => {
+    setTipoClienteActivo('corporativo');
+    navigate('/clientes/agregarCliente');
+  };
+
+  const openEditCorporate = () => {
+    if (!selectedClient || selectedClient.tipoCliente !== 'corporativo') return;
+    setShowEditModal(true);
+    setActionStatus({ type: '', message: '' });
+  };
+
+  const handleDeleteClient = async () => {
+    if (!selectedClient) return;
+    setSubmitting(true);
+    const result = await deleteClient(selectedClient._id);
+    setSubmitting(false);
+    if (result.success) {
+      setShowDeleteConfirm(false);
+      closeDetailView();
+      setSuccessType('delete');
+      setShowSuccessAlert(true);
+      return;
+    }
+    setActionStatus({ type: 'error', message: result.error || 'No se pudo eliminar' });
+  };
+
+  const handleOptionsClick = (e) => {
+    if (e) e.stopPropagation();
+    setShowOptionsAlert(true);
+  };
+
+  const handleEdit = () => {
+    setShowOptionsAlert(false);
+    openEditCorporate();
+  };
+
+  const handleDelete = () => {
+    setShowOptionsAlert(false);
+    setShowDeleteConfirm(true);
+  };
+
+  const handleSaveEdit = async (data) => {
+    if (!selectedClient) return;
+    const payload = {
+      ...data,
+      // Asegurar requeridos para corporativo
+      nombreEmpresa: data.nombreEmpresa || selectedClient.nombreEmpresa,
+      nombreComercial: data.nombreComercial || data.nombreEmpresa || selectedClient.nombreComercial || selectedClient.nombreEmpresa,
+      ruc: data.ruc || selectedClient.ruc,
+      email: data.email || selectedClient.email,
+      phone: data.phone || data.contactoPrincipal?.telefono || selectedClient.phone || selectedClient.contactoPrincipal?.telefono,
+      address: data.address || selectedClient.address,
+      direccionFacturacion: data.direccionFacturacion || selectedClient.direccionFacturacion || data.address || selectedClient.address,
+      tipoCliente: 'corporativo',
+      contactoPrincipal: {
+        ...selectedClient.contactoPrincipal,
+        ...data.contactoPrincipal
+      }
+    };
+
+    setSubmitting(true);
+    const result = await updateClient(selectedClient._id, payload);
+    setSubmitting(false);
+
+    if (result.success) {
+      setShowEditModal(false);
+      setSuccessType('edit');
+      setShowSuccessAlert(true);
+      return;
+    }
+
+    setActionStatus({ type: 'error', message: result.error || 'No se pudo actualizar' });
+  };
+
   // Efecto para activar loading cuando cambie el cliente seleccionado
   useEffect(() => {
     if (selectedClient && showDetailView) {
       setIsDetailLoading(true);
       const timer = setTimeout(() => {
         setIsDetailLoading(false);
-      }, 2500);
+      }, 1000); // Reduced from 2500ms for testing
 
       return () => clearTimeout(timer);
     }
   }, [selectedClient, showDetailView]);
+
+  useEffect(() => {
+    if (actionStatus.message) {
+      const timer = setTimeout(() => setActionStatus({ type: '', message: '' }), 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [actionStatus]);
 
   // Obtener clientes para la página actual
   const getCurrentPageClients = () => {
@@ -104,6 +225,11 @@ const Clientes= () => {
   return (
     <div className="min-h-screen" style={{background: 'linear-gradient(135deg, #34353A 0%, #2a2b30 100%)'}}>
       <div className="container mx-auto px-6 py-8">
+        {actionStatus.message && actionStatus.type === 'error' && (
+          <div className="mb-4 rounded-xl px-4 py-3 text-sm font-medium shadow-md bg-red-50 text-red-700 border border-red-200">
+            {actionStatus.message}
+          </div>
+        )}
         <div className="flex h-[calc(100vh-4rem)]">
           {/* Panel Principal */}
           <div className={`${showDetailView ? 'flex-1' : 'w-full'} bg-white rounded-2xl shadow-2xl ${showDetailView ? 'mr-6' : ''} flex flex-col overflow-hidden`}>
@@ -132,6 +258,32 @@ const Clientes= () => {
                       </span>
                     </div>
                   </div>
+                  
+                  {/* ✅ Botones para cambiar tipo de cliente */}
+                  <div className="flex items-center space-x-2 bg-white bg-opacity-20 rounded-lg p-1">
+                    <button
+                      onClick={() => setTipoClienteActivo('natural')}
+                      className={`px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 flex items-center space-x-2 ${
+                        tipoClienteActivo === 'natural'
+                          ? 'bg-white text-blue-700 shadow-lg'
+                          : 'text-white hover:bg-white hover:bg-opacity-10'
+                      }`}
+                    >
+                      <User className="w-4 h-4" />
+                      <span>Naturales ({clientesNaturales.length})</span>
+                    </button>
+                    <button
+                      onClick={() => setTipoClienteActivo('corporativo')}
+                      className={`px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 flex items-center space-x-2 ${
+                        tipoClienteActivo === 'corporativo'
+                          ? 'bg-white text-green-700 shadow-lg'
+                          : 'text-white hover:bg-white hover:bg-opacity-10'
+                      }`}
+                    >
+                      <Users className="w-4 h-4" />
+                      <span>Corporativos ({clientesCorporativos.length})</span>
+                    </button>
+                  </div>
                 </div>
                 
                 <div className="flex items-center justify-between space-x-4">
@@ -145,47 +297,99 @@ const Clientes= () => {
                       className="w-full pl-12 pr-4 py-3 bg-white border-0 rounded-xl focus:outline-none focus:ring-2 focus:ring-white focus:ring-opacity-50 text-gray-700 placeholder-gray-400 shadow-lg"
                     />
                   </div>
+                  {tipoClienteActivo === 'corporativo' && canCreate && (
+                    <button
+                      onClick={openCreateCorporate}
+                      className="flex items-center space-x-2 px-5 py-3 bg-white bg-opacity-20 text-white rounded-xl hover:bg-opacity-30 transition-all duration-200 shadow-lg backdrop-blur-sm font-medium"
+                    >
+                      <Plus className="w-5 h-5" />
+                      <span>Nuevo corporativo</span>
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
 
-            {/* Table Header */}
-            <div className="px-8 py-4 border-b-2" style={{borderColor: '#5F8EAD', backgroundColor: '#f8fafc'}}>
-              <div className={`grid ${showDetailView ? 'grid-cols-4' : 'grid-cols-6'} gap-6 text-sm font-semibold`} style={{color: '#5F8EAD'}}>
-                <div className="flex items-center">
-                  <User className="w-4 h-4 mr-2" />
-                  Nombres
-                </div>
-                <div className="flex items-center">
-                  <Mail className="w-4 h-4 mr-2" />
-                  Email
-                </div>
-                <div className="flex items-center">
-                  <CreditCard className="w-4 h-4 mr-2" />
-                  DUI
-                </div>
-                <div className="flex items-center">
-                  <Calendar className="w-4 h-4 mr-2" />
-                  Fecha Nacimiento
-                </div>
-                {!showDetailView && (
+            {/* ✅ TABLA DINÁMICA según tipo seleccionado */}
+            <div className="px-8 py-4 border-b-2" style={{
+              borderColor: tipoClienteActivo === 'natural' ? '#5F8EAD' : '#5D9646', 
+              backgroundColor: tipoClienteActivo === 'natural' ? '#f0f9ff' : '#f0fdf4'
+            }}>
+              <h3 className="text-lg font-bold mb-3" style={{color: tipoClienteActivo === 'natural' ? '#5F8EAD' : '#5D9646'}}>
+                {tipoClienteActivo === 'natural' ? ' Clientes Naturales' : ' Clientes Corporativos'} 
+              </h3>
+              
+              {/* Table Header Dinámico */}
+              <div className={`grid ${showDetailView ? 'grid-cols-4' : 'grid-cols-6'} gap-6 text-sm font-semibold mb-2`} style={{color: tipoClienteActivo === 'natural' ? '#5F8EAD' : '#5D9646'}}>
+                {tipoClienteActivo === 'natural' ? (
                   <>
                     <div className="flex items-center">
-                      <Phone className="w-4 h-4 mr-2" />
-                      Teléfono
+                      <User className="w-4 h-4 mr-2" />
+                      Nombres
                     </div>
                     <div className="flex items-center">
-                      <MapPin className="w-4 h-4 mr-2" />
-                      Dirección
+                      <Mail className="w-4 h-4 mr-2" />
+                      Email
                     </div>
+                    <div className="flex items-center">
+                      <CreditCard className="w-4 h-4 mr-2" />
+                      DUI
+                    </div>
+                    <div className="flex items-center">
+                      <Calendar className="w-4 h-4 mr-2" />
+                      Fecha Nacimiento
+                    </div>
+                    {!showDetailView && (
+                      <>
+                        <div className="flex items-center">
+                          <Phone className="w-4 h-4 mr-2" />
+                          Teléfono
+                        </div>
+                        <div className="flex items-center">
+                          <MapPin className="w-4 h-4 mr-2" />
+                          Dirección
+                        </div>
+                      </>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <div className="flex items-center">
+                      <Users className="w-4 h-4 mr-2" />
+                      Nombre Empresa
+                    </div>
+                    <div className="flex items-center">
+                      <User className="w-4 h-4 mr-2" />
+                      Nombre Comercial
+                    </div>
+                    <div className="flex items-center">
+                      <CreditCard className="w-4 h-4 mr-2" />
+                      RUC/NIT
+                    </div>
+                    <div className="flex items-center">
+                      <Mail className="w-4 h-4 mr-2" />
+                      Email
+                    </div>
+                    {!showDetailView && (
+                      <>
+                        <div className="flex items-center">
+                          <Phone className="w-4 h-4 mr-2" />
+                          Teléfono
+                        </div>
+                        <div className="flex items-center">
+                          <MapPin className="w-4 h-4 mr-2" />
+                          Dirección
+                        </div>
+                      </>
+                    )}
                   </>
                 )}
               </div>
             </div>
 
-            {/* Table Content */}
+            {/* Table Content Unificado */}
             <div className="flex-1 overflow-y-auto">
-              <div className="p-8 pt-0">
+              <div className="px-8 py-4">
                 {loading ? (
                   <div className="text-center py-12">
                     <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2" style={{borderColor: '#5F8EAD'}}></div>
@@ -204,27 +408,13 @@ const Clientes= () => {
                       </button>
                     </div>
                   </div>
-                ) : !stats.hasResults ? (
-                  <div className="text-center py-12">
-                    <div className="bg-gray-50 border border-gray-200 rounded-xl p-8">
-                      <Users className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                      <p className="text-gray-500 text-lg mb-2">
-                        {searchTerm ? 'No se encontraron resultados para tu búsqueda.' : 'No hay clientes registrados.'}
-                      </p>
-                      {searchTerm && (
-                        <button 
-                          onClick={() => setSearchTerm('')}
-                          className="mt-2 px-4 py-2 text-white rounded-lg transition-colors shadow-md hover:shadow-lg"
-                          style={{backgroundColor: '#5F8EAD'}}
-                        >
-                          Limpiar búsqueda
-                        </button>
-                      )}
-                    </div>
+                ) : clientesMostrar.length === 0 ? (
+                  <div className="text-center py-12 text-gray-500">
+                    No hay clientes {tipoClienteActivo === 'natural' ? 'naturales' : 'corporativos'} registrados
                   </div>
                 ) : (
-                  <div className="space-y-2 pt-4">
-                    {getCurrentPageClients().map((client, index) => (
+                  <div className="space-y-2">
+                    {clientesMostrar.map((client, index) => (
                       <div
                         key={client._id || index}
                         className={`grid ${showDetailView ? 'grid-cols-4' : 'grid-cols-6'} gap-6 py-4 px-6 rounded-xl cursor-pointer transition-all duration-200 border-2 ${
@@ -233,48 +423,99 @@ const Clientes= () => {
                             : 'hover:shadow-md hover:transform hover:scale-[1.01] border-transparent'
                         }`}
                         style={{
-                          backgroundColor: selectedClient && selectedClient._id === client._id ? '#5D9646' : '#ffffff',
+                          backgroundColor: selectedClient && selectedClient._id === client._id ? (tipoClienteActivo === 'natural' ? '#5F8EAD' : '#5D9646') : '#ffffff',
                           color: selectedClient && selectedClient._id === client._id ? '#ffffff' : '#374151',
-                          borderColor: selectedClient && selectedClient._id === client._id ? '#5D9646' : 'transparent'
+                          borderColor: selectedClient && selectedClient._id === client._id ? (tipoClienteActivo === 'natural' ? '#5F8EAD' : '#5D9646') : 'transparent'
                         }}
                         onClick={() => selectClient(client)}
                       >
-                        <div className="font-semibold flex items-center">
-                          <div className={`w-10 h-10 rounded-lg flex items-center justify-center mr-3 ${
-                            selectedClient && selectedClient._id === client._id ? 'bg-white bg-opacity-20' : ''
-                          }`} style={{backgroundColor: selectedClient && selectedClient._id === client._id ? 'rgba(255,255,255,0.2)' : '#5F8EAD'}}>
-                            <User className={`w-5 h-5 ${selectedClient && selectedClient._id === client._id ? 'text-white' : 'text-white'}`} />
-                          </div>
-                          <span className="truncate">{client.firstName} {client.lastName}</span>
-                        </div>
-                        <div className="flex items-center truncate">
-                          <Mail className={`w-4 h-4 mr-2 ${selectedClient && selectedClient._id === client._id ? 'text-white' : 'text-gray-400'}`} />
-                          <span className="truncate">{client.email}</span>
-                        </div>
-                        <div className="flex items-center truncate">
-                          <CreditCard className={`w-4 h-4 mr-2 ${selectedClient && selectedClient._id === client._id ? 'text-white' : 'text-gray-400'}`} />
-                          <span className="truncate">{client.idNumber}</span>
-                        </div>
-                        <div className="flex items-center truncate">
-                          <Calendar className={`w-4 h-4 mr-2 ${selectedClient && selectedClient._id === client._id ? 'text-white' : 'text-gray-400'}`} />
-                          <span className="truncate">
-                            {client.birthDate ? new Date(client.birthDate).toLocaleDateString() : 'No disponible'}
-                          </span>
-                        </div>
-                        {!showDetailView && (
+                        {tipoClienteActivo === 'natural' ? (
                           <>
-                            <div className="flex items-center truncate">
-                              <Phone className={`w-4 h-4 mr-2 ${selectedClient && selectedClient._id === client._id ? 'text-white' : 'text-gray-400'}`} />
-                              <span className="truncate">
-                                {client.phone ? client.phone.toString() : 'No disponible'}
-                              </span>
+                            <div className="font-semibold flex items-center">
+                              <div className={`w-10 h-10 rounded-lg flex items-center justify-center mr-3 ${
+                                selectedClient && selectedClient._id === client._id ? 'bg-white bg-opacity-20' : ''
+                              }`} style={{backgroundColor: selectedClient && selectedClient._id === client._id ? 'rgba(255,255,255,0.2)' : '#5F8EAD'}}>
+                                <User className={`w-5 h-5 text-white`} />
+                              </div>
+                              <span className="truncate">{client.firstName} {client.lastName}</span>
                             </div>
                             <div className="flex items-center truncate">
-                              <MapPin className={`w-4 h-4 mr-2 ${selectedClient && selectedClient._id === client._id ? 'text-white' : 'text-gray-400'}`} />
+                              <Mail className={`w-4 h-4 mr-2 ${selectedClient && selectedClient._id === client._id ? 'text-white' : 'text-gray-400'}`} />
+                              <span className="truncate">{client.email}</span>
+                            </div>
+                            <div className="flex items-center truncate">
+                              <CreditCard className={`w-4 h-4 mr-2 ${selectedClient && selectedClient._id === client._id ? 'text-white' : 'text-gray-400'}`} />
+                              <span className="truncate">{client.idNumber || '—'}</span>
+                            </div>
+                            <div className="flex items-center truncate">
+                              <Calendar className={`w-4 h-4 mr-2 ${selectedClient && selectedClient._id === client._id ? 'text-white' : 'text-gray-400'}`} />
                               <span className="truncate">
-                                {client.address || 'No disponible'}
+                                {client.birthDate ? (() => {
+                                  try {
+                                    const dateStr = String(client.birthDate).substring(0, 10);
+                                    const [year, month, day] = dateStr.split('-');
+                                    return `${day}/${month}/${year}`;
+                                  } catch {
+                                    return 'No disponible';
+                                  }
+                                })() : 'No disponible'}
                               </span>
                             </div>
+                            {!showDetailView && (
+                              <>
+                                <div className="flex items-center truncate">
+                                  <Phone className={`w-4 h-4 mr-2 ${selectedClient && selectedClient._id === client._id ? 'text-white' : 'text-gray-400'}`} />
+                                  <span className="truncate">
+                                    {client.phone ? client.phone.toString() : 'No disponible'}
+                                  </span>
+                                </div>
+                                <div className="flex items-center truncate">
+                                  <MapPin className={`w-4 h-4 mr-2 ${selectedClient && selectedClient._id === client._id ? 'text-white' : 'text-gray-400'}`} />
+                                  <span className="truncate">
+                                    {client.address || 'No disponible'}
+                                  </span>
+                                </div>
+                              </>
+                            )}
+                          </>
+                        ) : (
+                          <>
+                            <div className="font-semibold flex items-center">
+                              <div className={`w-10 h-10 rounded-lg flex items-center justify-center mr-3 ${
+                                selectedClient && selectedClient._id === client._id ? 'bg-white bg-opacity-20' : ''
+                              }`} style={{backgroundColor: selectedClient && selectedClient._id === client._id ? 'rgba(255,255,255,0.2)' : '#5D9646'}}>
+                                <Users className={`w-5 h-5 text-white`} />
+                              </div>
+                              <span className="truncate">{client.nombreEmpresa || '—'}</span>
+                            </div>
+                            <div className="flex items-center truncate">
+                              <User className={`w-4 h-4 mr-2 ${selectedClient && selectedClient._id === client._id ? 'text-white' : 'text-gray-400'}`} />
+                              <span className="truncate">{client.nombreComercial || '—'}</span>
+                            </div>
+                            <div className="flex items-center truncate">
+                              <CreditCard className={`w-4 h-4 mr-2 ${selectedClient && selectedClient._id === client._id ? 'text-white' : 'text-gray-400'}`} />
+                              <span className="truncate">{client.ruc || '—'}</span>
+                            </div>
+                            <div className="flex items-center truncate">
+                              <Mail className={`w-4 h-4 mr-2 ${selectedClient && selectedClient._id === client._id ? 'text-white' : 'text-gray-400'}`} />
+                              <span className="truncate">{client.email}</span>
+                            </div>
+                            {!showDetailView && (
+                              <>
+                                <div className="flex items-center truncate">
+                                  <Phone className={`w-4 h-4 mr-2 ${selectedClient && selectedClient._id === client._id ? 'text-white' : 'text-gray-400'}`} />
+                                  <span className="truncate">
+                                    {client.phone || client.contactoPrincipal?.telefono || 'No disponible'}
+                                  </span>
+                                </div>
+                                <div className="flex items-center truncate">
+                                  <MapPin className={`w-4 h-4 mr-2 ${selectedClient && selectedClient._id === client._id ? 'text-white' : 'text-gray-400'}`} />
+                                  <span className="truncate">
+                                    {client.address || client.direccionFacturacion || 'No disponible'}
+                                  </span>
+                                </div>
+                              </>
+                            )}
                           </>
                         )}
                       </div>
@@ -334,219 +575,330 @@ const Clientes= () => {
 
           {/* Panel de Detalles */}
           {showDetailView && selectedClient && (
-            <div className="w-96 bg-white rounded-2xl shadow-2xl relative overflow-hidden flex flex-col h-full">
-              {isDetailLoading ? (
-                /* Enhanced Loading Screen with Lottie */
-                <div className="flex-1 flex items-center justify-center relative" 
-                     style={{background: 'linear-gradient(135deg, #34353A 0%, #2a2b2f 100%)'}}>
-                  
-                  {/* Background Animation */}
-                  <div className="absolute inset-0 overflow-hidden">
-                    <div className="absolute top-10 left-10 w-20 h-20 rounded-full opacity-10 animate-pulse"
-                         style={{backgroundColor: '#5F8EAD', animation: 'float 3s ease-in-out infinite'}}>
-                    </div>
-                    <div className="absolute bottom-10 right-10 w-16 h-16 rounded-full opacity-10 animate-pulse"
-                         style={{backgroundColor: '#5D9646', animation: 'float 3s ease-in-out infinite reverse'}}>
-                    </div>
-                    <div className="absolute top-1/2 left-4 w-12 h-12 rounded-full opacity-10 animate-pulse"
-                         style={{backgroundColor: '#5F8EAD', animation: 'float 4s ease-in-out infinite'}}>
-                    </div>
-                  </div>
-
-                  <div className="text-center z-10">
-                    {/* Lottie Animation */}
-                    <div className="relative mb-8">
-                      <div className="w-40 h-40 mx-auto mb-6 flex items-center justify-center">
-                        <Lottie 
-                          animationData={sandyLoadingAnimation}
-                          className="w-full h-full"
-                          loop={true}
-                          autoplay={true}
-                        />
-                      </div>
-                    </div>
-                    
-                    {/* Enhanced Loading Text */}
-                    <div className="space-y-4 mb-8">
-                      <h2 className="text-2xl font-bold text-white animate-pulse">
-                        Cargando Cliente
-                      </h2>
-                      <p className="text-gray-300 text-lg">
-                        Preparando información del cliente
-                      </p>
-                    </div>
-                    
-                    {/* Advanced Progress Bar */}
-                    <div className="w-80 mx-auto">
-                      <div className="w-full bg-gray-600 rounded-full h-2 mb-4 overflow-hidden shadow-inner">
-                        <div className="h-2 rounded-full relative overflow-hidden"
-                             style={{
-                               background: 'linear-gradient(90deg, #5F8EAD 0%, #5D9646 50%, #5F8EAD 100%)',
-                               width: '100%',
-                               animation: 'loading-wave 2.5s ease-in-out infinite'
-                             }}>
-                          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent opacity-40"
-                               style={{animation: 'shimmer 1.5s ease-in-out infinite'}}>
-                          </div>
-                        </div>
-                      </div>
-                      
-                      {/* Dynamic Loading Steps */}
-                      <div className="text-sm text-gray-400 animate-pulse">
-                        <span className="inline-block" style={{animation: 'text-fade 3s ease-in-out infinite'}}>
-                          Verificando información del cliente...
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <style jsx>{`
-                    @keyframes loading-wave {
-                      0% { 
-                        transform: translateX(-100%);
-                        opacity: 0.5;
-                      }
-                      50% { 
-                        transform: translateX(0%);
-                        opacity: 1;
-                      }
-                      100% { 
-                        transform: translateX(100%);
-                        opacity: 0.5;
-                      }
-                    }
-                    
-                    @keyframes float {
-                      0%, 100% {
-                        transform: translateY(0px) scale(1);
-                      }
-                      50% {
-                        transform: translateY(-10px) scale(1.1);
-                      }
-                    }
-                    
-                    @keyframes shimmer {
-                      0% {
-                        transform: translateX(-100%);
-                      }
-                      100% {
-                        transform: translateX(100%);
-                      }
-                    }
-                    
-                    @keyframes text-fade {
-                      0%, 100% { opacity: 0.6; }
-                      50% { opacity: 1; }
-                    }
-                  `}</style>
+            <div className="w-96 bg-white rounded-2xl shadow-2xl relative flex flex-col h-full">
+              {/* Header */}
+              <div className="flex items-center justify-between p-8 pb-4 flex-shrink-0 border-b border-gray-200">
+                <div className="flex items-center">
+                  <button
+                    className="p-3 hover:bg-gray-100 rounded-xl mr-3 transition-colors"
+                    onClick={closeDetailView}
+                  >
+                    <ArrowLeft className="w-5 h-5 text-gray-600" />
+                  </button>
+                  <h2 className="text-xl font-semibold text-gray-900">Detalles del Cliente</h2>
                 </div>
-              ) : (
-                <>
-                  {/* Background Pattern */}
-                  <div className="absolute top-0 right-0 w-32 h-32 opacity-5" style={{backgroundColor: '#5F8EAD', borderRadius: '0 0 0 100%'}}></div>
-                  
-                  {/* Header - Fijo */}
-                  <div className="flex items-center justify-between p-8 pb-4 flex-shrink-0">
-                    <div className="flex items-center">
-                      <button
-                        className="p-3 hover:bg-gray-100 rounded-xl mr-3 transition-colors"
-                        onClick={closeDetailView}
-                      >
-                        <ArrowLeft className="w-5 h-5 text-gray-600" />
-                      </button>
-                      <h2 className="text-xl font-semibold text-gray-900">Detalles del Cliente</h2>
+                <button
+                  onClick={handleOptionsClick}
+                  className="p-3 hover:bg-gray-100 rounded-xl transition-colors"
+                >
+                  <MoreHorizontal className="w-5 h-5 text-gray-600" />
+                </button>
+              </div>
+
+              {/* Content */}
+              <div className="flex-1 overflow-y-auto px-8 pb-8">
+                {/* Profile Section */}
+                <div className="text-center mb-10">
+                  <div className="relative inline-block">
+                    <div
+                      className="w-28 h-28 rounded-2xl mx-auto mb-4 flex items-center justify-center shadow-lg overflow-hidden"
+                      style={{ background: 'linear-gradient(135deg, #5F8EAD 0%, #4a7ba7 100%)' }}
+                    >
+                      {selectedClient.tipoCliente === 'corporativo' ? (
+                        <Building2 className="w-14 h-14 text-white" />
+                      ) : (
+                        <User className="w-14 h-14 text-white" />
+                      )}
                     </div>
                   </div>
+                  <h3 className="font-bold text-xl mb-2 text-gray-900">
+                    {selectedClient.tipoCliente === 'corporativo'
+                      ? (selectedClient.nombreEmpresa || selectedClient.nombreComercial || 'Cliente corporativo')
+                      : ((`${selectedClient.firstName || ''} ${selectedClient.lastName || ''}`.trim()) || 'Cliente')}
+                  </h3>
 
-                  {/* Contenido Scrolleable */}
-                  <div className="flex-1 overflow-y-auto px-8 pb-8">
-                    {/* Profile Section */}
-                    <div className="text-center mb-10">
-                      <div className="relative inline-block">
-                        <div className="w-28 h-28 rounded-2xl mx-auto mb-4 flex items-center justify-center shadow-lg" style={{background: 'linear-gradient(135deg, #5F8EAD 0%, #4a7ba7 100%)'}}>
-                          <User className="w-14 h-14 text-white" />
-                        </div>
-                      </div>
-                      <h3 className="font-bold text-xl mb-2 text-gray-900">
-                        {selectedClient.firstName} {selectedClient.lastName}
-                      </h3>
-                      
-                      <div className="flex justify-center space-x-3">
-                        <button className="p-3 rounded-xl transition-all duration-200 hover:scale-110 shadow-md" style={{backgroundColor: '#5D9646'}} title="Llamar">
-                          <Phone className="w-5 h-5 text-white" />
-                        </button>
-                        <button className="p-3 rounded-xl transition-all duration-200 hover:scale-110 shadow-md" style={{backgroundColor: '#5F8EAD'}} title="Email">
-                          <Mail className="w-5 h-5 text-white" />
-                        </button>
-                      </div>
-                    </div>
+                  <div className="flex justify-center space-x-3">
+                    <button
+                      className="p-3 rounded-xl transition-all duration-200 hover:scale-110 shadow-md"
+                      style={{ backgroundColor: '#5D9646' }}
+                    >
+                      <Phone className="w-5 h-5 text-white" />
+                    </button>
+                    <button
+                      className="p-3 rounded-xl transition-all duration-200 hover:scale-110 shadow-md"
+                      style={{ backgroundColor: '#5F8EAD' }}
+                    >
+                      <Mail className="w-5 h-5 text-white" />
+                    </button>
+                  </div>
+                </div>
 
-                    {/* Information Cards */}
-                    <div className="space-y-6">
-                      {/* Información Personal */}
+                {/* Information Cards */}
+                <div className="space-y-6">
+                  {selectedClient.tipoCliente === 'corporativo' ? (
+                    <>
+                      {/* Información Empresarial */}
                       <div className="bg-gradient-to-r from-blue-50 to-blue-100 rounded-xl p-6 border border-blue-200">
                         <div className="flex items-center space-x-3 mb-4">
-                          <div className="p-2 rounded-lg" style={{backgroundColor: '#5F8EAD'}}>
-                            <User className="w-5 h-5 text-white" />
-                          </div>
-                          <span className="font-semibold text-gray-900">Información Personal</span>
-                        </div>
+                          <div className="p-2 rounded-lg" style={{ backgroundColor: '#5F8EAD' }}>
+                            <Building2 className="w-5 h-5 text-white" />
+                              </div>
+                              <span className="font-semibold text-gray-900">Información Empresarial</span>
+                            </div>
 
-                        <div className="space-y-4">
-                          <div>
-                            <div className="text-sm font-medium text-gray-700 mb-1">Correo Electrónico</div>
-                            <div className="text-sm text-gray-600 break-words bg-white p-3 rounded-lg border">{selectedClient.email}</div>
-                          </div>
-                          <div>
-                            <div className="text-sm font-medium text-gray-700 mb-1">DUI</div>
-                            <div className="text-sm text-gray-600 bg-white p-3 rounded-lg border">{selectedClient.idNumber}</div>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Información de Contacto */}
-                      <div className="bg-gradient-to-r from-green-50 to-green-100 rounded-xl p-6 border border-green-200">
-                        <div className="flex items-center space-x-3 mb-4">
-                          <div className="p-2 rounded-lg" style={{backgroundColor: '#5D9646'}}>
-                            <Phone className="w-5 h-5 text-white" />
-                          </div>
-                          <span className="font-semibold text-gray-900">Contacto y Ubicación</span>
-                        </div>
-
-                        <div className="space-y-4">
-                          <div>
-                            <div className="text-sm font-medium text-gray-700 mb-1">Fecha de Nacimiento</div>
-                            <div className="text-sm text-gray-600 bg-white p-3 rounded-lg border flex items-center">
-                              <Calendar className="w-4 h-4 mr-2" style={{color: '#5D9646'}} />
-                              {selectedClient.birthDate ? 
-                                new Date(selectedClient.birthDate).toLocaleDateString() : 
-                                'No disponible'
-                              }
+                            <div className="space-y-4">
+                              <div>
+                                <div className="text-sm font-medium text-gray-700 mb-1">Nombre de la Empresa</div>
+                                <div className="text-sm text-gray-600 bg-white p-3 rounded-lg border">
+                                  {selectedClient.nombreEmpresa || 'No especificado'}
+                                </div>
+                              </div>
+                              <div>
+                                <div className="text-sm font-medium text-gray-700 mb-1">Nombre Comercial</div>
+                                <div className="text-sm text-gray-600 bg-white p-3 rounded-lg border">
+                                  {selectedClient.nombreComercial || 'No especificado'}
+                                </div>
+                              </div>
+                              <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                  <div className="text-sm font-medium text-gray-700 mb-1">RUC/NIT</div>
+                                  <div className="text-sm text-gray-600 bg-white p-3 rounded-lg border flex items-center">
+                                    <CreditCard className="w-4 h-4 mr-2" style={{ color: '#5F8EAD' }} />
+                                    {selectedClient.ruc || 'No especificado'}
+                                  </div>
+                                </div>
+                                <div>
+                                  <div className="text-sm font-medium text-gray-700 mb-1">Giro del Negocio</div>
+                                  <div className="text-sm text-gray-600 bg-white p-3 rounded-lg border flex items-center">
+                                    <FileText className="w-4 h-4 mr-2" style={{ color: '#5F8EAD' }} />
+                                    {selectedClient.giroNegocio || 'No especificado'}
+                                  </div>
+                                </div>
+                              </div>
                             </div>
                           </div>
-                          <div>
-                            <div className="text-sm font-medium text-gray-700 mb-1">Teléfono</div>
-                            <div className="text-sm text-gray-600 bg-white p-3 rounded-lg border flex items-center">
-                              <Phone className="w-4 h-4 mr-2" style={{color: '#5D9646'}} />
-                              {selectedClient.phone ? selectedClient.phone.toString() : 'No disponible'}
+
+                          {/* Información de Contacto */}
+                          <div className="bg-gradient-to-r from-green-50 to-green-100 rounded-xl p-6 border border-green-200">
+                            <div className="flex items-center space-x-3 mb-4">
+                              <div className="p-2 rounded-lg" style={{ backgroundColor: '#5D9646' }}>
+                                <Phone className="w-5 h-5 text-white" />
+                              </div>
+                              <span className="font-semibold text-gray-900">Contacto y Ubicación</span>
+                            </div>
+
+                            <div className="space-y-4">
+                              <div>
+                                <div className="text-sm font-medium text-gray-700 mb-1">Correo Principal</div>
+                                <div className="text-sm text-gray-600 break-words bg-white p-3 rounded-lg border flex items-center">
+                                  <Mail className="w-4 h-4 mr-2" style={{ color: '#5D9646' }} />
+                                  {selectedClient.email || 'No especificado'}
+                                </div>
+                              </div>
+                              <div>
+                                <div className="text-sm font-medium text-gray-700 mb-1">Teléfono</div>
+                                <div className="text-sm text-gray-600 bg-white p-3 rounded-lg border flex items-center">
+                                  <Phone className="w-4 h-4 mr-2" style={{ color: '#5D9646' }} />
+                                  {selectedClient.phone || selectedClient.contactoPrincipal?.telefono || 'No especificado'}
+                                </div>
+                              </div>
+                              <div>
+                                <div className="text-sm font-medium text-gray-700 mb-1">Dirección Principal</div>
+                                <div className="text-sm text-gray-600 bg-white p-3 rounded-lg border flex items-center">
+                                  <MapPin className="w-4 h-4 mr-2" style={{ color: '#5D9646' }} />
+                                  {selectedClient.address || 'No especificado'}
+                                </div>
+                              </div>
+                              {selectedClient.direccionFacturacion && (
+                                <div>
+                                  <div className="text-sm font-medium text-gray-700 mb-1">Dirección de Facturación</div>
+                                  <div className="text-sm text-gray-600 bg-white p-3 rounded-lg border flex items-center">
+                                    <MapPin className="w-4 h-4 mr-2" style={{ color: '#5D9646' }} />
+                                    {selectedClient.direccionFacturacion}
+                                  </div>
+                                </div>
+                              )}
                             </div>
                           </div>
-                          <div>
-                            <div className="text-sm font-medium text-gray-700 mb-1">Dirección</div>
-                            <div className="text-sm text-gray-600 bg-white p-3 rounded-lg border flex items-center">
-                              <MapPin className="w-4 h-4 mr-2" style={{color: '#5D9646'}} />
-                              {selectedClient.address || 'No disponible'}
+
+                          {/* Información Financiera */}
+                          <div className="bg-gradient-to-r from-emerald-50 to-emerald-100 rounded-xl p-6 border border-emerald-200">
+                            <div className="flex items-center space-x-3 mb-4">
+                              <div className="p-2 rounded-lg" style={{ backgroundColor: '#10b981' }}>
+                                <DollarSign className="w-5 h-5 text-white" />
+                              </div>
+                              <span className="font-semibold text-gray-900">Información Comercial</span>
+                            </div>
+
+                            <div className="space-y-4">
+                              <div>
+                                <div className="text-sm font-medium text-gray-700 mb-1">Términos de Pago</div>
+                                <div className="text-sm text-gray-600 bg-white p-3 rounded-lg border flex items-center">
+                                  <DollarSign className="w-4 h-4 mr-2" style={{ color: '#10b981' }} />
+                                  {selectedClient.terminosPago || 'Contado'}
+                                </div>
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      </div>
+
+                          {/* Contacto Principal */}
+                          {(selectedClient.contactoPrincipal?.nombre || selectedClient.contactoPrincipal?.telefono) && (
+                            <div className="bg-gradient-to-r from-purple-50 to-purple-100 rounded-xl p-6 border border-purple-200">
+                              <div className="flex items-center space-x-3 mb-4">
+                                <div className="p-2 rounded-lg" style={{ backgroundColor: '#9333ea' }}>
+                                  <User className="w-5 h-5 text-white" />
+                                </div>
+                                <span className="font-semibold text-gray-900">Contacto Principal</span>
+                              </div>
+
+                              <div className="space-y-4">
+                                {selectedClient.contactoPrincipal?.nombre && (
+                                  <div>
+                                    <div className="text-sm font-medium text-gray-700 mb-1">Nombre</div>
+                                    <div className="text-sm text-gray-600 bg-white p-3 rounded-lg border">
+                                      {selectedClient.contactoPrincipal.nombre}
+                                    </div>
+                                  </div>
+                                )}
+                                {selectedClient.contactoPrincipal?.cargo && (
+                                  <div>
+                                    <div className="text-sm font-medium text-gray-700 mb-1">Cargo</div>
+                                    <div className="text-sm text-gray-600 bg-white p-3 rounded-lg border">
+                                      {selectedClient.contactoPrincipal.cargo}
+                                    </div>
+                                  </div>
+                                )}
+                                <div className="grid grid-cols-2 gap-3">
+                                  {selectedClient.contactoPrincipal?.telefono && (
+                                    <div>
+                                      <div className="text-sm font-medium text-gray-700 mb-1">Teléfono</div>
+                                      <div className="text-sm text-gray-600 bg-white p-3 rounded-lg border flex items-center">
+                                        <Phone className="w-4 h-4 mr-2" style={{ color: '#9333ea' }} />
+                                        {selectedClient.contactoPrincipal.telefono}
+                                      </div>
+                                    </div>
+                                  )}
+                                  {selectedClient.contactoPrincipal?.email && (
+                                    <div>
+                                      <div className="text-sm font-medium text-gray-700 mb-1">Email</div>
+                                      <div className="text-sm text-gray-600 bg-white p-3 rounded-lg border flex items-center">
+                                        <Mail className="w-4 h-4 mr-2" style={{ color: '#9333ea' }} />
+                                        {selectedClient.contactoPrincipal.email}
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </>
+                      ) : (
+                        <>
+                          {/* Información Personal - Cliente Natural */}
+                          <div className="bg-gradient-to-r from-blue-50 to-blue-100 rounded-xl p-6 border border-blue-200">
+                            <div className="flex items-center space-x-3 mb-4">
+                              <div className="p-2 rounded-lg" style={{ backgroundColor: '#5F8EAD' }}>
+                                <User className="w-5 h-5 text-white" />
+                              </div>
+                              <span className="font-semibold text-gray-900">Información Personal</span>
+                            </div>
+
+                            <div className="space-y-4">
+                              <div>
+                                <div className="text-sm font-medium text-gray-700 mb-1">Correo Electrónico</div>
+                                <div className="text-sm text-gray-600 break-words bg-white p-3 rounded-lg border">
+                                  {selectedClient.email || 'No especificado'}
+                                </div>
+                              </div>
+                              <div>
+                                <div className="text-sm font-medium text-gray-700 mb-1">DUI</div>
+                                <div className="text-sm text-gray-600 bg-white p-3 rounded-lg border">
+                                  {selectedClient.idNumber || selectedClient.dui || 'No especificado'}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Información de Contacto - Cliente Natural */}
+                          <div className="bg-gradient-to-r from-green-50 to-green-100 rounded-xl p-6 border border-green-200">
+                            <div className="flex items-center space-x-3 mb-4">
+                              <div className="p-2 rounded-lg" style={{ backgroundColor: '#5D9646' }}>
+                                <Phone className="w-5 h-5 text-white" />
+                              </div>
+                              <span className="font-semibold text-gray-900">Contacto y Ubicación</span>
+                            </div>
+
+                            <div className="space-y-4">
+                              <div>
+                                <div className="text-sm font-medium text-gray-700 mb-1">Fecha de Nacimiento</div>
+                                <div className="text-sm text-gray-600 bg-white p-3 rounded-lg border flex items-center">
+                                  <Calendar className="w-4 h-4 mr-2" style={{ color: '#5D9646' }} />
+                                  {selectedClient.birthDate ? (() => { 
+                                    try { 
+                                      const d = String(selectedClient.birthDate).substring(0,10); 
+                                      const [y,m,dd] = d.split('-'); 
+                                      return `${dd}/${m}/${y}`; 
+                                    } catch { 
+                                      return 'No especificado'; 
+                                    } 
+                                  })() : 'No especificado'}
+                                </div>
+                              </div>
+                              <div>
+                                <div className="text-sm font-medium text-gray-700 mb-1">Teléfono</div>
+                                <div className="text-sm text-gray-600 bg-white p-3 rounded-lg border flex items-center">
+                                  <Phone className="w-4 h-4 mr-2" style={{ color: '#5D9646' }} />
+                                  {selectedClient.phone || 'No especificado'}
+                                </div>
+                              </div>
+                              <div>
+                                <div className="text-sm font-medium text-gray-700 mb-1">Dirección</div>
+                                <div className="text-sm text-gray-600 bg-white p-3 rounded-lg border flex items-center">
+                                  <MapPin className="w-4 h-4 mr-2" style={{ color: '#5D9646' }} />
+                                  {selectedClient.address || 'No especificado'}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </>
+                      )}
                     </div>
                   </div>
-                </>
+                </div>
               )}
-            </div>
-          )}
+
         </div>
+        
+        {/* Global Alerts and Modals */}
+        <SweetAlertCliente
+          isOpen={showOptionsAlert}
+          onClose={() => setShowOptionsAlert(false)}
+          onDelete={handleDelete}
+          onEdit={handleEdit}
+        />
+
+        <ConfirmDeleteClienteAlert
+          isOpen={showDeleteConfirm}
+          onClose={() => setShowDeleteConfirm(false)}
+          onConfirm={handleDeleteClient}
+          clientName={selectedClient ? (selectedClient.nombreEmpresa || `${selectedClient.firstName || ''} ${selectedClient.lastName || ''}`.trim()) : ''}
+        />
+
+        <SuccessAlertCliente
+          isOpen={showSuccessAlert}
+          onClose={() => setShowSuccessAlert(false)}
+          type={successType === 'edit' ? 'edit' : 'delete'}
+        />
+
+        {selectedClient?.tipoCliente === 'corporativo' && (
+          <EditClienteCorporativoAlert
+            isOpen={showEditModal}
+            onClose={() => setShowEditModal(false)}
+            onSave={handleSaveEdit}
+            cliente={selectedClient}
+            submitting={submitting}
+          />
+        )}
       </div>
     </div>
   );

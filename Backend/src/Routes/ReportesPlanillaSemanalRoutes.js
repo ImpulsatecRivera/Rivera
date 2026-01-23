@@ -24,6 +24,21 @@ router.get('/detallado/:id', ReportesPlanillaSemanalController.generarPDFSemanal
 router.get('/mensual/:mes/:ano', ReportesPlanillaSemanalController.generarPDFMensual);
 
 /**
+ * GET /api/reportes/planilla/semanal/mensual-viaticos/:mes/:ano
+ * Reporte mensual consolidado solo de viáticos (viajes extra)
+ * Params:
+ * - mes: Número del mes (1-12)
+ * - ano: Año (ej: 2025)
+ */
+router.get('/mensual-viaticos/:mes/:ano', ReportesPlanillaSemanalController.generarPDFMensualViaticos);
+
+/**
+ * POST /api/reportes/planilla/semanal/multiMes-viaticos
+ * Reporte consolidado de múltiples meses solo viáticos
+ */
+router.post('/multiMes-viaticos', ReportesPlanillaSemanalController.generarPDFMultiMesViaticos);
+
+/**
  * POST /api/reportes/planilla/semanal/multiMes
  * Reporte consolidado de múltiples meses (trimestral, semestral, 9 meses)
  * Body:
@@ -47,5 +62,11 @@ router.post('/multiMes', ReportesPlanillaSemanalController.generarPDFMultiMes);
  * - ano: Año (ej: 2025)
  */
 router.get('/anual/:ano', ReportesPlanillaSemanalController.generarPDFAnual);
+
+/**
+ * GET /api/reportes/planilla/semanal/anual-viaticos/:ano
+ * Reporte anual consolidado solo viáticos
+ */
+router.get('/anual-viaticos/:ano', ReportesPlanillaSemanalController.generarPDFAnualViaticos);
 
 export default router;

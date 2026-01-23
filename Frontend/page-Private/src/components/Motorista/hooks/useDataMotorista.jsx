@@ -44,6 +44,7 @@ const useDataMotorista = () => {
       phone: m?.phone || '',
       address: m?.address || '',
       circulationCard: m?.circulationCard || '',
+      fechaVencimientoLicencia: m?.fechaVencimientoLicencia || null,
       img: m?.img || null,
 
       // ✅ nuevos/campos del model
@@ -106,27 +107,39 @@ const useDataMotorista = () => {
     fetchMotoristas();
   }, [fetchMotoristas]);
 
-  // ✅ Función para verificar licencia (misma lógica, con safety)
-  const isLicenseValid = (motorista) => {
+  // ✅ Función para obtener el estado de la licencia (Vigente, Próxima a vencer, Vencida)
+  const getLicenseStatus = (motorista) => {
     try {
-      if (!motorista?.circulationCard) return false;
+      if (!motorista?.fechaVencimientoLicencia) return 'Sin fecha';
 
-      if (motorista?.birthDate) {
-        const birthDate = new Date(motorista.birthDate);
-        if (Number.isNaN(birthDate.getTime())) return Boolean(motorista.circulationCard);
+      // Manejar fecha que viene del backend (puede ser string ISO o Date)
+      const fechaStr = String(motorista.fechaVencimientoLicencia).split('T')[0]; // YYYY-MM-DD
+      const [year, month, day] = fechaStr.split('-').map(Number);
+      const expireDate = new Date(year, month - 1, day); // Crear fecha local sin zona horaria
 
-        const today = new Date();
-        let age = today.getFullYear() - birthDate.getFullYear();
-        const m = today.getMonth() - birthDate.getMonth();
-        if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) age--;
-        return age >= 18;
-      }
+      if (Number.isNaN(expireDate.getTime())) return 'Fecha inválida';
 
-      return true;
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      expireDate.setHours(0, 0, 0, 0);
+
+      // Calcular diferencia en días
+      const diffTime = expireDate.getTime() - today.getTime();
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+      if (diffDays < 0) return 'Vencida';
+      if (diffDays <= 30) return 'Próxima a vencer'; // 30 días o menos
+      return 'Vigente';
     } catch (e) {
-      console.error('Error en isLicenseValid:', e);
-      return false;
+      console.error('Error en getLicenseStatus:', e);
+      return 'Error';
     }
+  };
+
+  // ✅ Función para verificar si la licencia está vigente (boolean)
+  const isLicenseValid = (motorista) => {
+    const status = getLicenseStatus(motorista);
+    return status === 'Vigente';
   };
 
   // ✅ Filtrar motoristas (incluye planillaTipo/salario)
@@ -306,10 +319,18 @@ const useDataMotorista = () => {
 
         appendIf('name', formData?.name);
         appendIf('lastName', formData?.lastName);
+        appendIf('email', formData?.email);
         appendIf('phone', formData?.phone);
         appendIf('address', formData?.address);
         appendIf('password', formData?.password);
         appendIf('circulationCard', formData?.circulationCard);
+
+        // ✅ Manejar fechaVencimientoLicencia (puede ser Date o string)
+        if (formData?.fechaVencimientoLicencia) {
+          const fecha = formData.fechaVencimientoLicencia;
+          const fechaStr = fecha instanceof Date ? fecha.toISOString().split('T')[0] : String(fecha).split('T')[0];
+          if (fechaStr) submitData.append('fechaVencimientoLicencia', fechaStr);
+        }
 
         // ✅ NUEVOS CAMPOS
         appendIf('planillaTipo', formData?.planillaTipo);
@@ -364,10 +385,18 @@ const useDataMotorista = () => {
 
       setIf('name', formData?.name);
       setIf('lastName', formData?.lastName);
+      setIf('email', formData?.email);
       setIf('phone', formData?.phone);
       setIf('address', formData?.address);
       setIf('password', formData?.password);
       setIf('circulationCard', formData?.circulationCard);
+
+      // ✅ Manejar fechaVencimientoLicencia (puede ser Date o string)
+      if (formData?.fechaVencimientoLicencia) {
+        const fecha = formData.fechaVencimientoLicencia;
+        const fechaStr = fecha instanceof Date ? fecha.toISOString().split('T')[0] : String(fecha).trim();
+        if (fechaStr) updateData.fechaVencimientoLicencia = fechaStr;
+      }
 
       // ✅ NUEVOS CAMPOS
       setIf('planillaTipo', formData?.planillaTipo);
@@ -503,7 +532,8 @@ const useDataMotorista = () => {
     selectMotorista,
     closeDetailView,
     handleRefresh,
-    isLicenseValid
+    isLicenseValid,
+    getLicenseStatus
   };
 };
 
