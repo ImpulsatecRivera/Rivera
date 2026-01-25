@@ -60,6 +60,10 @@ import AgregarViajeInterno from "./pages/viajesInternos/AgregarViajeInterno";
 // UI
 import SideNav from "./components/dashbordNav/sideNav";
 import PantallaCarga from "./components/SplashScreen/PantallaCarga";
+// src/App.jsx (o donde tengas tu componente principal)
+import './styles/tutorial-global.css';
+
+// ... resto de tu código
 
 function App() {
   const location = useLocation();

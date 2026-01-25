@@ -1,0 +1,134 @@
+/* src/styles/tutorial-global.css */
+:root {
+  --rivera-dark: #34353A;
+  --rivera-blue: #5F8EAD;
+  --rivera-green: #5D9646;
+}
+
+.rivera-tutorial-popover {
+  --driver-popover-arrow-size: 12px;
+  max-width: 420px;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+.driver-popover {
+  background: linear-gradient(145deg, #34353A 0%, #2a2b2f 100%);
+  border: 2px solid var(--rivera-green);
+  border-radius: 16px;
+  box-shadow: 
+    0 20px 60px rgba(0, 0, 0, 0.4),
+    0 0 0 1px rgba(93, 150, 70, 0.1);
+  padding: 24px;
+}
+
+.driver-popover-title {
+  color: var(--rivera-green);
+  font-size: 22px;
+  font-weight: 700;
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.driver-popover-description {
+  color: #e8e8e8;
+  font-size: 15px;
+  line-height: 1.7;
+  margin-bottom: 20px;
+}
+
+/* Botones */
+.driver-popover-footer {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  margin-top: 20px;
+}
+
+.driver-popover-next-btn {
+  background: linear-gradient(135deg, var(--rivera-green) 0%, #4a7735 100%);
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 12px rgba(93, 150, 70, 0.3);
+}
+
+.driver-popover-next-btn:hover {
+  background: linear-gradient(135deg, var(--rivera-blue) 0%, #4a6d8a 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(95, 142, 173, 0.4);
+}
+
+.driver-popover-prev-btn {
+  background: transparent;
+  border: 2px solid var(--rivera-green);
+  color: var(--rivera-green);
+  padding: 10px 20px;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.driver-popover-prev-btn:hover {
+  background: rgba(93, 150, 70, 0.1);
+  border-color: var(--rivera-blue);
+  color: var(--rivera-blue);
+}
+
+.driver-popover-close-btn {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  color: #fff;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.driver-popover-close-btn:hover {
+  background: rgba(255, 59, 48, 0.8);
+  transform: rotate(90deg);
+}
+
+/* Barra de progreso */
+.driver-popover-progress-text {
+  color: var(--rivera-blue);
+  font-size: 13px;
+  font-weight: 600;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Highlight del elemento activo */
+.driver-active-element {
+  outline: 3px solid var(--rivera-green) !important;
+  outline-offset: 6px;
+  border-radius: 8px;
+}
+
+.driver-overlay {
+  background: rgba(0, 0, 0, 0.80);
+  backdrop-filter: blur(3px);
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}

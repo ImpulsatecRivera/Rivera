@@ -19,6 +19,10 @@ import EditProveedorAlert from '../../components/Proveedores/EditProveedorAlert'
  
 // Hook de Proveedores
 import useSupplierManagement from '../../components/Proveedores/hooks/useDataProveedores';
+
+import { useTutorial } from '../../hooks/useTutorial';
+import '../../styles/tutorial-global.css';
+import { HelpCircle } from 'lucide-react';
  
 const Proveedores = () => {
   const {
@@ -51,6 +55,8 @@ const Proveedores = () => {
     closeDetailView,
     refreshProveedores
   } = useSupplierManagement();
+ 
+  const { startTutorial, hasCompleted } = useTutorial('proveedores');
  
   // Estados para paginación
   const [currentPage, setCurrentPage] = useState(1);
@@ -159,6 +165,8 @@ const Proveedores = () => {
               sortBy={sortBy}
               setSortBy={setSortBy}
               handleContinue={handleContinue}
+              onStartTutorial={startTutorial}
+              hasCompletedTutorial={hasCompleted}
             />
  
             {/* Table Header */}

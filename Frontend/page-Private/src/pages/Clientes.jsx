@@ -10,6 +10,9 @@ import sandyLoadingAnimation from '../assets/lotties/Sandy Loading.json';
 import useClients from '../components/Clientes/hooks/useDataCliente'; // Ajusta la ruta según tu estructura
 import { usePermissions } from '../hooks/usePermissions';
 import { ProtectedAction, RoleBadge } from '../components/Auth';
+import { useTutorial } from '../hooks/useTutorial';
+import '../styles/tutorial-global.css';
+import { HelpCircle } from 'lucide-react';
 
 const Clientes= () => {
   const {
@@ -30,6 +33,8 @@ const Clientes= () => {
   } = useClients();
 
   const { canCreate, canEdit, canDelete } = usePermissions();
+
+  const { startTutorial, hasCompleted } = useTutorial('clientes');
 
   // Modales y navegación
   const [showEditModal, setShowEditModal] = useState(false);
@@ -297,15 +302,32 @@ const Clientes= () => {
                       className="w-full pl-12 pr-4 py-3 bg-white border-0 rounded-xl focus:outline-none focus:ring-2 focus:ring-white focus:ring-opacity-50 text-gray-700 placeholder-gray-400 shadow-lg"
                     />
                   </div>
-                  {tipoClienteActivo === 'corporativo' && canCreate && (
+                  
+                  <div className="flex items-center space-x-3">
+                    {/* Botón tutorial */}
                     <button
-                      onClick={openCreateCorporate}
-                      className="flex items-center space-x-2 px-5 py-3 bg-white bg-opacity-20 text-white rounded-xl hover:bg-opacity-30 transition-all duration-200 shadow-lg backdrop-blur-sm font-medium"
+                      onClick={startTutorial}
+                      className="flex items-center gap-2 px-5 py-3 bg-white border-2 border-[#5F8EAD] text-[#5F8EAD] rounded-xl hover:bg-[#5F8EAD] hover:text-white font-bold shadow-lg transition-all transform hover:scale-105 backdrop-blur-sm"
                     >
-                      <Plus className="w-5 h-5" />
-                      <span>Nuevo corporativo</span>
+                      <HelpCircle size={22} />
+                      <span>Tutorial</span>
+                      {!hasCompleted && (
+                        <span className="bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center animate-pulse">
+                          !
+                        </span>
+                      )}
                     </button>
-                  )}
+
+                    {tipoClienteActivo === 'corporativo' && canCreate && (
+                      <button
+                        onClick={openCreateCorporate}
+                        className="flex items-center space-x-2 px-5 py-3 bg-white bg-opacity-20 text-white rounded-xl hover:bg-opacity-30 transition-all duration-200 shadow-lg backdrop-blur-sm font-medium"
+                      >
+                        <Plus className="w-5 h-5" />
+                        <span>Nuevo corporativo</span>
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>

@@ -1,251 +1,163 @@
-// src/hooks/useTruckForm.js
-import { useForm } from "react-hook-form";
 import { useEffect, useState } from "react";
-import { config } from '../../../config.jsx';
-const API_URL = config.api.API_URL;
+import axios from "axios";
+import { config } from "../../../config.jsx";
 
-const API_URL_MOTORISTAS = `${API_URL}/motoristas`;
-const API_URL_PROVEEDORES = `${API_URL}/proveedores`; 
-const API_URL_CAMIONES = `${API_URL}/camiones`;
+const API_URL = config.api.API_URL;
 
 export const useTruckForm = (onSuccess) => {
   const [motoristasDisponibles, setMotoristasDisponibles] = useState([]);
-  const [proveedoresDisponibles, setProveedoresDisponibles] = useState([]);
-  const [imagePreview, setImagePreview] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const {
-    register,
-    handleSubmit,
-    setValue,
-    watch,
-    reset,
-    formState: { errors },
-  } = useForm();
-
-  const imagen = watch("img");
-
-  // Cargar motoristas
+  /* ================= MOTORISTAS ================= */
   useEffect(() => {
-    fetch(API_URL_MOTORISTAS, { credentials: 'include' })
-      .then((res) => res.json())
-      .then((data) => {
-        console.log('Motoristas cargados:', data);
-        setMotoristasDisponibles(data);
-      })
-      .catch((err) => console.error("Error al cargar motoristas:", err));
+    const cargarMotoristas = async () => {
+      try {
+        console.log('🔍 Cargando motoristas desde:', `${API_URL}/motoristas`);
+        
+        const res = await axios.get(`${API_URL}/motoristas`, {
+          withCredentials: true,
+        });
+
+        // Tu API devuelve array directo
+        const motoristas = Array.isArray(res.data) ? res.data : [];
+        console.log('👥 Total motoristas:', motoristas.length);
+
+        // Filtrar activos (asumiendo que todos están activos si no hay campo state)
+        const activos = motoristas.filter((m) => {
+          const estado = (m.state || m.estado || m.status || "ACTIVO").toUpperCase();
+          return ["ACTIVO", "DISPONIBLE", "AVAILABLE", "ACTIVE"].includes(estado);
+        });
+
+        console.log('✅ Motoristas activos:', activos.length);
+        setMotoristasDisponibles(activos);
+        
+      } catch (error) {
+        console.error("❌ Error cargando motoristas:", error);
+        setMotoristasDisponibles([]);
+      }
+    };
+
+    cargarMotoristas();
   }, []);
 
-  // Cargar proveedores
-  useEffect(() => {
-    fetch(API_URL_PROVEEDORES, { credentials: 'include' })
-      .then((res) => res.json())
-      .then((data) => {
-        console.log('Proveedores cargados:', data);
-        setProveedoresDisponibles(data);
-      })
-      .catch((err) => console.error("Error al cargar proveedores:", err));
-  }, []);
-
-  useEffect(() => {
-    if (imagen && imagen.length > 0) {
-      const file = imagen[0];
-      const reader = new FileReader();
-      reader.onloadend = () => setImagePreview(reader.result);
-      reader.readAsDataURL(file);
-    } else {
-      setImagePreview(null);
-    }
-  }, [imagen]);
-
+  /* ================= SUBMIT ================= */
   const onSubmit = async (data) => {
     setIsSubmitting(true);
-    try {
-      console.log('=== DATOS RECIBIDOS EN HOOK ===');
-      console.log('Data completa:', data);
-      console.log('Claves disponibles:', Object.keys(data));
-      
-      // Debug específico para campos críticos
-      console.log('=== CAMPOS CRÍTICOS ===');
-      console.log('nivelGasolina:', data.nivelGasolina, 'tipo:', typeof data.nivelGasolina);
-      console.log('gasolineLevel:', data.gasolineLevel, 'tipo:', typeof data.gasolineLevel);
-      console.log('name:', data.name, 'tipo:', typeof data.name);
-      console.log('marca:', data.marca, 'tipo:', typeof data.marca);
-      console.log('brand:', data.brand, 'tipo:', typeof data.brand);
-      console.log('================================');
 
-      // ✅ VALIDACIÓN CRÍTICA: Verificar imagen
-      if (!data.img || !data.img[0]) {
-        throw new Error('Debe seleccionar una imagen para el camión');
-      }
+    try {
+      console.log('📤 === INICIO SUBMIT ===');
+      console.log('📤 Data recibida:', data);
 
       const formData = new FormData();
 
-      // ✅ AGREGAR IMAGEN CORRECTAMENTE (File, no FileList)
-      const imageFile = data.img[0];
-      console.log('Agregando imagen:', {
-        name: imageFile.name,
-        size: imageFile.size,
-        type: imageFile.type
-      });
-      formData.append('img', imageFile);
+      // Campos obligatorios
+      formData.append("licensePlate", data.licensePlate.toUpperCase());
+      formData.append("state", (data.state || "DISPONIBLE").toUpperCase());
+      formData.append("gasolineLevel", data.gasolineLevel || 4);
 
-      // ✅ MAPEAR CAMPOS CORRECTAMENTE SEGÚN TU API
-      const fieldMapping = {
-        // Mapeo de nombres de formulario a nombres de API
-        name: 'name',
-        nombre: 'name',
-        marca: 'brand',
-        brand: 'brand',
-        modelo: 'model',
-        model: 'model',
-        año: 'age',
-        age: 'age',
-        year: 'age',
-        placa: 'licensePlate',
-        licensePlate: 'licensePlate',
-        tarjetaCirculacion: 'ciculatioCard',
-        circulationCard: 'ciculatioCard',
-        ciculatioCard: 'ciculatioCard',
-        descripcion: 'description',
-        description: 'description',
-        // MÚLTIPLES VARIACIONES PARA NIVEL DE GASOLINA
-        nivelGasolina: 'gasolineLevel',
-        gasolineLevel: 'gasolineLevel',
-        gasoline: 'gasolineLevel',
-        gas: 'gasolineLevel',
-        fuel: 'gasolineLevel',
-        estado: 'state',
-        state: 'state',
-        proveedor: 'supplierId',
-        supplierId: 'supplierId',
-        supplier: 'supplierId',
-        motorista: 'driverId',
-        driverId: 'driverId',
-        driver: 'driverId'
-      };
-
-      // ✅ AGREGAR CAMPOS MAPEADOS (excluyendo img)
-      Object.entries(data).forEach(([key, value]) => {
-        if (key !== 'img') {
-          // Usar el mapeo si existe, sino usar el key original
-          const apiFieldName = fieldMapping[key] || key;
-          
-          // Validaciones específicas
-          if (apiFieldName === 'gasolineLevel') {
-            console.log('=== DEBUG NIVEL DE GASOLINA ===');
-            console.log('Valor original:', value);
-            console.log('Tipo original:', typeof value);
-            console.log('Es string vacío?', value === '');
-            console.log('Es undefined?', value === undefined);
-            console.log('Es null?', value === null);
-            
-            // Manejar casos especiales
-            let gasLevel;
-            if (value === '' || value === undefined || value === null || value === 'undefined') {
-              gasLevel = 0; // Valor por defecto
-              console.log('Usando valor por defecto: 0');
-            } else {
-              gasLevel = parseFloat(value);
-              console.log('Valor parseado:', gasLevel);
-              
-              if (isNaN(gasLevel)) {
-                gasLevel = 0;
-                console.log('NaN detectado, usando 0');
-              }
-            }
-            
-            // Validar rango
-            if (gasLevel < 0 || gasLevel > 100) {
-              console.error('Nivel de gasolina fuera de rango:', gasLevel);
-              throw new Error(`El nivel de gasolina debe estar entre 0 y 100. Valor recibido: ${gasLevel}`);
-            }
-            
-            console.log(`Valor final a enviar: ${gasLevel}`);
-            console.log('=== FIN DEBUG GASOLINA ===');
-            formData.append(apiFieldName, gasLevel.toString());
-          } else if (apiFieldName === 'age') {
-            // Asegurar que el año sea un número
-            const year = parseInt(value) || new Date().getFullYear();
-            console.log(`Agregando a FormData: ${apiFieldName} = ${year} (año)`);
-            formData.append(apiFieldName, year.toString());
-          } else if (apiFieldName === 'supplierId' || apiFieldName === 'driverId') {
-            // Solo agregar IDs si tienen valor
-            if (value && value.trim() !== '') {
-              console.log(`Agregando a FormData: ${apiFieldName} = ${value} (ID)`);
-              formData.append(apiFieldName, value.trim());
-            } else {
-              console.log(`Saltando campo vacío: ${apiFieldName}`);
-            }
-          } else {
-            // Campos de texto normales
-            const fieldValue = value || '';
-            console.log(`Agregando a FormData: ${apiFieldName} = ${fieldValue}`);
-            formData.append(apiFieldName, fieldValue);
-          }
-        }
-      });
-
-      console.log('=== ENVIANDO REQUEST ===');
-      console.log('URL:', API_URL_CAMIONES);
-      console.log('Método: POST');
+      // Campos opcionales
+      if (data.name?.trim()) formData.append("name", data.name.trim());
+      if (data.brand?.trim()) formData.append("brand", data.brand.trim());
+      if (data.model?.trim()) formData.append("model", data.model.trim());
+      if (data.age) formData.append("age", data.age);
+      if (data.description?.trim()) formData.append("description", data.description.trim());
+      if (data.ciculatioCard) formData.append("ciculatioCard", data.ciculatioCard);
       
-      // Debug FormData
-      console.log('=== CONTENIDO FORMDATA FINAL ===');
-      for (let [key, value] of formData.entries()) {
-        if (key === 'img') {
-          console.log(`${key}: File(${value.name}, ${value.size} bytes)`);
+      // Driver ID
+      if (data.driverId && data.driverId.trim() !== '') {
+        formData.append("driverId", data.driverId.trim());
+        console.log('✅ Motorista asignado:', data.driverId);
+      }
+      
+      if (data.salario) formData.append("salario", data.salario);
+
+      // ✅ IMÁGENES - Manejo correcto
+      console.log('🖼️ Procesando imágenes...');
+      console.log('   data.img:', data.img);
+      console.log('   Tipo data.img:', data.img?.constructor?.name);
+      
+      // Imagen principal
+      if (data.img) {
+        let imageFile = null;
+        
+        if (data.img instanceof FileList && data.img.length > 0) {
+          imageFile = data.img[0];
+          console.log('✅ Imagen principal (FileList):', imageFile.name);
+        } else if (data.img instanceof File) {
+          imageFile = data.img;
+          console.log('✅ Imagen principal (File):', imageFile.name);
+        } else if (Array.isArray(data.img) && data.img.length > 0) {
+          imageFile = data.img[0];
+          console.log('✅ Imagen principal (Array):', imageFile.name);
+        }
+        
+        if (imageFile instanceof File) {
+          formData.append("img", imageFile);
+          console.log('✅ Imagen agregada al FormData');
         } else {
-          console.log(`${key}: ${value}`);
+          console.warn('⚠️ No se pudo procesar la imagen principal');
+        }
+      } else {
+        console.log('ℹ️ No hay imagen principal');
+      }
+
+      // Imagen de tarjeta de circulación
+      if (data.circulationCardImage) {
+        let cardImage = null;
+        
+        if (data.circulationCardImage instanceof FileList && data.circulationCardImage.length > 0) {
+          cardImage = data.circulationCardImage[0];
+          console.log('✅ Imagen tarjeta (FileList):', cardImage.name);
+        } else if (data.circulationCardImage instanceof File) {
+          cardImage = data.circulationCardImage;
+          console.log('✅ Imagen tarjeta (File):', cardImage.name);
+        } else if (Array.isArray(data.circulationCardImage) && data.circulationCardImage.length > 0) {
+          cardImage = data.circulationCardImage[0];
+          console.log('✅ Imagen tarjeta (Array):', cardImage.name);
+        }
+        
+        if (cardImage instanceof File) {
+          formData.append("circulationCardImage", cardImage);
+          console.log('✅ Imagen tarjeta agregada al FormData');
+        } else {
+          console.warn('⚠️ No se pudo procesar la imagen de tarjeta');
+        }
+      } else {
+        console.log('ℹ️ No hay imagen de tarjeta de circulación');
+      }
+
+      // Debug FormData
+      console.log('📋 === CONTENIDO FORMDATA ===');
+      for (let [key, value] of formData.entries()) {
+        if (value instanceof File) {
+          console.log(`  ${key}:`, {
+            name: value.name,
+            size: value.size,
+            type: value.type
+          });
+        } else {
+          console.log(`  ${key}:`, value);
         }
       }
 
-      const res = await fetch(API_URL_CAMIONES, {
-        method: "POST",
-        body: formData,
-        // NO incluir Content-Type para FormData
-        credentials: 'include', // Agregar credenciales si es necesario
+      console.log('📡 Enviando a:', `${API_URL}/camiones`);
+      
+      const res = await axios.post(`${API_URL}/camiones`, formData, {
+        withCredentials: true,
+        headers: { 
+          "Content-Type": "multipart/form-data" 
+        },
       });
 
-      console.log('=== RESPUESTA RECIBIDA ===');
-      console.log('Status:', res.status);
-      console.log('Status Text:', res.statusText);
+      console.log('✅ Respuesta exitosa:', res.data);
 
-      if (!res.ok) {
-        const responseText = await res.text();
-        console.log('Response Body (raw):', responseText);
-        console.log('=== ERROR EN RESPUESTA ===');
-        
-        let errorMessage = `Error ${res.status}: ${res.statusText}`;
-        try {
-          const errorData = JSON.parse(responseText);
-          console.log('Error data parsed:', errorData);
-          errorMessage = errorData.message || errorData.error || errorData.details || errorMessage;
-        } catch (parseError) {
-          console.log('No se pudo parsear como JSON, usando texto crudo');
-          errorMessage = responseText || errorMessage;
-        }
-        
-        console.log('Mensaje de error final:', errorMessage);
-        throw new Error(errorMessage);
-      }
-
-      console.log('=== ÉXITO ===');
-      const result = await res.json();
-      console.log('Camión creado:', result);
-      
-      reset();
-      setImagePreview(null);
-      onSuccess?.();
+      if (onSuccess) onSuccess(res.data);
+      return res.data;
       
     } catch (error) {
-      console.error('=== ERROR CAPTURADO EN HOOK ===');
-      console.error('Error type:', typeof error);
-      console.error('Error name:', error.name);
-      console.error('Error message:', error.message);
-      console.error('Error stack:', error.stack);
-      console.error('Error completo:', error);
-      
+      console.error('❌ Error en submit:', error);
+      console.error('❌ Response:', error.response?.data);
+      console.error('❌ Status:', error.response?.status);
       throw error;
     } finally {
       setIsSubmitting(false);
@@ -253,14 +165,8 @@ export const useTruckForm = (onSuccess) => {
   };
 
   return {
-    register,
-    handleSubmit,
     onSubmit,
     motoristasDisponibles,
-    proveedoresDisponibles,
-    imagePreview,
     isSubmitting,
-    errors,
-    setValue,
   };
 };
