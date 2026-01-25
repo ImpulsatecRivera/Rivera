@@ -8,6 +8,7 @@ export const useTruckForm = (onSuccess) => {
   const [motoristasDisponibles, setMotoristasDisponibles] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+<<<<<<< HEAD
   /* ================= MOTORISTAS ================= */
   useEffect(() => {
     const cargarMotoristas = async () => {
@@ -33,11 +34,82 @@ export const useTruckForm = (onSuccess) => {
         
       } catch (error) {
         console.error("❌ Error cargando motoristas:", error);
+=======
+  const {
+    register,
+    handleSubmit,
+    setValue,
+    watch,
+    reset,
+    formState: { errors },
+  } = useForm();
+
+  const imagen = watch("img");
+
+  // Cargar motoristas sin camión asignado
+  useEffect(() => {
+    const cargarMotoristasDisponibles = async () => {
+      try {
+        // Cargar motoristas y camiones en paralelo
+        const [motoristasRes, camionesRes] = await Promise.all([
+          fetch(API_URL_MOTORISTAS, { credentials: 'include' }),
+          fetch(API_URL_CAMIONES, { credentials: 'include' })
+        ]);
+
+        const motoristas = await motoristasRes.json();
+        const camiones = await camionesRes.json();
+
+        console.log('Motoristas cargados:', motoristas);
+        console.log('Camiones cargados (raw):', camiones);
+
+        // Extraer el array de camiones - manejar diferentes estructuras de respuesta
+        let camionesArray = [];
+        if (Array.isArray(camiones)) {
+          camionesArray = camiones;
+        } else if (camiones?.data && Array.isArray(camiones.data)) {
+          camionesArray = camiones.data;
+        } else if (camiones?.camiones && Array.isArray(camiones.camiones)) {
+          camionesArray = camiones.camiones;
+        }
+
+        console.log('Camiones array procesado:', camionesArray);
+        console.log('Total de camiones:', camionesArray.length);
+
+        // Obtener IDs de motoristas que ya tienen camión asignado
+        const motoristasAsignados = new Set(
+          camionesArray
+            .filter(camion => camion.driverId)
+            .map(camion => {
+              // Manejar tanto ObjectId como string
+              const driverId = camion.driverId?._id || camion.driverId;
+              return typeof driverId === 'string' ? driverId : driverId?.toString();
+            })
+            .filter(id => id) // Remover nulls/undefined
+        );
+
+        console.log('Motoristas con camión asignado:', Array.from(motoristasAsignados));
+
+        // Filtrar motoristas que NO tienen camión asignado
+        const motoristasLibres = motoristas.filter(motorista => {
+          const motoristaId = motorista._id || motorista.id;
+          const isAsignado = motoristasAsignados.has(motoristaId);
+          return !isAsignado;
+        });
+
+        console.log('Motoristas disponibles (sin camión):', motoristasLibres);
+        setMotoristasDisponibles(motoristasLibres);
+      } catch (err) {
+        console.error("Error al cargar motoristas disponibles:", err);
+>>>>>>> 8077762b9ce48ebad7f3c0bfc421712a4bb94ca3
         setMotoristasDisponibles([]);
       }
     };
 
+<<<<<<< HEAD
     cargarMotoristas();
+=======
+    cargarMotoristasDisponibles();
+>>>>>>> 8077762b9ce48ebad7f3c0bfc421712a4bb94ca3
   }, []);
 
   /* ================= SUBMIT ================= */
@@ -55,6 +127,7 @@ export const useTruckForm = (onSuccess) => {
       formData.append("state", (data.state || "DISPONIBLE").toUpperCase());
       formData.append("gasolineLevel", data.gasolineLevel || 4);
 
+<<<<<<< HEAD
       // Campos opcionales
       if (data.name?.trim()) formData.append("name", data.name.trim());
       if (data.brand?.trim()) formData.append("brand", data.brand.trim());
@@ -62,6 +135,79 @@ export const useTruckForm = (onSuccess) => {
       if (data.age) formData.append("age", data.age);
       if (data.description?.trim()) formData.append("description", data.description.trim());
       if (data.ciculatioCard) formData.append("ciculatioCard", data.ciculatioCard);
+=======
+      // ✅ SIEMPRE AGREGAR NIVEL DE GASOLINA COMO 1 (campo no usado pero requerido)
+      formData.append('gasolineLevel', '1');
+      console.log('gasolineLevel: 1 (valor fijo)');
+
+      // ✅ MAPEAR CAMPOS CORRECTAMENTE SEGÚN TU API
+      const fieldMapping = {
+        // Mapeo de nombres de formulario a nombres de API
+        name: 'name',
+        nombre: 'name',
+        marca: 'brand',
+        brand: 'brand',
+        modelo: 'model',
+        model: 'model',
+        año: 'age',
+        age: 'age',
+        year: 'age',
+        placa: 'licensePlate',
+        licensePlate: 'licensePlate',
+        tarjetaCirculacion: 'ciculatioCard',
+        circulationCard: 'ciculatioCard',
+        ciculatioCard: 'ciculatioCard',
+        descripcion: 'description',
+        description: 'description',
+        // MÚLTIPLES VARIACIONES PARA NIVEL DE GASOLINA
+        nivelGasolina: 'gasolineLevel',
+        gasolineLevel: 'gasolineLevel',
+        gasoline: 'gasolineLevel',
+        gas: 'gasolineLevel',
+        fuel: 'gasolineLevel',
+        estado: 'state',
+        state: 'state',
+        proveedor: 'supplierId',
+        supplierId: 'supplierId',
+        supplier: 'supplierId',
+        motorista: 'driverId',
+        driverId: 'driverId',
+        driver: 'driverId'
+      };
+
+      // ✅ AGREGAR CAMPOS MAPEADOS (excluyendo img y gasolineLevel ya que se envía con valor fijo)
+      Object.entries(data).forEach(([key, value]) => {
+        if (key !== 'img' && key !== 'gasolineLevel') {
+          // Usar el mapeo si existe, sino usar el key original
+          const apiFieldName = fieldMapping[key] || key;
+          
+          // Validaciones específicas
+          if (apiFieldName === 'age') {
+            // Asegurar que el año sea un número
+            const year = parseInt(value) || new Date().getFullYear();
+            console.log(`Agregando a FormData: ${apiFieldName} = ${year} (año)`);
+            formData.append(apiFieldName, year.toString());
+          } else if (apiFieldName === 'supplierId' || apiFieldName === 'driverId') {
+            // Solo agregar IDs si tienen valor
+            if (value && value.trim() !== '') {
+              console.log(`Agregando a FormData: ${apiFieldName} = ${value} (ID)`);
+              formData.append(apiFieldName, value.trim());
+            } else {
+              console.log(`Saltando campo vacío: ${apiFieldName}`);
+            }
+          } else {
+            // Campos de texto normales
+            const fieldValue = value || '';
+            console.log(`Agregando a FormData: ${apiFieldName} = ${fieldValue}`);
+            formData.append(apiFieldName, fieldValue);
+          }
+        }
+      });
+
+      console.log('=== ENVIANDO REQUEST ===');
+      console.log('URL:', API_URL_CAMIONES);
+      console.log('Método: POST');
+>>>>>>> 8077762b9ce48ebad7f3c0bfc421712a4bb94ca3
       
       // Driver ID
       if (data.driverId && data.driverId.trim() !== '') {

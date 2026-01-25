@@ -47,10 +47,25 @@ const AssignmentFields = ({ register, errors, motoristasDisponibles = [] }) => {
   }
 
   return (
+<<<<<<< HEAD
     <div className="space-y-6">
       <h3 className="text-xl font-semibold text-white mb-4">
         Asignación
       </h3>
+=======
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+      {/* Motorista */}
+      <FormFieldInput
+        id="driverId"
+        label="Motorista"
+        icon={User}
+        type="select"
+        placeholder="Seleccionar motorista"
+        options={motoristaOptions}
+        {...register("driverId")}
+        error={errors.driverId}
+      />
+>>>>>>> 8077762b9ce48ebad7f3c0bfc421712a4bb94ca3
 
       <div className="grid grid-cols-1 gap-4 sm:gap-6">
         {/* Motorista */}
