@@ -1,40 +1,16 @@
 import { useEffect, useState } from "react";
+import { useForm } from "react-hook-form";
 import axios from "axios";
 import { config } from "../../../config.jsx";
 
 const API_URL = config.api.API_URL;
+const API_URL_MOTORISTAS = `${API_URL}/motoristas`;
+const API_URL_CAMIONES = `${API_URL}/camiones`;
 
 export const useTruckForm = (onSuccess) => {
   const [motoristasDisponibles, setMotoristasDisponibles] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-<<<<<<< HEAD
-  /* ================= MOTORISTAS ================= */
-  useEffect(() => {
-    const cargarMotoristas = async () => {
-      try {
-        console.log('🔍 Cargando motoristas desde:', `${API_URL}/motoristas`);
-        
-        const res = await axios.get(`${API_URL}/motoristas`, {
-          withCredentials: true,
-        });
-
-        // Tu API devuelve array directo
-        const motoristas = Array.isArray(res.data) ? res.data : [];
-        console.log('👥 Total motoristas:', motoristas.length);
-
-        // Filtrar activos (asumiendo que todos están activos si no hay campo state)
-        const activos = motoristas.filter((m) => {
-          const estado = (m.state || m.estado || m.status || "ACTIVO").toUpperCase();
-          return ["ACTIVO", "DISPONIBLE", "AVAILABLE", "ACTIVE"].includes(estado);
-        });
-
-        console.log('✅ Motoristas activos:', activos.length);
-        setMotoristasDisponibles(activos);
-        
-      } catch (error) {
-        console.error("❌ Error cargando motoristas:", error);
-=======
   const {
     register,
     handleSubmit,
@@ -100,16 +76,11 @@ export const useTruckForm = (onSuccess) => {
         setMotoristasDisponibles(motoristasLibres);
       } catch (err) {
         console.error("Error al cargar motoristas disponibles:", err);
->>>>>>> 8077762b9ce48ebad7f3c0bfc421712a4bb94ca3
         setMotoristasDisponibles([]);
       }
     };
 
-<<<<<<< HEAD
-    cargarMotoristas();
-=======
     cargarMotoristasDisponibles();
->>>>>>> 8077762b9ce48ebad7f3c0bfc421712a4bb94ca3
   }, []);
 
   /* ================= SUBMIT ================= */
@@ -125,17 +96,7 @@ export const useTruckForm = (onSuccess) => {
       // Campos obligatorios
       formData.append("licensePlate", data.licensePlate.toUpperCase());
       formData.append("state", (data.state || "DISPONIBLE").toUpperCase());
-      formData.append("gasolineLevel", data.gasolineLevel || 4);
 
-<<<<<<< HEAD
-      // Campos opcionales
-      if (data.name?.trim()) formData.append("name", data.name.trim());
-      if (data.brand?.trim()) formData.append("brand", data.brand.trim());
-      if (data.model?.trim()) formData.append("model", data.model.trim());
-      if (data.age) formData.append("age", data.age);
-      if (data.description?.trim()) formData.append("description", data.description.trim());
-      if (data.ciculatioCard) formData.append("ciculatioCard", data.ciculatioCard);
-=======
       // ✅ SIEMPRE AGREGAR NIVEL DE GASOLINA COMO 1 (campo no usado pero requerido)
       formData.append('gasolineLevel', '1');
       console.log('gasolineLevel: 1 (valor fijo)');
@@ -180,7 +141,7 @@ export const useTruckForm = (onSuccess) => {
         if (key !== 'img' && key !== 'gasolineLevel') {
           // Usar el mapeo si existe, sino usar el key original
           const apiFieldName = fieldMapping[key] || key;
-          
+
           // Validaciones específicas
           if (apiFieldName === 'age') {
             // Asegurar que el año sea un número
@@ -204,28 +165,23 @@ export const useTruckForm = (onSuccess) => {
         }
       });
 
-      console.log('=== ENVIANDO REQUEST ===');
-      console.log('URL:', API_URL_CAMIONES);
-      console.log('Método: POST');
->>>>>>> 8077762b9ce48ebad7f3c0bfc421712a4bb94ca3
-      
       // Driver ID
       if (data.driverId && data.driverId.trim() !== '') {
         formData.append("driverId", data.driverId.trim());
         console.log('✅ Motorista asignado:', data.driverId);
       }
-      
+
       if (data.salario) formData.append("salario", data.salario);
 
       // ✅ IMÁGENES - Manejo correcto
       console.log('🖼️ Procesando imágenes...');
       console.log('   data.img:', data.img);
       console.log('   Tipo data.img:', data.img?.constructor?.name);
-      
+
       // Imagen principal
       if (data.img) {
         let imageFile = null;
-        
+
         if (data.img instanceof FileList && data.img.length > 0) {
           imageFile = data.img[0];
           console.log('✅ Imagen principal (FileList):', imageFile.name);
@@ -236,7 +192,7 @@ export const useTruckForm = (onSuccess) => {
           imageFile = data.img[0];
           console.log('✅ Imagen principal (Array):', imageFile.name);
         }
-        
+
         if (imageFile instanceof File) {
           formData.append("img", imageFile);
           console.log('✅ Imagen agregada al FormData');
@@ -250,7 +206,7 @@ export const useTruckForm = (onSuccess) => {
       // Imagen de tarjeta de circulación
       if (data.circulationCardImage) {
         let cardImage = null;
-        
+
         if (data.circulationCardImage instanceof FileList && data.circulationCardImage.length > 0) {
           cardImage = data.circulationCardImage[0];
           console.log('✅ Imagen tarjeta (FileList):', cardImage.name);
@@ -261,7 +217,7 @@ export const useTruckForm = (onSuccess) => {
           cardImage = data.circulationCardImage[0];
           console.log('✅ Imagen tarjeta (Array):', cardImage.name);
         }
-        
+
         if (cardImage instanceof File) {
           formData.append("circulationCardImage", cardImage);
           console.log('✅ Imagen tarjeta agregada al FormData');
@@ -287,11 +243,11 @@ export const useTruckForm = (onSuccess) => {
       }
 
       console.log('📡 Enviando a:', `${API_URL}/camiones`);
-      
+
       const res = await axios.post(`${API_URL}/camiones`, formData, {
         withCredentials: true,
-        headers: { 
-          "Content-Type": "multipart/form-data" 
+        headers: {
+          "Content-Type": "multipart/form-data"
         },
       });
 
@@ -299,7 +255,7 @@ export const useTruckForm = (onSuccess) => {
 
       if (onSuccess) onSuccess(res.data);
       return res.data;
-      
+
     } catch (error) {
       console.error('❌ Error en submit:', error);
       console.error('❌ Response:', error.response?.data);
@@ -311,8 +267,15 @@ export const useTruckForm = (onSuccess) => {
   };
 
   return {
+    register,
+    handleSubmit,
+    setValue,
+    watch,
+    reset,
+    errors,
     onSubmit,
     motoristasDisponibles,
     isSubmitting,
+    imagen,
   };
 };
