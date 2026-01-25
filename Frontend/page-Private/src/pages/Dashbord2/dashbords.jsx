@@ -1,3 +1,4 @@
+// src/pages/Dashboard/ModernDashboard.jsx
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -16,11 +17,16 @@ import {
   Calendar,
   Clock,
   MoreVertical,
-  ChevronRight
+  ChevronRight,
+  HelpCircle // ⬅️ NUEVO
 } from 'lucide-react';
 import Lottie from 'lottie-react';
 import { config } from '../../config';
 import { api } from '../../Context/authContext';
+
+// 🎯 IMPORTAR TUTORIAL
+import { useTutorial } from '../../hooks/useTutorial';
+import '../../styles/tutorial-global.css';
 
 // 🎨 Importar animaciones Lottie
 import loadingTruckAnimation from '../../assets/lotties/ready, set, go!.json';
@@ -40,6 +46,9 @@ import ReportsPdfModal from '../../components/Dashboard/ReportsPdfModal';
 import ReportsGastosMesModal from '../../components/Dashboard/ReportsGastosMesModal';
 
 const ModernDashboard = () => {
+  // 🎯 HOOK DE TUTORIAL
+  const { startTutorial, hasCompleted, shouldAutoStart } = useTutorial('dashboard');
+
   // Estados de modales
   const [modalResumenOpen, setModalResumenOpen] = useState(false);
   const [modalPdfOpen, setModalPdfOpen] = useState(false);
@@ -340,6 +349,24 @@ const ModernDashboard = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* 🎯 BOTÓN DE AYUDA FLOTANTE */}
+      {!shouldAutoStart && (
+        <button
+          onClick={startTutorial}
+          className="fixed bottom-8 right-8 z-50 bg-gradient-to-r from-[#5D9646] to-[#5F8EAD] text-white rounded-full p-4 shadow-2xl hover:shadow-3xl transition-all duration-300 hover:scale-110 group"
+          title={hasCompleted ? "Ver tutorial nuevamente" : "¿Necesitas ayuda?"}
+        >
+          <HelpCircle size={28} className="group-hover:rotate-12 transition-transform" />
+          
+          {/* Badge de "nuevo" si no ha completado */}
+          {!hasCompleted && (
+            <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center animate-pulse">
+              !
+            </span>
+          )}
+        </button>
+      )}
+
       {/* 🎨 Hero Banner con Logo sobre Fondo Blanco LIMPIO */}
       <div className="relative h-[300px] overflow-hidden">
         
@@ -368,6 +395,24 @@ const ModernDashboard = () => {
             </div>
 
             <div className="flex items-center gap-3">
+              {/* 🎯 BOTÓN DE TUTORIAL EN EL HEADER */}
+              <div 
+                onClick={startTutorial}
+                className="bg-white/90 backdrop-blur-sm rounded-full px-5 py-2.5 border border-gray-200 shadow-lg pointer-events-auto cursor-pointer hover:bg-[#5F8EAD]/10 hover:border-[#5F8EAD] transition-all group"
+              >
+                <div className="flex items-center gap-2">
+                  <HelpCircle className="text-[#5F8EAD] group-hover:rotate-12 transition-transform" size={16} />
+                  <span className="text-[#34353A] font-bold text-sm">
+                    {hasCompleted ? 'Ver tutorial' : 'Ayuda'}
+                  </span>
+                  {!hasCompleted && (
+                    <span className="bg-red-500 text-white text-xs font-bold rounded-full w-4 h-4 flex items-center justify-center animate-pulse">
+                      !
+                    </span>
+                  )}
+                </div>
+              </div>
+
               <div className="bg-white/90 backdrop-blur-sm rounded-full px-5 py-2.5 border border-gray-200 shadow-lg pointer-events-auto cursor-pointer hover:bg-gray-50 transition-all">
                 <div className="flex items-center gap-2">
                   <Truck className="text-[#34353A]" size={16} />

@@ -7,17 +7,23 @@ const router = express.Router();
 
 const upload= multer({dest: "public/"})
 
+// Configuración para múltiples archivos
+const uploadFields = upload.fields([
+  { name: 'img', maxCount: 1 }, // Imagen del camión (opcional)
+  { name: 'circulationCardImage', maxCount: 1 } // Imagen de tarjeta de circulación (opcional)
+])
+
 // GET - solo admin, empleados y motoristas pueden ver la lista
 router
 .route("/")
 .get(validateAuthToken(["admin","Operativo","Supervisor","motorista"]), camionesController.get)
 // POST - solo admin y empleados
-.post(validateAuthToken(["admin","Operativo","Supervisor"]), upload.single("img"), camionesController.post);
+.post(validateAuthToken(["admin","Operativo","Supervisor"]), uploadFields, camionesController.post);
 
 router
 .route("/:id")
 // PUT - solo admin y empleados
-.put(validateAuthToken(["admin","Operativo","Supervisor"]), upload.single("img"), camionesController.put)
+.put(validateAuthToken(["admin","Operativo","Supervisor"]), uploadFields, camionesController.put)
 // GET by id - admin, empleados y motoristas
 .get(validateAuthToken(["admin","Operativo","Supervisor","motorista"]), camionesController.getById)
 // DELETE - solo admin y empleados

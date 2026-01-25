@@ -11,9 +11,8 @@ const VehicleDetailsFields = ({ register, errors }) => {
         label="Marca"
         icon={Building}
         placeholder="Marca del camión"
-        {...register("brand", { required: true })}
+        {...register("brand")}
         error={errors.brand}
-        required
       />
 
       {/* Modelo */}
@@ -22,9 +21,8 @@ const VehicleDetailsFields = ({ register, errors }) => {
         label="Modelo"
         icon={Car}
         placeholder="Modelo del camión"
-        {...register("model", { required: true })}
+        {...register("model")}
         error={errors.model}
-        required
       />
 
       {/* Año */}
@@ -34,9 +32,8 @@ const VehicleDetailsFields = ({ register, errors }) => {
         icon={Calendar}
         type="number"
         placeholder="Año del camión"
-        {...register("age", { required: true })}
+        {...register("age")}
         error={errors.age}
-        required
       />
 
       {/* Nivel de gasolina */}
@@ -48,7 +45,7 @@ const VehicleDetailsFields = ({ register, errors }) => {
         min="0"
         max="100"
         placeholder="Nivel de gasolina (0-100)"
-        {...register("gasolineLevel", { required: true })}
+        {...register("gasolineLevel", { required: "El nivel de gasolina es obligatorio" })}
         error={errors.gasolineLevel}
         required
       />

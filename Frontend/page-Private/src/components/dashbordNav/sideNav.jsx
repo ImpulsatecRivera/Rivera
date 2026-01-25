@@ -1,3 +1,4 @@
+// src/components/Sidebar/SidebarNav.jsx
 import React, { useState, useEffect } from "react";
 import { 
   Home, 
@@ -9,13 +10,18 @@ import {
   LogOut, 
   ChevronLeft, 
   ChevronRight,
-  Receipt // ⭐ NUEVO ÍCONO
+  Receipt,
+  Info // ⬅️ SOLO ESTE ÍCONO
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../Context/authContext";
 import Lottie from "lottie-react";
 import logoutAnim from "../../assets/lotties/Campervan _ Ignite Animation.json";
 import logoRivera from "../../images/logo.png";
+
+// 🎯 IMPORTAR SISTEMA DE TUTORIALES
+import TutorialService from "../../services/TutorialService";
+import { TUTORIALS } from "../../config/tutorials";
 
 const SidebarNav = () => {
   const navigate = useNavigate();
@@ -36,7 +42,7 @@ const SidebarNav = () => {
     { id: "diesel", route: "/diesel", icon: Fuel, label: "Diesel" },
     { id: "viajesInternos", route: "/viajesInternos", icon: Route, label: "Viajes" },
     { id: "CajaChica", route: "/CajaChica", icon: Vault, label: "Caja Chica" },
-    { id: "ventas", route: "/ventas", icon: Receipt, label: "Ventas" }, // ⭐ NUEVO
+    { id: "ventas", route: "/ventas", icon: Receipt, label: "Ventas" },
   ];
 
   useEffect(() => {
@@ -48,6 +54,13 @@ const SidebarNav = () => {
     if (item.route) {
       setActiveItem(item.id);
       navigate(item.route);
+    }
+  };
+
+  // 🎯 FUNCIÓN PARA INICIAR TUTORIAL DEL SIDEBAR
+  const handleStartSidebarTutorial = () => {
+    if (TUTORIALS.sidebar) {
+      TutorialService.start(TUTORIALS.sidebar.steps, 'sidebar');
     }
   };
 
@@ -126,6 +139,44 @@ const SidebarNav = () => {
               </div>
             )}
           </div>
+        </div>
+
+        {/* 🎯 SOLO BOTÓN DE TUTORIAL DEL SIDEBAR */}
+        <div className="px-3 mb-2 relative z-10">
+          <button
+            onClick={handleStartSidebarTutorial}
+            className={`
+              w-full flex items-center gap-3 px-4 py-3 rounded-xl
+              transition-all duration-200 group relative overflow-hidden
+              bg-blue-500/20 text-blue-400 hover:bg-blue-500/30
+              border border-blue-500/30 hover:border-blue-500/50
+              ${!isExpanded && 'justify-center'}
+            `}
+          >
+            <span className="absolute inset-0 bg-blue-500/10 scale-0 group-hover:scale-100 
+                           transition-transform duration-500 rounded-xl -z-10" />
+
+            <Info 
+              size={22} 
+              strokeWidth={2} 
+              className="transition-transform group-hover:rotate-12 duration-200"
+            />
+            
+            {isExpanded && (
+              <span className="font-medium text-sm">¿Cómo usar el menú?</span>
+            )}
+
+            {!isExpanded && (
+              <div className="absolute left-full ml-3 px-3 py-2 bg-gray-900 text-white text-xs 
+                              rounded-lg opacity-0 group-hover:opacity-100 pointer-events-none 
+                              transition-all whitespace-nowrap z-50 shadow-xl
+                              border border-gray-700">
+                ¿Cómo usar el menú?
+                <div className="absolute right-full top-1/2 -translate-y-1/2 
+                              border-4 border-transparent border-r-gray-900" />
+              </div>
+            )}
+          </button>
         </div>
 
         {/* Navigation Items */}
