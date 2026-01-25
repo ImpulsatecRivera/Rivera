@@ -65,7 +65,7 @@ const camioneSchema = new Schema({
   },
   driverId: {
     type: Schema.Types.ObjectId,  // Referencia al conductor asignado al camión
-    required: true                // Campo obligatorio para asignación
+    // Se asigna después - opcional al crear el camión
   },
   
   // Multimedia
