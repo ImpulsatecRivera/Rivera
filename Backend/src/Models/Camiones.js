@@ -67,7 +67,11 @@ const camioneSchema = new Schema({
   // Relaciones con otras colecciones (Referencias)
   driverId: {
     type: Schema.Types.ObjectId,  // Referencia al conductor asignado al camión
+<<<<<<< HEAD
     required: false              // Campo opcional
+=======
+    // Se asigna después - opcional al crear el camión
+>>>>>>> 8077762b9ce48ebad7f3c0bfc421712a4bb94ca3
   },
   
   // Multimedia

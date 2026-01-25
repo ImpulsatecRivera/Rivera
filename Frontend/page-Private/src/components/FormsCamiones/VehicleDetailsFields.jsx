@@ -1,5 +1,5 @@
 import React from 'react';
-import { Building, Car, Calendar, Fuel } from 'lucide-react';
+import { Building, Car, Calendar } from 'lucide-react';
 import FormFieldInput from '../../components/UICamiones/FieldInputAgregar';
 
 const VehicleDetailsFields = ({ register, errors }) => {
@@ -35,6 +35,7 @@ const VehicleDetailsFields = ({ register, errors }) => {
         {...register("age")}
         error={errors.age}
       />
+<<<<<<< HEAD
 
       {/* Nivel de gasolina */}
       <FormFieldInput
@@ -49,6 +50,8 @@ const VehicleDetailsFields = ({ register, errors }) => {
         error={errors.gasolineLevel}
         required
       />
+=======
+>>>>>>> 8077762b9ce48ebad7f3c0bfc421712a4bb94ca3
     </div>
   );
 };
