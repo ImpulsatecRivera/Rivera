@@ -35,23 +35,6 @@ const VehicleDetailsFields = ({ register, errors }) => {
         {...register("age")}
         error={errors.age}
       />
-<<<<<<< HEAD
-
-      {/* Nivel de gasolina */}
-      <FormFieldInput
-        id="gasolineLevel"
-        label="Nivel de gasolina"
-        icon={Fuel}
-        type="number"
-        min="0"
-        max="100"
-        placeholder="Nivel de gasolina (0-100)"
-        {...register("gasolineLevel", { required: "El nivel de gasolina es obligatorio" })}
-        error={errors.gasolineLevel}
-        required
-      />
-=======
->>>>>>> 8077762b9ce48ebad7f3c0bfc421712a4bb94ca3
     </div>
   );
 };
