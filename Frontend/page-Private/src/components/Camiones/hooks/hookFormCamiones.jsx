@@ -68,14 +68,15 @@ export const useTruckForm = (onSuccess) => {
 
         console.log('Motoristas con camión asignado:', Array.from(motoristasAsignados));
 
-        // Filtrar motoristas que NO tienen camión asignado
+        // Filtrar motoristas que NO tienen camión asignado Y que sean rol "motorista" (no auxiliar)
         const motoristasLibres = motoristas.filter(motorista => {
           const motoristaId = motorista._id || motorista.id;
           const isAsignado = motoristasAsignados.has(motoristaId);
-          return !isAsignado;
+          const esMotorista = motorista.rol === 'motorista'; // ✅ FILTRAR POR ROL
+          return !isAsignado && esMotorista;
         });
 
-        console.log('Motoristas disponibles (sin camión):', motoristasLibres);
+        console.log('Motoristas disponibles (sin camión y con rol motorista):', motoristasLibres);
         setMotoristasDisponibles(motoristasLibres);
       } catch (err) {
         console.error("Error al cargar motoristas disponibles:", err);

@@ -355,7 +355,7 @@ const EditMotoristaAlert = ({ isOpen, onClose, onSave, motorista }) => {
             </div>
           </div>
 
-          {/* Cuarta fila: DUI y Tarjeta de Circulación */}
+          {/* Cuarta fila: DUI y Licencia de conducir */}
           <div className="grid grid-cols-2 gap-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">DUI</label>

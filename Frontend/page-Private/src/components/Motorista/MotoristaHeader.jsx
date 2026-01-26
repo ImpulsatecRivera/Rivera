@@ -9,7 +9,12 @@ const MotoristaHeader = ({
   setSearchTerm, 
   sortBy, 
   setSortBy, 
+  selectedCategory,
+  setSelectedCategory,
+  countMotoristas,
+  countAuxiliares,
   handleContinue,
+  handleContinueAuxiliar,
 }) => {
   const { canCreate } = usePermissions();
   
@@ -38,6 +43,21 @@ const MotoristaHeader = ({
               </span>
             </div>
           </div>
+          {/* Tabs de categoría */}
+          <div className="flex space-x-2">
+            <button
+              className={`px-3 py-2 rounded-lg text-sm font-medium ${selectedCategory==='motorista'?'bg-white text-blue-700':'bg-white bg-opacity-20 text-white'}`}
+              onClick={() => setSelectedCategory('motorista')}
+            >
+              Motoristas ({countMotoristas})
+            </button>
+            <button
+              className={`px-3 py-2 rounded-lg text-sm font-medium ${selectedCategory==='auxiliar'?'bg-white text-blue-700':'bg-white bg-opacity-20 text-white'}`}
+              onClick={() => setSelectedCategory('auxiliar')}
+            >
+              Auxiliares ({countAuxiliares})
+            </button>
+          </div>
         </div>
         
         <div className="flex items-center justify-between space-x-4">
@@ -64,13 +84,24 @@ const MotoristaHeader = ({
               <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4 pointer-events-none" />
             </div>
             <ProtectedAction action="create">
-              <button 
-                onClick={handleContinue} 
-                className="flex items-center space-x-2 px-6 py-3 bg-white bg-opacity-20 text-white rounded-xl hover:bg-opacity-30 transition-all duration-200 shadow-lg backdrop-blur-sm font-medium"
-              >
-                <Plus className="w-5 h-5" />
-                <span>Nuevo Motorista</span>
-              </button>
+              {selectedCategory === 'motorista' && (
+                <button 
+                  onClick={handleContinue} 
+                  className="flex items-center space-x-2 px-6 py-3 bg-white bg-opacity-20 text-white rounded-xl hover:bg-opacity-30 transition-all duration-200 shadow-lg backdrop-blur-sm font-medium"
+                >
+                  <Plus className="w-5 h-5" />
+                  <span>Nuevo Motorista</span>
+                </button>
+              )}
+              {selectedCategory === 'auxiliar' && (
+                <button 
+                  onClick={handleContinueAuxiliar} 
+                  className="flex items-center space-x-2 px-6 py-3 bg-white bg-opacity-20 text-white rounded-xl hover:bg-opacity-30 transition-all duration-200 shadow-lg backdrop-blur-sm font-medium"
+                >
+                  <Plus className="w-5 h-5" />
+                  <span>Nuevo Auxiliar</span>
+                </button>
+              )}
             </ProtectedAction>
           </div>
         </div>

@@ -201,10 +201,14 @@ motoristasCon.post = async (req, res) => {
       password,
       phone,
       address,
+      // Admite ambos nombres desde el frontend: 'circulationCard' o 'licenciaConducir'
       circulationCard,
+      licenciaConducir,
       fechaVencimientoLicencia,
       planillaTipo,
-      salario, // ✅ Nuevo (requerido por schema)
+      salario, // ✅ Mantener
+      salarioBase,
+      rol, // 'motorista' | 'auxiliar'
     } = req.body;
 
     // ✅ Debug temporal (quitalo cuando ya funcione)
@@ -220,8 +224,15 @@ motoristasCon.post = async (req, res) => {
     if (!password) return res.status(400).json({ message: "La contraseña es obligatoria" });
     if (!phone?.trim()) return res.status(400).json({ message: "El teléfono es obligatorio" });
     if (!address?.trim()) return res.status(400).json({ message: "La dirección es obligatoria" });
-    if (!circulationCard?.trim()) return res.status(400).json({ message: "La tarjeta de circulación es obligatoria" });
-    if (!fechaVencimientoLicencia) return res.status(400).json({ message: "La fecha de vencimiento de la licencia es obligatoria" });
+    // Resolución de licencia: soporte ambos campos
+    const licenciaValor = (licenciaConducir ?? circulationCard ?? '').toString().trim();
+
+    // Validaciones condicionales según rol (por defecto 'motorista')
+    const rolFinal = (rol || 'motorista').toLowerCase();
+    if (rolFinal === 'motorista') {
+      if (!licenciaValor) return res.status(400).json({ message: "La Licencia de conducir es obligatoria" });
+      if (!fechaVencimientoLicencia) return res.status(400).json({ message: "La fecha de vencimiento de la licencia es obligatoria" });
+    }
     if (!planillaTipo?.trim()) return res.status(400).json({ message: "El tipo de planilla es obligatorio" });
 
     const salarioNum = Number(salario);
@@ -229,49 +240,51 @@ motoristasCon.post = async (req, res) => {
       return res.status(400).json({ message: "El salario debe ser un número mayor a 0" });
     }
 
-    // ✅ Tu modelo requiere img (required: true)
-    if (!req.file) {
-      return res.status(400).json({ message: "La imagen (img) es obligatoria" });
+    // ✅ Email OPCIONAL: validar solo si está proporcionado
+    let emailLimpio = undefined;
+    if (email && email.trim() !== "") {
+      emailLimpio = email.trim().toLowerCase();
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(emailLimpio)) {
+        return res.status(400).json({ message: "Formato de correo electrónico no válido" });
+      }
+
+      // Verificar si el email ya está registrado (solo si se proporciona)
+      const validarMotorista = await motoristalModel.findOne({ email: emailLimpio });
+      if (validarMotorista) {
+        return res.status(400).json({ message: "Este correo electrónico ya está registrado" });
+      }
     }
 
-    // ✅ Validar email proporcionado por el usuario
-    if (!email || email.trim() === "") {
-      return res.status(400).json({ message: "El correo electrónico es obligatorio" });
+    // ✅ Imagen opcional: si viene, subir a Cloudinary
+    let imgUrl = undefined;
+    if (req.file) {
+      const result = await cloudinary.uploader.upload(req.file.path, {
+        folder: "public",
+        allowed_formats: ["png", "jpg", "jpeg", "webp", "gif"],
+      });
+      imgUrl = result.secure_url;
     }
-
-    const emailLimpio = email.trim().toLowerCase();
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(emailLimpio)) {
-      return res.status(400).json({ message: "Formato de correo electrónico no válido" });
-    }
-
-    const validarMotorista = await motoristalModel.findOne({ email: emailLimpio });
-    if (validarMotorista) {
-      return res.status(400).json({ message: "Este correo electrónico ya está registrado" });
-    }
-
-    // ✅ Subir a Cloudinary
-    const result = await cloudinary.uploader.upload(req.file.path, {
-      folder: "public",
-      allowed_formats: ["png", "jpg", "jpeg", "webp", "gif"],
-    });
 
     const contraHash = await bcryptjs.hash(password, 10);
 
     const newmotorista = new motoristalModel({
       name: name.trim(),
       lastName: lastName.trim(),
-      email: emailLimpio,
+      email: emailLimpio || undefined,
       id: id.trim(),
       birthDate: birthDate || new Date(),
       password: contraHash,
       phone: phone.trim(),
       address: address.trim(),
-      circulationCard: circulationCard.trim(),
+      // Guardar con el nuevo nombre del campo
+      licenciaConducir: licenciaValor || undefined,
       fechaVencimientoLicencia: fechaVencimientoLicencia || new Date(),
       planillaTipo: planillaTipo.trim(),
       salario: salarioNum, // ✅ GUARDAR
-      img: result.secure_url, // ✅ SIEMPRE lleno
+      salarioBase: Number(salarioBase) || salarioNum, // opcional: usa salario si no viene
+      rol: rolFinal,
+      img: imgUrl,
     });
 
     await newmotorista.save();
@@ -310,9 +323,12 @@ motoristasCon.put = async (req, res) => {
       phone,
       address,
       circulationCard,
+      licenciaConducir,
       fechaVencimientoLicencia,
       planillaTipo,
-      salario, // ✅ Nuevo
+      salario, // ✅
+      salarioBase,
+      rol,
     } = req.body;
 
     const motoristaExistente = await motoristalModel.findById(motoristaId);
@@ -346,15 +362,20 @@ motoristasCon.put = async (req, res) => {
       salarioFinal = salarioNum;
     }
 
+    const licenciaValor = (licenciaConducir ?? circulationCard ?? '').toString().trim();
+
     const updateData = {
       name: name?.trim() || motoristaExistente.name,
       lastName: lastName?.trim() || motoristaExistente.lastName,
       phone: phone?.trim() || motoristaExistente.phone,
       address: address?.trim() || motoristaExistente.address,
-      circulationCard: circulationCard?.trim() || motoristaExistente.circulationCard,
+      // migración: usar nuevo nombre de campo
+      licenciaConducir: licenciaValor || motoristaExistente.licenciaConducir,
       fechaVencimientoLicencia: fechaVencimientoLicencia || motoristaExistente.fechaVencimientoLicencia,
       planillaTipo: planillaTipo?.trim() || motoristaExistente.planillaTipo,
       salario: salarioFinal, // ✅ Guardar salario
+      salarioBase: salarioBase !== undefined ? Number(salarioBase) || motoristaExistente.salarioBase : (motoristaExistente.salarioBase ?? salarioFinal),
+      rol: (rol || motoristaExistente.rol || 'motorista').toLowerCase(),
       img: imgUrl?.trim() || motoristaExistente.img,
       email: motoristaExistente.email,
       id: motoristaExistente.id,

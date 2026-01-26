@@ -117,6 +117,7 @@ export default function PlanillaSemanal() {
           _id: e._id,
           nombre: `${e.name || e.nombre || ''} ${e.lastName || e.apellido || ''}`.trim(),
           tipo: 'empleado',
+          rol: e.rol, // ✅ INCLUIR ROL
           planillaTipo: e.planillaTipo || 'N/A',
           salario: e.salary || e.salario || 0
         })),
@@ -124,6 +125,7 @@ export default function PlanillaSemanal() {
           _id: m._id,
           nombre: `${m.name || m.nombre || ''} ${m.lastName || m.apellido || ''}`.trim(),
           tipo: 'motorista',
+          rol: m.rol, // ✅ INCLUIR ROL (motorista o auxiliar)
           planillaTipo: m.planillaTipo || 'N/A',
           salario: m.salary || m.salario || 0
         }))
@@ -555,7 +557,7 @@ const data = response.data;
       },
       'pagada': {
         title: '¿Marcar como Pagada?',
-        text: 'Se registrará la fecha de pago actual',
+        text: 'Selecciona la fecha de pago',
         confirmText: 'Sí, marcar pagada',
         color: '#10b981'
       }
@@ -564,53 +566,125 @@ const data = response.data;
     const estadoConfig = estados[nuevoEstado];
     if (!estadoConfig) return;
 
-    const result = await Swal.fire({
-      title: estadoConfig.title,
-      text: estadoConfig.text,
-      icon: 'question',
-      showCancelButton: true,
-      confirmButtonText: estadoConfig.confirmText,
-      confirmButtonColor: estadoConfig.color,
-      cancelButtonText: 'Cancelar'
-    });
-
-    if (result.isConfirmed) {
-      try {
-        const body = { estado: nuevoEstado };
-        
-        if (nuevoEstado === 'pagada') {
-          body.fechaPago = new Date().toISOString();
-          body.pagada = true;
+    // Si es marcar como pagada, mostrar selector de fecha
+    if (nuevoEstado === 'pagada') {
+      // Obtener fecha actual en zona horaria de El Salvador (UTC-6)
+      const ahora = new Date();
+      const fechaElSalvador = new Date(ahora.getTime() - (6 * 60 * 60 * 1000));
+      const hoy = fechaElSalvador.toISOString().split('T')[0];
+      
+      const result = await Swal.fire({
+        title: estadoConfig.title,
+        html: `
+          <div style="text-align: left; margin: 20px 0;">
+            <label style="font-weight: 600; color: #34353A; display: block; margin-bottom: 8px;">
+              Fecha de pago:
+            </label>
+            <input 
+              type="date" 
+              id="fechaPago" 
+              value="${hoy}" 
+              max="${hoy}"
+              style="width: 100%; padding: 10px; border: 2px solid #e5e7eb; border-radius: 8px; font-size: 14px;"
+            />
+          </div>
+        `,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: estadoConfig.confirmText,
+        confirmButtonColor: estadoConfig.color,
+        cancelButtonText: 'Cancelar',
+        preConfirm: () => {
+          const fechaPago = document.getElementById('fechaPago').value;
+          if (!fechaPago) {
+            Swal.showValidationMessage('Debes seleccionar una fecha');
+            return false;
+          }
+          return fechaPago;
         }
+      });
 
-        const endpoint = `${config.api.API_URL}/planillas/semanal/${planilla._id}/estado`;
+      if (result.isConfirmed) {
+        try {
+          // Crear fecha en zona horaria de El Salvador (mediodía local)
+          const [año, mes, dia] = result.value.split('-');
+          const fechaSeleccionada = new Date(Date.UTC(año, mes - 1, dia, 18, 0, 0)); // 12:00 CST = 18:00 UTC
+          const body = { 
+            estado: nuevoEstado,
+            fechaPago: fechaSeleccionada.toISOString(),
+            pagada: true
+          };
 
-const response = await api.patch(endpoint, body);
-const data = response.data;
+          const endpoint = `${config.api.API_URL}/planillas/semanal/${planilla._id}/estado`;
 
+          const response = await api.patch(endpoint, body);
+          const data = response.data;
 
-
-        if (data.success) {
-          await cargarPlanilla();
+          if (data.success) {
+            await cargarPlanilla();
+            Swal.fire({
+              icon: 'success',
+              title: '¡Actualizado!',
+              text: data.message,
+              timer: 2000,
+              showConfirmButton: false
+            });
+          } else {
+            throw new Error(data.message);
+          }
+        } catch (error) {
+          console.error('Error cambiando estado:', error);
+          const errorMessage = error.response?.data?.message || error.message || 'No se pudo cambiar el estado';
           Swal.fire({
-            icon: 'success',
-            title: '¡Actualizado!',
-            text: data.message,
-            timer: 2000,
-            showConfirmButton: false
+            icon: 'error',
+            title: 'Error al cambiar estado',
+            text: errorMessage,
+            confirmButtonColor: '#5F8EAD'
           });
-        } else {
-          throw new Error(data.message);
         }
-      } catch (error) {
-        console.error('Error cambiando estado:', error);
-        const errorMessage = error.response?.data?.message || error.message || 'No se pudo cambiar el estado';
-        Swal.fire({
-          icon: 'error',
-          title: 'Error al cambiar estado',
-          text: errorMessage,
-          confirmButtonColor: '#5F8EAD'
-        });
+      }
+    } else {
+      // Para otros estados (aprobada, etc.)
+      const result = await Swal.fire({
+        title: estadoConfig.title,
+        text: estadoConfig.text,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: estadoConfig.confirmText,
+        confirmButtonColor: estadoConfig.color,
+        cancelButtonText: 'Cancelar'
+      });
+
+      if (result.isConfirmed) {
+        try {
+          const body = { estado: nuevoEstado };
+          const endpoint = `${config.api.API_URL}/planillas/semanal/${planilla._id}/estado`;
+
+          const response = await api.patch(endpoint, body);
+          const data = response.data;
+
+          if (data.success) {
+            await cargarPlanilla();
+            Swal.fire({
+              icon: 'success',
+              title: '¡Actualizado!',
+              text: data.message,
+              timer: 2000,
+              showConfirmButton: false
+            });
+          } else {
+            throw new Error(data.message);
+          }
+        } catch (error) {
+          console.error('Error cambiando estado:', error);
+          const errorMessage = error.response?.data?.message || error.message || 'No se pudo cambiar el estado';
+          Swal.fire({
+            icon: 'error',
+            title: 'Error al cambiar estado',
+            text: errorMessage,
+            confirmButtonColor: '#5F8EAD'
+          });
+        }
       }
     }
   };
@@ -715,6 +789,17 @@ const data = response.data;
                 <p className="text-gray-600 mt-1">
                   {formatearFecha(planilla.fechaInicio)} al {formatearFecha(planilla.fechaFin)}
                 </p>
+                {planilla.estado === 'pagada' && planilla.fechaPago && (
+                  <p className="text-green-600 font-semibold mt-1 flex items-center gap-2">
+                    <DollarSign size={16} />
+                    Pagada el: {new Date(planilla.fechaPago).toLocaleDateString('es-SV', { 
+                      timeZone: 'America/El_Salvador',
+                      year: 'numeric', 
+                      month: 'long', 
+                      day: 'numeric' 
+                    })}
+                  </p>
+                )}
               </div>
             </div>
 
@@ -905,37 +990,48 @@ const data = response.data;
                     </div>
                   )}
 
-                  {/* MOTORISTAS */}
+                  {/* MOTORISTAS Y AUXILIARES */}
                   {empleadosDisponibles.filter(e => e.tipo === 'motorista' && e.nombre.toLowerCase().includes(busquedaEmpleados.toLowerCase())).length > 0 && (
                     <div>
                       <div className="bg-green-50 text-green-700 px-3 py-1.5 rounded-lg mb-2">
                         <span className="text-xs font-bold uppercase">
-                          MOTORISTAS ({empleadosDisponibles.filter(e => e.tipo === 'motorista' && e.nombre.toLowerCase().includes(busquedaEmpleados.toLowerCase())).length})
+                          MOTORISTAS & AUXILIARES ({empleadosDisponibles.filter(e => e.tipo === 'motorista' && e.nombre.toLowerCase().includes(busquedaEmpleados.toLowerCase())).length})
                         </span>
                       </div>
                       <div className="space-y-2">
                         {empleadosDisponibles
                           .filter(e => e.tipo === 'motorista' && e.nombre.toLowerCase().includes(busquedaEmpleados.toLowerCase()))
-                          .map((empleado) => (
+                          .map((empleado) => {
+                            const esAuxiliar = empleado.rol === 'auxiliar'; // ✅ DETECTAR AUXILIAR
+                            return (
                             <div
                               key={empleado._id}
                               draggable
                               onDragStart={(e) => handleDragStart(e, empleado)}
                               onClick={() => handleAgregarEmpleado(empleado)}
-                              className="bg-white border-2 border-green-200 rounded-lg p-3 
-                                cursor-pointer hover:border-green-400 hover:shadow-md
-                                transition-all duration-200 group active:scale-95"
+                              className={`bg-white border-2 rounded-lg p-3 
+                                cursor-pointer transition-all duration-200 group active:scale-95
+                                ${esAuxiliar ? 'border-amber-200 hover:border-amber-400' : 'border-green-200 hover:border-green-400'} hover:shadow-md`}
                             >
                               <div className="flex items-start gap-2">
                                 <GripVertical size={16} className="text-gray-400 mt-0.5 flex-shrink-0" />
                                 <div className="flex-1 min-w-0">
-                                  <p className="font-semibold text-sm text-gray-900 truncate">
-                                    {empleado.nombre}
-                                  </p>
+                                  <div className="flex items-center gap-2">
+                                    <p className="font-semibold text-sm text-gray-900 truncate">
+                                      {empleado.nombre}
+                                    </p>
+                                    {/* ✅ BADGE DISTINTIVO PARA AUXILIARES */}
+                                    {esAuxiliar && (
+                                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 whitespace-nowrap flex-shrink-0">
+                                        Auxiliar
+                                      </span>
+                                    )}
+                                  </div>
                                 </div>
                               </div>
                             </div>
-                          ))}
+                            );
+                          })}
                       </div>
                     </div>
                   )}

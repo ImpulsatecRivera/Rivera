@@ -3,8 +3,10 @@ import { User, Building } from 'lucide-react';
 import FormFieldInput from '../../components/UICamiones/FieldInputAgregar';
 
 const AssignmentFields = ({ register, errors, motoristasDisponibles, proveedoresDisponibles }) => {
-  // Preparar opciones para motoristas
-  const motoristaOptions = (motoristasDisponibles || []).map(driver => ({
+  // Preparar opciones para motoristas - FILTRAR: Solo motoristas, excluir auxiliares
+  const motoristaOptions = (motoristasDisponibles || [])
+    .filter(driver => driver.rol === 'motorista') // ✅ FILTRAR POR ROL
+    .map(driver => ({
     value: driver._id,
     label: `${driver.name} ${driver.lastName}`
   }));
