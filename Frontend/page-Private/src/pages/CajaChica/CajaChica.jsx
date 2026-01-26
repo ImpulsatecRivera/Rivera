@@ -13,6 +13,10 @@ import ReportesCajaChicaModal from './ModalReportesCajaChica';
 import { usePermissions } from '../../hooks/usePermissions';
 import { api } from "../../Context/authContext";
 
+import { useTutorial } from '../../hooks/useTutorial';
+import '../../styles/tutorial-global.css';
+import { HelpCircle } from 'lucide-react';
+
 // 🎨 Importar animaciones Lottie
 import loadingAnimation from '../../assets/lotties/Sandy Loading.json';
 import emptyBoxAnimation from '../../assets/lotties/empty.json';
@@ -142,6 +146,8 @@ const showLottieToast = (type, title, duration = 3000) => {
 
 export default function CajaChicaModern() {
   const { canCreate, canDelete } = usePermissions();
+
+  const { startTutorial, hasCompleted } = useTutorial('cajaChica');
   
   const [balance, setBalance] = useState(0);
   const [transactions, setTransactions] = useState([]);
@@ -841,6 +847,19 @@ export default function CajaChicaModern() {
                 )}
                 <FileText size={18} />
                 <span className="relative z-10">Reportes</span>
+              </button>
+              
+              <button
+                onClick={startTutorial}
+                className="flex items-center gap-2 px-4 py-2.5 bg-white border-2 border-[#5F8EAD] text-[#5F8EAD] rounded-xl hover:bg-[#5F8EAD] hover:text-white font-bold shadow-lg transition-all transform hover:scale-105"
+              >
+                <HelpCircle size={18} />
+                <span>Tutorial</span>
+                {!hasCompleted && (
+                  <span className="bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center animate-pulse">
+                    !
+                  </span>
+                )}
               </button>
               
               <button

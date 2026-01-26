@@ -13,39 +13,45 @@ const camioneSchema = new Schema({
   // Información básica del camión
   name: {
     type: String,      // Nombre o identificador del camión
-    required: true     // Campo obligatorio
+    required: false    // Campo opcional - usaremos la placa como identificador
   },
   brand: {
     type: String,      // Marca del camión (ej: Ford, Chevrolet, Mercedes)
-    required: true     // Campo obligatorio
+    required: false    // Campo opcional
   },
   model: {
     type: String,      // Modelo específico del camión
-    required: true     // Campo obligatorio
+    required: false    // Campo opcional
   },
   
   // Estado operacional del camión
   state: {
     type: String,      // Estado actual: "DISPONIBLE", "EN RUTA", "MANTENIMIENTO", etc.
-    required: true     // Campo obligatorio
+    required: false,   // Campo opcional - valor por defecto: DISPONIBLE
+    default: "DISPONIBLE"
   },
   
   // Información del combustible
   gasolineLevel: {
     type: Number,      // Nivel de gasolina (generalmente escala 1-4)
-    required: true     // Campo obligatorio
+    required: false,   // Campo opcional - valor por defecto: 4
+    default: 4
   },
   
   // Información técnica del vehículo
   age: {
     type: Number,      // Año de fabricación del camión
-    required: true     // Campo obligatorio
+    required: false    // Campo opcional
   },
   
   // Documentación legal del vehículo
   ciculatioCard: {
-    type: String,      // Tarjeta de circulación del camión
-    required: true     // Campo obligatorio para legalidad
+    type: Date,        // Fecha de vencimiento de la tarjeta de circulación
+    required: false    // Campo opcional
+  },
+  circulationCardImage: {
+    type: String,      // URL de la imagen de la tarjeta de circulación
+    required: false    // Campo opcional
   },
   licensePlate: {
     type: String,      // Placa de matrícula del vehículo (debe ser única)
@@ -55,23 +61,20 @@ const camioneSchema = new Schema({
   // Información adicional
   description: {
     type: String,      // Descripción detallada del camión, características especiales
-    required: true     // Campo obligatorio
+    required: false    // Campo opcional
   },
   
   // Relaciones con otras colecciones (Referencias)
-  supplierId: {
-    type: Schema.Types.ObjectId,  // Referencia al proveedor responsable del camión
-    required: true                // Campo obligatorio para trazabilidad
-  },
   driverId: {
     type: Schema.Types.ObjectId,  // Referencia al conductor asignado al camión
+    required: false              // Campo opcional
     // Se asigna después - opcional al crear el camión
   },
   
   // Multimedia
   img: {
     type: String,      // URL de la imagen del camión (generalmente desde Cloudinary)
-    required: true     // Campo obligatorio para identificación visual
+    required: false    // Campo opcional
   }
 }, {
   // Opciones del esquema

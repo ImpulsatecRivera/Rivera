@@ -92,10 +92,16 @@ const formatearFecha = (fecha) => {
 
 const formatearHora = (fecha) => {
   const date = new Date(fecha);
-  return date.toLocaleTimeString('es-ES', {
-    hour: '2-digit',
-    minute: '2-digit'
+  return date.toLocaleTimeString('en-US', {
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true
   });
+};
+
+const formatearFechaString = (fechaStr) => {
+  const [year, month, day] = fechaStr.split('-');
+  return `${day}/${month}/${year}`;
 };
 
 // ===== NUEVAS FUNCIONES AUXILIARES PARA PERÍODOS =====
@@ -2927,4 +2933,274 @@ ReportesViajesDirecto.generarPDFConsolidadoAnual = async (req, res) => {
   }
 };
 
+ReportesViajesDirecto.generarPDFDiario = async (req, res) => {
+  let browser;
+  try {
+    const { fecha } = req.params;
+
+    // Validar formato de fecha YYYY-MM-DD
+    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+    if (!dateRegex.test(fecha)) {
+      return res.status(400).json({ success: false, message: 'Formato de fecha inválido. Usa YYYY-MM-DD (ej: 2025-01-25)' });
+    }
+
+    // ✅ PARSEAR COMO ZONA HORARIA LOCAL (igual que cuando guardas los viajes)
+    const [year, month, day] = fecha.split('-');
+    const fechaDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day), 0, 0, 0, 0);
+    const fechaFin = new Date(parseInt(year), parseInt(month) - 1, parseInt(day), 23, 59, 59, 999);
+
+    console.log(`📊 Generando PDF Diario de Viajes: ${formatearFechaString(fecha)}`);
+    console.log('🔍 Rango de búsqueda LOCAL:', fechaDate, 'hasta', fechaFin);
+
+    // 🔥 ACTUALIZADO: Obtener viajes del día con conductor y auxiliares
+    const viajes = await ViajesModel.find({
+      tipoViaje: 'operativo',
+      'estado.actual': 'completado',
+      departureTime: { $gte: fechaDate, $lte: fechaFin }
+    })
+      .populate('clienteOperativo', 'nombreComercial nombreEmpresa')
+      .populate('truckId', 'licensePlate placa')
+      .populate('conductorId', 'nombre name') // 🔥 NUEVO
+      .populate('auxiliares.auxiliarId', 'nombre name') // 🔥 NUEVO
+      .sort({ clienteNombre: 1, departureTime: 1 })
+      .lean();
+
+    console.log('✅ Viajes encontrados:', viajes.length);
+
+    if (!viajes || viajes.length === 0) {
+      return res.status(404).json({ success: false, message: 'No hay viajes completados en la fecha indicada' });
+    }
+
+    // 🔥 ACTUALIZADO: Agrupar por cliente
+    const clientesMap = new Map();
+    let totalViajesGeneral = 0;
+    let totalMontoGeneral = 0;
+
+    viajes.forEach(v => {
+      const cliente = v.clienteNombre || v.clienteOperativo?.nombreComercial || 'SIN CLIENTE';
+      const monto = v.montoAcordado || v.facturacion?.montoTotal || 0;
+
+      if (!clientesMap.has(cliente)) {
+        clientesMap.set(cliente, { viajes: [], totalViajes: 0, totalMonto: 0 });
+      }
+
+      const data = clientesMap.get(cliente);
+      
+      // 🔥 ACTUALIZADO: Agregar conductor y auxiliares
+      data.viajes.push({
+        hora: formatearHora(v.departureTime),
+        placa: v.truckId?.licensePlate || v.truckId?.placa || 'SIN PLACA',
+        conductor: v.conductorId?.nombre || v.conductorId?.name || 'SIN CONDUCTOR',
+        auxiliares: (v.auxiliares || [])
+          .map(aux => aux.auxiliarId?.nombre || aux.auxiliarId?.name)
+          .filter(Boolean),
+        monto: monto
+      });
+      
+      data.totalViajes += 1;
+      data.totalMonto += monto;
+      totalViajesGeneral += 1;
+      totalMontoGeneral += monto;
+    });
+
+    // 🔥 ACTUALIZADO: Generar filas HTML
+    let filasHTML = '';
+    let idx = 1;
+    clientesMap.forEach((data, cliente) => {
+      let viajesCliente = data.viajes.map(v => {
+        // Formatear personal: conductor + auxiliares
+        const personal = v.auxiliares.length > 0 
+          ? `${v.conductor}<br><span style="font-size:8px; color:#5D9646; font-style:italic;">+ ${v.auxiliares.join(', ')}</span>`
+          : v.conductor;
+          
+        return `
+          <tr>
+            <td style="text-align:center">${v.hora}</td>
+            <td style="text-align:center">${v.placa}</td>
+            <td style="text-align:left; padding:4px;">${personal}</td>
+            <td style="text-align:right">$${v.monto.toFixed(2)}</td>
+          </tr>
+        `;
+      }).join('');
+
+      filasHTML += `
+        <tr>
+          <td class="cell-numero" rowspan="${data.viajes.length + 1}">${idx}</td>
+          <td class="cell-cliente" rowspan="${data.viajes.length + 1}">${cliente}</td>
+          <td colspan="4" style="font-weight:bold; text-align:center; background-color:#f0f0f0;">Viajes del Día</td>
+        </tr>
+        ${viajesCliente}
+        <tr style="background-color:#e0e0e0;">
+          <td colspan="3" style="text-align:right; font-weight:bold;">Total Cliente:</td>
+          <td style="text-align:right; font-weight:bold;">$${data.totalMonto.toFixed(2)}</td>
+        </tr>
+      `;
+      idx++;
+    });
+
+    const logoBase64 = convertirImagenABase64(RUTA_LOGO);
+
+    const htmlContent = `
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: Arial, sans-serif;
+      font-size: 10px;
+      padding: 10px;
+      color: #34353A;
+    }
+    
+    .main-header {
+      text-align: center;
+      margin-bottom: 15px;
+      padding-bottom: 10px;
+      border-bottom: 3px solid #5F8EAD;
+    }
+    
+    .main-header .logo-container {
+      margin-bottom: 8px;
+    }
+    
+    .main-header .logo-container img {
+      max-width: 180px;
+      height: auto;
+    }
+    
+    h1 {
+      text-align: center;
+      font-size: 12px;
+      margin-bottom: 5px;
+      font-weight: bold;
+      color: #34353A;
+    }
+    
+    .main-header .periodo {
+      font-size: 10px;
+      color: #34353A;
+      margin-top: 6px;
+    }
+    
+    .content { 
+      padding: 0 10px 10px 10px; 
+    }
+    
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 20px;
+    }
+    
+    th, td {
+      border: 1px solid #ddd;
+      padding: 6px;
+      text-align: left;
+    }
+    
+    th {
+      background-color: #5F8EAD;
+      color: white;
+      font-weight: bold;
+      text-align: center;
+    }
+    
+    .cell-numero {
+      width: 5%;
+      text-align: center;
+      font-weight: bold;
+    }
+    
+    .cell-cliente {
+      width: 25%;
+      font-weight: bold;
+    }
+    
+    .total-row {
+      background-color: #f0f0f0;
+      font-weight: bold;
+    }
+    
+    .total-row td {
+      text-align: right;
+    }
+    
+    .footer {
+      text-align: center;
+      font-size: 8px;
+      color: #666;
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="main-header">
+    ${logoBase64 ? `<div class="logo-container"><img src="${logoBase64}" alt="Logo"></div>` : ''}
+    <h1>REPORTE DIARIO DE VIAJES</h1>
+    <div class="periodo">Fecha: ${formatearFechaString(fecha)}</div>
+  </div>
+  
+  <div class="content">
+    <table>
+      <thead>
+        <tr>
+          <th>N°</th>
+          <th>CLIENTE</th>
+          <th>HORA</th>
+          <th>PLACA</th>
+          <th>PERSONAL</th>
+          <th>MONTO</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${filasHTML}
+        <tr class="total-row">
+          <td colspan="5" style="text-align:right; font-weight:bold;">TOTAL GENERAL:</td>
+          <td style="text-align:right; font-weight:bold;">$${totalMontoGeneral.toFixed(2)}</td>
+        </tr>
+      </tbody>
+    </table>
+    
+    <div class="footer">
+      Total de Viajes: ${totalViajesGeneral} | Generado el ${new Date().toLocaleString('es-ES')}
+    </div>
+  </div>
+</body>
+</html>`;
+
+    browser = await puppeteer.launch(PUPPETEER_CONFIG());
+    const page = await browser.newPage();
+    await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
+
+    const pdfBuffer = await page.pdf({
+      format: 'A4',
+      printBackground: true,
+      margin: { top: '10mm', right: '10mm', bottom: '10mm', left: '10mm' }
+    });
+
+    await browser.close();
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename=reporte-diario-viajes-${fecha}.pdf`);
+    res.send(pdfBuffer);
+
+    console.log('✅ PDF Diario generado exitosamente');
+
+  } catch (error) {
+    if (browser) await browser.close();
+    console.error("❌ Error al generar PDF Diario:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error al generar el PDF diario",
+      error: error.message,
+    });
+  }
+};
 export default ReportesViajesDirecto;

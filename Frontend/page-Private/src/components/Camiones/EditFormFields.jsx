@@ -282,7 +282,9 @@ const EditFormFields = ({
             disabled={disabled}
           >
             <option value="">Seleccionar motorista</option>
-            {motoristas.map((m) => {
+            {motoristas
+              .filter(m => m.rol === 'motorista') // ✅ FILTRAR: Solo motoristas, excluir auxiliares
+              .map((m) => {
               const motoristaNombre = `${m.name || m.firstName || ''} ${m.lastName || m.apellido || ''}`.trim() || 'Motorista sin nombre';
               const motoristaId = m._id || m.id;
               

@@ -9,11 +9,16 @@ import { usePermissions } from '../../hooks/usePermissions';
 import { ProtectedAction, RoleBadge } from '../../components/Auth';
 import { api } from "../../Context/authContext"
 import { useNavigate } from 'react-router-dom';
+import { useTutorial } from '../../hooks/useTutorial';
+import '../../styles/tutorial-global.css';
+import { HelpCircle } from 'lucide-react';
 
 
 export default function Ventas() {
     const navigate = useNavigate();
     const { canCreate, canDelete, canEdit } = usePermissions();
+
+    const { startTutorial, hasCompleted } = useTutorial('ventas');
 
     const [ventasData, setVentasData] = useState([]);
     const [clientesData, setClientesData] = useState([]);
@@ -461,15 +466,29 @@ export default function Ventas() {
                         <h1 className="text-3xl font-bold text-[#34353A]">Ventas</h1>
                         <p className="text-slate-500 mt-1">Gestiona tus ventas y comprobantes</p>
                     </div>
-                    <ProtectedAction requiredPermission="create">
+                    <div className="flex items-center gap-3">
                         <button
-                            onClick={() => navigate('/agregar-venta')}
-                            className="flex items-center gap-2 bg-[#5F8EAD] text-white px-4 py-2.5 rounded-xl font-medium hover:opacity-90 transition-colors"
+                            onClick={startTutorial}
+                            className="flex items-center gap-2 px-4 py-2.5 bg-white border-2 border-[#5F8EAD] text-[#5F8EAD] rounded-xl hover:bg-[#5F8EAD] hover:text-white font-bold shadow-lg transition-all transform hover:scale-105"
                         >
-                            <Plus size={18} />
-                            Nueva Venta
+                            <HelpCircle size={18} />
+                            <span>Tutorial</span>
+                            {!hasCompleted && (
+                                <span className="bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center animate-pulse">
+                                    !
+                                </span>
+                            )}
                         </button>
-                    </ProtectedAction>
+                        <ProtectedAction requiredPermission="create">
+                            <button
+                                onClick={() => navigate('/agregar-venta')}
+                                className="flex items-center gap-2 bg-[#5F8EAD] text-white px-4 py-2.5 rounded-xl font-medium hover:opacity-90 transition-colors"
+                            >
+                                <Plus size={18} />
+                                Nueva Venta
+                            </button>
+                        </ProtectedAction>
+                    </div>
                 </div>
 
                 {/* Tabla Ventas */}

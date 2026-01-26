@@ -59,7 +59,7 @@ const SidebarNav = () => {
     { id: 'viajes', name: 'Viajes', route: '/viajes' },
     { id: 'cotizaciones', name: 'Cotizaciones', route: '/cotizaciones' },
     { id: 'Empleados', name: 'Empleados', route: '/empleados' },
-    { id: 'Motoristas', name: 'Motoristas', route: '/motoristas' },
+    { id: 'Motoristas', name: 'Motoristas/Auxiliares', route: '/motoristas' },
     { id: 'Proveedores', name: 'Proveedores', route: '/proveedores' },
     { id: 'Camiones', name: 'Camiones', route: '/camiones' },
     { id: 'clientes', name: 'Clientes', route: '/clientes' },

@@ -21,6 +21,7 @@ import Employee from "./pages/Employees/Employee";
 import AddEmployeeForm from "./pages/Employees/AgregarEmpleados";
 import MotoristaManagementInterface from "./pages/Motorista/Motorista";
 import AddMotoristaForm from "./pages/Motorista/AgregarMotorista";
+import AddAuxiliarForm from "./pages/Motorista/AgregarAuxiliar";
 import Travel from "./pages/Travel";
 import Maps from "./pages/maps";
 import Camiones from "./pages/Camiones/Camiones";
@@ -60,6 +61,10 @@ import AgregarViajeInterno from "./pages/viajesInternos/AgregarViajeInterno";
 // UI
 import SideNav from "./components/dashbordNav/sideNav";
 import PantallaCarga from "./components/SplashScreen/PantallaCarga";
+// src/App.jsx (o donde tengas tu componente principal)
+import './styles/tutorial-global.css';
+
+// ... resto de tu código
 
 function App() {
   const location = useLocation();
@@ -206,6 +211,7 @@ function App() {
         {/* Motoristas */}
         <Route path="/motoristas" element={<MotoristaManagementInterface />} />
         <Route path="/motoristas/agregarMotorista" element={<AddMotoristaForm />} />
+        <Route path="/motoristas/agregarAuxiliar" element={<AddAuxiliarForm />} />
 
         {/* Viajes */}
         <Route path="/viajes" element={<Travel />} />

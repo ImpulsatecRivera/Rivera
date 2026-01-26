@@ -267,7 +267,9 @@ export default function EditarCamion() {
                   className="w-full p-3 border border-gray-300 rounded-md text-sm appearance-none bg-white focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all cursor-pointer"
                 >
                   <option value="">Seleccionar motorista</option>
-                  {motoristas.map((m) => (
+                  {motoristas
+                    .filter(m => m.rol === 'motorista') // ✅ FILTRAR: Solo motoristas, excluir auxiliares
+                    .map((m) => (
                     <option key={m._id} value={m._id}>
                       {(m.name || m.firstName || '') + ' ' + (m.lastName || m.apellido || '')}
                     </option>

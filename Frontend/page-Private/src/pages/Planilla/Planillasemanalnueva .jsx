@@ -10,6 +10,9 @@ import { config } from '../../config';
 import Swal from 'sweetalert2';
 import { useAuth } from '../../Context/authContext';
 import { api } from '../../Context/authContext';
+import { useTutorial } from '../../hooks/useTutorial';
+import '../../styles/tutorial-global.css';
+import { HelpCircle } from 'lucide-react';
 
 export default function PlanillaSemanalNueva() {
   const navigate = useNavigate();
@@ -30,6 +33,7 @@ export default function PlanillaSemanalNueva() {
   const [empleadosDisponibles, setEmpleadosDisponibles] = useState([]);
   const [busquedaEmpleados, setBusquedaEmpleados] = useState('');
   const [loadingEmpleados, setLoadingEmpleados] = useState(false);
+  const { startTutorial } = useTutorial('planillaSemanalNueva');
 
   const diasSemana = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
 
@@ -112,6 +116,7 @@ export default function PlanillaSemanalNueva() {
           _id: e._id,
           nombre: `${e.name || e.nombre || ''} ${e.lastName || e.apellido || ''}`.trim(),
           tipo: 'empleado',
+          rol: e.rol, // ✅ INCLUIR ROL
           planillaTipo: e.planillaTipo || 'N/A',
           salario: e.salary || e.salario || 0
         })),
@@ -119,6 +124,7 @@ export default function PlanillaSemanalNueva() {
           _id: m._id,
           nombre: `${m.name || m.nombre || ''} ${m.lastName || m.apellido || ''}`.trim(),
           tipo: 'motorista',
+          rol: m.rol, // ✅ INCLUIR ROL (motorista o auxiliar)
           planillaTipo: m.planillaTipo || 'N/A',
           salario: m.salary || m.salario || 0
         }))
@@ -282,28 +288,72 @@ export default function PlanillaSemanalNueva() {
     try {
       Swal.fire({
         title: 'Cargando datos',
-        text: 'Obteniendo empleados de planilla anterior',
+        text: 'Obteniendo empleados de planilla anterior...',
         allowOutsideClick: false,
         didOpen: () => Swal.showLoading()
       });
 
-      setEmpleadosSeleccionados(empleadosDisponibles.slice(0, 10));
+      // Buscar la planilla semanal más reciente
+      const response = await api.get(`${config.api.API_URL}/planillas/semanal`);
+      const planillas = response.data?.data || response.data?.planillas || [];
+
+      if (planillas.length === 0) {
+        Swal.close();
+        Swal.fire({
+          icon: 'info',
+          title: 'Sin planillas anteriores',
+          text: 'No hay planillas previas para cargar empleados',
+          confirmButtonColor: '#5F8EAD'
+        });
+        return;
+      }
+
+      // Obtener la planilla más reciente (ordenar por fecha)
+      const planillaReciente = planillas.sort((a, b) => {
+        const fechaA = new Date(a.fechaInicio || a.createdAt);
+        const fechaB = new Date(b.fechaInicio || b.createdAt);
+        return fechaB - fechaA; // Más reciente primero
+      })[0];
+
+      // Obtener los IDs de empleados de la planilla anterior
+      const empleadosAnteriores = planillaReciente.empleados || [];
+      const idsEmpleadosAnteriores = empleadosAnteriores.map(e => e.empleadoId || e._id);
+
+      // Filtrar empleados disponibles que estaban en la planilla anterior
+      const empleadosACargar = empleadosDisponibles.filter(emp => 
+        idsEmpleadosAnteriores.includes(emp._id)
+      );
+
+      if (empleadosACargar.length === 0) {
+        Swal.close();
+        Swal.fire({
+          icon: 'warning',
+          title: 'Sin coincidencias',
+          text: 'No se encontraron empleados de la planilla anterior en la lista disponible',
+          confirmButtonColor: '#5F8EAD'
+        });
+        return;
+      }
+
+      setEmpleadosSeleccionados(empleadosACargar);
       
       Swal.close();
       Swal.fire({
         icon: 'success',
         title: 'Datos Cargados',
-        text: 'Empleados cargados desde planilla anterior',
-        timer: 2000,
+        text: `${empleadosACargar.length} empleado(s) cargados desde la planilla del ${new Date(planillaReciente.fechaInicio).toLocaleDateString()}`,
+        timer: 3000,
         showConfirmButton: false
       });
 
     } catch (error) {
-      console.error('Error:', error);
+      console.error('Error cargando planilla anterior:', error);
+      Swal.close();
       Swal.fire({
         icon: 'error',
         title: 'Error',
-        text: 'No se pudo cargar los datos'
+        text: error.response?.data?.message || 'No se pudo cargar los datos de la planilla anterior',
+        confirmButtonColor: '#5F8EAD'
       });
     }
   };
@@ -335,6 +385,14 @@ export default function PlanillaSemanalNueva() {
             <ArrowLeft size={20} className="text-[#34353A] group-hover:text-[#5F8EAD] group-hover:-translate-x-1 transition-all" />
             <span className="font-semibold text-[#34353A]">Volver</span>
           </button>
+          <button
+  onClick={startTutorial}
+  className="fixed bottom-8 right-8 p-4 bg-gradient-to-r from-[#5F8EAD] to-[#5D9646] text-white rounded-full shadow-2xl hover:scale-110 transition-all z-50"
+  title="Ver tutorial"
+>
+  <HelpCircle size={24} />
+</button>
+          
 
           <div className="flex items-center gap-4">
             <div className="p-4 bg-gradient-to-br from-[#5F8EAD] to-[#5D9646] rounded-2xl shadow-xl">
@@ -554,7 +612,7 @@ export default function PlanillaSemanalNueva() {
                                 {empleado.tipo === 'motorista' ? (
                                   <>
                                     <Truck size={12} />
-                                    Motorista
+                                    {empleado.rol === 'auxiliar' ? 'Auxiliar' : 'Motorista'}
                                   </>
                                 ) : (
                                   <>
@@ -576,16 +634,12 @@ export default function PlanillaSemanalNueva() {
                           </div>
                           <Plus size={16} className="text-[#5D9646] opacity-0 group-hover:opacity-100 transition-opacity" />
                         </div>
-                        <div className="text-xs text-gray-600 font-medium mt-2 flex items-center gap-1">
-                          {empleado.planillaTipo === 'Semanal' ? (
-                            <>
-                              <DollarSign size={12} />
-                              Base: {formatearMoneda(calcularBaseDiaria(empleado.salario))} /día
-                            </>
-                          ) : (
-                            <span className="text-gray-400 italic">No aplica base</span>
-                          )}
-                        </div>
+                        {empleado.planillaTipo === 'Semanal' && (
+                          <div className="text-xs text-gray-600 font-medium mt-2 flex items-center gap-1">
+                            <DollarSign size={12} />
+                            Base: {formatearMoneda(calcularBaseDiaria(empleado.salario))} /día
+                          </div>
+                        )}
                       </div>
                     ))}
                 </div>
@@ -689,10 +743,12 @@ export default function PlanillaSemanalNueva() {
                         {empleadosSeleccionados.map(emp => (
                           <div key={emp._id} className="flex items-center justify-between bg-white rounded-xl p-3 border-2 border-gray-200">
                             <span className="text-[#34353A] text-sm font-semibold">{emp.nombre}</span>
-                            <span className="text-[#5F8EAD] text-xs font-bold flex items-center gap-1">
-                              <DollarSign size={12} />
-                              {formatearMoneda(calcularBaseDiaria(emp.salario))} /día
-                            </span>
+                            {emp.planillaTipo === 'Semanal' && (
+                              <span className="text-[#5F8EAD] text-xs font-bold flex items-center gap-1">
+                                <DollarSign size={12} />
+                                {formatearMoneda(calcularBaseDiaria(emp.salario))} /día
+                              </span>
+                            )}
                           </div>
                         ))}
                       </div>
