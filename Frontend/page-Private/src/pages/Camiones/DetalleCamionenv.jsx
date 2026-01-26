@@ -4,7 +4,6 @@ import { useParams, useNavigate } from 'react-router-dom';
 import Lottie from 'lottie-react';
 import sandyLoadingAnimation from '../../assets/lotties/Sandy Loading.json';
 import { useTruckDetail } from '../../components/Camiones/hooks/HookVer';
-import CamionFord from "../../images/CamionFord.jpg";
 
 const DetalleCamionenv = () => {
   const { id: truckId } = useParams();
@@ -35,6 +34,25 @@ const DetalleCamionenv = () => {
 
   const goToImage = (index) => {
     setCurrentImageIndex(index);
+  };
+
+  // Función para formatear fecha
+  const formatDate = (dateString) => {
+    if (!dateString || dateString === 'No especificado') return 'No especificado';
+    
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return 'Fecha inválida';
+      
+      // Usar UTC para evitar problemas de zona horaria - Formato: mes/día/año
+      const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+      const day = String(date.getUTCDate()).padStart(2, '0');
+      const year = date.getUTCFullYear();
+      
+      return `${month}/${day}/${year}`;
+    } catch (error) {
+      return 'Fecha inválida';
+    }
   };
 
   const getStatusColor = (status) => {
@@ -268,51 +286,78 @@ const DetalleCamionenv = () => {
             {/* Main Content Area - Sin Sidebar */}
             <div className="flex-1 overflow-y-auto">
               <div className="p-8">
-                {/* Image Carousel */}
-                <div className="relative mb-6">
-                  <div className="w-full h-60 sm:h-72 bg-white rounded-2xl overflow-hidden relative shadow-md">
-                    <img
-                      src={truck.images[currentImageIndex] || CamionFord}
-                      alt={truck.name}
-                      className="w-full h-full object-contain"
-                    />
+                {/* Grid de Imágenes - Mostrar ambas lado a lado si existen */}
+                {(truck.images?.length > 0 || truck.circulationCardImage) && (
+                  <div className={`grid gap-6 mb-6 ${
+                    truck.images?.length > 0 && truck.circulationCardImage 
+                      ? 'grid-cols-1 lg:grid-cols-2' 
+                      : 'grid-cols-1'
+                  }`}>
+                    
+                    {/* Imagen del Camión */}
+                    {truck.images && truck.images.length > 0 && (
+                      <div className="relative">
+                        <h3 className="text-lg font-semibold text-gray-800 mb-3">Imagen del Camión</h3>
+                        <div className="w-full h-60 sm:h-72 bg-white rounded-2xl overflow-hidden relative shadow-md">
+                          <img
+                            src={truck.images[currentImageIndex]}
+                            alt={truck.name}
+                            className="w-full h-full object-contain"
+                          />
 
-                    {/* Navigation Arrows */}
-                    {truck.images.length > 1 && (
-                      <>
-                        <button
-                          onClick={prevImage}
-                          className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-white bg-opacity-80 hover:bg-opacity-100 rounded-full p-2 transition-all"
-                        >
-                          <ChevronLeft size={20} className="text-gray-700" />
-                        </button>
-                        <button
-                          onClick={nextImage}
-                          className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-white bg-opacity-80 hover:bg-opacity-100 rounded-full p-2 transition-all"
-                        >
-                          <ChevronRight size={20} className="text-gray-700" />
-                        </button>
-                      </>
+                          {/* Navigation Arrows */}
+                          {truck.images.length > 1 && (
+                            <>
+                              <button
+                                onClick={prevImage}
+                                className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-white bg-opacity-80 hover:bg-opacity-100 rounded-full p-2 transition-all"
+                              >
+                                <ChevronLeft size={20} className="text-gray-700" />
+                              </button>
+                              <button
+                                onClick={nextImage}
+                                className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-white bg-opacity-80 hover:bg-opacity-100 rounded-full p-2 transition-all"
+                              >
+                                <ChevronRight size={20} className="text-gray-700" />
+                              </button>
+                            </>
+                          )}
+
+                          {/* Image Indicators */}
+                          {truck.images.length > 1 && (
+                            <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex gap-2">
+                              {truck.images.map((_, index) => (
+                                <button
+                                  key={index}
+                                  onClick={() => goToImage(index)}
+                                  className={`w-3 h-3 rounded-full transition-all ${
+                                    index === currentImageIndex
+                                      ? 'bg-white'
+                                      : 'bg-white bg-opacity-50 hover:bg-opacity-75'
+                                  }`}
+                                />
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
                     )}
 
-                    {/* Image Indicators */}
-                    {truck.images.length > 1 && (
-                      <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex gap-2">
-                        {truck.images.map((_, index) => (
-                          <button
-                            key={index}
-                            onClick={() => goToImage(index)}
-                            className={`w-3 h-3 rounded-full transition-all ${
-                              index === currentImageIndex
-                                ? 'bg-white'
-                                : 'bg-white bg-opacity-50 hover:bg-opacity-75'
-                            }`}
+                    {/* Imagen de Tarjeta de Circulación */}
+                    {truck.circulationCardImage && (
+                      <div>
+                        <h3 className="text-lg font-semibold text-gray-800 mb-3">Tarjeta de Circulación</h3>
+                        <div className="w-full h-60 sm:h-72 bg-white rounded-2xl overflow-hidden relative shadow-md">
+                          <img
+                            src={truck.circulationCardImage}
+                            alt="Tarjeta de circulación"
+                            className="w-full h-full object-contain"
                           />
-                        ))}
+                        </div>
                       </div>
                     )}
                   </div>
-                </div>
+                )}
 
                 {/* Vehicle Info Cards - Top Row */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
@@ -329,8 +374,8 @@ const DetalleCamionenv = () => {
                   <div className="bg-white border border-gray-200 p-6 rounded-2xl shadow-sm transform transition-all duration-500 hover:scale-[1.02] hover:shadow-md">
                     <div className="flex items-center justify-between">
                       <div>
-                        <div className="text-xl font-bold text-gray-900 mb-1">{truck.card}</div>
-                        <div className="text-sm text-gray-500">Tarjeta de circulación</div>
+                        <div className="text-xl font-bold text-gray-900 mb-1">{formatDate(truck.card)}</div>
+                        <div className="text-sm text-gray-500">Fecha vencimiento tarjeta</div>
                       </div>
                       <div className="text-3xl">📋</div>
                     </div>

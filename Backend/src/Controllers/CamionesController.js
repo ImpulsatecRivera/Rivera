@@ -55,8 +55,12 @@ const validateGasolineLevel = (level) => {
  * @returns {boolean} - true si es válido
  */
 const validateTruckState = (state) => {
+  // Validar que state sea un string
+  if (typeof state !== 'string') {
+    return false;
+  }
   const validStates = ['DISPONIBLE', 'EN RUTA', 'MANTENIMIENTO', 'NO DISPONIBLE'];
-  return validStates.includes(state?.toUpperCase());
+  return validStates.includes(state.toUpperCase());
 };
 
 /**
@@ -409,20 +413,41 @@ camionesController.post = async (req, res) => {
     console.log('req.files:', req.files);
     console.log('Campos en req.body:', Object.keys(req.body));
     
+    // ✅ Helper para normalizar campos que pueden venir como arrays
+    const normalizeField = (field) => {
+      if (Array.isArray(field)) {
+        return field[0]; // Tomar el primer elemento si es array
+      }
+      return field;
+    };
+    
     const {
-      name,
-      brand,
-      model,
-      state,
-      gasolineLevel,
-      age,
-      ciculatioCard,
-      licensePlate,
-      description,
-      driverId,
-      salario,
+      name: rawName,
+      brand: rawBrand,
+      model: rawModel,
+      state: rawState,
+      gasolineLevel: rawGasolineLevel,
+      age: rawAge,
+      ciculatioCard: rawCiculatioCard,
+      licensePlate: rawLicensePlate,
+      description: rawDescription,
+      driverId: rawDriverId,
+      salario: rawSalario,
       // ✅ supplierId ELIMINADO - ya no se necesita
     } = req.body;
+    
+    // Normalizar todos los campos
+    const name = normalizeField(rawName);
+    const brand = normalizeField(rawBrand);
+    const model = normalizeField(rawModel);
+    const state = normalizeField(rawState);
+    const gasolineLevel = normalizeField(rawGasolineLevel);
+    const age = normalizeField(rawAge);
+    const ciculatioCard = normalizeField(rawCiculatioCard);
+    const licensePlate = normalizeField(rawLicensePlate);
+    const description = normalizeField(rawDescription);
+    const driverId = normalizeField(rawDriverId);
+    const salario = normalizeField(rawSalario);
 
     const requiredFields = ['licensePlate'];
     const validation = validateRequiredFields(req.body, requiredFields);
@@ -450,12 +475,7 @@ camionesController.post = async (req, res) => {
       });
     }
 
-    if (state && !validateTruckState(state)) {
-      return res.status(400).json({
-        message: "Estado de camión inválido",
-        error: "Estados válidos: DISPONIBLE, EN RUTA, MANTENIMIENTO, NO DISPONIBLE"
-      });
-    }
+    // ✅ Validación de estado eliminada - siempre se crea como DISPONIBLE
 
     const currentYear = new Date().getFullYear();
     if (age && (age < 1990 || age > currentYear)) {
@@ -467,8 +487,8 @@ camionesController.post = async (req, res) => {
 
     // ✅ VALIDACIÓN DE supplierId ELIMINADA
 
-    // ✅ Validar driverId solo si viene y no está vacío
-    if (driverId && driverId.trim() !== '' && !isValidObjectId(driverId)) {
+    // ✅ Validar driverId solo si viene, es string y no está vacío
+    if (driverId && typeof driverId === 'string' && driverId.trim() !== '' && !isValidObjectId(driverId.trim())) {
       return res.status(400).json({
         message: "ID de conductor inválido",
         error: "El ID del conductor no tiene un formato válido"
@@ -562,14 +582,14 @@ camionesController.post = async (req, res) => {
       name: name?.trim() || licensePlate.toUpperCase(),
       brand: brand?.trim() || undefined,
       model: model?.trim() || undefined,
-      state: state?.toUpperCase() || 'DISPONIBLE',
+      state: 'DISPONIBLE', // ✅ SIEMPRE DISPONIBLE al crear un camión nuevo
       gasolineLevel: gasolineLevel ? Number(gasolineLevel) : 4,
       age: age ? Number(age) : undefined,
       ciculatioCard: processedDate,
       circulationCardImage: circulationCardImageUrl || undefined,
       licensePlate: licensePlate.toUpperCase(),
       description: description?.trim() || undefined,
-      driverId: driverId && driverId.trim() !== '' ? driverId.trim() : undefined,
+      driverId: (driverId && typeof driverId === 'string' && driverId.trim() !== '') ? driverId.trim() : undefined,
       // ✅ supplierId ELIMINADO
       salario: salario ? Number(salario) : undefined,
       img: imgUrl || undefined,
@@ -712,10 +732,11 @@ camionesController.put = async (req, res) => {
       }
     }
 
+    // ✅ Procesar imagen del camión
     let imgUrl = "";
-    if (req.file) {
+    if (req.files && req.files.img && req.files.img[0]) {
       try {
-        const result = await cloudinary.uploader.upload(req.file.path, {
+        const result = await cloudinary.uploader.upload(req.files.img[0].path, {
           folder: "public",
           allowed_formats: ["png", "jpg", "jpeg"],
           transformation: [
@@ -726,8 +747,29 @@ camionesController.put = async (req, res) => {
         imgUrl = result.secure_url;
       } catch (uploadError) {
         return res.status(400).json({
-          message: "Error al subir la imagen",
+          message: "Error al subir la imagen del camión",
           error: "No se pudo procesar la imagen proporcionada"
+        });
+      }
+    }
+
+    // ✅ Procesar imagen de tarjeta de circulación
+    let circulationCardImageUrl = "";
+    if (req.files && req.files.circulationCardImage && req.files.circulationCardImage[0]) {
+      try {
+        const result = await cloudinary.uploader.upload(req.files.circulationCardImage[0].path, {
+          folder: "circulation-cards",
+          allowed_formats: ["png", "jpg", "jpeg"],
+          transformation: [
+            { width: 800, height: 600, crop: "fill" },
+            { quality: "auto" }
+          ]
+        });
+        circulationCardImageUrl = result.secure_url;
+      } catch (uploadError) {
+        return res.status(400).json({
+          message: "Error al subir la imagen de la tarjeta de circulación",
+          error: "No se pudo procesar la imagen de la tarjeta"
         });
       }
     }
@@ -744,6 +786,7 @@ camionesController.put = async (req, res) => {
     if (description !== undefined) updatedTruck.description = description?.trim();
     if (driverId !== undefined) updatedTruck.driverId = driverId;
     if (imgUrl) updatedTruck.img = imgUrl;
+    if (circulationCardImageUrl) updatedTruck.circulationCardImage = circulationCardImageUrl; // ✅ Nueva imagen
     if (salario !== undefined) updatedTruck.salario = Number(salario);
     // ✅ supplierId ELIMINADO
 

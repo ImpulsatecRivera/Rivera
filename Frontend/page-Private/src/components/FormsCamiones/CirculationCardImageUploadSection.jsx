@@ -68,7 +68,6 @@ const CirculationCardImageUploadSection = ({
         accept="image/*"
         onChange={onImageChange}
         className="hidden"
-        {...register("circulationCardImage")}
       />
 
       {/* Mensaje de error */}

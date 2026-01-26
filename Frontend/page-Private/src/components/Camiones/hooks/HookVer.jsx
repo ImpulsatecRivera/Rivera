@@ -164,9 +164,17 @@ export const useTruckDetail = (truckId) => {
               return finalImages;
             }
             
-            const defaultImages = ["https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=800&h=600&fit=crop"];
-            console.log('Usando imágenes por defecto:', defaultImages);
-            return defaultImages;
+            // ✅ NO USAR IMAGEN POR DEFECTO - retornar array vacío
+            console.log('Sin imagen del camión');
+            return [];
+          })(),
+          
+          // ✅ IMAGEN DE TARJETA DE CIRCULACIÓN
+          circulationCardImage: (() => {
+            console.log('=== MAPEANDO IMAGEN DE TARJETA DE CIRCULACIÓN ===');
+            const cardImageValue = findValue(data, ['circulationCardImage', 'circulationCardImageUrl', 'circulation_card_image'], null);
+            console.log('Valor de imagen de tarjeta encontrado:', cardImageValue);
+            return cardImageValue;
           })(),
           
           // ✅ ESTADÍSTICAS POR DEFECTO (ya que no usamos /stats)

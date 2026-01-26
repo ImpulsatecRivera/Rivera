@@ -35,6 +35,11 @@ const useTruckEdit = (fetchOptions, onUpdateSuccess) => {
   const [currentImage, setCurrentImage] = useState(null);
   const [imageError, setImageError] = useState(null);
 
+  // ✅ Estados de imagen de tarjeta de circulación
+  const [circulationCardImagePreview, setCirculationCardImagePreview] = useState(null);
+  const [currentCirculationCardImage, setCurrentCirculationCardImage] = useState(null);
+  const [circulationCardImageError, setCirculationCardImageError] = useState(null);
+
   // Función para normalizar el estado desde la API
   const normalizeState = useCallback((state) => {
     if (!state) return 'DISPONIBLE';
@@ -75,6 +80,10 @@ const useTruckEdit = (fetchOptions, onUpdateSuccess) => {
     setImagePreview(null);
     setCurrentImage(null);
     setImageError(null);
+    // ✅ Resetear estados de imagen de tarjeta
+    setCirculationCardImagePreview(null);
+    setCurrentCirculationCardImage(null);
+    setCirculationCardImageError(null);
   }, []);
 
   // Función para abrir modal de edición - ACTUALIZADO CON API
@@ -197,10 +206,26 @@ const useTruckEdit = (fetchOptions, onUpdateSuccess) => {
 
       console.log('Total de motoristas a mostrar:', motoristasConMetadata.length);
 
+      // ✅ Función para formatear fecha al formato YYYY-MM-DD para input type="date"
+      const formatDateForInput = (dateString) => {
+        if (!dateString) return '';
+        try {
+          const date = new Date(dateString);
+          if (isNaN(date.getTime())) return '';
+          // Usar UTC para evitar problemas de zona horaria
+          const year = date.getUTCFullYear();
+          const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+          const day = String(date.getUTCDate()).padStart(2, '0');
+          return `${year}-${month}-${day}`;
+        } catch (error) {
+          return '';
+        }
+      };
+
       // Establecer datos del formulario
       const formDataToSet = {
         nombre: truckData.name || '',
-        tarjetaCirculacion: truckData.ciculatioCard || truckData.circulationCard || '',
+        tarjetaCirculacion: formatDateForInput(truckData.ciculatioCard || truckData.circulationCard),
         placa: truckData.licensePlate || '',
         proveedor: truckData.supplierId?._id || truckData.supplierId || '',
         descripcion: truckData.description || '',
@@ -237,6 +262,20 @@ const useTruckEdit = (fetchOptions, onUpdateSuccess) => {
         setCurrentImage(null);
         setImagePreview(null);
         console.log('⚠️ No hay imagen para este camión');
+      }
+
+      // ✅ Establecer imagen de tarjeta de circulación actual
+      const circulationCardImageUrl = truckData.circulationCardImage || truckData.circulationCardImageUrl || null;
+      console.log('URL de imagen de tarjeta de circulación:', circulationCardImageUrl);
+      
+      if (circulationCardImageUrl) {
+        setCurrentCirculationCardImage(circulationCardImageUrl);
+        setCirculationCardImagePreview(null);
+        console.log('✅ Imagen de tarjeta cargada desde servidor:', circulationCardImageUrl);
+      } else {
+        setCurrentCirculationCardImage(null);
+        setCirculationCardImagePreview(null);
+        console.log('⚠️ No hay imagen de tarjeta para este camión');
       }
 
       // Establecer listas - usar todos los motoristas con metadata
@@ -307,6 +346,39 @@ const useTruckEdit = (fetchOptions, onUpdateSuccess) => {
     reader.readAsDataURL(file);
   }, []);
 
+  // ✅ Función para manejar cambio de imagen de tarjeta de circulación
+  const handleCirculationCardImageChange = useCallback((file) => {
+    if (!file) return;
+
+    const maxSize = 5 * 1024 * 1024; // 5MB
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif'];
+
+    if (file.size > maxSize) {
+      setCirculationCardImageError('El archivo es demasiado grande. Máximo 5MB.');
+      return;
+    }
+
+    if (!allowedTypes.includes(file.type)) {
+      setCirculationCardImageError('Formato no soportado. Use JPG, PNG o GIF.');
+      return;
+    }
+
+    setCirculationCardImageError(null);
+    setFormData(prev => ({
+      ...prev,
+      circulationCardImage: file
+    }));
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      setCirculationCardImagePreview(e.target.result);
+    };
+    reader.onerror = () => {
+      setCirculationCardImageError('Error al procesar la imagen.');
+    };
+    reader.readAsDataURL(file);
+  }, []);
+
   // Función auxiliar para sanitizar valores vacíos
   const sanitizeValue = (value) => {
     if (typeof value === 'string') {
@@ -327,12 +399,13 @@ const useTruckEdit = (fetchOptions, onUpdateSuccess) => {
       console.log('=== INICIANDO ACTUALIZACIÓN ===');
       console.log('FormData actual:', formData);
       console.log('¿Hay imagen nueva?:', !!formData.imagen);
+      console.log('¿Hay imagen de tarjeta nueva?:', !!formData.circulationCardImage);
 
       let response;
 
       // Determinar si usar FormData o JSON
-      if (formData.imagen) {
-        console.log('=== USANDO FORMDATA PARA IMAGEN ===');
+      if (formData.imagen || formData.circulationCardImage) {
+        console.log('=== USANDO FORMDATA PARA IMÁGENES ===');
         
         const formDataToSend = new FormData();
         
@@ -372,7 +445,15 @@ const useTruckEdit = (fetchOptions, onUpdateSuccess) => {
         const año = sanitizeValue(formData.año);
         if (año) formDataToSend.append('age', año);
         
-        formDataToSend.append('img', formData.imagen);
+        // ✅ Agregar imagen del camión si existe
+        if (formData.imagen) {
+          formDataToSend.append('img', formData.imagen);
+        }
+
+        // ✅ Agregar imagen de tarjeta de circulación si existe
+        if (formData.circulationCardImage) {
+          formDataToSend.append('circulationCardImage', formData.circulationCardImage);
+        }
 
         console.log('=== ENVIANDO FORMDATA ===');
         for (let pair of formDataToSend.entries()) {
@@ -534,6 +615,11 @@ const useTruckEdit = (fetchOptions, onUpdateSuccess) => {
     currentImage,
     imageError,
     
+    // ✅ Estados de imagen de tarjeta de circulación
+    circulationCardImagePreview,
+    currentCirculationCardImage,
+    circulationCardImageError,
+    
     // Funciones principales
     openEditModal,
     closeEditModal,
@@ -542,6 +628,7 @@ const useTruckEdit = (fetchOptions, onUpdateSuccess) => {
     // Funciones de manejo
     handleInputChange,
     handleImageChange,
+    handleCirculationCardImageChange, // ✅ Nueva función
     resetForm,
     validateForm,
     normalizeState,

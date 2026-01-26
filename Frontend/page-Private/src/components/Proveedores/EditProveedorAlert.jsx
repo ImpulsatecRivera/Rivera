@@ -8,7 +8,11 @@ const EditProveedorAlert = ({ isOpen, onClose, onSave, supplier }) => {
     repuesto: '',
     telefono: '',
     direccion: '',
-    rubro: ''
+    rubro: '',
+    contactoNombre: '',
+    contactoCargo: '',
+    contactoTelefono: '',
+    contactoEmail: ''
   });
 
   useEffect(() => {
@@ -19,7 +23,11 @@ const EditProveedorAlert = ({ isOpen, onClose, onSave, supplier }) => {
         repuesto: supplier.partDescription || '',
         telefono: supplier.phone || '',
         direccion: supplier.direccion || '',
-        rubro: supplier.rubro || ''
+        rubro: supplier.rubro || '',
+        contactoNombre: supplier?.contactoPrincipal?.nombre || '',
+        contactoCargo: supplier?.contactoPrincipal?.cargo || '',
+        contactoTelefono: supplier?.contactoPrincipal?.telefono || '',
+        contactoEmail: supplier?.contactoPrincipal?.email || ''
       });
     }
   }, [supplier, isOpen]);
@@ -29,7 +37,7 @@ const EditProveedorAlert = ({ isOpen, onClose, onSave, supplier }) => {
     let formattedValue = value;
 
     // Formateo para teléfono
-    if (name === 'telefono') {
+    if (name === 'telefono' || name === 'contactoTelefono') {
       const numbers = value.replace(/\D/g, '');
       if (numbers.length > 4) {
         formattedValue = numbers.slice(0, 4) + '-' + numbers.slice(4, 8);
@@ -53,6 +61,22 @@ const EditProveedorAlert = ({ isOpen, onClose, onSave, supplier }) => {
       direccion: formData.direccion,
       rubro: formData.rubro
     };
+
+    const contactoPrincipal = {
+      nombre: formData.contactoNombre,
+      cargo: formData.contactoCargo,
+      telefono: formData.contactoTelefono,
+      email: formData.contactoEmail
+    };
+
+    const hasContacto = Object.values(contactoPrincipal).some((value) => value && value.trim() !== '');
+    if (hasContacto) {
+      mappedData.contactoPrincipal = contactoPrincipal;
+      mappedData.contactoNombre = formData.contactoNombre;
+      mappedData.contactoCargo = formData.contactoCargo;
+      mappedData.contactoTelefono = formData.contactoTelefono;
+      mappedData.contactoEmail = formData.contactoEmail;
+    }
     onSave(mappedData);
   };
 
@@ -168,6 +192,54 @@ const EditProveedorAlert = ({ isOpen, onClose, onSave, supplier }) => {
                   onChange={handleInputChange}
                   className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 text-base text-gray-900 bg-white"
                   placeholder="7556-9709"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Nombre del contacto</label>
+                <input
+                  type="text"
+                  name="contactoNombre"
+                  value={formData.contactoNombre}
+                  onChange={handleInputChange}
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 text-base text-gray-900 bg-white"
+                  placeholder="Nombre completo"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Cargo</label>
+                <input
+                  type="text"
+                  name="contactoCargo"
+                  value={formData.contactoCargo}
+                  onChange={handleInputChange}
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 text-base text-gray-900 bg-white"
+                  placeholder="Compras, Gerente, etc."
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Teléfono del contacto</label>
+                <input
+                  type="tel"
+                  name="contactoTelefono"
+                  value={formData.contactoTelefono}
+                  onChange={handleInputChange}
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 text-base text-gray-900 bg-white"
+                  placeholder="0000-0000"
+                  maxLength={9}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Email del contacto</label>
+                <input
+                  type="email"
+                  name="contactoEmail"
+                  value={formData.contactoEmail}
+                  onChange={handleInputChange}
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 text-base text-gray-900 bg-white"
+                  placeholder="correo@contacto.com"
                 />
               </div>
             </div>
