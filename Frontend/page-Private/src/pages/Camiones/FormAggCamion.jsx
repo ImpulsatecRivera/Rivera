@@ -10,6 +10,7 @@ import FormHeader from '../../components/FormsCamiones/FormHeader';
 import FormHeroSection from '../../components/FormsCamiones/FormHeroSection';
 import FormContainer from '../../components/FormsCamiones/FormContainer';
 import ImageUploadSection from '../../components/FormsCamiones/ImageUploadSection';
+import CirculationCardImageUploadSection from '../../components/FormsCamiones/CirculationCardImageUploadSection';
 import BasicInfoFields from '../../components/FormsCamiones/BasicInfoFields';
 import VehicleDetailsFields from '../../components/FormsCamiones/VehicleDetailsFields';
 import AssignmentFields from '../../components/FormsCamiones/AssignmentFields';
@@ -19,6 +20,8 @@ import SubmitButton from '../../components/FormsCamiones/SubmitButton';
 const FormAggCamion = ({ onNavigateBack, onSubmitSuccess }) => {
   const [imagePreview, setImagePreview] = useState(null);
   const [imageFile, setImageFile] = useState(null);
+  const [circulationCardImagePreview, setCirculationCardImagePreview] = useState(null);
+  const [circulationCardImageFile, setCirculationCardImageFile] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const {
@@ -33,8 +36,7 @@ const FormAggCamion = ({ onNavigateBack, onSubmitSuccess }) => {
   const {
     onSubmit,
     motoristasDisponibles,
-    proveedoresDisponibles,
-  } = useTruckForm();
+  } = useTruckForm(onSubmitSuccess);
 
   // Handler para volver al menú
   const handleBackToMenu = () => {
@@ -139,6 +141,82 @@ const FormAggCamion = ({ onNavigateBack, onSubmitSuccess }) => {
     }
   };
 
+  // Handler para cambio de imagen de tarjeta de circulación
+  const handleCirculationCardImageChange = (e) => {
+    console.log('🔥 === INICIO handleCirculationCardImageChange ===');
+    console.log('🔥 Event completo:', e);
+    console.log('🔥 e.target:', e.target);
+    console.log('🔥 e.target.files:', e.target.files);
+    
+    const file = e.target.files[0];
+    console.log('🔥 File extraído:', file);
+    
+    if (file) {
+      // Validar tipo de archivo
+      if (!file.type.startsWith('image/')) {
+        console.log('❌ Tipo de archivo inválido:', file.type);
+        Swal.fire({
+          title: 'Formato no válido',
+          text: 'Por favor selecciona una imagen en formato JPG, PNG o GIF para la tarjeta de circulación',
+          icon: 'warning',
+          confirmButtonText: 'Entendido',
+          confirmButtonColor: '#f59e0b'
+        });
+        return;
+      }
+
+      console.log('✅ Archivo válido, procediendo...');
+      
+      // Guardar el archivo en el estado
+      setCirculationCardImageFile(file);
+      console.log('🔥 CirculationCardImageFile guardado en state:', file);
+      
+      // Setear en el formulario
+      setValue('circulationCardImage', e.target.files, { 
+        shouldValidate: true,
+        shouldDirty: true,
+        shouldTouch: true 
+      });
+      
+      // Crear preview
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        console.log('🔥 Preview de tarjeta de circulación creado exitosamente');
+        setCirculationCardImagePreview(e.target.result);
+      };
+      reader.readAsDataURL(file);
+
+      console.log('🔥 === DEBUG CIRCULATION CARD IMAGE CHANGE COMPLETO ===');
+      console.log('🔥 Archivo seleccionado:', {
+        name: file.name,
+        size: file.size,
+        type: file.type,
+        lastModified: file.lastModified
+      });
+    } else {
+      console.log('❌ No se seleccionó ningún archivo para tarjeta de circulación');
+    }
+    
+    console.log('🔥 === FIN handleCirculationCardImageChange ===');
+  };
+
+  // Handler para remover imagen de tarjeta de circulación
+  const removeCirculationCardImage = () => {
+    setCirculationCardImagePreview(null);
+    setCirculationCardImageFile(null);
+    setValue('circulationCardImage', null, { 
+      shouldValidate: true,
+      shouldDirty: true,
+      shouldTouch: true 
+    });
+    
+    // Limpiar el input file
+    const fileInput = document.getElementById('circulation-card-img-input');
+    if (fileInput) {
+      fileInput.value = '';
+    }
+  };
+
   // Función para mostrar alerta de formulario incompleto
   const showIncompleteFormAlert = (camposFaltantes) => {
     Swal.fire({
@@ -186,8 +264,21 @@ const FormAggCamion = ({ onNavigateBack, onSubmitSuccess }) => {
         popup: 'animated bounceIn'
       }
     }).then((result) => {
-      if (result.isConfirmed && onSubmitSuccess) {
-        onSubmitSuccess();
+      if (result.isConfirmed) {
+        // Marcar que se agregó un camión para que la página principal refresque
+        localStorage.setItem('truckAdded', 'true');
+        
+        // Llamar al callback si existe
+        if (onSubmitSuccess) {
+          onSubmitSuccess();
+        } else {
+          // Navegar de vuelta a la página principal
+          if (onNavigateBack) {
+            onNavigateBack();
+          } else {
+            window.history.back();
+          }
+        }
       }
     });
   };
@@ -209,9 +300,12 @@ const FormAggCamion = ({ onNavigateBack, onSubmitSuccess }) => {
 
   // Handler personalizado para el submit - SOLUCIÓN DEFINITIVA
   const handleCustomSubmit = async (data) => {
+    console.log('🚀 === INICIO DEL SUBMIT ===');
+    console.log('Datos recibidos:', data);
+
     try {
       setIsSubmitting(true);
-      
+
       console.log('=== DEBUG ANTES DEL SUBMIT ===');
       console.log('Datos del formulario:', data);
       console.log('Archivo de imagen del state:', imageFile);
@@ -220,45 +314,28 @@ const FormAggCamion = ({ onNavigateBack, onSubmitSuccess }) => {
       console.log('¿Es File?:', data.img instanceof File);
       console.log('Tipo de data.img:', typeof data.img);
 
-      // VERIFICACIÓN INTELIGENTE DE LA IMAGEN
-      let finalImageFile;
+      // VERIFICACIÓN INTELIGENTE DE LA IMAGEN (ahora opcional)
+      let finalImageFile = null;
       if (data.img instanceof FileList && data.img.length > 0) {
         finalImageFile = data.img[0];
-        console.log('✅ Imagen encontrada en FileList:', finalImageFile);
       } else if (data.img instanceof File) {
         finalImageFile = data.img;
-        console.log('✅ Imagen encontrada como File directo:', finalImageFile);
-      } else {
-        console.log('❌ No se encontró imagen válida');
-        throw new Error('Debe seleccionar una imagen para el camión');
       }
-
-      console.log('🔥 Imagen final para enviar:', {
-        name: finalImageFile.name,
-        size: finalImageFile.size,
-        type: finalImageFile.type
-      });
 
       // Mostrar alerta de carga
       showLoadingAlert();
 
       // CONVERTIR A FORMATO QUE ESPERA EL HOOK
-      // El hook espera data.img[0], así que creamos un objeto que simule FileList
       const dataToSubmit = {
         ...data,
         state: "disponible",
-        img: data.img instanceof FileList ? data.img : [finalImageFile] // Asegurar formato array-like
+        img: finalImageFile ? [finalImageFile] : undefined
       };
 
-      console.log('=== DEBUG DATOS PARA ENVÍO ===');
-      console.log('Datos con estado agregado:', dataToSubmit);
-      console.log('Imagen final en formato esperado:', dataToSubmit.img);
-      console.log('¿Tiene índice [0]?:', !!dataToSubmit.img[0]);
-      console.log('Archivo en [0]:', dataToSubmit.img[0]);
-
       // Llamar a la función onSubmit original
+      console.log('📡 Enviando datos a API:', dataToSubmit);
       const result = await onSubmit(dataToSubmit);
-      console.log('Resultado del onSubmit:', result);
+      console.log('✅ Respuesta de API:', result);
 
       // Si todo sale bien, mostrar alerta de éxito
       showSuccessAlert();
@@ -267,15 +344,15 @@ const FormAggCamion = ({ onNavigateBack, onSubmitSuccess }) => {
       reset();
       setImagePreview(null);
       setImageFile(null);
+      setCirculationCardImagePreview(null);
+      setCirculationCardImageFile(null);
 
     } catch (error) {
-      // Log del error para debug
-      console.error('=== ERROR COMPLETO ===');
-      console.error('Error:', error);
-      
+      console.error('❌ Error al enviar formulario:', error);
+
       // Obtener mensaje de error específico
       let errorMessage = 'Ocurrió un error inesperado';
-      
+
       if (error.response?.data?.message) {
         errorMessage = error.response.data.message;
       } else if (error.response?.data?.error) {
@@ -297,6 +374,10 @@ const FormAggCamion = ({ onNavigateBack, onSubmitSuccess }) => {
 
   // Handler para errores de validación
   const handleFormErrors = (errors) => {
+    console.log('⚠️ === ERRORES DE VALIDACIÓN ===');
+    console.log('Errores encontrados:', errors);
+    console.log('Campos con error:', Object.keys(errors));
+
     if (Object.keys(errors).length > 0) {
       const camposFaltantes = Object.keys(errors).map(field => {
         const fieldNames = {
@@ -349,6 +430,15 @@ const FormAggCamion = ({ onNavigateBack, onSubmitSuccess }) => {
             {/* Basic Info Fields */}
             <BasicInfoFields register={register} errors={errors} />
 
+            {/* Circulation Card Image Upload Section */}
+            <CirculationCardImageUploadSection
+              imagePreview={circulationCardImagePreview}
+              onImageChange={handleCirculationCardImageChange}
+              onRemoveImage={removeCirculationCardImage}
+              register={register}
+              error={errors.circulationCardImage}
+            />
+
             {/* Vehicle Details Fields */}
             <VehicleDetailsFields register={register} errors={errors} />
 
@@ -357,7 +447,6 @@ const FormAggCamion = ({ onNavigateBack, onSubmitSuccess }) => {
               register={register} 
               errors={errors}
               motoristasDisponibles={motoristasDisponibles}
-              proveedoresDisponibles={proveedoresDisponibles}
             />
 
             {/* Description Field */}

@@ -3,6 +3,9 @@ import { ArrowLeft, Calendar, Truck, FileText, Plus, Trash2, Save, AlertCircle, 
 import { useNavigate } from 'react-router-dom';
 import { api } from '../../Context/authContext';
 import Swal from 'sweetalert2'; // ← IMPORTAR SWEETALERT2
+import { useTutorial } from '../../hooks/useTutorial';
+import '../../styles/tutorial-global.css';
+import { HelpCircle } from 'lucide-react';
 
 const CreateMantenimientoPage = () => {
   const navigate = useNavigate();
@@ -10,6 +13,8 @@ const CreateMantenimientoPage = () => {
   const [camiones, setCamiones] = useState([]);
   const [proveedores, setProveedores] = useState([]);
   const [loadingProveedores, setLoadingProveedores] = useState(true);
+
+  const { startTutorial, hasCompleted } = useTutorial('mantenimientoNuevo');
 
   const [formData, setFormData] = useState({
     fecha_mantenimiento: '',
@@ -672,6 +677,18 @@ const result = response.data;
 
           {/* Botones de Acción */}
           <div className="flex items-center gap-4">
+            <button
+  onClick={startTutorial}
+  className="flex items-center gap-2 px-6 py-3 bg-white border-2 border-[#5F8EAD] text-[#5F8EAD] rounded-xl hover:bg-[#5F8EAD] hover:text-white font-bold shadow-lg transition-all transform hover:scale-105"
+>
+  <HelpCircle size={22} />
+  <span>Tutorial</span>
+  {!hasCompleted && (
+    <span className="bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center animate-pulse">
+      !
+    </span>
+  )}
+</button>
             <button
               onClick={handleCancelar} // ✅ Cambiado para usar confirmación
               className="flex-1 px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-xl font-semibold hover:bg-gray-50 transition-colors"

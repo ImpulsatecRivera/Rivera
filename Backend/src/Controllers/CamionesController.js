@@ -103,7 +103,6 @@ camionesController.getById = async (req, res) => {
   try {
     const { id } = req.params;
 
-    // Validar que el ID sea válido
     if (!isValidObjectId(id)) {
       return res.status(400).json({ 
         message: "ID de camión inválido",
@@ -112,8 +111,8 @@ camionesController.getById = async (req, res) => {
     }
 
     const camion = await camionesMod.findById(id)
-      .populate("driverId")
-      .populate("supplierId");
+      .populate("driverId");
+      // ✅ .populate("supplierId") ELIMINADO
 
     if (!camion) {
       return res.status(404).json({ 
@@ -399,8 +398,17 @@ const calculateTruckStats = async (camion, allCamiones) => {
  * Agregar un nuevo camión
  * POST /camiones
  */
+/**
+ * Agregar un nuevo camión
+ * POST /camiones
+ */
 camionesController.post = async (req, res) => {
   try {
+    console.log('=== DATOS RECIBIDOS EN BACKEND ===');
+    console.log('req.body:', req.body);
+    console.log('req.files:', req.files);
+    console.log('Campos en req.body:', Object.keys(req.body));
+    
     const {
       name,
       brand,
@@ -411,12 +419,12 @@ camionesController.post = async (req, res) => {
       ciculatioCard,
       licensePlate,
       description,
-      supplierId,
       driverId,
-      salario, // <-- NUEVO CAMPO
+      salario,
+      // ✅ supplierId ELIMINADO - ya no se necesita
     } = req.body;
 
-    const requiredFields = ['name', 'brand', 'model', 'licensePlate'];
+    const requiredFields = ['licensePlate'];
     const validation = validateRequiredFields(req.body, requiredFields);
 
     if (!validation.isValid) {
@@ -427,7 +435,7 @@ camionesController.post = async (req, res) => {
     }
 
     // === VALIDACIÓN DE SALARIO ===
-    const SALARIO_MINIMO_ES = 365; // salario mínimo El Salvador
+    const SALARIO_MINIMO_ES = 365;
     if (salario && Number(salario) < SALARIO_MINIMO_ES) {
       return res.status(400).json({
         message: "Salario inválido",
@@ -449,18 +457,6 @@ camionesController.post = async (req, res) => {
       });
     }
 
-  function validateLicensePlate(plate) {
-  if (!plate) return false;
-
-  const normalized = plate.trim().toUpperCase();
-
-  // Acepta letras, números y guiones, entre 6 y 12 caracteres
-  const regex = /^[A-Z0-9-]{6,12}$/;
-
-  return regex.test(normalized);
-}
-
-
     const currentYear = new Date().getFullYear();
     if (age && (age < 1990 || age > currentYear)) {
       return res.status(400).json({
@@ -469,20 +465,19 @@ camionesController.post = async (req, res) => {
       });
     }
 
-    if (supplierId && !isValidObjectId(supplierId)) {
-      return res.status(400).json({
-        message: "ID de proveedor inválido",
-        error: "El ID del proveedor no tiene un formato válido"
-      });
-    }
+    // ✅ VALIDACIÓN DE supplierId ELIMINADA
 
-    if (driverId && !isValidObjectId(driverId)) {
+    // ✅ Validar driverId solo si viene y no está vacío
+    if (driverId && driverId.trim() !== '' && !isValidObjectId(driverId)) {
       return res.status(400).json({
         message: "ID de conductor inválido",
         error: "El ID del conductor no tiene un formato válido"
       });
     }
 
+    console.log('=== BUSCANDO CAMIÓN DUPLICADO ===');
+    console.log('Buscando placa:', licensePlate.toUpperCase());
+    
     const existingTruck = await camionesMod.findOne({
       licensePlate: licensePlate.toUpperCase()
     });
@@ -495,9 +490,9 @@ camionesController.post = async (req, res) => {
     }
 
     let imgUrl = "";
-    if (req.file) {
+    if (req.files && req.files.img && req.files.img[0]) {
       try {
-        const result = await cloudinary.uploader.upload(req.file.path, {
+        const result = await cloudinary.uploader.upload(req.files.img[0].path, {
           folder: "public",
           allowed_formats: ["png", "jpg", "jpeg"],
           transformation: [
@@ -506,32 +501,88 @@ camionesController.post = async (req, res) => {
           ]
         });
         imgUrl = result.secure_url;
+        console.log('✅ Imagen del camión subida:', imgUrl);
       } catch (uploadError) {
+        console.error('❌ Error subiendo imagen:', uploadError);
         return res.status(400).json({
-          message: "Error al subir la imagen",
+          message: "Error al subir la imagen del camión",
           error: "No se pudo procesar la imagen proporcionada"
         });
       }
+    } else {
+      console.log('ℹ️ No se recibió imagen del camión');
     }
 
+    let circulationCardImageUrl = "";
+    if (req.files && req.files.circulationCardImage && req.files.circulationCardImage[0]) {
+      try {
+        const result = await cloudinary.uploader.upload(req.files.circulationCardImage[0].path, {
+          folder: "circulation-cards",
+          allowed_formats: ["png", "jpg", "jpeg"],
+          transformation: [
+            { width: 800, height: 600, crop: "fill" },
+            { quality: "auto" }
+          ]
+        });
+        circulationCardImageUrl = result.secure_url;
+        console.log('✅ Imagen de tarjeta subida:', circulationCardImageUrl);
+      } catch (uploadError) {
+        console.error('❌ Error subiendo tarjeta:', uploadError);
+        return res.status(400).json({
+          message: "Error al subir la imagen de la tarjeta de circulación",
+          error: "No se pudo procesar la imagen de la tarjeta de circulación"
+        });
+      }
+    } else {
+      console.log('ℹ️ No se recibió imagen de tarjeta de circulación');
+    }
+
+    console.log('=== VALIDACIONES COMPLETADAS ===');
+    
+    // Procesar fecha de circulación
+    let processedDate = undefined;
+    if (ciculatioCard) {
+      try {
+        processedDate = new Date(ciculatioCard);
+        if (isNaN(processedDate.getTime())) {
+          console.log('Fecha inválida, usando undefined');
+          processedDate = undefined;
+        } else {
+          console.log('Fecha válida procesada:', processedDate);
+        }
+      } catch (dateError) {
+        console.log('Error procesando fecha:', dateError.message);
+        processedDate = undefined;
+      }
+    }
+
+    console.log('=== CREANDO DOCUMENTO CAMIÓN ===');
+
     const newCamion = new camionesMod({
-      name: name.trim(),
-      brand: brand.trim(),
-      model: model.trim(),
+      name: name?.trim() || licensePlate.toUpperCase(),
+      brand: brand?.trim() || undefined,
+      model: model?.trim() || undefined,
       state: state?.toUpperCase() || 'DISPONIBLE',
-      gasolineLevel: gasolineLevel || 4,
-      age,
-      ciculatioCard: ciculatioCard?.trim(),
+      gasolineLevel: gasolineLevel ? Number(gasolineLevel) : 4,
+      age: age ? Number(age) : undefined,
+      ciculatioCard: processedDate,
+      circulationCardImage: circulationCardImageUrl || undefined,
       licensePlate: licensePlate.toUpperCase(),
-      description: description?.trim(),
-      supplierId,
-      driverId,
-      salario: salario ? Number(salario) : undefined, // <-- GUARDARLO
-      img: imgUrl,
+      description: description?.trim() || undefined,
+      driverId: driverId && driverId.trim() !== '' ? driverId.trim() : undefined,
+      // ✅ supplierId ELIMINADO
+      salario: salario ? Number(salario) : undefined,
+      img: imgUrl || undefined,
     });
 
-    await newCamion.save();
+    console.log('=== GUARDANDO EN BASE DE DATOS ===');
+    console.log('Documento a guardar:', newCamion);
 
+    await newCamion.save();
+    
+    console.log('=== CAMIÓN GUARDADO EXITOSAMENTE ===');
+    console.log('ID generado:', newCamion._id);
+    
     res.status(201).json({
       message: "Camión agregado correctamente",
       data: {
@@ -542,6 +593,8 @@ camionesController.post = async (req, res) => {
       }
     });
   } catch (error) {
+    console.error('❌ ERROR COMPLETO:', error);
+    
     if (error.code === 11000) {
       return res.status(409).json({
         message: "Datos duplicados",
@@ -561,11 +614,14 @@ camionesController.post = async (req, res) => {
  * Actualizar un camión existente
  * PUT /camiones/:id
  */
+/**
+ * Actualizar un camión existente
+ * PUT /camiones/:id
+ */
 camionesController.put = async (req, res) => {
   try {
     const { id } = req.params;
 
-    // Validar ID
     if (!isValidObjectId(id)) {
       return res.status(400).json({
         message: "ID de camión inválido",
@@ -573,7 +629,6 @@ camionesController.put = async (req, res) => {
       });
     }
 
-    // Verificar existencia del camión
     const existingCamion = await camionesMod.findById(id);
     if (!existingCamion) {
       return res.status(404).json({
@@ -592,14 +647,12 @@ camionesController.put = async (req, res) => {
       ciculatioCard,
       licensePlate,
       description,
-      supplierId,
       driverId,
-      salario, // <-- NUEVO CAMPO
+      salario,
+      // ✅ supplierId ELIMINADO
     } = req.body;
 
-    // === VALIDACIÓN DE SALARIO ===
     const SALARIO_MINIMO_ES = 365;
-
     if (salario !== undefined && Number(salario) < SALARIO_MINIMO_ES) {
       return res.status(400).json({
         message: "Salario inválido",
@@ -607,7 +660,6 @@ camionesController.put = async (req, res) => {
       });
     }
 
-    // Validaciones restantes
     if (gasolineLevel && !validateGasolineLevel(gasolineLevel)) {
       return res.status(400).json({
         message: "Nivel de gasolina inválido",
@@ -637,21 +689,15 @@ camionesController.put = async (req, res) => {
       });
     }
 
-    if (supplierId && !isValidObjectId(supplierId)) {
-      return res.status(400).json({
-        message: "ID de proveedor inválido",
-        error: "El ID del proveedor no tiene un formato válido"
-      });
-    }
+    // ✅ VALIDACIÓN DE supplierId ELIMINADA
 
-    if (driverId && !isValidObjectId(driverId)) {
+    if (driverId && driverId.trim() !== '' && !isValidObjectId(driverId)) {
       return res.status(400).json({
         message: "ID de conductor inválido",
         error: "El ID del conductor no tiene un formato válido"
       });
     }
 
-    // Verificar placa duplicada si se intenta cambiar
     if (licensePlate && licensePlate !== existingCamion.licensePlate) {
       const duplicatePlate = await camionesMod.findOne({
         licensePlate: licensePlate.toUpperCase(),
@@ -666,7 +712,6 @@ camionesController.put = async (req, res) => {
       }
     }
 
-    // Subida de imagen a Cloudinary
     let imgUrl = "";
     if (req.file) {
       try {
@@ -687,9 +732,7 @@ camionesController.put = async (req, res) => {
       }
     }
 
-    // Preparar actualización dinámica
     const updatedTruck = {};
-
     if (name) updatedTruck.name = name.trim();
     if (brand) updatedTruck.brand = brand.trim();
     if (model) updatedTruck.model = model.trim();
@@ -699,12 +742,10 @@ camionesController.put = async (req, res) => {
     if (ciculatioCard) updatedTruck.ciculatioCard = ciculatioCard.trim();
     if (licensePlate) updatedTruck.licensePlate = licensePlate.toUpperCase();
     if (description !== undefined) updatedTruck.description = description?.trim();
-    if (supplierId !== undefined) updatedTruck.supplierId = supplierId;
     if (driverId !== undefined) updatedTruck.driverId = driverId;
     if (imgUrl) updatedTruck.img = imgUrl;
-
-    // NUEVO CAMPO:
     if (salario !== undefined) updatedTruck.salario = Number(salario);
+    // ✅ supplierId ELIMINADO
 
     const updatedCamion = await camionesMod.findByIdAndUpdate(
       id,
@@ -723,7 +764,6 @@ camionesController.put = async (req, res) => {
     });
 
   } catch (error) {
-
     if (error.code === 11000) {
       return res.status(409).json({
         message: "Datos duplicados",
@@ -737,7 +777,6 @@ camionesController.put = async (req, res) => {
     });
   }
 };
-
 
 /**
  * Eliminar un camión
