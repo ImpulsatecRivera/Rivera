@@ -9,7 +9,11 @@ const useSupplierForm = () => {
     companyName: '',
     email: '',
     phone: '',
-    partDescription: ''
+    partDescription: '',
+    contactoNombre: '',
+    contactoCargo: '',
+    contactoTelefono: '',
+    contactoEmail: ''
   });
 
   const [errors, setErrors] = useState({});
@@ -67,7 +71,7 @@ const useSupplierForm = () => {
     let formattedValue = value;
 
     // Validación y formateo de teléfono
-    if (name === 'phone') {
+    if (name === 'phone' || name === 'contactoTelefono') {
       const numbers = value.replace(/\D/g, '');
       if (numbers.length > 4) {
         formattedValue = numbers.slice(0, 4) + '-' + numbers.slice(4, 8);
@@ -86,15 +90,21 @@ const useSupplierForm = () => {
   const validateForm = () => {
     const newErrors = {};
     if (!formData.companyName) newErrors.companyName = "El nombre de la empresa es obligatorio";
-    if (!formData.email) newErrors.email = "El email es obligatorio";
     if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
       newErrors.email = "El formato del email no es válido";
     }
-    if (!formData.phone) newErrors.phone = "El teléfono es obligatorio";
+    // Teléfono ahora es opcional; valida solo si se ingresa
     if (formData.phone && formData.phone.replace(/\D/g, '').length !== 8) {
       newErrors.phone = "El teléfono debe tener exactamente 8 dígitos";
     }
-    if (!formData.partDescription) newErrors.partDescription = "La descripción del repuesto es obligatoria";
+    // partDescription ahora es opcional
+    // Validaciones opcionales del contacto principal
+    if (formData.contactoEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.contactoEmail)) {
+      newErrors.contactoEmail = "El formato del email de contacto no es válido";
+    }
+    if (formData.contactoTelefono && formData.contactoTelefono.replace(/\D/g, '').length !== 0 && formData.contactoTelefono.replace(/\D/g, '').length !== 8) {
+      newErrors.contactoTelefono = "El teléfono de contacto debe tener 8 dígitos";
+    }
 
     return newErrors;
   };
@@ -141,7 +151,10 @@ const useSupplierForm = () => {
           companyName: 'Nombre de la empresa',
           email: 'Email',
           phone: 'Teléfono',
-          partDescription: 'Repuesto'
+          contactoNombre: 'Nombre del contacto',
+          contactoCargo: 'Cargo del contacto',
+          contactoTelefono: 'Teléfono del contacto',
+          contactoEmail: 'Email del contacto'
         };
         return fieldNames[field] || field;
       });
@@ -170,11 +183,21 @@ const useSupplierForm = () => {
       setLoading(true);
       console.log('Estado de loading activado');
 
+      const contactoPrincipal = {
+        nombre: formData.contactoNombre.trim(),
+        cargo: formData.contactoCargo.trim(),
+        telefono: formData.contactoTelefono.trim(),
+        email: formData.contactoEmail.trim()
+      };
+
+      const hasContacto = Object.values(contactoPrincipal).some((value) => value);
+
       const dataToSend = {
         companyName: formData.companyName.trim(),
         email: formData.email.trim(),
         phone: formData.phone.trim(),
-        partDescription: formData.partDescription.trim()
+        partDescription: formData.partDescription.trim(),
+        ...(hasContacto ? { contactoPrincipal } : {})
       };
 
       console.log('=== DATOS A ENVIAR ===');
@@ -211,7 +234,11 @@ const useSupplierForm = () => {
           companyName: '',
           email: '',
           phone: '',
-          partDescription: ''
+          partDescription: '',
+          contactoNombre: '',
+          contactoCargo: '',
+          contactoTelefono: '',
+          contactoEmail: ''
         });
         setErrors({});
       } else {

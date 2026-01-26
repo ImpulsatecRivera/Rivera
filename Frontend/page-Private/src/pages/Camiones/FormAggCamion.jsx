@@ -144,10 +144,6 @@ const FormAggCamion = ({ onNavigateBack, onSubmitSuccess }) => {
   // Handler para cambio de imagen de tarjeta de circulación
   const handleCirculationCardImageChange = (e) => {
     console.log('🔥 === INICIO handleCirculationCardImageChange ===');
-    console.log('🔥 Event completo:', e);
-    console.log('🔥 e.target:', e.target);
-    console.log('🔥 e.target.files:', e.target.files);
-    
     const file = e.target.files[0];
     console.log('🔥 File extraído:', file);
     
@@ -171,8 +167,8 @@ const FormAggCamion = ({ onNavigateBack, onSubmitSuccess }) => {
       setCirculationCardImageFile(file);
       console.log('🔥 CirculationCardImageFile guardado en state:', file);
       
-      // Setear en el formulario
-      setValue('circulationCardImage', e.target.files, { 
+      // Setear en el formulario usando setValue manualmente
+      setValue('circulationCardImage', file, { 
         shouldValidate: true,
         shouldDirty: true,
         shouldTouch: true 
@@ -180,19 +176,13 @@ const FormAggCamion = ({ onNavigateBack, onSubmitSuccess }) => {
       
       // Crear preview
       const reader = new FileReader();
-      reader.onload = (e) => {
+      reader.onload = (readerEvent) => {
         console.log('🔥 Preview de tarjeta de circulación creado exitosamente');
-        setCirculationCardImagePreview(e.target.result);
+        setCirculationCardImagePreview(readerEvent.target.result);
       };
       reader.readAsDataURL(file);
 
-      console.log('🔥 === DEBUG CIRCULATION CARD IMAGE CHANGE COMPLETO ===');
-      console.log('🔥 Archivo seleccionado:', {
-        name: file.name,
-        size: file.size,
-        type: file.type,
-        lastModified: file.lastModified
-      });
+      console.log('🔥 Archivo seleccionado:', file.name, file.size, 'bytes');
     } else {
       console.log('❌ No se seleccionó ningún archivo para tarjeta de circulación');
     }
@@ -314,13 +304,23 @@ const FormAggCamion = ({ onNavigateBack, onSubmitSuccess }) => {
       console.log('¿Es File?:', data.img instanceof File);
       console.log('Tipo de data.img:', typeof data.img);
 
-      // VERIFICACIÓN INTELIGENTE DE LA IMAGEN (ahora opcional)
+      // VERIFICACIÓN INTELIGENTE DE LAS IMÁGENES (ahora opcionales)
       let finalImageFile = null;
       if (data.img instanceof FileList && data.img.length > 0) {
         finalImageFile = data.img[0];
       } else if (data.img instanceof File) {
         finalImageFile = data.img;
       }
+
+      let finalCirculationCardImage = null;
+      if (data.circulationCardImage instanceof FileList && data.circulationCardImage.length > 0) {
+        finalCirculationCardImage = data.circulationCardImage[0];
+      } else if (data.circulationCardImage instanceof File) {
+        finalCirculationCardImage = data.circulationCardImage;
+      }
+
+      console.log('🖼️ Imagen principal procesada:', finalImageFile?.name || 'ninguna');
+      console.log('🖼️ Imagen tarjeta procesada:', finalCirculationCardImage?.name || 'ninguna');
 
       // Mostrar alerta de carga
       showLoadingAlert();
@@ -329,7 +329,8 @@ const FormAggCamion = ({ onNavigateBack, onSubmitSuccess }) => {
       const dataToSubmit = {
         ...data,
         state: "disponible",
-        img: finalImageFile ? [finalImageFile] : undefined
+        img: finalImageFile ? [finalImageFile] : undefined,
+        circulationCardImage: finalCirculationCardImage ? [finalCirculationCardImage] : undefined
       };
 
       // Llamar a la función onSubmit original

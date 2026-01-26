@@ -8,7 +8,8 @@ const ImageUpload = ({
   fileName,
   disabled = false,
   maxSize = 5 * 1024 * 1024, // 5MB por defecto
-  acceptedTypes = ['image/jpeg', 'image/png', 'image/gif']
+  acceptedTypes = ['image/jpeg', 'image/png', 'image/gif'],
+  label = 'Imagen del camión' // ✅ Prop personalizable
 }) => {
   const [dragOver, setDragOver] = useState(false);
   const [error, setError] = useState(null);
@@ -125,7 +126,7 @@ const ImageUpload = ({
       {/* Label */}
       <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
         <Image className="w-4 h-4 text-[#5F8EAD]" />
-        <span>Imagen del camión</span>
+        <span>{label}</span>
       </label>
       
       {/* Mostrar imagen actual o preview */}

@@ -10,6 +10,8 @@ const ProveedorDetailPanel = ({
   handleOptionsClick 
 }) => {
   const [isLoading, setIsLoading] = useState(true);
+  const contactoPrincipal = selectedProveedor?.contactoPrincipal || {};
+  const hasContactoPrincipal = Object.values(contactoPrincipal || {}).some((value) => value);
 
   useEffect(() => {
     // Activar loading cada vez que cambie el proveedor seleccionado
@@ -200,6 +202,41 @@ const ProveedorDetailPanel = ({
                 <div className="text-sm font-medium text-gray-700 mb-1">Teléfono</div>
                 <div className="text-sm text-gray-600 bg-white p-3 rounded-lg border">{selectedProveedor.phone}</div>
               </div>
+
+              {hasContactoPrincipal && (
+                <div className="pt-4 border-t border-blue-200 space-y-3">
+                  <div className="flex items-center space-x-2">
+                    <div className="p-2 rounded-lg" style={{backgroundColor: '#5D9646'}}>
+                      <Phone className="w-4 h-4 text-white" />
+                    </div>
+                    <span className="text-sm font-semibold text-gray-900">Contacto principal</span>
+                  </div>
+                  {contactoPrincipal.nombre && (
+                    <div>
+                      <div className="text-xs font-medium text-gray-600">Nombre</div>
+                      <div className="text-sm text-gray-700 bg-white p-3 rounded-lg border">{contactoPrincipal.nombre}</div>
+                    </div>
+                  )}
+                  {contactoPrincipal.cargo && (
+                    <div>
+                      <div className="text-xs font-medium text-gray-600">Cargo</div>
+                      <div className="text-sm text-gray-700 bg-white p-3 rounded-lg border">{contactoPrincipal.cargo}</div>
+                    </div>
+                  )}
+                  {contactoPrincipal.telefono && (
+                    <div>
+                      <div className="text-xs font-medium text-gray-600">Teléfono</div>
+                      <div className="text-sm text-gray-700 bg-white p-3 rounded-lg border">{contactoPrincipal.telefono}</div>
+                    </div>
+                  )}
+                  {contactoPrincipal.email && (
+                    <div>
+                      <div className="text-xs font-medium text-gray-600">Email</div>
+                      <div className="text-sm text-gray-700 bg-white p-3 rounded-lg border break-words">{contactoPrincipal.email}</div>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
 
