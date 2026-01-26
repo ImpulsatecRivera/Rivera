@@ -22,6 +22,7 @@ ViajesOperativosController.crearViajeOperativo = async (req, res) => {
       // Recursos
       truckId,
       conductorId,
+      auxiliares,
       
       // Código de programación
       codigoProgramacion,
@@ -73,6 +74,18 @@ ViajesOperativosController.crearViajeOperativo = async (req, res) => {
       });
     }
 
+    // Validar auxiliares si se envían
+    if (auxiliares && Array.isArray(auxiliares)) {
+      for (const aux of auxiliares) {
+        if (!aux.auxiliarId || !mongoose.Types.ObjectId.isValid(aux.auxiliarId)) {
+          return res.status(400).json({
+            success: false,
+            message: "ID de auxiliar inválido"
+          });
+        }
+      }
+    }
+
     // Verificar que existan
     const [cliente, camion, conductor] = await Promise.all([
       ClientesModel.findById(clienteId),
@@ -87,9 +100,29 @@ ViajesOperativosController.crearViajeOperativo = async (req, res) => {
       });
     }
 
-    // Validar fechas
-    const salidaDate = new Date(departureTime);
-    const llegadaDate = new Date(arrivalTime);
+    // Verificar auxiliares si se envían
+    if (auxiliares && Array.isArray(auxiliares)) {
+      const auxiliaresIds = auxiliares.map(aux => aux.auxiliarId);
+      const auxiliaresEncontrados = await MotoristaModel.find({ _id: { $in: auxiliaresIds } });
+      if (auxiliaresEncontrados.length !== auxiliaresIds.length) {
+        return res.status(404).json({
+          success: false,
+          message: "Uno o más auxiliares no encontrados"
+        });
+      }
+    }
+
+    // Validar fechas - parsear como local time quitando Z si existe
+    const departureTimeLocal = departureTime.replace('Z', '').replace('.000', '');
+    const arrivalTimeLocal = arrivalTime.replace('Z', '').replace('.000', '');
+    
+    const salidaDate = new Date(departureTimeLocal);
+    const llegadaDate = new Date(arrivalTimeLocal);
+
+    console.log('departureTime recibido:', departureTime);
+    console.log('departureTimeLocal:', departureTimeLocal);
+    console.log('salidaDate parsed local:', salidaDate);
+    console.log('salidaDate ISO:', salidaDate.toISOString());
 
     if (salidaDate >= llegadaDate) {
       return res.status(400).json({
@@ -116,6 +149,7 @@ ViajesOperativosController.crearViajeOperativo = async (req, res) => {
       // Recursos
       truckId: new mongoose.Types.ObjectId(truckId),
       conductorId: new mongoose.Types.ObjectId(conductorId),
+      auxiliares: auxiliares || [],
       
       // Descripción
       tripDescription: tripDescription || 
@@ -158,7 +192,7 @@ ViajesOperativosController.crearViajeOperativo = async (req, res) => {
       
       // ✅ MONTO
       montoAcordado: montoAcordado || 0,
-      metodoPago: metodoPago || 'credito', // 
+      metodoPago: metodoPago || 'credito',
       
       // Estado
       estado: {
@@ -222,6 +256,133 @@ ViajesOperativosController.crearViajeOperativo = async (req, res) => {
     await nuevoViaje.save();
     
     console.log("✅ Viaje operativo creado:", nuevoViaje._id);
+    console.log("departureTime guardado:", nuevoViaje.departureTime);
+    console.log("departureTime ISO:", nuevoViaje.departureTime.toISOString());
+
+    // =====================================================
+    // 🔥 AUTO-APRENDIZAJE: Actualizar rutas frecuentes
+    // =====================================================
+    try {
+      if (rutaOrigen && rutaDestino && cliente.tipoCliente === 'corporativo') {
+        console.log("🎓 Actualizando rutas frecuentes del cliente...");
+        
+        // Normalizar origen y destino
+        const origenNormalizado = rutaOrigen.trim().toUpperCase();
+        const destinoNormalizado = rutaDestino.trim().toUpperCase();
+
+        // Buscar si la ruta ya existe
+        const rutaExistenteIndex = cliente.rutasFrecuentes?.findIndex(
+          r => r.origen === origenNormalizado && r.destino === destinoNormalizado
+        ) ?? -1;
+
+        if (rutaExistenteIndex !== -1) {
+          // 📊 La ruta YA existe: actualizar estadísticas
+          console.log(`📈 Ruta existente encontrada: ${origenNormalizado} → ${destinoNormalizado}`);
+          
+          const rutaActual = cliente.rutasFrecuentes[rutaExistenteIndex];
+          
+          // Incrementar contador de usos
+          rutaActual.vecesUsada += 1;
+          rutaActual.ultimoUso = ahora;
+          
+          console.log(`   • Usos anteriores: ${rutaActual.vecesUsada - 1}`);
+          console.log(`   • Usos nuevos: ${rutaActual.vecesUsada}`);
+          
+          // Actualizar distancia promedio (si viene nueva distancia)
+          if (distanciaTotal && distanciaTotal > 0) {
+            const totalUsos = rutaActual.vecesUsada;
+            const distanciaAnterior = rutaActual.distancia || 0;
+            
+            const nuevaDistanciaPromedio = Math.round(
+              (distanciaAnterior * (totalUsos - 1) + Number(distanciaTotal)) / totalUsos
+            );
+            
+            console.log(`   • Distancia anterior: ${distanciaAnterior} km`);
+            console.log(`   • Distancia nueva: ${distanciaTotal} km`);
+            console.log(`   • Distancia promedio actualizada: ${nuevaDistanciaPromedio} km`);
+            
+            rutaActual.distancia = nuevaDistanciaPromedio;
+          }
+
+          // Actualizar tiempo estimado (tomar el más reciente si existe)
+          if (tiempoEstimado) {
+            // Convertir minutos a HH:MM si viene como número
+            let tiempoFormateado = tiempoEstimado;
+            if (typeof tiempoEstimado === 'number') {
+              const horas = Math.floor(tiempoEstimado / 60);
+              const minutos = tiempoEstimado % 60;
+              tiempoFormateado = `${String(horas).padStart(2, '0')}:${String(minutos).padStart(2, '0')}`;
+            }
+            
+            console.log(`   • Tiempo estimado actualizado: ${tiempoFormateado}`);
+            rutaActual.tiempoEstimado = tiempoFormateado;
+          }
+
+          // Actualizar monto promedio
+          if (montoAcordado && montoAcordado > 0) {
+            const totalUsos = rutaActual.vecesUsada;
+            const montoAnterior = rutaActual.montoPromedio || 0;
+            
+            const nuevoMontoPromedio = Math.round(
+              ((montoAnterior * (totalUsos - 1) + Number(montoAcordado)) / totalUsos) * 100
+            ) / 100;
+            
+            console.log(`   • Monto anterior: $${montoAnterior}`);
+            console.log(`   • Monto nuevo: $${montoAcordado}`);
+            console.log(`   • Monto promedio actualizado: $${nuevoMontoPromedio}`);
+            
+            rutaActual.montoPromedio = nuevoMontoPromedio;
+          }
+
+          cliente.rutasFrecuentes[rutaExistenteIndex] = rutaActual;
+          
+        } else {
+          // 🆕 Ruta NUEVA: agregarla
+          console.log(`🆕 Nueva ruta agregada: ${origenNormalizado} → ${destinoNormalizado}`);
+          
+          if (!cliente.rutasFrecuentes) {
+            cliente.rutasFrecuentes = [];
+          }
+          
+          // Convertir tiempo estimado si es número
+          let tiempoFormateado = tiempoEstimado;
+          if (typeof tiempoEstimado === 'number') {
+            const horas = Math.floor(tiempoEstimado / 60);
+            const minutos = tiempoEstimado % 60;
+            tiempoFormateado = `${String(horas).padStart(2, '0')}:${String(minutos).padStart(2, '0')}`;
+          }
+          
+          cliente.rutasFrecuentes.push({
+            origen: origenNormalizado,
+            destino: destinoNormalizado,
+            distancia: Number(distanciaTotal) || 0,
+            tiempoEstimado: tiempoFormateado || null,
+            vecesUsada: 1,
+            ultimoUso: ahora,
+            montoPromedio: Number(montoAcordado) || 0,
+            frecuencia: 'esporadico'
+          });
+          
+          console.log(`   • Distancia inicial: ${distanciaTotal || 0} km`);
+          console.log(`   • Tiempo inicial: ${tiempoFormateado || 'N/A'}`);
+          console.log(`   • Monto inicial: $${montoAcordado || 0}`);
+        }
+
+        // Guardar cliente con rutas actualizadas
+        await cliente.save();
+        
+        console.log(`✅ Rutas frecuentes actualizadas para ${cliente.nombreComercial || cliente.nombreEmpresa}`);
+        console.log(`   • Total de rutas registradas: ${cliente.rutasFrecuentes.length}`);
+        
+      } else {
+        console.log("ℹ️ No se actualizan rutas frecuentes (cliente natural o datos incompletos)");
+      }
+    } catch (updateError) {
+      // Si falla la actualización de rutas, solo logueamos el error
+      // pero NO fallamos la creación del viaje
+      console.error("⚠️ Error actualizando rutas frecuentes:", updateError);
+      console.error("   El viaje se creó correctamente pero las rutas no se actualizaron");
+    }
 
     // Poblar para respuesta
     const viajeCompleto = await ViajesModel.findById(nuevoViaje._id)
@@ -311,31 +472,41 @@ ViajesOperativosController.listarViajesOperativos = async (req, res) => {
 // =====================================================
 // GET: Vista de programación (como la pizarra)
 // =====================================================
-// =====================================================
-// GET: Vista de programación (como la pizarra)
-// =====================================================
 ViajesOperativosController.obtenerProgramacionDia = async (req, res) => {
    console.log('🚀🚀🚀 ENDPOINT LLAMADO: /viajes-operativos/programacion/:fecha 🚀🚀🚀');
   console.log('Fecha recibida:', req.params.fecha);
   try {
     const { fecha } = req.params;
     
-    const fechaDate = new Date(fecha);
-    const siguienteDia = new Date(fechaDate);
-    siguienteDia.setDate(fechaDate.getDate() + 1);
+    // Parsear fecha en UTC con offset para zona -6 (6 AM UTC = 00:00 local)
+    const [year, month, day] = fecha.split('-').map(Number);
+    const fechaDate = new Date(Date.UTC(year, month - 1, day, 6, 0, 0, 0));
+    const siguienteDia = new Date(Date.UTC(year, month - 1, day + 1, 6, 0, 0, 0));
     
-    const viajes = await ViajesModel.find({
+    console.log('Fecha parseada UTC offset:', fechaDate.toISOString());
+    console.log('Siguiente día UTC offset:', siguienteDia.toISOString());
+    
+    const query = {
       tipoViaje: 'operativo',
       departureTime: {
         $gte: fechaDate,
         $lt: siguienteDia
       }
-    })
+    };
+    console.log('Query de búsqueda:', JSON.stringify(query, null, 2));
+    
+    const viajes = await ViajesModel.find(query)
     .populate('truckId', 'brand model licensePlate placa marca modelo name nombre')
     .populate('conductorId', 'name nombre')
     .populate('clienteOperativo', 'nombre name')
     .sort({ departureTime: 1 })
     .lean();
+    
+    // DEBUG: Mostrar todos los viajes operativos
+    const todosOperativos = await ViajesModel.find({ tipoViaje: 'operativo' }).select('departureTime tipoViaje _id').sort({ departureTime: -1 }).limit(20).lean();
+    console.log('🔍 === TODOS LOS VIAJES OPERATIVOS (últimos 20) ===');
+    todosOperativos.forEach(v => console.log(`${v._id}: ${v.departureTime} (${v.tipoViaje}) - ${v.departureTime.toISOString()}`));
+    console.log('===============================================');
     
     console.log('🚛 === VIAJES ENCONTRADOS ===');
     console.log('Total viajes:', viajes.length);
@@ -392,8 +563,8 @@ ViajesOperativosController.obtenerProgramacionDia = async (req, res) => {
         destino: viaje.rutaDirecta?.destino?.nombre || 'N/A',
         estado: viaje.estado?.actual || 'pendiente',
         camion: nombreCamion,
-        placa: placaCamion, // ✅ AGREGAR ESTE CAMPO
-        horaSalida: hora // ✅ TAMBIÉN AGREGAR HORA DE SALIDA EXPLÍCITA
+        placa: placaCamion,
+        horaSalida: hora
       };
       
       console.log('📦 Objeto viaje a enviar:', JSON.stringify(viajeData, null, 2));

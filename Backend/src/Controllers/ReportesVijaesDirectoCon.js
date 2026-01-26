@@ -2944,10 +2944,13 @@ ReportesViajesDirecto.generarPDFDiario = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Formato de fecha inválido. Usa YYYY-MM-DD (ej: 2025-01-25)' });
     }
 
-    const fechaDate = new Date(fecha + 'T00:00:00.000Z');
-    const fechaFin = new Date(fecha + 'T23:59:59.999Z');
+    // ✅ PARSEAR COMO ZONA HORARIA LOCAL (igual que cuando guardas los viajes)
+    const [year, month, day] = fecha.split('-');
+    const fechaDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day), 0, 0, 0, 0);
+    const fechaFin = new Date(parseInt(year), parseInt(month) - 1, parseInt(day), 23, 59, 59, 999);
 
     console.log(`📊 Generando PDF Diario de Viajes: ${formatearFechaString(fecha)}`);
+    console.log('🔍 Rango de búsqueda LOCAL:', fechaDate, 'hasta', fechaFin);
 
     // Obtener viajes del día
     const viajes = await ViajesModel.find({
@@ -2959,6 +2962,8 @@ ReportesViajesDirecto.generarPDFDiario = async (req, res) => {
       .populate('truckId', 'licensePlate placa')
       .sort({ clienteNombre: 1, departureTime: 1 })
       .lean();
+
+    console.log('✅ Viajes encontrados:', viajes.length);
 
     if (!viajes || viajes.length === 0) {
       return res.status(404).json({ success: false, message: 'No hay viajes completados en la fecha indicada' });
@@ -3168,6 +3173,8 @@ ReportesViajesDirecto.generarPDFDiario = async (req, res) => {
     res.setHeader('Content-Disposition', `attachment; filename=reporte-diario-viajes-${fecha}.pdf`);
     res.send(pdfBuffer);
 
+    console.log('✅ PDF Diario generado exitosamente');
+
   } catch (error) {
     if (browser) await browser.close();
     console.error("❌ Error al generar PDF Diario:", error);
@@ -3178,5 +3185,4 @@ ReportesViajesDirecto.generarPDFDiario = async (req, res) => {
     });
   }
 };
-
 export default ReportesViajesDirecto;
