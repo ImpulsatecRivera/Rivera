@@ -1,6 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { User, Mail, Phone, MapPin, Lock, CreditCard, Cake, Car } from 'lucide-react';
+import { User, Mail, Phone, MapPin, Lock, CreditCard, Cake, Car, DollarSign, ClipboardList } from 'lucide-react';
 import Swal from 'sweetalert2';
+
+import { config } from '../../config';
+
+const API_URL = config.api.API_URL;
 
 // Componentes de formularios específicos
 import HeaderNavigation from '../../components/FormsMotoristas/FormHeaderNavigation';
@@ -13,7 +17,7 @@ import DatePicker from '../../components/FormsMotoristas/FormDatePicker';
 import ImageUpload from '../../components/FormsMotoristas/ImageUpload';
 import SubmitButton from '../../components/FormsMotoristas/SubmitButton';
 
-const AgregarMotorista = () => {
+const AgregarAuxiliar = () => {
   // Estados del componente
   const [formData, setFormData] = useState({
     name: '',
@@ -24,7 +28,11 @@ const AgregarMotorista = () => {
     password: '',
     phone: '',
     address: '',
-    circulationCard: '',
+    licenciaConducir: '',
+    fechaVencimientoLicencia: '',
+    // ✅ NUEVOS CAMPOS DEL MODEL
+    planillaTipo: '',
+    salario: '',
     img: null
   });
 
@@ -32,21 +40,11 @@ const AgregarMotorista = () => {
   const [loading, setLoading] = useState(false);
   const [imagePreview, setImagePreview] = useState(null);
 
-  // Generar email automáticamente cuando cambien nombre o apellido
-  useEffect(() => {
-    if (formData.name && formData.lastName) {
-      const emailGenerated = `${formData.name.toLowerCase()}.${formData.lastName.toLowerCase()}@rivera.com`;
-      setFormData(prev => ({ ...prev, email: emailGenerated }));
-    } else {
-      setFormData(prev => ({ ...prev, email: '' }));
-    }
-  }, [formData.name, formData.lastName]);
-
-  // Configuración de SweetAlert2
+  // Manejo de imagen
   const showSuccessAlert = () => {
     Swal.fire({
-      title: '¡Motorista agregado con éxito!',
-      text: 'Motorista agregado correctamente',
+      title: '¡Auxiliar agregado con éxito!',
+      text: 'Auxiliar agregado correctamente',
       icon: 'success',
       confirmButtonText: 'Continuar',
       confirmButtonColor: '#5D9646',
@@ -57,21 +55,9 @@ const AgregarMotorista = () => {
     });
   };
 
-  const showErrorAlert = (message) => {
-    Swal.fire({
-      title: 'Error al agregar motorista',
-      text: message || 'Hubo un error al procesar la solicitud',
-      icon: 'error',
-      confirmButtonText: 'Intentar de nuevo',
-      confirmButtonColor: '#ef4444',
-      allowOutsideClick: false,
-      customClass: { popup: 'animated shakeX' }
-    });
-  };
-
   const showLoadingAlert = () => {
     Swal.fire({
-      title: 'Agregando motorista...',
+      title: 'Agregando auxiliar...',
       text: 'Por favor espera mientras procesamos la información',
       allowOutsideClick: false,
       allowEscapeKey: false,
@@ -113,28 +99,18 @@ const AgregarMotorista = () => {
         return;
       }
 
-      const maxSize = 5 * 1024 * 1024; // 5MB
-      if (file.size > maxSize) {
-        Swal.fire({
-          title: 'Archivo muy grande',
-          text: 'La imagen debe ser menor a 5MB',
-          icon: 'warning',
-          confirmButtonText: 'Entendido',
-          confirmButtonColor: '#f59e0b'
-        });
-        return;
-      }
-
-      setFormData(prev => ({ ...prev, img: file }));
       const reader = new FileReader();
-      reader.onload = (e) => setImagePreview(e.target.result);
+      reader.onloadend = () => {
+        setImagePreview(reader.result);
+      };
       reader.readAsDataURL(file);
+      setFormData(prev => ({...prev, img: file}));
     }
   };
 
   const removeImage = () => {
-    setFormData(prev => ({ ...prev, img: null }));
     setImagePreview(null);
+    setFormData(prev => ({...prev, img: null}));
     const fileInput = document.getElementById('img-input');
     if (fileInput) fileInput.value = '';
   };
@@ -144,56 +120,63 @@ const AgregarMotorista = () => {
     const { name, value } = e.target;
     let formattedValue = value;
 
-    if (name === 'email') return;
-
     if (name === 'phone') {
       const numbers = value.replace(/\D/g, '');
-      formattedValue = numbers.length > 4 
+      formattedValue = numbers.length > 4
         ? numbers.slice(0, 4) + '-' + numbers.slice(4, 8)
         : numbers;
     }
 
     if (name === 'id') {
       const numbers = value.replace(/\D/g, '');
-      formattedValue = numbers.length > 8 
+      formattedValue = numbers.length > 8
         ? numbers.slice(0, 8) + '-' + numbers.slice(8, 9)
         : numbers;
     }
 
-    if (name === 'circulationCard') {
+    if (name === 'licenciaConducir') {
       formattedValue = value.replace(/[^a-zA-Z0-9-]/g, '').toUpperCase();
     }
 
-    setFormData(prev => ({ ...prev, [name]: formattedValue }));
+    // ✅ salario: permitir solo número (string en el state; lo convertimos al enviar)
+    if (name === 'salario') {
+      formattedValue = value; // el input type=number ya ayuda
+    }
+
+    setFormData(prev => ({
+      ...prev,
+      [name]: formattedValue
+    }));
   };
 
-  // Manejo específico para DatePicker
+  // Manejo de fecha
   const handleDateChange = (date) => {
-    setFormData(prev => ({ ...prev, birthDate: date }));
+    setFormData(prev => ({
+      ...prev,
+      birthDate: date
+    }));
   };
 
-  // Validación del formulario
+  // Validación de formulario
   const validateForm = () => {
     const newErrors = {};
-    
-    if (!formData.name) newErrors.name = "El nombre es obligatorio";
-    if (!formData.lastName) newErrors.lastName = "El apellido es obligatorio";
-    if (!formData.id) newErrors.id = "El DUI es obligatorio";
-    if (formData.id && formData.id.replace(/\D/g, '').length !== 9) {
-      newErrors.id = "El DUI debe tener exactamente 9 dígitos";
-    }
+
+    // Campos obligatorios para auxiliar (SIN licencia)
+    if (!formData.name.trim()) newErrors.name = "El nombre es obligatorio";
+    if (!formData.lastName.trim()) newErrors.lastName = "El apellido es obligatorio";
+    if (!formData.id.trim()) newErrors.id = "El DUI es obligatorio";
     if (!formData.birthDate) newErrors.birthDate = "La fecha de nacimiento es obligatoria";
     if (!formData.password) newErrors.password = "La contraseña es obligatoria";
-    if (!formData.phone) newErrors.phone = "El teléfono es obligatorio";
-    if (formData.phone && formData.phone.replace(/\D/g, '').length !== 8) {
-      newErrors.phone = "El teléfono debe tener exactamente 8 dígitos";
+    if (!formData.phone.trim()) newErrors.phone = "El teléfono es obligatorio";
+    if (!formData.address.trim()) newErrors.address = "La dirección es obligatoria";
+    if (!formData.planillaTipo) newErrors.planillaTipo = "El tipo de planilla es obligatorio";
+    if (String(formData.salario).trim() === '') newErrors.salario = "El salario es obligatorio";
+    if (String(formData.salario).trim() !== '' && Number(formData.salario) <= 0) {
+      newErrors.salario = "El salario debe ser mayor a 0";
     }
-    if (!formData.address) newErrors.address = "La dirección es obligatoria";
-    if (!formData.circulationCard) newErrors.circulationCard = "La Licencia de conducir es obligatoria";
-    if (formData.circulationCard && formData.circulationCard.length < 3) {
-      newErrors.circulationCard = "La Licencia de conducir debe tener al menos 3 caracteres";
-    }
-    if (!formData.img) newErrors.img = "La imagen es obligatoria";
+
+    // Licencia de conducir OPCIONAL para auxiliares
+    // Imagen opcional: no requerida
 
     return newErrors;
   };
@@ -201,8 +184,19 @@ const AgregarMotorista = () => {
   // Resetear formulario
   const resetForm = () => {
     setFormData({
-      name: '', lastName: '', email: '', id: '', birthDate: '',
-      password: '', phone: '', address: '', circulationCard: '', img: null
+      name: '',
+      lastName: '',
+      email: '',
+      id: '',
+      birthDate: '',
+      password: '',
+      phone: '',
+      address: '',
+      licenciaConducir: '',
+      fechaVencimientoLicencia: '',
+      planillaTipo: '',
+      salario: '',
+      img: null
     });
     setImagePreview(null);
     setErrors({});
@@ -211,73 +205,27 @@ const AgregarMotorista = () => {
     if (fileInput) fileInput.value = '';
   };
 
-  // Manejo de errores de la API
-  const getErrorMessage = (error) => {
-    let errorMsg = 'Error desconocido';
-    let errorTitle = '❌ Error al agregar motorista';
-
-    if (error.message.includes('HTTP error!')) {
-      const statusCode = error.message.match(/\d+/);
-      if (statusCode) {
-        switch (parseInt(statusCode[0])) {
-          case 400:
-            errorTitle = '❌ Error de validación';
-            errorMsg = 'Los datos enviados no son válidos. Verifica la información.';
-            break;
-          case 401:
-            errorTitle = '🔒 No autorizado';
-            errorMsg = 'No tienes permisos para realizar esta acción. Verifica tus credenciales.';
-            break;
-          case 403:
-            errorTitle = '⛔ Acceso denegado';
-            errorMsg = 'No tienes permisos suficientes para agregar motoristas.';
-            break;
-          case 404:
-            errorTitle = '🔍 Servicio no encontrado';
-            errorMsg = 'El servicio no está disponible. Contacta al administrador.';
-            break;
-          case 409:
-            errorTitle = '⚠️ Conflicto de datos';
-            errorMsg = 'Ya existe un motorista con estos datos. Verifica el DUI o tarjeta de circulación.';
-            break;
-          case 413:
-            errorTitle = '📁 Archivo muy grande';
-            errorMsg = 'La imagen es muy grande. Reduce el tamaño e intenta de nuevo.';
-            break;
-          case 500:
-            errorTitle = '🔥 Error del servidor';
-            errorMsg = 'Error interno del servidor. Inténtalo más tarde.';
-            break;
-          default:
-            errorTitle = '❌ Error inesperado';
-            errorMsg = `Error del servidor (${statusCode[0]}). Contacta al administrador.`;
-        }
-      }
-    } else if (error.name === 'TypeError' && error.message.includes('fetch')) {
-      errorTitle = '🌐 Sin conexión';
-      errorMsg = 'No se pudo conectar con el servidor. Verifica tu conexión a internet.';
-    } else {
-      errorTitle = '⚙️ Error de configuración';
-      errorMsg = 'Error al configurar la petición. Contacta al administrador.';
-    }
-
-    return { errorTitle, errorMsg };
-  };
-
   // Envío del formulario
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     const formErrors = validateForm();
     setErrors(formErrors);
 
     if (Object.keys(formErrors).length > 0) {
       const camposFaltantes = Object.keys(formErrors).map(field => {
         const fieldNames = {
-          name: 'Nombre', lastName: 'Apellido', id: 'DUI',
-          birthDate: 'Fecha de nacimiento', password: 'Contraseña',
-          phone: 'Teléfono', address: 'Dirección',
-          circulationCard: 'Tarjeta de circulación', img: 'Imagen'
+          name: 'Nombre',
+          lastName: 'Apellido',
+          email: 'Correo electrónico',
+          id: 'DUI',
+          birthDate: 'Fecha de nacimiento',
+          password: 'Contraseña',
+          phone: 'Teléfono',
+          address: 'Dirección',
+          planillaTipo: 'Tipo de planilla',
+          salario: 'Salario',
+          img: 'Imagen'
         };
         return fieldNames[field] || field;
       });
@@ -295,26 +243,55 @@ const AgregarMotorista = () => {
       formDataToSend.append('name', formData.name.trim());
       formDataToSend.append('lastName', formData.lastName.trim());
       formDataToSend.append('id', formData.id.trim());
-      formDataToSend.append('birthDate', formData.birthDate);
+      
+      // Convertir dates a formato YYYY-MM-DD para evitar problemas de zona horaria
+      const birthDateStr = formData.birthDate instanceof Date 
+        ? formData.birthDate.toISOString().split('T')[0]
+        : String(formData.birthDate).split('T')[0];
+      formDataToSend.append('birthDate', birthDateStr);
+      
+      // Licencia de conducir OPCIONAL para auxiliares
+      if (formData.licenciaConducir?.trim()) {
+        formDataToSend.append('licenciaConducir', formData.licenciaConducir.trim());
+      }
+      
+      if (formData.fechaVencimientoLicencia) {
+        const fechaVencStr = formData.fechaVencimientoLicencia instanceof Date
+          ? formData.fechaVencimientoLicencia.toISOString().split('T')[0]
+          : String(formData.fechaVencimientoLicencia).split('T')[0];
+        formDataToSend.append('fechaVencimientoLicencia', fechaVencStr);
+      }
+      
       formDataToSend.append('password', formData.password);
       formDataToSend.append('phone', formData.phone.trim());
       formDataToSend.append('address', formData.address.trim());
-      formDataToSend.append('circulationCard', formData.circulationCard.trim());
+
+      // ✅ enviar campos del model
+      formDataToSend.append('planillaTipo', formData.planillaTipo);
+      formDataToSend.append('salario', String(Number(formData.salario)));
+
+      // (Opcional) si querés guardarlo aunque no esté en model (strict:false lo permite)
+      if (formData.email?.trim()) {
+        formDataToSend.append('email', formData.email.trim());
+      }
 
       if (formData.img) {
         formDataToSend.append('img', formData.img);
       }
 
-      const response = await fetch('https://riveraproject-production-933e.up.railway.app/api/motoristas', {
+      // ✅ Rol automático para auxiliar
+      formDataToSend.append('rol', 'auxiliar');
+
+      const response = await fetch(`${API_URL}/motoristas`, {
         method: 'POST',
-        credentials: 'include',
         body: formDataToSend,
+        credentials: 'include'
       });
 
       if (response.ok) {
         const responseData = await response.json();
-        console.log('Motorista creado exitosamente:', responseData);
-        
+        console.log('Auxiliar creado exitosamente:', responseData);
+
         Swal.close();
         resetForm();
         showSuccessAlert();
@@ -322,23 +299,19 @@ const AgregarMotorista = () => {
         const errorData = await response.json();
         throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
       }
-
     } catch (error) {
       console.error('Error capturado:', error);
       Swal.close();
-      
-      const { errorTitle, errorMsg } = getErrorMessage(error);
-      
+
       Swal.fire({
-        title: errorTitle,
-        text: errorMsg,
+        title: '❌ Error al agregar auxiliar',
+        text: error.message || 'Hubo un error al procesar la solicitud',
         icon: 'error',
         confirmButtonText: 'Intentar de nuevo',
         confirmButtonColor: '#ef4444',
         allowOutsideClick: false,
         customClass: { popup: 'animated shakeX' }
       });
-
     } finally {
       setLoading(false);
     }
@@ -356,7 +329,7 @@ const AgregarMotorista = () => {
   return (
     <div className="min-h-screen" style={{ backgroundColor: '#34353A' }}>
       {/* Header Navigation */}
-      <HeaderNavigation 
+      <HeaderNavigation
         onBack={handleBackToMenu}
         title="Volver al menú principal"
       />
@@ -364,31 +337,31 @@ const AgregarMotorista = () => {
       {/* Main Content */}
       <div className="px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
         <div className="max-w-7xl mx-auto">
-          
+
           {/* Hero Section */}
           <FormHeroSection
             icon={Car}
-            title="Agregar Nuevo Motorista"
-            description="Complete la información del motorista para agregarlo al sistema"
+            title="Agregar Nuevo Auxiliar"
+            description="Complete la información del auxiliar para agregarlo al sistema"
             iconColor="#5D9646"
           />
 
           {/* Form Container */}
           <FormContainer onSubmit={handleSubmit}>
-            
+
             {/* Profile Image Upload */}
             <ImageUpload
               imagePreview={imagePreview}
               onImageChange={handleImageChange}
               onRemoveImage={removeImage}
               error={errors.img}
-              label="Subir foto *"
-              required={true}
+              label="Subir foto (opcional)"
+              required={false}
             />
 
             {/* Form Fields Grid */}
             <FormFieldsGrid>
-              
+
               {/* Nombre */}
               <FormInput
                 id="name"
@@ -424,10 +397,11 @@ const AgregarMotorista = () => {
                 type="email"
                 value={formData.email}
                 onChange={handleInputChange}
-                label="Correo electrónico"
+                placeholder="Ingrese el correo electrónico (opcional)"
+                label="Correo electrónico (opcional)"
                 icon={Mail}
-                readOnly={true}
-                autoGenerated={true}
+                error={errors.email}
+                required={false}
                 className="sm:col-span-2 lg:col-span-1"
               />
 
@@ -486,17 +460,72 @@ const AgregarMotorista = () => {
                 required={true}
               />
 
-              {/* Licencia de conducir */}
+              {/* Licencia de conducir (OPCIONAL para auxiliares)*/}
               <FormInput
-                id="circulationCard"
-                name="circulationCard"
+                id="licenciaConducir"
+                name="licenciaConducir"
                 type="text"
-                value={formData.circulationCard}
+                value={formData.licenciaConducir}
                 onChange={handleInputChange}
                 placeholder="Ejemplo: ABC-123"
-                label="Licencia de conducir"
+                label="Licencia de conducir (opcional)"
                 icon={Car}
-                error={errors.circulationCard}
+                error={errors.licenciaConducir}
+                required={false}
+              />
+
+              {/* Fecha de Vencimiento de la Licencia (OPCIONAL para auxiliares) */}
+              <DatePicker
+                value={formData.fechaVencimientoLicencia}
+                onChange={(date) => setFormData(prev => ({ ...prev, fechaVencimientoLicencia: date }))}
+                placeholder="Seleccionar fecha"
+                label="Fecha de vencimiento (opcional)"
+                icon={Car}
+                error={errors.fechaVencimientoLicencia}
+                required={false}
+              />
+
+              {/* ✅ Tipo de planilla (Semanal / Quincenal) */}
+              <div className="w-full">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Tipo de planilla *
+                </label>
+
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <ClipboardList className="w-5 h-5" style={{ color: '#5D9646' }} />
+                  </div>
+
+                  <select
+                    name="planillaTipo"
+                    value={formData.planillaTipo}
+                    onChange={handleInputChange}
+                    className={`w-full pl-10 pr-10 py-3 rounded-lg border-2 bg-white text-gray-900
+                      focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200
+                      ${errors.planillaTipo ? 'border-red-500' : 'border-gray-300'}`}
+                  >
+                    <option value="" disabled>Selecciona una opción</option>
+                    <option value="Semanal">Semanal</option>
+                    <option value="Quincenal">Quincenal</option>
+                  </select>
+                </div>
+
+                {errors.planillaTipo && (
+                  <p className="text-xs mt-1 text-red-500">{errors.planillaTipo}</p>
+                )}
+              </div>
+
+              {/* ✅ Salario */}
+              <FormInput
+                id="salario"
+                name="salario"
+                type="number"
+                value={formData.salario}
+                onChange={handleInputChange}
+                placeholder="Ejemplo: 600"
+                label="Salario ($)"
+                icon={DollarSign}
+                error={errors.salario}
                 required={true}
               />
 
@@ -525,7 +554,7 @@ const AgregarMotorista = () => {
               color="#5D9646"
               hoverColor="#4a7a37"
             >
-              Agregar Motorista
+              Agregar Auxiliar
             </SubmitButton>
 
           </FormContainer>
@@ -535,4 +564,4 @@ const AgregarMotorista = () => {
   );
 };
 
-export default AgregarMotorista;
+export default AgregarAuxiliar;

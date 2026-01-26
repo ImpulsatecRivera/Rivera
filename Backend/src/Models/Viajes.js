@@ -29,6 +29,21 @@ const viajeSchema = new Schema({
   },
 
   // =====================================================
+  // 🆕 AUXILIARES DEL VIAJE (máximo 2)
+  // =====================================================
+  auxiliares: [{
+    auxiliarId: {
+      type: Schema.Types.ObjectId,
+      ref: 'Motorista'
+    },
+    rol: {
+      type: String,
+      enum: ['auxiliar'],
+      default: 'auxiliar'
+    }
+  }],
+
+  // =====================================================
   // 🆕 TIPO DE VIAJE
   // =====================================================
   tipoViaje: {

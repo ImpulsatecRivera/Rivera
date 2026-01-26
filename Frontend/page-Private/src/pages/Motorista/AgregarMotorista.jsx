@@ -28,7 +28,7 @@ const AgregarMotorista = () => {
     password: '',
     phone: '',
     address: '',
-    circulationCard: '',
+    licenciaConducir: '',
     fechaVencimientoLicencia: '',
     // ✅ NUEVOS CAMPOS DEL MODEL
     planillaTipo: '',
@@ -144,7 +144,7 @@ const AgregarMotorista = () => {
         : numbers;
     }
 
-    if (name === 'circulationCard') {
+    if (name === 'licenciaConducir') {
       formattedValue = value.replace(/[^a-zA-Z0-9-]/g, '').toUpperCase();
     }
 
@@ -168,11 +168,6 @@ const AgregarMotorista = () => {
     if (!formData.name) newErrors.name = "El nombre es obligatorio";
     if (!formData.lastName) newErrors.lastName = "El apellido es obligatorio";
 
-    if (!formData.email) newErrors.email = "El correo electrónico es obligatorio";
-    if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      newErrors.email = "Formato de correo electrónico inválido";
-    }
-
     if (!formData.id) newErrors.id = "El DUI es obligatorio";
     if (formData.id && formData.id.replace(/\D/g, '').length !== 9) {
       newErrors.id = "El DUI debe tener exactamente 9 dígitos";
@@ -188,9 +183,9 @@ const AgregarMotorista = () => {
 
     if (!formData.address) newErrors.address = "La dirección es obligatoria";
 
-    if (!formData.circulationCard) newErrors.circulationCard = "La tarjeta de circulación es obligatoria";
-    if (formData.circulationCard && formData.circulationCard.length < 3) {
-      newErrors.circulationCard = "La tarjeta de circulación debe tener al menos 3 caracteres";
+    if (!formData.licenciaConducir) newErrors.licenciaConducir = "La Licencia de conducir es obligatoria";
+    if (formData.licenciaConducir && formData.licenciaConducir.length < 3) {
+      newErrors.licenciaConducir = "La Licencia de conducir debe tener al menos 3 caracteres";
     }
 
     if (!formData.fechaVencimientoLicencia) newErrors.fechaVencimientoLicencia = "La fecha de vencimiento de la licencia es obligatoria";
@@ -202,7 +197,7 @@ const AgregarMotorista = () => {
       newErrors.salario = "El salario debe ser mayor a 0";
     }
 
-    if (!formData.img) newErrors.img = "La imagen es obligatoria";
+    // Imagen opcional: no requerida
 
     return newErrors;
   };
@@ -218,7 +213,7 @@ const AgregarMotorista = () => {
       password: '',
       phone: '',
       address: '',
-      circulationCard: '',
+      licenciaConducir: '',
       fechaVencimientoLicencia: '',
       planillaTipo: '',
       salario: '',
@@ -249,7 +244,7 @@ const AgregarMotorista = () => {
           password: 'Contraseña',
           phone: 'Teléfono',
           address: 'Dirección',
-          circulationCard: 'Tarjeta de circulación',
+          licenciaConducir: 'Licencia de conducir',
           fechaVencimientoLicencia: 'Fecha de vencimiento de la licencia',
           planillaTipo: 'Tipo de planilla',
           salario: 'Salario',
@@ -286,7 +281,7 @@ const AgregarMotorista = () => {
       formDataToSend.append('password', formData.password);
       formDataToSend.append('phone', formData.phone.trim());
       formDataToSend.append('address', formData.address.trim());
-      formDataToSend.append('circulationCard', formData.circulationCard.trim());
+      formDataToSend.append('licenciaConducir', formData.licenciaConducir.trim());
 
       // ✅ enviar campos del model
       formDataToSend.append('planillaTipo', formData.planillaTipo);
@@ -300,6 +295,9 @@ const AgregarMotorista = () => {
       if (formData.img) {
         formDataToSend.append('img', formData.img);
       }
+
+      // Rol automático para este formulario
+      formDataToSend.append('rol', 'motorista');
 
       const response = await fetch(`${API_URL}/motoristas`, {
         method: 'POST',
@@ -374,8 +372,8 @@ const AgregarMotorista = () => {
               onImageChange={handleImageChange}
               onRemoveImage={removeImage}
               error={errors.img}
-              label="Subir foto *"
-              required={true}
+              label="Subir foto (opcional)"
+              required={false}
             />
 
             {/* Form Fields Grid */}
@@ -416,11 +414,11 @@ const AgregarMotorista = () => {
                 type="email"
                 value={formData.email}
                 onChange={handleInputChange}
-                placeholder="Ingrese el correo electrónico"
-                label="Correo electrónico"
+                placeholder="Ingrese el correo electrónico (opcional)"
+                label="Correo electrónico (opcional)"
                 icon={Mail}
                 error={errors.email}
-                required={true}
+                required={false}
                 className="sm:col-span-2 lg:col-span-1"
               />
 
@@ -479,17 +477,17 @@ const AgregarMotorista = () => {
                 required={true}
               />
 
-              {/* Tarjeta de Circulación */}
+              {/* Licencia de conducir*/}
               <FormInput
-                id="circulationCard"
-                name="circulationCard"
+                id="licenciaConducir"
+                name="licenciaConducir"
                 type="text"
-                value={formData.circulationCard}
+                value={formData.licenciaConducir}
                 onChange={handleInputChange}
                 placeholder="Ejemplo: ABC-123"
-                label="Tarjeta de circulación"
+                label="Licencia de conducir"
                 icon={Car}
-                error={errors.circulationCard}
+                error={errors.licenciaConducir}
                 required={true}
               />
 

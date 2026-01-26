@@ -33,6 +33,8 @@ const Motorista = () => {
     error,
     searchTerm,
     sortBy,
+    selectedCategory,
+    setSelectedCategory,
     setSearchTerm,
     setSortBy,
     showAlert,
@@ -41,7 +43,10 @@ const Motorista = () => {
     showEditAlert,
     successType,
     filterMotoristas,
+    countMotoristas,
+    countAuxiliares,
     handleContinue,
+    handleContinueAuxiliar,
     handleOptionsClick,
     handleEdit,
     handleDelete,
@@ -169,9 +174,14 @@ const Motorista = () => {
                 setSearchTerm={setSearchTerm}
                 sortBy={sortBy}
                 setSortBy={setSortBy}
+                selectedCategory={selectedCategory}
+                setSelectedCategory={setSelectedCategory}
+                countMotoristas={countMotoristas}
+                countAuxiliares={countAuxiliares}
                 handleContinue={handleContinue}
                 onStartTutorial={startTutorial}
                 hasCompletedTutorial={hasCompleted}
+                handleContinueAuxiliar={handleContinueAuxiliar}
               />
             </div>
 
@@ -239,7 +249,7 @@ const Motorista = () => {
         onClose={closeAlert}
         onPrimary={handleDelete}
         onSecondary={handleEdit}
-        title="¿Deseas eliminar o actualizar un motorista?"
+        title={selectedMotorista?.rol === 'auxiliar' ? '¿Deseas eliminar o actualizar un auxiliar?' : '¿Deseas eliminar o actualizar un motorista?'}
         description="Elija la opción"
         primaryText="Eliminar"
         secondaryText="Actualizar"
@@ -252,8 +262,8 @@ const Motorista = () => {
         onClose={cancelDelete}
         onConfirm={confirmDelete}
         itemName={selectedMotorista ? `${selectedMotorista.name} ${selectedMotorista.lastName}` : ''}
-        title="¿Está seguro de que desea eliminar a este motorista?"
-        description="El motorista se eliminará con esta acción"
+        title={selectedMotorista?.rol === 'auxiliar' ? '¿Está seguro de que desea eliminar a este auxiliar?' : '¿Está seguro de que desea eliminar a este motorista?'}
+        description={selectedMotorista?.rol === 'auxiliar' ? 'El auxiliar se eliminará con esta acción' : 'El motorista se eliminará con esta acción'}
         confirmText="Eliminar"
         cancelText="Cancelar"
       />
@@ -262,8 +272,24 @@ const Motorista = () => {
         isOpen={showSuccessAlert}
         onClose={closeSuccessAlert}
         type={successType}
-        title={successType === 'edit' ? 'Motorista actualizado con éxito' : 'Motorista eliminado con éxito'}
-        description={successType === 'edit' ? 'Motorista actualizado correctamente' : 'Motorista eliminado correctamente'}
+        title={
+          successType === 'edit'
+            ? selectedMotorista?.rol === 'auxiliar'
+              ? 'Auxiliar actualizado con éxito'
+              : 'Motorista actualizado con éxito'
+            : selectedMotorista?.rol === 'auxiliar'
+              ? 'Auxiliar eliminado con éxito'
+              : 'Motorista eliminado con éxito'
+        }
+        description={
+          successType === 'edit'
+            ? selectedMotorista?.rol === 'auxiliar'
+              ? 'Auxiliar actualizado correctamente'
+              : 'Motorista actualizado correctamente'
+            : selectedMotorista?.rol === 'auxiliar'
+              ? 'Auxiliar eliminado correctamente'
+              : 'Motorista eliminado correctamente'
+        }
         buttonText="Continuar"
       />
 
