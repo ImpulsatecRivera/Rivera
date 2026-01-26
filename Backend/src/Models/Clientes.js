@@ -100,12 +100,55 @@ const clienteSchema = new Schema({
     default: 'activo'
   },
   
-  // Rutas frecuentes (para clientes operativos)
+  // =====================================================
+  // 🔥 RUTAS FRECUENTES ACTUALIZADO
+  // =====================================================
   rutasFrecuentes: [{
-    origen: String,
-    destino: String,
-    frecuencia: String, // Ej: "diario", "semanal", "mensual"
-    tarifa: Number
+    origen: {
+      type: String,
+      required: true,
+      trim: true,
+      uppercase: true
+    },
+    destino: {
+      type: String,
+      required: true,
+      trim: true,
+      uppercase: true
+    },
+    distancia: {
+      type: Number,
+      min: 0,
+      default: 0
+    },
+    tiempoEstimado: {
+      type: String,
+      validate: {
+        validator: function(v) {
+          if (!v) return true; // Permitir null/undefined
+          return /^([0-9]{1,2}):([0-5][0-9])$/.test(v);
+        },
+        message: 'Formato de tiempo inválido. Use HH:MM (ejemplo: 02:30)'
+      }
+    },
+    vecesUsada: {
+      type: Number,
+      default: 0,
+      min: 0
+    },
+    ultimoUso: {
+      type: Date
+    },
+    montoPromedio: {
+      type: Number,
+      min: 0,
+      default: 0
+    },
+    frecuencia: {
+      type: String,
+      enum: ['diario', 'semanal', 'quincenal', 'mensual', 'esporadico'],
+      default: 'esporadico'
+    }
   }],
   
   // Notas internas sobre el cliente corporativo
@@ -299,6 +342,7 @@ clienteSchema.index({ tipoCliente: 1 });
 clienteSchema.index({ nombreComercial: 1 });
 clienteSchema.index({ ruc: 1 }, { sparse: true });
 clienteSchema.index({ estadoCorporativo: 1 });
+clienteSchema.index({ 'rutasFrecuentes.origen': 1, 'rutasFrecuentes.destino': 1 });
 
 // =====================================================
 // MÉTODOS DE INSTANCIA
@@ -350,6 +394,71 @@ clienteSchema.methods.tieneCreditoDisponible = function(monto) {
   if (this.terminosPago === 'contado') return true;
   
   return (this.limiteCredito || 0) >= monto;
+};
+
+/**
+ * 🔥 NUEVO: Obtener la ruta más usada
+ */
+clienteSchema.methods.getRutaMasUsada = function() {
+  if (!this.rutasFrecuentes || this.rutasFrecuentes.length === 0) {
+    return null;
+  }
+  
+  return this.rutasFrecuentes.reduce((prev, current) => {
+    return (current.vecesUsada > prev.vecesUsada) ? current : prev;
+  });
+};
+
+/**
+ * 🔥 NUEVO: Obtener estadísticas de rutas
+ */
+clienteSchema.methods.getEstadisticasRutas = function() {
+  if (!this.rutasFrecuentes || this.rutasFrecuentes.length === 0) {
+    return {
+      totalRutas: 0,
+      totalViajes: 0,
+      rutaMasUsada: null,
+      distanciaTotal: 0,
+      montoPromedioGeneral: 0
+    };
+  }
+  
+  const totalViajes = this.rutasFrecuentes.reduce((sum, ruta) => sum + ruta.vecesUsada, 0);
+  const rutaMasUsada = this.getRutaMasUsada();
+  const distanciaTotal = this.rutasFrecuentes.reduce((sum, ruta) => {
+    return sum + (ruta.distancia * ruta.vecesUsada);
+  }, 0);
+  const montoTotal = this.rutasFrecuentes.reduce((sum, ruta) => {
+    return sum + (ruta.montoPromedio * ruta.vecesUsada);
+  }, 0);
+  
+  return {
+    totalRutas: this.rutasFrecuentes.length,
+    totalViajes,
+    rutaMasUsada: rutaMasUsada ? {
+      origen: rutaMasUsada.origen,
+      destino: rutaMasUsada.destino,
+      usos: rutaMasUsada.vecesUsada
+    } : null,
+    distanciaTotal: Math.round(distanciaTotal),
+    montoPromedioGeneral: totalViajes > 0 ? Math.round((montoTotal / totalViajes) * 100) / 100 : 0
+  };
+};
+
+/**
+ * 🔥 NUEVO: Buscar ruta específica
+ */
+clienteSchema.methods.buscarRuta = function(origen, destino) {
+  if (!this.rutasFrecuentes || this.rutasFrecuentes.length === 0) {
+    return null;
+  }
+  
+  const origenNormalizado = origen.trim().toUpperCase();
+  const destinoNormalizado = destino.trim().toUpperCase();
+  
+  return this.rutasFrecuentes.find(
+    r => r.origen === origenNormalizado && r.destino === destinoNormalizado
+  );
 };
 
 // =====================================================
@@ -410,6 +519,38 @@ clienteSchema.statics.obtenerEstadisticas = async function() {
     };
     return acc;
   }, {});
+};
+
+/**
+ * 🔥 NUEVO: Obtener clientes con más rutas frecuentes
+ */
+clienteSchema.statics.obtenerClientesConMasRutas = function(limit = 10) {
+  return this.aggregate([
+    {
+      $match: {
+        tipoCliente: 'corporativo',
+        estadoCorporativo: 'activo'
+      }
+    },
+    {
+      $project: {
+        nombreComercial: 1,
+        nombreEmpresa: 1,
+        totalRutas: { $size: { $ifNull: ['$rutasFrecuentes', []] } }
+      }
+    },
+    {
+      $match: {
+        totalRutas: { $gt: 0 }
+      }
+    },
+    {
+      $sort: { totalRutas: -1 }
+    },
+    {
+      $limit: limit
+    }
+  ]);
 };
 
 /**
