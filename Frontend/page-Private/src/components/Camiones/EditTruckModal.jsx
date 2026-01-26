@@ -11,11 +11,14 @@ const EditTruckModal = ({
   formData,
   imagePreview,
   currentImage,
+  circulationCardImagePreview, // ✅ Nueva prop
+  currentCirculationCardImage, // ✅ Nueva prop
   proveedores = [],
   motoristas = [],
   onClose,
   onInputChange,
   onImageChange,
+  onCirculationCardImageChange, // ✅ Nueva prop
   onSubmit,
   onSuccess
 }) => {
@@ -184,6 +187,18 @@ const EditTruckModal = ({
                   fileName={formData.imagen?.name}
                   disabled={isSubmitting}
                 />
+
+                {/* ✅ Subida de imagen de tarjeta de circulación */}
+                <div className="border-t border-gray-200 pt-6">
+                  <ImageUpload
+                    imagePreview={circulationCardImagePreview}
+                    currentImage={currentCirculationCardImage}
+                    onImageChange={onCirculationCardImageChange}
+                    fileName={formData.circulationCardImage?.name}
+                    disabled={isSubmitting}
+                    label="Imagen de tarjeta de circulación"
+                  />
+                </div>
 
                 {/* Botón de envío */}
                 <div className="flex justify-center pt-6 modal-button">

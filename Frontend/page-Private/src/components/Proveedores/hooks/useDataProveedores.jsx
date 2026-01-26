@@ -45,7 +45,16 @@ const useDataProveedores = () => {
 
   // Filtrar proveedores
   const filterProveedores = proveedores.filter((proveedor) => 
-    [proveedor.companyName, proveedor.email, proveedor.partDescription, proveedor.phone]
+    [
+      proveedor.companyName || '',
+      proveedor.email || '',
+      proveedor.partDescription || '',
+      proveedor.phone || '',
+      proveedor?.contactoPrincipal?.nombre || '',
+      proveedor?.contactoPrincipal?.cargo || '',
+      proveedor?.contactoPrincipal?.telefono || '',
+      proveedor?.contactoPrincipal?.email || ''
+    ]
       .join(' ')
       .toLowerCase()
       .includes(searchTerm.toLowerCase())
@@ -99,6 +108,7 @@ const useDataProveedores = () => {
     try {
       // Los nombres de los campos ahora coinciden con la estructura del backend
       const updatedData = {};
+      const contactoPrincipal = {};
       
       // Solo incluir campos que no estén vacíos
       if (formData.companyName && formData.companyName.trim()) {
@@ -120,6 +130,23 @@ const useDataProveedores = () => {
         updatedData.rubro = formData.rubro;
       }
 
+      if (formData.contactoNombre && formData.contactoNombre.trim()) {
+        contactoPrincipal.nombre = formData.contactoNombre;
+      }
+      if (formData.contactoCargo && formData.contactoCargo.trim()) {
+        contactoPrincipal.cargo = formData.contactoCargo;
+      }
+      if (formData.contactoTelefono && formData.contactoTelefono.trim()) {
+        contactoPrincipal.telefono = formData.contactoTelefono;
+      }
+      if (formData.contactoEmail && formData.contactoEmail.trim()) {
+        contactoPrincipal.email = formData.contactoEmail;
+      }
+
+      if (Object.keys(contactoPrincipal).length) {
+        updatedData.contactoPrincipal = contactoPrincipal;
+      }
+
       const response = await axios.put(
         `${API_URL}/proveedores/${selectedProveedor._id}`, 
         updatedData
@@ -133,7 +160,14 @@ const useDataProveedores = () => {
       ));
       
       // Actualizar el proveedor seleccionado
-      setSelectedProveedor({ ...selectedProveedor, ...updatedData });
+      const updatedProveedor = { ...selectedProveedor, ...updatedData };
+      if (updatedData.contactoPrincipal) {
+        updatedProveedor.contactoPrincipal = {
+          ...(selectedProveedor.contactoPrincipal || {}),
+          ...updatedData.contactoPrincipal
+        };
+      }
+      setSelectedProveedor(updatedProveedor);
       
       console.log("Proveedor actualizado:", response.data);
       
