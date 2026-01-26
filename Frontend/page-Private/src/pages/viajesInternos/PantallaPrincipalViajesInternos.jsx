@@ -18,6 +18,10 @@ import { config } from "../../config";
 import ReportesViajesOperativosModal from "./ReportesViajesInternosModal";
 import { api } from "../../Context/authContext";
 
+import { useTutorial } from '../../hooks/useTutorial';
+import '../../styles/tutorial-global.css';
+import { HelpCircle } from 'lucide-react';
+
 const ESTADOS = {
   TODOS: "Todos",
   PENDIENTE: "Pendiente",
@@ -82,6 +86,8 @@ const estadoBadgeClass = (estado) => {
 
 export default function PantallaPrincipalViajesOperativos() {
   const navigate = useNavigate();
+
+  const { startTutorial, hasCompleted } = useTutorial('viajesInternos');
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -509,6 +515,19 @@ export default function PantallaPrincipalViajesOperativos() {
             >
               <Calendar size={20} />
               Programación
+            </button>
+
+            <button
+              onClick={startTutorial}
+              className="flex items-center gap-2 px-5 py-3 bg-white border-2 border-[#5F8EAD] text-[#5F8EAD] rounded-xl hover:bg-[#5F8EAD] hover:text-white font-bold shadow-lg transition-all transform hover:scale-105"
+            >
+              <HelpCircle size={20} />
+              <span>Tutorial</span>
+              {!hasCompleted && (
+                <span className="bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center animate-pulse">
+                  !
+                </span>
+              )}
             </button>
 
             <button

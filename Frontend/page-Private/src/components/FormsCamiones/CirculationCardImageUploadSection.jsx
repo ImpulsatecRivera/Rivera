@@ -1,33 +1,33 @@
 import React from 'react';
-import { Camera, X } from 'lucide-react';
+import { CreditCard, X } from 'lucide-react';
 import Lottie from 'lottie-react';
 import uploadFilesAnimation from '../../assets/lotties/Upload Files.json';
 
-const ImageUploadSection = ({ 
-  imagePreview, 
-  onImageChange, 
-  onRemoveImage, 
-  register, 
-  error 
+const CirculationCardImageUploadSection = ({
+  imagePreview,
+  onImageChange,
+  onRemoveImage,
+  register,
+  error
 }) => {
   return (
     <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
       <div className="flex items-center mb-4">
-        <Camera className="w-6 h-6 mr-3" style={{ color: '#5F8EAD' }} />
+        <CreditCard className="w-6 h-6 mr-3" style={{ color: '#5F8EAD' }} />
         <h3 className="text-lg font-semibold text-gray-800">
-          Imagen del Camión
+          Imagen de Tarjeta de Circulación
         </h3>
         <span className="text-gray-500 ml-2 text-sm">(Opcional)</span>
       </div>
-      
+
       <div className="flex justify-center mb-4">
         <div className="relative group">
           {imagePreview ? (
             <div className="relative w-32 h-32 rounded-xl overflow-hidden border-4 shadow-xl" style={{ borderColor: '#5F8EAD' }}>
-              <img 
-                src={imagePreview} 
-                alt="Vista previa del camión" 
-                className="object-cover w-full h-full" 
+              <img
+                src={imagePreview}
+                alt="Vista previa de tarjeta de circulación"
+                className="object-cover w-full h-full"
               />
               <button
                 type="button"
@@ -40,50 +40,52 @@ const ImageUploadSection = ({
             </div>
           ) : (
             <label
-              htmlFor="img-input"
+              htmlFor="circulation-card-img-input"
               className="flex flex-col items-center justify-center cursor-pointer w-32 h-32 rounded-xl bg-gray-50 border-2 border-dashed border-gray-300 transition-all duration-300 hover:shadow-xl hover:bg-gray-100 hover:border-blue-400 hover:scale-105"
             >
               {/* Animación Lottie de Upload Files */}
               <div className="w-16 h-16 mb-2">
-                <Lottie 
+                <Lottie
                   animationData={uploadFilesAnimation}
                   loop={true}
-                  autoplay={true}
-                  className="w-full h-full"
                 />
               </div>
-              
-              <span className="text-sm font-medium text-center px-2" style={{ color: '#5D9646' }}>
-                Subir imagen
+              <span className="text-sm text-gray-600 font-medium">
+                Subir Imagen
+              </span>
+              <span className="text-xs text-gray-400 mt-1">
+                PNG, JPG, GIF
               </span>
             </label>
           )}
         </div>
       </div>
 
-      {/* Input de archivo - COMPATIBLE CON EL HOOK */}
+      {/* Input oculto para el archivo */}
       <input
-        id="img-input"
+        id="circulation-card-img-input"
         type="file"
         accept="image/*"
-        // NO usar register aquí porque interferirá con setValue
         onChange={onImageChange}
         className="hidden"
+        {...register("circulationCardImage")}
       />
 
-      {/* Mensaje de error - Solo mostrar si NO hay imagen */}
-      {error && !imagePreview && (
-        <p className="text-red-500 text-sm mt-2 text-center">
+      {/* Mensaje de error */}
+      {error && (
+        <p className="text-red-500 text-sm text-center mt-2">
           {error.message}
         </p>
       )}
 
-      {/* Instrucciones */}
-      <div className="text-center text-gray-500 text-xs mt-3">
-        <p>Formatos permitidos: JPG, PNG, GIF</p>
+      {/* Información adicional */}
+      <div className="text-center mt-4">
+        <p className="text-sm text-gray-500">
+          Sube una foto clara de la tarjeta de circulación para mantener tus documentos organizados
+        </p>
       </div>
     </div>
   );
 };
 
-export default ImageUploadSection;
+export default CirculationCardImageUploadSection;

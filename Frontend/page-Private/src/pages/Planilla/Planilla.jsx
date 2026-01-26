@@ -10,6 +10,9 @@ import Swal from 'sweetalert2';
 import { useAuth } from '../../Context/authContext';
 import { api } from '../../Context/authContext';
 import { formatearFechaEnSalvador } from '../../utils/timezoneUtils';
+import { useTutorial } from '../../hooks/useTutorial';
+import '../../styles/tutorial-global.css';
+import { HelpCircle } from 'lucide-react';
 
 export default function Planillas() {
   const navigate = useNavigate();
@@ -46,6 +49,7 @@ export default function Planillas() {
   
   const dropdownRef = useRef(null);
   const reportesRef = useRef(null);
+  const { startTutorial, hasCompleted, shouldAutoStart } = useTutorial('planillasDashboard');
 
   useEffect(() => {
     cargarPlanillas();
@@ -799,6 +803,7 @@ export default function Planillas() {
                   className={`transition-transform ${showDropdown ? 'rotate-180' : ''}`}
                 />
               </button>
+              
 
               {showDropdown && (
                 <div className="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-2xl border-2 border-gray-100 overflow-hidden z-50 animate-fadeIn">
@@ -832,6 +837,18 @@ export default function Planillas() {
                 </div>
               )}
             </div>
+            <button
+  onClick={startTutorial}
+  className="flex items-center gap-2 px-6 py-3 bg-white border-2 border-[#5F8EAD] text-[#5F8EAD] rounded-xl hover:bg-[#5F8EAD] hover:text-white font-bold shadow-lg transition-all transform hover:scale-105"
+>
+  <HelpCircle size={22} />
+  <span>Tutorial</span>
+  {!hasCompleted && (
+    <span className="bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center animate-pulse">
+      !
+    </span>
+  )}
+</button>
           </div>
         </div>
 
@@ -1625,6 +1642,7 @@ export default function Planillas() {
                             >
                               <Download size={18} />
                             </button>
+                            
 
                             {planilla.estado === 'pendiente' && (
                               <button

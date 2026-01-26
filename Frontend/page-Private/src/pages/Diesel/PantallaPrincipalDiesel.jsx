@@ -20,6 +20,10 @@ import { api } from "../../Context/authContext";
 import DieselDetailModal from "./DieselDetailModal";
 import ReportesDieselModal from "./ReportesDieselModal";
 
+import { useTutorial } from '../../hooks/useTutorial';
+import '../../styles/tutorial-global.css';
+import { HelpCircle } from 'lucide-react';
+
 const DIESEL_ENDPOINT = `${config.api.API_URL}/resumen`;
 const DIESEL_REPORTE_ENDPOINT = `${config.api.API_URL}/resumenReporte`;
 
@@ -27,6 +31,8 @@ const PantallaPrincipalDiesel = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { canEdit, canDelete } = usePermissions();
+
+  const { startTutorial, hasCompleted } = useTutorial('diesel');
 
   const [currentPage, setCurrentPage] = useState(1);
   const [sortBy, setSortBy] = useState("newest");
@@ -464,6 +470,19 @@ const PantallaPrincipalDiesel = () => {
                   <option value="oldest">Más antiguo</option>
                 </select>
               </div>
+
+              <button
+                onClick={startTutorial}
+                className="flex items-center gap-2 px-4 py-3 bg-white border-2 border-[#5F8EAD] text-[#5F8EAD] rounded-xl hover:bg-[#5F8EAD] hover:text-white font-bold shadow-lg transition-all transform hover:scale-105"
+              >
+                <HelpCircle size={18} />
+                <span>Tutorial</span>
+                {!hasCompleted && (
+                  <span className="bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center animate-pulse">
+                    !
+                  </span>
+                )}
+              </button>
 
               <button
                 onClick={() => setIsReportesModalOpen(true)}

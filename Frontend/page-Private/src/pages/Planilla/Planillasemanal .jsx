@@ -10,6 +10,9 @@ import Swal from 'sweetalert2';
 import { useAuth } from '../../Context/authContext';
 import { api } from '../../Context/authContext';
 import { formatearFechaEnSalvador } from '../../utils/timezoneUtils';
+import { useTutorial } from '../../hooks/useTutorial';
+import '../../styles/tutorial-global.css';
+import { HelpCircle } from 'lucide-react';
 
 export default function PlanillaSemanal() {
   const { id } = useParams();
@@ -40,6 +43,7 @@ export default function PlanillaSemanal() {
 
   const diasSemana = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado'];
   const diasLabels = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+  const { startTutorial } = useTutorial('planillaSemanal');
 
   useEffect(() => {
     if (id) {
@@ -851,6 +855,13 @@ const data = response.data;
                 <Download size={20} />
                 <span>PDF</span>
               </button>
+              <button
+  onClick={startTutorial}
+  className="flex items-center gap-2 px-5 py-2.5 bg-white border-2 border-[#5F8EAD] text-[#5F8EAD] rounded-xl hover:bg-[#5F8EAD] hover:text-white font-semibold transition-all"
+>
+  <HelpCircle size={20} />
+  <span>Tutorial</span>
+</button>
             </div>
           </div>
 

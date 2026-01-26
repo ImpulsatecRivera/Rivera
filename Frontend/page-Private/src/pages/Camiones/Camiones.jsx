@@ -23,6 +23,10 @@ import FiltersSection from '../../components/Camiones/FiltersSection';
 import TrucksGrid from '../../components/Camiones/TrucksGrid';
 import EditTruckModal from '../../components/Camiones/EditTruckModal';
 
+import { useTutorial } from '../../hooks/useTutorial';
+import '../../styles/tutorial-global.css';
+import { HelpCircle } from 'lucide-react';
+
 const Camiones = () => {
   const navigate = useNavigate();
   
@@ -35,6 +39,8 @@ const Camiones = () => {
     description: 'Los cambios se han guardado correctamente.'
   });
   const [isDeleting, setIsDeleting] = useState(false);
+
+  const { startTutorial, hasCompleted } = useTutorial('camiones');
 
   // Hook para gestión de datos de camiones
   const {
@@ -71,6 +77,16 @@ const Camiones = () => {
 
   // Hook para edición de camiones
   const editHook = useTruckEdit(fetchOptions, updateTruckInState);
+
+  // Detectar cuando se agregó un camión y refrescar la lista
+  React.useEffect(() => {
+    const truckAdded = localStorage.getItem('truckAdded');
+    if (truckAdded === 'true') {
+      console.log('🔄 Detectado camión agregado, refrescando lista...');
+      localStorage.removeItem('truckAdded');
+      refreshTrucks();
+    }
+  }, []);
 
   // Handlers para navegación
   const handleAddTruck = () => {
@@ -259,6 +275,8 @@ const Camiones = () => {
             viewMode={viewMode}
             onViewModeChange={setViewMode}
             onAddTruck={handleAddTruck}
+            onStartTutorial={startTutorial}
+            hasCompletedTutorial={hasCompleted}
             primaryColor="#5F8EAD"
           />
 

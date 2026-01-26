@@ -10,6 +10,9 @@ import { config } from '../../config';
 import Swal from 'sweetalert2';
 import { useAuth } from '../../Context/authContext';
 import { api } from '../../Context/authContext';
+import { useTutorial } from '../../hooks/useTutorial';
+import '../../styles/tutorial-global.css';
+import { HelpCircle } from 'lucide-react';
 
 export default function PlanillaQuincenal() {
   const { id } = useParams();
@@ -50,6 +53,7 @@ export default function PlanillaQuincenal() {
 
   const [filaEditando, setFilaEditando] = useState(null);
   const [datosEdicion, setDatosEdicion] = useState({});
+  const { startTutorial } = useTutorial('planillaQuincenal');
 
   // Inicializar infoPlanilla siempre con la primera quincena de enero del año actual
   const obtenerInfoPlanillaInicial = () => {
@@ -1290,8 +1294,17 @@ export default function PlanillaQuincenal() {
                     <span>Nueva Planilla</span>
                   </button>
                 )}
+                <button
+  onClick={startTutorial}
+  className="flex items-center gap-2 px-5 py-2.5 bg-white border-2 border-[#5F8EAD] text-[#5F8EAD] rounded-xl hover:bg-[#5F8EAD] hover:text-white font-semibold transition-all"
+>
+  <HelpCircle size={20} />
+  <span>Tutorial</span>
+</button>
               </div>
+              
             </div>
+           
           </div>
 
           {/* Banner solo lectura */}

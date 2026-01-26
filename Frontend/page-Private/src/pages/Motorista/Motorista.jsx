@@ -20,6 +20,10 @@ import EditMotoristaAlert from '../../components/Motorista/EditMotoristaAlert';
 // Hook de Motorista
 import useMotoristaManagement from '../../components/Motorista/hooks/useDataMotorista';
 
+import { useTutorial } from '../../hooks/useTutorial';
+import '../../styles/tutorial-global.css';
+import { HelpCircle } from 'lucide-react';
+
 const Motorista = () => {
   const {
     motoristas,
@@ -58,6 +62,8 @@ const Motorista = () => {
     isLicenseValid,
     getLicenseStatus
   } = useMotoristaManagement();
+
+  const { startTutorial, hasCompleted } = useTutorial('motoristas');
 
   // Estados para paginación
   const [currentPage, setCurrentPage] = useState(1);
@@ -173,6 +179,8 @@ const Motorista = () => {
                 countMotoristas={countMotoristas}
                 countAuxiliares={countAuxiliares}
                 handleContinue={handleContinue}
+                onStartTutorial={startTutorial}
+                hasCompletedTutorial={hasCompleted}
                 handleContinueAuxiliar={handleContinueAuxiliar}
               />
             </div>

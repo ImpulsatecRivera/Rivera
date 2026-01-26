@@ -11,20 +11,19 @@ const BasicInfoFields = ({ register, errors }) => {
         label="Nombre"
         icon={Truck}
         placeholder="Nombre del número del camión"
-        {...register("name", { required: true })}
+        {...register("name", { required: "El nombre del camión es obligatorio" })}
         error={errors.name}
         required
       />
 
-      {/* Tarjeta de circulación */}
+      {/* Tarjeta de circulación - Fecha de vencimiento */}
       <FormFieldInput
         id="ciculatioCard"
-        label="Tarjeta de circulación"
+        label="Fecha de vencimiento tarjeta circulación"
         icon={CreditCard}
-        placeholder="Tarjeta de circulación del Camión"
-        {...register("ciculatioCard", { required: true })}
+        type="date"
+        {...register("ciculatioCard")}
         error={errors.ciculatioCard}
-        required
       />
 
       {/* Placa */}
@@ -33,7 +32,7 @@ const BasicInfoFields = ({ register, errors }) => {
         label="Placa"
         icon={Car}
         placeholder="Número de placa"
-        {...register("licensePlate", { required: true })}
+        {...register("licensePlate", { required: "La placa es obligatoria" })}
         error={errors.licensePlate}
         required
       />

@@ -10,6 +10,9 @@ import { config } from '../../config';
 import Swal from 'sweetalert2';
 import { useAuth } from '../../Context/authContext';
 import { api } from '../../Context/authContext';
+import { useTutorial } from '../../hooks/useTutorial';
+import '../../styles/tutorial-global.css';
+import { HelpCircle } from 'lucide-react';
 
 export default function PlanillaSemanalNueva() {
   const navigate = useNavigate();
@@ -30,6 +33,7 @@ export default function PlanillaSemanalNueva() {
   const [empleadosDisponibles, setEmpleadosDisponibles] = useState([]);
   const [busquedaEmpleados, setBusquedaEmpleados] = useState('');
   const [loadingEmpleados, setLoadingEmpleados] = useState(false);
+  const { startTutorial } = useTutorial('planillaSemanalNueva');
 
   const diasSemana = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
 
@@ -381,6 +385,14 @@ export default function PlanillaSemanalNueva() {
             <ArrowLeft size={20} className="text-[#34353A] group-hover:text-[#5F8EAD] group-hover:-translate-x-1 transition-all" />
             <span className="font-semibold text-[#34353A]">Volver</span>
           </button>
+          <button
+  onClick={startTutorial}
+  className="fixed bottom-8 right-8 p-4 bg-gradient-to-r from-[#5F8EAD] to-[#5D9646] text-white rounded-full shadow-2xl hover:scale-110 transition-all z-50"
+  title="Ver tutorial"
+>
+  <HelpCircle size={24} />
+</button>
+          
 
           <div className="flex items-center gap-4">
             <div className="p-4 bg-gradient-to-br from-[#5F8EAD] to-[#5D9646] rounded-2xl shadow-xl">
