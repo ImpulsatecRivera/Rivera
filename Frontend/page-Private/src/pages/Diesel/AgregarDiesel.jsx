@@ -33,10 +33,20 @@ const AgregarDiesel = () => {
     return `${yyyy}-${mm}-${dd}`;
   };
 
+  const getTodayDateTimeISO = () => {
+    const d = new Date();
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const dd = String(d.getDate()).padStart(2, "0");
+    const hh = String(d.getHours()).padStart(2, "0");
+    const min = String(d.getMinutes()).padStart(2, "0");
+    return `${yyyy}-${mm}-${dd}T${hh}:${min}`;
+  };
+
   const normalizeDateToISO = (dateStr) => {
     if (!dateStr) return null;
-    const [year, month, day] = dateStr.split('-');
-    const localDate = new Date(year, month - 1, day, 12, 0, 0, 0);
+    // Para datetime-local, el formato es "YYYY-MM-DDTHH:mm"
+    const localDate = new Date(dateStr);
     return localDate.toISOString();
   };
 
@@ -81,7 +91,7 @@ const AgregarDiesel = () => {
     const { name, value } = e.target;
 
     if (name === "fecha") {
-      const today = getTodayISO();
+      const today = getTodayDateTimeISO();
       if (value && value > today) {
         Swal.fire({
           icon: 'warning',
@@ -115,21 +125,11 @@ const AgregarDiesel = () => {
       return;
     }
 
-    if (formData.fecha > getTodayISO()) {
+    if (formData.fecha > getTodayDateTimeISO()) {
       Swal.fire({
         icon: 'warning',
         title: 'Fecha no válida',
         text: 'La fecha no puede ser a futuro (solo hoy o fechas pasadas).',
-        confirmButtonColor: '#5F8EAD'
-      });
-      return;
-    }
-
-    if (!formData.CicurlationCard) {
-      Swal.fire({
-        icon: 'warning',
-        title: 'Campo requerido',
-        text: 'Debe seleccionar un camión',
         confirmButtonColor: '#5F8EAD'
       });
       return;
@@ -293,11 +293,11 @@ const AgregarDiesel = () => {
               <div>
                 <label className="block text-sm font-semibold text-[#34353A] mb-2">Fecha *</label>
                 <input
-                  type="date"
+                  type="datetime-local"
                   name="fecha"
                   value={formData.fecha}
                   onChange={handleInputChange}
-                  max={getTodayISO()}
+                  max={getTodayDateTimeISO()}
                   className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#5F8EAD] focus:border-[#5F8EAD]"
                 />
               </div>

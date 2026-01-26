@@ -4,11 +4,11 @@ import ResumenDiesel from '../Models/ResumenDiesel.js';
 import PlanillaSemanal from '../Models/PlanillaSemanal.js';
 import PlanillaQuincenal from '../Models/PlanillaQuincenal.js';
 import Camiones from '../Models/Camiones.js';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
 import Motorista from '../Models/Motorista.js';
 import fs from 'fs';
 import path from 'path';
-import { fileURLToPath } from 'url';
-import { dirname } from 'path';
 
 const ReporteConsolidadoController = {};
 
@@ -20,17 +20,17 @@ const __dirname = dirname(__filename);
 const convertirImagenABase64 = (rutaImagen) => {
     try {
         console.log('Intentando leer imagen desde:', rutaImagen);
-        
+
         if (!fs.existsSync(rutaImagen)) {
             console.error('La imagen no existe en la ruta:', rutaImagen);
             return null;
         }
-        
+
         const imagen = fs.readFileSync(rutaImagen);
         const base64 = imagen.toString('base64');
         const ext = path.extname(rutaImagen).toLowerCase();
         const mimeType = ext === '.png' ? 'image/png' : 'image/jpeg';
-        
+
         console.log('Imagen convertida exitosamente a base64');
         return `data:${mimeType};base64,${base64}`;
     } catch (error) {
@@ -38,6 +38,15 @@ const convertirImagenABase64 = (rutaImagen) => {
         return null;
     }
 };
+
+const obtenerNombreMes = (mes) => {
+    const meses = [
+        'ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO',
+        'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'
+    ];
+    return meses[mes - 1] || 'MES INVÁLIDO';
+};
+
 // Detectar entorno de ejecución
 const IS_CLOUD_RUN = process.env.K_SERVICE !== undefined;
 const IS_PRODUCTION = process.env.NODE_ENV === 'production';
@@ -68,14 +77,6 @@ const PUPPETEER_CONFIG = () => {
             ]
         };
     }
-};
-// Función auxiliar para obtener nombre del mes
-const obtenerNombreMes = (mes) => {
-    const meses = [
-        'ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO',
-        'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'
-    ];
-    return meses[mes - 1] || 'MES INVÁLIDO';
 };
 
 /**
@@ -1258,21 +1259,40 @@ ReporteConsolidadoController.generarPDFRango = async (req, res) => {
 
                     planillaTotal += planillaViaje;
 
-                    // Buscar diesel del día específico del viaje
+                    // Buscar diesel del día específico del viaje (comparar solo fechas, no hora)
                     let dieselDelDia = 0;
+                    let infoGasolina = null;
+                    
                     if (viaje.fechaServicio) {
                         const fechaViaje = new Date(viaje.fechaServicio);
                         const diaViaje = fechaViaje.getDate();
                         const mesViaje = fechaViaje.getMonth() + 1;
                         const anoViaje = fechaViaje.getFullYear();
 
-                        // Buscar registro de diesel del mismo día
-                        const dieselDia = todosRegistrosDiesel.find(d => 
-                            d.dia === diaViaje && d.mes === mesViaje && d.ano === anoViaje
-                        );
+                        // Tomar TODOS los registros de diesel de ese día
+                        const registrosDia = todosRegistrosDiesel.filter(d => {
+                            const fechaDiesel = new Date(d.fechaHora || d.fecha);
+                            const diaDiesel = fechaDiesel.getDate();
+                            const mesDiesel = fechaDiesel.getMonth() + 1;
+                            const anoDiesel = fechaDiesel.getFullYear();
+                            
+                            return diaDiesel === diaViaje && mesDiesel === mesViaje && anoDiesel === anoViaje;
+                        });
                         
-                        if (dieselDia) {
-                            dieselDelDia = dieselDia.Total || 0;
+                        if (registrosDia.length > 0) {
+                            dieselDelDia = registrosDia.reduce((acc, d) => acc + (d.Total || 0), 0);
+                            const galonesDia = registrosDia.reduce((acc, d) => acc + (d.Galones || 0), 0);
+                            const fechaGasolina = new Date(registrosDia[0].fechaHora || registrosDia[0].fecha);
+                            infoGasolina = {
+                                hora: fechaGasolina.toLocaleTimeString('es-SV', {
+                                    hour: '2-digit',
+                                    minute: '2-digit',
+                                    hour12: true,
+                                    timeZone: 'America/El_Salvador'
+                                }),
+                                galones: galonesDia,
+                                total: dieselDelDia
+                            };
                         }
                     }
 
@@ -1282,9 +1302,38 @@ ReporteConsolidadoController.generarPDFRango = async (req, res) => {
                         monto: viaje.montoAcordado || 0,
                         planilla: planillaViaje,
                         diesel: dieselDelDia,
-                        personal: personal
+                        personal: personal,
+                        tieneDiesel: dieselDelDia > 0,
+                        infoGasolina: infoGasolina,
+                        departureTime: viaje.departureTime
                     });
                 }
+
+                // Agrupar viajes por fecha (día)
+                const viajesPorDia = {};
+                viajesDetalle.forEach(viaje => {
+                    const fechaViaje = new Date(viaje.departureTime || viaje.fecha);
+                    const keyFecha = fechaViaje.toLocaleDateString('es-SV', {
+                        timeZone: 'America/El_Salvador'
+                    });
+                    
+                    if (!viajesPorDia[keyFecha]) {
+                        viajesPorDia[keyFecha] = [];
+                    }
+                    viajesPorDia[keyFecha].push(viaje);
+                });
+
+                // Convertir a array y ordenar por fecha
+                const diasConViajes = Object.entries(viajesPorDia)
+                    .map(([fecha, viajes]) => ({
+                        fecha,
+                        viajes: viajes.sort((a, b) => {
+                            const horaA = new Date(a.departureTime || a.fecha).getTime();
+                            const horaB = new Date(b.departureTime || b.fecha).getTime();
+                            return horaA - horaB;
+                        })
+                    }))
+                    .sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
 
                 datosCamiones.push({
                     placa: camion.licensePlate,
@@ -1293,7 +1342,8 @@ ReporteConsolidadoController.generarPDFRango = async (req, res) => {
                     diesel: dieselTotal,
                     planilla: planillaTotal,
                     utilidadBruta: ingresos - dieselTotal - planillaTotal,
-                    viajes: viajesDetalle
+                    viajes: viajesDetalle,
+                    diasConViajes: diasConViajes
                 });
             }
         }
@@ -1505,8 +1555,8 @@ ReporteConsolidadoController.generarPDFRango = async (req, res) => {
             <table>
                 <thead>
                     <tr>
-                        <th style="width: 10%">FECHA</th>
-                        <th style="width: 35%">PERSONAL ASIGNADO</th>
+                        <th style="width: 15%">FECHA Y HORA</th>
+                        <th style="width: 30%">PERSONAL ASIGNADO</th>
                         <th style="width: 11%">INGRESO</th>
                         <th style="width: 11%">DIESEL</th>
                         <th style="width: 11%">PLANILLA DÍA</th>
@@ -1515,37 +1565,73 @@ ReporteConsolidadoController.generarPDFRango = async (req, res) => {
                     </tr>
                 </thead>
                 <tbody>
-                    ${camion.viajes.map(viaje => {
-                        const utilidadViaje = viaje.monto - viaje.diesel - viaje.planilla;
-                        const fechaViaje = new Date(viaje.fecha);
-                        const fechaFormateada = fechaViaje.toLocaleDateString('es-SV', {
-                            day: '2-digit',
-                            month: 'short',
-                            year: 'numeric',
-                            timeZone: 'America/El_Salvador'
-                        });
-                        return `
-                        <tr>
-                            <td>${fechaFormateada}</td>
-                            <td>
-                                <div class="personal-list">
-                                    ${viaje.personal.map(p => `
-                                        <div class="personal-item">
-                                            <span class="rol-badge ${p.rol.toLowerCase()}">${p.rol}</span>
-                                            <strong>${p.nombre}</strong> - $${p.salarioDiario.toFixed(2)}/día
-                                        </div>
-                                    `).join('')}
-                                </div>
-                            </td>
-                            <td class="col-monto">$${viaje.monto.toFixed(2)}</td>
-                            <td class="col-monto">${viaje.diesel > 0 ? '$' + viaje.diesel.toFixed(2) : '-'}</td>
-                            <td class="col-monto">$${viaje.planilla.toFixed(2)}</td>
-                            <td class="col-monto ${utilidadViaje >= 0 ? 'positivo' : 'negativo'}">
-                                $${utilidadViaje.toFixed(2)}
-                            </td>
-                            <td>1 de ${diasNum}</td>
-                        </tr>
-                        `;
+                    ${camion.diasConViajes.map(dia => {
+                        const gasolinaDelDia = dia.viajes.find(v => v.tieneDiesel && v.infoGasolina);
+                        const ingresosDia = dia.viajes.reduce((acc, v) => acc + (v.monto || 0), 0);
+                        const planillaDia = dia.viajes.reduce((acc, v) => acc + (v.planilla || 0), 0);
+                        const dieselDia = gasolinaDelDia
+                            ? gasolinaDelDia.infoGasolina.total || 0
+                            : dia.viajes.reduce((acc, v) => acc + (v.diesel || 0), 0);
+                        const utilidadDia = ingresosDia - dieselDia - planillaDia;
+
+                        const filasViajes = dia.viajes.map((viaje, idx) => {
+                            const utilidadViaje = viaje.monto - viaje.diesel - viaje.planilla;
+                            const fechaViaje = new Date(viaje.departureTime || viaje.fecha);
+                            
+                            const fechaFormateada = fechaViaje.toLocaleDateString('es-SV', {
+                                day: '2-digit',
+                                month: 'short',
+                                year: 'numeric',
+                                timeZone: 'America/El_Salvador'
+                            });
+                            
+                            const horaFormateada = fechaViaje.toLocaleTimeString('es-SV', {
+                                hour: '2-digit',
+                                minute: '2-digit',
+                                hour12: true,
+                                timeZone: 'America/El_Salvador'
+                            });
+
+                            const dieselCell = idx === 0
+                                ? `<td class="col-monto" rowspan="${dia.viajes.length}">${dieselDia > 0 ? `$${dieselDia.toFixed(2)}${gasolinaDelDia ? `<br/><small>${gasolinaDelDia.infoGasolina.galones || 0} gal ${gasolinaDelDia.infoGasolina.hora || ''}</small>` : ''}` : '-'}</td>`
+                                : '';
+
+                            return `
+                            <tr>
+                                <td><strong>${fechaFormateada}</strong><br/>${horaFormateada}</td>
+                                <td>
+                                    <div class="personal-list">
+                                        ${viaje.personal.map(p => `
+                                            <div class="personal-item">
+                                                <span class="rol-badge ${p.rol.toLowerCase()}">${p.rol}</span>
+                                                <strong>${p.nombre}</strong> - $${p.salarioDiario.toFixed(2)}/día
+                                            </div>
+                                        `).join('')}
+                                    </div>
+                                </td>
+                                <td class="col-monto">$${viaje.monto.toFixed(2)}</td>
+                                ${dieselCell}
+                                <td class="col-monto">$${viaje.planilla.toFixed(2)}</td>
+                                <td class="col-monto ${utilidadViaje >= 0 ? 'positivo' : 'negativo'}">
+                                    $${utilidadViaje.toFixed(2)}
+                                </td>
+                                <td></td>
+                            </tr>
+                            `;
+                        }).join('');
+
+                        const filaResumen = `
+                            <tr style="background: #E8F4FF; font-weight: bold;">
+                                <td></td>
+                                <td></td>
+                                <td class="col-monto">$${ingresosDia.toFixed(2)}</td>
+                                <td class="col-monto">$${dieselDia.toFixed(2)}</td>
+                                <td class="col-monto">$${planillaDia.toFixed(2)}</td>
+                                <td class="col-monto ${utilidadDia >= 0 ? 'positivo' : 'negativo'}">$${utilidadDia.toFixed(2)}</td>
+                                <td></td>
+                            </tr>`;
+
+                        return filasViajes + filaResumen;
                     }).join('')}
                 </tbody>
             </table>
@@ -1554,8 +1640,8 @@ ReporteConsolidadoController.generarPDFRango = async (req, res) => {
 
     <table>
         <tr class="total-row">
-            <td style="width: 10%"><strong>TOTALES</strong></td>
-            <td style="width: 35%"><strong>Viajes: ${totales.viajes}</strong></td>
+            <td style="width: 15%"><strong>TOTALES</strong></td>
+            <td style="width: 30%"><strong>Viajes: ${totales.viajes}</strong></td>
             <td style="width: 11%"><strong>$${totales.ingresos.toFixed(2)}</strong></td>
             <td style="width: 11%"><strong>$${totales.diesel.toFixed(2)}</strong></td>
             <td style="width: 11%"><strong>$${totales.planilla.toFixed(2)}</strong></td>

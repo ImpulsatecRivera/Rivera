@@ -44,15 +44,21 @@ import logo from '../../images/logo.png';
 import ModalResumenConsolidado from "./ModalResumenConsolidado";
 import ReportsPdfModal from '../../components/Dashboard/ReportsPdfModal';
 import ReportsGastosMesModal from '../../components/Dashboard/ReportsGastosMesModal';
+// Flota (camiones)
+import useTrucksData from '../../components/Camiones/hooks/useTrucksData';
 
 const ModernDashboard = () => {
   // 🎯 HOOK DE TUTORIAL
   const { startTutorial, hasCompleted, shouldAutoStart } = useTutorial('dashboard');
+  // Datos de flota
+  const { trucks, loading: loadingTrucks } = useTrucksData();
 
   // Estados de modales
   const [modalResumenOpen, setModalResumenOpen] = useState(false);
   const [modalPdfOpen, setModalPdfOpen] = useState(false);
   const [modalGastosMesOpen, setModalGastosMesOpen] = useState(false);
+  const [modalFlotaOpen, setModalFlotaOpen] = useState(false);
+  const [tipoFlota, setTipoFlota] = useState('disponibles'); // 'disponibles' o 'todos'
 
   const navigate = useNavigate();
   const [selectedPeriod, setSelectedPeriod] = useState('30');
@@ -64,7 +70,7 @@ const ModernDashboard = () => {
     diesel: { total: 0, pendientes: 0, completados: 0, gastos: 0, galones: 0 },
     cajaChica: { balance: 0, ingresos: 0, gastos: 0, transacciones: 0 },
     planillas: { total: 0, pendientes: 0, pagadas: 0, totalPagado: 0, empleados: 0 },
-    flota: { total: 25, operando: 23 }
+    flota: { total: 0, operando: 0 }
   });
   const lottieRef = useRef();
 
@@ -176,7 +182,7 @@ const ModernDashboard = () => {
         diesel: dieselStats,
         cajaChica: cajaStats,
         planillas: planillasStats,
-        flota: { total: 25, operando: 23 }
+        flota: { total: trucks.length || 0, operando: (trucks.filter(t => (t.state || t.estado || '').toLowerCase().includes('disponible')).length) || 0 }
       });
 
     } catch (error) {
@@ -207,6 +213,12 @@ const ModernDashboard = () => {
       (estadisticas.mantenimientos.gastos + estadisticas.diesel.gastos + estadisticas.cajaChica.gastos + estadisticas.planillas.totalPagado)
   };
 
+  // Flota: calcular disponibles vs total
+  const totalFlota = trucks.length;
+  const disponibles = trucks.filter(t => (t.state || t.estado || '').toLowerCase().includes('disponible'));
+  const operandoFlota = disponibles.length;
+  const porcentajeOperando = totalFlota > 0 ? `${Math.round((operandoFlota / totalFlota) * 100)}%` : '0%';
+
   const statsCards = [
     {
       title: 'Viajes Activos',
@@ -230,12 +242,12 @@ const ModernDashboard = () => {
     },
     {
       title: 'Flota Operando',
-      value: `${estadisticas.flota.operando}/${estadisticas.flota.total}`,
-      change: '92%',
+      value: `${operandoFlota}/${totalFlota}`,
+      change: porcentajeOperando,
       trend: 'neutral',
       icon: Package,
       color: 'purple',
-      extra: `${estadisticas.flota.total - estadisticas.flota.operando} en mantenimiento`,
+      extra: `${Math.max(totalFlota - operandoFlota, 0)} en mantenimiento`,
       lottie: null
     },
     {
@@ -881,6 +893,165 @@ const ModernDashboard = () => {
               isOpen={modalGastosMesOpen}
               onClose={() => setModalGastosMesOpen(false)}
             />
+
+            {/* Flota Operando: disponibles (izquierda) vs todos (derecha) - COMPACTO */}
+            <div className="bg-white rounded-2xl p-5 shadow-lg hover:shadow-xl transition-shadow border-2 border-purple-200">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-bold text-[#34353A] flex items-center gap-2">
+                  <Package className="text-purple-600" size={20} />
+                  Flota Operando
+                </h3>
+                <span className="bg-purple-600 text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg">
+                  {operandoFlota}/{totalFlota}
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Disponibles (izquierda) - COMPACTO */}
+                <div 
+                  onClick={() => {
+                    setTipoFlota('disponibles');
+                    setModalFlotaOpen(true);
+                  }}
+                  className="bg-purple-50 rounded-xl p-4 border border-purple-200 cursor-pointer hover:shadow-lg hover:border-purple-400 transition-all"
+                >
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-sm font-semibold text-purple-700">Disponibles</span>
+                    <span className="text-xs bg-purple-600 text-white px-2 py-0.5 rounded-full font-bold">
+                      {disponibles.length}
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {disponibles.length === 0 ? (
+                      <p className="text-xs text-purple-700 w-full">Sin camiones disponibles</p>
+                    ) : (
+                      disponibles.slice(0, 3).map((t) => (
+                        <div 
+                          key={t.id || t._id} 
+                          className="bg-white rounded-lg px-2 py-1 border border-purple-200 text-xs font-semibold text-[#34353A]"
+                        >
+                          {t.licensePlate}
+                        </div>
+                      ))
+                    )}
+                    {disponibles.length > 3 && (
+                      <div className="bg-white rounded-lg px-2 py-1 border border-purple-200 text-xs font-semibold text-purple-600">
+                        +{disponibles.length - 3} más
+                      </div>
+                    )}
+                  </div>
+                  <p className="text-xs text-purple-600 mt-2 flex items-center gap-1">
+                    Haz click para ver detalles →
+                  </p>
+                </div>
+
+                {/* Todos (derecha) - COMPACTO */}
+                <div 
+                  onClick={() => {
+                    setTipoFlota('todos');
+                    setModalFlotaOpen(true);
+                  }}
+                  className="bg-gray-50 rounded-xl p-4 border border-gray-200 cursor-pointer hover:shadow-lg hover:border-gray-400 transition-all"
+                >
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-sm font-semibold text-gray-700">Todos</span>
+                    <span className="text-xs bg-gray-800 text-white px-2 py-0.5 rounded-full font-bold">
+                      {totalFlota}
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {totalFlota === 0 ? (
+                      <p className="text-xs text-gray-700 w-full">Sin camiones registrados</p>
+                    ) : (
+                      trucks.slice(0, 3).map((t) => {
+                        const estado = (t.state || t.estado || 'SIN ESTADO').toUpperCase();
+                        const esDisponible = estado.toLowerCase().includes('disponible');
+                        return (
+                          <div 
+                            key={t.id || t._id}
+                            className={`rounded-lg px-2 py-1 border text-xs font-semibold ${
+                              esDisponible 
+                                ? 'bg-green-50 border-green-200 text-green-700' 
+                                : 'bg-orange-50 border-orange-200 text-orange-700'
+                            }`}
+                          >
+                            {t.licensePlate}
+                          </div>
+                        );
+                      })
+                    )}
+                    {totalFlota > 3 && (
+                      <div className="bg-white rounded-lg px-2 py-1 border border-gray-300 text-xs font-semibold text-gray-600">
+                        +{totalFlota - 3} más
+                      </div>
+                    )}
+                  </div>
+                  <p className="text-xs text-gray-600 mt-2 flex items-center gap-1">
+                    Haz click para ver detalles →
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* MODAL DE FLOTA DETALLADO */}
+            {modalFlotaOpen && (
+              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-96 flex flex-col">
+                  {/* Header */}
+                  <div className="flex items-center justify-between p-6 border-b border-gray-200">
+                    <h2 className="text-2xl font-bold text-[#34353A]">
+                      {tipoFlota === 'disponibles' ? '🟢 Camiones Disponibles' : '🚛 Todos los Camiones'}
+                    </h2>
+                    <button
+                      onClick={() => setModalFlotaOpen(false)}
+                      className="text-gray-400 hover:text-gray-600 text-2xl"
+                    >
+                      ×
+                    </button>
+                  </div>
+
+                  {/* Content */}
+                  <div className="overflow-y-auto flex-1 p-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {(tipoFlota === 'disponibles' ? disponibles : trucks).map((t) => {
+                        const estado = (t.state || t.estado || 'SIN ESTADO').toUpperCase();
+                        const esDisponible = estado.toLowerCase().includes('disponible');
+                        return (
+                          <div 
+                            key={t.id || t._id}
+                            className="p-4 bg-gray-50 rounded-lg border-2 border-gray-200 hover:border-purple-400 hover:shadow-md transition-all"
+                          >
+                            <div className="flex items-start justify-between">
+                              <div>
+                                <p className="font-bold text-lg text-[#34353A]">{t.licensePlate}</p>
+                                <p className="text-sm text-gray-600">{t.name || 'Sin marca'}</p>
+                              </div>
+                              <span className={`text-xs px-3 py-1 rounded-full font-bold ${
+                                esDisponible 
+                                  ? 'bg-green-100 text-green-700' 
+                                  : 'bg-orange-100 text-orange-700'
+                              }`}>
+                                {estado}
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Footer */}
+                  <div className="flex justify-end gap-3 p-6 border-t border-gray-200 bg-gray-50">
+                    <button
+                      onClick={() => setModalFlotaOpen(false)}
+                      className="px-6 py-2 bg-gray-300 text-gray-800 rounded-lg font-semibold hover:bg-gray-400 transition-colors"
+                    >
+                      Cerrar
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Actividad Reciente */}
             <div className="bg-white rounded-2xl p-5 shadow-lg hover:shadow-xl transition-shadow border-2 border-[#5F8EAD]">
