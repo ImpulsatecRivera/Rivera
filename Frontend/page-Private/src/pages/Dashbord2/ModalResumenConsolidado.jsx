@@ -10,6 +10,9 @@ const ModalResumenConsolidado = ({ isOpen, onClose }) => {
   const [anoSeleccionado, setAnoSeleccionado] = useState(new Date().getFullYear());
   const [mesesSeleccionados, setMesesSeleccionados] = useState([]);
   const [diasTrabajados, setDiasTrabajados] = useState('');
+  const [diasTrabajadosRango, setDiasTrabajadosRango] = useState('');
+  const [fechaInicio, setFechaInicio] = useState('');
+  const [fechaFin, setFechaFin] = useState('');
   const [generando, setGenerando] = useState(false);
   
   // Estados de alerta
@@ -47,6 +50,7 @@ const ModalResumenConsolidado = ({ isOpen, onClose }) => {
     if (generando) return true;
     if (tipoReporte === 'mensual' && (!mesSeleccionado || !diasTrabajados)) return true;
     if (tipoReporte === 'multiple' && mesesSeleccionados.length === 0) return true;
+    if (tipoReporte === 'rango' && (!fechaInicio || !fechaFin || !diasTrabajadosRango)) return true;
     return false;
   };
 
@@ -71,6 +75,21 @@ const ModalResumenConsolidado = ({ isOpen, onClose }) => {
     if (tipoReporte === 'multiple' && mesesSeleccionados.length === 0) {
       showCustomAlert('warning', 'Meses no seleccionados', 'Por favor selecciona al menos un mes para continuar.');
       return;
+    }
+
+    if (tipoReporte === 'rango') {
+      if (!fechaInicio || !fechaFin) {
+        showCustomAlert('warning', 'Fechas incompletas', 'Por favor selecciona la fecha de inicio y fin del rango.');
+        return;
+      }
+      if (new Date(fechaInicio) > new Date(fechaFin)) {
+        showCustomAlert('warning', 'Rango inválido', 'La fecha de inicio no puede ser posterior a la fecha de fin.');
+        return;
+      }
+      if (!diasTrabajadosRango || parseInt(diasTrabajadosRango) < 1 || parseInt(diasTrabajadosRango) > 31) {
+        showCustomAlert('warning', 'Días trabajados inválidos', 'Por favor ingresa un número válido de días trabajados (1-31).');
+        return;
+      }
     }
 
     setGenerando(true);
@@ -259,6 +278,54 @@ const ModalResumenConsolidado = ({ isOpen, onClose }) => {
           }
         }
       }
+      // REPORTE POR RANGO DE FECHAS
+      else if (tipoReporte === 'rango') {
+        try {
+          const response = await api.get(
+            `/reporte-consolidado/rango?fechaInicio=${fechaInicio}&fechaFin=${fechaFin}&diasRango=${diasTrabajadosRango}`,
+            { responseType: 'blob' }
+          );
+          
+          const blob = new Blob([response.data], { type: 'application/pdf' });
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `reporte-consolidado-rango-${fechaInicio}-${fechaFin}.pdf`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          
+          setTimeout(() => {
+            window.URL.revokeObjectURL(url);
+            setGenerando(false);
+            Swal.fire({
+              icon: 'success',
+              title: '¡Reporte generado!',
+              text: 'El reporte por rango de fechas está listo.',
+              timer: 2000,
+              showConfirmButton: false
+            });
+          }, 600);
+        } catch (error) {
+          setGenerando(false);
+          Swal.close();
+          if (error.response?.status === 404) {
+            Swal.fire({
+              icon: 'info',
+              title: 'Sin datos disponibles',
+              text: error.response.data?.message || `No hay registros para el rango de fechas seleccionado.`,
+              confirmButtonColor: '#5F8EAD'
+            });
+          } else {
+            Swal.fire({
+              icon: 'error',
+              title: 'Error al generar reporte',
+              text: error.response?.data?.message || 'No se pudo generar el reporte.',
+              confirmButtonColor: '#ef4444'
+            });
+          }
+        }
+      }
       
     } catch (error) {
       console.error('Error:', error);
@@ -298,7 +365,7 @@ const ModalResumenConsolidado = ({ isOpen, onClose }) => {
             {/* Selector de Tipo de Reporte */}
             <div className="mb-6">
               <label className="block text-sm font-semibold text-gray-700 mb-3">Tipo de Reporte</label>
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-4 gap-3">
                 <button
                   onClick={() => setTipoReporte('mensual')}
                   className={`p-4 rounded-xl border-2 transition-all ${
@@ -323,6 +390,19 @@ const ModalResumenConsolidado = ({ isOpen, onClose }) => {
                   <Calendar className="mx-auto mb-2" size={24} />
                   <div className="text-sm font-semibold">Multi-mes</div>
                   <div className="text-xs text-gray-500 mt-1">Varios meses</div>
+                </button>
+
+                <button
+                  onClick={() => setTipoReporte('rango')}
+                  className={`p-4 rounded-xl border-2 transition-all ${
+                    tipoReporte === 'rango'
+                      ? 'border-[#5F8EAD] bg-[#5F8EAD] bg-opacity-10 text-[#5F8EAD]'
+                      : 'border-gray-200 hover:border-gray-300 text-gray-700'
+                  }`}
+                >
+                  <Calendar className="mx-auto mb-2" size={24} />
+                  <div className="text-sm font-semibold">Rango</div>
+                  <div className="text-xs text-gray-500 mt-1">Fechas</div>
                 </button>
 
                 <button
@@ -495,6 +575,79 @@ const ModalResumenConsolidado = ({ isOpen, onClose }) => {
                     ))}
                   </div>
                 </div>
+              </div>
+            )}
+
+            {/* RANGO DE FECHAS */}
+            {tipoReporte === 'rango' && (
+              <div className="space-y-4">
+                <div className="bg-[#5F8EAD] bg-opacity-10 rounded-xl p-5 border border-[#5F8EAD] mb-4">
+                  <div className="flex items-start gap-3">
+                    <Calendar className="text-[#5F8EAD] mt-1" size={20} />
+                    <div>
+                      <h3 className="font-semibold text-[#34353A] mb-1">Reporte Detallado por Rango</h3>
+                      <p className="text-sm text-gray-600">
+                        Genera un reporte detallado mostrando todos los viajes realizados, días, personal asignado y planilla calculada por día.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">Fecha Inicio</label>
+                    <input
+                      type="date"
+                      value={fechaInicio}
+                      onChange={(e) => setFechaInicio(e.target.value)}
+                      max={fechaFin || undefined}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#5F8EAD] focus:border-[#5F8EAD] font-semibold"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">Fecha Fin</label>
+                    <input
+                      type="date"
+                      value={fechaFin}
+                      onChange={(e) => setFechaFin(e.target.value)}
+                      min={fechaInicio || undefined}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#5F8EAD] focus:border-[#5F8EAD] font-semibold"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Días Trabajados</label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="31"
+                    value={diasTrabajadosRango}
+                    onChange={(e) => setDiasTrabajadosRango(e.target.value)}
+                    placeholder="Ej: 26"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#5F8EAD] focus:border-[#5F8EAD] font-semibold"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    💡 Número de días trabajados en el mes para calcular el salario diario
+                  </p>
+                </div>
+
+                {fechaInicio && fechaFin && diasTrabajadosRango && (() => {
+                  // Ajustar para timezone El Salvador (UTC-6)
+                  const inicio = new Date(fechaInicio + 'T00:00:00-06:00');
+                  const fin = new Date(fechaFin + 'T23:59:59-06:00');
+                  return (
+                    <div className="bg-green-50 border border-green-200 rounded-xl p-4">
+                      <p className="text-sm text-green-800 font-semibold">
+                        📅 Rango seleccionado: {inicio.toLocaleDateString('es-SV', { timeZone: 'America/El_Salvador' })} - {fin.toLocaleDateString('es-SV', { timeZone: 'America/El_Salvador' })}
+                      </p>
+                      <p className="text-xs text-green-600 mt-1">
+                        El reporte mostrará detalles de viajes con {diasTrabajadosRango} días trabajados para el cálculo de planilla.
+                      </p>
+                    </div>
+                  );
+                })()}
               </div>
             )}
           </div>

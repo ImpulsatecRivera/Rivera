@@ -179,8 +179,10 @@ const useTruckEdit = (fetchOptions, onUpdateSuccess) => {
 
       console.log('Motoristas asignados a otros camiones:', motoristasAsignadosMap.size);
 
-      // MOSTRAR TODOS los motoristas con metadata de asignación
-      const motoristasConMetadata = motoristasData.map(motorista => {
+      // MOSTRAR TODOS los motoristas con metadata de asignación - FILTRAR: Solo motoristas, excluir auxiliares
+      const motoristasConMetadata = motoristasData
+        .filter(motorista => motorista.rol === 'motorista') // ✅ FILTRAR POR ROL
+        .map(motorista => {
         const motoristaId = motorista._id || motorista.id;
         const isCurrentDriver = motoristaActualId && motoristaId === motoristaActualId;
         const asignacionInfo = motoristasAsignadosMap.get(motoristaId);

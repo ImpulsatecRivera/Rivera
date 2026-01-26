@@ -2,49 +2,20 @@ import React from 'react';
 import { User } from 'lucide-react';
 import FormFieldInput from '../../components/UICamiones/FieldInputAgregar';
 
-const AssignmentFields = ({ register, errors, motoristasDisponibles = [] }) => {
-  console.log('🚗 === RENDER AssignmentFields ===');
-  console.log('🚗 Motoristas recibidos:', motoristasDisponibles);
-  console.log('🚗 Cantidad:', motoristasDisponibles?.length || 0);
-  
-  // Preparar opciones para motoristas
-  const motoristaOptions = [
-    { value: '', label: 'Seleccionar motorista (opcional)' },
-    ...(motoristasDisponibles || []).map(driver => {
-      console.log('👤 Procesando motorista:', driver);
-      
-      // ✅ Campos correctos según tu modelo
-      const nombre = driver.name || '';
-      const apellido = driver.lastName || '';
-      const nombreCompleto = `${nombre} ${apellido}`.trim();
-      
-      // Número de licencia (circulationCard en tu modelo)
-      const licencia = driver.circulationCard || '';
-      
-      // Crear label
-      const label = licencia 
-        ? `${nombreCompleto} - Lic: ${licencia}`
-        : nombreCompleto || `Motorista ${driver._id}`;
-      
-      console.log('👤 Opción creada:', {
-        value: driver._id,
-        label,
-        driver
-      });
-      
-      return {
-        value: driver._id,
-        label
-      };
-    })
-  ];
+const AssignmentFields = ({ register, errors, motoristasDisponibles, proveedoresDisponibles }) => {
+  // Preparar opciones para motoristas - FILTRAR: Solo motoristas, excluir auxiliares
+  const motoristaOptions = (motoristasDisponibles || [])
+    .filter(driver => driver.rol === 'motorista') // ✅ FILTRAR POR ROL
+    .map(driver => ({
+    value: driver._id,
+    label: `${driver.name} ${driver.lastName}`
+  }));
 
-  console.log('📋 Opciones finales:', motoristaOptions);
-  console.log('📋 Total opciones:', motoristaOptions.length);
-
-  if (motoristasDisponibles.length === 0) {
-    console.warn('⚠️ No hay motoristas disponibles');
-  }
+  // Preparar opciones para proveedores
+  const proveedorOptions = (proveedoresDisponibles || []).map(proveedor => ({
+    value: proveedor._id,
+    label: proveedor.companyName
+  }));
 
   return (
     <div className="space-y-6">

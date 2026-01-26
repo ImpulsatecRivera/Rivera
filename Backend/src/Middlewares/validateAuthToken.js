@@ -1,6 +1,7 @@
 import jwt from "jsonwebtoken";
 import EmpleadoModel from "../Models/Empleados.js";
 import ClienteModel from "../Models/Clientes.js";
+import MotoristaModel from "../Models/Motorista.js";
 import { config } from "../config.js";
 
 /**
@@ -44,13 +45,36 @@ export const validateAuthToken = (allowedRoles = []) => {
         return res.status(403).json({ message: "Access denied", userPermission: "admin" });
       }
 
-      // MOTORISTA -> mapped to 'motorista' (accept 'motorista', 'motoristas', case-insensitive)
+      // MOTORISTA -> fetch DB to resolve rol (motorista | auxiliar)
       if (normalizedType.startsWith('motorist') || normalizedType === 'motoristas' || normalizedSingular === 'motorista') {
-        if (allowedRoles.length === 0 || allowedRoles.includes("motorista") || allowedRoles.includes("motoristas")) {
-          req.user = { id, userType: "motorista" };
-          return next();
+        const motorista = await MotoristaModel.findById(id).select("rol name lastName");
+        if (!motorista) {
+          return res.status(401).json({ message: "Motorista no encontrado" });
         }
-        return res.status(403).json({ message: "Access denied", userPermission: "motorista" });
+
+        const rol = motorista.rol; // Expect 'motorista' | 'auxiliar'
+
+        // allow if no allowedRoles specified or if allowedRoles includes the rol or generic 'motorista'
+        const allowed =
+          allowedRoles.length === 0 ||
+          allowedRoles.includes(rol) ||
+          allowedRoles.includes("motorista") ||
+          allowedRoles.includes("motoristas") ||
+          allowedRoles.includes(rol?.toLowerCase());
+
+        if (!allowed) {
+          return res.status(403).json({ message: "Access denied", userPermission: rol });
+        }
+
+        req.user = {
+          id,
+          userType: "motorista",
+          rol,
+          nombre: motorista.name || null,
+          apellido: motorista.lastName || null,
+        };
+
+        return next();
       }
 
       // EMPLEADO -> fetch DB to resolve rol (Operativo | Supervisor)

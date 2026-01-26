@@ -152,7 +152,7 @@ const DetailPanel = ({
                 Cargando Perfil
               </h2>
               <p className="text-gray-300 text-lg">
-                Preparando información del motorista
+                Preparando información del {selectedMotorista?.rol === 'auxiliar' ? 'auxiliar' : 'motorista'}
               </p>
             </div>
 
@@ -232,7 +232,7 @@ const DetailPanel = ({
               </div>
               <div className="text-sm text-gray-400 animate-pulse">
                 <span style={{ animation: "text-fade 3s ease-in-out infinite" }}>
-                  Verificando credenciales del motorista...
+                  Verificando credenciales del {selectedMotorista?.rol === 'auxiliar' ? 'auxiliar' : 'motorista'}...
                 </span>
               </div>
             </div>
@@ -287,7 +287,7 @@ const DetailPanel = ({
             <ArrowLeft className="w-5 h-5 text-gray-600" />
           </button>
           <h2 className="text-xl font-semibold text-gray-900">
-            Detalles del Motorista
+            {selectedMotorista.rol === 'auxiliar' ? 'Detalles del Auxiliar' : 'Detalles del Motorista'}
           </h2>
         </div>
 
