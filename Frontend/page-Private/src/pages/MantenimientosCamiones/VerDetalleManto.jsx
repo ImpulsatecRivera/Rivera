@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Calendar, Truck, Wrench, FileText, DollarSign, Package, Loader2, AlertCircle, Users } from 'lucide-react';
+import { X, Calendar, Truck, Wrench, FileText, DollarSign, Package, Loader2, AlertCircle, Users, Clock } from 'lucide-react';
 import { api } from '../../Context/authContext';
 
 const MantenimientoDetailModal = ({ mantenimientoId, isOpen, onClose }) => {
@@ -39,13 +39,14 @@ const MantenimientoDetailModal = ({ mantenimientoId, isOpen, onClose }) => {
       const mantenimientoMapeado = {
         _id: data._id,
         fecha_mantenimiento: data.fecha || data.fecha_mantenimiento,
+        fecha_finalizacion: data.fecha_finalizacion || data.fechaFinalizacion,
         mes: data.mes,
         ano: data.ano,
         tipo_de_mantenimiento: data.tipoMantenimiento || data.tipo_de_mantenimiento,
         descripcion: data.descripcion,
         estado: data.estado,
         ciculatioCard: data.camion || data.ciculatioCard,
-        proveedores: data.proveedores || [], // ← NUEVO
+        proveedores: data.proveedores || [],
         detalles: data.detalles || []
       };
 
@@ -71,6 +72,44 @@ const MantenimientoDetailModal = ({ mantenimientoId, isOpen, onClose }) => {
       month: 'long', 
       day: 'numeric' 
     });
+  };
+
+  const formatearFechaHora = (fecha) => {
+    if (!fecha) return 'N/A';
+    const date = new Date(fecha);
+    return date.toLocaleString('es-ES', {
+      year: 'numeric',
+      month: 'short',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
+    });
+  };
+
+  const calcularDuracionHumana = (inicio, fin) => {
+    if (!inicio) return '';
+    const start = new Date(inicio);
+    const end = fin ? new Date(fin) : new Date();
+    const diffMs = Math.max(end - start, 0);
+    const minutes = Math.floor(diffMs / 60000);
+    const hours = Math.floor(minutes / 60);
+    const days = Math.floor(hours / 24);
+    if (days >= 60) {
+      const meses = Math.round(days / 30);
+      return `${meses} mes${meses === 1 ? '' : 'es'}`;
+    }
+    if (days >= 14) {
+      const semanas = Math.round(days / 7);
+      return `${semanas} semana${semanas === 1 ? '' : 's'}`;
+    }
+    if (days >= 1) {
+      return `${days} día${days === 1 ? '' : 's'}`;
+    }
+    if (hours >= 1) {
+      return `${hours} hora${hours === 1 ? '' : 's'}`;
+    }
+    return `${minutes} min`;
   };
 
   const formatearMoneda = (cantidad) => {
@@ -184,7 +223,7 @@ const MantenimientoDetailModal = ({ mantenimientoId, isOpen, onClose }) => {
               {/* Content */}
               <div className="overflow-y-auto max-h-[calc(90vh-140px)] px-8 py-6">
                 {/* Info Cards Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                   {/* Fecha */}
                   <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-2xl p-5 border border-indigo-100">
                     <div className="flex items-start gap-3">
@@ -192,12 +231,32 @@ const MantenimientoDetailModal = ({ mantenimientoId, isOpen, onClose }) => {
                         <Calendar className="text-indigo-600" size={20} />
                       </div>
                       <div>
-                        <p className="text-gray-500 text-xs font-semibold uppercase tracking-wide mb-1">Fecha</p>
+                        <p className="text-gray-500 text-xs font-semibold uppercase tracking-wide mb-1">Inicio</p>
                         <p className="text-gray-900 font-bold capitalize">
                           {formatearFecha(mantenimiento.fecha_mantenimiento)}
                         </p>
                         <p className="text-indigo-600 text-sm font-medium mt-1">
-                          {mantenimiento.mes}/{mantenimiento.ano}
+                          {formatearFechaHora(mantenimiento.fecha_mantenimiento)}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Finalización */}
+                  <div className="bg-gradient-to-br from-emerald-50 to-green-50 rounded-2xl p-5 border border-emerald-100">
+                    <div className="flex items-start gap-3">
+                      <div className="bg-emerald-100 p-2.5 rounded-xl">
+                        <Clock className="text-emerald-600" size={20} />
+                      </div>
+                      <div>
+                        <p className="text-gray-500 text-xs font-semibold uppercase tracking-wide mb-1">Finalización</p>
+                        <p className="text-gray-900 font-bold">
+                          {mantenimiento.fecha_finalizacion ? formatearFechaHora(mantenimiento.fecha_finalizacion) : 'En proceso'}
+                        </p>
+                        <p className="text-emerald-600 text-sm font-medium mt-1">
+                          {mantenimiento.fecha_finalizacion
+                            ? `Duró ${calcularDuracionHumana(mantenimiento.fecha_mantenimiento, mantenimiento.fecha_finalizacion)}`
+                            : `En mantenimiento por ${calcularDuracionHumana(mantenimiento.fecha_mantenimiento)}`}
                         </p>
                       </div>
                     </div>

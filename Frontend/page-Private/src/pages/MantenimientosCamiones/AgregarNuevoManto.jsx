@@ -7,6 +7,11 @@ import { useTutorial } from '../../hooks/useTutorial';
 import '../../styles/tutorial-global.css';
 import { HelpCircle } from 'lucide-react';
 
+const toDateTimeLocal = (date = new Date()) => {
+  const pad = (value) => String(value).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+};
+
 const CreateMantenimientoPage = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
@@ -17,7 +22,7 @@ const CreateMantenimientoPage = () => {
   const { startTutorial, hasCompleted } = useTutorial('mantenimientoNuevo');
 
   const [formData, setFormData] = useState({
-    fecha_mantenimiento: '',
+    fecha_mantenimiento: toDateTimeLocal(),
     tipo_de_mantenimiento: '',
     descripcion: '',
     ciculatioCard: '',
@@ -299,7 +304,7 @@ const CreateMantenimientoPage = () => {
         }
       });
 
-      const fechaLocal = new Date(formData.fecha_mantenimiento + 'T12:00:00');
+      const fechaLocal = new Date(formData.fecha_mantenimiento);
 
       // Filtrar proveedores vacíos, null, undefined
       const proveedoresUnicos = [...new Set(
@@ -479,10 +484,11 @@ const result = response.data;
               {/* Fecha */}
               <div>
                 <label className="block text-sm font-semibold text-[#34353A] mb-2">
-                  Fecha de Mantenimiento *
+                  Fecha y hora de Mantenimiento *
                 </label>
                 <input
-                  type="date"
+                  type="datetime-local"
+                  step="60"
                   name="fecha_mantenimiento"
                   value={formData.fecha_mantenimiento}
                   onChange={handleInputChange}
