@@ -2952,7 +2952,7 @@ ReportesViajesDirecto.generarPDFDiario = async (req, res) => {
     console.log(`📊 Generando PDF Diario de Viajes: ${formatearFechaString(fecha)}`);
     console.log('🔍 Rango de búsqueda LOCAL:', fechaDate, 'hasta', fechaFin);
 
-    // Obtener viajes del día
+    // 🔥 ACTUALIZADO: Obtener viajes del día con conductor y auxiliares
     const viajes = await ViajesModel.find({
       tipoViaje: 'operativo',
       'estado.actual': 'completado',
@@ -2960,6 +2960,8 @@ ReportesViajesDirecto.generarPDFDiario = async (req, res) => {
     })
       .populate('clienteOperativo', 'nombreComercial nombreEmpresa')
       .populate('truckId', 'licensePlate placa')
+      .populate('conductorId', 'nombre name') // 🔥 NUEVO
+      .populate('auxiliares.auxiliarId', 'nombre name') // 🔥 NUEVO
       .sort({ clienteNombre: 1, departureTime: 1 })
       .lean();
 
@@ -2969,7 +2971,7 @@ ReportesViajesDirecto.generarPDFDiario = async (req, res) => {
       return res.status(404).json({ success: false, message: 'No hay viajes completados en la fecha indicada' });
     }
 
-    // Agrupar por cliente
+    // 🔥 ACTUALIZADO: Agrupar por cliente
     const clientesMap = new Map();
     let totalViajesGeneral = 0;
     let totalMontoGeneral = 0;
@@ -2983,38 +2985,53 @@ ReportesViajesDirecto.generarPDFDiario = async (req, res) => {
       }
 
       const data = clientesMap.get(cliente);
+      
+      // 🔥 ACTUALIZADO: Agregar conductor y auxiliares
       data.viajes.push({
         hora: formatearHora(v.departureTime),
         placa: v.truckId?.licensePlate || v.truckId?.placa || 'SIN PLACA',
+        conductor: v.conductorId?.nombre || v.conductorId?.name || 'SIN CONDUCTOR',
+        auxiliares: (v.auxiliares || [])
+          .map(aux => aux.auxiliarId?.nombre || aux.auxiliarId?.name)
+          .filter(Boolean),
         monto: monto
       });
+      
       data.totalViajes += 1;
       data.totalMonto += monto;
       totalViajesGeneral += 1;
       totalMontoGeneral += monto;
     });
 
-    // Generar filas HTML
+    // 🔥 ACTUALIZADO: Generar filas HTML
     let filasHTML = '';
     let idx = 1;
     clientesMap.forEach((data, cliente) => {
-      let viajesCliente = data.viajes.map(v => 
-        `<tr>
-          <td style="text-align:center">${v.hora}</td>
-          <td style="text-align:center">${v.placa}</td>
-          <td style="text-align:right">$${v.monto.toFixed(2)}</td>
-        </tr>`
-      ).join('');
+      let viajesCliente = data.viajes.map(v => {
+        // Formatear personal: conductor + auxiliares
+        const personal = v.auxiliares.length > 0 
+          ? `${v.conductor}<br><span style="font-size:8px; color:#5D9646; font-style:italic;">+ ${v.auxiliares.join(', ')}</span>`
+          : v.conductor;
+          
+        return `
+          <tr>
+            <td style="text-align:center">${v.hora}</td>
+            <td style="text-align:center">${v.placa}</td>
+            <td style="text-align:left; padding:4px;">${personal}</td>
+            <td style="text-align:right">$${v.monto.toFixed(2)}</td>
+          </tr>
+        `;
+      }).join('');
 
       filasHTML += `
         <tr>
           <td class="cell-numero" rowspan="${data.viajes.length + 1}">${idx}</td>
           <td class="cell-cliente" rowspan="${data.viajes.length + 1}">${cliente}</td>
-          <td colspan="3" style="font-weight:bold; text-align:center; background-color:#f0f0f0;">Viajes del Día</td>
+          <td colspan="4" style="font-weight:bold; text-align:center; background-color:#f0f0f0;">Viajes del Día</td>
         </tr>
         ${viajesCliente}
         <tr style="background-color:#e0e0e0;">
-          <td colspan="2" style="text-align:right; font-weight:bold;">Total Cliente:</td>
+          <td colspan="3" style="text-align:right; font-weight:bold;">Total Cliente:</td>
           <td style="text-align:right; font-weight:bold;">$${data.totalMonto.toFixed(2)}</td>
         </tr>
       `;
@@ -3138,13 +3155,14 @@ ReportesViajesDirecto.generarPDFDiario = async (req, res) => {
           <th>CLIENTE</th>
           <th>HORA</th>
           <th>PLACA</th>
+          <th>PERSONAL</th>
           <th>MONTO</th>
         </tr>
       </thead>
       <tbody>
         ${filasHTML}
         <tr class="total-row">
-          <td colspan="4" style="text-align:right; font-weight:bold;">TOTAL GENERAL:</td>
+          <td colspan="5" style="text-align:right; font-weight:bold;">TOTAL GENERAL:</td>
           <td style="text-align:right; font-weight:bold;">$${totalMontoGeneral.toFixed(2)}</td>
         </tr>
       </tbody>

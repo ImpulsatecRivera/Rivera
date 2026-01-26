@@ -427,28 +427,44 @@ export default function ProgramacionViajesOperativos() {
                         </div>
                         
                         <div className="space-y-2 pl-4">
-                          {viajes.map((viaje, idx) => {
-                            const placa = obtenerPlacaCamion(viaje);
-                            
-                            return (
-                              <div 
-                                key={viaje?.id || idx} 
-                                className="flex items-center gap-3 text-xl font-semibold text-gray-800 group hover:bg-blue-50 p-2 rounded transition-colors"
-                              >
-                                <span className="text-blue-600 font-mono">{placa}</span>
-                                <span className="text-gray-600">{formatearHoraSalida(viaje)}</span>
-                                <span>{viaje?.conductor || "Sin conductor"}</span>
-                                <span className="text-sm text-gray-500">{viaje?.destino || ""}</span>
-                                
-                                <button
-                                  onClick={() => handleCambiarEstado(viaje, cliente)}
-                                  className="ml-auto opacity-0 group-hover:opacity-100 transition-opacity"
-                                >
-                                  <Edit2 size={16} className="text-blue-600" />
-                                </button>
-                              </div>
-                            );
-                          })}
+                         
+
+{viajes.map((viaje, idx) => {
+  const placa = obtenerPlacaCamion(viaje);
+  
+  // 🔥 NUEVO: Obtener auxiliares
+  const auxiliares = viaje?.auxiliares || [];
+  const nombresConductor = viaje?.conductor || "Sin conductor";
+  
+  return (
+    <div 
+      key={viaje?.id || idx} 
+      className="flex items-center gap-3 text-xl font-semibold text-gray-800 group hover:bg-blue-50 p-2 rounded transition-colors"
+    >
+      <span className="text-blue-600 font-mono">{placa}</span>
+      <span className="text-gray-600">{formatearHoraSalida(viaje)}</span>
+      
+      {/* 🔥 CONDUCTOR + AUXILIARES */}
+      <div className="flex flex-col gap-0.5">
+        <span className="text-gray-900">{nombresConductor}</span>
+        {auxiliares.length > 0 && (
+          <span className="text-sm text-green-700 italic">
+            + {auxiliares.map(aux => aux.nombre || aux.name || 'Aux').join(', ')}
+          </span>
+        )}
+      </div>
+      
+      <span className="text-sm text-gray-500">{viaje?.destino || ""}</span>
+      
+      <button
+        onClick={() => handleCambiarEstado(viaje, cliente)}
+        className="ml-auto opacity-0 group-hover:opacity-100 transition-opacity"
+      >
+        <Edit2 size={16} className="text-blue-600" />
+      </button>
+    </div>
+  );
+})}
                         </div>
                       </div>
                     ))}

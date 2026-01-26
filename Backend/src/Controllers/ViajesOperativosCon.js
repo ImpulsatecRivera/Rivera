@@ -496,11 +496,12 @@ ViajesOperativosController.obtenerProgramacionDia = async (req, res) => {
     console.log('Query de búsqueda:', JSON.stringify(query, null, 2));
     
     const viajes = await ViajesModel.find(query)
-    .populate('truckId', 'brand model licensePlate placa marca modelo name nombre')
-    .populate('conductorId', 'name nombre')
-    .populate('clienteOperativo', 'nombre name')
-    .sort({ departureTime: 1 })
-    .lean();
+  .populate('truckId', 'brand model licensePlate placa marca modelo name nombre')
+  .populate('conductorId', 'name nombre')
+  .populate('clienteOperativo', 'nombre name')
+  .populate('auxiliares.auxiliarId', 'nombre name') // 🔥 NUEVO
+  .sort({ departureTime: 1 })
+  .lean();
     
     // DEBUG: Mostrar todos los viajes operativos
     const todosOperativos = await ViajesModel.find({ tipoViaje: 'operativo' }).select('departureTime tipoViaje _id').sort({ departureTime: -1 }).limit(20).lean();
@@ -554,18 +555,27 @@ ViajesOperativosController.obtenerProgramacionDia = async (req, res) => {
       console.log('Hora:', hora);
       console.log('================================');
       
-      const viajeData = {
-        id: viaje._id,
-        codigo: camionCodigo,
-        hora: hora,
-        ruta: viaje.rutaDirecta?.rutaCompleta || 'N/A',
-        conductor: viaje.conductorId?.name || viaje.conductorId?.nombre || 'N/A',
-        destino: viaje.rutaDirecta?.destino?.nombre || 'N/A',
-        estado: viaje.estado?.actual || 'pendiente',
-        camion: nombreCamion,
-        placa: placaCamion,
-        horaSalida: hora
-      };
+      // ViajesOperativosController.js
+// En la función obtenerProgramacionDia, actualiza la parte donde creas viajeData:
+
+const viajeData = {
+  id: viaje._id,
+  codigo: camionCodigo,
+  hora: hora,
+  ruta: viaje.rutaDirecta?.rutaCompleta || 'N/A',
+  conductor: viaje.conductorId?.name || viaje.conductorId?.nombre || 'N/A',
+  destino: viaje.rutaDirecta?.destino?.nombre || 'N/A',
+  estado: viaje.estado?.actual || 'pendiente',
+  camion: nombreCamion,
+  placa: placaCamion,
+  horaSalida: hora,
+  
+  //
+  auxiliares: (viaje.auxiliares || []).map(aux => ({
+    id: aux.auxiliarId?._id || aux.auxiliarId,
+    nombre: aux.auxiliarId?.nombre || aux.auxiliarId?.name || 'Auxiliar'
+  }))
+};
       
       console.log('📦 Objeto viaje a enviar:', JSON.stringify(viajeData, null, 2));
       console.log('================================');
