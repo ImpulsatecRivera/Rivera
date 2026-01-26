@@ -15,7 +15,7 @@ const MotoristaHeader = ({
   countAuxiliares,
   handleContinue,
   onStartTutorial,
-  hasCompletedTutorial
+  hasCompletedTutorial,
   handleContinueAuxiliar,
 }) => {
   const { canCreate } = usePermissions();
