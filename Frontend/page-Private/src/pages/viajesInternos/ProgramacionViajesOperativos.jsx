@@ -6,19 +6,18 @@ import {
   RefreshCw,
   Truck,
   User,
-  MapPin,
   Clock,
   CheckCircle,
   XCircle,
   PlayCircle,
-  Pause,
   AlertCircle,
+  Edit2,
+  Download,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
 import { config } from "../../config";
 import { api } from "../../Context/authContext";
-
 
 const PROGRAMACION_ENDPOINT = `${config.api.API_URL}/viajes-operativos/programacion`;
 const COMPLETAR_UNO_ENDPOINT = `${config.api.API_URL}/viajes-operativos/completar`;
@@ -41,26 +40,11 @@ const getEstadoConfig = (estado) => {
   return ESTADOS_DISPONIBLES[0];
 };
 
-const getEstadoBadgeClass = (color) => {
-  if (color === "green") return "bg-[#5D9646] bg-opacity-20 text-[#5D9646] border-2 border-[#5D9646]";
-  if (color === "blue") return "bg-[#5F8EAD] bg-opacity-20 text-[#5F8EAD] border-2 border-[#5F8EAD]";
-  if (color === "red") return "bg-red-50 text-red-700 border-2 border-red-200";
-  return "bg-yellow-50 text-yellow-800 border-2 border-yellow-200";
-};
-
 const parseDateLocal = (dateString) => {
-  // Parsea fecha en formato YYYY-MM-DD o ISO como fecha local, no UTC
   if (!dateString) return null;
   const [year, month, day] = dateString.split("T")[0].split("-");
   if (!year || !month || !day) return null;
   return new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
-};
-
-const formatearHora = (fecha) => {
-  if (!fecha) return "N/A";
-  const d = typeof fecha === "string" ? parseDateLocal(fecha) : new Date(fecha);
-  if (!d || Number.isNaN(d.getTime())) return "N/A";
-  return d.toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" });
 };
 
 const formatearFechaCompleta = (fecha) => {
@@ -68,11 +52,48 @@ const formatearFechaCompleta = (fecha) => {
   const d = typeof fecha === "string" ? parseDateLocal(fecha) : new Date(fecha);
   if (!d || Number.isNaN(d.getTime())) return "N/A";
   return d.toLocaleDateString("es-ES", {
-    weekday: "long",
-    year: "numeric",
-    month: "long",
-    day: "numeric",
+    day: "2-digit",
+    month: "2-digit",
+    year: "2-digit",
   });
+};
+
+// Función para formatear hora de salida
+const formatearHoraSalida = (viaje) => {
+  const horaSalida = viaje?.horaSalida || viaje?.hora_salida || viaje?.hora || viaje?.departureTime;
+  
+  if (!horaSalida) return "N/A";
+  
+  if (typeof horaSalida === 'string' && horaSalida.includes(':')) {
+    return horaSalida;
+  }
+  
+  try {
+    const fecha = new Date(horaSalida);
+    if (!isNaN(fecha.getTime())) {
+      return fecha.toLocaleTimeString("en-US", { 
+        hour: "numeric", 
+        minute: "2-digit",
+        hour12: true 
+      });
+    }
+  } catch (e) {
+    console.error('Error formateando hora:', e);
+  }
+  
+  return horaSalida.toString();
+};
+
+// Función para obtener la placa del camión
+// En la función obtenerPlacaCamion, cambia a esto:
+
+const obtenerPlacaCamion = (viaje) => {
+  console.log('=== DEBUG FINAL ===');
+  console.log('Viaje completo:', JSON.stringify(viaje, null, 2));
+  console.log('viaje.placa:', viaje?.placa);
+  console.log('==================');
+  
+  return viaje?.placa || "Sin placa";
 };
 
 export default function ProgramacionViajesOperativos() {
@@ -104,13 +125,17 @@ export default function ProgramacionViajesOperativos() {
     }
   }, [selectedDate]);
 
-  const fetchProgramacion = async (fecha) => {
+ const fetchProgramacion = async (fecha) => {
   try {
     setLoading(true);
     setError(null);
 
-    const response = await api.get(`${PROGRAMACION_ENDPOINT}/${fecha}`);
+    const url = `${PROGRAMACION_ENDPOINT}/${fecha}`;
+    console.log('🌐 URL COMPLETA QUE ESTOY LLAMANDO:', url);
+    console.log('🌐 config.api.API_URL:', config.api.API_URL);
+    console.log('🌐 PROGRAMACION_ENDPOINT:', PROGRAMACION_ENDPOINT);
 
+    const response = await api.get(`${PROGRAMACION_ENDPOINT}/${fecha}`);
     const data = response.data?.data || {};
     const prog = data?.programacion || [];
 
@@ -119,21 +144,55 @@ export default function ProgramacionViajesOperativos() {
     setTotalViajes(data?.totalViajes || 0);
     setTotalClientes(data?.totalClientes || 0);
   } catch (e) {
-    setError(
-      e.response?.data?.message ||
-      e.message ||
-      "Error al cargar"
-    );
+    setError(e.response?.data?.message || e.message || "Error al cargar");
     setProgramacion([]);
   } finally {
     setLoading(false);
   }
 };
 
-
   const handleRefresh = () => {
     if (selectedDate) {
       fetchProgramacion(selectedDate);
+    }
+  };
+
+  const handleDownloadReporte = async () => {
+    if (!selectedDate) {
+      Swal.fire({
+        icon: "warning",
+        title: "Fecha requerida",
+        text: "Selecciona una fecha para descargar el reporte",
+      });
+      return;
+    }
+
+    try {
+      const url = `${config.api.API_URL}/reportes-directos/diario/${selectedDate}`;
+      const response = await api.get(url, { responseType: 'blob' });
+
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const urlBlob = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = urlBlob;
+      a.download = `reporte-diario-viajes-${selectedDate}.pdf`;
+      a.click();
+      URL.revokeObjectURL(urlBlob);
+
+      Swal.fire({
+        icon: "success",
+        title: "Descarga exitosa",
+        text: "El reporte diario se ha descargado correctamente",
+        timer: 2000,
+      });
+    } catch (error) {
+      console.error("Error descargando reporte:", error);
+      const isNoData = error.response?.status === 404;
+      Swal.fire({
+        icon: isNoData ? "warning" : "error",
+        title: isNoData ? "Sin datos" : "Error",
+        text: error.response?.data?.message || "No se pudo descargar el reporte",
+      });
     }
   };
 
@@ -155,15 +214,9 @@ export default function ProgramacionViajesOperativos() {
 
     try {
       if (nuevoEstado === "completado") {
-       await api.put(`${COMPLETAR_UNO_ENDPOINT}/${viajeId}`, {
-  observacion: "Viaje completado desde programación",
-});
-
-
-        const json = await res.json().catch(() => ({}));
-
-        if (!res.ok || json?.success === false)
-          throw new Error(json?.message || "Error al completar");
+        await api.put(`${COMPLETAR_UNO_ENDPOINT}/${viajeId}`, {
+          observacion: "Viaje completado desde programación",
+        });
 
         await Swal.fire({
           title: "¡Completado!",
@@ -172,15 +225,9 @@ export default function ProgramacionViajesOperativos() {
           timer: 1500,
         });
       } else {
-       await api.patch(`${ACTUALIZAR_ESTADO_ENDPOINT}/${viajeId}`, {
-  estado: nuevoEstado,
-});
-
-
-        const json = await res.json().catch(() => ({}));
-
-        if (!res.ok || json?.success === false)
-          throw new Error(json?.message || "Error al actualizar estado");
+        await api.patch(`${ACTUALIZAR_ESTADO_ENDPOINT}/${viajeId}`, {
+          estado: nuevoEstado,
+        });
 
         await Swal.fire({
           title: "¡Actualizado!",
@@ -199,23 +246,10 @@ export default function ProgramacionViajesOperativos() {
 
   const getEstadosPermitidos = (estadoActual) => {
     const e = normalize(estadoActual);
-
-    if (e === "pendiente") {
-      return ["en_curso", "completado", "cancelado"];
-    }
-
-    if (e === "en_curso" || e === "en curso") {
-      return ["completado"];
-    }
-
-    if (e === "completado") {
-      return [];
-    }
-
-    if (e === "cancelado") {
-      return [];
-    }
-
+    if (e === "pendiente") return ["en_curso", "completado", "cancelado"];
+    if (e === "en_curso" || e === "en curso") return ["completado"];
+    if (e === "completado") return [];
+    if (e === "cancelado") return [];
     return ["pendiente", "en_curso", "completado", "cancelado"];
   };
 
@@ -223,113 +257,122 @@ export default function ProgramacionViajesOperativos() {
     setEditandoEstado(null);
   };
 
-  const viajesPorHora = useMemo(() => {
-    const grupos = {};
+  const viajesPorTipo = useMemo(() => {
+    const grupos = {
+      ruta: [],
+      descarga: [],
+      descargaTransito: [],
+      descargaSanMiguel: [],
+    };
 
     programacion.forEach((clienteGroup) => {
+      const nombreCliente = clienteGroup?.cliente || "Cliente N/A";
       const viajes = clienteGroup?.viajes || [];
 
       viajes.forEach((viaje) => {
-        const hora = viaje?.hora || "00:00";
-        const horaKey = hora.substring(0, 2);
-
-        if (!grupos[horaKey]) {
-          grupos[horaKey] = [];
-        }
-
-        grupos[horaKey].push({
+        const ruta = (viaje?.ruta || "").toLowerCase();
+        const viajeConCliente = {
           ...viaje,
-          clienteNombre: clienteGroup?.cliente || "N/A",
-        });
+          clienteNombre: nombreCliente,
+        };
+
+        if (ruta.includes("ruta") || ruta.includes("diaya")) {
+          grupos.ruta.push(viajeConCliente);
+        } else if (ruta.includes("descarga") && ruta.includes("transito")) {
+          grupos.descargaTransito.push(viajeConCliente);
+        } else if (ruta.includes("descarga") && ruta.includes("san miguel")) {
+          grupos.descargaSanMiguel.push(viajeConCliente);
+        } else if (ruta.includes("descarga")) {
+          grupos.descarga.push(viajeConCliente);
+        } else {
+          grupos.ruta.push(viajeConCliente);
+        }
       });
     });
 
-    return grupos;
+    const agruparPorCliente = (viajes) => {
+      const clientesMap = {};
+      
+      viajes.forEach((viaje) => {
+        const cliente = viaje.clienteNombre;
+        if (!clientesMap[cliente]) {
+          clientesMap[cliente] = [];
+        }
+        clientesMap[cliente].push(viaje);
+      });
+
+      Object.keys(clientesMap).forEach((cliente) => {
+        clientesMap[cliente].sort((a, b) => {
+          const horaA = formatearHoraSalida(a);
+          const horaB = formatearHoraSalida(b);
+          return horaA.localeCompare(horaB);
+        });
+      });
+
+      return clientesMap;
+    };
+
+    return {
+      ruta: agruparPorCliente(grupos.ruta),
+      descarga: agruparPorCliente(grupos.descarga),
+      descargaTransito: agruparPorCliente(grupos.descargaTransito),
+      descargaSanMiguel: agruparPorCliente(grupos.descargaSanMiguel),
+    };
   }, [programacion]);
 
-  const horasOrdenadas = useMemo(() => {
-    return Object.keys(viajesPorHora).sort();
-  }, [viajesPorHora]);
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-8">
+    <div className="min-h-screen bg-[#f5f5f0] p-4 sm:p-8">
       <div className="max-w-7xl mx-auto">
-        {/* Header - COLORES CAMBIADOS */}
-        <div className="mb-8">
+        {/* Header */}
+        <div className="mb-6">
           <button
             onClick={() => navigate("/viajesInternos")}
-            className="flex items-center gap-2 text-[#5F8EAD] hover:text-[#34353A] font-semibold mb-4 transition-colors"
+            className="flex items-center gap-2 text-gray-700 hover:text-gray-900 font-semibold mb-4 transition-colors"
           >
             <ArrowLeft size={20} />
-            Volver a Viajes Operativos
+            Volver
           </button>
 
-          <div className="flex items-center gap-4">
-            <div className="bg-gradient-to-br from-[#34353A] to-[#5F8EAD] p-4 rounded-2xl shadow-lg">
-              <Calendar className="text-white" size={32} />
-            </div>
+          <div className="flex items-center justify-between flex-wrap gap-4">
             <div>
-              <h1 className="text-4xl font-bold text-[#34353A] mb-1">
-                Programación del Día
+              <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-1">
+                Programación {formatearFechaCompleta(selectedDate)}
               </h1>
-              <p className="text-gray-600">Vista tipo pizarra de viajes operativos</p>
+              <p className="text-gray-600">Vista tipo pizarra</p>
             </div>
-          </div>
-        </div>
 
-        {/* Selector de Fecha + Estadísticas - COLORES CAMBIADOS */}
-        <div className="bg-white rounded-2xl shadow-lg p-6 mb-6">
-          <div className="flex items-center justify-between gap-4 flex-wrap">
-            <div className="flex items-center gap-4">
-              <div>
-                <label className="block text-sm font-semibold text-[#34353A] mb-2">
-                  Seleccionar Fecha
-                </label>
-                <input
-                  type="date"
-                  value={selectedDate}
-                  onChange={(e) => setSelectedDate(e.target.value)}
-                  className="px-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#5F8EAD] focus:border-[#5F8EAD]"
-                />
-              </div>
+            <div className="flex items-center gap-3">
+              <input
+                type="date"
+                value={selectedDate}
+                onChange={(e) => setSelectedDate(e.target.value)}
+                className="px-4 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
 
               <button
                 onClick={handleRefresh}
                 disabled={loading}
-                className="mt-7 px-4 py-3 bg-[#5F8EAD] text-white rounded-xl hover:opacity-90 font-semibold disabled:opacity-50 flex items-center gap-2"
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold disabled:opacity-50 flex items-center gap-2"
               >
                 <RefreshCw size={18} className={loading ? "animate-spin" : ""} />
                 Actualizar
               </button>
-            </div>
 
-            <div className="flex items-center gap-6">
-              <div className="text-center">
-                <p className="text-3xl font-bold text-[#5F8EAD]">{totalViajes}</p>
-                <p className="text-sm text-gray-600 font-medium">Viajes</p>
-              </div>
-
-              <div className="h-12 w-px bg-gray-300"></div>
-
-              <div className="text-center">
-                <p className="text-3xl font-bold text-[#5D9646]">{totalClientes}</p>
-                <p className="text-sm text-gray-600 font-medium">Clientes</p>
-              </div>
+              <button
+                onClick={handleDownloadReporte}
+                disabled={loading}
+                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold disabled:opacity-50 flex items-center gap-2"
+              >
+                <Download size={18} />
+                Reporte Diario
+              </button>
             </div>
           </div>
-
-          {fechaInfo && (
-            <div className="mt-4 pt-4 border-t border-gray-200">
-              <p className="text-[#34353A] font-semibold">
-                📅 {formatearFechaCompleta(selectedDate)}
-              </p>
-            </div>
-          )}
         </div>
 
         {/* Error */}
         {error && (
-          <div className="mb-6 bg-red-50 border-2 border-red-200 rounded-xl p-4 flex items-start gap-3">
+          <div className="mb-6 bg-red-50 border-2 border-red-300 rounded-lg p-4 flex items-start gap-3">
             <AlertCircle className="text-red-600 flex-shrink-0 mt-0.5" size={20} />
             <div>
               <p className="text-red-800 font-semibold">Error</p>
@@ -340,117 +383,220 @@ export default function ProgramacionViajesOperativos() {
 
         {/* Loading */}
         {loading && (
-          <div className="bg-white rounded-2xl shadow-lg p-12 text-center">
-            <Loader2 className="w-12 h-12 animate-spin text-[#5F8EAD] mx-auto mb-4" />
+          <div className="bg-white rounded-lg shadow-lg p-12 text-center border-4 border-gray-300">
+            <Loader2 className="w-12 h-12 animate-spin text-blue-600 mx-auto mb-4" />
             <p className="text-gray-600 font-medium">Cargando programación...</p>
           </div>
         )}
 
-        {/* Programación - COLORES CAMBIADOS */}
+        {/* Pizarra Digital */}
         {!loading && !error && (
-          <>
-            {horasOrdenadas.length === 0 ? (
-              <div className="bg-white rounded-2xl shadow-lg p-12 text-center">
-                <Calendar className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                <p className="text-gray-600 font-semibold text-lg">
-                  No hay viajes programados para esta fecha
+          <div className="bg-white rounded-lg shadow-2xl p-6 sm:p-8 border-8 border-gray-400" style={{ fontFamily: "'Caveat', 'Comic Sans MS', cursive" }}>
+            {/* Título */}
+            <div className="mb-8 pb-4 border-b-4 border-red-600">
+              <h2 className="text-4xl sm:text-5xl font-bold text-red-600 text-center" style={{ textShadow: "2px 2px 0px rgba(0,0,0,0.1)" }}>
+                Programicio {formatearFechaCompleta(selectedDate)}
+              </h2>
+            </div>
+
+            {programacion.length === 0 ? (
+              <div className="text-center py-12">
+                <Calendar className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                <p className="text-gray-600 text-2xl font-semibold">
+                  No hay viajes programados
                 </p>
               </div>
             ) : (
-              <div className="space-y-6">
-                {horasOrdenadas.map((horaKey) => {
-                  const viajesHora = viajesPorHora[horaKey];
-
-                  return (
-                    <div key={horaKey} className="bg-white rounded-2xl shadow-lg p-6">
-                      <div className="flex items-center gap-3 mb-4 pb-4 border-b border-gray-200">
-                        <Clock className="text-[#5F8EAD]" size={24} />
-                        <h3 className="text-2xl font-bold text-[#34353A]">
-                          {horaKey}:00 hrs
-                        </h3>
-                        <span className="ml-auto bg-[#5F8EAD] bg-opacity-20 text-[#5F8EAD] px-3 py-1 rounded-full text-sm font-semibold">
-                          {viajesHora.length} viajes
-                        </span>
-                      </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {viajesHora.map((viaje, idx) => {
-                          const estadoConfig = getEstadoConfig(viaje?.estado);
-                          const IconoEstado = estadoConfig.icon;
-
-                          return (
-                            <div
-                              key={viaje?.id || idx}
-                              className="bg-gradient-to-br from-gray-50 to-white border border-gray-200 rounded-xl p-4 hover:shadow-md transition-shadow"
-                            >
-                              <div className="flex items-start justify-between mb-3">
-                                <div>
-                                  <p className="text-xs font-semibold text-gray-500 uppercase">
-                                    {viaje?.codigo || "N/A"}
-                                  </p>
-                                  <h4 className="text-lg font-bold text-[#34353A]">
-                                    {viaje?.clienteNombre}
-                                  </h4>
-                                </div>
-
+              <div className="space-y-10">
+                {/* RUTA */}
+                {Object.keys(viajesPorTipo.ruta).length > 0 && (
+                  <div>
+                    <div className="mb-4 pb-2 border-b-4 border-blue-600">
+                      <h3 className="text-4xl font-bold text-blue-600 flex items-center gap-2">
+                        <span>RUTA:</span>
+                        <span className="text-2xl text-blue-500">→</span>
+                      </h3>
+                    </div>
+                    
+                    {Object.entries(viajesPorTipo.ruta).map(([cliente, viajes]) => (
+                      <div key={cliente} className="mb-6 pl-4">
+                        <div className="mb-2">
+                          <h4 className="text-2xl font-bold text-gray-800 underline decoration-blue-400 decoration-2">
+                            {cliente}
+                          </h4>
+                        </div>
+                        
+                        <div className="space-y-2 pl-4">
+                          {viajes.map((viaje, idx) => {
+                            const placa = obtenerPlacaCamion(viaje);
+                            
+                            return (
+                              <div 
+                                key={viaje?.id || idx} 
+                                className="flex items-center gap-3 text-xl font-semibold text-gray-800 group hover:bg-blue-50 p-2 rounded transition-colors"
+                              >
+                                <span className="text-blue-600 font-mono">{placa}</span>
+                                <span className="text-gray-600">{formatearHoraSalida(viaje)}</span>
+                                <span>{viaje?.conductor || "Sin conductor"}</span>
+                                <span className="text-sm text-gray-500">{viaje?.destino || ""}</span>
+                                
                                 <button
-                                  onClick={() =>
-                                    handleCambiarEstado(viaje, viaje?.clienteNombre)
-                                  }
-                                  className={`px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1 ${getEstadoBadgeClass(
-                                    estadoConfig.color
-                                  )} hover:opacity-80 transition-opacity cursor-pointer`}
+                                  onClick={() => handleCambiarEstado(viaje, cliente)}
+                                  className="ml-auto opacity-0 group-hover:opacity-100 transition-opacity"
                                 >
-                                  <IconoEstado size={14} />
-                                  {estadoConfig.label}
+                                  <Edit2 size={16} className="text-blue-600" />
                                 </button>
                               </div>
-
-                              <div className="space-y-2">
-                                <div className="flex items-center gap-2 text-sm text-gray-700">
-                                  <Clock size={16} className="text-gray-400" />
-                                  <span className="font-semibold">{viaje?.hora}</span>
-                                </div>
-
-                                <div className="flex items-center gap-2 text-sm text-gray-700">
-                                  <MapPin size={16} className="text-gray-400" />
-                                  <span className="font-medium">{viaje?.ruta || "N/A"}</span>
-                                </div>
-
-                                <div className="flex items-center gap-2 text-sm text-gray-700">
-                                  <User size={16} className="text-gray-400" />
-                                  <span>{viaje?.conductor || "N/A"}</span>
-                                </div>
-
-                                <div className="flex items-center gap-2 text-sm text-gray-700">
-                                  <Truck size={16} className="text-gray-400" />
-                                  <span>{viaje?.camion || "N/A"}</span>
-                                </div>
-
-                                <div className="pt-2 mt-2 border-t border-gray-200">
-                                  <p className="text-xs text-gray-500">
-                                    Destino: <span className="font-semibold">{viaje?.destino || "N/A"}</span>
-                                  </p>
-                                </div>
-                              </div>
-                            </div>
-                          );
-                        })}
+                            );
+                          })}
+                        </div>
                       </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* DESCARGA */}
+                {Object.keys(viajesPorTipo.descarga).length > 0 && (
+                  <div>
+                    <div className="mb-4 pb-2 border-b-4 border-red-600">
+                      <h3 className="text-4xl font-bold text-red-600">DESCARGA</h3>
                     </div>
-                  );
-                })}
+                    
+                    {Object.entries(viajesPorTipo.descarga).map(([cliente, viajes]) => (
+                      <div key={cliente} className="mb-6 pl-4">
+                        <div className="mb-2">
+                          <h4 className="text-2xl font-bold text-gray-800 underline decoration-red-400 decoration-2">
+                            {cliente}
+                          </h4>
+                        </div>
+                        
+                        <div className="space-y-2 pl-4">
+                          {viajes.map((viaje, idx) => {
+                            const placa = obtenerPlacaCamion(viaje);
+                            
+                            return (
+                              <div 
+                                key={viaje?.id || idx} 
+                                className="flex items-center gap-3 text-xl font-semibold text-gray-800 group hover:bg-red-50 p-2 rounded transition-colors"
+                              >
+                                <span className="text-red-600 font-mono">{placa}</span>
+                                <span className="text-gray-600">{formatearHoraSalida(viaje)}</span>
+                                <span>{viaje?.conductor || "Sin conductor"}</span>
+                                <span className="text-sm text-gray-500">{viaje?.destino || ""}</span>
+                                
+                                <button
+                                  onClick={() => handleCambiarEstado(viaje, cliente)}
+                                  className="ml-auto opacity-0 group-hover:opacity-100 transition-opacity"
+                                >
+                                  <Edit2 size={16} className="text-red-600" />
+                                </button>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* DESCARGA/TRANSITO */}
+                {Object.keys(viajesPorTipo.descargaTransito).length > 0 && (
+                  <div>
+                    <div className="mb-4 pb-2 border-b-4 border-green-600">
+                      <h3 className="text-4xl font-bold text-green-600">DESCARGA/TRANSITO</h3>
+                    </div>
+                    
+                    {Object.entries(viajesPorTipo.descargaTransito).map(([cliente, viajes]) => (
+                      <div key={cliente} className="mb-6 pl-4">
+                        <div className="mb-2">
+                          <h4 className="text-2xl font-bold text-gray-800 underline decoration-green-400 decoration-2">
+                            {cliente}
+                          </h4>
+                        </div>
+                        
+                        <div className="space-y-2 pl-4">
+                          {viajes.map((viaje, idx) => {
+                            const placa = obtenerPlacaCamion(viaje);
+                            
+                            return (
+                              <div 
+                                key={viaje?.id || idx} 
+                                className="flex items-center gap-3 text-xl font-semibold text-gray-800 group hover:bg-green-50 p-2 rounded transition-colors"
+                              >
+                                <span className="text-green-600 font-mono">{placa}</span>
+                                <span className="text-gray-600">{formatearHoraSalida(viaje)}</span>
+                                <span>{viaje?.conductor || "Sin conductor"}</span>
+                                <span className="text-sm text-gray-500">{viaje?.destino || ""}</span>
+                                
+                                <button
+                                  onClick={() => handleCambiarEstado(viaje, cliente)}
+                                  className="ml-auto opacity-0 group-hover:opacity-100 transition-opacity"
+                                >
+                                  <Edit2 size={16} className="text-green-600" />
+                                </button>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* DESCARGA/SAN MIGUEL */}
+                {Object.keys(viajesPorTipo.descargaSanMiguel).length > 0 && (
+                  <div>
+                    <div className="mb-4 pb-2 border-b-4 border-purple-600">
+                      <h3 className="text-4xl font-bold text-purple-600">DESCARGA/SAN MIGUEL</h3>
+                    </div>
+                    
+                    {Object.entries(viajesPorTipo.descargaSanMiguel).map(([cliente, viajes]) => (
+                      <div key={cliente} className="mb-6 pl-4">
+                        <div className="mb-2">
+                          <h4 className="text-2xl font-bold text-gray-800 underline decoration-purple-400 decoration-2">
+                            {cliente}
+                          </h4>
+                        </div>
+                        
+                        <div className="space-y-2 pl-4">
+                          {viajes.map((viaje, idx) => {
+                            const placa = obtenerPlacaCamion(viaje);
+                            
+                            return (
+                              <div 
+                                key={viaje?.id || idx} 
+                                className="flex items-center gap-3 text-xl font-semibold text-gray-800 group hover:bg-purple-50 p-2 rounded transition-colors"
+                              >
+                                <span className="text-purple-600 font-mono">{placa}</span>
+                                <span className="text-gray-600">{formatearHoraSalida(viaje)}</span>
+                                <span>{viaje?.conductor || "Sin conductor"}</span>
+                                <span className="text-sm text-gray-500">{viaje?.destino || ""}</span>
+                                
+                                <button
+                                  onClick={() => handleCambiarEstado(viaje, cliente)}
+                                  className="ml-auto opacity-0 group-hover:opacity-100 transition-opacity"
+                                >
+                                  <Edit2 size={16} className="text-purple-600" />
+                                </button>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
-          </>
+          </div>
         )}
       </div>
 
-      {/* Modal Cambiar Estado - COLORES CAMBIADOS */}
+      {/* Modal Cambiar Estado */}
       {editandoEstado && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6">
-            <h3 className="text-2xl font-bold text-[#34353A] mb-2">Cambiar Estado</h3>
+            <h3 className="text-2xl font-bold text-gray-900 mb-2">Cambiar Estado</h3>
             <p className="text-gray-600 mb-6">
               {editandoEstado.clienteNombre} - {editandoEstado.viaje?.ruta}
             </p>
@@ -463,7 +609,7 @@ export default function ProgramacionViajesOperativos() {
                 return (
                   <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 mb-6">
                     <p className="text-gray-700 text-center font-semibold">
-                      No se puede cambiar el estado actual: <span className="text-[#5F8EAD]">{getEstadoConfig(estadoActual).label}</span>
+                      No se puede cambiar el estado actual: <span className="text-blue-600">{getEstadoConfig(estadoActual).label}</span>
                     </p>
                   </div>
                 );
@@ -475,24 +621,15 @@ export default function ProgramacionViajesOperativos() {
                     estadosPermitidos.includes(estado.value)
                   ).map((estado) => {
                     const Icono = estado.icon;
-                    const esActual = normalize(estado.value) === normalize(estadoActual);
 
                     return (
                       <button
                         key={estado.value}
                         onClick={() => confirmarCambioEstado(estado.value)}
-                        disabled={esActual}
-                        className={`w-full flex items-center gap-3 p-4 rounded-xl font-semibold transition-all ${
-                          esActual
-                            ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                            : `${getEstadoBadgeClass(estado.color)} hover:shadow-md cursor-pointer`
-                        }`}
+                        className="w-full flex items-center gap-3 p-4 rounded-xl font-semibold transition-all bg-gray-50 hover:bg-gray-100 border-2 border-gray-200 hover:border-blue-400"
                       >
                         <Icono size={20} />
                         <span>{estado.label}</span>
-                        {esActual && (
-                          <span className="ml-auto text-xs">(Estado actual)</span>
-                        )}
                       </button>
                     );
                   })}

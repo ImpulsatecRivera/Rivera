@@ -311,7 +311,12 @@ ViajesOperativosController.listarViajesOperativos = async (req, res) => {
 // =====================================================
 // GET: Vista de programación (como la pizarra)
 // =====================================================
+// =====================================================
+// GET: Vista de programación (como la pizarra)
+// =====================================================
 ViajesOperativosController.obtenerProgramacionDia = async (req, res) => {
+   console.log('🚀🚀🚀 ENDPOINT LLAMADO: /viajes-operativos/programacion/:fecha 🚀🚀🚀');
+  console.log('Fecha recibida:', req.params.fecha);
   try {
     const { fecha } = req.params;
     
@@ -331,6 +336,14 @@ ViajesOperativosController.obtenerProgramacionDia = async (req, res) => {
     .populate('clienteOperativo', 'nombre name')
     .sort({ departureTime: 1 })
     .lean();
+    
+    console.log('🚛 === VIAJES ENCONTRADOS ===');
+    console.log('Total viajes:', viajes.length);
+    if (viajes.length > 0) {
+      console.log('Primer viaje completo:', JSON.stringify(viajes[0], null, 2));
+      console.log('truckId del primer viaje:', viajes[0].truckId);
+    }
+    console.log('============================');
     
     // Agrupar por cliente (como en la pizarra)
     const programacionPorCliente = viajes.reduce((acc, viaje) => {
@@ -353,7 +366,24 @@ ViajesOperativosController.obtenerProgramacionDia = async (req, res) => {
         minute: '2-digit'
       });
       
-      acc[clienteNombre].viajes.push({
+      // ✅ OBTENER LA PLACA DEL CAMIÓN
+      const placaCamion = viaje.truckId?.licensePlate || 
+                         viaje.truckId?.placa || 
+                         'Sin placa';
+      
+      const nombreCamion = `${viaje.truckId?.brand || viaje.truckId?.marca || ''} ${viaje.truckId?.model || viaje.truckId?.modelo || ''}`.trim();
+      
+      console.log('🔍 === DEBUG BACKEND (REDUCE) ===');
+      console.log('Cliente:', clienteNombre);
+      console.log('viaje.truckId completo:', viaje.truckId);
+      console.log('viaje.truckId?.licensePlate:', viaje.truckId?.licensePlate);
+      console.log('viaje.truckId?.placa:', viaje.truckId?.placa);
+      console.log('Placa del camión (resultado):', placaCamion);
+      console.log('Nombre del camión:', nombreCamion);
+      console.log('Hora:', hora);
+      console.log('================================');
+      
+      const viajeData = {
         id: viaje._id,
         codigo: camionCodigo,
         hora: hora,
@@ -361,13 +391,25 @@ ViajesOperativosController.obtenerProgramacionDia = async (req, res) => {
         conductor: viaje.conductorId?.name || viaje.conductorId?.nombre || 'N/A',
         destino: viaje.rutaDirecta?.destino?.nombre || 'N/A',
         estado: viaje.estado?.actual || 'pendiente',
-        camion: `${viaje.truckId?.brand || viaje.truckId?.marca || ''} ${viaje.truckId?.model || viaje.truckId?.modelo || ''}`.trim()
-      });
+        camion: nombreCamion,
+        placa: placaCamion, // ✅ AGREGAR ESTE CAMPO
+        horaSalida: hora // ✅ TAMBIÉN AGREGAR HORA DE SALIDA EXPLÍCITA
+      };
+      
+      console.log('📦 Objeto viaje a enviar:', JSON.stringify(viajeData, null, 2));
+      console.log('================================');
+      
+      acc[clienteNombre].viajes.push(viajeData);
       
       return acc;
     }, {});
     
     const programacionArray = Object.values(programacionPorCliente);
+    
+    console.log('📤 === RESPUESTA FINAL ===');
+    console.log('Total clientes:', programacionArray.length);
+    console.log('Programación completa:', JSON.stringify(programacionArray, null, 2));
+    console.log('==========================');
     
     res.status(200).json({
       success: true,
@@ -385,6 +427,7 @@ ViajesOperativosController.obtenerProgramacionDia = async (req, res) => {
     });
     
   } catch (error) {
+    console.error('❌ Error en obtenerProgramacionDia:', error);
     res.status(500).json({
       success: false,
       message: "Error al obtener programación del día",

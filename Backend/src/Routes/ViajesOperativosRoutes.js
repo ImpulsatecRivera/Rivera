@@ -10,7 +10,15 @@ router.post("/crear", validateAuthToken(["admin", "Operativo", "Supervisor"]), V
 router.get("/listar", validateAuthToken(["admin", "Operativo", "Supervisor", "motorista"]), ViajesOperativosController.listarViajesOperativos);
 
 // ✅ Obtener programación del día (vista pizarra)
-router.get("/programacion/:fecha", validateAuthToken(["admin", "Operativo", "Supervisor", "motorista"]), ViajesOperativosController.obtenerProgramacionDia);
+router.get("/programacion/:fecha", 
+  (req, res, next) => {
+    console.log('🎯 RUTA INTERCEPTADA: /programacion/:fecha');
+    console.log('Parámetro fecha:', req.params.fecha);
+    next();
+  },
+  validateAuthToken(["admin", "Operativo", "Supervisor", "motorista"]), 
+  ViajesOperativosController.obtenerProgramacionDia
+);
 
 // 🆕 Completar TODOS los viajes operativos
 router.put("/completar-todos", validateAuthToken(["admin", "Operativo", "Supervisor","motorista"]), ViajesOperativosController.completarTodosLosViajes);
