@@ -42,6 +42,12 @@ const motoristaSchema = new Schema({
         type: String,      // Número de teléfono del motorista
         required: true     // Campo obligatorio para comunicación durante rutas
     },
+    email: {
+        type: String,      // Correo electrónico del motorista
+        required: false,   // Campo opcional
+        sparse: true,      // Permite múltiples documentos sin email (para índice único)
+        match: [/^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/, 'Formato de email inválido'] // Validación opcional
+    },
     address: {
         type: String,      // Dirección física completa del motorista
         required: true     // Campo obligatorio para registros legales y contacto
@@ -55,22 +61,36 @@ const motoristaSchema = new Schema({
         required: true
     },
 
+    // Rol del motorista - puede ser motorista o auxiliar
+    rol: {
+        type: String,
+        enum: ['motorista', 'auxiliar'],
+        default: 'motorista',
+        required: true
+    },
+
+    // Salario base mensual (usado para calcular planilla en reportes)
+    salarioBase: {
+        type: Number,
+        required: true
+    },
+
     // Documentación específica para conductores
-    circulationCard: {
-        type: String,      // Tarjeta de circulación o licencia de conducir
-        required: true     // Campo obligatorio para validar capacidad legal de conducir
+    licenciaConducir: {
+        type: String,      // licencia de conducir
+            // Campo obligatorio para validar capacidad legal de conducir
     },
     fechaVencimientoLicencia: {
         type: Date,        // Fecha de vencimiento de la licencia de conducir
-        required: true     // Campo obligatorio para control de vigencia
+            // Campo obligatorio para control de vigencia
     },
     phoneVerified: { type: Boolean, default: false }, // ⭐ AGREGAR ESTO
     phoneVerifiedAt: { type: Date }, // ⭐ AGREGAR ESTO (opcional)
 
     // Información multimedia
     img: {
-        type: String,      // URL de la foto del motorista (generalmente desde Cloudinary)
-        required: true     // Campo obligatorio para identificación visual y seguridad
+        type: String      // URL de la foto del motorista (generalmente desde Cloudinary)
+        // Opcional para ambos roles (motorista y auxiliar)
     },
     salario: {
         type: Number,

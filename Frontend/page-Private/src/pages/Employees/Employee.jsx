@@ -17,6 +17,10 @@ import EmployeeRow from '../../components/Empleados/EmployeeRow';
 import EmployeeDetailPanel from '../../components/Empleados/EmployeDetailsPanel';
 import EditEmployeeModal from '../../components/Empleados/EditEmployeeModal';
 
+import { useTutorial } from '../../hooks/useTutorial';
+import '../../styles/tutorial-global.css';
+import { HelpCircle } from 'lucide-react';
+
 const Employee = () => {
   const { canDelete } = usePermissions();
   const {
@@ -48,6 +52,8 @@ const Employee = () => {
     selectEmpleado,
     closeDetailView
   } = useEmployeeManagement();
+
+  const { startTutorial, hasCompleted } = useTutorial('empleados');
 
   // Estados para paginación
   const [currentPage, setCurrentPage] = useState(1);
@@ -182,6 +188,8 @@ const Employee = () => {
                 setSortBy={setSortBy}
                 filterEmpleados={filterEmpleados}
                 handleContinue={handleContinue}
+                onStartTutorial={startTutorial}
+                hasCompletedTutorial={hasCompleted}
               />
             </div>
 

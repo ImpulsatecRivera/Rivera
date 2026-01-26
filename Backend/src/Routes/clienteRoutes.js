@@ -6,7 +6,7 @@ const router = express.Router();
 
 // GET - Requiere sesión (admin, Operativo, Supervisor, cliente, motorista)
 router.route("/")
-  .get(validateAuthToken(["admin", "Operativo", "Supervisor", "cliente", "motorista"]), clienteCon.get)
+  .get(validateAuthToken(["admin", "Operativo", "Supervisor", "cliente", "motorista", "auxiliar"]), clienteCon.get)
   .post(validateAuthToken(["admin", "Operativo", "Supervisor"]), clienteCon.crearClienteCorporativo);
 
 // PUT corporativo específico
@@ -16,12 +16,12 @@ router.put('/corporativo/:id',
 );
 
 // Rutas específicas con nombres van ANTES que las rutas con parámetros
-router.get('/usuarios-activos', validateAuthToken(["admin", "Operativo", "Supervisor", "cliente", "motorista"]), clienteCon.getUsuariosActivos);
-router.get('/resumen-usuarios', validateAuthToken(["admin", "Operativo", "Supervisor", "cliente", "motorista"]), clienteCon.getResumenUsuarios);
+router.get('/usuarios-activos', validateAuthToken(["admin", "Operativo", "Supervisor", "cliente", "motorista", "auxiliar"]), clienteCon.getUsuariosActivos);
+router.get('/resumen-usuarios', validateAuthToken(["admin", "Operativo", "Supervisor", "cliente", "motorista", "auxiliar"]), clienteCon.getResumenUsuarios);
 
 // Rutas con parámetros van AL FINAL
 router.route("/:id")
-  .get(validateAuthToken(["admin", "Operativo", "Supervisor", "cliente", "motorista"]), clienteCon.getClienteById)
+  .get(validateAuthToken(["admin", "Operativo", "Supervisor", "cliente", "motorista", "auxiliar"]), clienteCon.getClienteById)
   .delete(validateAuthToken(["admin"]), clienteCon.deleteClientes);
 
 // Ruta PUT separada - Admin, Supervisor y el propio cliente puede editar su perfil

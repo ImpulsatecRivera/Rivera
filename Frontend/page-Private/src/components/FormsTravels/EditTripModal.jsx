@@ -96,10 +96,14 @@ const EditTripModal = ({
         cargarDatos(`${API_URL}/motoristas`, 'Motoristas')
       ]);
 
-      // Procesar camiones
+      // Procesar camiones - Filtrar los que están en mantenimiento
       if (camionesData.status === 'fulfilled') {
-        setCamiones(camionesData.value);
-        console.log(`✅ Camiones cargados: ${camionesData.value.length}`);
+        const camionesDisponibles = camionesData.value.filter((c) => {
+          const estado = String(c.state || c.estado || "").toUpperCase().replace(/\s+/g, "_");
+          return estado !== "MANTENIMIENTO" && estado !== "EN_MANTENIMIENTO" && estado !== "NO_DISPONIBLE";
+        });
+        setCamiones(camionesDisponibles);
+        console.log(`✅ Camiones disponibles: ${camionesDisponibles.length} de ${camionesData.value.length}`);
       } else {
         setCamiones([]);
       }

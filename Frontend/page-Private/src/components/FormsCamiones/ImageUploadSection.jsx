@@ -17,7 +17,7 @@ const ImageUploadSection = ({
         <h3 className="text-lg font-semibold text-gray-800">
           Imagen del Camión
         </h3>
-        <span className="text-red-500 ml-1">*</span>
+        <span className="text-gray-500 ml-2 text-sm">(Opcional)</span>
       </div>
       
       <div className="flex justify-center mb-4">

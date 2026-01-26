@@ -9,6 +9,20 @@ import { ProtectedAction } from '../../components/Auth';
 import Swal from 'sweetalert2';
 import { api } from '../../Context/authContext';
 
+const formatDateTimeLocal = (date = new Date()) => {
+  const pad = (value) => String(value).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+};
+
+const formatearFechaCorta = (fecha) => {
+  if (!fecha) return 'N/A';
+  return new Date(fecha).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' });
+};
+
+const formatearHoraCorta = (fecha) => {
+  if (!fecha) return '';
+  return new Date(fecha).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', hour12: true });
+};
 
 const MantenimientosTable = () => {
   const navigate = useNavigate();
@@ -150,16 +164,30 @@ const MantenimientosTable = () => {
 const marcarComoCompletado = async (id) => {
   const result = await Swal.fire({
     title: '¿Marcar como completado?',
-    text: 'El mantenimiento se marcará como completado',
+    html: '<p class="text-gray-700">Selecciona la fecha y hora en la que se finalizó el mantenimiento.</p>',
     icon: 'question',
+    input: 'datetime-local',
+    inputLabel: 'Fecha y hora de finalización',
+    inputValue: formatDateTimeLocal(),
+    inputAttributes: {
+      step: '60'
+    },
     showCancelButton: true,
     confirmButtonText: 'Sí, marcar completado',
     confirmButtonColor: '#5D9646',
     cancelButtonColor: '#6b7280',
-    cancelButtonText: 'Cancelar'
+    cancelButtonText: 'Cancelar',
+    preConfirm: (value) => {
+      if (!value) {
+        Swal.showValidationMessage('Selecciona la fecha y hora de finalización');
+      }
+      return value;
+    }
   });
 
-  if (!result.isConfirmed) return;
+  if (!result.isConfirmed || !result.value) return;
+
+  const fechaFinalizacion = result.value;
 
   try {
     Swal.fire({
@@ -189,7 +217,8 @@ const marcarComoCompletado = async (id) => {
     });
 
     const response = await api.put(`/mantenimientos/${id}`, {
-      estado: 'completado'
+      estado: 'completado',
+      fecha_finalizacion: new Date(fechaFinalizacion).toISOString()
     });
 
     if (response.data.success) {
@@ -431,7 +460,12 @@ const marcarComoCompletado = async (id) => {
                       onClick={() => { setSelectedMantenimientoId(mant._id); setIsModalOpen(true); }} 
                       className="border-b border-gray-100 hover:bg-gray-50 cursor-pointer transition-colors"
                     >
-                      <td className="py-5 px-6 text-[#34353A] font-semibold">{formatearFecha(mant.fecha_mantenimiento)}</td>
+                      <td className="py-5 px-6 text-[#34353A] font-semibold">
+                        <div className="flex flex-col">
+                          <span>{formatearFechaCorta(mant.fecha_mantenimiento)}</span>
+                          <span className="text-xs text-gray-500">{formatearHoraCorta(mant.fecha_mantenimiento)}</span>
+                        </div>
+                      </td>
                       <td className="py-5 px-6 text-gray-600">{mant.ciculatioCard?.licensePlate || 'N/A'}</td>
                       <td className="py-5 px-6">
                         <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-[#5F8EAD] bg-opacity-20 text-[#5F8EAD]">

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { config } from '../../../config';
-import { api } from '../../../Context/authContext'; // ✅ IMPORTAR API
+import { api } from '../../../Context/authContext';
 
 const API_URL = config.api.API_URL;
 
@@ -10,7 +10,6 @@ export const useTruckDetail = (truckId) => {
   const [error, setError] = useState(null);
   const [allDrivers, setAllDrivers] = useState([]);
 
-  // ✅ USAR API EN LUGAR DE FETCH
   const fetchAllDrivers = async () => {
     try {
       console.log('=== OBTENIENDO LISTA DE MOTORISTAS ===');
@@ -29,7 +28,6 @@ export const useTruckDetail = (truckId) => {
     }
   };
 
-  // Función para obtener el nombre del motorista por ID
   const getDriverNameById = (driverId, driversList) => {
     const motorista = driversList.find(m => m._id === driverId || m.id === driverId);
     
@@ -43,7 +41,6 @@ export const useTruckDetail = (truckId) => {
     return null;
   };
 
-  // Función para asignar un motorista aleatorio
   const getRandomDriver = (driversList) => {
     if (driversList.length === 0) return 'Sin motoristas disponibles';
     
@@ -62,17 +59,17 @@ export const useTruckDetail = (truckId) => {
       setLoading(true);
       setError(null);
       
-      console.log('=== OBTENIENDO DETALLE DEL CAMIÓN CON ESTADÍSTICAS ===');
+      console.log('=== OBTENIENDO DETALLE DEL CAMIÓN ===');
       console.log('ID del camión:', truckId);
       
-      // ✅ USAR API EN LUGAR DE FETCH
-      const response = await api.get(`/camiones/${truckId}/stats`, {
+      // ✅ ENDPOINT NORMAL SIN /stats
+      const response = await api.get(`/camiones/${truckId}`, {
         timeout: 10000
       });
       
       console.log('=== RESPUESTA DEL SERVIDOR ===');
       console.log('Status:', response.status);
-      console.log('Datos del camión con estadísticas recibidos:', response.data);
+      console.log('Datos del camión recibidos:', response.data);
 
       const apiResponse = response.data;
 
@@ -85,7 +82,6 @@ export const useTruckDetail = (truckId) => {
         console.log('=== DATOS DEL CAMIÓN EXTRAÍDOS ===');
         console.log('Truck data:', data);
         
-        // Función para buscar un valor en múltiples campos posibles
         const findValue = (obj, possibleKeys, defaultValue = 'No especificado') => {
           for (let key of possibleKeys) {
             if (obj && obj[key] !== undefined && obj[key] !== null && obj[key] !== '') {
@@ -111,7 +107,7 @@ export const useTruckDetail = (truckId) => {
           brand: findValue(data, ['marca', 'brand', 'manufacturer']),
           model: findValue(data, ['modelo', 'model']),
           
-          // STATUS - Manejar todas las variaciones de estado
+          // STATUS
           status: (() => {
             console.log('=== MAPEANDO STATUS ===');
             const rawStatus = findValue(data, ['state', 'estado', 'status', 'condition'], null);
@@ -156,22 +152,6 @@ export const useTruckDetail = (truckId) => {
             }
           })(),
           
-          // Proveedor
-          supplier: (() => {
-            console.log('=== MAPEANDO PROVEEDOR ===');
-            console.log('Supplier ID:', data.supplierId);
-            console.log('Tipo de Supplier ID:', typeof data.supplierId);
-            
-            if (data.supplierId && typeof data.supplierId === 'object') {
-              const supplierName = data.supplierId.companyName || data.supplierId.name || 'Sin proveedor';
-              console.log('Proveedor (objeto):', supplierName);
-              return supplierName;
-            }
-            const fallbackSupplier = findValue(data, ['supplier', 'proveedor', 'provider'], 'Sin proveedor');
-            console.log('Proveedor (fallback):', fallbackSupplier);
-            return fallbackSupplier;
-          })(),
-          
           // Imágenes
           images: (() => {
             console.log('=== MAPEANDO IMÁGENES ===');
@@ -189,42 +169,21 @@ export const useTruckDetail = (truckId) => {
             return defaultImages;
           })(),
           
-          // ESTADÍSTICAS
-          stats: (() => {
-            console.log('=== MAPEANDO ESTADÍSTICAS ===');
-            console.log('Stats del API:', data.stats);
-            
-            if (data.stats) {
-              console.log('Usando estadísticas del API');
-              return data.stats;
-            }
-            
-            console.log('Usando estadísticas por defecto');
-            return {
-              kilometraje: { value: '97,528', percentage: 25 },
-              viajesRealizados: { value: '150', percentage: 60 },
-              visitasAlTaller: { value: '4', percentage: 15 },
-              combustible: { value: "100%", percentage: 100 },
-              vecesNoDisponible: { value: '35', percentage: 30 },
-            };
-          })(),
+          // ✅ ESTADÍSTICAS POR DEFECTO (ya que no usamos /stats)
+          stats: {
+            kilometraje: { value: '0', percentage: 0 },
+            viajesRealizados: { value: '0', percentage: 0 },
+            visitasAlTaller: { value: '0', percentage: 0 },
+            combustible: { value: "0%", percentage: 0 },
+            vecesNoDisponible: { value: '0', percentage: 0 },
+          },
           
-          // ID original para referencias
+          // ID original
           _id: data._id || data.id,
         };
 
         console.log('=== DATOS FINALES MAPEADOS ===');
         console.log('Truck Data Completo:', JSON.stringify(truckData, null, 2));
-        
-        if (truckData.stats.combustible?.details) {
-          console.log('=== DETALLES DEL COMBUSTIBLE ===');
-          console.log('Litros actuales:', truckData.stats.combustible.details.liters);
-          console.log('Capacidad total:', truckData.stats.combustible.details.capacity);
-          console.log('Litros consumidos:', truckData.stats.combustible.details.consumed);
-          console.log('Eficiencia:', truckData.stats.combustible.details.efficiency);
-          console.log('Viajes activos:', truckData.stats.combustible.details.activeTrips);
-          console.log('Distancia total:', truckData.stats.combustible.details.totalDistance);
-        }
         
         console.log('=== ESTABLECIENDO DATOS EN STATE ===');
         setTruck(truckData);
@@ -242,13 +201,11 @@ export const useTruckDetail = (truckId) => {
 
       let errorMessage = 'Error desconocido';
 
-      // ✅ MANEJO DE ERRORES DE AXIOS
       if (error.code === 'ECONNABORTED') {
         errorMessage = 'La solicitud tardó demasiado tiempo. Inténtalo de nuevo.';
       } else if (error.code === 'ERR_NETWORK') {
         errorMessage = 'No se pudo conectar con el servidor. Verifica tu conexión.';
       } else if (error.response) {
-        // Error con respuesta del servidor
         switch (error.response.status) {
           case 401:
             errorMessage = 'No autorizado para ver este camión';
@@ -272,7 +229,6 @@ export const useTruckDetail = (truckId) => {
       setError(errorMessage);
       setTruck(null);
     } finally {
-      // Delay de 2 segundos para mostrar la animación
       setTimeout(() => {
         setLoading(false);
         console.log('=== CARGA FINALIZADA ===');

@@ -23,14 +23,7 @@ const EditMotoristaAlert = ({ isOpen, onClose, onSave, motorista, uploading = fa
   const [isDragOver, setIsDragOver] = useState(false);
   const fileInputRef = useRef(null);
 
-  const generateEmail = (name, lastName) => {
-    const cleanName = String(name || '').trim().toLowerCase().replace(/\s+/g, '');
-    const cleanLastName = String(lastName || '').trim().toLowerCase().replace(/\s+/g, '');
-    if (!cleanName && !cleanLastName) return '';
-    if (!cleanName) return `${cleanLastName}@rivera.com`;
-    if (!cleanLastName) return `${cleanName}@rivera.com`;
-    return `${cleanName}.${cleanLastName}@rivera.com`;
-  };
+  // Email auto-generation removed - email is now truly optional
 
   // ✅ Cargar datos del motorista al abrir
   useEffect(() => {
@@ -45,8 +38,8 @@ const EditMotoristaAlert = ({ isOpen, onClose, onSave, motorista, uploading = fa
         address: '',
         password: '',
         circulationCard: '',
-        // email se muestra (y puede auto-actualizarse si cambias nombre/apellido)
-        email: motorista.email || generateEmail(name, lastName) || '',
+        // Email opcional sin auto-generación
+        email: motorista.email || '',
         fechaVencimientoLicencia: motorista.fechaVencimientoLicencia || '',
         // ✅ model
         planillaTipo: motorista.planillaTipo || '',
@@ -182,7 +175,7 @@ const EditMotoristaAlert = ({ isOpen, onClose, onSave, motorista, uploading = fa
               animation: isOpen ? 'fadeInUp 0.5s ease-out 0.2s both' : 'none',
             }}
           >
-            Editar Motorista
+            {motorista?.rol === 'auxiliar' ? 'Editar Auxiliar' : 'Editar Motorista'}
           </h3>
           {motorista && (
             <p className="text-gray-600 mt-2">

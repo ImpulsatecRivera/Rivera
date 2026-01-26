@@ -189,9 +189,9 @@ const AgregarMotorista = () => {
       newErrors.phone = "El teléfono debe tener exactamente 8 dígitos";
     }
     if (!formData.address) newErrors.address = "La dirección es obligatoria";
-    if (!formData.circulationCard) newErrors.circulationCard = "La tarjeta de circulación es obligatoria";
+    if (!formData.circulationCard) newErrors.circulationCard = "La Licencia de conducir es obligatoria";
     if (formData.circulationCard && formData.circulationCard.length < 3) {
-      newErrors.circulationCard = "La tarjeta de circulación debe tener al menos 3 caracteres";
+      newErrors.circulationCard = "La Licencia de conducir debe tener al menos 3 caracteres";
     }
     if (!formData.img) newErrors.img = "La imagen es obligatoria";
 
@@ -486,7 +486,7 @@ const AgregarMotorista = () => {
                 required={true}
               />
 
-              {/* Tarjeta de Circulación */}
+              {/* Licencia de conducir */}
               <FormInput
                 id="circulationCard"
                 name="circulationCard"
@@ -494,7 +494,7 @@ const AgregarMotorista = () => {
                 value={formData.circulationCard}
                 onChange={handleInputChange}
                 placeholder="Ejemplo: ABC-123"
-                label="Tarjeta de circulación"
+                label="Licencia de conducir"
                 icon={Car}
                 error={errors.circulationCard}
                 required={true}

@@ -41,4 +41,7 @@ router.get("/consolidado/:ano",validateAuthToken(["admin", "Operativo", "Supervi
 // 🆕 PDF 5: CONSOLIDADO UNIVERSAL (semanal, mensual, trimestral, semestral, 9meses, anual)
 router.get("/consolidado-periodo",validateAuthToken(["admin", "Operativo", "Supervisor"]), ReportesViajesDirecto.generarPDFConsolidadoPeriodo);
 
+// 🆕 PDF: REPORTE DIARIO DE VIAJES
+router.get("/diario/:fecha", validateAuthToken(["admin", "Operativo", "Supervisor"]), ReportesViajesDirecto.generarPDFDiario);
+
 export default router;

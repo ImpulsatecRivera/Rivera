@@ -19,4 +19,8 @@ router.post('/multi-mes', validateAuthToken(["admin", "Operativo", "Supervisor"]
 // GET /api/reporte-consolidado/anual/:ano
 router.get('/anual/:ano', validateAuthToken(["admin", "Operativo", "Supervisor"]), ReporteConsolidadoController.generarPDFAnual);
 
+// 4. Reporte por rango de fechas con detalle de viajes
+// GET /api/reporte-consolidado/rango?fechaInicio=YYYY-MM-DD&fechaFin=YYYY-MM-DD&diasRango=N
+router.get('/rango', validateAuthToken(["admin", "Operativo", "Supervisor"]), ReporteConsolidadoController.generarPDFRango);
+
 export default router;

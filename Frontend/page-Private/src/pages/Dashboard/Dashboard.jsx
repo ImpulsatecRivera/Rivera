@@ -4,14 +4,18 @@ import ActivityChart from '../../components/Dashboard/ActivityChart';
 import CompletedTrips from '../../components/Dashboard/CompletedTrips';
 import LoadMetrics from '../../components/Dashboard/LoadMetrics';
 import ReportsCard from '../../components/Dashboard/ReportsCard';
+import { useTutorial } from '../../hooks/useTutorial';
+import '../../styles/tutorial-global.css';
+import { HelpCircle } from 'lucide-react';
 
 const Dashboard = () => {
+  const { startTutorial, hasCompleted } = useTutorial('dashboardGeneral');
   return (
     <div className="h-screen bg-[#34353A] p-2 sm:p-4 lg:p-6 overflow-hidden">
       <div className="bg-white rounded-xl p-3 sm:p-4 lg:p-6 h-full flex flex-col overflow-hidden">
         {/* Header - altura fija */}
         <div className="flex-shrink-0">
-          <Header />
+          <Header onStartTutorial={startTutorial} hasCompletedTutorial={hasCompleted} />
         </div>
         
         {/* Grid principal adaptativo - ocupa el resto del espacio */}
