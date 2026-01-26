@@ -17,6 +17,8 @@ const useDataMotorista = () => {
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState('Newest');
+  // Filtro de categoría (motoristas vs auxiliares)
+  const [selectedCategory, setSelectedCategory] = useState('motorista');
 
   // Estados de modales
   const [showAlert, setShowAlert] = useState(false);
@@ -43,9 +45,11 @@ const useDataMotorista = () => {
       birthDate: m?.birthDate || null,
       phone: m?.phone || '',
       address: m?.address || '',
-      circulationCard: m?.circulationCard || '',
+      // soporte ambos nombres desde backend
+      licenciaConducir: m?.licenciaConducir || m?.circulationCard || '',
       fechaVencimientoLicencia: m?.fechaVencimientoLicencia || null,
       img: m?.img || null,
+      rol: (m?.rol || 'motorista').toLowerCase(),
 
       // ✅ nuevos/campos del model
       planillaTipo: (m?.planillaTipo || '').toString(),
@@ -147,9 +151,12 @@ const useDataMotorista = () => {
     const list = Array.isArray(motoristas) ? motoristas : [];
     const q = String(searchTerm || '').toLowerCase().trim();
 
-    if (!q) return list;
+    // Primero filtrar por rol seleccionado
+    const byCategory = list.filter(m => (m.rol || 'motorista') === selectedCategory);
 
-    return list.filter((m) => {
+    if (!q) return byCategory;
+
+    return byCategory.filter((m) => {
       const haystack = [
         m.name,
         m.lastName,
@@ -157,17 +164,22 @@ const useDataMotorista = () => {
         m.email,
         m.planillaTipo,
         String(m.salario ?? ''),
-        m.circulationCard
+        m.licenciaConducir
       ].join(' ').toLowerCase();
 
       return haystack.includes(q);
     });
-  }, [motoristas, searchTerm]);
+  }, [motoristas, searchTerm, selectedCategory]);
 
   // Navegación
   const handleContinue = (e) => {
     e.preventDefault();
     navigate('/motoristas/agregarMotorista');
+  };
+
+  const handleContinueAuxiliar = (e) => {
+    e.preventDefault();
+    navigate('/motoristas/agregarAuxiliar');
   };
 
   // Manejo de opciones
@@ -319,7 +331,10 @@ const useDataMotorista = () => {
 
         appendIf('name', formData?.name);
         appendIf('lastName', formData?.lastName);
-        appendIf('email', formData?.email);
+        // Email: permitir string vacío para borrarlo
+        if (formData?.email !== undefined) {
+          submitData.append('email', String(formData.email).trim());
+        }
         appendIf('phone', formData?.phone);
         appendIf('address', formData?.address);
         appendIf('password', formData?.password);
@@ -385,7 +400,10 @@ const useDataMotorista = () => {
 
       setIf('name', formData?.name);
       setIf('lastName', formData?.lastName);
-      setIf('email', formData?.email);
+      // Email: permitir string vacío para borrarlo
+      if (formData?.email !== undefined) {
+        updateData.email = String(formData.email).trim();
+      }
       setIf('phone', formData?.phone);
       setIf('address', formData?.address);
       setIf('password', formData?.password);
@@ -502,6 +520,7 @@ const useDataMotorista = () => {
     error,
     searchTerm,
     sortBy,
+    selectedCategory,
     showAlert,
     showConfirmDelete,
     showSuccessAlert,
@@ -511,15 +530,19 @@ const useDataMotorista = () => {
 
     // listas
     filterMotoristas: sortedMotoristas,
+    countMotoristas: (Array.isArray(motoristas) ? motoristas : []).filter(m => (m.rol || 'motorista') === 'motorista').length,
+    countAuxiliares: (Array.isArray(motoristas) ? motoristas : []).filter(m => (m.rol || 'motorista') === 'auxiliar').length,
 
     // Setters
     setSearchTerm,
     setSortBy,
+    setSelectedCategory,
     setError,
 
     // Funciones
     fetchMotoristas,
     handleContinue,
+    handleContinueAuxiliar,
     handleOptionsClick,
     handleEdit,
     handleDelete,

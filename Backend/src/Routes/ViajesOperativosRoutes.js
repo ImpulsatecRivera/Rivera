@@ -7,18 +7,18 @@ const router = express.Router();
 router.post("/crear", validateAuthToken(["admin", "Operativo", "Supervisor"]), ViajesOperativosController.crearViajeOperativo);
 
 // ✅ Listar viajes operativos
-router.get("/listar", validateAuthToken(["admin", "Operativo", "Supervisor", "motorista"]), ViajesOperativosController.listarViajesOperativos);
+router.get("/listar", validateAuthToken(["admin", "Operativo", "Supervisor", "motorista", "auxiliar"]), ViajesOperativosController.listarViajesOperativos);
 
 // ✅ Obtener programación del día (vista pizarra)
-router.get("/programacion/:fecha", validateAuthToken(["admin", "Operativo", "Supervisor", "motorista"]), ViajesOperativosController.obtenerProgramacionDia);
+router.get("/programacion/:fecha", validateAuthToken(["admin", "Operativo", "Supervisor", "motorista", "auxiliar"]), ViajesOperativosController.obtenerProgramacionDia);
 
 // 🆕 Completar TODOS los viajes operativos
-router.put("/completar-todos", validateAuthToken(["admin", "Operativo", "Supervisor","motorista"]), ViajesOperativosController.completarTodosLosViajes);
+router.put("/completar-todos", validateAuthToken(["admin", "Operativo", "Supervisor","motorista", "auxiliar"]), ViajesOperativosController.completarTodosLosViajes);
 
 // 🆕 Completar UN viaje operativo específico
-router.put("/completar/:viajeId", validateAuthToken(["admin", "Operativo", "Supervisor","motorista"]), ViajesOperativosController.completarViajeOperativo);
+router.put("/completar/:viajeId", validateAuthToken(["admin", "Operativo", "Supervisor","motorista", "auxiliar"]), ViajesOperativosController.completarViajeOperativo);
 
 // 🆕 Actualizar estado de un viaje operativo
-router.patch("/actualizar-estado/:viajeId", validateAuthToken(["admin", "Operativo", "Supervisor","motorista"]), ViajesOperativosController.actualizarEstado);
+router.patch("/actualizar-estado/:viajeId", validateAuthToken(["admin", "Operativo", "Supervisor","motorista", "auxiliar"]), ViajesOperativosController.actualizarEstado);
 
 export default router;
