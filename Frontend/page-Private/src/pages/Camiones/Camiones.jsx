@@ -303,11 +303,14 @@ const Camiones = () => {
         formData={editHook.formData}
         imagePreview={editHook.imagePreview}
         currentImage={editHook.currentImage}
+        circulationCardImagePreview={editHook.circulationCardImagePreview}
+        currentCirculationCardImage={editHook.currentCirculationCardImage}
         proveedores={editHook.proveedores}
         motoristas={editHook.motoristas}
         onClose={editHook.closeEditModal}
         onInputChange={editHook.handleInputChange}
         onImageChange={editHook.handleImageChange}
+        onCirculationCardImageChange={editHook.handleCirculationCardImageChange}
         onSubmit={handleEditSubmit}
         onSuccess={handleEditSuccess}
       />

@@ -137,9 +137,9 @@ export const useTruckForm = (onSuccess) => {
         driver: 'driverId'
       };
 
-      // ✅ AGREGAR CAMPOS MAPEADOS (excluyendo img y gasolineLevel ya que se envía con valor fijo)
+      // ✅ AGREGAR CAMPOS MAPEADOS (excluyendo img, gasolineLevel y circulationCardImage)
       Object.entries(data).forEach(([key, value]) => {
-        if (key !== 'img' && key !== 'gasolineLevel') {
+        if (key !== 'img' && key !== 'gasolineLevel' && key !== 'circulationCardImage') {
           // Usar el mapeo si existe, sino usar el key original
           const apiFieldName = fieldMapping[key] || key;
 
@@ -166,12 +166,7 @@ export const useTruckForm = (onSuccess) => {
         }
       });
 
-      // Driver ID
-      if (data.driverId && data.driverId.trim() !== '') {
-        formData.append("driverId", data.driverId.trim());
-        console.log('✅ Motorista asignado:', data.driverId);
-      }
-
+      // ✅ salario - manejar por separado si no está en data
       if (data.salario) formData.append("salario", data.salario);
 
       // ✅ IMÁGENES - Manejo correcto
