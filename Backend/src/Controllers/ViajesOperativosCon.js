@@ -7,6 +7,47 @@ import mongoose from 'mongoose';
 const ViajesOperativosController = {};
 
 // =====================================================
+// 💰 FUNCIÓN AUXILIAR: Cargar salarios históricos
+// =====================================================
+const cargarSalariosHistoricos = async (viaje) => {
+  try {
+    const conductor = await MotoristaModel.findById(viaje.conductorId).select('salario');
+    
+    if (!viaje.salariosCargados) {
+      viaje.salariosCargados = {};
+    }
+    
+    // Guardar salario del conductor
+    if (conductor) {
+      viaje.salariosCargados.salarioConductor = conductor.salario || null;
+    }
+    
+    // Guardar salarios de auxiliares
+    if (viaje.auxiliares && viaje.auxiliares.length > 0) {
+      viaje.salariosCargados.salariosAuxiliares = [];
+      
+      for (const aux of viaje.auxiliares) {
+        const auxiliar = await MotoristaModel.findById(aux.auxiliarId).select('salario');
+        if (auxiliar) {
+          viaje.salariosCargados.salariosAuxiliares.push({
+            auxiliarId: aux.auxiliarId,
+            salario: auxiliar.salario || null
+          });
+        }
+      }
+    }
+    
+    viaje.salariosCargados.fechaCarga = new Date();
+    
+    console.log("💰 Salarios históricos cargados para viaje operativo:", viaje._id);
+    return viaje;
+  } catch (error) {
+    console.error("❌ Error cargando salarios históricos:", error);
+    return viaje; // Devolver el viaje sin los salarios si hay error
+  }
+};
+
+// =====================================================
 // POST: Crear viaje operativo (como la pizarra)
 // =====================================================
 ViajesOperativosController.crearViajeOperativo = async (req, res) => {
@@ -112,17 +153,29 @@ ViajesOperativosController.crearViajeOperativo = async (req, res) => {
       }
     }
 
-    // Validar fechas - parsear como local time quitando Z si existe
-    const departureTimeLocal = departureTime.replace('Z', '').replace('.000', '');
-    const arrivalTimeLocal = arrivalTime.replace('Z', '').replace('.000', '');
+    // Validar fechas - El frontend envía "YYYY-MM-DDTHH:mm" interpretando como local
+    // Pero JavaScript lo interpreta como UTC cuando no tiene timezone info
+    // Solución: Parsear como UTC y restar 6 horas (offset de El Salvador = UTC-6)
     
-    const salidaDate = new Date(departureTimeLocal);
-    const llegadaDate = new Date(arrivalTimeLocal);
+    const parseLocalDateToUTC = (dateString) => {
+      // dateString formato: "2026-01-27T02:36"
+      // JavaScript interpreta esto como UTC
+      const dateUTC = new Date(dateString);
+      
+      // Restar 6 horas para convertir de UTC a la hora REAL que el usuario seleccionó
+      // (porque lo seleccionó como local pero JavaScript lo interpretó como UTC)
+      const offsetElSalvador = 6 * 60 * 60 * 1000; // 6 horas en ms
+      const dateLocal = new Date(dateUTC.getTime() - offsetElSalvador);
+      
+      return dateLocal;
+    };
+    
+    const salidaDate = parseLocalDateToUTC(departureTime);
+    const llegadaDate = parseLocalDateToUTC(arrivalTime);
 
-    console.log('departureTime recibido:', departureTime);
-    console.log('departureTimeLocal:', departureTimeLocal);
-    console.log('salidaDate parsed local:', salidaDate);
-    console.log('salidaDate ISO:', salidaDate.toISOString());
+    console.log('departureTime recibido del frontend:', departureTime);
+    console.log('salidaDate interpretado (restando offset El Salvador):', salidaDate.toISOString());
+    console.log('salidaDate local:', salidaDate.toString());
 
     if (salidaDate >= llegadaDate) {
       return res.status(400).json({
@@ -258,6 +311,11 @@ ViajesOperativosController.crearViajeOperativo = async (req, res) => {
     console.log("✅ Viaje operativo creado:", nuevoViaje._id);
     console.log("departureTime guardado:", nuevoViaje.departureTime);
     console.log("departureTime ISO:", nuevoViaje.departureTime.toISOString());
+    
+    // 💰 CARGAR SALARIOS HISTÓRICOS DESPUÉS DE CREAR
+    await cargarSalariosHistoricos(nuevoViaje);
+    await nuevoViaje.save();
+    console.log("💰 Salarios históricos guardados para viaje operativo");
 
     // =====================================================
     // 🔥 AUTO-APRENDIZAJE: Actualizar rutas frecuentes
@@ -763,9 +821,15 @@ ViajesOperativosController.completarViajeOperativo = async (req, res) => {
     if (!viaje.tiemposReales.salidaReal) {
       viaje.tiemposReales.salidaReal = viaje.departureTime;
     }
-    viaje.tiemposReales.llegadaReal = req.body.llegadaReal 
-      ? new Date(req.body.llegadaReal)
-      : viaje.arrivalTime || ahora;
+    
+    if (req.body.llegadaReal) {
+      // Parsear llegadaReal con el mismo offset que departureTime
+      const llegadaRealUTC = new Date(req.body.llegadaReal);
+      const offsetElSalvador = 6 * 60 * 60 * 1000;
+      viaje.tiemposReales.llegadaReal = new Date(llegadaRealUTC.getTime() - offsetElSalvador);
+    } else {
+      viaje.tiemposReales.llegadaReal = viaje.arrivalTime || ahora;
+    }
     viaje.tiemposReales.ultimaActualizacion = ahora;
 
     // Calcular tiempo real del viaje
