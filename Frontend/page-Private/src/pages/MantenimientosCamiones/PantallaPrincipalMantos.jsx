@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, ChevronLeft, ChevronRight, Loader2, Download, Edit, Trash2, Plus, Check } from "lucide-react";
+import { Search, ChevronLeft, ChevronRight, Loader2, Download, Edit, Trash2, Plus, Check, TruckIcon } from "lucide-react";
 import { useNavigate } from 'react-router-dom';
 import { config } from '../../config';
 import MantenimientoDetailModal from "./VerDetalleManto";
@@ -79,225 +79,221 @@ const MantenimientosTable = () => {
   }, []);
 
   const descargarReporteIndividual = async (id) => {
-  try {
-    // Mostrar alerta de procesando
-    Swal.fire({
-      title: 'Procesando...',
-      html: '<div style="text-align: center;"><div style="border: 4px solid #f3f3f3; border-top: 4px solid #5F8EAD; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 0 auto;"></div><p style="margin-top: 10px; color: #666;">Generando reporte, por favor espera</p></div>',
-      allowOutsideClick: false,
-      allowEscapeKey: false,
-      showConfirmButton: false,
-      didOpen: () => {
-        const style = document.createElement('style');
-        style.textContent = '@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }';
-        document.head.appendChild(style);
-      }
-    });
-
-    const response = await api.get(`/reporte/individual/${id}`, {
-      responseType: 'blob'
-    });
-
-    const blob = new Blob([response.data], { type: 'application/pdf' });
-    const url = window.URL.createObjectURL(blob);
-
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `reporte-mantenimiento-${id}.pdf`;
-    document.body.appendChild(a);
-    a.click();
-
-    document.body.removeChild(a);
-    window.URL.revokeObjectURL(url);
-
-    // Cerrar alerta de procesando y mostrar éxito
-    Swal.fire({
-      icon: 'success',
-      title: '¡Reporte generado!',
-      text: 'El reporte individual se descargó correctamente',
-      confirmButtonText: 'OK',
-      confirmButtonColor: '#5F8EAD',
-      timer: 3000,
-      timerProgressBar: true
-    });
-
-  } catch (error) {
-    console.error('Error descargando reporte individual:', error);
-
-    Swal.fire({
-      icon: 'error',
-      title: 'Error al generar reporte',
-      text: error.response?.data?.message || 'No se pudo descargar el reporte',
-      confirmButtonColor: '#5F8EAD'
-    });
-  }
-};
-
- const fetchMantenimientos = async () => {
-  try {
-    setLoading(true);
-    const { data } = await api.get('/mantenimientos'); // ✅ Sin config.api.API_URL
-    setMantenimientos(data.data || data || []); // ✅ Más seguro
-    setError(null);
-  } catch (err) {
-    console.error('Error cargando mantenimientos:', err);
-    setError(err.response?.data?.message || err.message || 'Error al cargar los mantenimientos');
-  } finally {
-    setLoading(false);
-  }
-};
-
-const marcarComoCompletado = async (id) => {
-  const result = await Swal.fire({
-    title: '¿Marcar como completado?',
-    text: 'El mantenimiento se marcará como completado',
-    icon: 'question',
-    showCancelButton: true,
-    confirmButtonText: 'Sí, marcar completado',
-    confirmButtonColor: '#5D9646',
-    cancelButtonColor: '#6b7280',
-    cancelButtonText: 'Cancelar'
-  });
-
-  if (!result.isConfirmed) return;
-
-  try {
-    Swal.fire({
-      title: 'Actualizando...',
-      html: `
-        <div style="display: flex; flex-direction: column; align-items: center; gap: 15px;">
-          <div class="spinner" style="
-            width: 50px;
-            height: 50px;
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid #5F8EAD;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-          "></div>
-          <p style="color: #666; font-size: 14px; margin: 0;">Por favor espera...</p>
-        </div>
-        <style>
-          @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-          }
-        </style>
-      `,
-      showConfirmButton: false,
-      allowOutsideClick: false,
-      allowEscapeKey: false
-    });
-
-    const response = await api.put(`/mantenimientos/${id}`, {
-      estado: 'completado'
-    });
-
-    if (response.data.success) {
-      await fetchMantenimientos();
-      
-      Swal.fire({
-        icon: 'success',
-        title: '¡Completado!',
-        text: 'El mantenimiento ha sido marcado como completado',
-        timer: 2000,
-        showConfirmButton: false
-      });
-    }
-  } catch (error) {
-    console.error('Error marcando como completado:', error);
-    Swal.fire({
-      icon: 'error',
-      title: 'Error',
-      text: error.response?.data?.message || 'No se pudo marcar como completado',
-      confirmButtonColor: '#ef4444'
-    });
-  }
-};
-
-
-  const handleDelete = async (mantenimiento) => {
-  const result = await Swal.fire({
-    title: '¿Estás seguro?',
-    html: `
-      <div class="text-left">
-        <p class="text-gray-700 mb-4">Esta acción no se puede deshacer.</p>
-        <div class="bg-gray-50 rounded-lg p-4 border border-gray-200">
-          <p class="text-sm text-gray-600 mb-2">
-            <strong class="text-gray-800">Camión:</strong> ${mantenimiento.ciculatioCard?.licensePlate || 'N/A'}
-          </p>
-          <p class="text-sm text-gray-600 mb-2">
-            <strong class="text-gray-800">Tipo:</strong> ${tipoMantenimientoLabels[mantenimiento.tipo_de_mantenimiento] || 'N/A'}
-          </p>
-          <p class="text-sm text-gray-600 mb-2">
-            <strong class="text-gray-800">Fecha:</strong> ${formatearFecha(mantenimiento.fecha_mantenimiento)}
-          </p>
-          <p class="text-sm text-gray-600">
-            <strong class="text-gray-800">Total:</strong> ${formatearMoneda(calcularTotal(mantenimiento.detalles))}
-          </p>
-        </div>
-      </div>
-    `,
-    icon: 'warning',
-    showCancelButton: true,
-    confirmButtonColor: '#ef4444',
-    cancelButtonColor: '#6b7280',
-    confirmButtonText: 'Sí, eliminar',
-    cancelButtonText: 'Cancelar',
-    reverseButtons: true,
-    customClass: {
-      popup: 'rounded-2xl',
-      title: 'text-xl font-bold text-gray-800',
-      confirmButton: 'px-6 py-2.5 rounded-lg font-semibold',
-      cancelButton: 'px-6 py-2.5 rounded-lg font-semibold'
-    }
-  });
-
-  if (result.isConfirmed) {
-    // Mostrar loading
-    Swal.fire({
-      title: 'Eliminando...',
-      text: 'Por favor espera',
-      allowOutsideClick: false,
-      allowEscapeKey: false,
-      didOpen: () => {
-        Swal.showLoading();
-      }
-    });
-
     try {
-      const { data } = await api.delete(`/mantenimientos/${mantenimiento._id}`);
-
-      if (data.success) {
-        await Swal.fire({
-          title: '¡Eliminado!',
-          text: 'El mantenimiento se ha eliminado correctamente',
-          icon: 'success',
-          timer: 2000,
-          showConfirmButton: false,
-          customClass: {
-            popup: 'rounded-2xl'
-          }
-        });
-        fetchMantenimientos();
-      } else {
-        throw new Error(data.message || 'Error al eliminar');
-      }
-    } catch (error) {
-      console.error('Error eliminando mantenimiento:', error);
       Swal.fire({
-        title: 'Error',
-        text: error.response?.data?.message || error.message || 'No se pudo eliminar el mantenimiento',
-        icon: 'error',
-        confirmButtonText: 'Entendido',
-        confirmButtonColor: '#ef4444',
-        customClass: {
-          popup: 'rounded-2xl',
-          confirmButton: 'px-6 py-2.5 rounded-lg font-semibold'
+        title: 'Procesando...',
+        html: '<div style="text-align: center;"><div style="border: 4px solid #f3f3f3; border-top: 4px solid #5F8EAD; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 0 auto;"></div><p style="margin-top: 10px; color: #666;">Generando reporte, por favor espera</p></div>',
+        allowOutsideClick: false,
+        allowEscapeKey: false,
+        showConfirmButton: false,
+        didOpen: () => {
+          const style = document.createElement('style');
+          style.textContent = '@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }';
+          document.head.appendChild(style);
         }
       });
+
+      const response = await api.get(`/reporte/individual/${id}`, {
+        responseType: 'blob'
+      });
+
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
+
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `reporte-mantenimiento-${id}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+
+      Swal.fire({
+        icon: 'success',
+        title: '¡Reporte generado!',
+        text: 'El reporte individual se descargó correctamente',
+        confirmButtonText: 'OK',
+        confirmButtonColor: '#5F8EAD',
+        timer: 3000,
+        timerProgressBar: true
+      });
+
+    } catch (error) {
+      console.error('Error descargando reporte individual:', error);
+
+      Swal.fire({
+        icon: 'error',
+        title: 'Error al generar reporte',
+        text: error.response?.data?.message || 'No se pudo descargar el reporte',
+        confirmButtonColor: '#5F8EAD'
+      });
     }
-  }
-};
+  };
+
+  const fetchMantenimientos = async () => {
+    try {
+      setLoading(true);
+      const { data } = await api.get('/mantenimientos');
+      setMantenimientos(data.data || data || []);
+      setError(null);
+    } catch (err) {
+      console.error('Error cargando mantenimientos:', err);
+      setError(err.response?.data?.message || err.message || 'Error al cargar los mantenimientos');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const marcarComoCompletado = async (id) => {
+    const result = await Swal.fire({
+      title: '¿Marcar como completado?',
+      text: 'El mantenimiento se marcará como completado',
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Sí, marcar completado',
+      confirmButtonColor: '#5D9646',
+      cancelButtonColor: '#6b7280',
+      cancelButtonText: 'Cancelar'
+    });
+
+    if (!result.isConfirmed) return;
+
+    try {
+      Swal.fire({
+        title: 'Actualizando...',
+        html: `
+          <div style="display: flex; flex-direction: column; align-items: center; gap: 15px;">
+            <div class="spinner" style="
+              width: 50px;
+              height: 50px;
+              border: 4px solid #f3f3f3;
+              border-top: 4px solid #5F8EAD;
+              border-radius: 50%;
+              animation: spin 1s linear infinite;
+            "></div>
+            <p style="color: #666; font-size: 14px; margin: 0;">Por favor espera...</p>
+          </div>
+          <style>
+            @keyframes spin {
+              0% { transform: rotate(0deg); }
+              100% { transform: rotate(360deg); }
+            }
+          </style>
+        `,
+        showConfirmButton: false,
+        allowOutsideClick: false,
+        allowEscapeKey: false
+      });
+
+      const response = await api.put(`/mantenimientos/${id}`, {
+        estado: 'completado'
+      });
+
+      if (response.data.success) {
+        await fetchMantenimientos();
+        
+        Swal.fire({
+          icon: 'success',
+          title: '¡Completado!',
+          text: 'El mantenimiento ha sido marcado como completado',
+          timer: 2000,
+          showConfirmButton: false
+        });
+      }
+    } catch (error) {
+      console.error('Error marcando como completado:', error);
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: error.response?.data?.message || 'No se pudo marcar como completado',
+        confirmButtonColor: '#ef4444'
+      });
+    }
+  };
+
+  const handleDelete = async (mantenimiento) => {
+    const result = await Swal.fire({
+      title: '¿Estás seguro?',
+      html: `
+        <div class="text-left">
+          <p class="text-gray-700 mb-4">Esta acción no se puede deshacer.</p>
+          <div class="bg-gray-50 rounded-lg p-4 border border-gray-200">
+            <p class="text-sm text-gray-600 mb-2">
+              <strong class="text-gray-800">Camión:</strong> ${mantenimiento.ciculatioCard?.licensePlate || 'N/A'}
+            </p>
+            <p class="text-sm text-gray-600 mb-2">
+              <strong class="text-gray-800">Tipo:</strong> ${tipoMantenimientoLabels[mantenimiento.tipo_de_mantenimiento] || 'N/A'}
+            </p>
+            <p class="text-sm text-gray-600 mb-2">
+              <strong class="text-gray-800">Fecha:</strong> ${formatearFecha(mantenimiento.fecha_mantenimiento)}
+            </p>
+            <p class="text-sm text-gray-600">
+              <strong class="text-gray-800">Total:</strong> ${formatearMoneda(calcularTotal(mantenimiento.detalles))}
+            </p>
+          </div>
+        </div>
+      `,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#ef4444',
+      cancelButtonColor: '#6b7280',
+      confirmButtonText: 'Sí, eliminar',
+      cancelButtonText: 'Cancelar',
+      reverseButtons: true,
+      customClass: {
+        popup: 'rounded-2xl',
+        title: 'text-xl font-bold text-gray-800',
+        confirmButton: 'px-6 py-2.5 rounded-lg font-semibold',
+        cancelButton: 'px-6 py-2.5 rounded-lg font-semibold'
+      }
+    });
+
+    if (result.isConfirmed) {
+      Swal.fire({
+        title: 'Eliminando...',
+        text: 'Por favor espera',
+        allowOutsideClick: false,
+        allowEscapeKey: false,
+        didOpen: () => {
+          Swal.showLoading();
+        }
+      });
+
+      try {
+        const { data } = await api.delete(`/mantenimientos/${mantenimiento._id}`);
+
+        if (data.success) {
+          await Swal.fire({
+            title: '¡Eliminado!',
+            text: 'El mantenimiento se ha eliminado correctamente',
+            icon: 'success',
+            timer: 2000,
+            showConfirmButton: false,
+            customClass: {
+              popup: 'rounded-2xl'
+            }
+          });
+          fetchMantenimientos();
+        } else {
+          throw new Error(data.message || 'Error al eliminar');
+        }
+      } catch (error) {
+        console.error('Error eliminando mantenimiento:', error);
+        Swal.fire({
+          title: 'Error',
+          text: error.response?.data?.message || error.message || 'No se pudo eliminar el mantenimiento',
+          icon: 'error',
+          confirmButtonText: 'Entendido',
+          confirmButtonColor: '#ef4444',
+          customClass: {
+            popup: 'rounded-2xl',
+            confirmButton: 'px-6 py-2.5 rounded-lg font-semibold'
+          }
+        });
+      }
+    }
+  };
 
   const calcularTotal = (detalles) => {
     if (!detalles || detalles.length === 0) return 0;
@@ -359,9 +355,23 @@ const marcarComoCompletado = async (id) => {
   return (
     <div className="min-h-screen bg-white p-8">
       <div className="max-w-7xl mx-auto">
+        {/* HEADER CON BOTÓN AL PANEL DE FLOTA */}
         <div className="mb-8">
-          <h1 className="text-4xl font-bold text-[#34353A] mb-2">Mantenimientos</h1>
-          <p className="text-[#5F8EAD] text-base font-semibold">Total: {mantenimientos.length} registros</p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-4xl font-bold text-[#34353A] mb-2">Mantenimientos</h1>
+              <p className="text-[#5F8EAD] text-base font-semibold">Total: {mantenimientos.length} registros</p>
+            </div>
+            
+            {/* BOTÓN PARA IR AL PANEL DE FLOTA */}
+            <button
+              onClick={() => navigate('/flota')}
+              className="flex items-center gap-2 px-5 py-3 bg-gradient-to-r from-[#34353A] to-[#5F8EAD] text-white rounded-xl hover:opacity-90 font-semibold shadow-lg transition-all"
+            >
+              <TruckIcon size={20} />
+              Ver Panel de Flota
+            </button>
+          </div>
         </div>
 
         <div className="bg-white rounded-2xl shadow-md mb-6 p-5 border border-gray-100">

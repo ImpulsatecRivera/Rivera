@@ -48,6 +48,7 @@ import PlanillaSemanalNueva from "./pages/Planilla/Planillasemanalnueva ";
 import NoAccess from "./pages/NoAccess";
 import ProgramacionViajesOperativos from "./pages/viajesInternos/ProgramacionViajesOperativos";
 import Nav from "./components/Nav/Nav";
+import FleetDashboard from './pages/MantenimientosCamiones/FleetDashboard';
 
 // ✅ Diesel
 import PantallaPrincipalDiesel from "./pages/Diesel/PantallaPrincipalDiesel";
@@ -179,6 +180,7 @@ function App() {
         <Route path="/mantenimientos" element={<MantenimientosTable />} />
         <Route path="/mantenimientos/agregar-mantenimiento" element={<CreateMantenimientoPage />} />
         <Route path="/mantenimientos/editar/:id" element={<EditMantenimiento />} />
+        <Route path="/flota" element={<FleetDashboard />} />
       </Route>
 
       {/* ===================== RUTAS CON NAV (Administración) ===================== */}
