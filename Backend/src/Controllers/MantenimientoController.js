@@ -1,6 +1,6 @@
 import MantenimientoCamiones from "../Models/MantenimientoCamiones.js";
 import camiones from "../Models/Camiones.js";
-import Proveedores from "../Models/Proveedores.js"; // ← NUEVO: Importar modelo
+import Proveedores from "../Models/Proveedores.js";
 import mongoose, { isValidObjectId } from 'mongoose';
 
 const mantenimientoCon = {};
@@ -38,7 +38,7 @@ mantenimientoCon.getMantenimineto = async(req, res) => {
             tipo_de_mantenimiento: m.tipo_de_mantenimiento,
             descripcion: m.descripcion,
             detalles: m.detalles,
-            proveedores: m.proveedores, // ← NUEVO
+            proveedores: m.proveedores,
             costoTotal: m.costoTotal,
             estado: m.estado,  
             ciculatioCard: m.ciculatioCard,
@@ -86,7 +86,6 @@ const formateartipoMantenimiento = (tipo) => {
 };
 
 //# Obtener mantenimiento por ID con información detallada
-//# Obtener mantenimiento por ID con información detallada
 mantenimientoCon.obtenerMantoId = async(req, res) => {
     try {
         const { id } = req.params;
@@ -105,11 +104,11 @@ mantenimientoCon.obtenerMantoId = async(req, res) => {
             })
             .populate({
                 path: "proveedores",
-                select: "companyName telefono email direccion phone partDescription" // ← CAMBIO: companyName
+                select: "companyName telefono email direccion phone partDescription"
             })
             .populate({
                 path: "detalles.proveedor",
-                select: "companyName telefono phone" // ← CAMBIO: companyName
+                select: "companyName telefono phone"
             });
 
         if(!manto) {
@@ -165,7 +164,7 @@ mantenimientoCon.obtenerMantoId = async(req, res) => {
                 precioUnitario: detalle.precioUnitario,
                 subTotal: detalle.subTotal,
                 subtotalFormateado: `$${detalle.subTotal.toFixed(2)}`,
-                proveedor: detalle.proveedor || null // ← Ya incluye el objeto completo del proveedor
+                proveedor: detalle.proveedor || null
             })),
             
             // Resumen financiero
@@ -196,9 +195,6 @@ mantenimientoCon.obtenerMantoId = async(req, res) => {
     }
 };
 
-//# Método agregar mantenimiento
-//# Método agregar mantenimiento
-//# Método agregar mantenimiento
 //# Método agregar mantenimiento
 mantenimientoCon.postMantenimiento = async(req, res) => {
     try {
@@ -312,10 +308,27 @@ mantenimientoCon.postMantenimiento = async(req, res) => {
             }
         }
 
-        // Procesar fecha
-        const fecha = fecha_mantenimiento ? new Date(fecha_mantenimiento) : new Date();
+        // ✅ PROCESAMIENTO DE FECHA MEJORADO
+        const fecha = (() => {
+            if (!fecha_mantenimiento) {
+                return new Date(); // Usa hora actual del servidor
+            }
+            
+            // Si viene en formato YYYY-MM-DD (sin hora), crear fecha en zona horaria local
+            if (typeof fecha_mantenimiento === 'string' && fecha_mantenimiento.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                const [year, month, day] = fecha_mantenimiento.split('-').map(Number);
+                return new Date(year, month - 1, day, 12, 0, 0, 0); // Mediodía para evitar cambios de día
+            }
+            
+            // Si viene con hora, usar directamente
+            return new Date(fecha_mantenimiento);
+        })();
+
         const mes = fecha.getMonth() + 1;
         const ano = fecha.getFullYear();
+
+        console.log('📅 Fecha procesada:', fecha.toISOString());
+        console.log('📅 Mes/Año calculados:', mes, ano);
 
         // Calcular detalles y costo total
         let costoTotal = 0;
@@ -360,6 +373,8 @@ mantenimientoCon.postMantenimiento = async(req, res) => {
 
         await nuevoMantenimiento.save();
         console.log('✅ Mantenimiento guardado con ID:', nuevoMantenimiento._id);
+        console.log('✅ createdAt:', nuevoMantenimiento.createdAt);
+        console.log('✅ updatedAt:', nuevoMantenimiento.updatedAt);
         
         await nuevoMantenimiento.populate([
             { 
@@ -414,7 +429,6 @@ mantenimientoCon.postMantenimiento = async(req, res) => {
 };
 
 //# Método actualizar la info del mantenimiento
-//# Método actualizar la info del mantenimiento
 mantenimientoCon.ActualizarMantenimiento = async (req, res) => {
     try {
         const { id } = req.params;
@@ -447,12 +461,22 @@ mantenimientoCon.ActualizarMantenimiento = async (req, res) => {
 
         console.log('📝 PUT /mantenimientos/:id - Actualizando mantenimiento:', id);
 
-        // Actualizar fecha y calcular mes/año si se proporciona nueva fecha
+        // ✅ Actualizar fecha con zona horaria corregida
         if(fecha_mantenimiento) {
-            const nuevaFecha = new Date(fecha_mantenimiento);
+            const nuevaFecha = (() => {
+                // Si viene en formato YYYY-MM-DD (sin hora), crear fecha en zona horaria local
+                if (typeof fecha_mantenimiento === 'string' && fecha_mantenimiento.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                    const [year, month, day] = fecha_mantenimiento.split('-').map(Number);
+                    return new Date(year, month - 1, day, 12, 0, 0, 0);
+                }
+                return new Date(fecha_mantenimiento);
+            })();
+            
             mantoExisting.fecha_mantenimiento = nuevaFecha;
             mantoExisting.mes = nuevaFecha.getMonth() + 1;
             mantoExisting.ano = nuevaFecha.getFullYear();
+            
+            console.log('📅 Fecha actualizada:', nuevaFecha.toISOString());
         }
 
         // Actualizar tipo de mantenimiento si se proporciona
@@ -610,11 +634,11 @@ mantenimientoCon.ActualizarMantenimiento = async (req, res) => {
             },
             { 
                 path: 'proveedores', 
-                select: 'companyName telefono email' // ← CAMBIO: companyName
+                select: 'companyName telefono email'
             },
             { 
                 path: 'detalles.proveedor', 
-                select: 'companyName' // ← CAMBIO: companyName
+                select: 'companyName'
             }
         ]);
 
@@ -654,6 +678,7 @@ mantenimientoCon.ActualizarMantenimiento = async (req, res) => {
         });
     }
 };
+
 //# Método para eliminar registro del mantenimiento
 mantenimientoCon.DeleteManto = async(req, res) => {
     try {
