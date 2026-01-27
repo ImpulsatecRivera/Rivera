@@ -9,6 +9,20 @@ import { ProtectedAction } from '../../components/Auth';
 import Swal from 'sweetalert2';
 import { api } from '../../Context/authContext';
 
+const formatDateTimeLocal = (date = new Date()) => {
+  const pad = (value) => String(value).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+};
+
+const formatearFechaCorta = (fecha) => {
+  if (!fecha) return 'N/A';
+  return new Date(fecha).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' });
+};
+
+const formatearHoraCorta = (fecha) => {
+  if (!fecha) return '';
+  return new Date(fecha).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', hour12: true });
+};
 
 const MantenimientosTable = () => {
   const navigate = useNavigate();
@@ -79,6 +93,209 @@ const MantenimientosTable = () => {
   }, []);
 
   const descargarReporteIndividual = async (id) => {
+<<<<<<< HEAD
+=======
+  try {
+    // Mostrar alerta de procesando
+    Swal.fire({
+      title: 'Procesando...',
+      html: '<div style="text-align: center;"><div style="border: 4px solid #f3f3f3; border-top: 4px solid #5F8EAD; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 0 auto;"></div><p style="margin-top: 10px; color: #666;">Generando reporte, por favor espera</p></div>',
+      allowOutsideClick: false,
+      allowEscapeKey: false,
+      showConfirmButton: false,
+      didOpen: () => {
+        const style = document.createElement('style');
+        style.textContent = '@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }';
+        document.head.appendChild(style);
+      }
+    });
+
+    const response = await api.get(`/reporte/individual/${id}`, {
+      responseType: 'blob'
+    });
+
+    const blob = new Blob([response.data], { type: 'application/pdf' });
+    const url = window.URL.createObjectURL(blob);
+
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `reporte-mantenimiento-${id}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+
+    // Cerrar alerta de procesando y mostrar éxito
+    Swal.fire({
+      icon: 'success',
+      title: '¡Reporte generado!',
+      text: 'El reporte individual se descargó correctamente',
+      confirmButtonText: 'OK',
+      confirmButtonColor: '#5F8EAD',
+      timer: 3000,
+      timerProgressBar: true
+    });
+
+  } catch (error) {
+    console.error('Error descargando reporte individual:', error);
+
+    Swal.fire({
+      icon: 'error',
+      title: 'Error al generar reporte',
+      text: error.response?.data?.message || 'No se pudo descargar el reporte',
+      confirmButtonColor: '#5F8EAD'
+    });
+  }
+};
+
+ const fetchMantenimientos = async () => {
+  try {
+    setLoading(true);
+    const { data } = await api.get('/mantenimientos'); // ✅ Sin config.api.API_URL
+    setMantenimientos(data.data || data || []); // ✅ Más seguro
+    setError(null);
+  } catch (err) {
+    console.error('Error cargando mantenimientos:', err);
+    setError(err.response?.data?.message || err.message || 'Error al cargar los mantenimientos');
+  } finally {
+    setLoading(false);
+  }
+};
+
+const marcarComoCompletado = async (id) => {
+  const result = await Swal.fire({
+    title: '¿Marcar como completado?',
+    html: '<p class="text-gray-700">Selecciona la fecha y hora en la que se finalizó el mantenimiento.</p>',
+    icon: 'question',
+    input: 'datetime-local',
+    inputLabel: 'Fecha y hora de finalización',
+    inputValue: formatDateTimeLocal(),
+    inputAttributes: {
+      step: '60'
+    },
+    showCancelButton: true,
+    confirmButtonText: 'Sí, marcar completado',
+    confirmButtonColor: '#5D9646',
+    cancelButtonColor: '#6b7280',
+    cancelButtonText: 'Cancelar',
+    preConfirm: (value) => {
+      if (!value) {
+        Swal.showValidationMessage('Selecciona la fecha y hora de finalización');
+      }
+      return value;
+    }
+  });
+
+  if (!result.isConfirmed || !result.value) return;
+
+  const fechaFinalizacion = result.value;
+
+  try {
+    Swal.fire({
+      title: 'Actualizando...',
+      html: `
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 15px;">
+          <div class="spinner" style="
+            width: 50px;
+            height: 50px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #5F8EAD;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+          "></div>
+          <p style="color: #666; font-size: 14px; margin: 0;">Por favor espera...</p>
+        </div>
+        <style>
+          @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+          }
+        </style>
+      `,
+      showConfirmButton: false,
+      allowOutsideClick: false,
+      allowEscapeKey: false
+    });
+
+    const response = await api.put(`/mantenimientos/${id}`, {
+      estado: 'completado',
+      fecha_finalizacion: new Date(fechaFinalizacion).toISOString()
+    });
+
+    if (response.data.success) {
+      await fetchMantenimientos();
+      
+      Swal.fire({
+        icon: 'success',
+        title: '¡Completado!',
+        text: 'El mantenimiento ha sido marcado como completado',
+        timer: 2000,
+        showConfirmButton: false
+      });
+    }
+  } catch (error) {
+    console.error('Error marcando como completado:', error);
+    Swal.fire({
+      icon: 'error',
+      title: 'Error',
+      text: error.response?.data?.message || 'No se pudo marcar como completado',
+      confirmButtonColor: '#ef4444'
+    });
+  }
+};
+
+
+  const handleDelete = async (mantenimiento) => {
+  const result = await Swal.fire({
+    title: '¿Estás seguro?',
+    html: `
+      <div class="text-left">
+        <p class="text-gray-700 mb-4">Esta acción no se puede deshacer.</p>
+        <div class="bg-gray-50 rounded-lg p-4 border border-gray-200">
+          <p class="text-sm text-gray-600 mb-2">
+            <strong class="text-gray-800">Camión:</strong> ${mantenimiento.ciculatioCard?.licensePlate || 'N/A'}
+          </p>
+          <p class="text-sm text-gray-600 mb-2">
+            <strong class="text-gray-800">Tipo:</strong> ${tipoMantenimientoLabels[mantenimiento.tipo_de_mantenimiento] || 'N/A'}
+          </p>
+          <p class="text-sm text-gray-600 mb-2">
+            <strong class="text-gray-800">Fecha:</strong> ${formatearFecha(mantenimiento.fecha_mantenimiento)}
+          </p>
+          <p class="text-sm text-gray-600">
+            <strong class="text-gray-800">Total:</strong> ${formatearMoneda(calcularTotal(mantenimiento.detalles))}
+          </p>
+        </div>
+      </div>
+    `,
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#ef4444',
+    cancelButtonColor: '#6b7280',
+    confirmButtonText: 'Sí, eliminar',
+    cancelButtonText: 'Cancelar',
+    reverseButtons: true,
+    customClass: {
+      popup: 'rounded-2xl',
+      title: 'text-xl font-bold text-gray-800',
+      confirmButton: 'px-6 py-2.5 rounded-lg font-semibold',
+      cancelButton: 'px-6 py-2.5 rounded-lg font-semibold'
+    }
+  });
+
+  if (result.isConfirmed) {
+    // Mostrar loading
+    Swal.fire({
+      title: 'Eliminando...',
+      text: 'Por favor espera',
+      allowOutsideClick: false,
+      allowEscapeKey: false,
+      didOpen: () => {
+        Swal.showLoading();
+      }
+    });
+
+>>>>>>> c162f964af8929843b6808c0f56ae3b60ef7293e
     try {
       Swal.fire({
         title: 'Procesando...',
@@ -441,7 +658,12 @@ const MantenimientosTable = () => {
                       onClick={() => { setSelectedMantenimientoId(mant._id); setIsModalOpen(true); }} 
                       className="border-b border-gray-100 hover:bg-gray-50 cursor-pointer transition-colors"
                     >
-                      <td className="py-5 px-6 text-[#34353A] font-semibold">{formatearFecha(mant.fecha_mantenimiento)}</td>
+                      <td className="py-5 px-6 text-[#34353A] font-semibold">
+                        <div className="flex flex-col">
+                          <span>{formatearFechaCorta(mant.fecha_mantenimiento)}</span>
+                          <span className="text-xs text-gray-500">{formatearHoraCorta(mant.fecha_mantenimiento)}</span>
+                        </div>
+                      </td>
                       <td className="py-5 px-6 text-gray-600">{mant.ciculatioCard?.licensePlate || 'N/A'}</td>
                       <td className="py-5 px-6">
                         <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-[#5F8EAD] bg-opacity-20 text-[#5F8EAD]">

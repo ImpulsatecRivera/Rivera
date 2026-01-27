@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Building, Mail, Phone, Package } from 'lucide-react';
+import { Building, Mail, Phone, Package, User, Briefcase } from 'lucide-react';
 import Swal from 'sweetalert2';
 import { config } from '../../config';
 
@@ -30,7 +30,11 @@ const AgregarProveedor = () => {
     companyName: '',
     email: '',
     phone: '',
-    partDescription: ''
+    partDescription: '',
+    contactoNombre: '',
+    contactoCargo: '',
+    contactoTelefono: '',
+    contactoEmail: ''
   });
 
   const [errors, setErrors] = useState({});
@@ -77,7 +81,7 @@ const AgregarProveedor = () => {
     let formattedValue = value;
 
     // Validación y formateo de teléfono
-    if (name === 'phone') {
+    if (name === 'phone' || name === 'contactoTelefono') {
       const numbers = value.replace(/\D/g, '');
       if (numbers.length > 4) {
         formattedValue = numbers.slice(0, 4) + '-' + numbers.slice(4, 8);
@@ -96,15 +100,22 @@ const AgregarProveedor = () => {
   const validateForm = () => {
     const newErrors = {};
     if (!formData.companyName) newErrors.companyName = "El nombre de la empresa es obligatorio";
-    if (!formData.email) newErrors.email = "El email es obligatorio";
     if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
       newErrors.email = "El formato del email no es válido";
     }
-    if (!formData.phone) newErrors.phone = "El teléfono es obligatorio";
+    // Teléfono ahora es opcional; valida solo si se ingresa
     if (formData.phone && formData.phone.replace(/\D/g, '').length !== 8) {
       newErrors.phone = "El teléfono debe tener exactamente 8 dígitos";
     }
-    if (!formData.partDescription) newErrors.partDescription = "La descripción del repuesto es obligatoria";
+    // partDescription ahora es opcional
+
+    // Campos opcionales de contacto principal
+    if (formData.contactoEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.contactoEmail)) {
+      newErrors.contactoEmail = "El formato del email de contacto no es válido";
+    }
+    if (formData.contactoTelefono && formData.contactoTelefono.replace(/\D/g, '').length !== 0 && formData.contactoTelefono.replace(/\D/g, '').length !== 8) {
+      newErrors.contactoTelefono = "El teléfono de contacto debe tener 8 dígitos";
+    }
 
     return newErrors;
   };
@@ -115,7 +126,11 @@ const AgregarProveedor = () => {
       companyName: '',
       email: '',
       phone: '',
-      partDescription: ''
+      partDescription: '',
+      contactoNombre: '',
+      contactoCargo: '',
+      contactoTelefono: '',
+      contactoEmail: ''
     });
     setErrors({});
     setApiError(null);
@@ -134,7 +149,10 @@ const AgregarProveedor = () => {
           companyName: 'Nombre de la empresa',
           email: 'Email',
           phone: 'Teléfono',
-          partDescription: 'Repuesto'
+          contactoNombre: 'Nombre del contacto',
+          contactoCargo: 'Cargo del contacto',
+          contactoTelefono: 'Teléfono del contacto',
+          contactoEmail: 'Email del contacto'
         };
         return fieldNames[field] || field;
       });
@@ -204,11 +222,21 @@ const AgregarProveedor = () => {
       setLoading(true);
       setApiError(null);
 
+      const contactoPrincipal = {
+        nombre: formData.contactoNombre.trim(),
+        cargo: formData.contactoCargo.trim(),
+        telefono: formData.contactoTelefono.trim(),
+        email: formData.contactoEmail.trim()
+      };
+
+      const hasContacto = Object.values(contactoPrincipal).some((value) => value);
+
       const dataToSend = {
         companyName: formData.companyName.trim(),
         email: formData.email.trim(),
         phone: formData.phone.trim(),
-        partDescription: formData.partDescription.trim()
+        partDescription: formData.partDescription.trim(),
+        ...(hasContacto ? { contactoPrincipal } : {})
       };
 
       console.log('Enviando datos:', dataToSend);
@@ -316,7 +344,6 @@ const AgregarProveedor = () => {
             label="Email"
             icon={Mail}
             error={errors.email}
-            required={true}
           />
 
           {/* Teléfono */}
@@ -331,7 +358,6 @@ const AgregarProveedor = () => {
             label="Teléfono"
             icon={Phone}
             error={errors.phone}
-            required={true}
           />
 
           {/* Repuesto */}
@@ -341,14 +367,67 @@ const AgregarProveedor = () => {
             type="text"
             value={formData.partDescription}
             onChange={handleInputChange}
-            placeholder="Introduce el repuesto necesitado"
+            placeholder="Introduce el tipo de repuesto o servicio"
             label="Repuesto"
             icon={Package}
             error={errors.partDescription}
-            required={true}
           />
 
         </FormFieldsGrid>
+
+        <div className="mt-6 space-y-3">
+          <p className="text-sm font-semibold text-gray-700">Contacto principal (opcional)</p>
+          <FormFieldsGrid columns="2">
+            <FormInput
+              id="contactoNombre"
+              name="contactoNombre"
+              type="text"
+              value={formData.contactoNombre}
+              onChange={handleInputChange}
+              placeholder="Nombre del contacto"
+              label="Nombre"
+              icon={User}
+              error={errors.contactoNombre}
+            />
+
+            <FormInput
+              id="contactoCargo"
+              name="contactoCargo"
+              type="text"
+              value={formData.contactoCargo}
+              onChange={handleInputChange}
+              placeholder="Cargo del contacto"
+              label="Cargo"
+              icon={Briefcase}
+              error={errors.contactoCargo}
+            />
+
+            <FormInput
+              id="contactoTelefono"
+              name="contactoTelefono"
+              type="text"
+              value={formData.contactoTelefono}
+              onChange={handleInputChange}
+              placeholder="0000-0000"
+              maxLength={9}
+              label="Teléfono del contacto"
+              icon={Phone}
+              error={errors.contactoTelefono}
+            />
+
+            <FormInput
+              id="contactoEmail"
+              name="contactoEmail"
+              type="email"
+              value={formData.contactoEmail}
+              onChange={handleInputChange}
+              placeholder="correo@contacto.com"
+              label="Email del contacto"
+              icon={Mail}
+              error={errors.contactoEmail}
+            />
+          </FormFieldsGrid>
+        </div>
 
         {/* Submit Button */}
         <SubmitButton
