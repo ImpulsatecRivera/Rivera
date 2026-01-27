@@ -410,7 +410,34 @@ const viajeSchema = new Schema({
   },
 
   // =====================================================
-  // 📍 TRACKING
+  // � SALARIOS HISTÓRICOS (campos internos, invisible para usuario)
+  // =====================================================
+  salariosCargados: {
+    // Salario del conductor al momento del viaje
+    salarioConductor: {
+      type: Number,
+      default: null
+    },
+    // Array de salarios de auxiliares al momento del viaje
+    salariosAuxiliares: [{
+      auxiliarId: {
+        type: Schema.Types.ObjectId,
+        ref: 'Motorista'
+      },
+      salario: {
+        type: Number,
+        default: null
+      }
+    }],
+    // Fecha en que se cargaron los salarios
+    fechaCarga: {
+      type: Date,
+      default: null
+    }
+  },
+
+  // =====================================================
+  // �📍 TRACKING
   // =====================================================
   tracking: {
     ubicacionActual: {

@@ -79,6 +79,113 @@ const PUPPETEER_CONFIG = () => {
     }
 };
 
+321
+
+/**
+ * FUNCIÓN AUXILIAR: Calcular días hábiles del mes (restando solo domingos)
+ * @param {Number} mes - Mes (1-12)
+ * @param {Number} ano - Año
+ * @returns {Number} - Número de días hábiles
+ */
+const calcularDiasHabilesPorMes = (mes, ano) => {
+    const ultimoDia = new Date(ano, mes, 0); // Último día del mes
+    const totalDias = ultimoDia.getDate();
+    
+    let domingos = 0;
+    
+    // Contar domingos en el mes
+    for (let dia = 1; dia <= totalDias; dia++) {
+        const fecha = new Date(ano, mes - 1, dia);
+        if (fecha.getDay() === 0) { // 0 = domingo
+            domingos++;
+        }
+    }
+    
+    const diasHabiles = totalDias - domingos;
+    console.log(`📊 Mes ${mes}/${ano}: Total ${totalDias} días - ${domingos} domingos = ${diasHabiles} días hábiles`);
+    return diasHabiles;
+};
+
+/**
+ * FUNCIÓN AUXILIAR: Obtener días hábiles del mes desde la planilla semanal
+ * Busca TODAS las planillas que toquen el mes y retorna el diasHabiles más frecuente
+ * Si no hay planillas, calcula dinámicamente restando domingos
+ * @param {Number} mes - Mes (1-12)
+ * @param {Number} ano - Año
+ * @returns {Promise<Number>} - Número de días hábiles (el más frecuente en las planillas)
+ */
+const obtenerDiasHabilesMes = async (mes, ano) => {
+    try {
+        const primerDiaMes = new Date(ano, mes - 1, 1);
+        const ultimoDiaMes = new Date(ano, mes, 0); // Último día del mes
+        
+        console.log(`🔍 Buscando TODAS las planillas que toquen ${mes}/${ano}...`);
+        
+        // Buscar TODAS las planillas que intersecten con este mes
+        const planillas = await PlanillaSemanal.find({
+            $or: [
+                {
+                    // Planilla que empieza en este mes
+                    fechaInicio: {
+                        $gte: primerDiaMes,
+                        $lte: ultimoDiaMes
+                    }
+                },
+                {
+                    // Planilla que termina en este mes
+                    fechaFin: {
+                        $gte: primerDiaMes,
+                        $lte: ultimoDiaMes
+                    }
+                },
+                {
+                    // Planilla que abarca todo el mes
+                    fechaInicio: { $lte: primerDiaMes },
+                    fechaFin: { $gte: ultimoDiaMes }
+                }
+            ]
+        }).sort({ fechaInicio: 1 });
+        
+        if (planillas.length === 0) {
+            console.log(`⚠️ No se encontraron planillas para ${mes}/${ano}, calculando dinámicamente...`);
+            return calcularDiasHabilesPorMes(mes, ano);
+        }
+        
+        console.log(`📊 Se encontraron ${planillas.length} planilla(s) para ${mes}/${ano}:`);
+        
+        // Contar la frecuencia de cada valor de diasHabiles
+        const frecuencias = {};
+        const detalles = [];
+        
+        for (const planilla of planillas) {
+            const diasHabiles = planilla.diasHabiles;
+            console.log(`   - ${planilla.fechaInicio.toLocaleDateString()} al ${planilla.fechaFin.toLocaleDateString()}: ${diasHabiles} días`);
+            
+            detalles.push({
+                rango: `${planilla.fechaInicio.toLocaleDateString()} al ${planilla.fechaFin.toLocaleDateString()}`,
+                diasHabiles: diasHabiles
+            });
+            
+            frecuencias[diasHabiles] = (frecuencias[diasHabiles] || 0) + 1;
+        }
+        
+        // Encontrar el valor más frecuente
+        const diasMasFrecuente = Object.keys(frecuencias).reduce((a, b) => 
+            frecuencias[a] > frecuencias[b] ? a : b
+        );
+        
+        const diasNum = parseInt(diasMasFrecuente);
+        console.log(`✅ Valor más frecuente para ${mes}/${ano}: ${diasNum} días (aparece ${frecuencias[diasMasFrecuente]} veces)`);
+        
+        return diasNum;
+        
+    } catch (error) {
+        console.error(`❌ Error obteniendo días hábiles del mes ${mes}/${ano}:`, error);
+        // En caso de error, calcular dinámicamente
+        return calcularDiasHabilesPorMes(mes, ano);
+    }
+};
+
 /**
  * FUNCIÓN AUXILIAR: Obtener datos consolidados de un camión en un mes específico
  * @param {String} placa - Placa del camión
@@ -136,31 +243,46 @@ const obtenerDatosCamionMes = async (placa, mes, ano, diasTrabajados) => {
         for (const viaje of viajes) {
             let planillaViaje = 0;
 
-            // 4.1 Obtener salario del conductor principal
+            // 4.1 Obtener salario del conductor principal (usar histórico si existe)
             if (viaje.conductorId) {
                 const conductor = viaje.conductorId;
-                const salario = conductor.salario || 0;
+                let salario = conductor.salario || 0;
+                
+                // PRIMERO intentar usar salario histórico
+                if (viaje.salariosCargados && viaje.salariosCargados.salarioConductor) {
+                    salario = viaje.salariosCargados.salarioConductor;
+                    console.log(`  📊 Conductor (${conductor.name || 'N/A'} ${conductor.lastName || ''}): Usando salario histórico $${salario}`);
+                }
                 
                 if (salario > 0) {
                     const salarioDiario = salario / diasTrabajados;
                     planillaViaje += salarioDiario;
-                    console.log(`  Conductor (${conductor.name || 'N/A'} ${conductor.lastName || ''}): $${salario} / ${diasTrabajados} = $${salarioDiario.toFixed(2)}`);
+                    console.log(`  Conductor: $${salario} / ${diasTrabajados} = $${salarioDiario.toFixed(2)}`);
                 } else {
                     console.log(`  ⚠️ Conductor sin salario definido`);
                 }
             }
 
-            // 4.2 Obtener salarios de los auxiliares (máximo 2)
+            // 4.2 Obtener salarios de los auxiliares (usar histórico si existe)
             if (viaje.auxiliares && viaje.auxiliares.length > 0) {
-                for (const aux of viaje.auxiliares) {
+                for (let idx = 0; idx < viaje.auxiliares.length; idx++) {
+                    const aux = viaje.auxiliares[idx];
                     if (aux.auxiliarId) {
                         const auxiliar = aux.auxiliarId;
-                        const salario = auxiliar.salario || 0;
+                        let salario = auxiliar.salario || 0;
+                        
+                        // PRIMERO intentar usar salario histórico
+                        if (viaje.salariosCargados && 
+                            viaje.salariosCargados.salariosAuxiliares && 
+                            viaje.salariosCargados.salariosAuxiliares[idx]) {
+                            salario = viaje.salariosCargados.salariosAuxiliares[idx].salario || 0;
+                            console.log(`  📊 Auxiliar (${auxiliar.name || 'N/A'} ${auxiliar.lastName || ''}): Usando salario histórico $${salario}`);
+                        }
                         
                         if (salario > 0) {
                             const salarioDiario = salario / diasTrabajados;
                             planillaViaje += salarioDiario;
-                            console.log(`  Auxiliar (${auxiliar.name || 'N/A'} ${auxiliar.lastName || ''}): $${salario} / ${diasTrabajados} = $${salarioDiario.toFixed(2)}`);
+                            console.log(`  Auxiliar: $${salario} / ${diasTrabajados} = $${salarioDiario.toFixed(2)}`);
                         } else {
                             console.log(`  ⚠️ Auxiliar sin salario definido`);
                         }
@@ -502,12 +624,15 @@ ReporteConsolidadoController.generarPDFMultiMes = async (req, res) => {
 
         // Generar HTML para cada mes
         const mesesHTML = [];
-        const diasPorDefecto = 30; // Valor por defecto para reportes multi-mes
         for (const mesNum of mesesValidos) {
+            // Obtener días hábiles del mes desde la planilla semanal
+            const diasHabilesMes = await obtenerDiasHabilesMes(mesNum, anoNum);
+            console.log(`📅 Mes ${mesNum}/${anoNum}: usando ${diasHabilesMes} días hábiles`);
+            
             const datosConsolidados = [];
             
             for (const camion of camiones) {
-                const datos = await obtenerDatosCamionMes(camion.licensePlate, mesNum, anoNum, diasPorDefecto);
+                const datos = await obtenerDatosCamionMes(camion.licensePlate, mesNum, anoNum, diasHabilesMes);
                 if (datos.cantidadViajes > 0 || datos.diesel > 0 || datos.planilla > 0) {
                     datosConsolidados.push(datos);
                 }
@@ -772,13 +897,16 @@ ReporteConsolidadoController.generarPDFAnual = async (req, res) => {
 
         // Generar HTML para cada mes del año
         const mesesHTML = [];
-        const diasPorDefecto = 30; // Valor por defecto para reportes anuales
         
         for (let mes = 1; mes <= 12; mes++) {
+            // Obtener días hábiles del mes desde la planilla semanal
+            const diasHabilesMes = await obtenerDiasHabilesMes(mes, anoNum);
+            console.log(`📅 Mes ${mes}/${anoNum}: usando ${diasHabilesMes} días hábiles`);
+            
             const datosConsolidados = [];
             
             for (const camion of camiones) {
-                const datos = await obtenerDatosCamionMes(camion.licensePlate, mes, anoNum, diasPorDefecto);
+                const datos = await obtenerDatosCamionMes(camion.licensePlate, mes, anoNum, diasHabilesMes);
                 if (datos.cantidadViajes > 0 || datos.diesel > 0 || datos.planilla > 0) {
                     datosConsolidados.push(datos);
                 }
@@ -1231,7 +1359,12 @@ ReporteConsolidadoController.generarPDFRango = async (req, res) => {
 
                     // Calcular planilla del conductor
                     if (viaje.conductorId) {
-                        const salario = viaje.conductorId.salario || 0;
+                        // PRIMERO intentar usar salario histórico, si no, usar salario actual
+                        let salario = viaje.conductorId.salario || 0;
+                        if (viaje.salariosCargados && viaje.salariosCargados.salarioConductor) {
+                            salario = viaje.salariosCargados.salarioConductor;
+                            console.log(`📊 Usando salario histórico para conductor ${viaje.conductorId.name}: $${salario}`);
+                        }
                         const salarioDiario = salario / diasNum;
                         planillaViaje += salarioDiario;
                         personal.push({
@@ -1243,9 +1376,17 @@ ReporteConsolidadoController.generarPDFRango = async (req, res) => {
 
                     // Calcular planilla de auxiliares
                     if (viaje.auxiliares && viaje.auxiliares.length > 0) {
-                        for (const aux of viaje.auxiliares) {
+                        for (let idx = 0; idx < viaje.auxiliares.length; idx++) {
+                            const aux = viaje.auxiliares[idx];
                             if (aux.auxiliarId) {
-                                const salario = aux.auxiliarId.salario || 0;
+                                // PRIMERO intentar usar salario histórico, si no, usar salario actual
+                                let salario = aux.auxiliarId.salario || 0;
+                                if (viaje.salariosCargados && 
+                                    viaje.salariosCargados.salariosAuxiliares && 
+                                    viaje.salariosCargados.salariosAuxiliares[idx]) {
+                                    salario = viaje.salariosCargados.salariosAuxiliares[idx].salario || 0;
+                                    console.log(`📊 Usando salario histórico para auxiliar ${aux.auxiliarId.name}: $${salario}`);
+                                }
                                 const salarioDiario = salario / diasNum;
                                 planillaViaje += salarioDiario;
                                 personal.push({
@@ -1271,7 +1412,8 @@ ReporteConsolidadoController.generarPDFRango = async (req, res) => {
 
                         // Tomar TODOS los registros de diesel de ese día
                         const registrosDia = todosRegistrosDiesel.filter(d => {
-                            const fechaDiesel = new Date(d.fechaHora || d.fecha);
+                            // Usar 'fecha' primero, luego 'fechaHora' como fallback
+                            const fechaDiesel = new Date(d.fecha || d.fechaHora);
                             const diaDiesel = fechaDiesel.getDate();
                             const mesDiesel = fechaDiesel.getMonth() + 1;
                             const anoDiesel = fechaDiesel.getFullYear();
@@ -1282,7 +1424,8 @@ ReporteConsolidadoController.generarPDFRango = async (req, res) => {
                         if (registrosDia.length > 0) {
                             dieselDelDia = registrosDia.reduce((acc, d) => acc + (d.Total || 0), 0);
                             const galonesDia = registrosDia.reduce((acc, d) => acc + (d.Galones || 0), 0);
-                            const fechaGasolina = new Date(registrosDia[0].fechaHora || registrosDia[0].fecha);
+                            // Usar 'fecha' primero, luego 'fechaHora' como fallback
+                            const fechaGasolina = new Date(registrosDia[0].fecha || registrosDia[0].fechaHora);
                             infoGasolina = {
                                 hora: fechaGasolina.toLocaleTimeString('es-SV', {
                                     hour: '2-digit',
@@ -1323,16 +1466,43 @@ ReporteConsolidadoController.generarPDFRango = async (req, res) => {
                     viajesPorDia[keyFecha].push(viaje);
                 });
 
+                // NUEVO: También agrupar registros de diesel por fecha
+                const dieselPorDia = {};
+                todosRegistrosDiesel.forEach(diesel => {
+                    // Usar 'fecha' primero, luego 'fechaHora' como fallback
+                    const fechaDiesel = new Date(diesel.fecha || diesel.fechaHora);
+                    const keyFecha = fechaDiesel.toLocaleDateString('es-SV', {
+                        timeZone: 'America/El_Salvador'
+                    });
+                    
+                    if (!dieselPorDia[keyFecha]) {
+                        dieselPorDia[keyFecha] = [];
+                    }
+                    dieselPorDia[keyFecha].push(diesel);
+                });
+
+                // Combinar fechas de viajes y diesel
+                const todasLasFechas = new Set([
+                    ...Object.keys(viajesPorDia),
+                    ...Object.keys(dieselPorDia)
+                ]);
+
                 // Convertir a array y ordenar por fecha
-                const diasConViajes = Object.entries(viajesPorDia)
-                    .map(([fecha, viajes]) => ({
-                        fecha,
-                        viajes: viajes.sort((a, b) => {
-                            const horaA = new Date(a.departureTime || a.fecha).getTime();
-                            const horaB = new Date(b.departureTime || b.fecha).getTime();
-                            return horaA - horaB;
-                        })
-                    }))
+                const diasConViajes = Array.from(todasLasFechas)
+                    .map(fecha => {
+                        const viajesDelDia = viajesPorDia[fecha] || [];
+                        const dieselDelDia = dieselPorDia[fecha] || [];
+                        
+                        return {
+                            fecha,
+                            viajes: viajesDelDia.sort((a, b) => {
+                                const horaA = new Date(a.departureTime || a.fecha).getTime();
+                                const horaB = new Date(b.departureTime || b.fecha).getTime();
+                                return horaA - horaB;
+                            }),
+                            registrosDiesel: dieselDelDia
+                        };
+                    })
                     .sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
 
                 datosCamiones.push({
@@ -1566,73 +1736,132 @@ ReporteConsolidadoController.generarPDFRango = async (req, res) => {
                 </thead>
                 <tbody>
                     ${camion.diasConViajes.map(dia => {
-                        const gasolinaDelDia = dia.viajes.find(v => v.tieneDiesel && v.infoGasolina);
                         const ingresosDia = dia.viajes.reduce((acc, v) => acc + (v.monto || 0), 0);
                         const planillaDia = dia.viajes.reduce((acc, v) => acc + (v.planilla || 0), 0);
-                        const dieselDia = gasolinaDelDia
-                            ? gasolinaDelDia.infoGasolina.total || 0
-                            : dia.viajes.reduce((acc, v) => acc + (v.diesel || 0), 0);
+                        
+                        // Calcular diesel del día: PRIMERO intentar desde registros, si no, sumar de los viajes
+                        let dieselDia = 0;
+                        let infoGasolinaDelDia = null;
+                        
+                        if (dia.registrosDiesel && dia.registrosDiesel.length > 0) {
+                            dieselDia = dia.registrosDiesel.reduce((acc, d) => acc + (d.Total || 0), 0);
+                            const galonesDia = dia.registrosDiesel.reduce((acc, d) => acc + (d.Galones || 0), 0);
+                            // Usar 'fecha' primero, luego 'fechaHora' como fallback
+                            const fechaGasolina = new Date(dia.registrosDiesel[0].fecha || dia.registrosDiesel[0].fechaHora);
+                            infoGasolinaDelDia = {
+                                hora: fechaGasolina.toLocaleTimeString('es-SV', {
+                                    hour: '2-digit',
+                                    minute: '2-digit',
+                                    hour12: true,
+                                    timeZone: 'America/El_Salvador'
+                                }),
+                                galones: galonesDia,
+                                total: dieselDia
+                            };
+                        } else {
+                            // Si no hay registros de diesel directos, sumar el diesel de todos los viajes del día
+                            dieselDia = dia.viajes.reduce((acc, v) => acc + (v.diesel || 0), 0);
+                            // Buscar información de gasolina del primer viaje que la tenga
+                            const viajeConGasolina = dia.viajes.find(v => v.infoGasolina);
+                            if (viajeConGasolina) {
+                                infoGasolinaDelDia = viajeConGasolina.infoGasolina;
+                            }
+                        }
+                        
                         const utilidadDia = ingresosDia - dieselDia - planillaDia;
 
-                        const filasViajes = dia.viajes.map((viaje, idx) => {
-                            const utilidadViaje = viaje.monto - viaje.diesel - viaje.planilla;
-                            const fechaViaje = new Date(viaje.departureTime || viaje.fecha);
-                            
-                            const fechaFormateada = fechaViaje.toLocaleDateString('es-SV', {
+                        // Si hay viajes ese día
+                        if (dia.viajes.length > 0) {
+                            const filasViajes = dia.viajes.map((viaje, idx) => {
+                                const utilidadViaje = viaje.monto - viaje.diesel - viaje.planilla;
+                                const fechaViaje = new Date(viaje.departureTime || viaje.fecha);
+                                
+                                const fechaFormateada = fechaViaje.toLocaleDateString('es-SV', {
+                                    day: '2-digit',
+                                    month: 'short',
+                                    year: 'numeric',
+                                    timeZone: 'America/El_Salvador'
+                                });
+                                
+                                const horaFormateada = fechaViaje.toLocaleTimeString('es-SV', {
+                                    hour: '2-digit',
+                                    minute: '2-digit',
+                                    hour12: true,
+                                    timeZone: 'America/El_Salvador'
+                                });
+
+                                const dieselCell = idx === 0
+                                    ? `<td class="col-monto" rowspan="${dia.viajes.length}">${dieselDia > 0 ? `<strong style="color: #5D9646;">$${dieselDia.toFixed(2)}</strong>${infoGasolinaDelDia ? `<br/><small>${infoGasolinaDelDia.galones || 0} gal, ${infoGasolinaDelDia.hora || ''}</small>` : ''}` : '-'}</td>`
+                                    : '';
+
+                                return `
+                                <tr>
+                                    <td><strong>${fechaFormateada}</strong><br/>${horaFormateada}</td>
+                                    <td>
+                                        <div class="personal-list">
+                                            ${viaje.personal.map(p => `
+                                                <div class="personal-item">
+                                                    <span class="rol-badge ${p.rol.toLowerCase()}">${p.rol}</span>
+                                                    <strong>${p.nombre}</strong> - $${p.salarioDiario.toFixed(2)}/día
+                                                </div>
+                                            `).join('')}
+                                        </div>
+                                    </td>
+                                    <td class="col-monto">$${viaje.monto.toFixed(2)}</td>
+                                    ${dieselCell}
+                                    <td class="col-monto">$${viaje.planilla.toFixed(2)}</td>
+                                    <td class="col-monto ${utilidadViaje >= 0 ? 'positivo' : 'negativo'}">
+                                        $${utilidadViaje.toFixed(2)}
+                                    </td>
+                                    <td></td>
+                                </tr>
+                                `;
+                            }).join('');
+
+                            const filaResumen = `
+                                <tr style="background: #E8F4FF; font-weight: bold;">
+                                    <td colspan="2"></td>
+                                    <td class="col-monto">$${ingresosDia.toFixed(2)}</td>
+                                    <td class="col-monto"><strong style="color: #5D9646;">$${dieselDia.toFixed(2)}</strong></td>
+                                    <td class="col-monto">$${planillaDia.toFixed(2)}</td>
+                                    <td class="col-monto ${utilidadDia >= 0 ? 'positivo' : 'negativo'}">$${utilidadDia.toFixed(2)}</td>
+                                    <td></td>
+                                </tr>`;
+
+                            return filasViajes + filaResumen;
+                        } else if (dia.registrosDiesel && dia.registrosDiesel.length > 0) {
+                            // Si NO hay viajes pero SÍ hay registros de diesel ese día
+                            // Usar 'fecha' primero, luego 'fechaHora' como fallback
+                            const fechaPrimera = new Date(dia.registrosDiesel[0].fecha || dia.registrosDiesel[0].fechaHora);
+                            const fechaFormateada = fechaPrimera.toLocaleDateString('es-SV', {
                                 day: '2-digit',
                                 month: 'short',
                                 year: 'numeric',
                                 timeZone: 'America/El_Salvador'
                             });
-                            
-                            const horaFormateada = fechaViaje.toLocaleTimeString('es-SV', {
-                                hour: '2-digit',
-                                minute: '2-digit',
-                                hour12: true,
-                                timeZone: 'America/El_Salvador'
-                            });
-
-                            const dieselCell = idx === 0
-                                ? `<td class="col-monto" rowspan="${dia.viajes.length}">${dieselDia > 0 ? `$${dieselDia.toFixed(2)}${gasolinaDelDia ? `<br/><small>${gasolinaDelDia.infoGasolina.galones || 0} gal ${gasolinaDelDia.infoGasolina.hora || ''}</small>` : ''}` : '-'}</td>`
-                                : '';
 
                             return `
-                            <tr>
-                                <td><strong>${fechaFormateada}</strong><br/>${horaFormateada}</td>
-                                <td>
-                                    <div class="personal-list">
-                                        ${viaje.personal.map(p => `
-                                            <div class="personal-item">
-                                                <span class="rol-badge ${p.rol.toLowerCase()}">${p.rol}</span>
-                                                <strong>${p.nombre}</strong> - $${p.salarioDiario.toFixed(2)}/día
-                                            </div>
-                                        `).join('')}
-                                    </div>
-                                </td>
-                                <td class="col-monto">$${viaje.monto.toFixed(2)}</td>
-                                ${dieselCell}
-                                <td class="col-monto">$${viaje.planilla.toFixed(2)}</td>
-                                <td class="col-monto ${utilidadViaje >= 0 ? 'positivo' : 'negativo'}">
-                                    $${utilidadViaje.toFixed(2)}
-                                </td>
-                                <td></td>
-                            </tr>
-                            `;
-                        }).join('');
-
-                        const filaResumen = `
-                            <tr style="background: #E8F4FF; font-weight: bold;">
-                                <td></td>
-                                <td></td>
-                                <td class="col-monto">$${ingresosDia.toFixed(2)}</td>
-                                <td class="col-monto">$${dieselDia.toFixed(2)}</td>
-                                <td class="col-monto">$${planillaDia.toFixed(2)}</td>
-                                <td class="col-monto ${utilidadDia >= 0 ? 'positivo' : 'negativo'}">$${utilidadDia.toFixed(2)}</td>
-                                <td></td>
-                            </tr>`;
-
-                        return filasViajes + filaResumen;
+                                <tr style="background: #FFF8DC;">
+                                    <td><strong>${fechaFormateada}</strong><br/><em>Solo carga de combustible</em></td>
+                                    <td style="text-align: center; font-style: italic; color: #666;">Sin viajes registrados</td>
+                                    <td class="col-monto">-</td>
+                                    <td class="col-monto" style="background: #E8F5E9;"><strong style="color: #5D9646;">$${dieselDia.toFixed(2)}</strong><br/><small>${infoGasolinaDelDia.galones || 0} gal @ ${infoGasolinaDelDia.hora || ''}</small></td>
+                                    <td class="col-monto">-</td>
+                                    <td class="col-monto">-</td>
+                                    <td></td>
+                                </tr>`;
+                        }
+                        
+                        return '';
                     }).join('')}
+                    <tr style="background: #34353A; color: white; font-weight: bold; font-size: 9px;">
+                        <td colspan="2" style="text-align: center; padding: 10px; border: 2px solid #5D9646;">TOTAL CAMIÓN</td>
+                        <td style="padding: 10px; border: 2px solid #5D9646;">$${camion.ingresos.toFixed(2)}</td>
+                        <td style="padding: 10px; border: 2px solid #5D9646;">$${camion.diesel.toFixed(2)}</td>
+                        <td style="padding: 10px; border: 2px solid #5D9646;">$${camion.planilla.toFixed(2)}</td>
+                        <td style="padding: 10px; border: 2px solid #5D9646; ${camion.utilidadBruta >= 0 ? 'color: #5D9646;' : 'color: #ff6b6b;'}">$${camion.utilidadBruta.toFixed(2)}</td>
+                        <td style="padding: 10px; border: 2px solid #5D9646;">-</td>
+                    </tr>
                 </tbody>
             </table>
         </div>
