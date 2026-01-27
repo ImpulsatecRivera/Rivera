@@ -20,17 +20,24 @@ const proveedoreSchema = new Schema({
     // Información de contacto empresarial
     email: {
         type: String,      // Correo electrónico corporativo del proveedor
-        required: true     // Campo obligatorio para comunicación formal y cotizaciones
+        required: false    // Ahora opcional
     },
     phone: {
         type: String,      // Número de teléfono principal de la empresa
-        required: true     // Campo obligatorio para comunicación directa y emergencias
+        required: false    // Opcional: se valida en frontend si se provee
     },
     
     // Información de servicios y productos
     partDescription: {
         type: String,      // Descripción detallada de las partes, servicios o productos que ofrece
-        required: true     // Campo obligatorio para identificar qué suministra cada proveedor
+        required: false    // Ahora opcional
+    },
+    // Contacto principal del proveedor (opcional)
+    contactoPrincipal: {
+        nombre: { type: String, trim: true },
+        cargo: { type: String, trim: true },
+        telefono: { type: String, trim: true },
+        email: { type: String, trim: true }
     }
 }, {
     // Opciones del esquema

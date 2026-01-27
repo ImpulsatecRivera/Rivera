@@ -103,26 +103,19 @@ const EditFormFields = ({
         </div>
       </div>
 
-      {/* Tarjeta de circulación */}
+      {/* Fecha de vencimiento de tarjeta de circulación */}
       <div>
         <label className={labelClassName}>
-          <CreditCard className="w-4 h-4 text-[#5F8EAD]" />
-          <span>Tarjeta de circulación</span>
+          <Calendar className="w-4 h-4 text-[#5F8EAD]" />
+          <span>Fecha vencimiento tarjeta</span>
         </label>
         <input
-          type="text"
+          type="date"
           value={formData.tarjetaCirculacion || ''}
           onChange={(e) => handleChange('tarjetaCirculacion', e.target.value)}
           className={inputClassName}
-          placeholder="Número de tarjeta"
           disabled={disabled}
-          maxLength={20}
         />
-        {getCharCount(formData.tarjetaCirculacion, 20) && (
-          <div className="flex justify-end mt-1">
-            {getCharCount(formData.tarjetaCirculacion, 20)}
-          </div>
-        )}
       </div>
 
       {/* Placa */}

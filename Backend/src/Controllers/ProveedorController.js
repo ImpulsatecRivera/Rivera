@@ -5,6 +5,20 @@ import proveedorModel from "../Models/Proveedores.js";
  */
 const proveedorsCon = {};
 
+// Construye el objeto de contacto principal solo con campos presentes
+const buildContactoPrincipalPayload = (body = {}) => {
+  const source = body.contactoPrincipal || {};
+  const contacto = {
+    nombre: source.nombre || body.contactoNombre || "",
+    cargo: source.cargo || body.contactoCargo || "",
+    telefono: source.telefono || body.contactoTelefono || "",
+    email: source.email || body.contactoEmail || ""
+  };
+
+  const hasValues = Object.values(contacto).some((value) => value && value.toString().trim() !== "");
+  return hasValues ? contacto : undefined;
+};
+
 /**
  * Obtener todos los proveedores registrados en el sistema
  * GET /proveedores
@@ -35,14 +49,19 @@ proveedorsCon.get = async (req, res) => {
 proveedorsCon.post = async (req, res) => {
   try {
     // Extraer los datos del proveedor del cuerpo de la petición
-    const { companyName, email, phone, partDescription } = req.body;
+    const { companyName, email, phone, partDescription, direccion, rubro } = req.body;
+
+    const contactoPrincipal = buildContactoPrincipalPayload(req.body);
     
     // Crear nueva instancia del modelo Proveedor con los datos recibidos
     const newProveedor = new proveedorModel({ 
       companyName,        // Nombre de la empresa proveedora
       email,              // Email de contacto del proveedor
       phone,              // Teléfono de contacto
-      partDescription     // Descripción de las partes/servicios que provee
+      partDescription,    // Descripción de las partes/servicios que provee
+      direccion,
+      rubro,
+      contactoPrincipal
     });
     
     // Guardar el nuevo proveedor en la base de datos
@@ -65,19 +84,22 @@ proveedorsCon.post = async (req, res) => {
  */
 proveedorsCon.put = async (req, res) => {
   try {
-    // Extraer los nuevos datos del proveedor del cuerpo de la petición
-    const { companyName, email, phone, partDescription } = req.body;
-    
-    // Buscar proveedor por ID y actualizar con los nuevos datos
+    const contactoPrincipal = buildContactoPrincipalPayload(req.body);
+
+    // Solo construir campos que se envíen para evitar sobreescribir con undefined
+    const updateData = {};
+    if (req.body.companyName) updateData.companyName = req.body.companyName;
+    if (req.body.email) updateData.email = req.body.email;
+    if (req.body.phone) updateData.phone = req.body.phone;
+    if (req.body.partDescription) updateData.partDescription = req.body.partDescription;
+    if (req.body.direccion) updateData.direccion = req.body.direccion;
+    if (req.body.rubro) updateData.rubro = req.body.rubro;
+    if (contactoPrincipal) updateData.contactoPrincipal = contactoPrincipal;
+
     await proveedorModel.findByIdAndUpdate(
-      req.params.id,    // ID del proveedor a actualizar (viene de la URL)
-      { 
-        companyName,    // Nuevo nombre de empresa
-        email,          // Nuevo email
-        phone,          // Nuevo teléfono
-        partDescription // Nueva descripción de partes
-      },
-      { new: true }     // Opción para retornar el documento actualizado
+      req.params.id,
+      updateData,
+      { new: true }
     );
     
     // Responder con mensaje de éxito

@@ -168,6 +168,20 @@ export default function ProgramacionViajesOperativos() {
     }
 
     try {
+      // Mostrar alerta de generando PDF
+      Swal.fire({
+        title: 'Generando PDF...',
+        html: '<div style="text-align: center;"><div style="border: 4px solid #f3f3f3; border-top: 4px solid #5F8EAD; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 0 auto;"></div><p style="margin-top: 10px; color: #666;">Preparando reporte, por favor espera</p></div>',
+        allowOutsideClick: false,
+        allowEscapeKey: false,
+        showConfirmButton: false,
+        didOpen: () => {
+          const style = document.createElement('style');
+          style.textContent = '@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }';
+          document.head.appendChild(style);
+        }
+      });
+
       const url = `${config.api.API_URL}/reportes-directos/diario/${selectedDate}`;
       const response = await api.get(url, { responseType: 'blob' });
 
@@ -395,7 +409,7 @@ export default function ProgramacionViajesOperativos() {
             {/* Título */}
             <div className="mb-8 pb-4 border-b-4 border-red-600">
               <h2 className="text-4xl sm:text-5xl font-bold text-red-600 text-center" style={{ textShadow: "2px 2px 0px rgba(0,0,0,0.1)" }}>
-                Programicio {formatearFechaCompleta(selectedDate)}
+                Programación {formatearFechaCompleta(selectedDate)}
               </h2>
             </div>
 

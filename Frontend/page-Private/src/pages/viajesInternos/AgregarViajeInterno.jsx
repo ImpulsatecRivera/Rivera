@@ -24,8 +24,30 @@ const TIPO_CARGA = [
   { value: "otro", label: "Otro" },
 ];
 
-const getMotoristaNombre = (m) =>
-  m?.nombre || m?.name || [m?.nombres, m?.apellidos].filter(Boolean).join(" ") || "Motorista";
+const getMotoristaNombre = (m) => {
+  if (!m) return "Sin motorista";
+  
+  // Priorizar campos name + lastName (del modelo estándar)
+  const primerNombre = m?.name || m?.nombres || m?.primerNombre || m?.firstName || "";
+  const apellidos = m?.lastName || m?.apellidos || m?.apellido || m?.primerApellido || "";
+  
+  // Si existen ambos, combinarlos
+  if (primerNombre && apellidos) {
+    return `${primerNombre} ${apellidos}`.trim();
+  }
+  
+  // Si solo hay apellidos, intentar extraer nombre de otros campos
+  if (apellidos && (m?.nombres || m?.primerNombre)) {
+    const nombre = m?.nombres || m?.primerNombre || "";
+    return `${nombre} ${apellidos}`.trim();
+  }
+  
+  // Fallback - si solo existe nombre O apellido
+  if (primerNombre) return String(primerNombre);
+  if (apellidos) return String(apellidos);
+  
+  return m?._id ? `Motorista ${String(m._id).slice(-6)}` : "Motorista";
+};
 
 const getCamionPlaca = (c) =>
   c?.placa || c?.licensePlate || c?.numeroPlaca || c?.placaCamion || c?.plate || "";
@@ -271,7 +293,14 @@ export default function AgregarViajeOperativo() {
 
   const camionesOptions = useMemo(() => {
     return (camiones || [])
-      .filter((c) => c?._id)
+      .filter((c) => {
+        if (!c?._id) return false;
+        const estado = String(c.state || c.estado || "").toUpperCase().replace(/\s+/g, "_");
+        // Excluir camiones en mantenimiento o no disponibles
+        return estado !== "MANTENIMIENTO" && 
+               estado !== "EN_MANTENIMIENTO" && 
+               estado !== "NO_DISPONIBLE";
+      })
       .map((c) => {
         const placa = getCamionPlaca(c);
         return {
@@ -301,7 +330,7 @@ export default function AgregarViajeOperativo() {
     if (!formData.clienteId) return "Selecciona un cliente";
     if (!formData.conductorId) return "Selecciona un motorista";
     if (!formData.truckId) return "Selecciona un camión";
-    if (!formData.departureTime) return "Ingresa fecha/hora de salida";
+    if (!formData.departureTime) return "Ingresa fecha/hora de Carga";
     if (!formData.rutaOrigen) return "Ingresa origen";
     if (!formData.rutaDestino) return "Ingresa destino";
     if (!formData.montoAcordado || Number(formData.montoAcordado) <= 0)
@@ -507,12 +536,12 @@ export default function AgregarViajeOperativo() {
           <div className="mb-6 sm:mb-8">
             <h3 className="text-lg sm:text-xl font-bold text-[#34353A] mb-4 flex items-center gap-2">
               <Calendar className="text-[#5F8EAD]" size={22} />
-              Fecha y Hora de Salida
+              Fecha y Hora de Carga
             </h3>
 
             <div>
               <label className="block text-sm font-semibold text-[#34353A] mb-2">
-                Fecha/Hora Salida *
+                Fecha/Hora Carga *
               </label>
               <input
                 type="datetime-local"
@@ -521,9 +550,7 @@ export default function AgregarViajeOperativo() {
                 onChange={handleInputChange}
                 className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#5F8EAD] focus:border-[#5F8EAD]"
               />
-              <p className="text-xs text-gray-500 mt-1">
-                La fecha de llegada se calculará automáticamente (24 horas después)
-              </p>
+            
             </div>
           </div>
 
@@ -918,10 +945,20 @@ export default function AgregarViajeOperativo() {
                                 );
                               }
 
+                              const allowedCamionesIds = camiones
+                                .filter((c) => {
+                                  if (!c?._id) return false;
+                                  const estado = String(c.state || c.estado || "").toUpperCase().replace(/\s+/g, "_");
+                                  return estado !== "MANTENIMIENTO" && estado !== "EN_MANTENIMIENTO";
+                                })
+                                .map((c) => String(c._id));
+
                               setFormData((p) => ({
                                 ...p,
                                 conductorId,
-                                truckId: associatedTruckId || p.truckId,
+                                truckId: associatedTruckId && allowedCamionesIds.includes(associatedTruckId)
+                                  ? associatedTruckId
+                                  : "",
                               }));
                             }}
                             className="w-4 h-4 text-[#5F8EAD] border-gray-300 focus:ring-[#5F8EAD] focus:ring-2 flex-shrink-0"
@@ -1029,20 +1066,17 @@ export default function AgregarViajeOperativo() {
               <div className="mt-4">
                 <label className="block text-xs font-semibold text-gray-600 mb-1 flex items-center gap-1">
                   <Truck size={14} />
-                  Camión * (asignado automáticamente)
+                  Camión *
                 </label>
                 <select
                   value={formData.truckId}
                   onChange={(e) => setFormData((p) => ({ ...p, truckId: e.target.value }))}
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl bg-gray-100 cursor-not-allowed text-gray-600"
-                  disabled={true}
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#5F8EAD] focus:border-[#5F8EAD]"
                 >
                   <option value="">
                     {loadingCamiones
                       ? "Cargando camiones..."
-                      : formData.truckId
-                      ? "Camión asignado"
-                      : "Selecciona un motorista primero"}
+                      : "Selecciona un camión disponible"}
                   </option>
                   {camionesOptions.map((c) => (
                     <option key={c.id} value={c.id}>
@@ -1081,7 +1115,7 @@ export default function AgregarViajeOperativo() {
               value={formData.observaciones}
               onChange={handleInputChange}
               rows={3}
-              placeholder="Notas adicionales del viaje..."
+              placeholder="Notas adicionales del viaje... (opcional)"
               className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#5F8EAD] focus:border-[#5F8EAD] resize-none"
             />
           </div>

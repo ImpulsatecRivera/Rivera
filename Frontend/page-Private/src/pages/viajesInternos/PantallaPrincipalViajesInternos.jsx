@@ -492,15 +492,6 @@ export default function PantallaPrincipalViajesOperativos() {
           <div className="flex items-center gap-3 flex-wrap">
             <button
               type="button"
-              onClick={handleCompletarTodos}
-              className="flex items-center gap-2 px-5 py-3 bg-[#5D9646] text-white rounded-xl hover:opacity-90 font-semibold shadow-lg"
-            >
-              <CheckCircle size={20} />
-              Completar Todos
-            </button>
-
-            <button
-              type="button"
               onClick={() => setIsReportesOpen(true)}
               className="flex items-center gap-2 px-5 py-3 bg-white border border-gray-200 text-gray-800 rounded-xl hover:bg-gray-50 font-semibold shadow-sm"
             >

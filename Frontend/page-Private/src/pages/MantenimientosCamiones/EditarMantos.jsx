@@ -63,9 +63,29 @@ export default function EditMantenimiento({ onClose }) {
       const mantenimiento = data.data || data;
 
       console.log('📦 Mantenimiento cargado:', mantenimiento);
+      console.log('📅 Fecha raw:', mantenimiento.fecha_mantenimiento);
+      console.log('📅 Fecha campo (si es diferente):', mantenimiento.fecha);
 
-      setManto({
-        fecha_mantenimiento: mantenimiento.fecha_mantenimiento || "",
+      // Convertir fecha ISO a formato datetime-local (YYYY-MM-DDTHH:mm)
+      let fechaFormateada = "";
+      const fechaRaw = mantenimiento.fecha_mantenimiento || mantenimiento.fecha;
+      
+      console.log('📅 Fecha a formatear:', fechaRaw);
+      
+      if (fechaRaw) {
+        const fecha = new Date(fechaRaw);
+        console.log('📅 Fecha parseada:', fecha);
+        console.log('📅 ¿Fecha válida?:', !isNaN(fecha.getTime()));
+        
+        if (!isNaN(fecha.getTime())) {
+          const pad = (n) => String(n).padStart(2, '0');
+          fechaFormateada = `${fecha.getFullYear()}-${pad(fecha.getMonth() + 1)}-${pad(fecha.getDate())}T${pad(fecha.getHours())}:${pad(fecha.getMinutes())}`;
+          console.log('📅 Fecha formateada para input:', fechaFormateada);
+        }
+      }
+
+      const mantoData = {
+        fecha_mantenimiento: fechaFormateada,
         tipo_de_mantenimiento: mantenimiento.tipo_de_mantenimiento || mantenimiento.tipoMantenimiento || "",
         descripcion: mantenimiento.descripcion || "",
         estado: mantenimiento.estado || "pendiente",
@@ -77,7 +97,10 @@ export default function EditMantenimiento({ onClose }) {
               proveedor: d.proveedor?._id || d.proveedor || ""
             }))
           : []
-      });
+      };
+
+      console.log('✅ Estado a setear:', mantoData);
+      setManto(mantoData);
     } catch (error) {
       console.error('❌ Error al cargar mantenimiento:', error);
       Swal.fire({
@@ -244,7 +267,7 @@ export default function EditMantenimiento({ onClose }) {
       )];
 
       const payload = {
-        fecha_mantenimiento: manto.fecha_mantenimiento,
+        fecha_mantenimiento: new Date(manto.fecha_mantenimiento).toISOString(),
         tipo_de_mantenimiento: manto.tipo_de_mantenimiento,
         descripcion: manto.descripcion,
         estado: manto.estado,
@@ -390,12 +413,13 @@ export default function EditMantenimiento({ onClose }) {
               color: '#34353A',
               mb: 1
             }}>
-              Fecha de Mantenimiento
+              Fecha y Hora de Mantenimiento
             </Typography>
             <TextField
               fullWidth
-              type="date"
-              value={manto?.fecha_mantenimiento ? new Date(manto.fecha_mantenimiento).toISOString().substring(0,10) : ""}
+              type="datetime-local"
+              inputProps={{ step: 60 }}
+              value={manto?.fecha_mantenimiento || ""}
               onChange={(e) => setManto({ ...manto, fecha_mantenimiento: e.target.value })}
               sx={{
                 '& .MuiOutlinedInput-root': {

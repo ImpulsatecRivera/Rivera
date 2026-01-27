@@ -33,6 +33,7 @@ mantenimientoCon.getMantenimineto = async(req, res) => {
         const mantenimientosFormateados = manto.map(m => ({
             _id: m._id,
             fecha_mantenimiento: m.fecha_mantenimiento,
+            fecha_finalizacion: m.fecha_finalizacion,
             mes: m.mes,
             ano: m.ano,
             tipo_de_mantenimiento: m.tipo_de_mantenimiento,
@@ -131,6 +132,16 @@ mantenimientoCon.obtenerMantoId = async(req, res) => {
                 month: 'long',
                 day: 'numeric'
             }),
+            fecha_finalizacion: manto.fecha_finalizacion,
+            fechaFinalizacionFormateada: manto.fecha_finalizacion
+                ? manto.fecha_finalizacion.toLocaleString('es-ES', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                })
+                : null,
             mes: manto.mes,
             ano: manto.ano,
             periodo: `${obtenerNombreMes(manto.mes)} ${manto.ano}`,
@@ -224,6 +235,18 @@ mantenimientoCon.postMantenimiento = async(req, res) => {
                 success: false,
                 message: 'Camión no encontrado'
             });
+        }
+
+        // Marcar camión como en mantenimiento
+        try {
+            await camiones.findByIdAndUpdate(
+                ciculatioCard,
+                { state: 'MANTENIMIENTO' },
+                { new: true }
+            );
+            console.log(`🚚 Camión ${ciculatioCard} marcado como NO DISPONIBLE por mantenimiento`);
+        } catch (camionStateError) {
+            console.error('❌ No se pudo actualizar el estado del camión a NO DISPONIBLE:', camionStateError);
         }
 
         // ✅ Filtrar y validar proveedores (array principal)
@@ -452,6 +475,7 @@ mantenimientoCon.ActualizarMantenimiento = async (req, res) => {
 
         const {
             fecha_mantenimiento,
+            fecha_finalizacion,
             tipo_de_mantenimiento,
             descripcion,
             detalles,
@@ -477,6 +501,10 @@ mantenimientoCon.ActualizarMantenimiento = async (req, res) => {
             mantoExisting.ano = nuevaFecha.getFullYear();
             
             console.log('📅 Fecha actualizada:', nuevaFecha.toISOString());
+        }
+
+        if(fecha_finalizacion) {
+            mantoExisting.fecha_finalizacion = new Date(fecha_finalizacion);
         }
 
         // Actualizar tipo de mantenimiento si se proporciona
@@ -536,16 +564,20 @@ mantenimientoCon.ActualizarMantenimiento = async (req, res) => {
             const estadoAnterior = mantoExisting.estado;
             mantoExisting.estado = estado;
 
-            // Si el estado cambia a "completado", actualizar el camión a "DISPONIBLE"
+            // Si el estado cambia a "completado", actualizar el camión a "MANTENIMIENTO"
             if(estado === 'completado' && estadoAnterior !== 'completado') {
                 try {
+                    mantoExisting.fecha_finalizacion = fecha_finalizacion
+                        ? new Date(fecha_finalizacion)
+                        : new Date();
+
                     const camionId = mantoExisting.ciculatioCard;
                     await camiones.findByIdAndUpdate(
                         camionId,
-                        { state: 'DISPONIBLE' },
+                        { state: 'MANTENIMIENTO' },
                         { new: true }
                     );
-                    console.log(`✅ Camión ${camionId} actualizado a DISPONIBLE`);
+                    console.log(`✅ Camión ${camionId} actualizado a MANTENIMIENTO`);
                 } catch (camionError) {
                     console.error('❌ Error al actualizar estado del camión:', camionError);
                 }

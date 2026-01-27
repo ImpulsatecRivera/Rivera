@@ -15,6 +15,10 @@ const ResumenDieselSchema = new mongoose.Schema({
     type: Date,
     default: Date.now,
   },
+  fechaHora: {
+    type: Date,
+    default: Date.now,
+  },
   mes: {
     type: Number,
     required: true,

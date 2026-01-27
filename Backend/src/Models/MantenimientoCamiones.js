@@ -44,6 +44,12 @@ const manteniminetoSChema = new Schema({
         required: true,
         default: Date.now
     },
+    // Fecha y hora en la que se completó el mantenimiento
+    fecha_finalizacion: {
+        type: Date,
+        required: false,
+        default: null
+    },
     mes: {
         type: Number,
         required: true
