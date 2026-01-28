@@ -21,6 +21,7 @@ import LottieView from 'lottie-react-native';
 import * as ImagePicker from 'expo-image-picker';
 import Header from "../components/Header";
 import { useProfile } from "../hooks/useProfile";
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // ✅ CONFIGURAR TU API URL
 const API_URL = "https://rivera-test-629395560179.us-west1.run.app/api";
@@ -74,8 +75,6 @@ const SmallInfoCard = ({ icon, label, value }) => (
   </View>
 );
 
-
-
 export default function CamionProfileScreen() {
   const { profile, loading, fetchProfile } = useProfile();
   const insets = useSafeAreaInsets();
@@ -83,6 +82,7 @@ export default function CamionProfileScreen() {
   const [modalVisible, setModalVisible] = useState(false);
   
   // Estados del formulario
+  const [placaCamion, setPlacaCamion] = useState('');
   const [galones, setGalones] = useState('');
   const [total, setTotal] = useState('');
   const [numeroMarchamo, setNumeroMarchamo] = useState('');
@@ -121,7 +121,6 @@ export default function CamionProfileScreen() {
         color: "",
         state: "",
         gasoline: "",
-        camionId: null,
       };
     }
 
@@ -151,12 +150,12 @@ export default function CamionProfileScreen() {
       color, 
       state, 
       gasoline,
-      camionId: raw._id || raw.id || null,
     };
   }, [profile]);
 
   // ✅ LIMPIAR FORMULARIO
   const limpiarFormulario = () => {
+    setPlacaCamion('');
     setGalones('');
     setTotal('');
     setNumeroMarchamo('');
@@ -164,94 +163,187 @@ export default function CamionProfileScreen() {
   };
 
   // ✅ FUNCIÓN PARA SUBIR REGISTRO DE GAS
-  const registrarGas = async () => {
-    try {
-      // Validaciones
-      if (!galones || !total) {
-        Alert.alert("Campos incompletos", "Por favor completa todos los campos");
-        return;
-      }
-
-      if (!comprobante) {
-        Alert.alert("Comprobante requerido", "Por favor agrega una foto del comprobante");
-        return;
-      }
-
-      if (!camionData.camionId) {
-        Alert.alert("Error", "No se encontró el ID del camión");
-        return;
-      }
-
-      setUploading(true);
-
-      // Obtener fecha actual
-      const fechaActual = new Date();
-      const mes = fechaActual.getMonth() + 1; // 1-12
-      const ano = fechaActual.getFullYear();
-
-      // Crear FormData
-      const formData = new FormData();
-      
-      // Agregar imagen
-      formData.append('comprobante', {
-        uri: Platform.OS === 'ios' ? comprobante.uri.replace('file://', '') : comprobante.uri,
-        type: comprobante.mimeType || 'image/jpeg',
-        name: comprobante.fileName || `comprobante_${Date.now()}.jpg`,
-      });
-
-      // Agregar datos del formulario
-      formData.append('CicurlationCard', camionData.camionId);
-      formData.append('Galones', galones);
-      formData.append('Total', total);
-      formData.append('fecha', fechaActual.toISOString());
-      formData.append('mes', mes.toString());
-      formData.append('ano', ano.toString());
-      formData.append('estado', 'pendiente'); // Estado por defecto
-      if (numeroMarchamo.trim()) {
-        formData.append('numeroMarchamo', numeroMarchamo.trim());
-      }
-
-      console.log('📤 Registrando gas...');
-
-      const response = await fetch(`${API_URL}/resumen`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-        body: formData,
-      });
-
-      const data = await response.json();
-
-      if (response.ok && data.success) {
-        Alert.alert(
-          "¡Registro exitoso! ⛽",
-          `Has agregado ${galones} galones por $${total}`,
-          [
-            {
-              text: "OK",
-              onPress: () => {
-                setModalVisible(false);
-                limpiarFormulario();
-                fetchProfile?.();
-              }
-            }
-          ]
-        );
-      } else {
-        throw new Error(data.message || 'Error al registrar el gas');
-      }
-
-    } catch (error) {
-      console.error('❌ Error registrando gas:', error);
-      Alert.alert(
-        "Error",
-        error.message || "No se pudo registrar el gas"
-      );
-    } finally {
-      setUploading(false);
+  // ✅ FUNCIÓN PARA SUBIR REGISTRO DE GAS
+// ✅ FUNCIÓN PARA SUBIR REGISTRO DE GAS
+// ✅ FUNCIÓN PARA SUBIR REGISTRO DE GAS
+// ✅ FUNCIÓN PARA SUBIR REGISTRO DE GAS
+// ✅ FUNCIÓN PARA SUBIR REGISTRO DE GAS
+const registrarGas = async () => {
+  try {
+    // Validaciones
+    if (!placaCamion.trim()) {
+      Alert.alert("Campo requerido", "Por favor escribe la placa del camión");
+      return;
     }
-  };
+
+    if (!galones || !total) {
+      Alert.alert("Campos incompletos", "Por favor completa galones y total");
+      return;
+    }
+
+    if (!comprobante) {
+      Alert.alert("Comprobante requerido", "Por favor agrega una foto del comprobante");
+      return;
+    }
+
+    setUploading(true);
+
+    // ✅ PASO 1: OBTENER EL TOKEN DE AUTENTICACIÓN
+    const token = await AsyncStorage.getItem('token');
+    
+    if (!token) {
+      throw new Error('No se encontró el token de autenticación. Por favor inicia sesión nuevamente.');
+    }
+
+    // ✅ PASO 2: OBTENER TODOS LOS CAMIONES CON AUTENTICACIÓN
+    console.log('🔍 Buscando camión con placa:', placaCamion.trim().toUpperCase());
+    
+    const camionesResponse = await fetch(`${API_URL}/camiones`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+    
+    if (!camionesResponse.ok) {
+      const errorText = await camionesResponse.text();
+      console.error('❌ Error respuesta camiones:', errorText);
+      throw new Error('Error al obtener la lista de camiones');
+    }
+
+    const camionesData = await camionesResponse.json();
+    
+    console.log('📦 Respuesta del servidor:', camionesData);
+    
+    // ✅ MANEJAR ESTRUCTURA DE RESPUESTA
+    let listaCamiones = [];
+    
+    if (camionesData.data && Array.isArray(camionesData.data)) {
+      listaCamiones = camionesData.data;
+    } else if (Array.isArray(camionesData)) {
+      listaCamiones = camionesData;
+    }
+
+    if (!listaCamiones || listaCamiones.length === 0) {
+      throw new Error('No hay camiones registrados en el sistema');
+    }
+
+    console.log('📋 Total de camiones:', listaCamiones.length);
+
+    // Buscar el camión por placa (case-insensitive)
+    const placaBuscada = placaCamion.trim().toUpperCase();
+    const camionEncontrado = listaCamiones.find(camion => {
+      const placaCamionActual = (camion.licensePlate || camion.placa || '').toUpperCase();
+      return placaCamionActual === placaBuscada;
+    });
+
+    if (!camionEncontrado) {
+      // Mostrar las primeras 5 placas disponibles
+      const placasDisponibles = listaCamiones
+        .slice(0, 5)
+        .map(c => c.licensePlate || c.placa)
+        .filter(Boolean)
+        .join(', ');
+      
+      throw new Error(
+        `No se encontró el camión con placa: ${placaBuscada}\n\n` +
+        `Verifica que la placa esté correctamente escrita.\n\n` +
+        `Ejemplos de placas registradas:\n${placasDisponibles}`
+      );
+    }
+
+    const camionId = camionEncontrado._id || camionEncontrado.id;
+    console.log('✅ Camión encontrado:', {
+      id: camionId,
+      placa: camionEncontrado.licensePlate || camionEncontrado.placa,
+      nombre: camionEncontrado.name || camionEncontrado.nombre
+    });
+
+    // ✅ PASO 3: PREPARAR FECHA LOCAL (EL SALVADOR UTC-6)
+    const fechaActual = new Date();
+    
+    // Ajustar a zona horaria de El Salvador (UTC-6)
+    const offsetElSalvador = -6 * 60; // -6 horas en minutos
+    const offsetLocal = fechaActual.getTimezoneOffset(); // offset del dispositivo
+    const diferenciaMinutos = offsetElSalvador - offsetLocal;
+    
+    const fechaElSalvador = new Date(fechaActual.getTime() + (diferenciaMinutos * 60 * 1000));
+    
+    const mes = fechaElSalvador.getMonth() + 1;
+    const ano = fechaElSalvador.getFullYear();
+    
+    // Crear fecha ISO en zona horaria de El Salvador
+    const pad = (n) => String(n).padStart(2, '0');
+    const fechaISO = `${ano}-${pad(mes)}-${pad(fechaElSalvador.getDate())}T${pad(fechaElSalvador.getHours())}:${pad(fechaElSalvador.getMinutes())}:${pad(fechaElSalvador.getSeconds())}.000-06:00`;
+    
+    console.log('📅 Fecha local del dispositivo:', fechaActual.toISOString());
+    console.log('📅 Fecha ajustada El Salvador:', fechaISO);
+
+    const formData = new FormData();
+    
+    // Agregar imagen
+    formData.append('comprobante', {
+      uri: Platform.OS === 'ios' ? comprobante.uri.replace('file://', '') : comprobante.uri,
+      type: comprobante.mimeType || 'image/jpeg',
+      name: comprobante.fileName || `comprobante_${Date.now()}.jpg`,
+    });
+
+    // Agregar datos del formulario
+    formData.append('CicurlationCard', camionId);
+    formData.append('Galones', galones);
+    formData.append('Total', total);
+    formData.append('fecha', fechaISO); // ✅ Fecha con zona horaria de El Salvador
+    formData.append('mes', mes.toString());
+    formData.append('ano', ano.toString());
+    formData.append('estado', 'pendiente');
+    if (numeroMarchamo.trim()) {
+      formData.append('numeroMarchamo', numeroMarchamo.trim());
+    }
+
+    console.log('📤 Registrando gas para camión ID:', camionId);
+
+    const response = await fetch(`${API_URL}/resumen`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+      body: formData,
+    });
+
+    const data = await response.json();
+    
+    console.log('📥 Respuesta del registro:', data);
+
+    if (response.ok && data.success) {
+      Alert.alert(
+        "¡Registro exitoso! ⛽",
+        `Has agregado ${galones} galones por $${total} al camión ${placaBuscada}`,
+        [
+          {
+            text: "OK",
+            onPress: () => {
+              setModalVisible(false);
+              limpiarFormulario();
+              fetchProfile?.();
+            }
+          }
+        ]
+      );
+    } else {
+      throw new Error(data.message || 'Error al registrar el gas');
+    }
+
+  } catch (error) {
+    console.error('❌ Error registrando gas:', error);
+    Alert.alert(
+      "Error",
+      error.message || "No se pudo registrar el gas"
+    );
+  } finally {
+    setUploading(false);
+  }
+};
 
   // ✅ FUNCIÓN PARA TOMAR FOTO
   const tomarFoto = async () => {
@@ -372,29 +464,27 @@ export default function CamionProfileScreen() {
             <View style={styles.fullWidthCard}>
               <SmallInfoCard icon="✅" label="Estado" value={camionData.state} />
             </View>
-
-            {/* BOTÓN PARA REGISTRAR GAS */}
-            {!!camionData.gasoline && (
-              <TouchableOpacity 
-                style={[
-                  styles.addGasButton,
-                  uploading && styles.addGasButtonDisabled
-                ]}
-                disabled={uploading}
-                onPress={() => setModalVisible(true)}
-              >
-                <LottieView
-                  source={require('../../assets/lottie/gasoline.json')}
-                  autoPlay
-                  loop
-                  style={styles.addGasLottie}
-                />
-                <Text style={styles.addGasText}>¿Agregaste gas?</Text>
-                <Text style={styles.addGasSubtext}>Toca para registrar</Text>
-              </TouchableOpacity>
-            )}
           </>
         )}
+
+        {/* BOTÓN PARA REGISTRAR GAS - Siempre visible */}
+        <TouchableOpacity 
+          style={[
+            styles.addGasButton,
+            uploading && styles.addGasButtonDisabled
+          ]}
+          disabled={uploading}
+          onPress={() => setModalVisible(true)}
+        >
+          <LottieView
+            source={require('../../assets/lottie/gasoline.json')}
+            autoPlay
+            loop
+            style={styles.addGasLottie}
+          />
+          <Text style={styles.addGasText}>¿Agregaste gas?</Text>
+          <Text style={styles.addGasSubtext}>Toca para registrar</Text>
+        </TouchableOpacity>
       </ScrollView>
 
       {/* MODAL FORMULARIO */}
@@ -421,7 +511,7 @@ export default function CamionProfileScreen() {
                 <View>
                   <Text style={styles.modalTitle}>Registrar carga de gas ⛽</Text>
                   <Text style={styles.modalSubtitle}>
-                    Camión: {camionData.resumen}
+                    Completa los datos del registro
                   </Text>
                 </View>
                 <TouchableOpacity 
@@ -438,6 +528,18 @@ export default function CamionProfileScreen() {
               {/* Formulario */}
               <View style={styles.formContainer}>
                 
+                {/* Campo Placa del Camión */}
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>🚛 Placa del camión</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Ej: P-123456"
+                    value={placaCamion}
+                    onChangeText={setPlacaCamion}
+                    autoCapitalize="characters"
+                  />
+                </View>
+
                 {/* Campo Galones */}
                 <View style={styles.inputGroup}>
                   <Text style={styles.inputLabel}>⛽ Galones cargados</Text>
@@ -667,75 +769,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 
-  gasolineCard: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 12,
-    ...Platform.select({
-      ios: {
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.08,
-        shadowRadius: 8,
-      },
-      android: { 
-        elevation: 3 
-      },
-    }),
-  },
-
-  gasolineHeader: {
-    marginBottom: 20,
-  },
-
-  gasolineTitleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 10,
-  },
-
-  gasolineEmoji: {
-    fontSize: 28,
-  },
-
-  gasolineTitle: {
-    fontSize: 18,
-    fontWeight: "800",
-    color: "#111",
-  },
-
-  chartContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  chartLegend: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: 20,
-    marginTop: 20,
-  },
-
-  legendItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-
-  legendDot: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-  },
-
-  legendText: {
-    fontSize: 13,
-    color: "#6B7280",
-    fontWeight: "600",
-  },
-
   addGasButton: {
     marginTop: 20,
     backgroundColor: "#1F2937",
@@ -760,11 +793,6 @@ const styles = StyleSheet.create({
   addGasButtonDisabled: {
     backgroundColor: "#9CA3AF",
     opacity: 0.7,
-  },
-
-  addGasIcon: {
-    fontSize: 32,
-    marginBottom: 8,
   },
 
   addGasLottie: {

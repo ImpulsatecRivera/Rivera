@@ -12,34 +12,23 @@ import {
 import { StatusBar } from "expo-status-bar";
 import LottieView from "lottie-react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs"; // ✅ CLAVE
+import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 
 import { useTrips } from "../hooks/useTrips";
 import { useProfile } from "../hooks/useProfile";
 
 // Components
 import LogoHeader from "../components/LogoHeader";
-import ServiceCard from "../components/ServiceCard";
 
 const InicioScreen = ({ navigation }) => {
   const insets = useSafeAreaInsets();
-  const tabBarHeight = useBottomTabBarHeight(); // ✅ altura real del tabBar
+  const tabBarHeight = useBottomTabBarHeight();
   const { profile, loading: profileLoading } = useProfile();
 
-  // Estados para clima y hora
-  const [currentTime, setCurrentTime] = useState(new Date());
-  const [weather, setWeather] = useState(null);
-  const [weatherLoading, setWeatherLoading] = useState(false);
   const [selectedDay, setSelectedDay] = useState(0); // 0 = hoy, 1 = mañana, etc.
 
   // Animaciones
-  const pulseAnim = useRef(new Animated.Value(1)).current;
   const slideAnim = useRef(new Animated.Value(0)).current;
-
-  // Timers/refs
-  const clockTimerRef = useRef(null);
-  const weatherTimerRef = useRef(null);
-  const pulseLoopRef = useRef(null);
 
   const motoristaId = profile?.id || profile?._id;
 
@@ -47,14 +36,11 @@ const InicioScreen = ({ navigation }) => {
     loading: tripsLoading,
     totalTrips,
     refrescarViajes,
-    getViajesHoy,
-    getEstadisticas,
     viajesPorDia,
   } = useTrips(motoristaId);
 
   const loading = profileLoading || tripsLoading;
 
-  // ✅ ESPACIO REAL para que el último cuadro NO quede debajo del tab flotante
   const bottomSpace = tabBarHeight + 24;
 
   // ===== ANIMACIONES =====
@@ -64,109 +50,9 @@ const InicioScreen = ({ navigation }) => {
       duration: 800,
       useNativeDriver: true,
     }).start();
-
-    const pulseAnimation = Animated.sequence([
-      Animated.timing(pulseAnim, {
-        toValue: 1.05,
-        duration: 1000,
-        useNativeDriver: true,
-      }),
-      Animated.timing(pulseAnim, {
-        toValue: 1,
-        duration: 1000,
-        useNativeDriver: true,
-      }),
-    ]);
-
-    pulseLoopRef.current = Animated.loop(pulseAnimation);
-    pulseLoopRef.current.start();
-
-    return () => {
-      try {
-        pulseLoopRef.current?.stop?.();
-      } catch {}
-    };
-  }, [pulseAnim, slideAnim]);
-
-  // ===== HORA =====
-  useEffect(() => {
-    clockTimerRef.current = setInterval(() => {
-      setCurrentTime(new Date());
-    }, 60000);
-
-    return () => {
-      if (clockTimerRef.current) clearInterval(clockTimerRef.current);
-    };
-  }, []);
-
-  // ===== CLIMA =====
-  const obtenerClima = async () => {
-    setWeatherLoading(true);
-
-    // ✅ limpia timeout anterior si el usuario refresca rápido
-    if (weatherTimerRef.current) clearTimeout(weatherTimerRef.current);
-
-    try {
-      weatherTimerRef.current = setTimeout(() => {
-        const climas = [
-          { temp: 28, descripcion: "Perfecto para manejar", icono: "☀️", color: "#FFD700", bg: "#FFF8DC" },
-          { temp: 25, descripcion: "Día agradable", icono: "⛅", color: "#87CEEB", bg: "#F0F8FF" },
-          { temp: 22, descripcion: "Fresco y cómodo", icono: "☁️", color: "#B0C4DE", bg: "#F5F5F5" },
-          { temp: 30, descripcion: "¡Mantente hidratado!", icono: "🌡️", color: "#FF6347", bg: "#FFE4E1" },
-          { temp: 26, descripcion: "Clima ideal", icono: "🌤️", color: "#98FB98", bg: "#F0FFF0" },
-        ];
-        setWeather(climas[Math.floor(Math.random() * climas.length)]);
-        setWeatherLoading(false);
-      }, 900);
-    } catch {
-      setWeather({
-        temp: "🤷",
-        descripcion: "Sorpresa del clima",
-        icono: "🌈",
-        color: "#FF69B4",
-        bg: "#FFF0F5",
-      });
-      setWeatherLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    obtenerClima();
-    return () => {
-      if (weatherTimerRef.current) clearTimeout(weatherTimerRef.current);
-    };
-  }, []);
+  }, [slideAnim]);
 
   // ===== UTILIDADES =====
-  const formatearHora = (fecha) =>
-    fecha.toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit", hour12: false });
-
-  const obtenerSaludo = (hora) => {
-    const h = hora.getHours();
-    const saludos = {
-      mañana: ["¡Buenos días!", "¡Que tengas un gran día!", "¡Empecemos con energía!"],
-      tarde: ["¡Buenas tardes!", "¡Sigue así!", "¡Excelente trabajo!"],
-      noche: ["¡Buenas noches!", "¡Ya casi terminas!", "¡Último esfuerzo!"],
-    };
-
-    let categoria = "noche";
-    if (h >= 5 && h < 12) categoria = "mañana";
-    else if (h >= 12 && h < 18) categoria = "tarde";
-
-    const opciones = saludos[categoria];
-    return opciones[Math.floor(Math.random() * opciones.length)];
-  };
-
-  const getInitials = (name) => {
-    if (!name) return "😊";
-    return name
-      .split(" ")
-      .map((w) => w.charAt(0))
-      .join("")
-      .toUpperCase()
-      .substring(0, 2);
-  };
-
   const getFirstName = (fullName) => {
     if (!fullName) return "Conductor";
     return fullName.split(" ")[0];
@@ -176,12 +62,11 @@ const InicioScreen = ({ navigation }) => {
   const formatearHoraViaje = (viaje) => {
     try {
       if (!viaje) return "—";
-      // Intenta con las diferentes propiedades posibles
       const fecha = viaje._fechaSalidaISO || viaje.horaSalida || viaje.fechaSalida;
       if (!fecha) return "—";
       
       const fechaObj = new Date(fecha);
-      if (isNaN(fechaObj.getTime())) return "—"; // Invalid Date
+      if (isNaN(fechaObj.getTime())) return "—";
       
       return fechaObj.toLocaleTimeString("es-ES", {
         hour: "2-digit",
@@ -221,25 +106,19 @@ const InicioScreen = ({ navigation }) => {
   // Buscar viajes del día seleccionado
   const viajesDelDia = useMemo(() => {
     if (!diaSeleccionado || !viajesPorDia) {
-      console.log("❌ Sin data:", { diaSeleccionado, viajesPorDia });
       return [];
     }
     
     const diaFecha = diaSeleccionado.fecha;
-    console.log("🔍 Buscando viajes para:", diaFecha);
-    console.log("📋 Total días con viajes:", viajesPorDia.length);
     
     if (Array.isArray(viajesPorDia)) {
       const diaEncontrado = viajesPorDia.find((d) => d.fecha === diaFecha);
-      console.log("✅ Día encontrado:", diaEncontrado);
       
       if (diaEncontrado && Array.isArray(diaEncontrado.viajes)) {
-        console.log("✈️ Viajes del día:", diaEncontrado.viajes.length);
         return diaEncontrado.viajes;
       }
     }
     
-    console.log("⚠️ No hay viajes para:", diaFecha);
     return [];
   }, [viajesPorDia, diaSeleccionado]);
 
@@ -262,10 +141,16 @@ const InicioScreen = ({ navigation }) => {
 
   const onRefresh = () => {
     refrescarViajes?.();
-    obtenerClima();
   };
 
   const handleButtonPress = (action) => action?.();
+
+  const viajesHoy = useMemo(() => {
+    const hoy = diasSemana[0]?.fecha;
+    if (!hoy || !viajesPorDia) return [];
+    const diaHoy = viajesPorDia.find((d) => d.fecha === hoy);
+    return diaHoy?.viajes || [];
+  }, [viajesPorDia, diasSemana]);
 
   // ===== UI =====
   return (
@@ -294,10 +179,10 @@ const InicioScreen = ({ navigation }) => {
       >
         <LogoHeader />
 
-        {/* HEADER CON CLIMA */}
+        {/* PIZARRA - DÍAS DE LA SEMANA */}
         <Animated.View
           style={[
-            styles.headerPizarra,
+            styles.pizarraContainer,
             {
               transform: [
                 {
@@ -310,31 +195,6 @@ const InicioScreen = ({ navigation }) => {
             },
           ]}
         >
-          <View style={styles.headerRow}>
-            <View>
-              <Text style={styles.timeTextBig}>{formatearHora(currentTime)}</Text>
-              <Text style={styles.nameTextHeader}>{getFirstName(profile?.name || profile?.nombre)}</Text>
-            </View>
-
-            <TouchableOpacity
-              style={styles.weatherSectionPizarra}
-              onPress={() => handleButtonPress(obtenerClima)}
-              activeOpacity={0.7}
-            >
-              {weatherLoading ? (
-                <Text style={styles.weatherIconBig}>🔄</Text>
-              ) : weather ? (
-                <>
-                  <Text style={styles.weatherIconBig}>{weather.icono}</Text>
-                  <Text style={styles.tempTextBig}>{weather.temp}°</Text>
-                </>
-              ) : null}
-            </TouchableOpacity>
-          </View>
-        </Animated.View>
-
-        {/* PIZARRA - DÍAS DE LA SEMANA */}
-        <View style={styles.pizarraContainer}>
           {/* Selector de días */}
           <ScrollView
             horizontal
@@ -426,7 +286,7 @@ const InicioScreen = ({ navigation }) => {
               </View>
             )}
           </View>
-        </View>
+        </Animated.View>
 
         {/* ESTADÍSTICAS RÁPIDAS */}
         {totalTrips > 0 && (
@@ -487,58 +347,6 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#f0f4f8" },
   scrollView: { flex: 1 },
   content: { flexGrow: 1 },
-
-  // HEADER PIZARRA
-  headerPizarra: {
-    backgroundColor: "#2c3e50",
-    marginHorizontal: 20,
-    marginBottom: 20,
-    borderRadius: 20,
-    padding: 20,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.25,
-    shadowRadius: 12,
-    elevation: 8,
-  },
-
-  headerRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-
-  timeTextBig: {
-    fontSize: 42,
-    fontWeight: "800",
-    color: "#fff",
-    marginBottom: 5,
-  },
-
-  nameTextHeader: {
-    fontSize: 16,
-    color: "#ecf0f1",
-    fontWeight: "600",
-  },
-
-  weatherSectionPizarra: {
-    alignItems: "center",
-    backgroundColor: "rgba(255, 255, 255, 0.15)",
-    padding: 15,
-    borderRadius: 20,
-    minWidth: 100,
-  },
-
-  weatherIconBig: {
-    fontSize: 40,
-    marginBottom: 5,
-  },
-
-  tempTextBig: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: "#fff",
-  },
 
   // PIZARRA CONTAINER
   pizarraContainer: {
