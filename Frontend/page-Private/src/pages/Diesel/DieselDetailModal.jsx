@@ -100,7 +100,6 @@ const DieselDetailModal = ({ dieselId, isOpen, onClose }) => {
     const date = parseLocalDate(fecha);
     if (!date) return "N/A";
     return date.toLocaleDateString("es-ES", {
-      weekday: "long",
       year: "numeric",
       month: "long",
       day: "numeric",
@@ -131,7 +130,7 @@ const DieselDetailModal = ({ dieselId, isOpen, onClose }) => {
       />
 
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-        <div className="bg-white rounded-3xl shadow-2xl w-full max-w-4xl overflow-hidden">
+        <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden">
           {/* HEADER */}
           <div className="bg-gradient-to-r from-[#34353A] to-[#5F8EAD] px-8 py-6 flex justify-between items-start">
             <div>
