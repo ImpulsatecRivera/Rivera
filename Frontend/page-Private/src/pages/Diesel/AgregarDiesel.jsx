@@ -33,20 +33,10 @@ const AgregarDiesel = () => {
     return `${yyyy}-${mm}-${dd}`;
   };
 
-  const getTodayDateTimeISO = () => {
-    const d = new Date();
-    const yyyy = d.getFullYear();
-    const mm = String(d.getMonth() + 1).padStart(2, "0");
-    const dd = String(d.getDate()).padStart(2, "0");
-    const hh = String(d.getHours()).padStart(2, "0");
-    const min = String(d.getMinutes()).padStart(2, "0");
-    return `${yyyy}-${mm}-${dd}T${hh}:${min}`;
-  };
-
   const normalizeDateToISO = (dateStr) => {
     if (!dateStr) return null;
-    // Para datetime-local, el formato es "YYYY-MM-DDTHH:mm"
-    const localDate = new Date(dateStr);
+    // Para date, el formato es "YYYY-MM-DD"
+    const localDate = new Date(dateStr + "T00:00:00");
     return localDate.toISOString();
   };
 
@@ -91,7 +81,7 @@ const AgregarDiesel = () => {
     const { name, value } = e.target;
 
     if (name === "fecha") {
-      const today = getTodayDateTimeISO();
+      const today = getTodayISO();
       if (value && value > today) {
         Swal.fire({
           icon: 'warning',
@@ -125,7 +115,7 @@ const AgregarDiesel = () => {
       return;
     }
 
-    if (formData.fecha > getTodayDateTimeISO()) {
+    if (formData.fecha > getTodayISO()) {
       Swal.fire({
         icon: 'warning',
         title: 'Fecha no válida',
@@ -293,11 +283,11 @@ const AgregarDiesel = () => {
               <div>
                 <label className="block text-sm font-semibold text-[#34353A] mb-2">Fecha *</label>
                 <input
-                  type="datetime-local"
+                  type="date"
                   name="fecha"
                   value={formData.fecha}
                   onChange={handleInputChange}
-                  max={getTodayDateTimeISO()}
+                  max={getTodayISO()}
                   className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#5F8EAD] focus:border-[#5F8EAD]"
                 />
               </div>
