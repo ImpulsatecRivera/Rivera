@@ -81,20 +81,21 @@ const MaintenanceTimeline = ({ mantenimientos }) => {
   };
 
   const formatearFechaCompleta = (fecha) => {
-  if (!fecha) return 'N/A';
-  
-  // Crear fecha y ajustar por timezone offset
-  const date = new Date(fecha);
-  
-  return date.toLocaleDateString('es-ES', { 
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-    timeZone: 'America/El_Salvador' // ← Forzar zona horaria
-  });
-};
+    if (!fecha) return 'N/A';
+    
+    // Crear fecha y ajustar por timezone offset
+    const date = new Date(fecha);
+    
+    return date.toLocaleString('es-ES', { 
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true, // ✅ Formato 12 horas (AM/PM)
+      timeZone: 'America/El_Salvador'
+    });
+  };
 
   const formatearMoneda = (cantidad) => {
     return new Intl.NumberFormat('es-US', { 
@@ -199,8 +200,8 @@ const MaintenanceTimeline = ({ mantenimientos }) => {
                               <div className="mt-3 space-y-1">
                                 <div className="flex items-center gap-2 text-xs text-gray-600">
                                   <Clock size={12} className="text-[#5F8EAD]" />
-                                  <span className="font-semibold">Registrado:</span>
-                                  <span>{formatearFechaCompleta(mant.createdAt || mant.fecha_mantenimiento)}</span>
+                                  <span className="font-semibold">Fecha de Servicio:</span>
+                                  <span>{formatearFechaCompleta(mant.fecha_mantenimiento)}</span>
                                 </div>
                                 {mant.estado === 'completado' && mant.updatedAt && (
                                   <div className="flex items-center gap-2 text-xs text-gray-600">

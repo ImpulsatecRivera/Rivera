@@ -314,7 +314,26 @@ const AgregarMotorista = () => {
         showSuccessAlert();
       } else {
         const errorData = await response.json();
-        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+        Swal.close();
+
+        // ✅ Mostrar alerta específica para DUI duplicado
+        if (errorData.message?.includes('DUI ya está registrado')) {
+          Swal.fire({
+            title: '⚠️ DUI Duplicado',
+            html: `
+              <p style="margin-bottom: 15px;">El número de DUI ingresado ya está registrado en el sistema.</p>
+              <p style="color: #dc2626; font-weight: 500;">Por favor verifica el número de identificación.</p>
+            `,
+            icon: 'warning',
+            confirmButtonText: 'Entendido',
+            confirmButtonColor: '#f59e0b',
+            allowOutsideClick: false,
+            customClass: { popup: 'animated pulse' }
+          });
+        } else {
+          throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+        }
+        return;
       }
     } catch (error) {
       console.error('Error capturado:', error);

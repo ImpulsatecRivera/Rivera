@@ -1736,16 +1736,22 @@ ReporteConsolidadoController.generarPDFRango = async (req, res) => {
                 </thead>
                 <tbody>
                     ${camion.diasConViajes.map(dia => {
-                        const ingresosDia = dia.viajes.reduce((acc, v) => acc + (v.monto || 0), 0);
-                        const planillaDia = dia.viajes.reduce((acc, v) => acc + (v.planilla || 0), 0);
+                        // Acumular en centavos y dividir al final para evitar errores de precisión
+                        const ingresosDiaCentavos = dia.viajes.reduce((acc, v) => acc + Math.round((v.monto || 0) * 100), 0);
+                        const ingresosDia = ingresosDiaCentavos / 100;
+                        
+                        const planillaDiaCentavos = dia.viajes.reduce((acc, v) => acc + Math.round((v.planilla || 0) * 100), 0);
+                        const planillaDia = planillaDiaCentavos / 100;
                         
                         // Calcular diesel del día: PRIMERO intentar desde registros, si no, sumar de los viajes
                         let dieselDia = 0;
                         let infoGasolinaDelDia = null;
                         
                         if (dia.registrosDiesel && dia.registrosDiesel.length > 0) {
-                            dieselDia = dia.registrosDiesel.reduce((acc, d) => acc + (d.Total || 0), 0);
-                            const galonesDia = dia.registrosDiesel.reduce((acc, d) => acc + (d.Galones || 0), 0);
+                            const dieselDiaCentavos = dia.registrosDiesel.reduce((acc, d) => acc + Math.round((d.Total || 0) * 100), 0);
+                            dieselDia = dieselDiaCentavos / 100;
+                            const galonesDiaCentavos = dia.registrosDiesel.reduce((acc, d) => acc + Math.round((d.Galones || 0) * 100), 0);
+                            const galonesDia = galonesDiaCentavos / 100;
                             // Usar 'fecha' primero, luego 'fechaHora' como fallback
                             const fechaGasolina = new Date(dia.registrosDiesel[0].fecha || dia.registrosDiesel[0].fechaHora);
                             infoGasolinaDelDia = {
@@ -1760,7 +1766,8 @@ ReporteConsolidadoController.generarPDFRango = async (req, res) => {
                             };
                         } else {
                             // Si no hay registros de diesel directos, sumar el diesel de todos los viajes del día
-                            dieselDia = dia.viajes.reduce((acc, v) => acc + (v.diesel || 0), 0);
+                            const dieselDiaCentavos = dia.viajes.reduce((acc, v) => acc + Math.round((v.diesel || 0) * 100), 0);
+                            dieselDia = dieselDiaCentavos / 100;
                             // Buscar información de gasolina del primer viaje que la tenga
                             const viajeConGasolina = dia.viajes.find(v => v.infoGasolina);
                             if (viajeConGasolina) {
@@ -1791,7 +1798,7 @@ ReporteConsolidadoController.generarPDFRango = async (req, res) => {
                                 });
 
                                 const dieselCell = idx === 0
-                                    ? `<td class="col-monto" rowspan="${dia.viajes.length}">${dieselDia > 0 ? `<strong style="color: #5D9646;">$${dieselDia.toFixed(2)}</strong>${infoGasolinaDelDia ? `<br/><small>${infoGasolinaDelDia.galones || 0} gal, ${infoGasolinaDelDia.hora || ''}</small>` : ''}` : '-'}</td>`
+                                    ? `<td class="col-monto" rowspan="${dia.viajes.length}">${dieselDia > 0 ? `<strong style="color: #5D9646;">$${dieselDia.toFixed(2)}</strong>${infoGasolinaDelDia ? `<br/><small>${infoGasolinaDelDia.galones || 0} gal</small>` : ''}` : '-'}</td>`
                                     : '';
 
                                 return `
@@ -1845,7 +1852,7 @@ ReporteConsolidadoController.generarPDFRango = async (req, res) => {
                                     <td><strong>${fechaFormateada}</strong><br/><em>Solo carga de combustible</em></td>
                                     <td style="text-align: center; font-style: italic; color: #666;">Sin viajes registrados</td>
                                     <td class="col-monto">-</td>
-                                    <td class="col-monto" style="background: #E8F5E9;"><strong style="color: #5D9646;">$${dieselDia.toFixed(2)}</strong><br/><small>${infoGasolinaDelDia.galones || 0} gal @ ${infoGasolinaDelDia.hora || ''}</small></td>
+                                    <td class="col-monto" style="background: #E8F5E9;"><strong style="color: #5D9646;">$${dieselDia.toFixed(2)}</strong><br/><small>${infoGasolinaDelDia.galones || 0} gal</small></td>
                                     <td class="col-monto">-</td>
                                     <td class="col-monto">-</td>
                                     <td></td>
