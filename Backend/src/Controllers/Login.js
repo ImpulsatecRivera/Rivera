@@ -186,14 +186,16 @@ LoginController.GoogleLogin = async (req, res) => {
 };
 
 // ===================== LOGIN =====================
+// ===================== LOGIN =====================
 LoginController.Login = async (req, res) => {
-  const { email, password } = req.body;
-  console.log("🔐 [LOGIN] email:", email);
+  const { email, password, dui } = req.body;
+  console.log("🔐 [LOGIN] email:", email, "dui:", dui);
 
   try {
-    // Bloqueo por intentos
-    if (isBlocked(email)) {
-      const sec = getBlockTimeRemaining(email);
+    const identifier = dui || email;
+    
+    if (isBlocked(identifier)) {
+      const sec = getBlockTimeRemaining(identifier);
       return res.status(429).json({
         message: `Demasiados intentos fallidos. Intenta de nuevo en ${Math.ceil(sec / 60)} minuto(s).`,
         blocked: true,
@@ -201,14 +203,14 @@ LoginController.Login = async (req, res) => {
       });
     }
 
-    const currentAttempts = failedAttempts.get(email)?.attempts || 0;
+    const currentAttempts = failedAttempts.get(identifier)?.attempts || 0;
     if (currentAttempts >= 4) {
-      const d = failedAttempts.get(email);
+      const d = failedAttempts.get(identifier);
       if (!d.blockedUntil) {
         d.blockedUntil = new Date(Date.now() + 5 * 60 * 1000);
-        failedAttempts.set(email, d);
+        failedAttempts.set(identifier, d);
       }
-      const sec = getBlockTimeRemaining(email);
+      const sec = getBlockTimeRemaining(identifier);
       return res.status(429).json({
         message: `Demasiados intentos fallidos. Intenta de nuevo en ${Math.ceil(sec / 60)} minuto(s).`,
         blocked: true,
@@ -223,7 +225,7 @@ LoginController.Login = async (req, res) => {
     // 1) Admin
     if (email === config.ADMIN.emailAdmin) {
       if (password !== config.ADMIN.password) {
-        const d = recordFailedAttempt(email);
+        const d = recordFailedAttempt(identifier);
         const remaining = Math.max(0, 4 - d.attempts);
         return res.status(400).json({
           message: `Contraseña incorrecta. Te quedan ${remaining} intento(s).`,
@@ -234,39 +236,83 @@ LoginController.Login = async (req, res) => {
       userFound = { _id: "admin", email };
       valid = true;
     } else {
-      // 2) Empleado
-      userFound = await EmpleadoModel.findOne({ email });
-      if (userFound) {
+      // ✅ 2) MOTORISTA O AUXILIAR - LOGIN CON DUI
+      if (dui) {
+        console.log('🔍 Buscando motorista/auxiliar con DUI:', dui);
+        
+        const duiBuscado = dui.trim();
+        
+        // Intento 1: Búsqueda exacta
+        userFound = await MotoristaModel.findOne({ id: duiBuscado });
+        
+        // Intento 2: Búsqueda case-insensitive
+        if (!userFound) {
+          userFound = await MotoristaModel.findOne({ 
+            id: { $regex: new RegExp(`^${duiBuscado}$`, 'i') } 
+          });
+        }
+        
+        // Intento 3: Buscar con guiones (ej: 04411192-3)
+        if (!userFound && duiBuscado.length === 9) {
+          const duiConGuion = `${duiBuscado.slice(0, 8)}-${duiBuscado.slice(8)}`;
+          userFound = await MotoristaModel.findOne({ id: duiConGuion });
+          console.log('🔍 Búsqueda con guión:', duiConGuion, userFound ? 'ENCONTRADO ✅' : 'NO ENCONTRADO');
+        }
+        
+        // Intento 4: Buscar sin guiones si el usuario lo escribió con guión
+        if (!userFound && duiBuscado.includes('-')) {
+          const duiSinGuion = duiBuscado.replace(/-/g, '');
+          userFound = await MotoristaModel.findOne({ id: duiSinGuion });
+        }
+        
+        if (!userFound) {
+          console.log('❌ Motorista/Auxiliar no encontrado con DUI:', dui);
+          const d = recordFailedAttempt(identifier);
+          const remaining = Math.max(0, 4 - d.attempts);
+          return res.status(400).json({
+            message: `DUI no encontrado. Verifica que esté correctamente escrito.`,
+            attemptsRemaining: remaining,
+          });
+        }
+
+        console.log('✅ Motorista/Auxiliar encontrado:', userFound._id);
+        
         valid = await bcryptjs.compare(password, userFound.password);
+        console.log('🔑 bcrypt.compare result:', valid);
+
         if (!valid) {
-          const d = recordFailedAttempt(email);
+          console.log('❌ Contraseña incorrecta para motorista/auxiliar');
+          const d = recordFailedAttempt(identifier);
           const remaining = Math.max(0, 4 - d.attempts);
           return res.status(400).json({
             message: `Contraseña incorrecta. Te quedan ${remaining} intento(s).`,
             attemptsRemaining: remaining,
           });
         }
-        userType = "Empleado";
-      } else {
-        // 3) Motorista
-        userFound = await MotoristaModel.findOne({ email });
+
+        console.log('✅ Login de motorista/auxiliar exitoso');
+        userType = "Motorista";
+      } 
+      // 3) Empleado - LOGIN CON EMAIL
+      else if (email) {
+        userFound = await EmpleadoModel.findOne({ email });
         if (userFound) {
           valid = await bcryptjs.compare(password, userFound.password);
           if (!valid) {
-            const d = recordFailedAttempt(email);
+            const d = recordFailedAttempt(identifier);
             const remaining = Math.max(0, 4 - d.attempts);
             return res.status(400).json({
               message: `Contraseña incorrecta. Te quedan ${remaining} intento(s).`,
               attemptsRemaining: remaining,
             });
           }
-          userType = "Motorista";
+          userType = "Empleado";
         } else {
-          // 4) Cliente
+          // 4) Cliente - LOGIN CON EMAIL
           userFound = await ClienteModel.findOne({ email });
           if (!userFound) {
             console.log('❌ Cliente no encontrado para email:', email);
-            const d = recordFailedAttempt(email);
+            const d = recordFailedAttempt(identifier);
             const remaining = Math.max(0, 4 - d.attempts);
             return res.status(400).json({
               message: `Usuario no encontrado. Te quedan ${remaining} intento(s).`,
@@ -276,11 +322,10 @@ LoginController.Login = async (req, res) => {
 
           console.log('✅ Cliente encontrado:', userFound._id);
           valid = await bcryptjs.compare(password, userFound.password);
-          console.log('🔑 bcrypt.compare result:', valid);
 
           if (!valid) {
             console.log('❌ Contraseña incorrecta para cliente');
-            const d = recordFailedAttempt(email);
+            const d = recordFailedAttempt(identifier);
             const remaining = Math.max(0, 4 - d.attempts);
             return res.status(400).json({
               message: `Contraseña incorrecta. Te quedan ${remaining} intento(s).`,
@@ -291,11 +336,15 @@ LoginController.Login = async (req, res) => {
           console.log('✅ Login de cliente exitoso');
           userType = "Cliente";
         }
+      } else {
+        return res.status(400).json({
+          message: "Debes proporcionar email o DUI para iniciar sesión"
+        });
       }
     }
 
     // ✅ Login exitoso
-    clearFailedAttempts(email);
+    clearFailedAttempts(identifier);
 
     if (!config.JWT.secret) {
       console.error("❌ Falta JWT secret en config.js");
@@ -305,12 +354,14 @@ LoginController.Login = async (req, res) => {
     const token = generateToken({ id: userFound._id, userType });
     setAuthCookie(res, token);
 
-    // Construir objeto de usuario con rol si es empleado
+    // ✅ Construir objeto de usuario - MANEJO FLEXIBLE DE CAMPOS
     const userData = {
       id: userFound._id,
-      email: userFound.email || email,
-      nombre: userFound.nombre || userFound.firstName || userFound.name || null,
-      apellido: userFound.lastName || null,
+      email: userFound.email || null,
+      dui: userFound.id || null,
+      // ✅ Intentar diferentes campos para nombre
+      nombre: userFound.name || userFound.nombre || userFound.firstName || null,
+      apellido: userFound.apellidos || userFound.lastName || null,
       userType
     };
 
@@ -318,6 +369,8 @@ LoginController.Login = async (req, res) => {
     if (userType === "Empleado" && userFound.rol) {
       userData.rol = userFound.rol;
     }
+
+    console.log('📋 Datos de usuario enviados:', userData);
 
     return res.status(200).json({
       message: "Inicio de sesión completado",
