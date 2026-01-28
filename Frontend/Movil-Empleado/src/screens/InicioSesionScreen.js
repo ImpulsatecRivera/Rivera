@@ -23,7 +23,7 @@ import { useAuth } from '../Context/authContext';
 const { width, height } = Dimensions.get('window');
 
 const InicioSesionScreen = ({ navigation }) => {
-  const [email, setEmail] = useState('');
+  const [dui, setDui] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -48,15 +48,46 @@ const InicioSesionScreen = ({ navigation }) => {
     ]).start();
   }, []);
 
+  // ✅ FORMATO AUTOMÁTICO DE DUI CON GUIÓN
+  const formatDUI = (text) => {
+    // Remover todo excepto números
+    const numbers = text.replace(/[^0-9]/g, '');
+    
+    // Limitar a 9 dígitos máximo
+    const limited = numbers.slice(0, 9);
+    
+    // Si tiene 8 o más dígitos, agregar el guión
+    if (limited.length > 8) {
+      return `${limited.slice(0, 8)}-${limited.slice(8)}`;
+    }
+    
+    return limited;
+  };
+
+  const handleDuiChange = (text) => {
+    const formatted = formatDUI(text);
+    setDui(formatted);
+  };
+
   const validateForm = () => {
-    if (!email.trim()) {
-      Alert.alert('Error', 'Ingresa tu email');
+    // Remover guión para validar
+    const duiSinGuion = dui.replace(/-/g, '');
+    
+    if (!duiSinGuion.trim()) {
+      Alert.alert('Error', 'Ingresa tu DUI');
       return false;
     }
+    
+    if (duiSinGuion.length !== 9) {
+      Alert.alert('Error', 'El DUI debe tener 9 dígitos');
+      return false;
+    }
+    
     if (!password.trim()) {
       Alert.alert('Error', 'Ingresa tu contraseña');
       return false;
     }
+    
     return true;
   };
 
@@ -75,7 +106,7 @@ const InicioSesionScreen = ({ navigation }) => {
           Accept: 'application/json',
         },
         body: JSON.stringify({
-          email: email.trim(),
+          dui: dui.trim(), // ✅ Enviar con guión tal como está
           password: password.trim(),
         }),
       });
@@ -135,19 +166,26 @@ const InicioSesionScreen = ({ navigation }) => {
             <Text style={styles.title}>Rivera distribuidora y transporte</Text>
             <Text style={styles.subtitle}>Inicia sesión para continuar</Text>
 
+            {/* ✅ CAMPO DUI CON FORMATO AUTOMÁTICO */}
             <View style={styles.inputContainer}>
               <View style={styles.iconBox}>
-                <Icon name="mail-outline" size={16} color="#555" />
+                <Icon name="card-outline" size={16} color="#555" />
               </View>
               <TextInput
                 style={styles.input}
-                placeholder="Email"
+                placeholder="DUI (ej: 12345678-9)"
                 placeholderTextColor="#777"
-                value={email}
-                onChangeText={setEmail}
-                autoCapitalize="none"
+                value={dui}
+                onChangeText={handleDuiChange}
+                keyboardType="number-pad"
+                maxLength={10} // ✅ 8 dígitos + guión + 1 dígito = 10 caracteres
                 editable={!loading}
               />
+              {dui.length > 0 && (
+                <Text style={styles.duiCounter}>
+                  {dui.replace(/-/g, '').length}/9
+                </Text>
+              )}
             </View>
 
             <View style={styles.inputContainer}>
@@ -257,6 +295,12 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 15,
     color: '#111',
+  },
+  duiCounter: {
+    fontSize: 12,
+    color: '#777',
+    fontWeight: '600',
+    marginLeft: 8,
   },
   forgotPill: {
     flexDirection: 'row',
