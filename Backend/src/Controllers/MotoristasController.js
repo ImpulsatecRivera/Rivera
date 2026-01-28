@@ -296,6 +296,14 @@ motoristasCon.post = async (req, res) => {
   } catch (error) {
     console.error("Error real POST /motoristas:", error);
 
+    // ✅ Error de DUI duplicado (código 11000 de MongoDB)
+    if (error.code === 11000 && error.keyPattern?.id) {
+      return res.status(400).json({ 
+        message: "Este DUI ya está registrado en el sistema",
+        error: "El número de DUI proporcionado ya pertenece a otro motorista"
+      });
+    }
+
     // ✅ Validación de Mongoose => 400
     if (error?.name === "ValidationError") {
       return res.status(400).json({ message: "Datos inválidos", error: error.message });
