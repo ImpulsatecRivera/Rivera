@@ -63,6 +63,7 @@ app.use(
   cors({
     origin: [
       "https://verdant-sunshine-da6504.netlify.app",
+      "https://riveradistribuidoraytransporte.com",
       "https://rivera-test.vercel.app",
       "https://rivera-test-git-master-gabriel-contreras-projects-462b2f95.vercel.app",
       "http://localhost:5173",

@@ -1,5 +1,5 @@
-// src/screens/CamionScreen.js
-import React, { useCallback, useMemo, useState } from "react";
+// src/screens/CamionScreen.js - VERSIÓN MEJORADA CON SELECTOR DE PLACAS
+import React, { useCallback, useMemo, useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -13,6 +13,7 @@ import {
   Modal,
   TextInput,
   KeyboardAvoidingView,
+  FlatList,
 } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -64,7 +65,6 @@ const Badge = ({ text }) => (
   </View>
 );
 
-// ✅ CARD PEQUEÑA PARA GRID 2x2
 const SmallInfoCard = ({ icon, label, value }) => (
   <View style={styles.smallCard}>
     <Text style={styles.smallCardIcon}>{icon}</Text>
@@ -75,11 +75,187 @@ const SmallInfoCard = ({ icon, label, value }) => (
   </View>
 );
 
+// 🆕 COMPONENTE SELECTOR DE CAMIONES
+const CamionSelector = ({ 
+  camiones, 
+  camionSeleccionado, 
+  onSeleccionar, 
+  cargando 
+}) => {
+  const [modalVisible, setModalVisible] = useState(false);
+  const [busqueda, setBusqueda] = useState('');
+
+  const camionesFiltrados = useMemo(() => {
+    if (!busqueda.trim()) return camiones;
+    
+    const termino = busqueda.toLowerCase();
+    return camiones.filter(camion => {
+      const placa = (camion.licensePlate || camion.placa || '').toLowerCase();
+      const marca = (camion.brand || camion.marca || '').toLowerCase();
+      const modelo = (camion.model || camion.modelo || '').toLowerCase();
+      
+      return placa.includes(termino) || 
+             marca.includes(termino) || 
+             modelo.includes(termino);
+    });
+  }, [camiones, busqueda]);
+
+  const camionActual = useMemo(() => {
+    if (!camionSeleccionado) return null;
+    return camiones.find(c => 
+      (c._id || c.id) === camionSeleccionado ||
+      (c.licensePlate || c.placa) === camionSeleccionado
+    );
+  }, [camiones, camionSeleccionado]);
+
+  return (
+    <View style={styles.inputGroup}>
+      <Text style={styles.inputLabel}>🚛 Selecciona el camión</Text>
+      
+      {/* Botón para abrir selector */}
+      <TouchableOpacity
+        style={styles.selectorButton}
+        onPress={() => setModalVisible(true)}
+        disabled={cargando}
+      >
+        {cargando ? (
+          <ActivityIndicator size="small" color="#6B7280" />
+        ) : camionActual ? (
+          <View style={styles.selectorButtonContent}>
+            <View style={styles.camionSelectedInfo}>
+              <Text style={styles.selectorButtonTextMain}>
+                {camionActual.licensePlate || camionActual.placa}
+              </Text>
+              <Text style={styles.selectorButtonTextSub}>
+                {camionActual.brand || camionActual.marca} {camionActual.model || camionActual.modelo}
+              </Text>
+            </View>
+            <Text style={styles.selectorButtonIcon}>▼</Text>
+          </View>
+        ) : (
+          <View style={styles.selectorButtonContent}>
+            <Text style={styles.selectorButtonPlaceholder}>
+              Toca para seleccionar un camión
+            </Text>
+            <Text style={styles.selectorButtonIcon}>▼</Text>
+          </View>
+        )}
+      </TouchableOpacity>
+
+      {/* Modal con lista de camiones */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={modalVisible}
+        onRequestClose={() => setModalVisible(false)}
+      >
+        <View style={styles.selectorModalOverlay}>
+          <View style={styles.selectorModalContainer}>
+            
+            {/* Header del selector */}
+            <View style={styles.selectorModalHeader}>
+              <Text style={styles.selectorModalTitle}>Seleccionar Camión</Text>
+              <TouchableOpacity 
+                onPress={() => setModalVisible(false)}
+                style={styles.selectorCloseButton}
+              >
+                <Text style={styles.selectorCloseButtonText}>✕</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Buscador */}
+            <View style={styles.searchContainer}>
+              <Text style={styles.searchIcon}>🔍</Text>
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Buscar por placa, marca o modelo..."
+                value={busqueda}
+                onChangeText={setBusqueda}
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
+              {busqueda.length > 0 && (
+                <TouchableOpacity 
+                  onPress={() => setBusqueda('')}
+                  style={styles.searchClearButton}
+                >
+                  <Text style={styles.searchClearText}>✕</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+
+            {/* Lista de camiones */}
+            <FlatList
+              data={camionesFiltrados}
+              keyExtractor={(item) => item._id || item.id}
+              renderItem={({ item }) => {
+                const placa = item.licensePlate || item.placa;
+                const marca = item.brand || item.marca || '';
+                const modelo = item.model || item.modelo || '';
+                const estaSeleccionado = camionActual && 
+                  ((item._id || item.id) === (camionActual._id || camionActual.id));
+
+                return (
+                  <TouchableOpacity
+                    style={[
+                      styles.camionItem,
+                      estaSeleccionado && styles.camionItemSelected
+                    ]}
+                    onPress={() => {
+                      onSeleccionar(item._id || item.id, placa);
+                      setModalVisible(false);
+                      setBusqueda('');
+                    }}
+                  >
+                    <View style={styles.camionItemIcon}>
+                      <Text style={styles.camionItemIconText}>🚛</Text>
+                    </View>
+                    
+                    <View style={styles.camionItemInfo}>
+                      <Text style={styles.camionItemPlaca}>{placa}</Text>
+                      {(marca || modelo) && (
+                        <Text style={styles.camionItemDetails}>
+                          {marca} {modelo}
+                        </Text>
+                      )}
+                    </View>
+
+                    {estaSeleccionado && (
+                      <View style={styles.camionItemCheck}>
+                        <Text style={styles.camionItemCheckText}>✓</Text>
+                      </View>
+                    )}
+                  </TouchableOpacity>
+                );
+              }}
+              ListEmptyComponent={
+                <View style={styles.emptyListContainer}>
+                  <Text style={styles.emptyListIcon}>🔍</Text>
+                  <Text style={styles.emptyListText}>
+                    {busqueda ? 'No se encontraron camiones' : 'No hay camiones registrados'}
+                  </Text>
+                </View>
+              }
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={styles.camionListContent}
+            />
+          </View>
+        </View>
+      </Modal>
+    </View>
+  );
+};
+
 export default function CamionProfileScreen() {
   const { profile, loading, fetchProfile } = useProfile();
   const insets = useSafeAreaInsets();
   const [uploading, setUploading] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
+  
+  // 🆕 Estados para el selector de camiones
+  const [camiones, setCamiones] = useState([]);
+  const [cargandoCamiones, setCargandoCamiones] = useState(false);
+  const [camionIdSeleccionado, setCamionIdSeleccionado] = useState(null);
   
   // Estados del formulario
   const [placaCamion, setPlacaCamion] = useState('');
@@ -100,6 +276,63 @@ export default function CamionProfileScreen() {
       fetchProfile?.();
     }, [fetchProfile])
   );
+
+  // 🆕 CARGAR CAMIONES AL ABRIR EL MODAL
+  useEffect(() => {
+    if (modalVisible) {
+      cargarCamiones();
+    }
+  }, [modalVisible]);
+
+  // 🆕 FUNCIÓN PARA CARGAR TODOS LOS CAMIONES
+  const cargarCamiones = async () => {
+    try {
+      setCargandoCamiones(true);
+      
+      const token = await AsyncStorage.getItem('token');
+      
+      if (!token) {
+        throw new Error('No se encontró el token de autenticación');
+      }
+
+      const response = await fetch(`${API_URL}/camiones`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Error al cargar los camiones');
+      }
+
+      const data = await response.json();
+      
+      let listaCamiones = [];
+      if (data.data && Array.isArray(data.data)) {
+        listaCamiones = data.data;
+      } else if (Array.isArray(data)) {
+        listaCamiones = data;
+      }
+
+      // Ordenar por placa
+      listaCamiones.sort((a, b) => {
+        const placaA = (a.licensePlate || a.placa || '').toUpperCase();
+        const placaB = (b.licensePlate || b.placa || '').toUpperCase();
+        return placaA.localeCompare(placaB);
+      });
+
+      setCamiones(listaCamiones);
+      console.log('✅ Camiones cargados:', listaCamiones.length);
+
+    } catch (error) {
+      console.error('❌ Error cargando camiones:', error);
+      Alert.alert('Error', 'No se pudieron cargar los camiones');
+    } finally {
+      setCargandoCamiones(false);
+    }
+  };
 
   const camionData = useMemo(() => {
     const raw =
@@ -153,8 +386,8 @@ export default function CamionProfileScreen() {
     };
   }, [profile]);
 
-  // ✅ LIMPIAR FORMULARIO
   const limpiarFormulario = () => {
+    setCamionIdSeleccionado(null);
     setPlacaCamion('');
     setGalones('');
     setTotal('');
@@ -162,190 +395,98 @@ export default function CamionProfileScreen() {
     setComprobante(null);
   };
 
-  // ✅ FUNCIÓN PARA SUBIR REGISTRO DE GAS
-  // ✅ FUNCIÓN PARA SUBIR REGISTRO DE GAS
-// ✅ FUNCIÓN PARA SUBIR REGISTRO DE GAS
-// ✅ FUNCIÓN PARA SUBIR REGISTRO DE GAS
-// ✅ FUNCIÓN PARA SUBIR REGISTRO DE GAS
-// ✅ FUNCIÓN PARA SUBIR REGISTRO DE GAS
-const registrarGas = async () => {
-  try {
-    // Validaciones
-    if (!placaCamion.trim()) {
-      Alert.alert("Campo requerido", "Por favor escribe la placa del camión");
-      return;
-    }
+  const registrarGas = async () => {
+    try {
+      // Validaciones
+      if (!camionIdSeleccionado) {
+        Alert.alert("Camión requerido", "Por favor selecciona un camión");
+        return;
+      }
 
-    if (!galones || !total) {
-      Alert.alert("Campos incompletos", "Por favor completa galones y total");
-      return;
-    }
+      if (!galones || !total) {
+        Alert.alert("Campos incompletos", "Por favor completa galones y total");
+        return;
+      }
 
-    if (!comprobante) {
-      Alert.alert("Comprobante requerido", "Por favor agrega una foto del comprobante");
-      return;
-    }
+      if (!comprobante) {
+        Alert.alert("Comprobante requerido", "Por favor agrega una foto del comprobante");
+        return;
+      }
 
-    setUploading(true);
+      setUploading(true);
 
-    // ✅ PASO 1: OBTENER EL TOKEN DE AUTENTICACIÓN
-    const token = await AsyncStorage.getItem('token');
-    
-    if (!token) {
-      throw new Error('No se encontró el token de autenticación. Por favor inicia sesión nuevamente.');
-    }
-
-    // ✅ PASO 2: OBTENER TODOS LOS CAMIONES CON AUTENTICACIÓN
-    console.log('🔍 Buscando camión con placa:', placaCamion.trim().toUpperCase());
-    
-    const camionesResponse = await fetch(`${API_URL}/camiones`, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-    });
-    
-    if (!camionesResponse.ok) {
-      const errorText = await camionesResponse.text();
-      console.error('❌ Error respuesta camiones:', errorText);
-      throw new Error('Error al obtener la lista de camiones');
-    }
-
-    const camionesData = await camionesResponse.json();
-    
-    console.log('📦 Respuesta del servidor:', camionesData);
-    
-    // ✅ MANEJAR ESTRUCTURA DE RESPUESTA
-    let listaCamiones = [];
-    
-    if (camionesData.data && Array.isArray(camionesData.data)) {
-      listaCamiones = camionesData.data;
-    } else if (Array.isArray(camionesData)) {
-      listaCamiones = camionesData;
-    }
-
-    if (!listaCamiones || listaCamiones.length === 0) {
-      throw new Error('No hay camiones registrados en el sistema');
-    }
-
-    console.log('📋 Total de camiones:', listaCamiones.length);
-
-    // Buscar el camión por placa (case-insensitive)
-    const placaBuscada = placaCamion.trim().toUpperCase();
-    const camionEncontrado = listaCamiones.find(camion => {
-      const placaCamionActual = (camion.licensePlate || camion.placa || '').toUpperCase();
-      return placaCamionActual === placaBuscada;
-    });
-
-    if (!camionEncontrado) {
-      // Mostrar las primeras 5 placas disponibles
-      const placasDisponibles = listaCamiones
-        .slice(0, 5)
-        .map(c => c.licensePlate || c.placa)
-        .filter(Boolean)
-        .join(', ');
+      // Preparar fecha local (El Salvador UTC-6)
+      const fechaActual = new Date();
+      const offsetElSalvador = -6 * 60;
+      const offsetLocal = fechaActual.getTimezoneOffset();
+      const diferenciaMinutos = offsetElSalvador - offsetLocal;
+      const fechaElSalvador = new Date(fechaActual.getTime() + (diferenciaMinutos * 60 * 1000));
       
-      throw new Error(
-        `No se encontró el camión con placa: ${placaBuscada}\n\n` +
-        `Verifica que la placa esté correctamente escrita.\n\n` +
-        `Ejemplos de placas registradas:\n${placasDisponibles}`
-      );
-    }
+      const mes = fechaElSalvador.getMonth() + 1;
+      const ano = fechaElSalvador.getFullYear();
+      
+      const pad = (n) => String(n).padStart(2, '0');
+      const fechaISO = `${ano}-${pad(mes)}-${pad(fechaElSalvador.getDate())}T${pad(fechaElSalvador.getHours())}:${pad(fechaElSalvador.getMinutes())}:${pad(fechaElSalvador.getSeconds())}.000-06:00`;
 
-    const camionId = camionEncontrado._id || camionEncontrado.id;
-    console.log('✅ Camión encontrado:', {
-      id: camionId,
-      placa: camionEncontrado.licensePlate || camionEncontrado.placa,
-      nombre: camionEncontrado.name || camionEncontrado.nombre
-    });
+      const formData = new FormData();
+      
+      formData.append('comprobante', {
+        uri: Platform.OS === 'ios' ? comprobante.uri.replace('file://', '') : comprobante.uri,
+        type: comprobante.mimeType || 'image/jpeg',
+        name: comprobante.fileName || `comprobante_${Date.now()}.jpg`,
+      });
 
-    // ✅ PASO 3: PREPARAR FECHA LOCAL (EL SALVADOR UTC-6)
-    const fechaActual = new Date();
-    
-    // Ajustar a zona horaria de El Salvador (UTC-6)
-    const offsetElSalvador = -6 * 60; // -6 horas en minutos
-    const offsetLocal = fechaActual.getTimezoneOffset(); // offset del dispositivo
-    const diferenciaMinutos = offsetElSalvador - offsetLocal;
-    
-    const fechaElSalvador = new Date(fechaActual.getTime() + (diferenciaMinutos * 60 * 1000));
-    
-    const mes = fechaElSalvador.getMonth() + 1;
-    const ano = fechaElSalvador.getFullYear();
-    
-    // Crear fecha ISO en zona horaria de El Salvador
-    const pad = (n) => String(n).padStart(2, '0');
-    const fechaISO = `${ano}-${pad(mes)}-${pad(fechaElSalvador.getDate())}T${pad(fechaElSalvador.getHours())}:${pad(fechaElSalvador.getMinutes())}:${pad(fechaElSalvador.getSeconds())}.000-06:00`;
-    
-    console.log('📅 Fecha local del dispositivo:', fechaActual.toISOString());
-    console.log('📅 Fecha ajustada El Salvador:', fechaISO);
+      formData.append('CicurlationCard', camionIdSeleccionado);
+      formData.append('Galones', galones);
+      formData.append('Total', total);
+      formData.append('fecha', fechaISO);
+      formData.append('mes', mes.toString());
+      formData.append('ano', ano.toString());
+      formData.append('estado', 'pendiente');
+      
+      if (numeroMarchamo.trim()) {
+        formData.append('numeroMarchamo', numeroMarchamo.trim());
+      }
 
-    const formData = new FormData();
-    
-    // Agregar imagen
-    formData.append('comprobante', {
-      uri: Platform.OS === 'ios' ? comprobante.uri.replace('file://', '') : comprobante.uri,
-      type: comprobante.mimeType || 'image/jpeg',
-      name: comprobante.fileName || `comprobante_${Date.now()}.jpg`,
-    });
+      console.log('📤 Registrando gas para camión ID:', camionIdSeleccionado);
 
-    // Agregar datos del formulario
-    formData.append('CicurlationCard', camionId);
-    formData.append('Galones', galones);
-    formData.append('Total', total);
-    formData.append('fecha', fechaISO); // ✅ Fecha con zona horaria de El Salvador
-    formData.append('mes', mes.toString());
-    formData.append('ano', ano.toString());
-    formData.append('estado', 'pendiente');
-    if (numeroMarchamo.trim()) {
-      formData.append('numeroMarchamo', numeroMarchamo.trim());
-    }
+      const response = await fetch(`${API_URL}/resumen`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+        body: formData,
+      });
 
-    console.log('📤 Registrando gas para camión ID:', camionId);
+      const data = await response.json();
 
-    const response = await fetch(`${API_URL}/resumen`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-      body: formData,
-    });
-
-    const data = await response.json();
-    
-    console.log('📥 Respuesta del registro:', data);
-
-    if (response.ok && data.success) {
-      Alert.alert(
-        "¡Registro exitoso! ⛽",
-        `Has agregado ${galones} galones por $${total} al camión ${placaBuscada}`,
-        [
-          {
-            text: "OK",
-            onPress: () => {
-              setModalVisible(false);
-              limpiarFormulario();
-              fetchProfile?.();
+      if (response.ok && data.success) {
+        Alert.alert(
+          "¡Registro exitoso! ⛽",
+          `Has agregado ${galones} galones por $${total} al camión ${placaCamion}`,
+          [
+            {
+              text: "OK",
+              onPress: () => {
+                setModalVisible(false);
+                limpiarFormulario();
+                fetchProfile?.();
+              }
             }
-          }
-        ]
-      );
-    } else {
-      throw new Error(data.message || 'Error al registrar el gas');
+          ]
+        );
+      } else {
+        throw new Error(data.message || 'Error al registrar el gas');
+      }
+
+    } catch (error) {
+      console.error('❌ Error registrando gas:', error);
+      Alert.alert("Error", error.message || "No se pudo registrar el gas");
+    } finally {
+      setUploading(false);
     }
+  };
 
-  } catch (error) {
-    console.error('❌ Error registrando gas:', error);
-    Alert.alert(
-      "Error",
-      error.message || "No se pudo registrar el gas"
-    );
-  } finally {
-    setUploading(false);
-  }
-};
-
-  // ✅ FUNCIÓN PARA TOMAR FOTO
   const tomarFoto = async () => {
     const permitido = await pedirPermisosCamara();
     if (!permitido) return;
@@ -358,11 +499,8 @@ const registrarGas = async () => {
         aspect: [4, 3],
       });
 
-      console.log('📷 Resultado cámara:', result);
-
       if (!result.canceled && result.assets && result.assets.length > 0) {
         setComprobante(result.assets[0]);
-        console.log('✅ Comprobante guardado:', result.assets[0].uri);
       }
     } catch (error) {
       console.error('❌ Error al tomar foto:', error);
@@ -370,7 +508,6 @@ const registrarGas = async () => {
     }
   };
 
-  // ✅ FUNCIÓN PARA SELECCIONAR ARCHIVO
   const seleccionarArchivo = async () => {
     const permitido = await pedirPermisosGaleria();
     if (!permitido) return;
@@ -383,11 +520,8 @@ const registrarGas = async () => {
         aspect: [4, 3],
       });
 
-      console.log('🖼️ Resultado galería:', result);
-
       if (!result.canceled && result.assets && result.assets.length > 0) {
         setComprobante(result.assets[0]);
-        console.log('✅ Comprobante guardado:', result.assets[0].uri);
       }
     } catch (error) {
       console.error('❌ Error al seleccionar imagen:', error);
@@ -467,7 +601,7 @@ const registrarGas = async () => {
           </>
         )}
 
-        {/* BOTÓN PARA REGISTRAR GAS - Siempre visible */}
+        {/* BOTÓN PARA REGISTRAR GAS */}
         <TouchableOpacity 
           style={[
             styles.addGasButton,
@@ -528,17 +662,16 @@ const registrarGas = async () => {
               {/* Formulario */}
               <View style={styles.formContainer}>
                 
-                {/* Campo Placa del Camión */}
-                <View style={styles.inputGroup}>
-                  <Text style={styles.inputLabel}>🚛 Placa del camión</Text>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Ej: P-123456"
-                    value={placaCamion}
-                    onChangeText={setPlacaCamion}
-                    autoCapitalize="characters"
-                  />
-                </View>
+                {/* 🆕 SELECTOR DE CAMIONES */}
+                <CamionSelector
+                  camiones={camiones}
+                  camionSeleccionado={camionIdSeleccionado}
+                  onSeleccionar={(id, placa) => {
+                    setCamionIdSeleccionado(id);
+                    setPlacaCamion(placa);
+                  }}
+                  cargando={cargandoCamiones}
+                />
 
                 {/* Campo Galones */}
                 <View style={styles.inputGroup}>
@@ -905,6 +1038,235 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#111',
     fontWeight: '600',
+  },
+
+  // 🆕 ESTILOS PARA EL SELECTOR
+  selectorButton: {
+    backgroundColor: '#F9FAFB',
+    borderWidth: 2,
+    borderColor: '#E5E7EB',
+    borderRadius: 12,
+    padding: 14,
+    minHeight: 56,
+  },
+
+  selectorButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+
+  camionSelectedInfo: {
+    flex: 1,
+  },
+
+  selectorButtonTextMain: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#111',
+    marginBottom: 2,
+  },
+
+  selectorButtonTextSub: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#6B7280',
+  },
+
+  selectorButtonPlaceholder: {
+    fontSize: 16,
+    color: '#9CA3AF',
+    fontWeight: '600',
+  },
+
+  selectorButtonIcon: {
+    fontSize: 14,
+    color: '#6B7280',
+    marginLeft: 8,
+  },
+
+  // Modal del selector
+  selectorModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+
+  selectorModalContainer: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    maxHeight: '80%',
+    ...Platform.select({
+      ios: {
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: -4 },
+        shadowOpacity: 0.1,
+        shadowRadius: 12,
+      },
+      android: { 
+        elevation: 8 
+      },
+    }),
+  },
+
+  selectorModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+
+  selectorModalTitle: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#111',
+  },
+
+  selectorCloseButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#F3F4F6',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  selectorCloseButtonText: {
+    fontSize: 18,
+    color: '#6B7280',
+    fontWeight: '600',
+  },
+
+  // Buscador
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F3F4F6',
+    borderRadius: 12,
+    margin: 20,
+    marginTop: 16,
+    marginBottom: 12,
+    paddingHorizontal: 12,
+    height: 48,
+  },
+
+  searchIcon: {
+    fontSize: 18,
+    marginRight: 8,
+  },
+
+  searchInput: {
+    flex: 1,
+    fontSize: 16,
+    color: '#111',
+    fontWeight: '600',
+  },
+
+  searchClearButton: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#D1D5DB',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 8,
+  },
+
+  searchClearText: {
+    fontSize: 14,
+    color: '#FFFFFF',
+    fontWeight: '700',
+  },
+
+  // Items de la lista
+  camionListContent: {
+    padding: 20,
+    paddingTop: 8,
+  },
+
+  camionItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F9FAFB',
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 10,
+    borderWidth: 2,
+    borderColor: '#E5E7EB',
+  },
+
+  camionItemSelected: {
+    backgroundColor: '#DBEAFE',
+    borderColor: '#3B82F6',
+  },
+
+  camionItemIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+
+  camionItemIconText: {
+    fontSize: 24,
+  },
+
+  camionItemInfo: {
+    flex: 1,
+  },
+
+  camionItemPlaca: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#111',
+    marginBottom: 2,
+  },
+
+  camionItemDetails: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#6B7280',
+  },
+
+  camionItemCheck: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#10B981',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 8,
+  },
+
+  camionItemCheckText: {
+    fontSize: 16,
+    color: '#FFFFFF',
+    fontWeight: '800',
+  },
+
+  emptyListContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 40,
+  },
+
+  emptyListIcon: {
+    fontSize: 48,
+    marginBottom: 12,
+  },
+
+  emptyListText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#6B7280',
+    textAlign: 'center',
   },
 
   comprobantePreview: {

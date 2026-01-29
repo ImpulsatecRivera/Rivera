@@ -589,13 +589,15 @@ motoristasCon.getViajesProgramados = async (req, res) => {
 
     res.status(200).json({
       motorista: {
-        _id: motorista._id,
-        name: motorista.name,
-        lastName: motorista.lastName,
-        email: motorista.email,
-        phone: motorista.phone,
-        img: motorista.img,
-      },
+  _id: motorista._id,
+  name: motorista.name,
+  lastName: motorista.lastName,
+  email: motorista.email,
+  phone: motorista.phone,
+  img: motorista.img,
+  rol: motorista.rol, // 👈 ESTA ES LA CLAVE
+},
+
       camionAsignado: {
         _id: camion._id,
         name: camion.name,
