@@ -17,6 +17,7 @@ import Swal from "sweetalert2";
 import { config } from "../../config";
 import ReportesViajesOperativosModal from "./ReportesViajesInternosModal";
 import { api } from "../../Context/authContext";
+import ViajeOperativoDetailModal from "./ViajeOperativoDetailModal";
 
 import { useTutorial } from '../../hooks/useTutorial';
 import '../../styles/tutorial-global.css';
@@ -101,6 +102,8 @@ export default function PantallaPrincipalViajesOperativos() {
   const itemsPerPage = 8;
 
   const [isReportesOpen, setIsReportesOpen] = useState(false);
+  const [selectedViajeId, setSelectedViajeId] = useState(null);
+  const [isDetailOpen, setIsDetailOpen] = useState(false);
 
   const fetchViajes = async () => {
     try {
@@ -255,6 +258,13 @@ export default function PantallaPrincipalViajesOperativos() {
         icon: "error",
       });
     }
+  };
+
+  const handleVerDetalle = (row) => {
+    const id = row?._id || row?.id;
+    if (!id) return;
+    setSelectedViajeId(id);
+    setIsDetailOpen(true);
   };
 
   const handleEdit = (e, row) => {
@@ -630,6 +640,7 @@ export default function PantallaPrincipalViajesOperativos() {
                     <tr
                       key={String(id || idx)}
                       className="border-b border-gray-100 hover:bg-gray-50 cursor-pointer transition-colors"
+                      onClick={() => handleVerDetalle(row)}
                     >
                       <td className="py-5 px-6 text-gray-700 font-semibold">
                         {startIndex + idx + 1}
@@ -770,6 +781,12 @@ export default function PantallaPrincipalViajesOperativos() {
       <ReportesViajesOperativosModal
         isOpen={isReportesOpen}
         onClose={() => setIsReportesOpen(false)}
+      />
+
+      <ViajeOperativoDetailModal
+        viajeId={selectedViajeId}
+        isOpen={isDetailOpen}
+        onClose={() => setIsDetailOpen(false)}
       />
     </div>
   );

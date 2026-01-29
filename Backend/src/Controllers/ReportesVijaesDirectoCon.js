@@ -2013,7 +2013,8 @@ ReportesViajesDirecto.generarPDFClienteIndividual = async (req, res) => {
       'periodoContable.mes': mesNum
     })
       .populate('truckId', 'licensePlate placa brand model marca modelo')
-      .populate('conductorId', 'name nombre')
+      .populate('conductorId', 'name nombre lastName apellido')
+      .populate('auxiliares.auxiliarId', 'name nombre lastName apellido')
       .sort({ departureTime: 1 })
       .lean();
 
@@ -2039,7 +2040,9 @@ ReportesViajesDirecto.generarPDFClienteIndividual = async (req, res) => {
           cantidadViajes: 0,
           montoPorViaje: viaje.montoAcordado || 0,
           montoTotal: 0,
-          viajes: []
+          viajes: [],
+          motoristas: new Set(),
+          auxiliares: new Set()
         });
       }
 
@@ -2047,6 +2050,22 @@ ReportesViajesDirecto.generarPDFClienteIndividual = async (req, res) => {
       ruta.cantidadViajes++;
       ruta.montoTotal += (viaje.montoAcordado || 0);
       ruta.viajes.push(viaje);
+      
+      // Agregar motorista si existe
+      if (viaje.conductorId) {
+        const nombreMotorista = `${viaje.conductorId.name || viaje.conductorId.nombre || ''} ${viaje.conductorId.lastName || viaje.conductorId.apellido || ''}`.trim() || 'N/A';
+        ruta.motoristas.add(nombreMotorista);
+      }
+      
+      // Agregar auxiliares si existen
+      if (viaje.auxiliares && Array.isArray(viaje.auxiliares)) {
+        viaje.auxiliares.forEach(aux => {
+          if (aux.auxiliarId) {
+            const nombreAuxiliar = `${aux.auxiliarId.name || aux.auxiliarId.nombre || ''} ${aux.auxiliarId.lastName || aux.auxiliarId.apellido || ''}`.trim() || 'N/A';
+            ruta.auxiliares.add(nombreAuxiliar);
+          }
+        });
+      }
     });
 
     const rutasArray = Array.from(rutasMap.values());
@@ -2313,26 +2332,34 @@ ReportesViajesDirecto.generarPDFClienteIndividual = async (req, res) => {
     <thead>
       <tr>
         <th style="width: 5%;">#</th>
-        <th style="width: 25%;">RUTA</th>
-        <th style="width: 20%;">ORIGEN</th>
-        <th style="width: 20%;">DESTINO</th>
-        <th style="width: 10%;">VIAJES</th>
-        <th style="width: 10%;">$/VIAJE</th>
+        <th style="width: 20%;">RUTA</th>
+        <th style="width: 15%;">ORIGEN</th>
+        <th style="width: 15%;">DESTINO</th>
+        <th style="width: 15%;">MOTORISTA(S)</th>
+        <th style="width: 10%;">AUXILIAR(ES)</th>
+        <th style="width: 8%;">VIAJES</th>
+        <th style="width: 8%;">$/VIAJE</th>
         <th style="width: 10%;">TOTAL</th>
       </tr>
     </thead>
     <tbody>
-      ${rutasArray.map((ruta, index) => `
+      ${rutasArray.map((ruta, index) => {
+        const motoristas = Array.from(ruta.motoristas).join(', ') || 'N/A';
+        const auxiliares = Array.from(ruta.auxiliares).join(', ') || 'N/A';
+        return `
         <tr>
           <td class="text-center"><strong>${index + 1}</strong></td>
           <td><strong>${ruta.rutaCompleta.toUpperCase()}</strong></td>
           <td>${ruta.origen.toUpperCase()}</td>
           <td>${ruta.destino.toUpperCase()}</td>
+          <td>${motoristas}</td>
+          <td>${auxiliares}</td>
           <td class="text-center">${ruta.cantidadViajes}</td>
           <td class="text-right">$${ruta.montoPorViaje.toFixed(2)}</td>
           <td class="text-right"><strong>$${ruta.montoTotal.toFixed(2)}</strong></td>
         </tr>
-      `).join("")}
+        `;
+      }).join("")}
     </tbody>
   </table>
 

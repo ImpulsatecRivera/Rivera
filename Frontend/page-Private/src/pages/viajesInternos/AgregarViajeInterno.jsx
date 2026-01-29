@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../../Context/authContext";
+import Swal from 'sweetalert2';
 
 const TIPO_CARGA = [
   { value: "general", label: "General" },
@@ -341,6 +342,12 @@ export default function AgregarViajeOperativo() {
   const handleSubmit = async () => {
     const err = validar();
     if (err) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: err,
+        confirmButtonColor: '#5F8EAD'
+      });
       setError(err);
       return;
     }
@@ -390,7 +397,14 @@ export default function AgregarViajeOperativo() {
     } catch (e) {
       console.error('❌ Error completo:', e);
       console.error('❌ Response data:', e.response?.data);
-      setError(e.response?.data?.message || e.message || "Error al guardar");
+      const errorMessage = e.response?.data?.message || e.message || "Error al guardar";
+      Swal.fire({
+        icon: 'error',
+        title: 'Error al crear viaje',
+        text: errorMessage,
+        confirmButtonColor: '#5F8EAD'
+      });
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
