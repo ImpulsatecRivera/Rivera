@@ -291,7 +291,8 @@ LoginController.Login = async (req, res) => {
         }
 
         console.log('✅ Login de motorista/auxiliar exitoso');
-       userType = userFound.cargo; // "Motorista" o "Auxiliar"
+              userType = "Motorista";
+
 
       } 
       // 3) Empleado - LOGIN CON EMAIL
