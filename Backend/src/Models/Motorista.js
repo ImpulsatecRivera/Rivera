@@ -24,7 +24,8 @@ const motoristaSchema = new Schema({
     // Información de identificación legal
     id: {
         type: String,      // Número de identificación (DUI, cédula, etc.)
-        required: true     // Campo obligatorio para verificación legal del conductor
+        required: true,    // Campo obligatorio para verificación legal del conductor
+        unique: true       // ✅ Índice único: no permite DUI duplicados
     },
     birthDate: {
         type: Date,        // Fecha de nacimiento del motorista
