@@ -48,46 +48,31 @@ const InicioSesionScreen = ({ navigation }) => {
     ]).start();
   }, []);
 
-  // ✅ FORMATO AUTOMÁTICO DE DUI CON GUIÓN
+  // ✅ FORMATO DUI
   const formatDUI = (text) => {
-    // Remover todo excepto números
     const numbers = text.replace(/[^0-9]/g, '');
-    
-    // Limitar a 9 dígitos máximo
     const limited = numbers.slice(0, 9);
-    
-    // Si tiene 8 o más dígitos, agregar el guión
     if (limited.length > 8) {
       return `${limited.slice(0, 8)}-${limited.slice(8)}`;
     }
-    
     return limited;
   };
 
   const handleDuiChange = (text) => {
-    const formatted = formatDUI(text);
-    setDui(formatted);
+    setDui(formatDUI(text));
   };
 
   const validateForm = () => {
-    // Remover guión para validar
     const duiSinGuion = dui.replace(/-/g, '');
-    
-    if (!duiSinGuion.trim()) {
-      Alert.alert('Error', 'Ingresa tu DUI');
-      return false;
-    }
-    
-    if (duiSinGuion.length !== 9) {
+
+    if (!duiSinGuion || duiSinGuion.length !== 9) {
       Alert.alert('Error', 'El DUI debe tener 9 dígitos');
       return false;
     }
-    
     if (!password.trim()) {
       Alert.alert('Error', 'Ingresa tu contraseña');
       return false;
     }
-    
     return true;
   };
 
@@ -96,17 +81,17 @@ const InicioSesionScreen = ({ navigation }) => {
 
     setLoading(true);
     try {
-      const API_URL = 'https://rivera-test-629395560179.us-west1.run.app/api/login';
+    const API_URL = 'https://rivera-test-629395560179.us-west1.run.app/api';
+
 
       const response = await fetch(API_URL, {
         method: 'POST',
-        credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
           Accept: 'application/json',
         },
         body: JSON.stringify({
-          dui: dui.trim(), // ✅ Enviar con guión tal como está
+          dui: dui.trim(),
           password: password.trim(),
         }),
       });
@@ -118,15 +103,13 @@ const InicioSesionScreen = ({ navigation }) => {
         return;
       }
 
-      if (data.userType !== 'Motorista') {
-        Alert.alert('Acceso denegado', 'Solo motoristas pueden usar esta app');
-        return;
-      }
+      // ✅ USAR CARGO REAL DEL BACKEND
+      
 
+      // 🚀 LOGIN REAL (AuthContext maneja el rol)
       await login({
         user: data.user,
-        userType: data.userType,
-        token: data.token || null,
+        token: data.token,
       });
     } catch (error) {
       Alert.alert('Error', 'No se pudo conectar al servidor');
@@ -141,7 +124,6 @@ const InicioSesionScreen = ({ navigation }) => {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       keyboardVerticalOffset={80}
     >
-      {/* Lottie fondo */}
       <LottieView
         source={require('../../assets/lottie/Background Full Screen-Train.json')}
         autoPlay
@@ -161,31 +143,32 @@ const InicioSesionScreen = ({ navigation }) => {
           }}
         >
           <BlurView intensity={45} tint="light" style={styles.card}>
-            <Image source={require('../images/logo.png')} style={styles.logo} />
+            <Image
+              source={require('../images/logo.png')}
+              style={styles.logo}
+            />
 
-            <Text style={styles.title}>Rivera distribuidora y transporte</Text>
-            <Text style={styles.subtitle}>Inicia sesión para continuar</Text>
+            <Text style={styles.title}>
+              Rivera distribuidora y transporte
+            </Text>
+            <Text style={styles.subtitle}>
+              Inicia sesión para continuar
+            </Text>
 
-            {/* ✅ CAMPO DUI CON FORMATO AUTOMÁTICO */}
             <View style={styles.inputContainer}>
               <View style={styles.iconBox}>
                 <Icon name="card-outline" size={16} color="#555" />
               </View>
               <TextInput
                 style={styles.input}
-                placeholder="DUI (ej: 12345678-9)"
+                placeholder="DUI (12345678-9)"
                 placeholderTextColor="#777"
                 value={dui}
                 onChangeText={handleDuiChange}
                 keyboardType="number-pad"
-                maxLength={10} // ✅ 8 dígitos + guión + 1 dígito = 10 caracteres
+                maxLength={10}
                 editable={!loading}
               />
-              {dui.length > 0 && (
-                <Text style={styles.duiCounter}>
-                  {dui.replace(/-/g, '').length}/9
-                </Text>
-              )}
             </View>
 
             <View style={styles.inputContainer}>
@@ -201,9 +184,15 @@ const InicioSesionScreen = ({ navigation }) => {
                 secureTextEntry={!showPassword}
                 editable={!loading}
               />
-              <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+              <TouchableOpacity
+                onPress={() => setShowPassword(!showPassword)}
+              >
                 <Icon
-                  name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                  name={
+                    showPassword
+                      ? 'eye-off-outline'
+                      : 'eye-outline'
+                  }
                   size={18}
                   color="#555"
                 />
@@ -212,14 +201,25 @@ const InicioSesionScreen = ({ navigation }) => {
 
             <TouchableOpacity
               style={styles.forgotPill}
-              onPress={() => navigation.navigate('elegirMetodoRecuperacion')}
+              onPress={() =>
+                navigation.navigate('elegirMetodoRecuperacion')
+              }
               disabled={loading}
             >
-              <Icon name="help-circle-outline" size={14} color="#2ecc71" />
-              <Text style={styles.forgotText}>¿Olvidaste tu contraseña?</Text>
+              <Icon
+                name="help-circle-outline"
+                size={14}
+                color="#2ecc71"
+              />
+              <Text style={styles.forgotText}>
+                ¿Olvidaste tu contraseña?
+              </Text>
             </TouchableOpacity>
 
-            <TouchableOpacity onPress={handleLogin} disabled={loading}>
+            <TouchableOpacity
+              onPress={handleLogin}
+              disabled={loading}
+            >
               <LinearGradient
                 colors={['#4CAF50', '#2ecc71']}
                 style={styles.button}
@@ -239,20 +239,13 @@ const InicioSesionScreen = ({ navigation }) => {
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  lottie: {
-    position: 'absolute',
-    width,
-    height,
-  },
+  container: { flex: 1 },
+  lottie: { position: 'absolute', width, height },
   card: {
     width: '85%',
     alignSelf: 'center',
     padding: 24,
     borderRadius: 26,
-    overflow: 'hidden',
   },
   logo: {
     width: 64,
@@ -271,7 +264,6 @@ const styles = StyleSheet.create({
     color: '#555',
     textAlign: 'center',
     marginBottom: 24,
-    marginTop: 4,
   },
   inputContainer: {
     flexDirection: 'row',
@@ -291,26 +283,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginRight: 8,
   },
-  input: {
-    flex: 1,
-    fontSize: 15,
-    color: '#111',
-  },
-  duiCounter: {
-    fontSize: 12,
-    color: '#777',
-    fontWeight: '600',
-    marginLeft: 8,
-  },
+  input: { flex: 1, fontSize: 15, color: '#111' },
   forgotPill: {
     flexDirection: 'row',
     alignItems: 'center',
     alignSelf: 'center',
     marginVertical: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.75)',
   },
   forgotText: {
     fontSize: 13,

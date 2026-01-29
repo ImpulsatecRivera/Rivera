@@ -58,7 +58,6 @@ const formatearFechaCompleta = (fecha) => {
   });
 };
 
-// Función para formatear hora de salida
 const formatearHoraSalida = (viaje) => {
   const horaSalida = viaje?.horaSalida || viaje?.hora_salida || viaje?.hora || viaje?.departureTime;
   
@@ -84,15 +83,7 @@ const formatearHoraSalida = (viaje) => {
   return horaSalida.toString();
 };
 
-// Función para obtener la placa del camión
-// En la función obtenerPlacaCamion, cambia a esto:
-
 const obtenerPlacaCamion = (viaje) => {
-  console.log('=== DEBUG FINAL ===');
-  console.log('Viaje completo:', JSON.stringify(viaje, null, 2));
-  console.log('viaje.placa:', viaje?.placa);
-  console.log('==================');
-  
   return viaje?.placa || "Sin placa";
 };
 
@@ -125,31 +116,26 @@ export default function ProgramacionViajesOperativos() {
     }
   }, [selectedDate]);
 
- const fetchProgramacion = async (fecha) => {
-  try {
-    setLoading(true);
-    setError(null);
+  const fetchProgramacion = async (fecha) => {
+    try {
+      setLoading(true);
+      setError(null);
 
-    const url = `${PROGRAMACION_ENDPOINT}/${fecha}`;
-    console.log('🌐 URL COMPLETA QUE ESTOY LLAMANDO:', url);
-    console.log('🌐 config.api.API_URL:', config.api.API_URL);
-    console.log('🌐 PROGRAMACION_ENDPOINT:', PROGRAMACION_ENDPOINT);
+      const response = await api.get(`${PROGRAMACION_ENDPOINT}/${fecha}`);
+      const data = response.data?.data || {};
+      const prog = data?.programacion || [];
 
-    const response = await api.get(`${PROGRAMACION_ENDPOINT}/${fecha}`);
-    const data = response.data?.data || {};
-    const prog = data?.programacion || [];
-
-    setProgramacion(Array.isArray(prog) ? prog : []);
-    setFechaInfo(data?.fecha || "");
-    setTotalViajes(data?.totalViajes || 0);
-    setTotalClientes(data?.totalClientes || 0);
-  } catch (e) {
-    setError(e.response?.data?.message || e.message || "Error al cargar");
-    setProgramacion([]);
-  } finally {
-    setLoading(false);
-  }
-};
+      setProgramacion(Array.isArray(prog) ? prog : []);
+      setFechaInfo(data?.fecha || "");
+      setTotalViajes(data?.totalViajes || 0);
+      setTotalClientes(data?.totalClientes || 0);
+    } catch (e) {
+      setError(e.response?.data?.message || e.message || "Error al cargar");
+      setProgramacion([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleRefresh = () => {
     if (selectedDate) {
@@ -168,7 +154,6 @@ export default function ProgramacionViajesOperativos() {
     }
 
     try {
-      // Mostrar alerta de generando PDF
       Swal.fire({
         title: 'Generando PDF...',
         html: '<div style="text-align: center;"><div style="border: 4px solid #f3f3f3; border-top: 4px solid #5F8EAD; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 0 auto;"></div><p style="margin-top: 10px; color: #666;">Preparando reporte, por favor espera</p></div>',
@@ -441,44 +426,39 @@ export default function ProgramacionViajesOperativos() {
                         </div>
                         
                         <div className="space-y-2 pl-4">
-                         
-
-{viajes.map((viaje, idx) => {
-  const placa = obtenerPlacaCamion(viaje);
-  
-  // 🔥 NUEVO: Obtener auxiliares
-  const auxiliares = viaje?.auxiliares || [];
-  const nombresConductor = viaje?.conductor || "Sin conductor";
-  
-  return (
-    <div 
-      key={viaje?.id || idx} 
-      className="flex items-center gap-3 text-xl font-semibold text-gray-800 group hover:bg-blue-50 p-2 rounded transition-colors"
-    >
-      <span className="text-blue-600 font-mono">{placa}</span>
-      <span className="text-gray-600">{formatearHoraSalida(viaje)}</span>
-      
-      {/* 🔥 CONDUCTOR + AUXILIARES */}
-      <div className="flex flex-col gap-0.5">
-        <span className="text-gray-900">{nombresConductor}</span>
-        {auxiliares.length > 0 && (
-          <span className="text-sm text-green-700 italic">
-            + {auxiliares.map(aux => aux.nombre || aux.name || 'Aux').join(', ')}
-          </span>
-        )}
-      </div>
-      
-      <span className="text-sm text-gray-500">{viaje?.destino || ""}</span>
-      
-      <button
-        onClick={() => handleCambiarEstado(viaje, cliente)}
-        className="ml-auto opacity-0 group-hover:opacity-100 transition-opacity"
-      >
-        <Edit2 size={16} className="text-blue-600" />
-      </button>
-    </div>
-  );
-})}
+                          {viajes.map((viaje, idx) => {
+                            const placa = obtenerPlacaCamion(viaje);
+                            const auxiliares = viaje?.auxiliares || [];
+                            const nombresConductor = viaje?.conductor || "Sin conductor";
+                            
+                            return (
+                              <div 
+                                key={viaje?.id || idx} 
+                                className="flex items-center gap-3 text-xl font-semibold text-gray-800 group hover:bg-blue-50 p-2 rounded transition-colors"
+                              >
+                                <span className="text-blue-600 font-mono">{placa}</span>
+                                <span className="text-gray-600">{formatearHoraSalida(viaje)}</span>
+                                
+                                <div className="flex flex-col gap-0.5">
+                                  <span className="text-gray-900">{nombresConductor}</span>
+                                  {auxiliares.length > 0 && (
+                                    <span className="text-sm text-green-700 italic">
+                                      + {auxiliares.map(aux => aux.nombre || aux.name || 'Aux').join(', ')}
+                                    </span>
+                                  )}
+                                </div>
+                                
+                                <span className="text-sm text-gray-500">{viaje?.destino || ""}</span>
+                                
+                                <button
+                                  onClick={() => handleCambiarEstado(viaje, cliente)}
+                                  className="ml-auto opacity-0 group-hover:opacity-100 transition-opacity"
+                                >
+                                  <Edit2 size={16} className="text-blue-600" />
+                                </button>
+                              </div>
+                            );
+                          })}
                         </div>
                       </div>
                     ))}

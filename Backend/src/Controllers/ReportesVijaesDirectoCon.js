@@ -2933,6 +2933,11 @@ ReportesViajesDirecto.generarPDFConsolidadoAnual = async (req, res) => {
   }
 };
 
+// =====================================================
+// 📄 PDF DIARIO - VERSIÓN CORREGIDA
+// Reemplaza SOLO este método en ReportesViajesDirecto.js
+// =====================================================
+
 ReportesViajesDirecto.generarPDFDiario = async (req, res) => {
   let browser;
   try {
@@ -2941,37 +2946,51 @@ ReportesViajesDirecto.generarPDFDiario = async (req, res) => {
     // Validar formato de fecha YYYY-MM-DD
     const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
     if (!dateRegex.test(fecha)) {
-      return res.status(400).json({ success: false, message: 'Formato de fecha inválido. Usa YYYY-MM-DD (ej: 2025-01-25)' });
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Formato de fecha inválido. Usa YYYY-MM-DD (ej: 2025-01-25)' 
+      });
     }
 
-    // ✅ PARSEAR COMO ZONA HORARIA LOCAL (igual que cuando guardas los viajes)
+    // ✅ PARSEAR COMO ZONA HORARIA LOCAL
     const [year, month, day] = fecha.split('-');
     const fechaDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day), 0, 0, 0, 0);
     const fechaFin = new Date(parseInt(year), parseInt(month) - 1, parseInt(day), 23, 59, 59, 999);
 
     console.log(`📊 Generando PDF Diario de Viajes: ${formatearFechaString(fecha)}`);
-    console.log('🔍 Rango de búsqueda LOCAL:', fechaDate, 'hasta', fechaFin);
 
-    // 🔥 ACTUALIZADO: Obtener viajes del día con conductor y auxiliares
+    // 🔥 CORRECCIÓN: Buscar con múltiples criterios para encontrar TODOS los viajes
     const viajes = await ViajesModel.find({
       tipoViaje: 'operativo',
       'estado.actual': 'completado',
-      departureTime: { $gte: fechaDate, $lte: fechaFin }
+      $or: [
+        // Criterio 1: departureTime en el rango
+        { departureTime: { $gte: fechaDate, $lte: fechaFin } },
+        // Criterio 2: periodoContable coincide (backup)
+        {
+          'periodoContable.año': parseInt(year),
+          'periodoContable.mes': parseInt(month),
+          'periodoContable.dia': parseInt(day)
+        }
+      ]
     })
       .populate('clienteOperativo', 'nombreComercial nombreEmpresa')
       .populate('truckId', 'licensePlate placa')
-      .populate('conductorId', 'nombre name') // 🔥 NUEVO
-      .populate('auxiliares.auxiliarId', 'nombre name') // 🔥 NUEVO
+      .populate('conductorId', 'nombre name')
+      .populate('auxiliares.auxiliarId', 'nombre name')
       .sort({ clienteNombre: 1, departureTime: 1 })
       .lean();
 
     console.log('✅ Viajes encontrados:', viajes.length);
 
     if (!viajes || viajes.length === 0) {
-      return res.status(404).json({ success: false, message: 'No hay viajes completados en la fecha indicada' });
+      return res.status(404).json({ 
+        success: false, 
+        message: 'No hay viajes completados en la fecha indicada' 
+      });
     }
 
-    // 🔥 ACTUALIZADO: Agrupar por cliente
+    // 🔥 AGRUPAR POR CLIENTE
     const clientesMap = new Map();
     let totalViajesGeneral = 0;
     let totalMontoGeneral = 0;
@@ -2986,14 +3005,16 @@ ReportesViajesDirecto.generarPDFDiario = async (req, res) => {
 
       const data = clientesMap.get(cliente);
       
-      // 🔥 ACTUALIZADO: Agregar conductor y auxiliares
+      // Obtener auxiliares
+      const auxiliares = (v.auxiliares || [])
+        .map(aux => aux.auxiliarId?.nombre || aux.auxiliarId?.name)
+        .filter(Boolean);
+      
       data.viajes.push({
         hora: formatearHora(v.departureTime),
         placa: v.truckId?.licensePlate || v.truckId?.placa || 'SIN PLACA',
         conductor: v.conductorId?.nombre || v.conductorId?.name || 'SIN CONDUCTOR',
-        auxiliares: (v.auxiliares || [])
-          .map(aux => aux.auxiliarId?.nombre || aux.auxiliarId?.name)
-          .filter(Boolean),
+        auxiliares: auxiliares,
         monto: monto
       });
       
@@ -3003,9 +3024,10 @@ ReportesViajesDirecto.generarPDFDiario = async (req, res) => {
       totalMontoGeneral += monto;
     });
 
-    // 🔥 ACTUALIZADO: Generar filas HTML
+    // 🔥 GENERAR FILAS HTML
     let filasHTML = '';
     let idx = 1;
+    
     clientesMap.forEach((data, cliente) => {
       let viajesCliente = data.viajes.map(v => {
         // Formatear personal: conductor + auxiliares
