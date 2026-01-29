@@ -1,5 +1,11 @@
 // src/context/AuthContext.js
-import React, { createContext, useContext, useEffect, useRef, useState } from "react";
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const AuthContext = createContext();
@@ -7,33 +13,28 @@ const AuthContext = createContext();
 // ⏰ CONFIGURACIÓN DE EXPIRACIÓN
 const SESSION_TIMEOUT = 20 * 60 * 1000; // 20 minutos
 
-// Llaves centralizadas para evitar typos
+// 🔑 Llaves centralizadas
 const STORAGE_KEYS = {
-  userToken: "userToken",
-  authToken: "authToken",
-  token: "token", // compat con otros hooks
+  token: "token",
   loginTime: "loginTime",
   onboardingCompleted: "onboardingCompleted",
   userData: "userData",
-  userType: "userType",
-  motoristaId: "motoristaId",
+  userType: "userType", // ← aquí se guarda el CARGO
+  userId: "userId",
 };
 
 export const AuthProvider = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [hasCompletedOnboarding, setHasCompletedOnboarding] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [userType, setUserType] = useState(null);
-  const [user, setUser] = useState(null);
 
-  // 🆕 SPLASH posterior al login
+  const [user, setUser] = useState(null);
+  const [userType, setUserType] = useState(null); // Motorista | Auxiliar
+  const [userId, setUserId] = useState(null);
+  const [token, setToken] = useState(null);
+
   const [showPostLoginSplash, setShowPostLoginSplash] = useState(false);
 
-  // ✅ Exponer token e id para otros hooks
-  const [token, setToken] = useState(null);
-  const [motoristaId, setMotoristaId] = useState(null);
-
-  // ✅ Timer con useRef para evitar re-renders
   const sessionTimerRef = useRef(null);
 
   useEffect(() => {
@@ -41,7 +42,6 @@ export const AuthProvider = ({ children }) => {
     return () => {
       if (sessionTimerRef.current) clearTimeout(sessionTimerRef.current);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const safeParse = (str, fallback = null) => {
@@ -52,206 +52,158 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // 🔍 VERIFICAR SI HAY UNA SESIÓN GUARDADA
+  // 🔍 RESTAURAR SESIÓN
   const checkAuthStatus = async () => {
     try {
-      console.log("🔍 Verificando sesión guardada...");
-
       const [
         tokenStr,
         loginTimeStr,
-        onboardingCompletedStr,
+        onboardingStr,
         userDataStr,
-        savedUserType,
-        storedMotoristaId,
+        storedUserType,
+        storedUserId,
       ] = await AsyncStorage.multiGet([
-        STORAGE_KEYS.userToken,
+        STORAGE_KEYS.token,
         STORAGE_KEYS.loginTime,
         STORAGE_KEYS.onboardingCompleted,
         STORAGE_KEYS.userData,
         STORAGE_KEYS.userType,
-        STORAGE_KEYS.motoristaId,
+        STORAGE_KEYS.userId,
       ]).then((pairs) => pairs.map(([, v]) => v));
 
       if (tokenStr && loginTimeStr) {
-        const currentTime = Date.now();
-        const timeSinceLogin = currentTime - parseInt(loginTimeStr, 10);
+        const now = Date.now();
+        const diff = now - parseInt(loginTimeStr, 10);
 
-        console.log(`⏰ Tiempo desde login: ${Math.round(timeSinceLogin / 1000 / 60)} minutos`);
-
-        if (timeSinceLogin < SESSION_TIMEOUT) {
-          const remainingTime = SESSION_TIMEOUT - timeSinceLogin;
-          console.log(
-            `✅ Sesión válida. Expira en: ${Math.round(remainingTime / 1000 / 60)} minutos`
-          );
-          console.log(`📋 Motorista ID guardado: ${storedMotoristaId}`);
-
+        if (diff < SESSION_TIMEOUT) {
           setIsAuthenticated(true);
-          setHasCompletedOnboarding(onboardingCompletedStr === "true");
-          setUser(safeParse(userDataStr, null));
-          setUserType(savedUserType);
-
-          // ✅ token e id en estado
+          setHasCompletedOnboarding(onboardingStr === "true");
+          setUser(safeParse(userDataStr));
+          setUserType(storedUserType);
+          setUserId(storedUserId);
           setToken(tokenStr);
-          setMotoristaId(storedMotoristaId || null);
 
-          // 🆕 No mostrar splash post-login en restauración
           setShowPostLoginSplash(false);
-
-          startSessionTimer(remainingTime);
+          startSessionTimer(SESSION_TIMEOUT - diff);
         } else {
-          console.log("❌ Sesión expirada - limpiando datos");
           await clearAuthData();
         }
-      } else {
-        console.log("📭 No hay sesión guardada");
       }
-    } catch (error) {
-      console.error("❌ Error verificando sesión:", error);
+    } catch (e) {
+      console.error("❌ Error restaurando sesión:", e);
       await clearAuthData();
     } finally {
       setIsLoading(false);
     }
   };
 
-  // ⏲️ INICIAR TIMER DE SESIÓN
-  const startSessionTimer = (timeoutDuration = SESSION_TIMEOUT) => {
+  // ⏲️ TIMER
+  const startSessionTimer = (duration = SESSION_TIMEOUT) => {
     if (sessionTimerRef.current) clearTimeout(sessionTimerRef.current);
-    sessionTimerRef.current = setTimeout(async () => {
-      console.log("⏰ Sesión expirada automáticamente - cerrando sesión");
-      await autoLogout();
-    }, timeoutDuration);
-    console.log(`⏰ Timer de sesión iniciado: ${Math.round(timeoutDuration / 1000 / 60)} minutos`);
+    sessionTimerRef.current = setTimeout(autoLogout, duration);
   };
 
-  // 🚪 AUTO-LOGOUT
+  // 🚪 AUTO LOGOUT
   const autoLogout = async () => {
-    try {
-      console.log("🔒 Cerrando sesión automáticamente por expiración");
-      await clearAuthData();
-    } catch (error) {
-      console.error("❌ Error en auto-logout:", error);
-    }
+    console.log("⏰ Sesión expirada");
+    await clearAuthData();
   };
 
-  // 🗑️ LIMPIAR TODOS LOS DATOS DE AUTENTICACIÓN
+  // 🗑️ LIMPIAR TODO
   const clearAuthData = async () => {
-    try {
-      await AsyncStorage.multiRemove([
-        STORAGE_KEYS.userToken,
-        STORAGE_KEYS.authToken,
-        STORAGE_KEYS.token, // ✅ limpiar compat
-        STORAGE_KEYS.loginTime,
-        STORAGE_KEYS.onboardingCompleted,
-        STORAGE_KEYS.userData,
-        STORAGE_KEYS.userType,
-        STORAGE_KEYS.motoristaId,
-      ]);
+    await AsyncStorage.multiRemove(Object.values(STORAGE_KEYS));
 
-      setIsAuthenticated(false);
-      setHasCompletedOnboarding(false);
-      setUserType(null);
-      setUser(null);
+    setIsAuthenticated(false);
+    setHasCompletedOnboarding(false);
+    setUser(null);
+    setUserType(null);
+    setUserId(null);
+    setToken(null);
+    setShowPostLoginSplash(false);
 
-      // ✅ limpiar estado in-memory
-      setToken(null);
-      setMotoristaId(null);
-
-      // 🆕 reset splash
-      setShowPostLoginSplash(false);
-
-      if (sessionTimerRef.current) {
-        clearTimeout(sessionTimerRef.current);
-        sessionTimerRef.current = null;
-      }
-    } catch (error) {
-      console.error("❌ Error limpiando datos:", error);
+    if (sessionTimerRef.current) {
+      clearTimeout(sessionTimerRef.current);
+      sessionTimerRef.current = null;
     }
   };
 
-  // 🔐 LOGIN
+  // 🔐 LOGIN (🔥 AQUÍ ESTABA EL PROBLEMA)
   const login = async (loginData) => {
-    try {
-      console.log("🔐 Procesando login exitoso:", loginData);
+  try {
+    const currentTime = Date.now();
 
-      const currentTime = Date.now();
-      const userId = loginData.user._id || loginData.user.id;
-      if (!userId) throw new Error("ID de usuario no disponible");
+    const user = loginData.user;
+    const tokenValue = loginData.token;
 
-      const tokenValue = loginData.token || "temp-token";
+    const id = user?.id || user?._id;
 
-      // 💾 Guardar todo (incluye 'token' para compat)
-      await AsyncStorage.multiSet([
-        [STORAGE_KEYS.userToken, tokenValue],
-        [STORAGE_KEYS.authToken, tokenValue],
-        [STORAGE_KEYS.token, tokenValue],
-        [STORAGE_KEYS.loginTime, currentTime.toString()],
-        [STORAGE_KEYS.userData, JSON.stringify(loginData.user)],
-        [STORAGE_KEYS.userType, loginData.userType],
-        [STORAGE_KEYS.motoristaId, userId.toString()],
-        [STORAGE_KEYS.onboardingCompleted, "true"],
-      ]);
-
-      // 📱 Estado
-      setUser(loginData.user);
-      setUserType(loginData.userType);
-      setIsAuthenticated(true);
-      setHasCompletedOnboarding(true);
-
-      setToken(tokenValue);
-      setMotoristaId(userId.toString());
-
-      setShowPostLoginSplash(true);
-      startSessionTimer();
-
-      console.log("✅ Login completado y guardado");
-      console.log("📋 Motorista ID guardado:", userId);
-      console.log("📊 Sesión expirará en 20 minutos");
-      console.log("🎬 SplashScreen2 activado");
-
-      return { success: true };
-    } catch (error) {
-      console.error("❌ Login error:", error);
-      return { success: false, error };
+    if (!id) {
+      throw new Error("ID de usuario no disponible");
     }
-  };
 
-  // 📝 REGISTRO
+    // 👉 El cargo se guarda, pero NO bloquea
+    const cargo = user?.cargo || null;
+
+    await AsyncStorage.multiSet([
+      [STORAGE_KEYS.token, tokenValue],
+      [STORAGE_KEYS.loginTime, currentTime.toString()],
+      [STORAGE_KEYS.userData, JSON.stringify(user)],
+      [STORAGE_KEYS.userType, cargo ?? ""],
+      [STORAGE_KEYS.userId, id.toString()],
+      [STORAGE_KEYS.onboardingCompleted, "true"],
+    ]);
+
+    setUser(user);
+    setUserType(cargo);
+    setUserId(id.toString());
+    setToken(tokenValue);
+    setIsAuthenticated(true);
+    setHasCompletedOnboarding(true);
+
+    setShowPostLoginSplash(true);
+    startSessionTimer();
+
+    console.log("✅ LOGIN OK");
+    console.log("👤 Cargo:", cargo);
+
+    return { success: true };
+  } catch (error) {
+    console.error("❌ Login error:", error);
+    return { success: false, error };
+  }
+};
+
+
+  // 📝 REGISTER (NO FORZAMOS MOTORISTA)
   const register = async (userData) => {
     try {
-      console.log("✅ Registro exitoso - activando pantallas de carga");
-
       const currentTime = Date.now();
-      const userId = userData._id || userData.id;
-      if (!userId) throw new Error("ID de usuario no disponible");
+      const id = userData?.id || userData?._id;
+      const cargo = userData?.cargo || null;
 
-      // Usamos token temporal (tu fetch lo ignora por la RegExp ^temp...)
+      if (!id || !cargo) {
+        throw new Error("Registro inválido");
+      }
+
       const tempToken = "temp-register-token";
 
       await AsyncStorage.multiSet([
-        [STORAGE_KEYS.userToken, tempToken],
-        [STORAGE_KEYS.authToken, tempToken], // mejor que vacío, para consistencia
         [STORAGE_KEYS.token, tempToken],
         [STORAGE_KEYS.loginTime, currentTime.toString()],
         [STORAGE_KEYS.userData, JSON.stringify(userData)],
-        [STORAGE_KEYS.userType, "Motorista"],
-        [STORAGE_KEYS.motoristaId, userId.toString()],
+        [STORAGE_KEYS.userType, cargo],
+        [STORAGE_KEYS.userId, id.toString()],
         [STORAGE_KEYS.onboardingCompleted, "false"],
       ]);
 
       setUser(userData);
-      setUserType("Motorista");
+      setUserType(cargo);
+      setUserId(id.toString());
+      setToken(tempToken);
       setIsAuthenticated(true);
       setHasCompletedOnboarding(false);
 
-      setToken(tempToken);
-      setMotoristaId(userId.toString());
-
-      setShowPostLoginSplash(false);
       startSessionTimer();
-
-      console.log("📊 Registro completado - mostrando onboarding");
-      console.log("📋 Motorista ID guardado:", userId);
 
       return { success: true };
     } catch (error) {
@@ -260,73 +212,50 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // 🎉 COMPLETAR ONBOARDING
   const completeOnboarding = async () => {
-    try {
-      await AsyncStorage.setItem(STORAGE_KEYS.onboardingCompleted, "true");
-      setHasCompletedOnboarding(true);
-      console.log("🎉 Onboarding completado");
-      return { success: true };
-    } catch (error) {
-      console.error("❌ Complete onboarding error:", error);
-      return { success: false, error };
-    }
+    await AsyncStorage.setItem(STORAGE_KEYS.onboardingCompleted, "true");
+    setHasCompletedOnboarding(true);
   };
 
-  // 🚪 LOGOUT MANUAL
   const logout = async () => {
-    try {
-      console.log("👋 Logout manual - limpiando sesión");
-      await clearAuthData();
-      return { success: true };
-    } catch (error) {
-      console.error("❌ Logout error:", error);
-      return { success: false, error };
-    }
+    await clearAuthData();
   };
 
-  // 🔄 RENOVAR SESIÓN
   const refreshSession = async () => {
-    try {
-      const currentTime = Date.now();
-      await AsyncStorage.setItem(STORAGE_KEYS.loginTime, currentTime.toString());
-      startSessionTimer(); // Reiniciar timer
-      console.log("🔄 Sesión renovada por 20 minutos más");
-    } catch (error) {
-      console.error("❌ Error renovando sesión:", error);
-    }
+    const now = Date.now();
+    await AsyncStorage.setItem(STORAGE_KEYS.loginTime, now.toString());
+    startSessionTimer();
   };
 
-  const value = {
-    isAuthenticated,
-    hasCompletedOnboarding,
-    isLoading,
-    userType,
-    user,
-
-    showPostLoginSplash,
-    setShowPostLoginSplash,
-
-    token,
-    motoristaId,
-
-    login,
-    register,
-    completeOnboarding,
-    logout,
-    refreshSession,
-  };
-
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider
+      value={{
+        isAuthenticated,
+        hasCompletedOnboarding,
+        isLoading,
+        user,
+        userType,
+        userId,
+        token,
+        showPostLoginSplash,
+        setShowPostLoginSplash,
+        login,
+        register,
+        completeOnboarding,
+        logout,
+        refreshSession,
+      }}
+    >
+      {children}
+    </AuthContext.Provider>
+  );
 };
 
-// Hook para usar el contexto
+// Hook
 export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error("useAuth debe ser usado dentro de AuthProvider");
-  }
-  return context;
+  const ctx = useContext(AuthContext);
+  if (!ctx) throw new Error("useAuth fuera de AuthProvider");
+  return ctx;
 };
 
 export default AuthContext;

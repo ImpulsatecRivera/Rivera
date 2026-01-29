@@ -2013,7 +2013,8 @@ ReportesViajesDirecto.generarPDFClienteIndividual = async (req, res) => {
       'periodoContable.mes': mesNum
     })
       .populate('truckId', 'licensePlate placa brand model marca modelo')
-      .populate('conductorId', 'name nombre')
+      .populate('conductorId', 'name nombre lastName apellido')
+      .populate('auxiliares.auxiliarId', 'name nombre lastName apellido')
       .sort({ departureTime: 1 })
       .lean();
 
@@ -2039,7 +2040,9 @@ ReportesViajesDirecto.generarPDFClienteIndividual = async (req, res) => {
           cantidadViajes: 0,
           montoPorViaje: viaje.montoAcordado || 0,
           montoTotal: 0,
-          viajes: []
+          viajes: [],
+          motoristas: new Set(),
+          auxiliares: new Set()
         });
       }
 
@@ -2047,6 +2050,22 @@ ReportesViajesDirecto.generarPDFClienteIndividual = async (req, res) => {
       ruta.cantidadViajes++;
       ruta.montoTotal += (viaje.montoAcordado || 0);
       ruta.viajes.push(viaje);
+      
+      // Agregar motorista si existe
+      if (viaje.conductorId) {
+        const nombreMotorista = `${viaje.conductorId.name || viaje.conductorId.nombre || ''} ${viaje.conductorId.lastName || viaje.conductorId.apellido || ''}`.trim() || 'N/A';
+        ruta.motoristas.add(nombreMotorista);
+      }
+      
+      // Agregar auxiliares si existen
+      if (viaje.auxiliares && Array.isArray(viaje.auxiliares)) {
+        viaje.auxiliares.forEach(aux => {
+          if (aux.auxiliarId) {
+            const nombreAuxiliar = `${aux.auxiliarId.name || aux.auxiliarId.nombre || ''} ${aux.auxiliarId.lastName || aux.auxiliarId.apellido || ''}`.trim() || 'N/A';
+            ruta.auxiliares.add(nombreAuxiliar);
+          }
+        });
+      }
     });
 
     const rutasArray = Array.from(rutasMap.values());
@@ -2313,26 +2332,34 @@ ReportesViajesDirecto.generarPDFClienteIndividual = async (req, res) => {
     <thead>
       <tr>
         <th style="width: 5%;">#</th>
-        <th style="width: 25%;">RUTA</th>
-        <th style="width: 20%;">ORIGEN</th>
-        <th style="width: 20%;">DESTINO</th>
-        <th style="width: 10%;">VIAJES</th>
-        <th style="width: 10%;">$/VIAJE</th>
+        <th style="width: 20%;">RUTA</th>
+        <th style="width: 15%;">ORIGEN</th>
+        <th style="width: 15%;">DESTINO</th>
+        <th style="width: 15%;">MOTORISTA(S)</th>
+        <th style="width: 10%;">AUXILIAR(ES)</th>
+        <th style="width: 8%;">VIAJES</th>
+        <th style="width: 8%;">$/VIAJE</th>
         <th style="width: 10%;">TOTAL</th>
       </tr>
     </thead>
     <tbody>
-      ${rutasArray.map((ruta, index) => `
+      ${rutasArray.map((ruta, index) => {
+        const motoristas = Array.from(ruta.motoristas).join(', ') || 'N/A';
+        const auxiliares = Array.from(ruta.auxiliares).join(', ') || 'N/A';
+        return `
         <tr>
           <td class="text-center"><strong>${index + 1}</strong></td>
           <td><strong>${ruta.rutaCompleta.toUpperCase()}</strong></td>
           <td>${ruta.origen.toUpperCase()}</td>
           <td>${ruta.destino.toUpperCase()}</td>
+          <td>${motoristas}</td>
+          <td>${auxiliares}</td>
           <td class="text-center">${ruta.cantidadViajes}</td>
           <td class="text-right">$${ruta.montoPorViaje.toFixed(2)}</td>
           <td class="text-right"><strong>$${ruta.montoTotal.toFixed(2)}</strong></td>
         </tr>
-      `).join("")}
+        `;
+      }).join("")}
     </tbody>
   </table>
 
@@ -2933,6 +2960,11 @@ ReportesViajesDirecto.generarPDFConsolidadoAnual = async (req, res) => {
   }
 };
 
+// =====================================================
+// 📄 PDF DIARIO - VERSIÓN CORREGIDA
+// Reemplaza SOLO este método en ReportesViajesDirecto.js
+// =====================================================
+
 ReportesViajesDirecto.generarPDFDiario = async (req, res) => {
   let browser;
   try {
@@ -2941,37 +2973,51 @@ ReportesViajesDirecto.generarPDFDiario = async (req, res) => {
     // Validar formato de fecha YYYY-MM-DD
     const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
     if (!dateRegex.test(fecha)) {
-      return res.status(400).json({ success: false, message: 'Formato de fecha inválido. Usa YYYY-MM-DD (ej: 2025-01-25)' });
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Formato de fecha inválido. Usa YYYY-MM-DD (ej: 2025-01-25)' 
+      });
     }
 
-    // ✅ PARSEAR COMO ZONA HORARIA LOCAL (igual que cuando guardas los viajes)
+    // ✅ PARSEAR COMO ZONA HORARIA LOCAL
     const [year, month, day] = fecha.split('-');
     const fechaDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day), 0, 0, 0, 0);
     const fechaFin = new Date(parseInt(year), parseInt(month) - 1, parseInt(day), 23, 59, 59, 999);
 
     console.log(`📊 Generando PDF Diario de Viajes: ${formatearFechaString(fecha)}`);
-    console.log('🔍 Rango de búsqueda LOCAL:', fechaDate, 'hasta', fechaFin);
 
-    // 🔥 ACTUALIZADO: Obtener viajes del día con conductor y auxiliares
+    // 🔥 CORRECCIÓN: Buscar con múltiples criterios para encontrar TODOS los viajes
     const viajes = await ViajesModel.find({
       tipoViaje: 'operativo',
       'estado.actual': 'completado',
-      departureTime: { $gte: fechaDate, $lte: fechaFin }
+      $or: [
+        // Criterio 1: departureTime en el rango
+        { departureTime: { $gte: fechaDate, $lte: fechaFin } },
+        // Criterio 2: periodoContable coincide (backup)
+        {
+          'periodoContable.año': parseInt(year),
+          'periodoContable.mes': parseInt(month),
+          'periodoContable.dia': parseInt(day)
+        }
+      ]
     })
       .populate('clienteOperativo', 'nombreComercial nombreEmpresa')
       .populate('truckId', 'licensePlate placa')
-      .populate('conductorId', 'nombre name') // 🔥 NUEVO
-      .populate('auxiliares.auxiliarId', 'nombre name') // 🔥 NUEVO
+      .populate('conductorId', 'nombre name')
+      .populate('auxiliares.auxiliarId', 'nombre name')
       .sort({ clienteNombre: 1, departureTime: 1 })
       .lean();
 
     console.log('✅ Viajes encontrados:', viajes.length);
 
     if (!viajes || viajes.length === 0) {
-      return res.status(404).json({ success: false, message: 'No hay viajes completados en la fecha indicada' });
+      return res.status(404).json({ 
+        success: false, 
+        message: 'No hay viajes completados en la fecha indicada' 
+      });
     }
 
-    // 🔥 ACTUALIZADO: Agrupar por cliente
+    // 🔥 AGRUPAR POR CLIENTE
     const clientesMap = new Map();
     let totalViajesGeneral = 0;
     let totalMontoGeneral = 0;
@@ -2986,14 +3032,16 @@ ReportesViajesDirecto.generarPDFDiario = async (req, res) => {
 
       const data = clientesMap.get(cliente);
       
-      // 🔥 ACTUALIZADO: Agregar conductor y auxiliares
+      // Obtener auxiliares
+      const auxiliares = (v.auxiliares || [])
+        .map(aux => aux.auxiliarId?.nombre || aux.auxiliarId?.name)
+        .filter(Boolean);
+      
       data.viajes.push({
         hora: formatearHora(v.departureTime),
         placa: v.truckId?.licensePlate || v.truckId?.placa || 'SIN PLACA',
         conductor: v.conductorId?.nombre || v.conductorId?.name || 'SIN CONDUCTOR',
-        auxiliares: (v.auxiliares || [])
-          .map(aux => aux.auxiliarId?.nombre || aux.auxiliarId?.name)
-          .filter(Boolean),
+        auxiliares: auxiliares,
         monto: monto
       });
       
@@ -3003,9 +3051,10 @@ ReportesViajesDirecto.generarPDFDiario = async (req, res) => {
       totalMontoGeneral += monto;
     });
 
-    // 🔥 ACTUALIZADO: Generar filas HTML
+    // 🔥 GENERAR FILAS HTML
     let filasHTML = '';
     let idx = 1;
+    
     clientesMap.forEach((data, cliente) => {
       let viajesCliente = data.viajes.map(v => {
         // Formatear personal: conductor + auxiliares

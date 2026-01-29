@@ -204,10 +204,19 @@ ReporteViajesYGastosSemanalesController.generarPDFSemanal = async (req, res) => 
             }
         });
 
-        const lastRecord = await CajaChica.findOne({ 
-            date: { $gte: weekStart, $lte: weekEnd } 
-        }).sort({ date: -1 }).lean();
-        const lastCurrentBalance = lastRecord ? Number(lastRecord.currentBalance || 0) : 0;
+        // Si no hay registros en la semana, buscar el registro más reciente para obtener el saldo
+        let lastCurrentBalance = 0;
+        if (cajaRecords.length === 0) {
+            const lastRecordBeforeWeek = await CajaChica.findOne({ 
+                date: { $lt: weekStart } 
+            }).sort({ date: -1 }).lean();
+            lastCurrentBalance = lastRecordBeforeWeek ? Number(lastRecordBeforeWeek.currentBalance || 0) : 0;
+        } else {
+            const lastRecord = await CajaChica.findOne({ 
+                date: { $gte: weekStart, $lte: weekEnd } 
+            }).sort({ date: -1 }).lean();
+            lastCurrentBalance = lastRecord ? Number(lastRecord.currentBalance || 0) : 0;
+        }
 
         // Planillas
         const planillas = await PlanillaSemanal.find({
@@ -221,31 +230,11 @@ ReporteViajesYGastosSemanalesController.generarPDFSemanal = async (req, res) => 
             efectivoViaje += Number(p.totales?.totalAPagar || 0);
         });
 
-        // Mantenimientos con detalles individuales
-        const mantens = await MantenimientoCamiones.find({ 
-            fecha_mantenimiento: { $gte: weekStart, $lte: weekEnd }, 
-            estado: 'completado' 
-        }).populate('ciculatioCard', 'licensePlate').lean();
-
-        // Calcular total de mantenimientos y preparar array de registros
-        const mantenimientosDetalle = [];
-        let maintenanceTotal = 0;
-        
-        mantens.forEach(m => {
-            const totalManto = m.detalles.reduce((sum, d) => sum + (Number(d.subTotal) || 0), 0);
-            maintenanceTotal += totalManto;
-            mantenimientosDetalle.push({
-                placa: m.ciculatioCard?.licensePlate || 'Sin placa',
-                descripcion: m.descripcion || m.tipo_de_mantenimiento || 'Mantenimiento',
-                monto: totalManto
-            });
-        });
-
         const totalViajes = viajesThis.reduce((s, r) => s + Number(r.monto || 0), 0);
         
-        // Total de efectivo de viaje (planilla + mantenimientos + manualEntries)
+        // Total de efectivo de viaje (planilla + manualEntries)
         const totalManualEntries = Array.isArray(manualEntries) ? manualEntries.reduce((s, m) => s + (Number(m.amount) || 0), 0) : 0;
-        const totalEfectivoViaje = efectivoViaje + maintenanceTotal + totalManualEntries;
+        const totalEfectivoViaje = efectivoViaje + totalManualEntries;
         
         const sobranteEfectivo = totalViajes - totalEfectivoViaje;
         // Determinar monto objetivo de caja chica: preferir valor enviado por cliente, si no existe usar configuración en DB
@@ -517,16 +506,9 @@ ReporteViajesYGastosSemanalesController.generarPDFSemanal = async (req, res) => 
                         <td>PLANILLA SEMANAL, EXTRA Y ANTICIPO</td>
                         <td class="text-right">$ ${formatMoney(efectivoViaje)}</td>
                     </tr>
-                    ${mantenimientosDetalle.map((mant, i) => `
-                        <tr>
-                            <td>${2 + i}</td>
-                            <td>MANTENIMIENTO ${mant.placa} - ${mant.descripcion}</td>
-                            <td class="text-right">$ ${formatMoney(mant.monto)}</td>
-                        </tr>
-                    `).join('')}
                     ${Array.isArray(manualEntries) && manualEntries.length > 0 ? manualEntries.map((m, i) => `
                         <tr>
-                            <td>${2 + mantenimientosDetalle.length + i}</td>
+                            <td>${2 + i}</td>
                             <td>${m.name || `MANUAL ${i + 1}`}</td>
                             <td class="text-right">$ ${formatMoney(m.amount || 0)}</td>
                         </tr>

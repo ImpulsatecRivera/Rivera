@@ -1171,21 +1171,19 @@ ReporteConsolidadoController.generarPDFRango = async (req, res) => {
             });
         }
 
-        // Convertir fechas a objetos Date simples (sin timezone)
-        const inicio = new Date(fechaInicio);
-        const fin = new Date(fechaFin);
-        fin.setHours(23, 59, 59, 999); // Final del día
+        // Convertir fechas a objetos Date locales (evitar desfase por timezone)
+        const parseDateLocal = (dateStr) => {
+            const [y, m, d] = String(dateStr).split('-').map(Number);
+            return new Date(y, (m || 1) - 1, d || 1, 0, 0, 0, 0);
+        };
 
-        // Extraer mes y año del rango
-        const mesInicio = inicio.getMonth() + 1; // getMonth() retorna 0-11
-        const anoInicio = inicio.getFullYear();
-        const mesFin = fin.getMonth() + 1;
-        const anoFin = fin.getFullYear();
+        const inicio = parseDateLocal(fechaInicio);
+        const fin = parseDateLocal(fechaFin);
+        fin.setHours(23, 59, 59, 999); // Final del día
 
         console.log(`\n=== Generando reporte consolidado por rango ===`);
         console.log(`Fecha inicio: ${inicio.toISOString()} (${fechaInicio})`);
         console.log(`Fecha fin: ${fin.toISOString()} (${fechaFin})`);
-        console.log(`Período: ${mesInicio}/${anoInicio} - ${mesFin}/${anoFin}`);
         console.log(`Días trabajados: ${diasNum}`);
 
         // Obtener todos los camiones
@@ -1227,45 +1225,18 @@ ReporteConsolidadoController.generarPDFRango = async (req, res) => {
                 });
             }
             
-            console.log(`\nRango de búsqueda por periodoContable:`);
-            console.log(`  Año: ${anoInicio} ${anoInicio !== anoFin ? `a ${anoFin}` : ''}`);
-            console.log(`  Mes: ${mesInicio} ${mesInicio !== mesFin ? `a ${mesFin}` : ''}`);
-            
-            // Buscar viajes completados del camión por periodo contable
-            // Si el rango está en el mismo mes y año
-            let queryPeriodo;
-            if (anoInicio === anoFin && mesInicio === mesFin) {
-                queryPeriodo = {
-                    'periodoContable.año': anoInicio,
-                    'periodoContable.mes': mesInicio
-                };
-            } else if (anoInicio === anoFin) {
-                // Mismo año, diferentes meses
-                queryPeriodo = {
-                    'periodoContable.año': anoInicio,
-                    'periodoContable.mes': { $gte: mesInicio, $lte: mesFin }
-                };
-            } else {
-                // Diferentes años
-                queryPeriodo = {
-                    $or: [
-                        {
-                            'periodoContable.año': anoInicio,
-                            'periodoContable.mes': { $gte: mesInicio }
-                        },
-                        {
-                            'periodoContable.año': anoFin,
-                            'periodoContable.mes': { $lte: mesFin }
-                        }
-                    ]
-                };
-            }
-            
+            console.log(`\nRango de búsqueda por fechas reales:`);
+            console.log(`  Inicio: ${inicio.toLocaleString('es-SV', { timeZone: 'America/El_Salvador' })}`);
+            console.log(`  Fin: ${fin.toLocaleString('es-SV', { timeZone: 'America/El_Salvador' })}`);
+
             const viajes = await Viajes.find({
                 truckId: camion._id,
                 tipoViaje: 'operativo',
                 'estado.actual': 'completado',
-                ...queryPeriodo
+                $or: [
+                    { departureTime: { $gte: inicio, $lte: fin } },
+                    { fechaServicio: { $gte: inicio, $lte: fin } }
+                ]
             })
             .populate('conductorId', 'name lastName salario')
             .populate('auxiliares.auxiliarId', 'name lastName salario')
@@ -1286,68 +1257,18 @@ ReporteConsolidadoController.generarPDFRango = async (req, res) => {
                 // Calcular totales
                 const ingresos = viajes.reduce((sum, v) => sum + (v.montoAcordado || 0), 0);
 
-                // Consultar diesel del camión en el mismo período
-                let dieselTotal = 0;
-                if (anoInicio === anoFin && mesInicio === mesFin) {
-                    // Mismo mes y año
-                    const registrosDiesel = await ResumenDiesel.find({
-                        CicurlationCard: camion._id,
-                        mes: mesInicio,
-                        ano: anoInicio
-                    });
-                    dieselTotal = registrosDiesel.reduce((sum, d) => sum + (d.Total || 0), 0);
-                } else if (anoInicio === anoFin) {
-                    // Mismo año, diferentes meses
-                    const registrosDiesel = await ResumenDiesel.find({
-                        CicurlationCard: camion._id,
-                        ano: anoInicio,
-                        mes: { $gte: mesInicio, $lte: mesFin }
-                    });
-                    dieselTotal = registrosDiesel.reduce((sum, d) => sum + (d.Total || 0), 0);
-                } else {
-                    // Diferentes años
-                    const registrosDiesel1 = await ResumenDiesel.find({
-                        CicurlationCard: camion._id,
-                        ano: anoInicio,
-                        mes: { $gte: mesInicio }
-                    });
-                    const registrosDiesel2 = await ResumenDiesel.find({
-                        CicurlationCard: camion._id,
-                        ano: anoFin,
-                        mes: { $lte: mesFin }
-                    });
-                    dieselTotal = [...registrosDiesel1, ...registrosDiesel2].reduce((sum, d) => sum + (d.Total || 0), 0);
-                }
+                // Obtener TODOS los registros de diesel del camión en el rango de fechas
+                // Buscar registros donde la fecha (o fechaHora) esté dentro del rango
+                const todosRegistrosDiesel = await ResumenDiesel.find({
+                    CicurlationCard: camion._id,
+                    $or: [
+                        { fecha: { $gte: inicio, $lte: fin } },
+                        { fechaHora: { $gte: inicio, $lte: fin } }
+                    ]
+                });
 
+                const dieselTotal = todosRegistrosDiesel.reduce((sum, d) => sum + (d.Total || 0), 0);
                 console.log(`Diesel encontrado para ${camion.licensePlate}: $${dieselTotal.toFixed(2)}`);
-
-                // Obtener TODOS los registros de diesel del período para buscar por día
-                let todosRegistrosDiesel = [];
-                if (anoInicio === anoFin && mesInicio === mesFin) {
-                    todosRegistrosDiesel = await ResumenDiesel.find({
-                        CicurlationCard: camion._id,
-                        mes: mesInicio,
-                        ano: anoInicio
-                    });
-                } else if (anoInicio === anoFin) {
-                    todosRegistrosDiesel = await ResumenDiesel.find({
-                        CicurlationCard: camion._id,
-                        ano: anoInicio,
-                        mes: { $gte: mesInicio, $lte: mesFin }
-                    });
-                } else {
-                    const registros1 = await ResumenDiesel.find({
-                        CicurlationCard: camion._id,
-                        ano: anoInicio,
-                        mes: { $gte: mesInicio }
-                    });
-                    const registros2 = await ResumenDiesel.find({
-                        CicurlationCard: camion._id,
-                        ano: anoFin,
-                        mes: { $lte: mesFin }
-                    });
-                    todosRegistrosDiesel = [...registros1, ...registros2];
-                }
 
                 // Calcular planilla total (suma de planillas de cada viaje)
                 let planillaTotal = 0;
@@ -1725,13 +1646,12 @@ ReporteConsolidadoController.generarPDFRango = async (req, res) => {
             <table>
                 <thead>
                     <tr>
-                        <th style="width: 15%">FECHA Y HORA</th>
-                        <th style="width: 30%">PERSONAL ASIGNADO</th>
-                        <th style="width: 11%">INGRESO</th>
-                        <th style="width: 11%">DIESEL</th>
-                        <th style="width: 11%">PLANILLA DÍA</th>
+                        <th style="width: 18%">FECHA Y HORA</th>
+                        <th style="width: 35%">PERSONAL ASIGNADO</th>
+                        <th style="width: 12%">INGRESO</th>
+                        <th style="width: 12%">DIESEL</th>
+                        <th style="width: 12%">PLANILLA DÍA</th>
                         <th style="width: 11%">UTILIDAD</th>
-                        <th style="width: 11%">OBS</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -1820,7 +1740,6 @@ ReporteConsolidadoController.generarPDFRango = async (req, res) => {
                                     <td class="col-monto ${utilidadViaje >= 0 ? 'positivo' : 'negativo'}">
                                         $${utilidadViaje.toFixed(2)}
                                     </td>
-                                    <td></td>
                                 </tr>
                                 `;
                             }).join('');
@@ -1832,7 +1751,6 @@ ReporteConsolidadoController.generarPDFRango = async (req, res) => {
                                     <td class="col-monto"><strong style="color: #5D9646;">$${dieselDia.toFixed(2)}</strong></td>
                                     <td class="col-monto">$${planillaDia.toFixed(2)}</td>
                                     <td class="col-monto ${utilidadDia >= 0 ? 'positivo' : 'negativo'}">$${utilidadDia.toFixed(2)}</td>
-                                    <td></td>
                                 </tr>`;
 
                             return filasViajes + filaResumen;
@@ -1855,7 +1773,6 @@ ReporteConsolidadoController.generarPDFRango = async (req, res) => {
                                     <td class="col-monto" style="background: #E8F5E9;"><strong style="color: #5D9646;">$${dieselDia.toFixed(2)}</strong><br/><small>${infoGasolinaDelDia.galones || 0} gal</small></td>
                                     <td class="col-monto">-</td>
                                     <td class="col-monto">-</td>
-                                    <td></td>
                                 </tr>`;
                         }
                         
@@ -1867,7 +1784,6 @@ ReporteConsolidadoController.generarPDFRango = async (req, res) => {
                         <td style="padding: 10px; border: 2px solid #5D9646;">$${camion.diesel.toFixed(2)}</td>
                         <td style="padding: 10px; border: 2px solid #5D9646;">$${camion.planilla.toFixed(2)}</td>
                         <td style="padding: 10px; border: 2px solid #5D9646; ${camion.utilidadBruta >= 0 ? 'color: #5D9646;' : 'color: #ff6b6b;'}">$${camion.utilidadBruta.toFixed(2)}</td>
-                        <td style="padding: 10px; border: 2px solid #5D9646;">-</td>
                     </tr>
                 </tbody>
             </table>
@@ -1878,11 +1794,10 @@ ReporteConsolidadoController.generarPDFRango = async (req, res) => {
         <tr class="total-row">
             <td style="width: 15%"><strong>TOTALES</strong></td>
             <td style="width: 30%"><strong>Viajes: ${totales.viajes}</strong></td>
-            <td style="width: 11%"><strong>$${totales.ingresos.toFixed(2)}</strong></td>
-            <td style="width: 11%"><strong>$${totales.diesel.toFixed(2)}</strong></td>
-            <td style="width: 11%"><strong>$${totales.planilla.toFixed(2)}</strong></td>
+            <td style="width: 12%"><strong>$${totales.ingresos.toFixed(2)}</strong></td>
+            <td style="width: 12%"><strong>$${totales.diesel.toFixed(2)}</strong></td>
+            <td style="width: 12%"><strong>$${totales.planilla.toFixed(2)}</strong></td>
             <td style="width: 11%"><strong>$${totales.utilidadBruta.toFixed(2)}</strong></td>
-            <td style="width: 11%"><strong>-</strong></td>
         </tr>
     </table>
 
