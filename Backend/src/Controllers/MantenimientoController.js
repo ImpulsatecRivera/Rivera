@@ -564,7 +564,7 @@ mantenimientoCon.ActualizarMantenimiento = async (req, res) => {
             const estadoAnterior = mantoExisting.estado;
             mantoExisting.estado = estado;
 
-            // Si el estado cambia a "completado", actualizar el camión a "MANTENIMIENTO"
+            // Si el estado cambia a "completado", actualizar el camión a "DISPONIBLE"
             if(estado === 'completado' && estadoAnterior !== 'completado') {
                 try {
                     mantoExisting.fecha_finalizacion = fecha_finalizacion
@@ -574,10 +574,10 @@ mantenimientoCon.ActualizarMantenimiento = async (req, res) => {
                     const camionId = mantoExisting.ciculatioCard;
                     await camiones.findByIdAndUpdate(
                         camionId,
-                        { state: 'MANTENIMIENTO' },
+                        { state: 'DISPONIBLE' },
                         { new: true }
                     );
-                    console.log(`✅ Camión ${camionId} actualizado a MANTENIMIENTO`);
+                    console.log(`✅ Camión ${camionId} actualizado a DISPONIBLE`);
                 } catch (camionError) {
                     console.error('❌ Error al actualizar estado del camión:', camionError);
                 }
