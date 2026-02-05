@@ -7,6 +7,8 @@ import {
   ScrollView,
   TouchableOpacity,
   Platform,
+  Alert,
+  ActivityIndicator,
 } from "react-native";
 import Header from "../components/Header";
 import { useAuth } from "../Context/authContext";
@@ -134,7 +136,6 @@ const deepEmail = (c) =>
     get(c, "contact.email")
   );
 
-// ✅ Soporta fechas tipo { "$date": "..." } (Mongo export)
 const fmtTime = (v) => {
   const raw = v && typeof v === "object" && v.$date ? v.$date : v;
   if (!raw) return "No especificada";
@@ -280,7 +281,6 @@ const tryFetchFirst = async (urls = [], token, signal) => {
   return null;
 };
 
-/* ========= Extracción mejorada para ruta/origen/destino ========= */
 const pickLocation = (raw, prefixes = []) => {
   const candidates = [];
   for (const pre of prefixes) {
@@ -296,10 +296,9 @@ const pickLocation = (raw, prefixes = []) => {
   return pickUseful(...candidates);
 };
 
-// ✅ Parseo por texto tipo "RED ROCKS/ULTRA - CLIENTE" o "ORIGEN/DESTINO"
 const parseRutaCompleta = (s) => {
   if (!s) return null;
-  const base = String(s).split("-")[0].trim(); // antes del " - cliente"
+  const base = String(s).split("-")[0].trim();
   const parts = base.split("/").map((x) => x.trim()).filter(Boolean);
   if (parts.length >= 2) return { origen: parts[0], destino: parts[1] };
   return null;
@@ -414,7 +413,6 @@ const getTripUI = (tripOrRaw) => {
     scanStrings(raw, /(descripcion|description|detalle|observa)/i)[0] ||
     "Sin descripción";
 
-  // ✅ rutaCompleta para fallback (operativos y otros)
   const rutaCompleta =
     pickUseful(
       get(raw, "rutaDirecta.rutaCompleta"),
@@ -453,16 +451,12 @@ const getTripUI = (tripOrRaw) => {
     scanStrings(raw, /(asistente|ayudante|helper|conductor|driver).*(name|nombre)/i)[0] ||
     "Por asignar";
 
-  // ✅ Soporta viajes operativos (rutaDirecta)
   const origen =
     pickUseful(
-      // Operativo
       get(raw, "rutaDirecta.origen.nombre"),
       get(raw, "rutaDirecta.origen.name"),
       get(raw, "rutaDirecta.origen.direccion"),
       get(raw, "rutaDirecta.origen.address"),
-
-      // Lo que ya tenías
       t.origen,
       get(t, "quoteId.ruta.origen.nombre"),
       get(t, "quoteId.ruta.origen.direccion"),
@@ -484,13 +478,10 @@ const getTripUI = (tripOrRaw) => {
 
   const destino =
     pickUseful(
-      // Operativo
       get(raw, "rutaDirecta.destino.nombre"),
       get(raw, "rutaDirecta.destino.name"),
       get(raw, "rutaDirecta.destino.direccion"),
       get(raw, "rutaDirecta.destino.address"),
-
-      // Lo que ya tenías
       t.destino,
       get(t, "quoteId.ruta.destino.nombre"),
       get(t, "quoteId.ruta.destino.direccion"),
@@ -624,6 +615,33 @@ const styles = StyleSheet.create({
   },
   actionButtonText: { color: "#fff", fontSize: 16, fontWeight: "700", letterSpacing: 0.5 },
 
+  // 🆕 BOTÓN DE COMPLETAR
+  completeButton: {
+    backgroundColor: "#2196F3",
+    paddingVertical: 16,
+    borderRadius: 12,
+    alignItems: "center",
+    marginTop: 10,
+    marginBottom: 12,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 8,
+    ...Platform.select({
+      ios: { shadowColor: "#2196F3", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8 },
+      android: { elevation: 4 },
+    }),
+  },
+  completeButtonDisabled: {
+    backgroundColor: "#B0BEC5",
+    opacity: 0.6,
+  },
+  completeButtonText: { 
+    color: "#fff", 
+    fontSize: 16, 
+    fontWeight: "700", 
+    letterSpacing: 0.5 
+  },
+
   debugBox: { backgroundColor: "#FFF3CD", borderRadius: 12, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: "#FFE69C" },
   debugTitle: { fontWeight: "700", marginBottom: 8, color: "#856404", fontSize: 14 },
   debugLine: { fontSize: 12, color: "#856404", marginBottom: 4, lineHeight: 18 },
@@ -643,6 +661,7 @@ const Icon = ({ name, size = 20 }) => {
     assistant: "👨‍🔧",
     location: "📍",
     route: "🗺️",
+    check: "✓",
   };
 
   return (
@@ -693,6 +712,7 @@ const InfoViajeScreen = ({ navigation, route }) => {
 
   const [raw, setRaw] = useState(rawInitial);
   const [ui, setUi] = useState(() => getTripUI({ raw: rawInitial || {} }));
+  const [completingTrip, setCompletingTrip] = useState(false);
 
   const [debug, setDebug] = useState({
     quoteFetch: null,
@@ -704,6 +724,100 @@ const InfoViajeScreen = ({ navigation, route }) => {
   });
 
   const missingTrip = !rawInitial;
+
+  // 🆕 FUNCIÓN PARA COMPLETAR EL VIAJE
+  // 🆕 FUNCIÓN PARA COMPLETAR EL VIAJE - VERSIÓN CORREGIDA
+const completarViaje = async () => {
+  try {
+    setCompletingTrip(true);
+
+    const id = resolveId(raw._id || raw.id || raw.viajeId);
+    if (!id) {
+      Alert.alert("Error", "No se pudo identificar el viaje");
+      return;
+    }
+
+    console.log('🔄 Completando viaje ID:', id);
+
+    const fallbackToken = token || 
+      await AsyncStorage.getItem("userToken") || 
+      await AsyncStorage.getItem("authToken") || 
+      await AsyncStorage.getItem("token");
+
+    // ✅ ENDPOINT CORRECTO
+    const endpoint = `${API_BASE_URL}/viajes-operativos/completar/${encodeURIComponent(id)}`;
+
+    console.log(`🌐 Usando endpoint: ${endpoint}`);
+
+    const response = await fetch(endpoint, {
+      method: 'PUT', // ✅ PUT, no PATCH
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        ...(fallbackToken && { Authorization: `Bearer ${fallbackToken}` }),
+      },
+      // El body puede estar vacío o incluir datos adicionales si el backend lo necesita
+      body: JSON.stringify({}),
+    });
+
+    console.log(`📥 Status: ${response.status}`);
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || errorData.error || `Error ${response.status}`);
+    }
+
+    const data = await response.json();
+    console.log('✅ Viaje completado exitosamente:', data);
+
+    // Actualizar el estado local
+    const newRaw = { ...raw, estado: 'completado' };
+    setRaw(newRaw);
+    setUi(getTripUI({ raw: newRaw }));
+
+    Alert.alert(
+      "¡Viaje completado! ✓",
+      "El viaje ha sido marcado como completado exitosamente.",
+      [
+        {
+          text: "OK",
+          onPress: () => {
+            // Opcional: volver atrás
+            // navigation.goBack();
+          }
+        }
+      ]
+    );
+
+  } catch (error) {
+    console.error('❌ Error completando viaje:', error);
+    Alert.alert(
+      "Error",
+      error.message || "No se pudo completar el viaje. Intenta nuevamente."
+    );
+  } finally {
+    setCompletingTrip(false);
+  }
+};
+
+  // Confirmar antes de completar
+  const handleCompletarViaje = () => {
+    Alert.alert(
+      "Confirmar finalización",
+      "¿Estás seguro que deseas marcar este viaje como completado?",
+      [
+        {
+          text: "Cancelar",
+          style: "cancel"
+        },
+        {
+          text: "Sí, completar",
+          onPress: completarViaje,
+          style: "default"
+        }
+      ]
+    );
+  };
 
   // 1) Traer viaje completo por ID si existe
   useEffect(() => {
@@ -727,7 +841,7 @@ const InfoViajeScreen = ({ navigation, route }) => {
     return () => controller.abort();
   }, [rawInitial, token]);
 
-  // 2) Enriquecer cotización/cliente/camión/conductor + ✅ ruta desde cotización
+  // 2) Enriquecer cotización/cliente/camión/conductor + ruta desde cotización
   const enriquecer = useCallback(
     async (signal) => {
       if (!raw) return;
@@ -737,7 +851,6 @@ const InfoViajeScreen = ({ navigation, route }) => {
       const missingDestino = !isUseful(ui.destino);
       const missingCliente = ui.cliente === "Cliente no especificado" || looksLikeWeakName(ui.cliente);
 
-      // --- Cotización / Cliente / Ruta ---
       const qId = resolveId(raw?.quoteId || raw?.cotizacionId || raw?.quote || raw?.quote_id);
       if ((missingCliente || missingOrigen || missingDestino) && qId) {
         const q = await tryFetchFirst(
@@ -752,7 +865,6 @@ const InfoViajeScreen = ({ navigation, route }) => {
 
         setDebug((d) => ({ ...d, quoteFetch: q, quoteKeys: q ? Object.keys(q).join(", ") : null }));
 
-        // ---- Cliente desde cotización
         let clientName = getQuoteClientName(q);
 
         let clientIdRaw = q?.clientIdSimple ?? q?.clientId ?? q?.clienteId ?? q?.customerId ?? null;
@@ -787,7 +899,6 @@ const InfoViajeScreen = ({ navigation, route }) => {
         if (clientName && missingCliente) next.cliente = clientName;
         if (desc && !isUseful(ui.descripcion)) next.descripcion = desc;
 
-        // ✅ Ruta desde cotización (si no venía en el viaje)
         if (missingOrigen || missingDestino) {
           const qRutaCompleta =
             pickUseful(
@@ -835,7 +946,6 @@ const InfoViajeScreen = ({ navigation, route }) => {
         }
       }
 
-      // --- Camión ---
       const tId = resolveId(raw?.truckId || raw?.camionId || raw?.truck || raw?.truck_id);
       if ((ui.camion === "N/A" || ui.camion === "—") && tId) {
         const t = await tryFetchFirst(
@@ -859,7 +969,6 @@ const InfoViajeScreen = ({ navigation, route }) => {
         }
       }
 
-      // --- Conductor / Asistente ---
       const dId = resolveId(raw?.conductorId || raw?.driverId || raw?.motoristaId);
       if ((ui.asistente === "Por asignar" || !ui.asistente) && dId) {
         const d = await tryFetchFirst(
@@ -899,6 +1008,9 @@ const InfoViajeScreen = ({ navigation, route }) => {
       : estadoLabel.includes("pendiente")
       ? "Pendiente"
       : "Programado";
+
+  // 🆕 Verificar si el viaje ya está completado
+  const yaCompletado = estadoLabel.includes("completado") || estadoLabel.includes("finalizado");
 
   return (
     <View style={styles.container}>
@@ -977,23 +1089,25 @@ const InfoViajeScreen = ({ navigation, route }) => {
               <View style={styles.routeInfo}>
                 <Text style={styles.routeLabel}>Destino</Text>
                 <Text style={styles.routeLocation}>{textSafe(ui.destino, "No especificado")}</Text>
-                <Text style={styles.routeTime}>🕐 {textSafe(ui.horaLlegada, "No especificada")}</Text>
               </View>
             </View>
           </View>
 
-          {/* Horarios */}
+          {/* Horarios - SIN HORA DE LLEGADA */}
           <View style={styles.sectionHeader}>
             <View style={[styles.sectionIcon, { backgroundColor: "#FFF3E0" }]}>
               <Icon name="clock" size={14} />
             </View>
-            <Text style={styles.sectionTitle}>Horarios</Text>
+            <Text style={styles.sectionTitle}>Horario</Text>
           </View>
 
           <View style={styles.infoCard}>
-            <InfoRow icon="clock" label="Hora de salida" value={textSafe(ui.horaSalida, "No especificada")} iconBg="#E8F5E9" />
-            <View style={styles.divider} />
-            <InfoRow icon="clock" label="Hora de llegada" value={textSafe(ui.horaLlegada, "No especificada")} iconBg="#FFEBEE" />
+            <InfoRow 
+              icon="clock" 
+              label="Hora de salida" 
+              value={textSafe(ui.horaSalida, "No especificada")} 
+              iconBg="#E8F5E9" 
+            />
           </View>
 
           {SHOW_DEBUG && (
@@ -1014,7 +1128,37 @@ const InfoViajeScreen = ({ navigation, route }) => {
             </View>
           )}
 
-          <TouchableOpacity style={styles.actionButton} onPress={() => navigation.goBack()} activeOpacity={0.85}>
+          {/* 🆕 BOTÓN COMPLETAR - Solo si NO está completado */}
+          {!yaCompletado && (
+            <TouchableOpacity 
+              style={[
+                styles.completeButton,
+                completingTrip && styles.completeButtonDisabled
+              ]} 
+              onPress={handleCompletarViaje}
+              activeOpacity={0.85}
+              disabled={completingTrip}
+            >
+              {completingTrip ? (
+                <>
+                  <ActivityIndicator color="#fff" size="small" />
+                  <Text style={styles.completeButtonText}>Completando...</Text>
+                </>
+              ) : (
+                <>
+                  <Icon name="check" size={18} />
+                  <Text style={styles.completeButtonText}>Marcar como completado</Text>
+                </>
+              )}
+            </TouchableOpacity>
+          )}
+
+          {/* Botón volver */}
+          <TouchableOpacity 
+            style={styles.actionButton} 
+            onPress={() => navigation.goBack()} 
+            activeOpacity={0.85}
+          >
             <Text style={styles.actionButtonText}>Volver a la lista</Text>
           </TouchableOpacity>
         </ScrollView>

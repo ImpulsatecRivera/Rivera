@@ -80,39 +80,99 @@ const InicioSesionScreen = ({ navigation }) => {
     if (!validateForm()) return;
 
     setLoading(true);
+    
     try {
-    const API_URL = 'https://rivera-test-629395560179.us-west1.run.app/api';
+      const API_URL = 'https://rivera-test-629395560179.us-west1.run.app/api';
+      
+      // 🔥 PRUEBA DIFERENTES ENDPOINTS POSIBLES
+      const posiblesEndpoints = [
+        `${API_URL}/auth/login`,
+        `${API_URL}/login`,
+        `${API_URL}/usuarios/login`,
+        `${API_URL}/user/login`,
+      ];
 
+      console.log('🔄 Intentando login...');
+      console.log('📤 DUI:', dui.trim());
 
-      const response = await fetch(API_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Accept: 'application/json',
-        },
-        body: JSON.stringify({
-          dui: dui.trim(),
-          password: password.trim(),
-        }),
-      });
+      let loginExitoso = false;
+      let ultimoError = null;
 
-      const data = await response.json();
+      // Intenta cada endpoint hasta que uno funcione
+      for (const endpoint of posiblesEndpoints) {
+        try {
+          console.log(`\n🌐 Probando endpoint: ${endpoint}`);
 
-      if (!response.ok) {
-        Alert.alert('Error', data.message || 'Error al iniciar sesión');
-        return;
+          const response = await fetch(endpoint, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json',
+            },
+            body: JSON.stringify({
+              dui: dui.trim(),
+              password: password.trim(),
+            }),
+          });
+
+          console.log(`📥 Status: ${response.status}`);
+
+          // Verifica el content-type antes de parsear
+          const contentType = response.headers.get('content-type');
+          console.log(`📋 Content-Type: ${contentType}`);
+
+          if (!contentType || !contentType.includes('application/json')) {
+            console.log('⚠️ Respuesta no es JSON, probando siguiente endpoint...');
+            continue;
+          }
+
+          const data = await response.json();
+          console.log('📦 Datos recibidos:', JSON.stringify(data, null, 2));
+
+          if (response.ok && (data.token || data.success)) {
+            console.log('✅ Login exitoso!');
+            
+            // 🎯 Login exitoso
+            await login({
+              user: data.user || data.usuario || data.data,
+              token: data.token,
+            });
+
+            loginExitoso = true;
+            break; // Salir del loop si fue exitoso
+          } else {
+            // El endpoint respondió pero hubo error
+            ultimoError = data.message || 'Credenciales incorrectas';
+            console.log('❌ Error del servidor:', ultimoError);
+            break; // Salir del loop si el endpoint es correcto pero las credenciales no
+          }
+
+        } catch (endpointError) {
+          console.log(`⚠️ Error en ${endpoint}:`, endpointError.message);
+          ultimoError = endpointError;
+          // Continúa al siguiente endpoint
+        }
       }
 
-      // ✅ USAR CARGO REAL DEL BACKEND
-      
+      // Si ningún endpoint funcionó
+      if (!loginExitoso) {
+        throw new Error(ultimoError?.message || 'No se pudo conectar con ningún endpoint');
+      }
 
-      // 🚀 LOGIN REAL (AuthContext maneja el rol)
-      await login({
-        user: data.user,
-        token: data.token,
-      });
     } catch (error) {
-      Alert.alert('Error', 'No se pudo conectar al servidor');
+      console.error('❌ Error final:', error);
+      
+      let mensajeError = 'No se pudo conectar al servidor';
+      
+      if (error.message.includes('JSON')) {
+        mensajeError = 'Error de comunicación con el servidor. Verifica tu conexión.';
+      } else if (error.message.includes('Network')) {
+        mensajeError = 'Sin conexión a internet. Verifica tu red.';
+      } else if (error.message) {
+        mensajeError = error.message;
+      }
+
+      Alert.alert('Error de inicio de sesión', mensajeError);
     } finally {
       setLoading(false);
     }
@@ -225,7 +285,10 @@ const InicioSesionScreen = ({ navigation }) => {
                 style={styles.button}
               >
                 {loading ? (
-                  <ActivityIndicator color="#fff" />
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                    <ActivityIndicator color="#fff" />
+                    <Text style={styles.buttonText}>Conectando...</Text>
+                  </View>
                 ) : (
                   <Text style={styles.buttonText}>Entrar</Text>
                 )}
