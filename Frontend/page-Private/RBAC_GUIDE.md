@@ -17,14 +17,15 @@ import { usePermissions } from '../hooks/usePermissions';
 
 function MyComponent() {
   const { 
-    userRole,           // 'Operativo' | 'Supervisor' | null
+    userRole,           // 'Operativo' | 'Coordinador' | 'Supervisor' | null
     isAdmin,            // boolean
     isSupervisor,       // boolean
     isOperativo,        // boolean
-    canCreate,          // function() - Operativo, Supervisor, Admin
+    isCoordinador,      // boolean
+    canCreate,          // function() - Operativo, Coordinador, Supervisor, Admin
     canEdit,            // function() - Supervisor, Admin
     canDelete,          // function() - Admin only
-    canViewReports,     // function() - Operativo, Supervisor, Admin
+    canViewReports,     // function() - Operativo, Coordinador, Supervisor, Admin
     hasRole,            // function(roles) - Verificar role específico
   } = usePermissions();
 
@@ -69,7 +70,7 @@ function DataTable() {
         {/* Con rol custom */}
         <ProtectedAction 
           action="custom"
-          requiredRole={['Supervisor', 'Operativo']}
+          requiredRole={['Supervisor', 'Operativo', 'Coordinador']}
         >
           <button>Acción especial</button>
         </ProtectedAction>
@@ -138,10 +139,10 @@ Se actualizó `AuthContext.jsx` para incluir:
 1. **Guardado de Rol:** El `rol` se almacena en localStorage automáticamente
 2. **Métodos de Verificación:**
    - `hasRole(requiredRoles)` - Verifica si el usuario tiene un rol específico
-   - `canCreate()` - Operativo, Supervisor, Admin
+  - `canCreate()` - Operativo, Coordinador, Supervisor, Admin
    - `canEdit()` - Supervisor, Admin
    - `canDelete()` - Admin only
-   - `canViewReports()` - Operativo, Supervisor, Admin
+  - `canViewReports()` - Operativo, Coordinador, Supervisor, Admin
 
 3. **Estado de Rol:** Nueva propiedad `userRole` en el provider
 
@@ -200,7 +201,7 @@ function ActionBar() {
 
       {/* Botones protegidos */}
       <div className="space-x-2">
-        {/* Crear - Operativo, Supervisor, Admin */}
+        {/* Crear - Operativo, Coordinador, Supervisor, Admin */}
         <ProtectedAction action="create">
           <button className="btn-primary">+ Nuevo</button>
         </ProtectedAction>
@@ -217,13 +218,13 @@ function ActionBar() {
 
 ## Modelo de Permisos
 
-| Acción | Operativo | Supervisor | Admin |
-|--------|-----------|-----------|-------|
-| Ver (GET) | ✅ | ✅ | ✅ |
-| Crear (POST) | ✅ | ✅ | ✅ |
-| Editar (PUT) | ❌ | ✅ | ✅ |
-| Eliminar (DELETE) | ❌ | ❌ | ✅ |
-| Ver Reportes | ✅ | ✅ | ✅ |
+| Acción | Operativo | Coordinador | Supervisor | Admin |
+|--------|-----------|-------------|-----------|-------|
+| Ver (GET) | ✅ | ✅ | ✅ | ✅ |
+| Crear (POST) | ✅ | ✅ | ✅ | ✅ |
+| Editar (PUT) | ❌ | ❌ | ✅ | ✅ |
+| Eliminar (DELETE) | ❌ | ❌ | ❌ | ✅ |
+| Ver Reportes | ✅ | ✅ | ✅ | ✅ |
 
 ## Manejo de Errores 403
 
@@ -254,7 +255,7 @@ try {
 ```js
 // Después del login, en la consola:
 localStorage.getItem('userRole')
-// Debe retornar: "Operativo", "Supervisor", o null para Admin
+// Debe retornar: "Operativo", "Coordinador", "Supervisor", o null para Admin
 ```
 
 ### Test 2: Verificar permisos en componente

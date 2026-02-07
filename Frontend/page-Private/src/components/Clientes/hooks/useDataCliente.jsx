@@ -189,6 +189,7 @@ const useDataCliente = () => {
       console.error('❌ Error al actualizar cliente:', error);
       return { 
         success: false, 
+        status: error.response?.status,
         error: error.response?.data?.message || 'Error al actualizar cliente' 
       };
     }
@@ -213,6 +214,7 @@ const useDataCliente = () => {
       console.error('❌ Error al eliminar cliente:', error);
       return { 
         success: false, 
+        status: error.response?.status,
         error: error.response?.data?.message || 'Error al eliminar cliente' 
       };
     }

@@ -7,11 +7,11 @@ const router = express.Router();
 router.get('/individual/:id', ReportesDieselRoutes.generarPDFIndividual);
 
 // 2. Reporte consolidado de todos los mantenimientos
-router.get('/reportes/diesel/mes/:mes/:ano', validateAuthToken(["admin", "Operativo", "Supervisor"]), ReportesDieselRoutes.generarPDFMensualSimple);
-router.get('/reportes/diesel/mes-detallado/:mes/:ano', validateAuthToken(["admin", "Operativo", "Supervisor"]), ReportesDieselRoutes.generarPDFMensualDetallado);
-router.post('/reportes/diesel/comparativo', validateAuthToken(["admin", "Operativo", "Supervisor"]), ReportesDieselRoutes.generarPDFMultiplesMeses);
-router.get('/reportes/diesel/anual/:ano', validateAuthToken(["admin", "Operativo", "Supervisor"]), ReportesDieselRoutes.generarPDFAnual); // 
+router.get('/reportes/diesel/mes/:mes/:ano', validateAuthToken(["admin", "Operativo", "Supervisor","Coordinador"]), ReportesDieselRoutes.generarPDFMensualSimple);
+router.get('/reportes/diesel/mes-detallado/:mes/:ano', validateAuthToken(["admin", "Operativo", "Supervisor","Coordinador"]), ReportesDieselRoutes.generarPDFMensualDetallado);
+router.post('/reportes/diesel/comparativo', validateAuthToken(["admin", "Operativo", "Supervisor","Coordinador"]), ReportesDieselRoutes.generarPDFMultiplesMeses);
+router.get('/reportes/diesel/anual/:ano', validateAuthToken(["admin", "Operativo", "Supervisor","Coordinador"]), ReportesDieselRoutes.generarPDFAnual); // 
 // Reporte semanal
-router.get('/reportes/diesel/semanal/:mes/:ano/:semana', validateAuthToken(["admin", "Operativo", "Supervisor"]), ReportesDieselRoutes.generarPDFSemanal);
+router.get('/reportes/diesel/semanal/:mes/:ano/:semana', validateAuthToken(["admin", "Operativo", "Supervisor","Coordinador"]), ReportesDieselRoutes.generarPDFSemanal);
 
 export default router;

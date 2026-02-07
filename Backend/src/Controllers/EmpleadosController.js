@@ -187,6 +187,7 @@ const normalizeRol = (rol) => {
     const r = normalizeText(rol).toLowerCase();
     if (r === "operativo") return "Operativo";
     if (r === "supervisor") return "Supervisor";
+    if (r === "coordinador") return "Coordinador";
     return normalizeText(rol); // si viene raro, quedará raro y fallará en validación
 };
 
@@ -354,7 +355,7 @@ empleadosCon.post = async (req, res) => {
         }
 
         // Validar rol (ya normalizado)
-        const rolesPermitidos = ['Operativo', 'Supervisor'];
+        const rolesPermitidos = ['Operativo', 'Supervisor', 'Coordinador'];
         if (!rolesPermitidos.includes(rolNormalizado)) {
             return res.status(400).json({
                 success: false,
@@ -709,7 +710,7 @@ empleadosCon.put = async (req, res) => {
 
         // Validar rol si se proporciona (normalizado)
         if (rolNormalizado !== undefined) {
-            const rolesPermitidos = ['Operativo', 'Supervisor'];
+            const rolesPermitidos = ['Operativo', 'Supervisor', 'Coordinador'];
             if (!rolesPermitidos.includes(rolNormalizado)) {
                 return res.status(400).json({
                     success: false,

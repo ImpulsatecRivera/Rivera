@@ -65,7 +65,7 @@ const empleadoSchema = new Schema(
     // Información multimedia
     img: {
       type: String,
-      required: true,
+      required: false,
       trim: true,
     },
 
@@ -88,7 +88,7 @@ const empleadoSchema = new Schema(
     rol: {
       type: String,
       enum: {
-        values: ["Operativo", "Supervisor"], // ✅ CORREGIDO
+        values: ["Operativo", "Supervisor", "Coordinador"], // ✅ CORREGIDO
         message: "Rol inválido",
       },
       required: true,
@@ -111,6 +111,7 @@ empleadoSchema.pre("validate", function (next) {
     const r = String(this.rol).trim().toLowerCase();
     if (r === "supervisor") this.rol = "Supervisor";
     if (r === "operativo") this.rol = "Operativo";
+    if (r === "coordinador") this.rol = "Coordinador";
   }
 
   if (this.planillaTipo) {

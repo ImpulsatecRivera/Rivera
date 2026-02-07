@@ -224,6 +224,16 @@ export default function PantallaPrincipalViajesOperativos() {
     const año = fechaSalida.getFullYear();
 
     try {
+      Swal.fire({
+        title: "Descargando PDF...",
+        text: "Por favor espera",
+        allowOutsideClick: false,
+        allowEscapeKey: false,
+        didOpen: () => {
+          Swal.showLoading();
+        },
+      });
+
       const url = `/reportes-directos/individual/${encodeURIComponent(clienteNombre)}/${mes}/${año}`;
       const nombreArchivo = `reporte-${clienteNombre}-${mes}-${año}.pdf`;
 
@@ -243,6 +253,8 @@ export default function PantallaPrincipalViajesOperativos() {
       document.body.removeChild(link);
       window.URL.revokeObjectURL(downloadUrl);
 
+      Swal.close();
+
       await Swal.fire({
         title: "¡Descargado!",
         text: `PDF generado: ${nombreArchivo}`,
@@ -252,6 +264,7 @@ export default function PantallaPrincipalViajesOperativos() {
       });
     } catch (error) {
       console.error("Error descargando PDF:", error);
+      Swal.close();
       Swal.fire({
         title: "Error",
         text: error.response?.data?.message || error.message || "No se pudo generar el PDF",

@@ -47,15 +47,15 @@ const upload = multer({
 // =====================================================
 
 // Obtener todos los resúmenes
-router.get("/", validateAuthToken(["admin", "Operativo", "Supervisor", "motorista", "auxiliar"]), ResumenCon.getResumen);
+router.get("/", validateAuthToken(["admin", "Operativo", "Supervisor", "motorista", "auxiliar","Coordinador"]), ResumenCon.getResumen);
 
 // Agregar resumen con comprobante opcional
-router.post("/", validateAuthToken(["admin", "Operativo", "Supervisor", "motorista", "auxiliar"]), upload.single('comprobante'), ResumenCon.AgregarDiesel);
+router.post("/", validateAuthToken(["admin", "Operativo", "Supervisor", "motorista", "auxiliar","Coordinador"]), upload.single('comprobante'), ResumenCon.AgregarDiesel);
 
 // Actualizar resumen con comprobante opcional
-router.put("/:id", validateAuthToken(["admin", "Operativo", "Supervisor", "motorista", "auxiliar"]), upload.single('comprobante'), ResumenCon.PutDiesel);
+router.put("/:id", validateAuthToken(["admin", "Supervisor", "motorista", "auxiliar"]), upload.single('comprobante'), ResumenCon.PutDiesel);
 
 // Eliminar resumen
-router.delete("/:id", validateAuthToken(["admin", "Operativo", "Supervisor"]), ResumenCon.DeleteResumen);
+router.delete("/:id", validateAuthToken(["admin","Supervisor"]), ResumenCon.DeleteResumen);
 
 export default router;
