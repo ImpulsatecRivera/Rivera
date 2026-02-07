@@ -3,36 +3,23 @@ import React, { useCallback } from "react";
 import {
   View,
   Text,
-@@ -19,18 +18,40 @@ import { useProfile } from "../hooks/useProfile";
+  StyleSheet,
+  Image,
+  TouchableOpacity,
+  Alert,
+  ScrollView,
+  ActivityIndicator,
+  RefreshControl,
+  useWindowDimensions,
+} from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
+import { useFocusEffect } from "@react-navigation/native";
+import { useProfile } from "../hooks/useProfile";
 import InfoRow from "../components/InfoRow";
 import perfilImg from "../images/perfil.png";
 
 const PerfilScreen = ({ navigation }) => {
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
   const { profile, loading, logout, fetchProfile } = useProfile();
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
@@ -47,45 +34,27 @@ const PerfilScreen = ({ navigation }) => {
 
   const isSmallScreen = width < 375;
   const isLargeScreen = width > 414;
-@@ -41,6 +62,37 @@ const PerfilScreen = ({ navigation }) => {
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchProfile();
     }, [fetchProfile])
   );
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
   const handleLogout = () => {
     Alert.alert("Cerrar sesión", "¿Estás seguro de que quieres cerrar sesión?", [
       { text: "Cancelar", style: "cancel" },
-@@ -59,15 +111,12 @@ const PerfilScreen = ({ navigation }) => {
+      { text: "Cerrar sesión", style: "destructive", onPress: logout },
+    ]);
+  };
+
+  if (loading) {
+    return (
+      <View style={[styles.container, styles.centerContent]}>
+        <ActivityIndicator size="large" color="#43A047" />
+        <Text style={styles.loadingText}>Cargando perfil...</Text>
+      </View>
+    );
   }
 
   const headerTop = (insets.top || 0) + (isSmallScreen ? 14 : 18);
@@ -101,7 +70,10 @@ const PerfilScreen = ({ navigation }) => {
         contentContainerStyle={{ paddingBottom: bottomSpace }}
         refreshControl={
           <RefreshControl
-@@ -78,110 +127,98 @@ const PerfilScreen = ({ navigation }) => {
+            refreshing={loading}
+            onRefresh={fetchProfile}
+            colors={["#43A047"]}
+            tintColor="#43A047"
           />
         }
       >
@@ -129,10 +101,6 @@ const PerfilScreen = ({ navigation }) => {
             resizeMode="cover"
           />
 
-
-
-
-
           <Text
             style={[
               styles.name,
@@ -146,7 +114,6 @@ const PerfilScreen = ({ navigation }) => {
             {profile?.cargo || "Motorista"}
           </Text>
         </View>
-        
 
         {/* Información Personal */}
         <View
@@ -177,42 +144,6 @@ const PerfilScreen = ({ navigation }) => {
           <InfoRow label="Teléfono" value={profile?.telefono || "—"} />
           <InfoRow label="Dirección" value={profile?.direccion || "—"} />
 
-          {/* Botón Editar perfil */}
-        
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-          {/* Botón refrescar */}
-          
-
           {/* Logout */}
           <TouchableOpacity
             style={[styles.btn, styles.btnRed]}
@@ -226,9 +157,6 @@ const PerfilScreen = ({ navigation }) => {
     </View>
   );
 };
-
-
-
 
 const styles = StyleSheet.create({
   container: {
@@ -249,7 +177,7 @@ const styles = StyleSheet.create({
 
   header: {
     backgroundColor: "#43A047",
-@@ -190,101 +227,44 @@ const styles = StyleSheet.create({
+    paddingBottom: 60,
     alignItems: "center",
     borderBottomLeftRadius: 30,
     borderBottomRightRadius: 30,
@@ -269,12 +197,6 @@ const styles = StyleSheet.create({
 
   perfilImage: {
     borderWidth: 4,
-
-
-
-
-
-
     borderColor: "#fff",
     marginTop: 10,
     backgroundColor: "#fff",
@@ -292,8 +214,6 @@ const styles = StyleSheet.create({
     textAlign: "center",
     letterSpacing: 0.3,
   },
-
-
 
   cargo: {
     color: "#E8F5E9",
@@ -357,6 +277,4 @@ const styles = StyleSheet.create({
   },
 });
 
-
 export default PerfilScreen;
-
