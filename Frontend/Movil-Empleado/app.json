@@ -25,12 +25,10 @@
     "web": {
       "favicon": "./assets/favicon.png"
     },
-    "plugins": [],
-    "extra": {
-      "eas": {
-        "projectId": "85642566-dbfc-417d-90e3-93cfca00d34c"
-      }
-    },
+    "plugins": [
+      "expo-asset"
+    ],
+    
     "owner": "kenik"
   }
 }
