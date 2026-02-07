@@ -60,7 +60,7 @@ router.post('/',validateAuthToken(["admin"]), PlanillaQuincenalController.crear)
  * Ejemplo:
  * GET /api/planillas/quincenal?año=2025&mes=12&quincena=1&estado=pendiente
  */
-router.get('/', validateAuthToken(["admin", "Operativo", "Supervisor"]),PlanillaQuincenalController.obtenerTodas);
+router.get('/', validateAuthToken(["admin", "Operativo", "Supervisor","Coordinador"]),PlanillaQuincenalController.obtenerTodas);
 
 /**
  * GET /api/planillas/quincenal/:id
@@ -72,7 +72,7 @@ router.get('/', validateAuthToken(["admin", "Operativo", "Supervisor"]),Planilla
  * Ejemplo:
  * GET /api/planillas/quincenal/674abc123def456
  */
-router.get('/:id',validateAuthToken(["admin", "Operativo", "Supervisor"]), PlanillaQuincenalController.obtenerPorId);
+router.get('/:id',validateAuthToken(["admin", "Operativo", "Supervisor","Coordinador"]), PlanillaQuincenalController.obtenerPorId);
 
 /**
  * GET /api/planillas/quincenal/empleado/:empleadoId
@@ -88,7 +88,7 @@ router.get('/:id',validateAuthToken(["admin", "Operativo", "Supervisor"]), Plani
  * Ejemplo:
  * GET /api/planillas/quincenal/empleado/674abc123?año=2025&mes=12
  */
-router.get('/empleado/:empleadoId',validateAuthToken(["admin", "Operativo", "Supervisor"]), PlanillaQuincenalController.obtenerPorEmpleado);
+router.get('/empleado/:empleadoId',validateAuthToken(["admin", "Operativo", "Supervisor","Coordinador"]), PlanillaQuincenalController.obtenerPorEmpleado);
 
 /**
  * PUT /api/planillas/quincenal/:id/empleado/:empleadoId

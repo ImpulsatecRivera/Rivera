@@ -34,6 +34,13 @@ export default function Ventas() {
 
     const itemsPerPage = 8;
 
+    const getPermissionErrorMessage = (error, fallback) => {
+        if (error?.response?.status === 403) {
+            return "No tienes permiso, contacta con un administrador";
+        }
+        return error?.response?.data?.message || error?.message || fallback;
+    };
+
    
     useEffect(() => {
         cargarVentas();
@@ -87,7 +94,7 @@ export default function Ventas() {
             const data = Array.isArray(response.data) ? response.data : response.data.data || [];
             setVentasData(data);
         } catch (err) {
-            setError(err.response?.data?.message || err.message || 'Error al cargar ventas');
+            setError(getPermissionErrorMessage(err, 'Error al cargar ventas'));
             setVentasData([]);
         } finally {
             setLoading(false);
@@ -131,7 +138,7 @@ export default function Ventas() {
         } catch (error) {
             Swal.fire({
                 title: 'Error',
-                text: error.response?.data?.message || 'No se pudo anular la venta',
+                text: getPermissionErrorMessage(error, 'No se pudo anular la venta'),
                 icon: 'error'
             });
         }
@@ -163,7 +170,7 @@ export default function Ventas() {
         } catch (error) {
             Swal.fire({
                 title: 'Error',
-                text: error.response?.data?.message || 'No se pudo marcar como pagada',
+                text: getPermissionErrorMessage(error, 'No se pudo marcar como pagada'),
                 icon: 'error'
             });
         }

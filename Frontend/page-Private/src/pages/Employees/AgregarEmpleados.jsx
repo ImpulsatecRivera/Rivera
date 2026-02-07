@@ -42,8 +42,8 @@ import { useImageUpload } from "../../components/Empleados/hooks/useImageUpload"
 const AgregarEmpleado = () => {
   // ✅ Opciones según tu schema (ENUM)
   const TIPOS_PLANILLA = ["Semanal", "Quincenal"];
-  // OJO: tu schema dice "SUpervisor" (así tal cual). Debe coincidir EXACTO.
-  const ROLES = ["Operativo", "SUpervisor"];
+  // Roles válidos según el backend
+  const ROLES = ["Operativo", "Supervisor", "Coordinador"];
 
   // Estados del formulario
   const [formData, setFormData] = useState({
@@ -166,10 +166,7 @@ const AgregarEmpleado = () => {
       formErrors.rol = "Selecciona un rol válido";
     }
 
-    // ✅ Si tu schema exige img required: true
-    if (!formData.img) {
-      formErrors.img = "La imagen es obligatoria";
-    }
+    // ✅ Imagen opcional
 
     setErrors(formErrors);
 
@@ -495,7 +492,8 @@ const AgregarEmpleado = () => {
                   >
                     <option value="">Selecciona...</option>
                     <option value="Operativo">Operativo</option>
-                    <option value="SUpervisor">Supervisor</option>
+                    <option value="Supervisor">Supervisor</option>
+                    <option value="Coordinador">Coordinador</option>
                   </select>
                   {errors.rol && (
                     <p className="text-red-500 text-xs mt-1">{errors.rol}</p>

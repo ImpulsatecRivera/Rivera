@@ -13,10 +13,7 @@ export const RBACExample = () => {
     isAdmin, 
     isSupervisor, 
     isOperativo,
-    canCreate, 
-    canEdit, 
-    canDelete,
-    hasRole 
+    isCoordinador
   } = usePermissions();
 
   const handleCreate = () => alert('✅ Crear registro');
@@ -35,7 +32,7 @@ export const RBACExample = () => {
         </div>
 
         {/* Información de permisos */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
           <div className="p-3 bg-gray-100 rounded">
             <p className="text-xs text-gray-600">Rol</p>
             <p className="font-semibold">{userRole || 'Sin rol'}</p>
@@ -51,6 +48,10 @@ export const RBACExample = () => {
           <div className="p-3 bg-gray-100 rounded">
             <p className="text-xs text-gray-600">¿Es Operativo?</p>
             <p className="font-semibold">{isOperativo ? '✅ Sí' : '❌ No'}</p>
+          </div>
+          <div className="p-3 bg-gray-100 rounded">
+            <p className="text-xs text-gray-600">¿Es Coordinador?</p>
+            <p className="font-semibold">{isCoordinador ? '✅ Sí' : '❌ No'}</p>
           </div>
         </div>
 
@@ -115,7 +116,7 @@ export const RBACExample = () => {
         <h2 className="text-2xl font-bold mb-4">Botones Deshabilitables</h2>
         <div className="space-y-4 mb-8">
           <div>
-            <p className="text-sm text-gray-600 mb-2">Crear (Operativo, Supervisor, Admin):</p>
+            <p className="text-sm text-gray-600 mb-2">Crear (Operativo, Coordinador, Supervisor, Admin):</p>
             <DisableableButton 
               action="create"
               onClick={handleCreate}
@@ -158,6 +159,7 @@ export const RBACExample = () => {
               <tr className="bg-gray-300">
                 <th className="border p-2 text-left">Acción</th>
                 <th className="border p-2 text-center">Operativo</th>
+                <th className="border p-2 text-center">Coordinador</th>
                 <th className="border p-2 text-center">Supervisor</th>
                 <th className="border p-2 text-center">Admin</th>
               </tr>
@@ -168,15 +170,18 @@ export const RBACExample = () => {
                 <td className="border p-2 text-center">✅</td>
                 <td className="border p-2 text-center">✅</td>
                 <td className="border p-2 text-center">✅</td>
+                <td className="border p-2 text-center">✅</td>
               </tr>
               <tr className="bg-gray-50">
                 <td className="border p-2 font-semibold">Crear (POST)</td>
                 <td className="border p-2 text-center">✅</td>
                 <td className="border p-2 text-center">✅</td>
                 <td className="border p-2 text-center">✅</td>
+                <td className="border p-2 text-center">✅</td>
               </tr>
               <tr>
                 <td className="border p-2 font-semibold">Editar (PUT)</td>
+                <td className="border p-2 text-center">❌</td>
                 <td className="border p-2 text-center">❌</td>
                 <td className="border p-2 text-center">✅</td>
                 <td className="border p-2 text-center">✅</td>
@@ -185,10 +190,12 @@ export const RBACExample = () => {
                 <td className="border p-2 font-semibold">Eliminar (DELETE)</td>
                 <td className="border p-2 text-center">❌</td>
                 <td className="border p-2 text-center">❌</td>
+                <td className="border p-2 text-center">❌</td>
                 <td className="border p-2 text-center">✅</td>
               </tr>
               <tr>
                 <td className="border p-2 font-semibold">Ver Reportes</td>
+                <td className="border p-2 text-center">✅</td>
                 <td className="border p-2 text-center">✅</td>
                 <td className="border p-2 text-center">✅</td>
                 <td className="border p-2 text-center">✅</td>

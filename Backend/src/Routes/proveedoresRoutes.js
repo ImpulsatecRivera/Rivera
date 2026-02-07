@@ -5,10 +5,10 @@ import express from "express";
 const router = express.Router();
 
 router.route("/")
-    .get(validateAuthToken(["admin", "Operativo", "Supervisor", "motorista", "auxiliar"]), proveedorsCon.get)
-    .post(validateAuthToken(["admin", "Operativo", "Supervisor", "motorista", "auxiliar"]), proveedorsCon.post);
+    .get(validateAuthToken(["admin", "Operativo", "Supervisor", "motorista", "auxiliar","Coordinador"]), proveedorsCon.get)
+    .post(validateAuthToken(["admin", "Operativo", "Supervisor", "motorista", "auxiliar","Coordinador"]), proveedorsCon.post);
 
 router.route("/:id")
-    .put(validateAuthToken(["admin", "Operativo", "Supervisor", "motorista", "auxiliar"]), proveedorsCon.put)
-    .delete(validateAuthToken(["admin", "Operativo", "Supervisor", "motorista", "auxiliar"]), proveedorsCon.delete);
+    .put(validateAuthToken(["admin", "Operativo", "Supervisor", "motorista", "auxiliar","Coordinador"]), proveedorsCon.put)
+    .delete(validateAuthToken(["admin", "Operativo", "Supervisor", "motorista", "auxiliar","Coordinador"]), proveedorsCon.delete);
 export default router;

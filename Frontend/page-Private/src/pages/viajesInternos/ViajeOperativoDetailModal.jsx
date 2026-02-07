@@ -168,7 +168,7 @@ const ViajeOperativoDetailModal = ({ viajeId, isOpen, onClose }) => {
                     <div className="flex items-center gap-2 mb-2">
                       <Calendar className="text-[#5F8EAD]" size={20} />
                       <p className="text-xs font-semibold uppercase text-gray-500">
-                        Salida
+                        FECHA DE CARGA
                       </p>
                     </div>
                     <p className="text-lg font-bold text-[#34353A]">
@@ -178,21 +178,7 @@ const ViajeOperativoDetailModal = ({ viajeId, isOpen, onClose }) => {
 
                   <div className="bg-white rounded-2xl p-5 border-2 border-[#5D9646]">
                     <div className="flex items-center gap-2 mb-2">
-                      <Calendar className="text-[#5D9646]" size={20} />
-                      <p className="text-xs font-semibold uppercase text-gray-500">
-                        Llegada
-                      </p>
-                    </div>
-                    <p className="text-lg font-bold text-[#34353A]">
-                      {formatearFechaHora(viaje?.arrivalTime)}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="grid md:grid-cols-2 gap-4">
-                  <div className="bg-white rounded-2xl p-5 border-2 border-[#5F8EAD]">
-                    <div className="flex items-center gap-2 mb-2">
-                      <MapPin className="text-[#5F8EAD]" size={20} />
+                      <MapPin className="text-[#5D9646]" size={20} />
                       <p className="text-xs font-semibold uppercase text-gray-500">
                         Ruta
                       </p>
@@ -202,10 +188,12 @@ const ViajeOperativoDetailModal = ({ viajeId, isOpen, onClose }) => {
                       {origen} → {destino}
                     </p>
                   </div>
+                </div>
 
-                  <div className="bg-white rounded-2xl p-5 border-2 border-[#5D9646]">
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div className="bg-white rounded-2xl p-5 border-2 border-[#5F8EAD]">
                     <div className="flex items-center gap-2 mb-2">
-                      <DollarSign className="text-[#5D9646]" size={20} />
+                      <DollarSign className="text-[#5F8EAD]" size={20} />
                       <p className="text-xs font-semibold uppercase text-gray-500">
                         Monto
                       </p>
@@ -215,34 +203,32 @@ const ViajeOperativoDetailModal = ({ viajeId, isOpen, onClose }) => {
                     </p>
                     <p className="text-sm text-gray-600">Método: {metodoPago}</p>
                   </div>
-                </div>
 
-                <div className="grid md:grid-cols-2 gap-4">
-                  <div className="bg-white rounded-2xl p-5 border-2 border-[#5F8EAD]">
+                  <div className="bg-white rounded-2xl p-5 border-2 border-[#5D9646]">
                     <div className="flex items-center gap-2 mb-2">
-                      <Truck className="text-[#5F8EAD]" size={20} />
+                      <Truck className="text-[#5D9646]" size={20} />
                       <p className="text-xs font-semibold uppercase text-gray-500">
                         Camión
                       </p>
                     </div>
                     <p className="text-lg font-bold text-[#34353A]">{camion}</p>
                   </div>
+                </div>
 
-                  <div className="bg-white rounded-2xl p-5 border-2 border-[#5D9646]">
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div className="bg-white rounded-2xl p-5 border-2 border-[#5F8EAD]">
                     <div className="flex items-center gap-2 mb-2">
-                      <User className="text-[#5D9646]" size={20} />
+                      <User className="text-[#5F8EAD]" size={20} />
                       <p className="text-xs font-semibold uppercase text-gray-500">
                         Motorista
                       </p>
                     </div>
                     <p className="text-lg font-bold text-[#34353A]">{motorista}</p>
                   </div>
-                </div>
 
-                <div className="grid md:grid-cols-2 gap-4">
-                  <div className="bg-white rounded-2xl p-5 border-2 border-[#5F8EAD]">
+                  <div className="bg-white rounded-2xl p-5 border-2 border-[#5D9646]">
                     <div className="flex items-center gap-2 mb-2">
-                      <Users className="text-[#5F8EAD]" size={20} />
+                      <Users className="text-[#5D9646]" size={20} />
                       <p className="text-xs font-semibold uppercase text-gray-500">
                         Auxiliares
                       </p>
@@ -251,10 +237,12 @@ const ViajeOperativoDetailModal = ({ viajeId, isOpen, onClose }) => {
                       {auxiliares.length > 0 ? auxiliares.join(", ") : "N/A"}
                     </p>
                   </div>
+                </div>
 
-                  <div className="bg-white rounded-2xl p-5 border-2 border-[#5D9646]">
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div className="bg-white rounded-2xl p-5 border-2 border-[#5F8EAD]">
                     <div className="flex items-center gap-2 mb-2">
-                      <ClipboardList className="text-[#5D9646]" size={20} />
+                      <ClipboardList className="text-[#5F8EAD]" size={20} />
                       <p className="text-xs font-semibold uppercase text-gray-500">
                         Estado
                       </p>

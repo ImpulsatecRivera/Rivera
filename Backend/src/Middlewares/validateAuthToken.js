@@ -77,21 +77,22 @@ export const validateAuthToken = (allowedRoles = []) => {
         return next();
       }
 
-      // EMPLEADO -> fetch DB to resolve rol (Operativo | Supervisor)
+      // EMPLEADO -> fetch DB to resolve rol (Operativo | Supervisor | Coordinador)
       if (normalizedType.startsWith('emplead') || normalizedType === 'empleados' || normalizedSingular === 'empleado') {
         const empleado = await EmpleadoModel.findById(id).select("rol email name lastName");
         if (!empleado) {
           return res.status(401).json({ message: "Empleado no encontrado" });
         }
 
-        const rol = empleado.rol; // Expect 'Operativo' | 'Supervisor'
+        const rol = empleado.rol; // Expect 'Operativo' | 'Supervisor' | 'Coordinador'
+        const normalizedRol = rol?.toLowerCase();
 
         // allow if no allowedRoles specified or if allowedRoles includes the rol or generic 'Empleado'
         const allowed =
           allowedRoles.length === 0 ||
           allowedRoles.includes(rol) ||
           allowedRoles.includes("Empleado") ||
-          allowedRoles.includes(rol?.toLowerCase());
+          allowedRoles.includes(normalizedRol);
 
         if (!allowed) {
           return res.status(403).json({ message: "Access denied", userPermission: rol });

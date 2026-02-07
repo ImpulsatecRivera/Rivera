@@ -5,14 +5,12 @@ import SweetAlertCliente from '../components/Clientes/SweetAlertCliente';
 import ConfirmDeleteClienteAlert from '../components/Clientes/ConfirmDeleteClienteAlert';
 import SuccessAlertCliente from '../components/Clientes/SuccessAlertCliente';
 import EditClienteCorporativoAlert from '../components/Clientes/EditClienteCorporativoAlert';
-import Lottie from 'lottie-react';
-import sandyLoadingAnimation from '../assets/lotties/Sandy Loading.json';
 import useClients from '../components/Clientes/hooks/useDataCliente'; // Ajusta la ruta según tu estructura
 import { usePermissions } from '../hooks/usePermissions';
-import { ProtectedAction, RoleBadge } from '../components/Auth';
+import { RoleBadge } from '../components/Auth';
+import Swal from 'sweetalert2';
 import { useTutorial } from '../hooks/useTutorial';
 import '../styles/tutorial-global.css';
-import { HelpCircle } from 'lucide-react';
 
 const Clientes= () => {
   const {
@@ -32,7 +30,7 @@ const Clientes= () => {
     updateClient,
   } = useClients();
 
-  const { canCreate, canEdit, canDelete } = usePermissions();
+    const { canCreate } = usePermissions();
 
   const { startTutorial, hasCompleted } = useTutorial('clientes');
 
@@ -76,6 +74,16 @@ const Clientes= () => {
     }
   };
 
+  const showNoPermission = () => {
+    Swal.fire({
+      title: 'Acceso restringido',
+      html: 'No tienes permiso, contacta con un administrador',
+      icon: 'info',
+      confirmButtonText: 'Entendido',
+      confirmButtonColor: '#2563eb'
+    });
+  };
+
   const openCreateCorporate = () => {
     setTipoClienteActivo('corporativo');
     navigate('/clientes/agregarCliente');
@@ -92,6 +100,11 @@ const Clientes= () => {
     setSubmitting(true);
     const result = await deleteClient(selectedClient._id);
     setSubmitting(false);
+    if (result.status === 403) {
+      showNoPermission();
+      setShowDeleteConfirm(false);
+      return;
+    }
     if (result.success) {
       setShowDeleteConfirm(false);
       closeDetailView();
@@ -140,6 +153,10 @@ const Clientes= () => {
     const result = await updateClient(selectedClient._id, payload);
     setSubmitting(false);
 
+    if (result.status === 403) {
+      showNoPermission();
+      return;
+    }
     if (result.success) {
       setShowEditModal(false);
       setSuccessType('edit');
