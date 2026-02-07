@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { config } from '../../../config';
 import axios from "axios";
+import Swal from 'sweetalert2';
 
 const API_URL = config.api.API_URL;
 
@@ -23,6 +24,16 @@ const useDataProveedores = () => {
   const [successType, setSuccessType] = useState('delete');
   
   const navigate = useNavigate();
+
+  const showNoPermission = () => {
+    Swal.fire({
+      title: 'Acceso restringido',
+      html: 'No tienes permiso, contacta con un administrador',
+      icon: 'info',
+      confirmButtonText: 'Entendido',
+      confirmButtonColor: '#2563eb'
+    });
+  };
 
   // Cargar proveedores al iniciar
   useEffect(() => {
@@ -95,6 +106,10 @@ const useDataProveedores = () => {
       setShowSuccessAlert(true);
     } catch (error) {
       console.error("Error al eliminar proveedor:", error);
+      if (error.response?.status === 403) {
+        showNoPermission();
+        return;
+      }
       setError("Error al eliminar el proveedor");
     }
   };
@@ -176,6 +191,10 @@ const useDataProveedores = () => {
       setShowSuccessAlert(true);
     } catch (error) {
       console.error("Error al actualizar proveedor:", error);
+      if (error.response?.status === 403) {
+        showNoPermission();
+        return;
+      }
       setError("Error al actualizar el proveedor");
     }
   };

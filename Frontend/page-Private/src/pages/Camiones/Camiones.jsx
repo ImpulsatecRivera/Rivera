@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Truck } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import Swal from 'sweetalert2';
 
 // Importar imagen por defecto
 import Camion from "../../images/camion.png";
@@ -25,11 +26,9 @@ import EditTruckModal from '../../components/Camiones/EditTruckModal';
 
 import { useTutorial } from '../../hooks/useTutorial';
 import '../../styles/tutorial-global.css';
-import { HelpCircle } from 'lucide-react';
 
 const Camiones = () => {
   const navigate = useNavigate();
-  
   // Estados para modales y acciones
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [selectedTruckForDelete, setSelectedTruckForDelete] = useState(null);
@@ -102,9 +101,23 @@ const Camiones = () => {
     }
   };
 
+  const showNoPermission = () => {
+    Swal.fire({
+      title: 'Acceso restringido',
+      html: 'No tienes permiso, contacta con un administrador',
+      icon: 'info',
+      confirmButtonText: 'Entendido',
+      confirmButtonColor: '#2563eb'
+    });
+  };
+
   // Handlers para edición
   const handleEditTruck = async (truck) => {
     const result = await editHook.openEditModal(truck);
+    if (result?.status === 403) {
+      showNoPermission();
+      return;
+    }
     if (!result.success) {
       alert(`Error al abrir editor: ${result.error}`);
     }
@@ -121,7 +134,11 @@ const Camiones = () => {
 
   const handleEditSubmit = async () => {
     const result = await editHook.submitEdit();
-    if (result && result.success) {
+    if (result?.status === 403) {
+      showNoPermission();
+      return result;
+    }
+    if (result?.success) {
       handleEditSuccess(result.data);
     } else if (result && !result.success) {
       alert(`Error al actualizar el camión: ${result.error}`);
@@ -150,6 +167,13 @@ const Camiones = () => {
       console.log('Eliminando camión:', selectedTruckForDelete.name);
       
       const result = await deleteTruck(selectedTruckForDelete.id);
+
+      if (result?.status === 403) {
+        showNoPermission();
+        setShowDeleteModal(false);
+        setSelectedTruckForDelete(null);
+        return;
+      }
       
       if (result.success) {
         setShowDeleteModal(false);

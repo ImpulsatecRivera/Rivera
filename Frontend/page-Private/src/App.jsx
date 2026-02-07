@@ -1,7 +1,8 @@
-import { Routes, Route, useLocation, Outlet } from "react-router-dom";
+import { Routes, Route, useLocation, Outlet, Navigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import Lottie from "lottie-react";
 import animationData from "./assets/lotties/404 not found.json";
+import { useAuth } from "./Context/authContext";
 
 // Rutas privadas
 import PrivateRoute from "./components/PrivateRoutes/PrivateRoute";
@@ -68,8 +69,15 @@ import './styles/tutorial-global.css';
 // ... resto de tu código
 
 function App() {
+  const { user } = useAuth();
   const location = useLocation();
   const [isRouteLoading, setIsRouteLoading] = useState(false);
+  const isAdmin = user?.userType === "Administrador";
+
+  const PlanillaRoute = ({ children }) => {
+    if (isAdmin) return children;
+    return <Navigate to="/no-access" replace />;
+  };
 
   const splashRoutes = [
     "/empleados/agregarEmployee",
@@ -150,11 +158,11 @@ function App() {
 
 
         {/* Planillas */}
-        <Route path="/planilla" element={<Planilla />} />
-        <Route path="/planilla/quincenal" element={<PlanillaQuincenal />} />
-        <Route path="/planilla/quincenal/:id" element={<PlanillaQuincenal />} />
-        <Route path="/planilla/semanal/nueva" element={<PlanillaSemanalNueva />} />        
-        <Route path="/planilla/semanal/:id" element={<PlanillaSemanal />} />
+        <Route path="/planilla" element={<PlanillaRoute><Planilla /></PlanillaRoute>} />
+        <Route path="/planilla/quincenal" element={<PlanillaRoute><PlanillaQuincenal /></PlanillaRoute>} />
+        <Route path="/planilla/quincenal/:id" element={<PlanillaRoute><PlanillaQuincenal /></PlanillaRoute>} />
+        <Route path="/planilla/semanal/nueva" element={<PlanillaRoute><PlanillaSemanalNueva /></PlanillaRoute>} />        
+        <Route path="/planilla/semanal/:id" element={<PlanillaRoute><PlanillaSemanal /></PlanillaRoute>} />
         <Route path="/no-access" element={<NoAccess />} />
 
 

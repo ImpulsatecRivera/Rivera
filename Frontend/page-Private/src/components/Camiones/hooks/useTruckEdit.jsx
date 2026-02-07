@@ -112,7 +112,10 @@ const useTruckEdit = (fetchOptions, onUpdateSuccess) => {
 
       // Verificar respuestas
       if (truckResponse.status === 'rejected') {
-        throw new Error(`Error al cargar datos del camión: ${truckResponse.reason?.message}`);
+        const status = truckResponse.reason?.response?.status;
+        const message = truckResponse.reason?.response?.data?.message || truckResponse.reason?.message || 'Error al cargar datos del camión';
+        setShowEditModal(false);
+        return { success: false, status, error: message };
       }
       
       // Extraer truckData correctamente - La API devuelve { message, data: {...} }
@@ -290,7 +293,7 @@ const useTruckEdit = (fetchOptions, onUpdateSuccess) => {
     } catch (error) {
       console.error('Error al cargar datos para edición:', error);
       setShowEditModal(false);
-      return { success: false, error: error.message };
+      return { success: false, status: error.response?.status, error: error.message };
     } finally {
       setEditLoading(false);
     }
@@ -564,7 +567,7 @@ const useTruckEdit = (fetchOptions, onUpdateSuccess) => {
         errorMessage = error.message;
       }
       
-      return { success: false, error: errorMessage };
+      return { success: false, status: error.response?.status, error: errorMessage };
     } finally {
       setIsSubmitting(false);
     }

@@ -5,13 +5,13 @@ import validateAuthToken from "../Middlewares/validateAuthToken.js";
 const router = express.Router();
 
 // GET - Requiere sesión (admin, Operativo, Supervisor, cliente, motorista)
-router.get("/", validateAuthToken(["admin","Operativo","Supervisor","cliente","motorista", "auxiliar"]), cotizacionesController.getAllCotizaciones);
+router.get("/", validateAuthToken(["admin","Operativo","Supervisor","cliente","motorista", "auxiliar","Coordinador"]), cotizacionesController.getAllCotizaciones);
 
 // POST - Admin y empleados (Operativo, Supervisor) pueden crear
-router.post("/", validateAuthToken(["admin","Operativo","Supervisor"]), cotizacionesController.createCotizacion);
+router.post("/", validateAuthToken(["admin","Operativo","Supervisor","Coordinador"]), cotizacionesController.createCotizacion);
 
 // GET by ID - Requiere sesión (admin, Operativo, Supervisor, cliente, motorista)
-router.get('/:id', validateAuthToken(["admin","Operativo","Supervisor","cliente","motorista", "auxiliar"]), cotizacionesController.getCotizacionById);
+router.get('/:id', validateAuthToken(["admin","Operativo","Supervisor","cliente","motorista", "auxiliar","Coordinador"]), cotizacionesController.getCotizacionById);
 
 // DELETE - Solo Admin
 router.delete('/:id', validateAuthToken(["admin"]), cotizacionesController.deleteCotizacion);

@@ -8,16 +8,16 @@ const router = express.Router();
 const upload = multer({ dest: "public/" });
 
 // OBTENER TODOS LOS MOVIMIENTOS - Solo admin y empleados
-router.get("/", validateAuthToken(["admin","Operativo","Supervisor"]), cajaChicaController.getAllMovements);
+router.get("/", validateAuthToken(["admin","Operativo","Supervisor","Coordinador"]), cajaChicaController.getAllMovements);
 
 // OBTENER BALANCE ACTUAL - Solo admin y empleados
-router.get('/balance', validateAuthToken(["admin","Operativo","Supervisor"]), cajaChicaController.getCurrentBalance);
+router.get('/balance', validateAuthToken(["admin","Operativo","Supervisor","Coordinador"]), cajaChicaController.getCurrentBalance);
 
 // REGISTRAR INGRESO - Admin, Supervisor, Operativo
-router.post("/ingreso", validateAuthToken(["admin","Operativo","Supervisor"]), upload.single("voucher"), cajaChicaController.registrarIngreso);
+router.post("/ingreso", validateAuthToken(["admin","Operativo","Supervisor","Coordinador"]), upload.single("voucher"), cajaChicaController.registrarIngreso);
 
 // REGISTRAR EGRESO - Admin, Supervisor, Operativo
-router.post("/egreso", validateAuthToken(["admin","Operativo","Supervisor"]), upload.single("voucher"), cajaChicaController.cashOperation);
+router.post("/egreso", validateAuthToken(["admin","Operativo","Supervisor","Coordinador"]), upload.single("voucher"), cajaChicaController.cashOperation);
 
 // UPLOAD VOUCHER - Admin, Supervisor
 router.patch(
@@ -28,6 +28,6 @@ router.patch(
 );
 
 // GENERAR VALE - Admin, Supervisor
-router.post('/:id/generar-vale', validateAuthToken(["admin","Operativo","Supervisor"]), cajaChicaController.generarVale);
+router.post('/:id/generar-vale', validateAuthToken(["admin","Operativo","Supervisor","Coordinador"]), cajaChicaController.generarVale);
 
 export default router;

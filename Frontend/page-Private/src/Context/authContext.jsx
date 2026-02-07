@@ -117,7 +117,7 @@ export const AuthProvider = ({ children }) => {
 
   const canCreate = () => {
     if (user?.userType === "Administrador") return true;
-    return ["Operativo", "Supervisor"].includes(userRole);
+    return ["Operativo", "Supervisor", "Coordinador"].includes(userRole);
   };
 
   const canEdit = () => {
@@ -131,7 +131,7 @@ export const AuthProvider = ({ children }) => {
 
   const canViewReports = () => {
     if (user?.userType === "Administrador") return true;
-    return ["Operativo", "Supervisor"].includes(userRole);
+    return ["Operativo", "Supervisor", "Coordinador"].includes(userRole);
   };
 
   // ===================== Login =====================
@@ -340,6 +340,11 @@ export const AuthProvider = ({ children }) => {
           window.location.href = '/login';
         }
         
+        // 403 - Sin permisos
+        if (err?.response?.status === 403) {
+          toast.error("No tienes permiso, contacta con un administrador");
+        }
+
         return Promise.reject(err);
       }
     );
