@@ -136,6 +136,7 @@ const InicioSesionScreen = ({ navigation }) => {
             await login({
               user: data.user || data.usuario || data.data,
               token: data.token,
+              userType: data.userType || data.user?.userType || data.user?.rol || 'motorista',
             });
 
             loginExitoso = true;
