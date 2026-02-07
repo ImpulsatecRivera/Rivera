@@ -54,7 +54,12 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const safeParse = (str, fallback = null) => {
-@@ -52,281 +52,210 @@ export const AuthProvider = ({ children }) => {
+    if (!str) return fallback;
+    try {
+      return JSON.parse(str);
+    } catch (error) {
+      console.error("❌ Error parseando JSON:", error);
+      return fallback;
     }
   };
 
@@ -216,33 +221,6 @@ export const AuthProvider = ({ children }) => {
       console.log("📊 Sesión expirará en 20 minutos");
       console.log("🎬 SplashScreen2 activado");
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
       return { success: true };
     } catch (error) {
       console.error("❌ Login error:", error);
@@ -258,10 +236,6 @@ export const AuthProvider = ({ children }) => {
       const currentTime = Date.now();
       const userId = userData._id || userData.id;
       if (!userId) throw new Error("ID de usuario no disponible");
-
-
-
-
 
       // Usamos token temporal (tu fetch lo ignora por la RegExp ^temp...)
       const tempToken = "temp-register-token";
