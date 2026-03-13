@@ -1,7 +1,7 @@
 export const config = {
     //Creé este archivo para facilitar el cambio de url backend.
     api: {
-        API_URL: "https://rivera-test-629395560179.us-west1.run.app/api"
+        API_URL: "https://rivera-test.onrender.com/api"
         //Acá cambiar solamente lo que está antes de /api, NO dejar espacios al final.
         //la /api es necesaria
     },
