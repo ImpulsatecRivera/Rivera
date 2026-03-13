@@ -8,19 +8,18 @@ const router = express.Router();
 
 // 1. Reporte mensual consolidado (incluye días trabajados)
 // GET /api/reporte-consolidado/mensual/:mes/:ano/:diasTrabajados
-router.get('/mensual/:mes/:ano/:diasTrabajados', validateAuthToken(["admin", "Operativo", "Supervisor"]), ReporteConsolidadoController.generarPDFMensual);
+router.get('/mensual/:mes/:ano/:diasTrabajados', validateAuthToken(["admin", "Operativo", "Supervisor","Coordinador"]), ReporteConsolidadoController.generarPDFMensual);
 
 // 2. Reporte multi-mes consolidado
 // POST /api/reporte-consolidado/multi-mes
 // Body: { meses: [1, 2, 3], ano: 2025 }
-router.post('/multi-mes', validateAuthToken(["admin", "Operativo", "Supervisor"]), ReporteConsolidadoController.generarPDFMultiMes);
+router.post('/multi-mes', validateAuthToken(["admin", "Operativo", "Supervisor","Coordinador"]), ReporteConsolidadoController.generarPDFMultiMes);
 
 // 3. Reporte anual consolidado
 // GET /api/reporte-consolidado/anual/:ano
-router.get('/anual/:ano', validateAuthToken(["admin", "Operativo", "Supervisor"]), ReporteConsolidadoController.generarPDFAnual);
-
+router.get('/anual/:ano', validateAuthToken(["admin", "Operativo", "Supervisor","Coordinador"]), ReporteConsolidadoController.generarPDFAnual);
 // 4. Reporte por rango de fechas con detalle de viajes
 // GET /api/reporte-consolidado/rango?fechaInicio=YYYY-MM-DD&fechaFin=YYYY-MM-DD&diasRango=N
-router.get('/rango', validateAuthToken(["admin", "Operativo", "Supervisor"]), ReporteConsolidadoController.generarPDFRango);
+router.get('/rango', validateAuthToken(["admin", "Operativo", "Supervisor","Coordinador"]), ReporteConsolidadoController.generarPDFRango);
 
 export default router;

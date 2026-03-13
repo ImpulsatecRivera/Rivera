@@ -2005,12 +2005,24 @@ ReportesViajesDirecto.generarPDFClienteIndividual = async (req, res) => {
       });
     }
 
+    const inicioMes = new Date(anoNum, mesNum - 1, 1);
+    const finMes = new Date(anoNum, mesNum, 1);
+
     const viajes = await ViajesModel.find({
       tipoViaje: 'operativo',
       clienteNombre: decodeURIComponent(clienteNombre),
-      'estado.actual': 'completado',
-      'periodoContable.año': anoNum,
-      'periodoContable.mes': mesNum
+      $or: [
+        {
+          'periodoContable.año': anoNum,
+          'periodoContable.mes': mesNum
+        },
+        {
+          departureTime: {
+            $gte: inicioMes,
+            $lt: finMes
+          }
+        }
+      ]
     })
       .populate('truckId', 'licensePlate placa brand model marca modelo')
       .populate('conductorId', 'name nombre lastName apellido')
@@ -2979,27 +2991,33 @@ ReportesViajesDirecto.generarPDFDiario = async (req, res) => {
       });
     }
 
-    // ✅ PARSEAR COMO ZONA HORARIA LOCAL
+    // ✅ PARSEAR COMO ZONA HORARIA EL SALVADOR (UTC-6)
     const [year, month, day] = fecha.split('-');
-    const fechaDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day), 0, 0, 0, 0);
-    const fechaFin = new Date(parseInt(year), parseInt(month) - 1, parseInt(day), 23, 59, 59, 999);
+    
+    // Crear fechas en UTC primero (independiente del timezone del servidor)
+    // Luego convertir a lo que representa en UTC-6
+    const tzOffsetHours = 6; // UTC-6
+    const tzOffsetMs = tzOffsetHours * 60 * 60 * 1000;
+    
+    // Crear medianoche UTC del día solicitado
+    const fechaDateUTC = new Date(Date.UTC(parseInt(year), parseInt(month) - 1, parseInt(day), 0, 0, 0, 0));
+    const fechaFinUTC = new Date(Date.UTC(parseInt(year), parseInt(month) - 1, parseInt(day), 23, 59, 59, 999));
+    
+    // Convertir a lo que representa en UTC-6 para MongoDB
+    // UTC-6 = UTC - 6 horas, entonces sumamos 6 horas a los timestamps UTC
+    const fechaDateAdjusted = new Date(fechaDateUTC.getTime() + tzOffsetMs);
+    const fechaFinAdjusted = new Date(fechaFinUTC.getTime() + tzOffsetMs);
 
-    console.log(`📊 Generando PDF Diario de Viajes: ${formatearFechaString(fecha)}`);
+    console.log(`📊 Generando PDF Diario de Viajes para: ${fecha}`);
+    console.log(`🕐 Fecha local solicitada: ${formatearFechaString(fecha)}`);
+    console.log(`🕐 Rango UTC-6: ${fecha} 00:00 a ${fecha} 23:59`);
+    console.log(`🕐 Rango UTC (búsqueda en DB): ${fechaDateAdjusted.toISOString()} a ${fechaFinAdjusted.toISOString()}`);
 
     // 🔥 CORRECCIÓN: Buscar con múltiples criterios para encontrar TODOS los viajes
     const viajes = await ViajesModel.find({
       tipoViaje: 'operativo',
       'estado.actual': 'completado',
-      $or: [
-        // Criterio 1: departureTime en el rango
-        { departureTime: { $gte: fechaDate, $lte: fechaFin } },
-        // Criterio 2: periodoContable coincide (backup)
-        {
-          'periodoContable.año': parseInt(year),
-          'periodoContable.mes': parseInt(month),
-          'periodoContable.dia': parseInt(day)
-        }
-      ]
+      departureTime: { $gte: fechaDateAdjusted, $lte: fechaFinAdjusted }
     })
       .populate('clienteOperativo', 'nombreComercial nombreEmpresa')
       .populate('truckId', 'licensePlate placa')

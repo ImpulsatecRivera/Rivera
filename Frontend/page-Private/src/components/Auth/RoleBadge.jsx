@@ -1,3 +1,4 @@
+/* eslint-disable react/prop-types */
 import React from 'react';
 import { usePermissions } from '../../hooks/usePermissions';
 
@@ -11,6 +12,7 @@ export const RoleBadge = ({ className = '' }) => {
     if (isAdmin) return 'bg-red-600';
     if (userRole === 'Supervisor') return 'bg-blue-600';
     if (userRole === 'Operativo') return 'bg-green-600';
+    if (userRole === 'Coordinador') return 'bg-purple-600';
     return 'bg-gray-600';
   };
 
@@ -30,8 +32,6 @@ export const RoleBadge = ({ className = '' }) => {
  * Componente para mostrar información del usuario con rol
  */
 export const UserInfo = ({ className = '' }) => {
-  const { userRole, isAdmin } = usePermissions();
-
   return (
     <div className={`text-center ${className}`}>
       <RoleBadge />

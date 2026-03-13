@@ -28,7 +28,11 @@
     "plugins": [
       "expo-asset"
     ],
-    
-    "owner": "kenik"
+    "owner": "",
+    "extra": {
+      "eas": {
+        "projectId": "4e3846cc-e6e9-4ac8-b587-aa15a8b7c2ea"
+      }
+    }
   }
 }

@@ -10,7 +10,7 @@ const router = express.Router();
 // GET /api/caja-chica-config
 // Retorna: { maximoPermitido, minimoReintegro, etc. }
 // Uso: Mostrar la configuración actual en el frontend
-router.get('/', validateAuthToken(["admin","Operativo","Supervisor"]), CajaChicaConfigController.obtenerConfiguracion);
+router.get('/', validateAuthToken(["admin","Operativo","Supervisor","Coordinador"]), CajaChicaConfigController.obtenerConfiguracion);
 
 // =====================================================
 // 2. ACTUALIZAR CONFIGURACIÓN
@@ -18,7 +18,7 @@ router.get('/', validateAuthToken(["admin","Operativo","Supervisor"]), CajaChica
 // PUT /api/caja-chica-config
 // Body: { "maximoPermitido": 250, "minimoReintegro": 50 }
 // Uso: Cuando el admin cambia el máximo de caja chica
-router.put('/', validateAuthToken(["admin","Operativo","Supervisor"]), CajaChicaConfigController.actualizarConfiguracion);
+router.put('/', validateAuthToken(["admin","Operativo","Supervisor","Coordinador"]), CajaChicaConfigController.actualizarConfiguracion);
 
 // =====================================================
 // 3. CALCULAR REINTEGRO NECESARIO
@@ -32,7 +32,7 @@ router.put('/', validateAuthToken(["admin","Operativo","Supervisor"]), CajaChica
 //   porcentajeDisponible: "5.88"
 // }
 // Uso: Mostrar cuánto dinero hace falta para llenar la caja
-router.get('/calcular-reintegro', validateAuthToken(["admin","Operativo","Supervisor"]), CajaChicaConfigController.calcularReintegro);
+router.get('/calcular-reintegro', validateAuthToken(["admin","Operativo","Supervisor","Coordinador"]), CajaChicaConfigController.calcularReintegro);
 
 // =====================================================
 // 4. VERIFICAR SI NECESITA REINTEGRO
@@ -40,7 +40,7 @@ router.get('/calcular-reintegro', validateAuthToken(["admin","Operativo","Superv
 // GET /api/caja-chica-config/verificar-reintegro
 // Retorna: { necesitaReintegro: true/false, mensaje, etc. }
 // Uso: Mostrar alerta en el dashboard si necesita reintegro
-router.get('/verificar-reintegro', validateAuthToken(["admin","Operativo","Supervisor"]), CajaChicaConfigController.verificarReintegro);
+router.get('/verificar-reintegro', validateAuthToken(["admin","Operativo","Supervisor","Coordinador"]), CajaChicaConfigController.verificarReintegro);
 
 // =====================================================
 // 5. REGISTRAR REINTEGRO AUTOMÁTICO ⭐ NUEVO
@@ -53,6 +53,6 @@ router.get('/verificar-reintegro', validateAuthToken(["admin","Operativo","Super
 //   Acción: Crea ingreso de $235.31 (lo gastado)
 //   Resultado: Balance nuevo = $250.00
 // Uso: Botón "Registrar Reintegro" en el frontend
-router.post('/registrar-reintegro', validateAuthToken(["admin","Operativo","Supervisor"]), CajaChicaConfigController.registrarReintegro);
+router.post('/registrar-reintegro', validateAuthToken(["admin","Operativo","Supervisor","Coordinador"]), CajaChicaConfigController.registrarReintegro);
 
 export default router; 

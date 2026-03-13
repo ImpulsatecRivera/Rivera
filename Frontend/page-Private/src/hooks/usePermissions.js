@@ -26,6 +26,7 @@ export const usePermissions = () => {
     isAdmin: user?.userType === 'Administrador',
     isSupervisor: userRole === 'Supervisor',
     isOperativo: userRole === 'Operativo',
+    isCoordinador: userRole === 'Coordinador',
     hasRole,
     canCreate,
     canEdit,

@@ -3,7 +3,6 @@ import { config } from '../../../config';
 import { useNavigate } from 'react-router-dom';
 import axios from "axios";
 import { api } from '../../../Context/authContext';
-import { useAuth } from '../../../Context/authContext';
 import Swal from 'sweetalert2';
 
 const API_URL = config.api.API_URL;
@@ -188,50 +187,22 @@ const useDataMotorista = () => {
     setShowAlert(true);
   };
 
-  const { user } = useAuth();
-
-  const handleEdit = () => {
-    // Only Admins can edit any motorista; a Motorista may edit their own profile via mobile (or web if id matches)
-    if (!user) {
-      // Mostrar modal como en el login cuando no está autenticado
-      Swal.fire({
-        title: 'No autenticado',
-        text: 'Por favor inicia sesión para continuar.',
-        icon: 'warning',
-        confirmButtonText: 'Entendido',
-        confirmButtonColor: '#2563eb'
-      });
-      return;
-    }
-
-    if (user.userType === 'Administrador' || (user.userType === 'Motorista' && String(user.id) === String(selectedMotorista?._id))) {
-      setShowAlert(false);
-      setShowEditAlert(true);
-      return;
-    }
-
+  const showNoPermission = () => {
     Swal.fire({
       title: 'Acceso restringido',
-      html: 'No tienes permisos para editar este motorista. Contacta a un administrador.',
+      html: 'No tienes permiso, contacta con un administrador',
       icon: 'info',
       confirmButtonText: 'Entendido',
       confirmButtonColor: '#2563eb'
     });
   };
 
-  const handleDelete = () => {
-    if (!user || user.userType !== 'Administrador') {
-      Swal.fire({
-        title: 'Acceso restringido',
-        html: 'No tienes permisos para eliminar motoristas. Contacta a un administrador.',
-        icon: 'info',
-        confirmButtonText: 'Entendido',
-        confirmButtonColor: '#2563eb'
-      });
-      setShowAlert(false);
-      return;
-    }
+  const handleEdit = () => {
+    setShowAlert(false);
+    setShowEditAlert(true);
+  };
 
+  const handleDelete = () => {
     setShowAlert(false);
     setShowConfirmDelete(true);
   };
@@ -257,6 +228,10 @@ const useDataMotorista = () => {
       setShowSuccessAlert(true);
     } catch (err) {
       console.error("Error al eliminar motorista:", err);
+      if (err?.response?.status === 403) {
+        showNoPermission();
+        return;
+      }
       setError("Error al eliminar el motorista");
     }
   };
@@ -456,6 +431,10 @@ const useDataMotorista = () => {
     } catch (err) {
       console.error('Error al actualizar motorista:', err);
 
+      if (err?.response?.status === 403) {
+        showNoPermission();
+        return;
+      }
       if (err?.response) {
         const msg = err.response.data?.message || 'Error del servidor';
         setError(`Error: ${msg}`);
