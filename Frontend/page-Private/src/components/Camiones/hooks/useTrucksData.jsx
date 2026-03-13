@@ -103,7 +103,7 @@ const useTrucksData = () => {
       console.log(`🗑️ Eliminando camión con ID: ${truckId}`);
       
       // ✅ USAR API Y CORREGIR LA URL (agregar /)
-      const response = await api.delete(`/camiones/${truckId}`);
+      await api.delete(`/camiones/${truckId}`);
 
       console.log('✅ Camión eliminado exitosamente');
       setTrucks(prevTrucks => prevTrucks.filter(t => t.id !== truckId && t._id !== truckId));
@@ -111,25 +111,31 @@ const useTrucksData = () => {
 
     } catch (error) {
       console.error('❌ Error al eliminar camión:', error);
+
+      const status = error.response?.status;
       
-      if (error.response?.status === 404) {
+      if (status === 404) {
         return { 
           success: false, 
+          status,
           error: 'Camión no encontrado.' 
         };
-      } else if (error.response?.status === 401) {
+      } else if (status === 401) {
         return { 
           success: false, 
+          status,
           error: 'No autorizado para eliminar este camión.' 
         };
-      } else if (error.response?.status === 403) {
+      } else if (status === 403) {
         return { 
           success: false, 
+          status,
           error: 'No tienes permisos para eliminar camiones.' 
         };
       } else {
         return { 
           success: false, 
+          status,
           error: error.response?.data?.message || 'Error al eliminar el camión. Inténtalo de nuevo.' 
         };
       }

@@ -148,10 +148,11 @@ const useDataEmpleado = () => {
 
   // Navegación
   const { user } = useAuth();
+  const isAdmin = user?.userType === 'Administrador';
 
   const handleContinue = (e) => {
     e.preventDefault();
-    if (!user || user.userType !== 'Administrador') {
+    if (!isAdmin) {
       Swal.fire({
         title: 'Acceso restringido',
         html: 'No tienes permisos para crear empleados. Contacta a un administrador.',
@@ -171,7 +172,7 @@ const useDataEmpleado = () => {
   };
 
   const handleEdit = () => {
-    if (!user || user.userType !== 'Administrador') {
+    if (!isAdmin) {
       Swal.fire({
         title: 'Acceso restringido',
         html: 'No tienes permisos para editar empleados. Contacta a un administrador.',
@@ -187,7 +188,7 @@ const useDataEmpleado = () => {
   }; 
 
   const handleDelete = () => {
-    if (!user || user.userType !== 'Administrador') {
+    if (!isAdmin) {
       Swal.fire({
         title: 'Acceso restringido',
         html: 'No tienes permisos para eliminar empleados. Contacta a un administrador.',
@@ -206,6 +207,17 @@ const useDataEmpleado = () => {
   const confirmDelete = async () => {
     setShowConfirmDelete(false);
     try {
+      if (!isAdmin) {
+        Swal.fire({
+          title: 'Acceso restringido',
+          html: 'No tienes permisos para eliminar empleados. Contacta a un administrador.',
+          icon: 'info',
+          confirmButtonText: 'Entendido',
+          confirmButtonColor: '#2563eb'
+        });
+        return;
+      }
+
       console.log(`🗑️ Eliminando empleado ${selectedEmpleados?._id}`);
       await axios.delete(`${API_URL}/empleados/${selectedEmpleados._id}`);
       
@@ -234,12 +246,19 @@ const useDataEmpleado = () => {
       return;
     }
 
-    // Verificar que el FormData no esté vacío
-    let hasData = false;
-    for (let _ of formData.entries()) {
-      hasData = true;
-      break;
+    if (!isAdmin) {
+      Swal.fire({
+        title: 'Acceso restringido',
+        html: 'No tienes permisos para editar empleados. Contacta a un administrador.',
+        icon: 'info',
+        confirmButtonText: 'Entendido',
+        confirmButtonColor: '#2563eb'
+      });
+      return;
     }
+
+    // Verificar que el FormData no esté vacío
+    const hasData = !formData.entries().next().done;
     if (!hasData) {
       setError('No hay cambios para guardar');
       return;
@@ -279,11 +298,17 @@ const useDataEmpleado = () => {
 
       // Actualización instantánea
       setSelectedEmpleados(fullyUpdatedEmployee);
-      setEmpleados(prev =>
-        Array.isArray(prev)
-          ? prev.map(emp => (emp._id === selectedEmpleados._id ? fullyUpdatedEmployee : emp))
-          : [fullyUpdatedEmployee]
-      );
+      setEmpleados(prev => {
+        if (!Array.isArray(prev)) {
+          return [fullyUpdatedEmployee];
+        }
+        return prev.map(emp => {
+          if (emp._id === selectedEmpleados._id) {
+            return fullyUpdatedEmployee;
+          }
+          return emp;
+        });
+      });
 
       setShowEditAlert(false);
       setSuccessType('edit');
@@ -292,13 +317,13 @@ const useDataEmpleado = () => {
     } catch (error) {
       console.error("❌ Error al actualizar empleado:", error);
 
-      let errorMessage = 'Error al actualizar el empleado';
+      let errorMessage;
       if (error.response) {
         errorMessage = `Error ${error.response.status}: ${error.response.data?.message || 'Error del servidor'}`;
       } else if (error.request) {
         errorMessage = 'No se pudo conectar con el servidor';
       } else {
-        errorMessage = error.message;
+        errorMessage = error.message || 'Error al actualizar el empleado';
       }
       setError(errorMessage);
 

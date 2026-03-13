@@ -456,6 +456,7 @@ const EditEmployeeModal = ({ isOpen, onClose, onSave, employee, uploading }) => 
                   className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 text-base text-gray-900 bg-white"
                 >
                   <option value="Operativo">Operativo</option>
+                  <option value="Coordinador">Coordinador</option>
                   <option value="Supervisor">Supervisor</option>
                 </select>
               </div>

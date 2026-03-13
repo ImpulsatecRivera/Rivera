@@ -291,7 +291,7 @@ LoginController.Login = async (req, res) => {
         }
 
         console.log('✅ Login de motorista/auxiliar exitoso');
-       userType = userFound.cargo; // "Motorista" o "Auxiliar"
+       userType = userFound.rol || 'motorista'; // "motorista" o "auxiliar" - del campo rol
 
       } 
       // 3) Empleado - LOGIN CON EMAIL
@@ -366,9 +366,9 @@ LoginController.Login = async (req, res) => {
       userType
     };
 
-    // Agregar rol si es empleado
-    if (userType === "Empleado" && userFound.rol) {
-      userData.rol = userFound.rol;
+    // Agregar rol si es empleado o motorista/auxiliar
+    if (userFound.rol) {
+      userData.rol = userFound.rol; // "motorista" o "auxiliar" para employees, "motorista"/"auxiliar" para drivers
     }
 
     console.log('📋 Datos de usuario enviados:', userData);

@@ -50,7 +50,7 @@ router.post('/',validateAuthToken(["admin"]), PlanillaSemanalController.crear);
  * Ejemplo:
  * GET /api/planillas/semanal?estado=pendiente&page=1&limit=10
  */
-router.get('/',validateAuthToken(["admin", "Operativo", "Supervisor"]), PlanillaSemanalController.obtenerTodas);
+router.get('/',validateAuthToken(["admin", "Operativo", "Supervisor","Coordinador"]), PlanillaSemanalController.obtenerTodas);
 
 /**
  * GET /api/planillas/semanal/:id
@@ -62,7 +62,7 @@ router.get('/',validateAuthToken(["admin", "Operativo", "Supervisor"]), Planilla
  * Ejemplo:
  * GET /api/planillas/semanal/674abc123def456
  */
-router.get('/:id',validateAuthToken(["admin", "Operativo", "Supervisor"]), PlanillaSemanalController.obtenerPorId);
+router.get('/:id',validateAuthToken(["admin", "Operativo", "Supervisor","Coordinador"]), PlanillaSemanalController.obtenerPorId);
 
 /**
  * PATCH /api/planillas/semanal/:id/estado

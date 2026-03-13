@@ -40,22 +40,22 @@ const upload = multer({
 
 // CRUD básico
 router.route("/")
-    .get(validateAuthToken(["admin", "Operativo", "Supervisor",]), ventasController.get)
-    .post(validateAuthToken(["admin", "Operativo", "Supervisor",]), upload.single('comprobante'), ventasController.post);
+    .get(validateAuthToken(["admin", "Operativo", "Supervisor","Coordinador"]), ventasController.get)
+    .post(validateAuthToken(["admin", "Operativo", "Supervisor","Coordinador"]), upload.single('comprobante'), ventasController.post);
 
 router.route("/:id")
-    .get(validateAuthToken(["admin", "Operativo", "Supervisor",]), ventasController.getById)
-    .put(validateAuthToken(["admin", "Operativo", "Supervisor",]), upload.single('comprobante'), ventasController.put)
-    .delete(validateAuthToken(["admin", "Operativo", "Supervisor",]), ventasController.delete);
+    .get(validateAuthToken(["admin", "Operativo", "Supervisor","Coordinador"]), ventasController.getById)
+    .put(validateAuthToken(["admin", "Supervisor"]), upload.single('comprobante'), ventasController.put)
+    .delete(validateAuthToken(["admin",  "Supervisor",]), ventasController.delete);
 
 // Cambiar estado de la venta (p. ej. anular)
 router.patch(
     "/:id/estado",
-    validateAuthToken(["admin", "Operativo", "Supervisor",]),
+    validateAuthToken(["admin", "Supervisor",]),
     ventasController.cambiarEstado
 );
 
 // Subir comprobante a una venta existente
-router.patch("/:id/comprobante", validateAuthToken(["admin", "Operativo", "Supervisor",]), upload.single('comprobante'), ventasController.actualizarComprobante);
+router.patch("/:id/comprobante", validateAuthToken(["admin", "Operativo", "Supervisor","Coordinador"]), upload.single('comprobante'), ventasController.actualizarComprobante);
 
 export default router;

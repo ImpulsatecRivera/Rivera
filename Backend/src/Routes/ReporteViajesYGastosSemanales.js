@@ -4,6 +4,6 @@ import { validateAuthToken } from '../Middlewares/validateAuthToken.js';
 const router = express.Router();
 
 // POST /api/reporte/viajes-gastos/semanal/pdf -> Genera y descarga PDF
-router.post('/pdf',validateAuthToken(["admin", "Operativo", "Supervisor"]), ReporteViajesYGastosSemanalesController.generarPDFSemanal);
+router.post('/pdf',validateAuthToken(["admin", "Operativo", "Supervisor","Coordinador"]), ReporteViajesYGastosSemanalesController.generarPDFSemanal);
 
 export default router;

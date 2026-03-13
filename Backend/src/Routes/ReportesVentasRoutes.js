@@ -13,7 +13,7 @@ const router = express.Router();
 // Ejemplo: /api/reportesVentas/mensual/4/2025 (Abril 2025)
 router.get(
     '/mensual/:mes/:ano',
-    validateAuthToken(["admin", "Operativo", "Supervisor"]),
+    validateAuthToken(["admin", "Operativo", "Supervisor","Coordinador"]),
     ReportesVentasController.generarPDFInformeMensual
 );
 
@@ -24,7 +24,7 @@ router.get(
 // Ejemplo: /api/reportesVentas/resumen-mensual/4/2025
 router.get(
     '/resumen-mensual/:mes/:ano',
-    validateAuthToken(["admin", "Operativo", "Supervisor"]),
+    validateAuthToken(["admin", "Operativo", "Supervisor","Coordinador"]),
     ReportesVentasController.generarPDFResumenMensual
 );
 
@@ -35,7 +35,7 @@ router.get(
 // Ejemplo: /api/reportesVentas/comparativo-anual/2025
 router.get(
     '/comparativo-anual/:ano',
-    validateAuthToken(["admin", "Operativo", "Supervisor"]),
+    validateAuthToken(["admin", "Operativo", "Supervisor","Coordinador"]),
     ReportesVentasController.generarPDFComparativoAnual
 );
 
