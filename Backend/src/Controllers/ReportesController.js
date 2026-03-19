@@ -4,6 +4,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
+import { launchUniversalBrowser } from '../Utils/puppeteerLauncher.js';
 
 const ReportesRoutes = {};
 
@@ -63,6 +64,13 @@ const PUPPETEER_CONFIG = () => {
             ]
         };
     }
+};
+
+const launchBrowserSafe = async () => {
+    return launchUniversalBrowser(puppeteer, {
+        serviceName: 'reportes-mantenimiento',
+        primaryConfig: PUPPETEER_CONFIG()
+    });
 };
 // Función auxiliar para obtener nombre del mes
 const obtenerNombreMes = (mes) => {

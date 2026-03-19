@@ -9,6 +9,7 @@ import { dirname } from 'path';
 import Motorista from '../Models/Motorista.js';
 import fs from 'fs';
 import path from 'path';
+import { launchUniversalBrowser } from '../Utils/puppeteerLauncher.js';
 
 const ReporteConsolidadoController = {};
 
@@ -77,6 +78,13 @@ const PUPPETEER_CONFIG = () => {
             ]
         };
     }
+};
+
+const launchBrowserSafe = async () => {
+    return launchUniversalBrowser(puppeteer, {
+        serviceName: 'reporte-consolidado',
+        primaryConfig: PUPPETEER_CONFIG()
+    });
 };
 
 321

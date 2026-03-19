@@ -10,6 +10,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
+import { launchUniversalBrowser } from '../Utils/puppeteerLauncher.js';
 
 const ReportesPlanillaSemanalController = {};
 
@@ -76,6 +77,14 @@ const PUPPETEER_CONFIG = () => {
         };
     }
 };
+
+const launchBrowserSafe = async () => {
+    return launchUniversalBrowser(puppeteer, {
+        serviceName: 'reportes-planilla-semanal',
+        primaryConfig: PUPPETEER_CONFIG()
+    });
+};
+
 // OPCIÓN 2: Si no funciona la opción 1, usa ruta absoluta directa:
 // const RUTA_LOGO = 'C:\\Users\\djpoc\\Desktop\\Rivera\\Backend\\src\\imagenes\\imagen_15.png';
 
