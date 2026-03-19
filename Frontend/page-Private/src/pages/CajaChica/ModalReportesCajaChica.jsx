@@ -63,6 +63,16 @@ const ReportesCajaChicaModal = ({ isOpen, onClose }) => {
     return new Date(year, month - 1, day);
   };
 
+  const parseBlobErrorMessage = async (blob) => {
+    try {
+      const text = await blob.text();
+      const jsonData = JSON.parse(text);
+      return jsonData?.message || jsonData?.error || text || null;
+    } catch {
+      return null;
+    }
+  };
+
  
 
 
@@ -208,6 +218,13 @@ const ReportesCajaChicaModal = ({ isOpen, onClose }) => {
 
     // Verificar si hay respuesta del servidor
     if (error.response) {
+      if (error.response.data instanceof Blob) {
+        const backendMessage = await parseBlobErrorMessage(error.response.data);
+        if (backendMessage) {
+          errorMessage = backendMessage;
+        }
+      }
+
       if (error.response.status === 401) {
         errorMessage = 'Sesión expirada';
         errorDetails = '<p style="color: #999; font-size: 12px; margin-top: 10px;">Vuelve a iniciar sesión</p>';
