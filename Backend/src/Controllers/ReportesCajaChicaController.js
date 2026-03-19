@@ -60,32 +60,77 @@ const convertirImagenABase64 = (rutaImagen) => {
 // Detectar entorno de ejecución
 const IS_CLOUD_RUN = process.env.K_SERVICE !== undefined;
 const IS_PRODUCTION = process.env.NODE_ENV === 'production';
+const IS_RENDER = process.env.RENDER === 'true';
 // Cargar logo una vez
 const logoBase64 = convertirImagenABase64(RUTA_LOGO);
 const PUPPETEER_CONFIG = () => {
-    if (IS_PRODUCTION || IS_CLOUD_RUN) {
-        // Configuración para Cloud Run
-        return {
+    const config = {
+        headless: 'new',
+        args: [
+            '--no-sandbox',
+            '--disable-setuid-sandbox',
+            '--disable-dev-shm-usage',
+            '--disable-gpu'
+        ]
+    };
+
+    const configuredPath = process.env.PUPPETEER_EXECUTABLE_PATH || process.env.CHROME_BIN;
+    if (configuredPath) {
+        if (fs.existsSync(configuredPath)) {
+            config.executablePath = configuredPath;
+            return config;
+        }
+        console.warn(`⚠️ PUPPETEER_EXECUTABLE_PATH/CHROME_BIN no existe: ${configuredPath}`);
+    }
+
+    if (IS_PRODUCTION || IS_CLOUD_RUN || IS_RENDER) {
+        const systemCandidates = [
+            '/usr/bin/chromium',
+            '/usr/bin/chromium-browser',
+            '/usr/bin/google-chrome-stable',
+            '/opt/google/chrome/chrome'
+        ];
+
+        const detectedPath = systemCandidates.find((candidate) => fs.existsSync(candidate));
+        if (detectedPath) {
+            config.executablePath = detectedPath;
+        } else {
+            console.warn('⚠️ No se encontró Chrome del sistema. Se usará el navegador incluido por Puppeteer.');
+        }
+    }
+
+    return config;
+};
+
+const toNumber = (value) => {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : 0;
+};
+
+const safeUpper = (value, fallback = 'SIN DESCRIPCION') => {
+    const text = String(value ?? '').trim();
+    return (text || fallback).toUpperCase();
+};
+
+const launchBrowserSafe = async () => {
+    const primaryConfig = PUPPETEER_CONFIG();
+
+    try {
+        return await puppeteer.launch(primaryConfig);
+    } catch (primaryError) {
+        console.error('❌ Error lanzando Puppeteer (config principal):', primaryError?.message || primaryError);
+        console.error('ℹ️ Reintentando Puppeteer con configuración fallback...');
+
+        const fallbackConfig = {
             headless: 'new',
-            executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/chromium',
             args: [
                 '--no-sandbox',
                 '--disable-setuid-sandbox',
-                '--disable-dev-shm-usage',
-                '--disable-gpu',
-                '--single-process',
-                '--no-zygote'
+                '--disable-dev-shm-usage'
             ]
         };
-    } else {
-        // Configuración para desarrollo local
-        return {
-            headless: 'new',
-            args: [
-                '--no-sandbox',
-                '--disable-setuid-sandbox'
-            ]
-        };
+
+        return await puppeteer.launch(fallbackConfig);
     }
 };
 const ReportesCajaChicaController = {};
@@ -354,7 +399,7 @@ ReportesCajaChicaController.generarPDFIndividual = async (req, res) => {
         </html>
         `;
 
-        browser = await puppeteer.launch(PUPPETEER_CONFIG());
+        browser = await launchBrowserSafe();
 
         const page = await browser.newPage();
         await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
@@ -421,13 +466,13 @@ ReportesCajaChicaController.generarPDFTodosMovimientos = async (req, res) => {
 
         const totalIngresos = movimientos
             .filter(m => m.type === 'income')
-            .reduce((sum, m) => sum + m.amount, 0);
+            .reduce((sum, m) => sum + toNumber(m.amount), 0);
 
         const totalEgresos = movimientos
             .filter(m => m.type === 'expense')
-            .reduce((sum, m) => sum + m.amount, 0);
+            .reduce((sum, m) => sum + toNumber(m.amount), 0);
 
-        const balanceFinal = movimientos[0].currentBalance;
+        const balanceFinal = toNumber(movimientos[0]?.currentBalance);
 
         const htmlContent = `
         <!DOCTYPE html>
@@ -624,14 +669,20 @@ ReportesCajaChicaController.generarPDFTodosMovimientos = async (req, res) => {
                     ${movimientos.map((m, index) => {
                         const tipo = m.type === 'income' ? 'INGRESO' : 'EGRESO';
                         const tipoClass = m.type === 'income' ? 'tipo-ingreso' : 'tipo-egreso';
+                        const fechaMovimiento = m?.date ? new Date(m.date) : null;
+                        const fechaTexto = fechaMovimiento && !Number.isNaN(fechaMovimiento.getTime())
+                            ? fechaMovimiento.toLocaleDateString('es-ES')
+                            : 'N/A';
+                        const descripcion = safeUpper(m?.reason || m?.descripcion);
+                        const monto = toNumber(m?.amount);
                         
                         return `
                             <tr>
                                 <td class="col-numero">${index + 1}</td>
-                                <td class="col-fecha">${new Date(m.date).toLocaleDateString('es-ES')}</td>
+                                <td class="col-fecha">${fechaTexto}</td>
                                 <td class="col-tipo ${tipoClass}">${tipo}</td>
-                                <td class="col-gastos">${m.reason.toUpperCase()}</td>
-                                <td class="col-monto">$ ${m.amount.toFixed(2)}</td>
+                                <td class="col-gastos">${descripcion}</td>
+                                <td class="col-monto">$ ${monto.toFixed(2)}</td>
                             </tr>
                         `;
                     }).join('')}
@@ -655,7 +706,7 @@ ReportesCajaChicaController.generarPDFTodosMovimientos = async (req, res) => {
         </html>
         `;
 
-        browser = await puppeteer.launch(PUPPETEER_CONFIG());
+        browser = await launchBrowserSafe();
 
         const page = await browser.newPage();
         await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
@@ -994,7 +1045,7 @@ ReportesCajaChicaController.generarPDFMensualSimple = async (req, res) => {
         </html>
         `;
 
-        browser = await puppeteer.launch(PUPPETEER_CONFIG());
+        browser = await launchBrowserSafe();
 
         const page = await browser.newPage();
         await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
@@ -1300,7 +1351,7 @@ ReportesCajaChicaController.generarPDFMultiplesMeses = async (req, res) => {
         </html>
         `;
 
-        browser = await puppeteer.launch(PUPPETEER_CONFIG());
+        browser = await launchBrowserSafe();
 
         const page = await browser.newPage();
         await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
@@ -1647,7 +1698,7 @@ ReportesCajaChicaController.generarPDFDiario = async (req, res) => {
         </html>
         `;
 
-        browser = await puppeteer.launch(PUPPETEER_CONFIG());
+        browser = await launchBrowserSafe();
 
         const page = await browser.newPage();
         await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
@@ -2020,7 +2071,7 @@ ReportesCajaChicaController.generarPDFRangoFechas = async (req, res) => {
         </html>
         `;
 
-        browser = await puppeteer.launch(PUPPETEER_CONFIG());
+        browser = await launchBrowserSafe();
 
         const page = await browser.newPage();
         await page.setContent(htmlContent, { waitUntil: 'networkidle0' });

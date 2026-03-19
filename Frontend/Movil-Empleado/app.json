@@ -28,10 +28,10 @@
     "plugins": [
       "expo-asset"
     ],
-    "owner": "gabcontreras",
+    "owner": "",
     "extra": {
       "eas": {
-        "projectId": "93d85bb2-9632-46d8-8e9e-e134f07ca3d0"
+        "projectId": "4e3846cc-e6e9-4ac8-b587-aa15a8b7c2ea"
       }
     }
   }

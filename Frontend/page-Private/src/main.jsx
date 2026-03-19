@@ -8,6 +8,13 @@ import axios from 'axios';
 // Ensure cookies are included on all axios requests by default
 axios.defaults.withCredentials = true;
 
+if (import.meta.env.PROD) {
+  // Disable console.log in production builds.
+  console.log = () => {};
+  // Disable console.warn in production builds.
+  console.warn = () => {};
+}
+
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <AuthProvider> 

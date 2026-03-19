@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Phone, Mail, User, ArrowLeft, ChevronLeft, ChevronRight, Users, MapPin, Calendar, CreditCard, Plus, MoreHorizontal, Building2, FileText, DollarSign } from 'lucide-react';
+import { Search, Phone, Mail, User, ArrowLeft, ChevronLeft, ChevronRight, Users, MapPin, Calendar, CreditCard, Plus, MoreHorizontal, Building2, FileText, DollarSign, HelpCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import SweetAlertCliente from '../components/Clientes/SweetAlertCliente';
 import ConfirmDeleteClienteAlert from '../components/Clientes/ConfirmDeleteClienteAlert';
