@@ -715,10 +715,21 @@ const diasDiferencia =
   } catch (error) {
     if (browser) await browser.close();
     console.error("❌ Error al generar PDF Consolidado:", error);
+
+    const diagnostics = {
+      env: process.env.NODE_ENV || 'undefined',
+      render: process.env.RENDER || 'false',
+      platform: process.platform,
+      arch: process.arch,
+      node: process.version,
+      executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || process.env.CHROME_BIN || 'auto'
+    };
+
     res.status(500).json({
       success: false,
       message: "Error al generar el PDF consolidado",
-      error: error.message,
+      error: error?.message || String(error),
+      diagnostics,
     });
   }
 };
