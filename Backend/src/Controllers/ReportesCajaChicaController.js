@@ -60,33 +60,48 @@ const convertirImagenABase64 = (rutaImagen) => {
 // Detectar entorno de ejecución
 const IS_CLOUD_RUN = process.env.K_SERVICE !== undefined;
 const IS_PRODUCTION = process.env.NODE_ENV === 'production';
+const IS_RENDER = process.env.RENDER === 'true';
 // Cargar logo una vez
 const logoBase64 = convertirImagenABase64(RUTA_LOGO);
 const PUPPETEER_CONFIG = () => {
-    if (IS_PRODUCTION || IS_CLOUD_RUN) {
-        // Configuración para Cloud Run
-        return {
-            headless: 'new',
-            executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/chromium',
-            args: [
-                '--no-sandbox',
-                '--disable-setuid-sandbox',
-                '--disable-dev-shm-usage',
-                '--disable-gpu',
-                '--single-process',
-                '--no-zygote'
-            ]
-        };
-    } else {
-        // Configuración para desarrollo local
-        return {
-            headless: 'new',
-            args: [
-                '--no-sandbox',
-                '--disable-setuid-sandbox'
-            ]
-        };
+    const config = {
+        headless: 'new',
+        args: [
+            '--no-sandbox',
+            '--disable-setuid-sandbox',
+            '--disable-dev-shm-usage',
+            '--disable-gpu',
+            '--single-process',
+            '--no-zygote'
+        ]
+    };
+
+    const configuredPath = process.env.PUPPETEER_EXECUTABLE_PATH || process.env.CHROME_BIN;
+    if (configuredPath) {
+        if (fs.existsSync(configuredPath)) {
+            config.executablePath = configuredPath;
+            return config;
+        }
+        console.warn(`⚠️ PUPPETEER_EXECUTABLE_PATH/CHROME_BIN no existe: ${configuredPath}`);
     }
+
+    if (IS_PRODUCTION || IS_CLOUD_RUN || IS_RENDER) {
+        const systemCandidates = [
+            '/usr/bin/chromium',
+            '/usr/bin/chromium-browser',
+            '/usr/bin/google-chrome-stable',
+            '/opt/google/chrome/chrome'
+        ];
+
+        const detectedPath = systemCandidates.find((candidate) => fs.existsSync(candidate));
+        if (detectedPath) {
+            config.executablePath = detectedPath;
+        } else {
+            console.warn('⚠️ No se encontró Chrome del sistema. Se usará el navegador incluido por Puppeteer.');
+        }
+    }
+
+    return config;
 };
 const ReportesCajaChicaController = {};
 

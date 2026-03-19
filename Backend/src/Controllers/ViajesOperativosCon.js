@@ -480,7 +480,7 @@ ViajesOperativosController.crearViajeOperativo = async (req, res) => {
 // =====================================================
 ViajesOperativosController.listarViajesOperativos = async (req, res) => {
   try {
-    const { fecha, clienteId, estado, limite = 50 } = req.query;
+    const { fecha, clienteId, estado, limite } = req.query;
     
     const filtros = { tipoViaje: 'operativo' };
     
@@ -503,13 +503,18 @@ ViajesOperativosController.listarViajesOperativos = async (req, res) => {
       filtros['estado.actual'] = estado;
     }
     
-    const viajes = await ViajesModel.find(filtros)
+    let query = ViajesModel.find(filtros)
       .populate('truckId', 'brand model licensePlate name marca modelo placa nombre')
       .populate('conductorId', 'name phone nombre telefono')
       .populate('clienteOperativo', 'nombre name')
-      .sort({ departureTime: 1 })
-      .limit(parseInt(limite))
-      .lean();
+      .sort({ departureTime: 1 });
+
+    const limiteNum = Number.parseInt(limite, 10);
+    if (Number.isFinite(limiteNum) && limiteNum > 0) {
+      query = query.limit(limiteNum);
+    }
+
+    const viajes = await query.lean();
     
     res.status(200).json({
       success: true,
