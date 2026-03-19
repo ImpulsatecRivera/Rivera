@@ -6,6 +6,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
+import { launchUniversalBrowser } from '../Utils/puppeteerLauncher.js';
 
 const ReportesViajesDirecto = {};
 
@@ -89,34 +90,10 @@ const PUPPETEER_CONFIG = () => {
 };
 
 const launchBrowserSafe = async () => {
-  const primaryConfig = PUPPETEER_CONFIG();
-
-  try {
-    return await puppeteer.launch(primaryConfig);
-  } catch (primaryError) {
-    console.error('❌ Error lanzando Puppeteer (config principal):', primaryError?.message || primaryError);
-    console.error('ℹ️ Reintentando Puppeteer con configuración compatible...');
-
-    const fallbackConfig = {
-      headless: true,
-      args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage'
-      ]
-    };
-
-    try {
-      const bundledPath = puppeteer.executablePath();
-      if (bundledPath && fs.existsSync(bundledPath)) {
-        fallbackConfig.executablePath = bundledPath;
-      }
-    } catch (error_) {
-      console.warn('⚠️ No se pudo resolver executablePath de Puppeteer para fallback.');
-    }
-
-    return await puppeteer.launch(fallbackConfig);
-  }
+  return launchUniversalBrowser(puppeteer, {
+    serviceName: 'reportes-directos',
+    primaryConfig: PUPPETEER_CONFIG()
+  });
 };
 // =====================================================
 // 🛠️ FUNCIONES AUXILIARES
