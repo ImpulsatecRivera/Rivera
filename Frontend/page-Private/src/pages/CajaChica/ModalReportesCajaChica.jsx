@@ -67,7 +67,14 @@ const ReportesCajaChicaModal = ({ isOpen, onClose }) => {
     try {
       const text = await blob.text();
       const jsonData = JSON.parse(text);
-      return jsonData?.message || jsonData?.error || text || null;
+      const message = jsonData?.message || '';
+      const detail = jsonData?.error || '';
+
+      if (message && detail && detail !== message) {
+        return `${message}: ${detail}`;
+      }
+
+      return message || detail || text || null;
     } catch {
       return null;
     }
@@ -257,6 +264,13 @@ const ReportesCajaChicaModal = ({ isOpen, onClose }) => {
       
       if (error.response.status) {
         errorDetails = `<p style="color: #999; font-size: 12px; margin-top: 10px;">Status: ${error.response.status}</p>`;
+      }
+
+      if (error.response.data instanceof Blob) {
+        const rawText = await error.response.data.text();
+        if (rawText) {
+          console.error('Backend error payload:', rawText);
+        }
       }
     } else if (error.message) {
       errorMessage = error.message;
