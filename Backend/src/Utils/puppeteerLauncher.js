@@ -1,4 +1,10 @@
-import fs from 'fs';
+import fs from 'node:fs';
+import path from 'node:path';
+
+const PROJECT_PUPPETEER_CACHE = path.resolve(process.cwd(), '.cache', 'puppeteer');
+if (!process.env.PUPPETEER_CACHE_DIR) {
+  process.env.PUPPETEER_CACHE_DIR = PROJECT_PUPPETEER_CACHE;
+}
 
 const DEFAULT_ARGS = [
   '--no-sandbox',
@@ -25,6 +31,28 @@ const SYSTEM_CHROME_CANDIDATES = [
 
 const unique = (values) => [...new Set(values.filter(Boolean))];
 
+const findChromeExecutablesInDir = (dirPath, maxDepth = 6) => {
+  if (!exists(dirPath) || maxDepth < 0) return [];
+
+  const found = [];
+  const entries = fs.readdirSync(dirPath, { withFileTypes: true });
+
+  for (const entry of entries) {
+    const fullPath = path.join(dirPath, entry.name);
+    if (entry.isDirectory()) {
+      found.push(...findChromeExecutablesInDir(fullPath, maxDepth - 1));
+      continue;
+    }
+
+    const lower = entry.name.toLowerCase();
+    if (lower === 'chrome' || lower === 'chrome.exe' || lower === 'chromium') {
+      found.push(fullPath);
+    }
+  }
+
+  return found;
+};
+
 const exists = (filePath) => {
   try {
     return Boolean(filePath) && fs.existsSync(filePath);
@@ -48,8 +76,9 @@ const getExecutableCandidates = (puppeteer) => {
   }
 
   const systemCandidates = process.platform === 'linux' ? SYSTEM_CHROME_CANDIDATES : [];
+  const cacheCandidates = findChromeExecutablesInDir(process.env.PUPPETEER_CACHE_DIR || PROJECT_PUPPETEER_CACHE);
 
-  return unique([...envCandidates, bundledPath, ...systemCandidates]).filter(exists);
+  return unique([...envCandidates, bundledPath, ...systemCandidates, ...cacheCandidates]).filter(exists);
 };
 
 const buildLaunchAttempts = (primaryConfig, executableCandidates) => {
