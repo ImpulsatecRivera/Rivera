@@ -87,6 +87,37 @@ const PUPPETEER_CONFIG = () => {
 
   return config;
 };
+
+const launchBrowserSafe = async () => {
+  const primaryConfig = PUPPETEER_CONFIG();
+
+  try {
+    return await puppeteer.launch(primaryConfig);
+  } catch (primaryError) {
+    console.error('❌ Error lanzando Puppeteer (config principal):', primaryError?.message || primaryError);
+    console.error('ℹ️ Reintentando Puppeteer con configuración compatible...');
+
+    const fallbackConfig = {
+      headless: true,
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage'
+      ]
+    };
+
+    try {
+      const bundledPath = puppeteer.executablePath();
+      if (bundledPath && fs.existsSync(bundledPath)) {
+        fallbackConfig.executablePath = bundledPath;
+      }
+    } catch (error_) {
+      console.warn('⚠️ No se pudo resolver executablePath de Puppeteer para fallback.');
+    }
+
+    return await puppeteer.launch(fallbackConfig);
+  }
+};
 // =====================================================
 // 🛠️ FUNCIONES AUXILIARES
 // =====================================================
@@ -672,7 +703,7 @@ const diasDiferencia =
     const comparativo = periodo.toLowerCase() === 'semanal';
     const htmlContent = generarHTMLConsolidado(titulo, columnas, clientesData, landscape, comparativo);
 
-    browser = await puppeteer.launch(PUPPETEER_CONFIG());
+    browser = await launchBrowserSafe();
 
     const page = await browser.newPage();
     await page.setContent(htmlContent, { waitUntil: "networkidle0" });
@@ -1205,7 +1236,7 @@ ReportesViajesDirecto.generarPDFResumenMensualV2 = async (req, res) => {
 </html>
 `;
 
-    browser = await puppeteer.launch(PUPPETEER_CONFIG());
+    browser = await launchBrowserSafe();
     const page = await browser.newPage();
     await page.setContent(htmlContent, { waitUntil: "networkidle0" });
 
@@ -1501,7 +1532,7 @@ ReportesViajesDirecto.generarPDFResumenMensual = async (req, res) => {
 </html>
 `;
 
-    browser = await puppeteer.launch(PUPPETEER_CONFIG());
+    browser = await launchBrowserSafe();
 
     const page = await browser.newPage();
     await page.setContent(htmlContent, { waitUntil: "networkidle0" });
@@ -1694,7 +1725,7 @@ ReportesViajesDirecto.generarPDFResumenPorMetodoPago = async (req, res) => {
 </html>
 `;
 
-    browser = await puppeteer.launch(PUPPETEER_CONFIG());
+    browser = await launchBrowserSafe();
     const page = await browser.newPage();
     await page.setContent(htmlContent, { waitUntil: "networkidle0" });
 
@@ -1982,7 +2013,7 @@ ReportesViajesDirecto.generarPDFComparativoEfectivo = async (req, res) => {
 </html>
 `;
 
-    browser = await puppeteer.launch(PUPPETEER_CONFIG());
+    browser = await launchBrowserSafe();
     const page = await browser.newPage();
     await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
 
@@ -2414,7 +2445,7 @@ ReportesViajesDirecto.generarPDFClienteIndividual = async (req, res) => {
 </html>
 `;
 
-    browser = await puppeteer.launch(PUPPETEER_CONFIG());
+    browser = await launchBrowserSafe();
 
     const page = await browser.newPage();
     await page.setContent(htmlContent, { waitUntil: "networkidle0" });
@@ -2723,7 +2754,7 @@ ReportesViajesDirecto.generarPDFCreditoFiscal = async (req, res) => {
 </html>
 `;
 
-    browser = await puppeteer.launch(PUPPETEER_CONFIG());
+    browser = await launchBrowserSafe();
 
     const page = await browser.newPage();
     await page.setContent(htmlContent, { waitUntil: "networkidle0" });
@@ -2956,7 +2987,7 @@ ReportesViajesDirecto.generarPDFConsolidadoAnual = async (req, res) => {
 </html>
 `;
 
-    browser = await puppeteer.launch(PUPPETEER_CONFIG());
+    browser = await launchBrowserSafe();
 
     const page = await browser.newPage();
     await page.setContent(htmlContent, { waitUntil: "networkidle0" });
@@ -3260,7 +3291,7 @@ ReportesViajesDirecto.generarPDFDiario = async (req, res) => {
 </body>
 </html>`;
 
-    browser = await puppeteer.launch(PUPPETEER_CONFIG());
+    browser = await launchBrowserSafe();
     const page = await browser.newPage();
     await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
 

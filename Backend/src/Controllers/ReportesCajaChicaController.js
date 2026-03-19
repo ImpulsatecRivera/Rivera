@@ -122,13 +122,22 @@ const launchBrowserSafe = async () => {
         console.error('ℹ️ Reintentando Puppeteer con configuración fallback...');
 
         const fallbackConfig = {
-            headless: 'new',
+            headless: true,
             args: [
                 '--no-sandbox',
                 '--disable-setuid-sandbox',
                 '--disable-dev-shm-usage'
             ]
         };
+
+        try {
+            const bundledPath = puppeteer.executablePath();
+            if (bundledPath && fs.existsSync(bundledPath)) {
+                fallbackConfig.executablePath = bundledPath;
+            }
+        } catch (error_) {
+            console.warn('⚠️ No se pudo resolver executablePath de Puppeteer para fallback.');
+        }
 
         return await puppeteer.launch(fallbackConfig);
     }
