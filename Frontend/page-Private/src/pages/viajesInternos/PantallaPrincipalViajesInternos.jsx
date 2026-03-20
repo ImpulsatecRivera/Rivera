@@ -124,7 +124,7 @@ export default function PantallaPrincipalViajesOperativos() {
       setLoading(true);
       setError(null);
 
-      const { data } = await api.get('/viajes-operativos/listar');
+      const { data } = await api.get('/viajes-operativos/listar?limite=2000');
       const rows = data?.data || (Array.isArray(data) ? data : []);
       setViajes(Array.isArray(rows) ? rows : []);
     } catch (e) {

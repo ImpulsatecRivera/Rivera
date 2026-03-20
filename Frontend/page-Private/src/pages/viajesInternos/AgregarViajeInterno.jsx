@@ -77,6 +77,49 @@ const getMotoristaTruckId = (m) => {
   return "";
 };
 
+const normalizeText = (v) => String(v ?? "").trim().toUpperCase();
+
+const construirRutasFrecuentesDesdeViajes = (viajes = []) => {
+  const rutasMap = new Map();
+
+  viajes.forEach((viaje) => {
+    const estado = String(viaje?.estado?.actual || "").trim().toLowerCase();
+    if (estado === "cancelado") return;
+
+    const origen = normalizeText(viaje?.rutaDirecta?.origen?.nombre);
+    const destino = normalizeText(viaje?.rutaDirecta?.destino?.nombre);
+
+    if (!origen || !destino) return;
+
+    const key = `${origen}|${destino}`;
+    const actual = rutasMap.get(key) || {
+      origen,
+      destino,
+      vecesUsada: 0,
+      ultimoUso: null,
+      rutaCompleta: `${origen}/${destino}`,
+    };
+
+    actual.vecesUsada += 1;
+
+    const salida = viaje?.departureTime ? new Date(viaje.departureTime) : null;
+    if (salida && !Number.isNaN(salida.getTime())) {
+      if (!actual.ultimoUso || salida > actual.ultimoUso) {
+        actual.ultimoUso = salida;
+      }
+    }
+
+    rutasMap.set(key, actual);
+  });
+
+  return Array.from(rutasMap.values()).sort((a, b) => {
+    if (b.vecesUsada !== a.vecesUsada) return b.vecesUsada - a.vecesUsada;
+    const aTime = a.ultimoUso ? a.ultimoUso.getTime() : 0;
+    const bTime = b.ultimoUso ? b.ultimoUso.getTime() : 0;
+    return bTime - aTime;
+  });
+};
+
 export default function AgregarViajeOperativo() {
   const navigate = useNavigate();
 
@@ -324,7 +367,22 @@ export default function AgregarViajeOperativo() {
       clienteId,
       clienteNombre: found?.nombreComercial || found?.nombreEmpresa || p.clienteNombre,
     }));
-    setRutasFrecuentesCliente(found?.rutasFrecuentes || []);
+    setRutasFrecuentesCliente([]);
+
+    if (!clienteId) return;
+
+    api
+      .get(`/viajes-operativos/listar?clienteId=${encodeURIComponent(clienteId)}&limite=2000`)
+      .then(({ data }) => {
+        const viajes = data?.data || [];
+        const rutasCalculadas = construirRutasFrecuentesDesdeViajes(
+          Array.isArray(viajes) ? viajes : []
+        );
+        setRutasFrecuentesCliente(rutasCalculadas);
+      })
+      .catch((e) => {
+        console.error("Error calculando rutas frecuentes desde viajes:", e);
+      });
   };
 
   const validar = () => {
