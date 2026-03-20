@@ -97,11 +97,11 @@ ViajesOperativosController.crearViajeOperativo = async (req, res) => {
     } = req.body;
 
     // ✅ VALIDACIONES
-    if (!clienteId || !truckId || !conductorId || !departureTime || !arrivalTime) {
+    if (!clienteId || !truckId || !conductorId || !departureTime) {
       return res.status(400).json({
         success: false,
         message: "Campos obligatorios faltantes",
-        required: ["clienteId", "truckId", "conductorId", "departureTime", "arrivalTime"]
+        required: ["clienteId", "truckId", "conductorId", "departureTime"]
       });
     }
 
@@ -153,31 +153,50 @@ ViajesOperativosController.crearViajeOperativo = async (req, res) => {
       }
     }
 
-    // Validar fechas - El frontend envía "YYYY-MM-DDTHH:mm" interpretando como local
-    // Pero JavaScript lo interpreta como UTC cuando no tiene timezone info
-    // Solución: Parsear como UTC y restar 6 horas (offset de El Salvador = UTC-6)
-    
+    // Validar fechas - Soportar date-only (YYYY-MM-DD), datetime-local (YYYY-MM-DDTHH:mm) y UTC timestamp
     const parseLocalDateToUTC = (dateString) => {
-      // dateString formato: "2026-01-27T02:36"
-      // JavaScript interpreta esto como UTC
-      const dateUTC = new Date(dateString);
-      
-      // Restar 6 horas para convertir de UTC a la hora REAL que el usuario seleccionó
-      // (porque lo seleccionó como local pero JavaScript lo interpretó como UTC)
-      const offsetElSalvador = 6 * 60 * 60 * 1000; // 6 horas en ms
-      const dateLocal = new Date(dateUTC.getTime() - offsetElSalvador);
-      
-      return dateLocal;
+      if (!dateString) return null;
+
+      // Si viene en formato date-only (sin tiempo), nos vamos a mediodía local para evitar desfase UTC
+      const dateOnlyMatch = dateString.match(/^\d{4}-\d{2}-\d{2}$/);
+      if (dateOnlyMatch) {
+        const [year, month, day] = dateString.split("-").map((v) => Number(v));
+        return new Date(year, month - 1, day, 12, 0, 0, 0);
+      }
+
+      // Si ya contiene zona horaria explícita (Z o ±HH:mm), interpretar directo
+      if (/[Zz]|[\+\-]\d{2}:?\d{2}$/.test(dateString)) {
+        return new Date(dateString);
+      }
+
+      // Caso datetime-local sin zona: se interpreta como local y se usa tal cual
+      if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2})?$/.test(dateString)) {
+        return new Date(dateString);
+      }
+
+      // Fallback: dejar que JS parsee el valor
+      return new Date(dateString);
     };
-    
+
     const salidaDate = parseLocalDateToUTC(departureTime);
-    const llegadaDate = parseLocalDateToUTC(arrivalTime);
+    const llegadaDate = arrivalTime ? parseLocalDateToUTC(arrivalTime) : null;
 
     console.log('departureTime recibido del frontend:', departureTime);
-    console.log('salidaDate interpretado (restando offset El Salvador):', salidaDate.toISOString());
+    console.log('salidaDate interpretado:', salidaDate.toISOString());
     console.log('salidaDate local:', salidaDate.toString());
 
-    if (salidaDate >= llegadaDate) {
+    const finalArrivalDate = llegadaDate
+      ? new Date(llegadaDate)
+      : new Date(salidaDate);
+
+    if (!llegadaDate) {
+      finalArrivalDate.setDate(finalArrivalDate.getDate() + 1);
+    }
+
+    console.log('arrivalTime recibido del frontend:', arrivalTime);
+    console.log('arrivalDate interpretado:', finalArrivalDate.toISOString());
+
+    if (salidaDate >= finalArrivalDate) {
       return res.status(400).json({
         success: false,
         message: "Fecha de salida debe ser anterior a llegada"
@@ -210,7 +229,7 @@ ViajesOperativosController.crearViajeOperativo = async (req, res) => {
       
       // Fechas
       departureTime: salidaDate,
-      arrivalTime: llegadaDate,
+      arrivalTime: finalArrivalDate,
       
       // ✅ RUTA DIRECTA (sin cotización)
       rutaDirecta: {
@@ -536,19 +555,19 @@ ViajesOperativosController.obtenerProgramacionDia = async (req, res) => {
   try {
     const { fecha } = req.params;
     
-    // Parsear fecha en UTC con offset para zona -6 (6 AM UTC = 00:00 local)
+    // Parsear la fecha seleccionada (YYYY-MM-DD) en el rango local del día completo
     const [year, month, day] = fecha.split('-').map(Number);
-    const fechaDate = new Date(Date.UTC(year, month - 1, day, 6, 0, 0, 0));
-    const siguienteDia = new Date(Date.UTC(year, month - 1, day + 1, 6, 0, 0, 0));
-    
-    console.log('Fecha parseada UTC offset:', fechaDate.toISOString());
-    console.log('Siguiente día UTC offset:', siguienteDia.toISOString());
-    
+    const fechaInicioLocal = new Date(year, month - 1, day, 0, 0, 0, 0); // 00:00 local
+    const fechaFinLocal = new Date(year, month - 1, day + 1, 0, 0, 0, 0); // 00:00 del día siguiente local
+
+    console.log('Fecha inicio local:', fechaInicioLocal.toISOString());
+    console.log('Fecha fin local:', fechaFinLocal.toISOString());
+
     const query = {
       tipoViaje: 'operativo',
       departureTime: {
-        $gte: fechaDate,
-        $lt: siguienteDia
+        $gte: fechaInicioLocal,
+        $lt: fechaFinLocal
       }
     };
     console.log('Query de búsqueda:', JSON.stringify(query, null, 2));
