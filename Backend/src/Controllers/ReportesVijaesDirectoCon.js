@@ -6,6 +6,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
+import { launchUniversalBrowser } from '../Utils/puppeteerLauncher.js';
 
 const ReportesViajesDirecto = {};
 
@@ -42,32 +43,57 @@ const RUTA_LOGO = path.join(process.cwd(), 'src', 'imagenes', 'imagen_15.png');
 // Detectar entorno de ejecución
 const IS_CLOUD_RUN = process.env.K_SERVICE !== undefined;
 const IS_PRODUCTION = process.env.NODE_ENV === 'production';
+const IS_RENDER = process.env.RENDER === 'true';
 
 const PUPPETEER_CONFIG = () => {
-    if (IS_PRODUCTION || IS_CLOUD_RUN) {
-        // Configuración para Cloud Run
-        return {
-            headless: 'new',
-            executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/chromium',
-            args: [
-                '--no-sandbox',
-                '--disable-setuid-sandbox',
-                '--disable-dev-shm-usage',
-                '--disable-gpu',
-                '--single-process',
-                '--no-zygote'
-            ]
-        };
-    } else {
-        // Configuración para desarrollo local
-        return {
-            headless: 'new',
-            args: [
-                '--no-sandbox',
-                '--disable-setuid-sandbox'
-            ]
-        };
+  const config = {
+    headless: 'new',
+    args: [
+      '--no-sandbox',
+      '--disable-setuid-sandbox',
+      '--disable-dev-shm-usage',
+      '--disable-gpu',
+      '--single-process',
+      '--no-zygote'
+    ]
+  };
+
+  // Permite definir explícitamente el navegador desde variables de entorno.
+  const configuredPath = process.env.PUPPETEER_EXECUTABLE_PATH || process.env.CHROME_BIN;
+  if (configuredPath) {
+    if (fs.existsSync(configuredPath)) {
+      config.executablePath = configuredPath;
+      return config;
     }
+    console.warn(`⚠️ PUPPETEER_EXECUTABLE_PATH/CHROME_BIN no existe: ${configuredPath}`);
+  }
+
+  // En Cloud Run/Docker se suelen usar rutas del sistema.
+  if (IS_PRODUCTION || IS_CLOUD_RUN || IS_RENDER) {
+    const systemCandidates = [
+      '/usr/bin/chromium',
+      '/usr/bin/chromium-browser',
+      '/usr/bin/google-chrome-stable',
+      '/opt/google/chrome/chrome'
+    ];
+
+    const detectedPath = systemCandidates.find((candidate) => fs.existsSync(candidate));
+    if (detectedPath) {
+      config.executablePath = detectedPath;
+    } else {
+      // En Render sin binario del sistema, Puppeteer usa su Chrome descargado.
+      console.warn('⚠️ No se encontró Chrome del sistema. Se usará el navegador incluido por Puppeteer.');
+    }
+  }
+
+  return config;
+};
+
+const launchBrowserSafe = async () => {
+  return launchUniversalBrowser(puppeteer, {
+    serviceName: 'reportes-directos',
+    primaryConfig: PUPPETEER_CONFIG()
+  });
 };
 // =====================================================
 // 🛠️ FUNCIONES AUXILIARES
@@ -654,7 +680,7 @@ const diasDiferencia =
     const comparativo = periodo.toLowerCase() === 'semanal';
     const htmlContent = generarHTMLConsolidado(titulo, columnas, clientesData, landscape, comparativo);
 
-    browser = await puppeteer.launch(PUPPETEER_CONFIG());
+    browser = await launchBrowserSafe();
 
     const page = await browser.newPage();
     await page.setContent(htmlContent, { waitUntil: "networkidle0" });
@@ -689,10 +715,21 @@ const diasDiferencia =
   } catch (error) {
     if (browser) await browser.close();
     console.error("❌ Error al generar PDF Consolidado:", error);
+
+    const diagnostics = {
+      env: process.env.NODE_ENV || 'undefined',
+      render: process.env.RENDER || 'false',
+      platform: process.platform,
+      arch: process.arch,
+      node: process.version,
+      executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || process.env.CHROME_BIN || 'auto'
+    };
+
     res.status(500).json({
       success: false,
       message: "Error al generar el PDF consolidado",
-      error: error.message,
+      error: error?.message || String(error),
+      diagnostics,
     });
   }
 };
@@ -1187,7 +1224,7 @@ ReportesViajesDirecto.generarPDFResumenMensualV2 = async (req, res) => {
 </html>
 `;
 
-    browser = await puppeteer.launch(PUPPETEER_CONFIG());
+    browser = await launchBrowserSafe();
     const page = await browser.newPage();
     await page.setContent(htmlContent, { waitUntil: "networkidle0" });
 
@@ -1483,7 +1520,7 @@ ReportesViajesDirecto.generarPDFResumenMensual = async (req, res) => {
 </html>
 `;
 
-    browser = await puppeteer.launch(PUPPETEER_CONFIG());
+    browser = await launchBrowserSafe();
 
     const page = await browser.newPage();
     await page.setContent(htmlContent, { waitUntil: "networkidle0" });
@@ -1676,7 +1713,7 @@ ReportesViajesDirecto.generarPDFResumenPorMetodoPago = async (req, res) => {
 </html>
 `;
 
-    browser = await puppeteer.launch(PUPPETEER_CONFIG());
+    browser = await launchBrowserSafe();
     const page = await browser.newPage();
     await page.setContent(htmlContent, { waitUntil: "networkidle0" });
 
@@ -1964,7 +2001,7 @@ ReportesViajesDirecto.generarPDFComparativoEfectivo = async (req, res) => {
 </html>
 `;
 
-    browser = await puppeteer.launch(PUPPETEER_CONFIG());
+    browser = await launchBrowserSafe();
     const page = await browser.newPage();
     await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
 
@@ -2396,7 +2433,7 @@ ReportesViajesDirecto.generarPDFClienteIndividual = async (req, res) => {
 </html>
 `;
 
-    browser = await puppeteer.launch(PUPPETEER_CONFIG());
+    browser = await launchBrowserSafe();
 
     const page = await browser.newPage();
     await page.setContent(htmlContent, { waitUntil: "networkidle0" });
@@ -2705,7 +2742,7 @@ ReportesViajesDirecto.generarPDFCreditoFiscal = async (req, res) => {
 </html>
 `;
 
-    browser = await puppeteer.launch(PUPPETEER_CONFIG());
+    browser = await launchBrowserSafe();
 
     const page = await browser.newPage();
     await page.setContent(htmlContent, { waitUntil: "networkidle0" });
@@ -2938,7 +2975,7 @@ ReportesViajesDirecto.generarPDFConsolidadoAnual = async (req, res) => {
 </html>
 `;
 
-    browser = await puppeteer.launch(PUPPETEER_CONFIG());
+    browser = await launchBrowserSafe();
 
     const page = await browser.newPage();
     await page.setContent(htmlContent, { waitUntil: "networkidle0" });
@@ -3242,7 +3279,7 @@ ReportesViajesDirecto.generarPDFDiario = async (req, res) => {
 </body>
 </html>`;
 
-    browser = await puppeteer.launch(PUPPETEER_CONFIG());
+    browser = await launchBrowserSafe();
     const page = await browser.newPage();
     await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
 

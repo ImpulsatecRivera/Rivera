@@ -6,6 +6,7 @@ import MantenimientoCamiones from '../Models/MantenimientoCamiones.js';
 import PlanillaSemanal from '../Models/PlanillaSemanal.js';
 import PlanillaQuincenal from '../Models/PlanillaQuincenal.js';
 import ResumenDiesel from '../Models/ResumenDiesel.js';
+import { launchUniversalBrowser } from '../Utils/puppeteerLauncher.js';
 
 // Obtener __dirname en ES modules
 const __filename = fileURLToPath(import.meta.url);
@@ -55,6 +56,14 @@ const PUPPETEER_CONFIG= () => {
         };
     }
 };
+
+const launchBrowserSafe = async () => {
+  return launchUniversalBrowser(puppeteer, {
+    serviceName: 'reportes-gastos-mes',
+    primaryConfig: PUPPETEER_CONFIG()
+  });
+};
+
 const formatMoney = (n) => {
   return new Intl.NumberFormat('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n || 0);
 };

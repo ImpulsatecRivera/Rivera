@@ -6,6 +6,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
+import { launchUniversalBrowser } from '../Utils/puppeteerLauncher.js';
 
 const ReportesVentasController = {};
 
@@ -76,6 +77,13 @@ const PUPPETEER_CONFIG = () => {
             ]
         };
     }
+};
+
+const launchBrowserSafe = async () => {
+  return launchUniversalBrowser(puppeteer, {
+    serviceName: 'reportes-ventas',
+    primaryConfig: PUPPETEER_CONFIG()
+  });
 };
 
 /**

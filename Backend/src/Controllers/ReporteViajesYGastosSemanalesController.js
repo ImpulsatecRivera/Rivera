@@ -8,6 +8,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
+import { launchUniversalBrowser } from '../Utils/puppeteerLauncher.js';
 
 // Obtener __dirname en ES modules
 const __filename = fileURLToPath(import.meta.url);
@@ -66,6 +67,13 @@ const PUPPETEER_CONFIG = () => {
             ]
         };
     }
+};
+
+const launchBrowserSafe = async () => {
+    return launchUniversalBrowser(puppeteer, {
+        serviceName: 'reporte-viajes-gastos-semanales',
+        primaryConfig: PUPPETEER_CONFIG()
+    });
 };
 const formatearFecha = (fecha) => {
     const date = new Date(fecha);
@@ -550,7 +558,7 @@ ReporteViajesYGastosSemanalesController.generarPDFSemanal = async (req, res) => 
         </html>
         `;
 
-        browser = await puppeteer.launch(PUPPETEER_CONFIG());
+        browser = await launchBrowserSafe();
 
         const page = await browser.newPage();
         await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
