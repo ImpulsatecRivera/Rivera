@@ -331,7 +331,7 @@ export default function AgregarViajeOperativo() {
     if (!formData.clienteId) return "Selecciona un cliente";
     if (!formData.conductorId) return "Selecciona un motorista";
     if (!formData.truckId) return "Selecciona un camión";
-    if (!formData.departureTime) return "Ingresa fecha/hora de Carga";
+    if (!formData.departureTime) return "Ingresa fecha de Carga";
     if (!formData.rutaOrigen) return "Ingresa origen";
     if (!formData.rutaDestino) return "Ingresa destino";
     if (!formData.montoAcordado || Number(formData.montoAcordado) <= 0)
@@ -356,8 +356,11 @@ export default function AgregarViajeOperativo() {
       setLoading(true);
       setError(null);
 
-      // Calcular arrivalTime automáticamente (1 día después de departureTime)
-      const departureDate = new Date(formData.departureTime);
+      // Calcular departureDate desde fecha sin hora (mantenemos día exacto usando mediodía local para evitar desfase UTC)
+      const [year, month, day] = formData.departureTime.split("-");
+      const departureDate = new Date(Number(year), Number(month) - 1, Number(day), 12, 0, 0, 0);
+
+      // Calcular arrivalTime automáticamente (1 día después de departureTime, misma hora)
       const arrivalDate = new Date(departureDate);
       arrivalDate.setDate(arrivalDate.getDate() + 1);
 
@@ -550,15 +553,15 @@ export default function AgregarViajeOperativo() {
           <div className="mb-6 sm:mb-8">
             <h3 className="text-lg sm:text-xl font-bold text-[#34353A] mb-4 flex items-center gap-2">
               <Calendar className="text-[#5F8EAD]" size={22} />
-              Fecha y Hora de Carga
+              Fecha de Carga
             </h3>
 
             <div>
               <label className="block text-sm font-semibold text-[#34353A] mb-2">
-                Fecha/Hora Carga *
+                Fecha Carga *
               </label>
               <input
-                type="datetime-local"
+                type="date"
                 name="departureTime"
                 value={formData.departureTime}
                 onChange={handleInputChange}

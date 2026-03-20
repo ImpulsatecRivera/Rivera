@@ -245,27 +245,29 @@ const generarEmail = async (name, lastName, excludeId = null) => {
  */
 empleadosCon.get = async (req, res) => {
     try {
-        // Agregar paginación opcional
+        // Agregar paginación opcional (desactivada por defecto para traer todo)
         const page = parseInt(req.query.page) || 1;
-        const limit = parseInt(req.query.limit) || 50;
-        const skip = (page - 1) * limit;
+        const limitQuery = req.query.limit ? parseInt(req.query.limit) : null;
 
-        // Validar parámetros de paginación
-        if (page < 1 || limit < 1 || limit > 100) {
-            return res.status(400).json({
-                success: false,
-                message: "Parámetros de paginación inválidos",
-                error: "La página debe ser >= 1 y el límite entre 1-100"
-            });
+        let empleadosQuery = empleadosModel.find().select('-password').sort({ createdAt: -1 });
+
+        let limit = null;
+        if (limitQuery !== null) {
+            if (isNaN(limitQuery) || limitQuery < 1 || limitQuery > 1000) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Parámetros de paginación inválidos",
+                    error: "El límite debe ser entre 1 y 1000"
+                });
+            }
+            limit = limitQuery;
+            const skip = (page - 1) * limit;
+            empleadosQuery = empleadosQuery.skip(skip).limit(limit);
         }
 
         // Obtener empleados sin contraseñas y con conteo total
         const [empleados, totalEmpleados] = await Promise.all([
-            empleadosModel.find()
-                .select('-password') // Excluir contraseñas
-                .skip(skip)
-                .limit(limit)
-                .sort({ createdAt: -1 }),
+            empleadosQuery,
             empleadosModel.countDocuments()
         ]);
 
@@ -279,14 +281,22 @@ empleadosCon.get = async (req, res) => {
                         currentPage: page,
                         totalPages: 0,
                         totalEmpleados: 0,
-                        empleadosPerPage: limit
+                        empleadosPerPage: limit || empleados.length,
+                        hasNextPage: false,
+                        hasPrevPage: false
                     }
                 }
             });
         }
 
         // Calcular información de paginación
-        const totalPages = Math.ceil(totalEmpleados / limit);
+        let totalPages = 1;
+        let hasNextPage = false;
+        let hasPrevPage = page > 1;
+        if (limit !== null) {
+            totalPages = Math.ceil(totalEmpleados / limit);
+            hasNextPage = page < totalPages;
+        }
 
         res.status(200).json({
             success: true,
@@ -297,9 +307,9 @@ empleadosCon.get = async (req, res) => {
                     currentPage: page,
                     totalPages,
                     totalEmpleados,
-                    empleadosPerPage: limit,
-                    hasNextPage: page < totalPages,
-                    hasPrevPage: page > 1
+                    empleadosPerPage: limit !== null ? limit : empleados.length,
+                    hasNextPage,
+                    hasPrevPage
                 }
             }
         });
