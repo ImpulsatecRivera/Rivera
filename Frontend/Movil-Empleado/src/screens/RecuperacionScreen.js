@@ -45,7 +45,7 @@ const RecuperacionScreen = ({ navigation }) => {
 
     setLoading(true);
     try {
-      const API_URL = 'https://rivera-test-629395560179.us-west1.run.app/api/recovery/requestCode';
+      const API_URL = 'https://rivera-test.onrender.com/api/recovery/requestCode';
 
       const response = await fetch(API_URL, {
         method: 'POST',

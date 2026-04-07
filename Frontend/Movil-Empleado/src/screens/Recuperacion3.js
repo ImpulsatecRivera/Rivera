@@ -45,7 +45,7 @@ const Recuperacion3 = ({ navigation, route }) => {
 
     setLoading(true);
     try {
-      const API_URL = 'https://rivera-test-629395560179.us-west1.run.app/api/recovery/newPassword';
+      const API_URL = 'https://rivera-test.onrender.com/api/recovery/newPassword';
       const response = await fetch(API_URL, {
         method: 'POST',
         credentials: 'include',
