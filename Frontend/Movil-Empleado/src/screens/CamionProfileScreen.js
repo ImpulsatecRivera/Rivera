@@ -25,7 +25,7 @@ import { useProfile } from "../hooks/useProfile";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // ✅ CONFIGURAR TU API URL
-const API_URL = "https://rivera-test-629395560179.us-west1.run.app/api";
+const API_URL = "https://rivera-test.onrender.com/api";
 
 const textSafe = (v, fb = "—") => {
   if (v === null || v === undefined) return fb;

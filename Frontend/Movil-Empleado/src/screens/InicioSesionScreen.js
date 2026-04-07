@@ -82,7 +82,7 @@ const InicioSesionScreen = ({ navigation }) => {
     setLoading(true);
     
     try {
-      const API_URL = 'https://rivera-test-629395560179.us-west1.run.app/api';
+      const API_URL = 'https://rivera-test.onrender.com/api';
       
       // 🔥 PRUEBA DIFERENTES ENDPOINTS POSIBLES
       const posiblesEndpoints = [
