@@ -26,7 +26,7 @@ import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 const RAW_BASE = (process.env.EXPO_PUBLIC_API_URL || "").replace(/\/+$/, "");
 const CLEAN_BASE = RAW_BASE.replace(/\/api$/i, "");
 const API_BASE_URL =
-  (CLEAN_BASE || "https://rivera-test-629395560179.us-west1.run.app") + "/api";
+  (CLEAN_BASE || "https://rivera-test.onrender.com") + "/api";
 
 /* =========================
    Utils
