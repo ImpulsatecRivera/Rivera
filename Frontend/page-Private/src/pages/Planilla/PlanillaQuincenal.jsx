@@ -136,7 +136,7 @@ export default function PlanillaQuincenal() {
   const cargarPersonal = async () => {
     try {
       try {
-        const resEmpleados = await api.get(`/empleados`);
+const resEmpleados = await api.get(`/empleados?limit=1000`);
         const dataEmpleados = resEmpleados.data;
 
         let empleadosArray = [];
@@ -917,7 +917,7 @@ export default function PlanillaQuincenal() {
       {/* 🎯 Sidebar con ancho dinámico que libera espacio */}
       {puedeEditar && (
         <div className={`
-          ${esMobil ? 'fixed left-0 top-0 h-full z-50' : 'relative'}
+          ${esMobil ? 'fixed left-0 top-0 h-full z-50' : 'relative h-screen'}
           bg-white flex flex-col overflow-hidden
           transition-all duration-300 ease-in-out
           ${esMobil ? 'shadow-2xl' : 'border-r border-gray-300 shadow-sm'}
@@ -1006,7 +1006,10 @@ export default function PlanillaQuincenal() {
           )}
 
           {/* Contenido del panel */}
-          <div className="flex-1 overflow-y-auto p-3 space-y-2 min-w-[320px]">
+          <div
+            className="flex-1 overflow-y-auto p-3 space-y-2 min-w-[320px]"
+            style={{ maxHeight: 'calc(100vh - 220px)' }}
+          >
             {personalFiltrado.length === 0 ? (
               <div className="text-center py-12 text-gray-400">
                 {busqueda ? (

@@ -92,7 +92,7 @@ export default function PlanillaSemanalNueva() {
   const cargarEmpleadosDisponibles = async () => {
     setLoadingEmpleados(true);
     try {
-      const resEmpleados = await api.get(`${config.api.API_URL}/empleados`);
+      const resEmpleados = await api.get(`${config.api.API_URL}/empleados?limit=1000`);
       const resMotoristas = await api.get(`${config.api.API_URL}/motoristas`);
 
       const dataEmpleados = resEmpleados.data;

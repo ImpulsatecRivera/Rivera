@@ -35,8 +35,22 @@ const normalize = (v) => String(v ?? "").trim().toLowerCase();
 
 const formatearFecha = (fecha) => {
   if (!fecha) return "N/A";
-  const d = new Date(fecha);
+
+  let d;
+  if (typeof fecha === "string") {
+    const dateOnly = /^\d{4}-\d{2}-\d{2}$/.test(fecha);
+    if (dateOnly) {
+      const [year, month, day] = fecha.split("-").map(Number);
+      d = new Date(year, month - 1, day, 12, 0, 0, 0); // usar mediodía local para evitar desfase UTC
+    } else {
+      d = new Date(fecha);
+    }
+  } else {
+    d = new Date(fecha);
+  }
+
   if (Number.isNaN(d.getTime())) return fecha ? String(fecha) : "N/A";
+
   return d.toLocaleDateString("es-ES", {
     year: "numeric",
     month: "short",
