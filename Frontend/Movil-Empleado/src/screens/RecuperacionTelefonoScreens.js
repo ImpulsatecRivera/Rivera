@@ -37,7 +37,7 @@ const RecuperacionTelefonoScreen = ({ navigation }) => {
       console.log('📞 Número completo:', fullPhoneNumber);
       
       // ✅ IP CONFIGURADA - Ajusta según tu configuración
-      const API_URL = 'https://rivera-test-629395560179.us-west1.run.app/api/recovery/requestCode';
+      const API_URL = 'https://rivera-test.onrender.com/api/recovery/requestCode';
       
       console.log('🌐 Conectando a:', API_URL);
       const response = await fetch(API_URL, {

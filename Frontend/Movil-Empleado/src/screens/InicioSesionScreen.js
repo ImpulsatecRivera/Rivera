@@ -82,82 +82,48 @@ const InicioSesionScreen = ({ navigation }) => {
     setLoading(true);
     
     try {
-      const API_URL = 'https://rivera-test-629395560179.us-west1.run.app/api';
-      
-      // 🔥 PRUEBA DIFERENTES ENDPOINTS POSIBLES
-      const posiblesEndpoints = [
-        `${API_URL}/auth/login`,
-        `${API_URL}/login`,
-        `${API_URL}/usuarios/login`,
-        `${API_URL}/user/login`,
-      ];
+      const API_URL = 'https://rivera-test.onrender.com/api';
+      const endpoint = `${API_URL}/login`;
 
       console.log('🔄 Intentando login...');
       console.log('📤 DUI:', dui.trim());
+      console.log(`🌐 Endpoint: ${endpoint}`);
 
-      let loginExitoso = false;
-      let ultimoError = null;
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        },
+        body: JSON.stringify({
+          dui: dui.trim(),
+          password: password.trim(),
+        }),
+      });
 
-      // Intenta cada endpoint hasta que uno funcione
-      for (const endpoint of posiblesEndpoints) {
-        try {
-          console.log(`\n🌐 Probando endpoint: ${endpoint}`);
+      console.log(`📥 Status: ${response.status}`);
 
-          const response = await fetch(endpoint, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Accept': 'application/json',
-            },
-            body: JSON.stringify({
-              dui: dui.trim(),
-              password: password.trim(),
-            }),
-          });
+      const rawText = await response.text();
+      let data = null;
 
-          console.log(`📥 Status: ${response.status}`);
-
-          // Verifica el content-type antes de parsear
-          const contentType = response.headers.get('content-type');
-          console.log(`📋 Content-Type: ${contentType}`);
-
-          if (!contentType || !contentType.includes('application/json')) {
-            console.log('⚠️ Respuesta no es JSON, probando siguiente endpoint...');
-            continue;
-          }
-
-          const data = await response.json();
-          console.log('📦 Datos recibidos:', JSON.stringify(data, null, 2));
-
-          if (response.ok && (data.token || data.success)) {
-            console.log('✅ Login exitoso!');
-            
-            // 🎯 Login exitoso
-            await login({
-              user: data.user || data.usuario || data.data,
-              token: data.token,
-              userType: data.userType || data.user?.userType || data.user?.rol || 'motorista',
-            });
-
-            loginExitoso = true;
-            break; // Salir del loop si fue exitoso
-          } else {
-            // El endpoint respondió pero hubo error
-            ultimoError = data.message || 'Credenciales incorrectas';
-            console.log('❌ Error del servidor:', ultimoError);
-            break; // Salir del loop si el endpoint es correcto pero las credenciales no
-          }
-
-        } catch (endpointError) {
-          console.log(`⚠️ Error en ${endpoint}:`, endpointError.message);
-          ultimoError = endpointError;
-          // Continúa al siguiente endpoint
-        }
+      try {
+        data = rawText ? JSON.parse(rawText) : null;
+      } catch {
+        data = { message: rawText || 'Respuesta no JSON del servidor' };
       }
 
-      // Si ningún endpoint funcionó
-      if (!loginExitoso) {
-        throw new Error(ultimoError?.message || 'No se pudo conectar con ningún endpoint');
+      console.log('📦 Datos recibidos:', JSON.stringify(data, null, 2));
+
+      if (response.ok && data && (data.token || data.success)) {
+        console.log('✅ Login exitoso!');
+
+        await login({
+          user: data.user || data.usuario || data.data,
+          token: data.token,
+          userType: data.userType || data.user?.userType || data.user?.rol || 'motorista',
+        });
+      } else {
+        throw new Error(data?.message || 'Credenciales incorrectas');
       }
 
     } catch (error) {

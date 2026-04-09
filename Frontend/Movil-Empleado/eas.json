@@ -18,6 +18,12 @@
         "EXPO_NO_CAPABILITY_SYNC": "1"
       }
     },
+    "apk": {
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      }
+    },
     "production": {
       "autoIncrement": true,
       "android": {
