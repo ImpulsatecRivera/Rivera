@@ -677,7 +677,7 @@ const viajeData = {
     res.status(200).json({
       success: true,
       data: {
-        fecha: fechaDate.toLocaleDateString('es-ES', {
+        fecha: fechaInicioLocal.toLocaleDateString('es-ES', {
           weekday: 'long',
           year: 'numeric',
           month: 'long',
