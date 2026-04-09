@@ -3050,10 +3050,9 @@ ReportesViajesDirecto.generarPDFDiario = async (req, res) => {
     console.log(`🕐 Rango UTC-6: ${fecha} 00:00 a ${fecha} 23:59`);
     console.log(`🕐 Rango UTC (búsqueda en DB): ${fechaDateAdjusted.toISOString()} a ${fechaFinAdjusted.toISOString()}`);
 
-    // 🔥 CORRECCIÓN: Buscar con múltiples criterios para encontrar TODOS los viajes
+    // 🔥 CORRECCIÓN: Buscar todos los viajes operativos del día, sin filtrar por estado
     const viajes = await ViajesModel.find({
       tipoViaje: 'operativo',
-      'estado.actual': 'completado',
       departureTime: { $gte: fechaDateAdjusted, $lte: fechaFinAdjusted }
     })
       .populate('clienteOperativo', 'nombreComercial nombreEmpresa')
