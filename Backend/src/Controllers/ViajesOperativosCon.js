@@ -637,27 +637,22 @@ ViajesOperativosController.obtenerProgramacionDia = async (req, res) => {
       console.log('Hora:', hora);
       console.log('================================');
       
-      // ViajesOperativosController.js
-// En la función obtenerProgramacionDia, actualiza la parte donde creas viajeData:
-
-const viajeData = {
-  id: viaje._id,
-  codigo: camionCodigo,
-  hora: hora,
-  ruta: viaje.rutaDirecta?.rutaCompleta || 'N/A',
-  conductor: viaje.conductorId?.name || viaje.conductorId?.nombre || 'N/A',
-  destino: viaje.rutaDirecta?.destino?.nombre || 'N/A',
-  estado: viaje.estado?.actual || 'pendiente',
-  camion: nombreCamion,
-  placa: placaCamion,
-  horaSalida: hora,
-  
-  //
-  auxiliares: (viaje.auxiliares || []).map(aux => ({
-    id: aux.auxiliarId?._id || aux.auxiliarId,
-    nombre: aux.auxiliarId?.nombre || aux.auxiliarId?.name || 'Auxiliar'
-  }))
-};
+      const viajeData = {
+        id: viaje._id,
+        codigo: camionCodigo,
+        hora: hora,
+        ruta: viaje.rutaDirecta?.rutaCompleta || 'N/A',
+        conductor: viaje.conductorId?.name || viaje.conductorId?.nombre || 'N/A',
+        destino: viaje.rutaDirecta?.destino?.nombre || 'N/A',
+        estado: viaje.estado?.actual || 'pendiente',
+        camion: nombreCamion,
+        placa: placaCamion,
+        horaSalida: hora,
+        auxiliares: (viaje.auxiliares || []).map(aux => ({
+          id: aux.auxiliarId?._id || aux.auxiliarId,
+          nombre: aux.auxiliarId?.nombre || aux.auxiliarId?.name || 'Auxiliar'
+        }))
+      };
       
       console.log('📦 Objeto viaje a enviar:', JSON.stringify(viajeData, null, 2));
       console.log('================================');
