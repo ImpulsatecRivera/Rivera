@@ -54,6 +54,8 @@ export default function PlanillaQuincenal() {
   const [filaEditando, setFilaEditando] = useState(null);
   const [datosEdicion, setDatosEdicion] = useState({});
   const { startTutorial } = useTutorial('planillaQuincenal');
+  const altasEnProcesoRef = React.useRef(new Set());
+  const ultimoClickAltaRef = React.useRef(new Map());
 
   // Inicializar infoPlanilla siempre con la primera quincena de enero del año actual
   const obtenerInfoPlanillaInicial = () => {
@@ -83,7 +85,7 @@ export default function PlanillaQuincenal() {
 
   useEffect(() => {
     const handleKeyPress = (e) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === 'b') {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'b') {
         e.preventDefault();
         if (puedeEditar) {
           setPanelAbierto(prev => !prev);
@@ -94,8 +96,8 @@ export default function PlanillaQuincenal() {
       }
     };
 
-    window.addEventListener('keydown', handleKeyPress);
-    return () => window.removeEventListener('keydown', handleKeyPress);
+    globalThis.addEventListener('keydown', handleKeyPress);
+    return () => globalThis.removeEventListener('keydown', handleKeyPress);
   }, [panelAbierto, esMobil]);
 
   const calcularProximaQuincena = (planillaActual) => {
@@ -432,6 +434,10 @@ const resEmpleados = await api.get(`/empleados?limit=1000`);
       return;
     }
 
+    if (!puedeIntentarAlta(persona._id)) {
+      return;
+    }
+
     try {
       const response = await api.post(
         `/planillas/quincenal/${planilla._id}/empleado`,
@@ -472,6 +478,8 @@ const resEmpleados = await api.get(`/empleados?limit=1000`);
         title: 'Error',
         text: error.response?.data?.message || 'No se pudo agregar el empleado'
       });
+    } finally {
+      liberarAlta(persona._id);
     }
   };
 
@@ -485,7 +493,12 @@ const resEmpleados = await api.get(`/empleados?limit=1000`);
       return;
     }
 
+    if (!puedeIntentarAlta(nuevaFila.empleadoId)) {
+      return;
+    }
+
     if (!planilla || !planilla._id) {
+      liberarAlta(nuevaFila.empleadoId);
       Swal.fire({
         icon: 'error',
         title: 'Error',
@@ -543,6 +556,8 @@ const resEmpleados = await api.get(`/empleados?limit=1000`);
         title: 'Error',
         text: error.response?.data?.message || 'Error al agregar empleado'
       });
+    } finally {
+      liberarAlta(nuevaFila.empleadoId);
     }
   };
 
@@ -852,6 +867,95 @@ const resEmpleados = await api.get(`/empleados?limit=1000`);
     }).format(cantidad || 0);
   };
 
+  const normalizarNombre = (persona) => (
+    `${persona?.nombreCompleto || persona?.name || persona?.nombre || ''} ${persona?.lastName || persona?.apellido || ''}`.trim()
+  );
+
+  const ordenarPorNombre = (lista) => (
+    [...lista].sort((a, b) => normalizarNombre(a).localeCompare(normalizarNombre(b), 'es', { sensitivity: 'base' }))
+  );
+
+  const getColorPersona = (persona) => {
+    if (persona?.tipo !== 'motorista') return 'bg-blue-500';
+    return String(persona?.rol || '').toLowerCase() === 'auxiliar' ? 'bg-amber-500' : 'bg-green-500';
+  };
+
+  const getEtiquetaPersona = (persona) => {
+    if (persona?.tipo !== 'motorista') return 'Empleado';
+    return String(persona?.rol || '').toLowerCase() === 'auxiliar' ? 'Auxiliar' : 'Motorista';
+  };
+
+  const personalCatalogoPorId = React.useMemo(() => {
+    const mapa = {};
+
+    empleados.forEach((emp) => {
+      mapa[String(emp._id)] = {
+        ...emp,
+        tipo: 'empleado'
+      };
+    });
+
+    motoristas.forEach((mot) => {
+      mapa[String(mot._id)] = {
+        ...mot,
+        tipo: 'motorista'
+      };
+    });
+
+    return mapa;
+  }, [empleados, motoristas]);
+
+  const getInfoPersonaPorId = (personaId) => personalCatalogoPorId[String(personaId)] || null;
+
+  const getTipoRealPersona = (persona) => {
+    const infoCatalogo = getInfoPersonaPorId(persona?.empleadoId || persona?._id);
+    return infoCatalogo?.tipo || persona?.tipo || 'empleado';
+  };
+
+  const getRolRealPersona = (persona) => {
+    const infoCatalogo = getInfoPersonaPorId(persona?.empleadoId || persona?._id);
+    return String(infoCatalogo?.rol || persona?.rol || '').toLowerCase();
+  };
+
+  const getNombreRealPersona = (persona) => {
+    const infoCatalogo = getInfoPersonaPorId(persona?.empleadoId || persona?._id);
+    return normalizarNombre(infoCatalogo || persona);
+  };
+
+  const getColorPersonaReal = (persona) => {
+    const tipoReal = getTipoRealPersona(persona);
+    const rolReal = getRolRealPersona(persona);
+
+    if (tipoReal !== 'motorista') return 'bg-blue-500';
+    return rolReal === 'auxiliar' ? 'bg-amber-500' : 'bg-green-500';
+  };
+
+  const getEtiquetaPersonaReal = (persona) => {
+    const tipoReal = getTipoRealPersona(persona);
+    const rolReal = getRolRealPersona(persona);
+
+    if (tipoReal !== 'motorista') return 'Empleado';
+    return rolReal === 'auxiliar' ? 'Auxiliar' : 'Motorista';
+  };
+
+  const puedeIntentarAlta = (personaId) => {
+    const idPersona = String(personaId);
+    const ahora = Date.now();
+    const ultimoClick = ultimoClickAltaRef.current.get(idPersona) || 0;
+
+    if (ahora - ultimoClick < 1000 || altasEnProcesoRef.current.has(idPersona)) {
+      return false;
+    }
+
+    ultimoClickAltaRef.current.set(idPersona, ahora);
+    altasEnProcesoRef.current.add(idPersona);
+    return true;
+  };
+
+  const liberarAlta = (personaId) => {
+    altasEnProcesoRef.current.delete(String(personaId));
+  };
+
   const getEstadoBadge = (estado) => {
     const badges = {
       pendiente: { 
@@ -881,13 +985,26 @@ const resEmpleados = await api.get(`/empleados?limit=1000`);
     );
   };
 
-  const personalDisponible = [
+  const personalDisponible = ordenarPorNombre([
     ...empleados.map(emp => ({ ...emp, tipo: 'empleado' })),
     ...motoristas.map(mot => ({ ...mot, tipo: 'motorista' }))
-  ].filter(persona => !planilla?.empleados?.some(pe => pe.empleadoId === persona._id));
+  ].filter(persona => !planilla?.empleados?.some(pe => pe.empleadoId === persona._id)));
 
-  const personalFiltrado = personalDisponible.filter(persona =>
-    `${persona.name} ${persona.lastName}`.toLowerCase().includes(busqueda.toLowerCase())
+  const personalFiltrado = ordenarPorNombre(personalDisponible.filter(persona =>
+    normalizarNombre(persona).toLowerCase().includes(busqueda.toLowerCase())
+  ));
+
+  const personalFiltradoEmpleados = personalFiltrado.filter(persona => persona.tipo === 'empleado');
+  const personalFiltradoMotoristas = personalFiltrado.filter(persona => persona.tipo === 'motorista');
+
+  const empleadosOrdenadosPlanilla = ordenarPorNombre(planilla?.empleados || []);
+
+  const empleadosDisponiblesSelect = ordenarPorNombre(
+    empleados.filter(emp => !planilla?.empleados?.some(pe => pe.empleadoId === emp._id))
+  );
+
+  const motoristasDisponiblesSelect = ordenarPorNombre(
+    motoristas.filter(mot => !planilla?.empleados?.some(pe => pe.empleadoId === mot._id))
   );
 
   const puedeEditar = planilla?.estado === 'pendiente';
@@ -947,14 +1064,18 @@ const resEmpleados = await api.get(`/empleados?limit=1000`);
               {personalFiltrado.length} {personalFiltrado.length === 1 ? 'persona' : 'personas'} - Planilla Quincenal
             </p>
             
-            <div className="flex gap-2 text-xs">
-              <div className="flex items-center gap-1 bg-white bg-opacity-20 px-2 py-1 rounded">
+            <div className="grid grid-cols-3 gap-2 text-xs">
+              <div className="flex items-center gap-1 bg-white bg-opacity-20 px-2 py-1 rounded justify-center">
                 <User size={12} />
                 <span>{empleados.length} Empleados</span>
               </div>
-              <div className="flex items-center gap-1 bg-white bg-opacity-20 px-2 py-1 rounded">
+              <div className="flex items-center gap-1 bg-white bg-opacity-20 px-2 py-1 rounded justify-center">
                 <Truck size={12} />
-                <span>{motoristas.length} Motoristas</span>
+                <span>{motoristas.filter(mot => String(mot.rol || '').toLowerCase() !== 'auxiliar').length} Motoristas</span>
+              </div>
+              <div className="flex items-center gap-1 bg-white bg-opacity-20 px-2 py-1 rounded justify-center">
+                <Truck size={12} />
+                <span>{motoristas.filter(mot => String(mot.rol || '').toLowerCase() === 'auxiliar').length} Auxiliares</span>
               </div>
             </div>
           </div>
@@ -1029,17 +1150,19 @@ const resEmpleados = await api.get(`/empleados?limit=1000`);
             ) : (
               <>
                 {/* Sección Empleados */}
-                {personalFiltrado.filter(p => p.tipo === 'empleado').length > 0 && (
+                {personalFiltradoEmpleados.length > 0 && (
                   <>
                     <div className="flex items-center gap-2 px-2 py-1.5 bg-blue-50 rounded-lg border border-blue-200">
                       <User size={14} className="text-blue-600" />
                       <span className="text-xs font-bold text-blue-900">
-                        EMPLEADOS ({personalFiltrado.filter(p => p.tipo === 'empleado').length})
+                        EMPLEADOS ({personalFiltradoEmpleados.length})
                       </span>
                     </div>
-                    {personalFiltrado
-                      .filter(p => p.tipo === 'empleado')
-                      .map((persona) => (
+                    {personalFiltradoEmpleados.map((persona) => {
+                      const esMotorista = persona.tipo === 'motorista';
+                      const esAuxiliar = String(persona.rol || '').toLowerCase() === 'auxiliar';
+
+                      return (
                         <div
                           key={persona._id}
                           draggable={!esMobil}
@@ -1053,11 +1176,23 @@ const resEmpleados = await api.get(`/empleados?limit=1000`);
                             {!esMobil && (
                               <GripVertical size={16} className="text-gray-400 mt-0.5 flex-shrink-0" />
                             )}
+                            <div className={`w-2.5 h-2.5 rounded-full ${getColorPersona(persona)} mt-1.5 flex-shrink-0`} />
                             <div className="flex-1 min-w-0">
-                              <p className="font-semibold text-sm text-gray-900 truncate">
-                                {persona.name} {persona.lastName}
-                              </p>
-                              <p className="text-xs text-gray-600 mt-0.5">
+                              <div className="flex items-center gap-2 mb-1">
+                                <p className="font-semibold text-sm text-gray-900 truncate">
+                                  {normalizarNombre(persona)}
+                                </p>
+                                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold whitespace-nowrap flex-shrink-0 ${
+                                  esMotorista
+                                    ? esAuxiliar
+                                      ? 'bg-amber-100 text-amber-800'
+                                      : 'bg-green-100 text-green-800'
+                                    : 'bg-blue-100 text-blue-700'
+                                }`}>
+                                  {getEtiquetaPersona(persona)}
+                                </span>
+                              </div>
+                              <p className="text-xs text-gray-600">
                                 Quincenal: {formatearMoneda((persona.salario || 0) / 2)}
                               </p>
                             </div>
@@ -1065,24 +1200,24 @@ const resEmpleados = await api.get(`/empleados?limit=1000`);
                               group-hover:opacity-100 transition-opacity flex-shrink-0" />
                           </div>
                         </div>
-                      ))}
+                      );
+                    })}
                   </>
                 )}
 
                 {/* Sección Motoristas y Auxiliares */}
-                {personalFiltrado.filter(p => p.tipo === 'motorista').length > 0 && (
+                {personalFiltradoMotoristas.length > 0 && (
                   <>
                     <div className="flex items-center gap-2 px-2 py-1.5 bg-green-50 rounded-lg border border-green-200 mt-3">
                       <Truck size={14} className="text-green-600" />
                       <span className="text-xs font-bold text-green-900">
-                        MOTORISTAS & AUXILIARES ({personalFiltrado.filter(p => p.tipo === 'motorista').length})
+                        MOTORISTAS & AUXILIARES ({personalFiltradoMotoristas.length})
                       </span>
                     </div>
-                    {personalFiltrado
-                      .filter(p => p.tipo === 'motorista')
-                      .map((persona) => {
-                        const esAuxiliar = persona.rol === 'auxiliar'; // ✅ DETECTAR AUXILIAR
-                        return (
+                    {personalFiltradoMotoristas.map((persona) => {
+                      const esAuxiliar = String(persona.rol || '').toLowerCase() === 'auxiliar';
+                      const esMotorista = true;
+                      return (
                         <div
                           key={persona._id}
                           draggable={!esMobil}
@@ -1096,17 +1231,21 @@ const resEmpleados = await api.get(`/empleados?limit=1000`);
                             {!esMobil && (
                               <GripVertical size={16} className="text-gray-400 mt-0.5 flex-shrink-0" />
                             )}
+                            <div className={`w-2.5 h-2.5 rounded-full ${getColorPersona(persona)} mt-1.5 flex-shrink-0`} />
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2 mb-1">
                                 <p className="font-semibold text-sm text-gray-900 truncate">
-                                  {persona.name} {persona.lastName}
+                                  {normalizarNombre(persona)}
                                 </p>
-                                {/* ✅ BADGE DISTINTIVO PARA AUXILIARES */}
-                                {esAuxiliar && (
-                                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 whitespace-nowrap flex-shrink-0">
-                                    Auxiliar
-                                  </span>
-                                )}
+                                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold whitespace-nowrap flex-shrink-0 ${
+                                  esMotorista
+                                    ? esAuxiliar
+                                      ? 'bg-amber-100 text-amber-800'
+                                      : 'bg-green-100 text-green-800'
+                                    : 'bg-blue-100 text-blue-700'
+                                }`}>
+                                  {getEtiquetaPersona(persona)}
+                                </span>
                               </div>
                               <p className="text-xs text-gray-600">
                                 Quincenal: {formatearMoneda((persona.salario || 0) / 2)}
@@ -1134,10 +1273,7 @@ const resEmpleados = await api.get(`/empleados?limit=1000`);
             </div>
             {!esMobil && (
               <div className="mt-2 text-xs text-gray-500 flex items-center gap-1">
-                <kbd className="px-1.5 py-0.5 bg-gray-200 rounded text-xs font-mono">Ctrl</kbd>
-                <span>+</span>
-                <kbd className="px-1.5 py-0.5 bg-gray-200 rounded text-xs font-mono">B</kbd>
-                <span>para mostrar/ocultar</span>
+           
               </div>
             )}
           </div>
@@ -1382,9 +1518,15 @@ const resEmpleados = await api.get(`/empleados?limit=1000`);
 
                 <tbody>
                   {/* Filas de empleados */}
-                  {planilla?.empleados?.map((emp, index) => {
+                  {empleadosOrdenadosPlanilla.map((emp, index) => {
                     const esFilaEditando = filaEditando === emp.empleadoId;
                     const esFilaPar = index % 2 === 0;
+                    const tipoReal = getTipoRealPersona(emp);
+                    const esMotorista = tipoReal === 'motorista';
+                    const esAuxiliar = getRolRealPersona(emp) === 'auxiliar';
+                    const etiquetaPersona = getEtiquetaPersonaReal(emp);
+                    const colorPersona = getColorPersonaReal(emp);
+                    const nombrePersona = getNombreRealPersona(emp) || emp.nombreCompleto;
 
                     return (
                       <tr 
@@ -1395,7 +1537,14 @@ const resEmpleados = await api.get(`/empleados?limit=1000`);
                           {index + 1}
                         </td>
                         <td className="px-3 py-2 text-xs text-gray-900 border-r border-gray-200 font-medium">
-                          {emp.nombreCompleto}
+                          <div className="flex items-center gap-2 min-w-0">
+                            <div className={`w-2.5 h-2.5 rounded-full ${colorPersona} flex-shrink-0`} />
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-2">
+                                <span className="truncate">{nombrePersona}</span>
+                              </div>
+                            </div>
+                          </div>
                         </td>
                         <td className="px-3 py-2 text-xs text-right border-r border-gray-200 font-mono text-gray-700">
                           {formatearMoneda(emp.salarioQuincenal)}
@@ -1567,10 +1716,9 @@ const resEmpleados = await api.get(`/empleados?limit=1000`);
                           className="w-full px-2 py-1 text-xs border border-blue-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 font-medium"
                         >
                           <option value="">Seleccionar...</option>
-                          {empleados.filter(emp => !planilla?.empleados?.some(pe => pe.empleadoId === emp._id)).length > 0 && (
+                          {empleadosDisponiblesSelect.length > 0 && (
                             <optgroup label="EMPLEADOS">
-                              {empleados
-                                .filter(emp => !planilla?.empleados?.some(pe => pe.empleadoId === emp._id))
+                              {empleadosDisponiblesSelect
                                 .map(emp => (
                                   <option key={emp._id} value={emp._id}>
                                     {emp.name} {emp.lastName} - {formatearMoneda((emp.salario || 0) / 2)}
@@ -1578,10 +1726,9 @@ const resEmpleados = await api.get(`/empleados?limit=1000`);
                                 ))}
                             </optgroup>
                           )}
-                          {motoristas.filter(mot => !planilla?.empleados?.some(pe => pe.empleadoId === mot._id)).length > 0 && (
+                          {motoristasDisponiblesSelect.length > 0 && (
                             <optgroup label="MOTORISTAS Y AUXILIARES">
-                              {motoristas
-                                .filter(mot => !planilla?.empleados?.some(pe => pe.empleadoId === mot._id))
+                              {motoristasDisponiblesSelect
                                 .map(mot => (
                                   <option key={mot._id} value={mot._id}>
                                     {mot.name} {mot.lastName}{mot.rol === 'auxiliar' ? ' (Auxiliar)' : ''} - {formatearMoneda((mot.salario || 0) / 2)}
