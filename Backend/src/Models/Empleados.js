@@ -22,7 +22,10 @@ const empleadoSchema = new Schema(
       required: true,
       trim: true,
     },
-
+    cuentaDesactivada: {
+      type: Boolean,
+      default: false
+    },
     // Información de contacto y acceso
     email: {
       type: String,

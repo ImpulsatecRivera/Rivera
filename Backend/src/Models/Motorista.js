@@ -69,7 +69,10 @@ const motoristaSchema = new Schema({
         default: 'motorista',
         required: true
     },
-
+    cuentaDesactivada: {
+        type: Boolean,
+        default: false
+    },
     // Salario base mensual (usado para calcular planilla en reportes)
     salarioBase: {
         type: Number,

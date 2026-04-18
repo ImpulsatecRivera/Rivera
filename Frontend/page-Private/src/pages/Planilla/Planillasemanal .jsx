@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { 
   Save, ArrowLeft, Calendar, Users, DollarSign, 
   CheckCircle, Lock, AlertCircle, Download, Edit2,
-  Plus, Trash2, X, Check, Clock, FileText, GripVertical, MousePointer
+  Plus, Trash2, X, Check, Clock, FileText, GripVertical, MousePointer, Zap
 } from 'lucide-react';
 import { config } from '../../config';
 import Swal from 'sweetalert2';
@@ -291,6 +291,47 @@ export default function PlanillaSemanal() {
         icon: 'error',
         title: 'Error al cargar datos',
         text: error.response?.data?.message || 'No se pudo cargar los datos de la planilla anterior'
+      });
+    }
+  };
+
+  const handleCargarGananciasViajesExtra = async () => {
+    if (!planilla || planilla.estado === 'pagada') {
+      return;
+    }
+
+    try {
+      Swal.fire({
+        title: 'Cargando ganancias extra',
+        text: 'Recalculando viajes extra de la semana...',
+        allowOutsideClick: false,
+        didOpen: () => Swal.showLoading()
+      });
+
+      const response = await api.post(
+        `${config.api.API_URL}/planillas/semanal/${planilla._id}/cargar-ganancias-viajes-extra`
+      );
+
+      if (response.data.success) {
+        await cargarPlanilla();
+        Swal.close();
+        Swal.fire({
+          icon: 'success',
+          title: 'Ganancias cargadas',
+          text: 'Los montos de viajes extra se actualizaron correctamente',
+          timer: 2200,
+          showConfirmButton: false
+        });
+      } else {
+        throw new Error(response.data.message || 'No se pudo cargar las ganancias extra');
+      }
+    } catch (error) {
+      console.error('Error cargando ganancias extra:', error);
+      Swal.close();
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: error.response?.data?.message || error.message || 'No se pudieron cargar las ganancias extra'
       });
     }
   };
@@ -906,6 +947,16 @@ const data = response.data;
                 </button>
               )}
 
+              {planilla.estado !== 'pagada' && (
+                <button
+                  onClick={handleCargarGananciasViajesExtra}
+                  className="flex items-center gap-2 px-5 py-2.5 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 font-semibold transition-all shadow-lg hover:shadow-xl"
+                >
+                  <Zap size={20} />
+                  <span>Cargar Ganancias Viajes Extra</span>
+                </button>
+              )}
+
               {/* Estado */}
               <div className={`flex items-center gap-2 px-4 py-2 rounded-xl border-2 ${estadoConfig.bg} ${estadoConfig.text} ${estadoConfig.border}`}>
                 <EstadoIcon size={20} />
@@ -953,7 +1004,7 @@ const data = response.data;
           </div>
 
           {/* INFO CARDS */}
-          <div className="grid grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
             <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-4 border border-blue-200">
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-white rounded-lg">
@@ -989,6 +1040,20 @@ const data = response.data;
                   <p className="text-xs text-purple-700 font-medium">Total Viáticos</p>
                   <p className="text-xl font-bold text-purple-900">
                     {formatearMoneda(planilla.totales?.totalViaticos || 0)}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-gradient-to-br from-amber-50 to-amber-100 rounded-xl p-4 border border-amber-200">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-white rounded-lg">
+                  <Zap className="text-amber-600" size={24} />
+                </div>
+                <div>
+                  <p className="text-xs text-amber-700 font-medium">Total Extra Viaje</p>
+                  <p className="text-xl font-bold text-amber-900">
+                    {formatearMoneda(planilla.totales?.totalExtraViaje || 0)}
                   </p>
                 </div>
               </div>
@@ -1222,22 +1287,22 @@ const data = response.data;
                   <th rowSpan={2} className="sticky left-0 z-20 bg-gray-200 px-2 py-2 text-left text-[10px] font-bold text-gray-800 uppercase border-r border-gray-400 min-w-[180px]">
                     Nombre
                   </th>
-                  <th colSpan={2} className="px-2 py-1 text-center text-[10px] font-bold text-gray-800 uppercase border-r border-gray-400">
+                  <th colSpan={3} className="px-2 py-1 text-center text-[10px] font-bold text-gray-800 uppercase border-r border-gray-400">
                     Lunes
                   </th>
-                  <th colSpan={2} className="px-2 py-1 text-center text-[10px] font-bold text-gray-800 uppercase border-r border-gray-400">
+                  <th colSpan={3} className="px-2 py-1 text-center text-[10px] font-bold text-gray-800 uppercase border-r border-gray-400">
                     Martes
                   </th>
-                  <th colSpan={2} className="px-2 py-1 text-center text-[10px] font-bold text-gray-800 uppercase border-r border-gray-400">
+                  <th colSpan={3} className="px-2 py-1 text-center text-[10px] font-bold text-gray-800 uppercase border-r border-gray-400">
                     Miércoles
                   </th>
-                  <th colSpan={2} className="px-2 py-1 text-center text-[10px] font-bold text-gray-800 uppercase border-r border-gray-400">
+                  <th colSpan={3} className="px-2 py-1 text-center text-[10px] font-bold text-gray-800 uppercase border-r border-gray-400">
                     Jueves
                   </th>
-                  <th colSpan={2} className="px-2 py-1 text-center text-[10px] font-bold text-gray-800 uppercase border-r border-gray-400">
+                  <th colSpan={3} className="px-2 py-1 text-center text-[10px] font-bold text-gray-800 uppercase border-r border-gray-400">
                     Viernes
                   </th>
-                  <th colSpan={2} className="px-2 py-1 text-center text-[10px] font-bold text-gray-800 uppercase border-r-2 border-gray-500">
+                  <th colSpan={3} className="px-2 py-1 text-center text-[10px] font-bold text-gray-800 uppercase border-r-2 border-gray-500">
                     Sábado
                   </th>
                   <th rowSpan={2} className="px-2 py-2 text-center text-[10px] font-bold text-gray-800 uppercase border-r border-gray-400 min-w-[70px]">
@@ -1252,12 +1317,13 @@ const data = response.data;
                   {estaEditable && <th rowSpan={2} className="px-2 py-2 text-center text-[10px] font-bold text-red-800 uppercase min-w-[60px]">Eliminar</th>}
                 </tr>
 
-                {/* FILA 2: Sub-encabezados (Base/Viático) */}
+                {/* FILA 2: Sub-encabezados (Base/Viático/Extra) */}
                 <tr className="bg-gray-200 border-b-2 border-gray-500">
                   {diasSemana.map((dia) => (
                     <React.Fragment key={dia}>
                       <th className="px-2 py-1 text-center text-[9px] font-semibold text-gray-700 border-r border-gray-300 min-w-[50px]">Base</th>
                       <th className="px-2 py-1 text-center text-[9px] font-semibold text-gray-700 border-r border-gray-400 min-w-[50px]">Viático</th>
+                      <th className="px-2 py-1 text-center text-[9px] font-semibold text-gray-700 border-r border-gray-300 min-w-[50px]">Extra</th>
                     </React.Fragment>
                   ))}
                 </tr>
@@ -1364,6 +1430,17 @@ const data = response.data;
                               </div>
                             )}
                           </td>
+
+                          {/* EXTRA */}
+                          <td className={`px-1 py-1 text-center text-[10px] border-r border-gray-300 ${
+                            diaData?.extraViaje ? 'bg-emerald-50' : 'bg-white'
+                          }`}>
+                            <span className={`font-medium ${
+                              (diaData?.extraViaje || 0) > 0 ? 'text-emerald-700' : 'text-gray-400'
+                            }`}>
+                              ${(diaData?.extraViaje || 0).toFixed(2)}
+                            </span>
+                          </td>
                         </React.Fragment>
                       );
                     })}
@@ -1443,9 +1520,12 @@ const data = response.data;
                   <td className="sticky left-0 z-10 bg-indigo-100 px-2 py-2 text-gray-900 border-r border-gray-400 text-[11px]">
                     TOTAL
                   </td>
-                  <td colSpan={12} className="border-r border-gray-400"></td>
+                  <td colSpan={18} className="border-r border-gray-400"></td>
                   <td className="px-1 py-2 text-center text-purple-800 border-r border-gray-400 text-[11px]">
                     ${(planilla.totales?.totalViaticos || 0).toFixed(2)}
+                  </td>
+                  <td className="px-1 py-2 text-center text-emerald-800 border-r border-gray-400 text-[11px]">
+                    ${(planilla.totales?.totalExtraViaje || 0).toFixed(2)}
                   </td>
                   <td className="px-1 py-2 text-center text-amber-800 border-r border-gray-400 text-[11px]">
                     ${(planilla.totales?.totalAnticipos || 0).toFixed(2)}
@@ -1473,6 +1553,10 @@ const data = response.data;
                 <div className="flex items-center gap-2">
                   <div className="w-3 h-3 rounded bg-amber-50 border border-amber-300"></div>
                   <span className="text-gray-600">Anticipos (Click para editar)</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded bg-emerald-50 border border-emerald-300"></div>
+                  <span className="text-gray-600">Extra de viaje</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="w-3 h-3 rounded bg-red-50 border border-red-300"></div>

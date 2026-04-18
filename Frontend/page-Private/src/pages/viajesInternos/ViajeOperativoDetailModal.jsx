@@ -88,6 +88,8 @@ const ViajeOperativoDetailModal = ({ viajeId, isOpen, onClose }) => {
   const estado = viaje?.estado?.actual || viaje?.estado || "pendiente";
   const metodoPago =
     viaje?.metodoPago || viaje?.facturacion?.metodoPago || "N/A";
+  const esViajeExtra = viaje?.esViajeExtra === true;
+  const montoExtraViaje = Number(viaje?.cantidadViajesExtra || 0);
   const camion =
     viaje?.truckId?.licensePlate ||
     viaje?.truckId?.placa ||
@@ -212,6 +214,35 @@ const ViajeOperativoDetailModal = ({ viajeId, isOpen, onClose }) => {
                       </p>
                     </div>
                     <p className="text-lg font-bold text-[#34353A]">{camion}</p>
+                  </div>
+                </div>
+
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div className={`bg-white rounded-2xl p-5 border-2 ${esViajeExtra ? 'border-emerald-500' : 'border-gray-200'}`}>
+                    <div className="flex items-center gap-2 mb-2">
+                      <ClipboardList className={esViajeExtra ? 'text-emerald-600' : 'text-gray-500'} size={20} />
+                      <p className="text-xs font-semibold uppercase text-gray-500">
+                        Viaje Extra
+                      </p>
+                    </div>
+                    <p className={`text-lg font-bold ${esViajeExtra ? 'text-emerald-700' : 'text-gray-500'}`}>
+                      {esViajeExtra ? 'Sí' : 'No'}
+                    </p>
+                  </div>
+
+                  <div className={`bg-white rounded-2xl p-5 border-2 ${esViajeExtra ? 'border-emerald-500' : 'border-gray-200'}`}>
+                    <div className="flex items-center gap-2 mb-2">
+                      <DollarSign className={esViajeExtra ? 'text-emerald-600' : 'text-gray-500'} size={20} />
+                      <p className="text-xs font-semibold uppercase text-gray-500">
+                        Monto Extra
+                      </p>
+                    </div>
+                    <p className={`text-lg font-bold ${esViajeExtra ? 'text-emerald-700' : 'text-gray-500'}`}>
+                      {esViajeExtra ? formatearMoneda(montoExtraViaje) : 'N/A'}
+                    </p>
+                    <p className="text-sm text-gray-600">
+                      {esViajeExtra ? 'Monto seleccionado para planilla semanal' : 'Este viaje no fue marcado como extra'}
+                    </p>
                   </div>
                 </div>
 

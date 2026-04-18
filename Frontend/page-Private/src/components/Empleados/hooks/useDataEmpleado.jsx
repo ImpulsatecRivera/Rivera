@@ -51,6 +51,7 @@ const useDataEmpleado = () => {
       salario: empleado.salario ?? empleado.salary ?? 0,
       planillaTipo: (empleado.planillaTipo || '').toString(),
       rol: (empleado.rol || '').toString(),
+      cuentaDesactivada: empleado.cuentaDesactivada === true,
 
       // Timestamps (si existen)
       createdAt: empleado.createdAt || null,

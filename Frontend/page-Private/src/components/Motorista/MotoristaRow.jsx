@@ -23,6 +23,49 @@ const MotoristaRow = ({
   const isSelected =
     selectedMotorista &&
     (selectedMotorista._id === motorista._id || selectedMotorista.id === motorista.id);
+  const isDesactivado = motorista?.cuentaDesactivada === true;
+
+  const rowColors = (() => {
+    if (isDesactivado && isSelected) {
+      return {
+        backgroundColor: '#be123c',
+        color: '#ffffff',
+        borderColor: '#be123c',
+      };
+    }
+
+    if (isDesactivado) {
+      return {
+        backgroundColor: '#fff7f8',
+        color: '#9f1239',
+        borderColor: '#fbcfe8',
+      };
+    }
+
+    if (isSelected) {
+      return {
+        backgroundColor: '#5D9646',
+        color: '#ffffff',
+        borderColor: '#5D9646',
+      };
+    }
+
+    return {
+      backgroundColor: '#ffffff',
+      color: '#374151',
+      borderColor: 'transparent',
+    };
+  })();
+
+  let iconColorClass = 'text-gray-400';
+  if (isSelected) iconColorClass = 'text-white';
+  else if (isDesactivado) iconColorClass = 'text-rose-300';
+
+  let statusClass = 'text-emerald-700';
+  if (isSelected) statusClass = 'text-white';
+  else if (isDesactivado) statusClass = 'text-rose-700';
+
+  const statusLabel = isDesactivado ? 'Desactivado' : 'Activo';
 
   // ✅ Ahora mostramos 2 columnas extra: Planilla + Salario
   // - Si está showDetailView, dejamos 4 (como lo tenías) para que el panel detalle tenga espacio
@@ -35,13 +78,9 @@ const MotoristaRow = ({
       className={`grid ${gridCols} gap-6 py-4 px-6 rounded-xl cursor-pointer transition-all duration-200 border-2 ${
         isSelected
           ? 'shadow-lg transform scale-[1.02]'
-          : 'hover:shadow-md hover:transform hover:scale-[1.01] border-transparent'
+          : 'hover:shadow-md hover:transform hover:scale-[1.01]'
       }`}
-      style={{
-        backgroundColor: isSelected ? '#5D9646' : '#ffffff',
-        color: isSelected ? '#ffffff' : '#374151',
-        borderColor: isSelected ? '#5D9646' : 'transparent',
-      }}
+      style={rowColors}
       onClick={() => selectMotorista(motorista)}
     >
       {/* Nombre */}
@@ -69,26 +108,35 @@ const MotoristaRow = ({
             className={`w-5 h-5 ${motorista.img ? 'hidden' : 'block'} text-white`}
           />
         </div>
-        <span className="truncate">
-          {motorista.name} {motorista.lastName}
-        </span>
+        <div className="min-w-0">
+          <div className="truncate">
+            {motorista.name} {motorista.lastName}
+          </div>
+          {!showDetailView && (
+            <div className="text-[11px] opacity-90 truncate">
+              <span className="font-semibold">{motorista.rol || '—'}</span>
+              <span className="mx-2">•</span>
+              <span className={`font-semibold ${statusClass}`}>{statusLabel}</span>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Email */}
       <div className="flex items-center truncate">
-        <Mail className={`w-4 h-4 mr-2 ${isSelected ? 'text-white' : 'text-gray-400'}`} />
+        <Mail className={`w-4 h-4 mr-2 ${iconColorClass}`} />
         <span className="truncate">{motorista.email || '—'}</span>
       </div>
 
       {/* DUI */}
       <div className="flex items-center truncate">
-        <CreditCard className={`w-4 h-4 mr-2 ${isSelected ? 'text-white' : 'text-gray-400'}`} />
+        <CreditCard className={`w-4 h-4 mr-2 ${iconColorClass}`} />
         <span className="truncate">{motorista.id || '—'}</span>
       </div>
 
       {/* Nacimiento */}
       <div className="flex items-center truncate">
-        <Calendar className={`w-4 h-4 mr-2 ${isSelected ? 'text-white' : 'text-gray-400'}`} />
+        <Calendar className={`w-4 h-4 mr-2 ${iconColorClass}`} />
         <span className="truncate">
           {motorista.birthDate ? (() => {
             try {
@@ -106,7 +154,7 @@ const MotoristaRow = ({
         <>
           {/* Teléfono */}
           <div className="flex items-center truncate">
-            <Phone className={`w-4 h-4 mr-2 ${isSelected ? 'text-white' : 'text-gray-400'}`} />
+            <Phone className={`w-4 h-4 mr-2 ${iconColorClass}`} />
             <span className="truncate">
               {motorista.phone ? String(motorista.phone) : 'No disponible'}
             </span>
@@ -114,19 +162,19 @@ const MotoristaRow = ({
 
           {/* Dirección */}
           <div className="flex items-center truncate">
-            <MapPin className={`w-4 h-4 mr-2 ${isSelected ? 'text-white' : 'text-gray-400'}`} />
+            <MapPin className={`w-4 h-4 mr-2 ${iconColorClass}`} />
             <span className="truncate">{motorista.address || 'No disponible'}</span>
           </div>
 
           {/* ✅ Tipo de planilla */}
           <div className="flex items-center truncate">
-            <ClipboardList className={`w-4 h-4 mr-2 ${isSelected ? 'text-white' : 'text-gray-400'}`} />
+            <ClipboardList className={`w-4 h-4 mr-2 ${iconColorClass}`} />
             <span className="truncate">{motorista.planillaTipo || 'No disponible'}</span>
           </div>
 
           {/* ✅ Salario */}
           <div className="flex items-center truncate">
-            <DollarSign className={`w-4 h-4 mr-2 ${isSelected ? 'text-white' : 'text-gray-400'}`} />
+            <DollarSign className={`w-4 h-4 mr-2 ${iconColorClass}`} />
             <span className="truncate">
               {motorista.salario === 0 || motorista.salario
                 ? Number(motorista.salario).toLocaleString('en-US', {
@@ -141,7 +189,7 @@ const MotoristaRow = ({
 
           {/* Vigencia */}
           <div className="flex items-center truncate">
-            <Shield className={`w-4 h-4 mr-2 ${isSelected ? 'text-white' : 'text-gray-400'}`} />
+            <Shield className={`w-4 h-4 mr-2 ${iconColorClass}`} />
             {(() => {
               const status = getLicenseStatus(motorista);
               if (status === 'Vigente') {

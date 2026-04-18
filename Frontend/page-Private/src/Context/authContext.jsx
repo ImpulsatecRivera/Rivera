@@ -169,25 +169,43 @@ export const AuthProvider = ({ children }) => {
       }
       
       toast.error("No se pudo iniciar sesión.");
-      return { success: false };
+      return { success: false, message: "No se pudo iniciar sesión." };
     } catch (error) {
+      const backendMessage =
+        error?.response?.data?.message ||
+        error?.response?.data?.error ||
+        "Credenciales inválidas.";
+
       if (error.response?.status === 429) {
-        toast.error(error.response.data.message || "Demasiados intentos fallidos");
+        toast.error(backendMessage || "Demasiados intentos fallidos");
         return { 
           success: false, 
           blocked: true, 
-          timeRemaining: error.response.data.timeRemaining 
+          timeRemaining: error.response.data.timeRemaining,
+          message: backendMessage,
         };
       }
+
+      if (error.response?.status === 403 && /desactivad/i.test(backendMessage)) {
+        toast.error(backendMessage);
+        return {
+          success: false,
+          accountDisabled: true,
+          message: backendMessage,
+        };
+      }
+
       if (error.response?.data?.attemptsRemaining !== undefined) {
-        toast.error(error.response.data.message);
+        toast.error(backendMessage);
         return { 
           success: false, 
-          attemptsRemaining: error.response.data.attemptsRemaining 
+          attemptsRemaining: error.response.data.attemptsRemaining,
+          message: backendMessage,
         };
       }
-      toast.error("Credenciales inválidas.");
-      return { success: false };
+
+      toast.error(backendMessage);
+      return { success: false, message: backendMessage };
     }
   };
 

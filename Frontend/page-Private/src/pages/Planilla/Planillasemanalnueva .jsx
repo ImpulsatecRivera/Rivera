@@ -36,6 +36,23 @@ export default function PlanillaSemanalNueva() {
   const { startTutorial } = useTutorial('planillaSemanalNueva');
 
   const diasSemana = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+  const vistaPreviaSemana = React.useMemo(() => {
+    if (!fechaInicio) return [];
+
+    const [year, month, day] = fechaInicio.split('-').map(Number);
+    const inicio = new Date(Date.UTC(year, month - 1, day, 12, 0, 0));
+
+    return diasSemana.map((dia, index) => {
+      const fecha = new Date(inicio);
+      fecha.setUTCDate(fecha.getUTCDate() + index);
+
+      return {
+        dia,
+        fechaDia: fecha.getUTCDate().toString().padStart(2, '0'),
+        fechaMes: (fecha.getUTCMonth() + 1).toString().padStart(2, '0')
+      };
+    });
+  }, [fechaInicio]);
 
   useEffect(() => {
     if (fechaInicio) {
@@ -161,7 +178,7 @@ export default function PlanillaSemanalNueva() {
       }, 0);
   };
 
-  const handleCrearPlanilla = async () => {
+  const handleCrearPlanilla = async (cargarExtras = false) => {
     if (!fechaInicio || !fechaFin) {
       Swal.fire({
         icon: 'warning',
@@ -237,10 +254,29 @@ export default function PlanillaSemanalNueva() {
         }
       }
 
+      let extrasCargados = !cargarExtras;
+
+      if (cargarExtras) {
+        try {
+          await api.post(`${config.api.API_URL}/planillas/semanal/${planillaId}/cargar-ganancias-viajes-extra`);
+          extrasCargados = true;
+        } catch (extraError) {
+          console.error('Error cargando ganancias extra al crear planilla:', extraError);
+          extrasCargados = false;
+          Swal.fire({
+            icon: 'warning',
+            title: 'Planilla creada',
+            text: 'La planilla se creó, pero no se pudieron cargar las ganancias extra automáticamente.'
+          });
+        }
+      }
+
       Swal.fire({
         icon: 'success',
         title: 'Planilla Creada',
-        text: `Planilla creada exitosamente con ${empleadosSeleccionados.length} empleado(s)`,
+        text: extrasCargados
+          ? `Planilla creada exitosamente con ${empleadosSeleccionados.length} empleado(s) y ganancias extra cargadas`
+          : `Planilla creada exitosamente con ${empleadosSeleccionados.length} empleado(s)`,
         timer: 2000,
         showConfirmButton: false
       });
@@ -530,10 +566,11 @@ export default function PlanillaSemanalNueva() {
                         <Zap size={20} className="text-[#5D9646]" />
                       </div>
                       <div className="grid grid-cols-6 gap-2">
-                        {diasSemana.map((dia, idx) => (
-                          <div key={idx} className="bg-white rounded-lg p-2 text-center border-2 border-gray-200">
-                            <div className="text-xs text-gray-600 font-medium mb-1">{dia}</div>
-                            <div className="text-sm font-bold text-[#34353A]">{idx + 1}</div>
+                        {vistaPreviaSemana.map((item) => (
+                          <div key={item.dia} className="bg-white rounded-lg p-2 text-center border-2 border-gray-200">
+                            <div className="text-xs text-gray-600 font-medium mb-1">{item.dia}</div>
+                            <div className="text-sm font-bold text-[#34353A]">{item.fechaDia}</div>
+                            <div className="text-[10px] text-gray-400">{item.fechaMes}</div>
                           </div>
                         ))}
                       </div>
@@ -788,7 +825,7 @@ export default function PlanillaSemanalNueva() {
                     <span>Atrás</span>
                   </button>
                   <button
-                    onClick={handleCrearPlanilla}
+                    onClick={() => handleCrearPlanilla(false)}
                     disabled={loading}
                     className="group flex items-center gap-3 px-10 py-4 bg-gradient-to-r from-[#34353A] to-[#5F8EAD] text-white rounded-2xl font-bold shadow-xl hover:shadow-2xl hover:scale-105 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
                   >
@@ -801,6 +838,23 @@ export default function PlanillaSemanalNueva() {
                       <>
                         <Plus size={20} />
                         <span>Crear Planilla</span>
+                      </>
+                    )}
+                  </button>
+                  <button
+                    onClick={() => handleCrearPlanilla(true)}
+                    disabled={loading || !fechaInicio || !fechaFin}
+                    className="group flex items-center gap-3 px-10 py-4 bg-gradient-to-r from-[#5D9646] to-[#5F8EAD] text-white rounded-2xl font-bold shadow-xl hover:shadow-2xl hover:scale-105 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+                  >
+                    {loading ? (
+                      <>
+                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                        <span>Procesando...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Zap size={20} />
+                        <span>Crear y Cargar Extras</span>
                       </>
                     )}
                   </button>

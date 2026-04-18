@@ -87,6 +87,23 @@ const Login = () => {
       customClass: { popup: 'animated bounceIn' }
     });
   };
+
+  const showDisabledAccountAlert = (message) => {
+    Swal.fire({
+      title: 'Cuenta desactivada',
+      html: `
+        <p>${message || 'Tu cuenta está desactivada.'}</p>
+        <div class="mt-4 p-3 bg-amber-50 rounded-lg border border-amber-200">
+          <p class="text-amber-800 text-sm">Contacta al administrador para reactivar tu acceso.</p>
+        </div>
+      `,
+      icon: 'info',
+      confirmButtonText: 'Entendido',
+      confirmButtonColor: '#d97706',
+      allowOutsideClick: false,
+      customClass: { popup: 'animated pulse' }
+    });
+  };
  
   const showErrorAlert = (message) => {
     Swal.fire({
@@ -127,7 +144,9 @@ const Login = () => {
       setIsBlocked(true);
       setBlockTimeRemaining(result.timeRemaining || 300);
       showBlockedAlert(result.message, result.timeRemaining || 300);
-    } else if (result?.attemptsRemaining !== undefined) {
+    } else if (result?.accountDisabled) {
+      showDisabledAccountAlert(result.message);
+    } else if (typeof result?.attemptsRemaining === 'number') {
       setAttemptsRemaining(result.attemptsRemaining);
       showAttemptsErrorAlert(result.message, result.attemptsRemaining);
     } else {

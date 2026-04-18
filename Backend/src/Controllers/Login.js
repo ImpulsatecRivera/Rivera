@@ -71,6 +71,8 @@ const setAuthCookie = (res, token) => {
   console.log("🍪 Cookie creada:", { isProd, cookieOptions });
 };
 
+const estaCuentaDesactivada = (doc) => doc?.cuentaDesactivada === true;
+
 
 // ===================== 🆕 GOOGLE LOGIN (CORREGIDO) =====================
 LoginController.GoogleLogin = async (req, res) => {
@@ -131,6 +133,10 @@ LoginController.GoogleLogin = async (req, res) => {
       });
       role = "Cliente";
     } else {
+      if (role === "Empleado" && estaCuentaDesactivada(user)) {
+        return res.status(403).json({ error: "Tu cuenta está desactivada" });
+      }
+
       // Actualizar googleId si no existe
       if (!user.googleId) {
         user.googleId = googleId;
@@ -275,6 +281,12 @@ LoginController.Login = async (req, res) => {
           });
         }
 
+        if (estaCuentaDesactivada(userFound)) {
+          return res.status(403).json({
+            message: "Tu cuenta está desactivada. Contacta al administrador.",
+          });
+        }
+
         console.log('✅ Motorista/Auxiliar encontrado:', userFound._id);
         
         valid = await bcryptjs.compare(password, userFound.password);
@@ -298,6 +310,12 @@ LoginController.Login = async (req, res) => {
       else if (email) {
         userFound = await EmpleadoModel.findOne({ email });
         if (userFound) {
+          if (estaCuentaDesactivada(userFound)) {
+            return res.status(403).json({
+              message: "Tu cuenta está desactivada. Contacta al administrador.",
+            });
+          }
+
           valid = await bcryptjs.compare(password, userFound.password);
           if (!valid) {
             const d = recordFailedAttempt(identifier);
@@ -431,14 +449,21 @@ LoginController.checkAuth = async (req, res) => {
       }
 
       const selectFields = userType === "Empleado" 
-        ? "email nombre name firstName lastName profilePicture googleId rol"
-        : "email nombre name firstName lastName profilePicture googleId";
+        ? "email nombre name firstName lastName profilePicture googleId rol cuentaDesactivada"
+        : "email nombre name firstName lastName profilePicture googleId cuentaDesactivada";
       
       const userFound = await Model.findById(id).select(selectFields);
       if (!userFound) {
         return res.status(200).json({ 
           message: `${userType} no encontrado`, 
           user: null 
+        });
+      }
+
+      if (userType !== "Cliente" && estaCuentaDesactivada(userFound)) {
+        return res.status(200).json({
+          message: "Cuenta desactivada",
+          user: null,
         });
       }
 

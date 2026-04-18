@@ -53,6 +53,7 @@ const useDataMotorista = () => {
       // ✅ nuevos/campos del model
       planillaTipo: (m?.planillaTipo || '').toString(),
       salario: m?.salario ?? 0,
+      cuentaDesactivada: m?.cuentaDesactivada === true,
       phoneVerified: Boolean(m?.phoneVerified),
       phoneVerifiedAt: m?.phoneVerifiedAt || null,
 
@@ -255,6 +256,12 @@ const useDataMotorista = () => {
 
       // --- Caso 1: ya viene FormData ---
       if (typeof FormData !== 'undefined' && formData instanceof FormData) {
+        const cuentaRaw = formData.get('cuentaDesactivada');
+        const cuentaValue =
+          cuentaRaw === null
+            ? selectedMotorista?.cuentaDesactivada === true
+            : cuentaRaw === true || cuentaRaw === 'true' || cuentaRaw === '1' || cuentaRaw === 1;
+        formData.set('cuentaDesactivada', String(cuentaValue));
         // ✅ asegurar que envíe campos nuevos si existen (por si tu modal no los añadió)
         // (Si ya están, append duplicará, así que solo "set" si existe)
         // FormData no tiene set en todos los navegadores viejos, pero en modern sí.
@@ -327,6 +334,7 @@ const useDataMotorista = () => {
         if (String(formData?.salario ?? '').trim() !== '') {
           submitData.append('salario', String(Number(formData.salario)));
         }
+        submitData.append('cuentaDesactivada', String(Boolean(formData?.cuentaDesactivada)));
 
         submitData.append('img', imgFile);
 
@@ -395,6 +403,9 @@ const useDataMotorista = () => {
       setIf('planillaTipo', formData?.planillaTipo);
       if (String(formData?.salario ?? '').trim() !== '') {
         updateData.salario = Number(formData.salario);
+      }
+      if (formData?.cuentaDesactivada !== undefined) {
+        updateData.cuentaDesactivada = Boolean(formData.cuentaDesactivada);
       }
 
       if (Object.keys(updateData).length === 0) {

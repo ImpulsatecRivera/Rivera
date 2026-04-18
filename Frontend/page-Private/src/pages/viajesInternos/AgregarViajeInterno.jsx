@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowLeft,
   Calendar,
@@ -11,7 +11,6 @@ import {
   Truck,
   Package,
   TrendingUp,
-  Clock,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../../Context/authContext";
@@ -55,6 +54,12 @@ const getCamionPlaca = (c) =>
 
 const getClienteNombre = (c) =>
   c?.nombreComercial || c?.nombreEmpresa || c?.nombre || c?.name || "";
+const getPersonalRol = (p) => String(p?.rol || "").trim().toLowerCase();
+const getPersonalBadgeClasses = (rol) =>
+  rol === "auxiliar"
+    ? "bg-amber-500"
+    : "bg-green-500";
+const getPersonalRoleLabel = (rol) => (rol === "auxiliar" ? "Auxiliar" : "Motorista");
 
 const getMotoristaTruckId = (m) => {
   if (!m) return "";
@@ -143,6 +148,7 @@ export default function AgregarViajeOperativo() {
 
   const [camiones, setCamiones] = useState([]);
   const [loadingCamiones, setLoadingCamiones] = useState(false);
+  const submitLockRef = useRef(false);
 
   const [rutasFrecuentesCliente, setRutasFrecuentesCliente] = useState([]);
 
@@ -162,6 +168,8 @@ export default function AgregarViajeOperativo() {
     cargaTipo: "general",
     montoAcordado: "",
     metodoPago: "credito",
+    esViajeExtra: false,
+    cantidadViajesExtra: "",
     condiciones: {
       clima: "normal",
       trafico: "normal",
@@ -276,7 +284,7 @@ export default function AgregarViajeOperativo() {
   const fetchMotoristas = async () => {
     try {
       setLoadingMotoristas(true);
-      const { data } = await api.get('/motoristas');
+      const { data } = await api.get('/motoristas?soloActivos=true');
       const rows = data?.data || (Array.isArray(data) ? data : []);
       setMotoristas(Array.isArray(rows) ? rows : []);
     } catch (e) {
@@ -286,22 +294,13 @@ export default function AgregarViajeOperativo() {
     }
   };
 
-  const motoristasPrincipalesOptions = useMemo(() => {
-    return (motoristas || [])
-      .filter((m) => m?._id && m?.rol === 'motorista')
-      .map((m) => {
-        const nombre = getMotoristaNombre(m);
-        return {
-          id: String(m._id),
-          nombre,
-          label: nombre,
-        };
-      });
+  const motoristasActivos = useMemo(() => {
+    return (motoristas || []).filter((m) => m?._id && m?.cuentaDesactivada !== true);
   }, [motoristas]);
 
-  const auxiliaresOptions = useMemo(() => {
-    return (motoristas || [])
-      .filter((m) => m?._id && m?.rol === 'auxiliar')
+  const motoristasPrincipalesOptions = useMemo(() => {
+    return motoristasActivos
+      .filter((m) => m?.rol === 'motorista')
       .map((m) => {
         const nombre = getMotoristaNombre(m);
         return {
@@ -310,7 +309,22 @@ export default function AgregarViajeOperativo() {
           label: nombre,
         };
       });
-  }, [motoristas]);
+  }, [motoristasActivos]);
+
+  const auxiliaresMixtosOptions = useMemo(() => {
+    return motoristasActivos
+      .map((m) => {
+        const nombre = getMotoristaNombre(m);
+        const rol = getPersonalRol(m);
+        return {
+          id: String(m._id),
+          nombre,
+          rol,
+          roleLabel: getPersonalRoleLabel(rol),
+          badgeClass: getPersonalBadgeClasses(rol),
+        };
+      });
+  }, [motoristasActivos]);
 
   const rutasCompletasOptions = useMemo(() => {
     return (rutasFrecuentesCliente || []).map((r, index) => ({
@@ -394,10 +408,18 @@ export default function AgregarViajeOperativo() {
     if (!formData.rutaDestino) return "Ingresa destino";
     if (!formData.montoAcordado || Number(formData.montoAcordado) <= 0)
       return "Ingresa un monto válido";
+    if (formData.esViajeExtra) {
+      const montoExtra = Number(formData.cantidadViajesExtra);
+      if (!Number.isFinite(montoExtra) || montoExtra <= 0) {
+        return "Ingresa un monto extra por empleado válido";
+      }
+    }
     return null;
   };
 
   const handleSubmit = async () => {
+    if (loading || submitLockRef.current) return;
+
     const err = validar();
     if (err) {
       Swal.fire({
@@ -409,6 +431,8 @@ export default function AgregarViajeOperativo() {
       setError(err);
       return;
     }
+
+    submitLockRef.current = true;
 
     try {
       setLoading(true);
@@ -442,6 +466,10 @@ export default function AgregarViajeOperativo() {
         cargaTipo: formData.cargaTipo,
         montoAcordado: Number(formData.montoAcordado),
         metodoPago: formData.metodoPago,
+        esViajeExtra: Boolean(formData.esViajeExtra),
+        cantidadViajesExtra: formData.esViajeExtra
+          ? Number(formData.cantidadViajesExtra || 0)
+          : 0,
         condiciones: formData.condiciones,
         observaciones: formData.observaciones || "",
       };
@@ -468,6 +496,7 @@ export default function AgregarViajeOperativo() {
       setError(errorMessage);
     } finally {
       setLoading(false);
+      submitLockRef.current = false;
     }
   };
 
@@ -873,6 +902,66 @@ export default function AgregarViajeOperativo() {
                 </select>
               </div>
             </div>
+
+            <div className="mt-4 grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <div className="bg-gray-50 border border-gray-200 rounded-xl p-4">
+                <div className="flex items-center gap-3">
+                  <input
+                    id="esViajeExtra"
+                    type="checkbox"
+                    aria-label="Contar como viaje extra en planilla semanal"
+                    checked={formData.esViajeExtra}
+                    onChange={(e) => {
+                      const checked = e.target.checked;
+                      setFormData((p) => ({
+                        ...p,
+                        esViajeExtra: checked,
+                        cantidadViajesExtra: checked ? p.cantidadViajesExtra : "",
+                      }));
+                    }}
+                    className="w-5 h-5 text-[#5D9646] border-gray-300 rounded focus:ring-[#5D9646]"
+                  />
+                  <div>
+                    <p className="text-sm font-semibold text-[#34353A]">
+                      Contar como viaje extra en planilla semanal
+                    </p>
+                    <p className="text-xs text-gray-600">
+                      Activa este viaje como extra para el cálculo de pagos del personal.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="relative">
+                <p id="cantidadViajesExtraLabel" className="block text-sm font-semibold text-[#34353A] mb-2">
+                  Monto extra por empleado
+                </p>
+                <DollarSign className="absolute left-4 top-11 text-gray-400" size={18} />
+                <input
+                  id="cantidadViajesExtra"
+                  type="number"
+                  aria-labelledby="cantidadViajesExtraLabel"
+                  min="0"
+                  step="0.01"
+                  value={formData.cantidadViajesExtra}
+                  disabled={!formData.esViajeExtra}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    const partes = val.split(".");
+                    if (val === "" || (Number(val) >= 0 && partes[0].length <= 6)) {
+                      setFormData((p) => ({ ...p, cantidadViajesExtra: val }));
+                    }
+                  }}
+                  placeholder={
+                    formData.esViajeExtra
+                      ? "Ej: 15.00"
+                      : "Marca la casilla para habilitar"
+                  }
+                  max="999999.99"
+                  className="w-full pl-12 pr-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#5F8EAD] focus:border-[#5F8EAD] disabled:bg-gray-100 disabled:text-gray-500"
+                />
+              </div>
+            </div>
           </div>
 
           {/* Conductor y Vehículo */}
@@ -1031,6 +1120,7 @@ export default function AgregarViajeOperativo() {
                               setFormData((p) => ({
                                 ...p,
                                 conductorId,
+                                auxiliares: p.auxiliares.filter((auxId) => auxId !== conductorId),
                                 truckId: associatedTruckId && allowedCamionesIds.includes(associatedTruckId)
                                   ? associatedTruckId
                                   : "",
@@ -1061,23 +1151,27 @@ export default function AgregarViajeOperativo() {
                   <div className="space-y-2 max-h-48 overflow-y-auto">
                     {loadingMotoristas ? (
                       <p className="text-gray-500 text-sm">Cargando auxiliares...</p>
-                    ) : auxiliaresOptions.length === 0 ? (
+                    ) : auxiliaresMixtosOptions.length === 0 ? (
                       <p className="text-gray-500 text-sm">No hay auxiliares disponibles</p>
                     ) : (
-                      auxiliaresOptions.map((a) => (
+                      auxiliaresMixtosOptions.map((a) => (
                         <label
                           key={a.id}
                           className={`flex items-center p-3 rounded-lg border-2 cursor-pointer transition-all ${
                             formData.auxiliares.includes(a.id)
                               ? "border-[#5F8EAD] bg-[#5F8EAD]/10 shadow-md"
-                              : "border-gray-200 hover:border-gray-300 hover:bg-gray-50"
+                              : a.id === formData.conductorId
+                                ? "border-amber-200 bg-amber-50 opacity-60"
+                                : "border-gray-200 hover:border-gray-300 hover:bg-gray-50"
                           }`}
                         >
                           <input
                             type="checkbox"
                             checked={formData.auxiliares.includes(a.id)}
+                            disabled={a.id === formData.conductorId}
                             onChange={(e) => {
                               const isChecked = e.target.checked;
+                              if (a.id === formData.conductorId) return;
                               setFormData((p) => ({
                                 ...p,
                                 auxiliares: isChecked
@@ -1088,12 +1182,17 @@ export default function AgregarViajeOperativo() {
                             className="w-4 h-4 text-[#5F8EAD] border-gray-300 rounded focus:ring-[#5F8EAD] focus:ring-2 flex-shrink-0"
                           />
                           <div className="ml-3 flex items-center gap-3">
-                            <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
+                            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0 ${a.badgeClass}`}>
                               {a.nombre.charAt(0).toUpperCase()}
                             </div>
-                            <span className="text-sm font-medium text-gray-900 break-words">
+                            <div className="min-w-0">
+                              <span className="text-sm font-medium text-gray-900 break-words block">
                               {a.nombre}
-                            </span>
+                              </span>
+                              <span className={`inline-flex mt-1 px-2 py-0.5 rounded-full text-[11px] font-semibold text-white ${a.badgeClass}`}>
+                                {a.roleLabel}
+                              </span>
+                            </div>
                           </div>
                         </label>
                       ))
@@ -1106,13 +1205,13 @@ export default function AgregarViajeOperativo() {
                       </p>
                       <div className="flex flex-wrap gap-2">
                         {formData.auxiliares.map((id) => {
-                          const aux = auxiliaresOptions.find((a) => a.id === id);
+                          const aux = auxiliaresMixtosOptions.find((a) => a.id === id);
                           return (
                             <div
                               key={id}
-                              className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 border border-green-200"
+                              className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border ${aux?.rol === 'auxiliar' ? 'bg-amber-100 text-amber-800 border-amber-200' : 'bg-green-100 text-green-800 border-green-200'}`}
                             >
-                              <div className="w-4 h-4 bg-green-500 rounded-full flex items-center justify-center text-white text-xs mr-2 flex-shrink-0">
+                              <div className={`w-4 h-4 rounded-full flex items-center justify-center text-white text-xs mr-2 flex-shrink-0 ${aux?.rol === 'auxiliar' ? 'bg-amber-500' : 'bg-green-500'}`}>
                                 {aux?.nombre.charAt(0).toUpperCase()}
                               </div>
                               <span className="break-all">{aux?.nombre || "Desconocido"}</span>
@@ -1206,7 +1305,7 @@ export default function AgregarViajeOperativo() {
 
             <button
               onClick={handleSubmit}
-              disabled={loading}
+              disabled={loading || submitLockRef.current}
               className="w-full sm:flex-1 px-6 py-3 bg-gradient-to-r from-[#34353A] to-[#5F8EAD] text-white rounded-xl font-semibold hover:opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg"
             >
               {loading ? (

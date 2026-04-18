@@ -1,4 +1,7 @@
-/backend/.env
-
-
-*.env
+.env
+**/node_modules
+**.cache/
+.cache/
+node_modules/ 
+backend/node_modules
+Backend/node_modules

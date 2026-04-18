@@ -22,17 +22,56 @@ const money = (n) => {
 
 const EmployeeRow = ({ empleado, showDetailView, selectedEmpleados, selectEmpleado }) => {
   const selected = selectedEmpleados && selectedEmpleados._id === empleado._id;
+  const isDesactivado = empleado?.cuentaDesactivada === true;
+
+  const rowColors = (() => {
+    if (isDesactivado && selected) {
+      return {
+        backgroundColor: '#be123c',
+        color: '#ffffff',
+        borderColor: '#be123c',
+      };
+    }
+
+    if (isDesactivado) {
+      return {
+        backgroundColor: '#fff7f8',
+        color: '#9f1239',
+        borderColor: '#fbcfe8',
+      };
+    }
+
+    if (selected) {
+      return {
+        backgroundColor: '#5D9646',
+        color: '#ffffff',
+        borderColor: '#5D9646',
+      };
+    }
+
+    return {
+      backgroundColor: '#ffffff',
+      color: '#374151',
+      borderColor: 'transparent',
+    };
+  })();
+
+  let iconColorClass = 'text-gray-400';
+  if (selected) iconColorClass = 'text-white';
+  else if (isDesactivado) iconColorClass = 'text-rose-300';
+
+  let statusClass = 'text-emerald-700';
+  if (selected) statusClass = 'text-white';
+  else if (isDesactivado) statusClass = 'text-rose-700';
+
+  const statusLabel = isDesactivado ? 'Desactivado' : 'Activo';
 
   return (
     <div
       className={`grid ${showDetailView ? "grid-cols-4" : "grid-cols-6"} gap-6 py-4 px-6 rounded-xl cursor-pointer transition-all duration-200 border-2 ${
-        selected ? "shadow-lg transform scale-[1.02]" : "hover:shadow-md hover:transform hover:scale-[1.01] border-transparent"
+        selected ? "shadow-lg transform scale-[1.02]" : "hover:shadow-md hover:transform hover:scale-[1.01]"
       }`}
-      style={{
-        backgroundColor: selected ? "#5D9646" : "#ffffff",
-        color: selected ? "#ffffff" : "#374151",
-        borderColor: selected ? "#5D9646" : "transparent",
-      }}
+      style={rowColors}
       onClick={() => selectEmpleado(empleado)}
     >
       {/* Nombre + Avatar */}
@@ -67,6 +106,8 @@ const EmployeeRow = ({ empleado, showDetailView, selectedEmpleados, selectEmplea
               <span className="font-semibold">{empleado.rol || "—"}</span>
               <span className="mx-2">•</span>
               <span>{empleado.planillaTipo || "—"}</span>
+              <span className="mx-2">•</span>
+              <span className={`font-semibold ${statusClass}`}>{statusLabel}</span>
             </div>
           )}
         </div>
@@ -74,19 +115,19 @@ const EmployeeRow = ({ empleado, showDetailView, selectedEmpleados, selectEmplea
 
       {/* Email */}
       <div className="flex items-center min-w-0">
-        <Mail className={`w-4 h-4 mr-2 ${selected ? "text-white" : "text-gray-400"}`} />
+        <Mail className={`w-4 h-4 mr-2 ${iconColorClass}`} />
         <span className="truncate">{empleado.email || "—"}</span>
       </div>
 
       {/* DUI */}
       <div className="flex items-center min-w-0">
-        <IdCard className={`w-4 h-4 mr-2 ${selected ? "text-white" : "text-gray-400"}`} />
+        <IdCard className={`w-4 h-4 mr-2 ${iconColorClass}`} />
         <span className="truncate">{empleado.dui || "—"}</span>
       </div>
 
       {/* BirthDate */}
       <div className="flex items-center min-w-0">
-        <Calendar className={`w-4 h-4 mr-2 ${selected ? "text-white" : "text-gray-400"}`} />
+        <Calendar className={`w-4 h-4 mr-2 ${iconColorClass}`} />
         <span className="truncate">{safeDate(empleado.birthDate)}</span>
       </div>
 
@@ -95,7 +136,7 @@ const EmployeeRow = ({ empleado, showDetailView, selectedEmpleados, selectEmplea
         <>
           {/* Teléfono + Salario debajo */}
           <div className="flex items-center min-w-0">
-            <Phone className={`w-4 h-4 mr-2 ${selected ? "text-white" : "text-gray-400"}`} />
+            <Phone className={`w-4 h-4 mr-2 ${iconColorClass}`} />
             <div className="min-w-0">
               <div className="truncate">{empleado.phone ? empleado.phone.toString() : "No disponible"}</div>
               <div className="text-[11px] opacity-90 truncate">Salario: {money(empleado.salario)}</div>
@@ -104,7 +145,7 @@ const EmployeeRow = ({ empleado, showDetailView, selectedEmpleados, selectEmplea
 
           {/* Dirección */}
           <div className="flex items-center min-w-0">
-            <MapPin className={`w-4 h-4 mr-2 ${selected ? "text-white" : "text-gray-400"}`} />
+            <MapPin className={`w-4 h-4 mr-2 ${iconColorClass}`} />
             <span className="truncate">{empleado.address || "—"}</span>
           </div>
         </>
