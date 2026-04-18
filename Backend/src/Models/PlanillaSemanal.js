@@ -103,6 +103,10 @@ const planillaSemanalSchema = new Schema({
                 type: Number,
                 default: 0
             },
+            extraViaje: {
+                type: Number,
+                default: 0
+            },
             // CAMPO PARA MARCAR FALTA INJUSTIFICADA
             faltaInjustificada: {
                 type: Boolean,
@@ -120,6 +124,11 @@ const planillaSemanalSchema = new Schema({
             default: 0
         },
         totalViaticos: {
+            type: Number,
+            default: 0
+        },
+
+        totalExtraViaje: {
             type: Number,
             default: 0
         },
@@ -147,6 +156,10 @@ const planillaSemanalSchema = new Schema({
             default: 0
         },
         totalViaticos: {
+            type: Number,
+            default: 0
+        },
+        totalExtraViaje: {
             type: Number,
             default: 0
         },

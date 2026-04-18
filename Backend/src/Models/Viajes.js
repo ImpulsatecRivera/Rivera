@@ -16,6 +16,11 @@ const viajeSchema = new Schema({
     }
   },
 
+  //Valores agregaos para viajes operativos que cuentan como extra en planilla semanal
+  esViajeExtra:{ type: Boolean, default: false },
+  // Para agregar cuanto dinero extra se le abonará al empleado, esto se tomará en cuenta en planilla semanal
+  // Este campo se actualizaría manualmente al crear un viaje operativo que se considere extra, o mediante lógica adicional en el backend
+  cantidadViajesExtra: { type: Number, default: 0 },
   truckId: {
     type: Schema.Types.ObjectId,
     ref: 'Camiones',

@@ -271,6 +271,7 @@ const DetailPanel = ({
 
   const salarioValue = getSalario(selectedMotorista);
   const planillaValue = getPlanillaTipo(selectedMotorista);
+  const isDesactivado = selectedMotorista?.cuentaDesactivada === true;
 
   return (
     <div className="w-96 bg-white rounded-2xl shadow-2xl relative overflow-hidden flex flex-col h-full">
@@ -338,6 +339,18 @@ const DetailPanel = ({
             {safeText(selectedMotorista.name, "")}{" "}
             {safeText(selectedMotorista.lastName, "")}
           </h3>
+
+          <div className="mb-3">
+            <span
+              className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold border ${
+                isDesactivado
+                  ? 'bg-rose-100 text-rose-700 border-rose-200'
+                  : 'bg-emerald-100 text-emerald-700 border-emerald-200'
+              }`}
+            >
+              {isDesactivado ? 'Cuenta desactivada' : 'Cuenta activa'}
+            </span>
+          </div>
 
           <div className="flex justify-center space-x-3">
             <button

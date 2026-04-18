@@ -11,6 +11,7 @@
  * - PUT    /:id/empleado/:empleadoId              Actualizar datos completos de empleado
  * - PATCH  /:id/empleado/:empleadoId/dia/:dia     Actualizar viáticos de un día específico
  * - PATCH  /:id/empleado/:empleadoId/montos       Actualizar anticipos del empleado
+ * - POST   /:id/cargar-ganancias-viajes-extra     Recalcular montos de viajes extra
  * - POST   /:id/empleado/:empleadoId/dia/:dia/falta    Marcar falta injustificada
  * - DELETE /:id/empleado/:empleadoId/dia/:dia/falta    Desmarcar falta injustificada
  * - DELETE /:id/empleado/:empleadoId              Eliminar empleado de planilla
@@ -229,6 +230,18 @@ router.patch('/:id/empleado/:empleadoId/dia/:dia',validateAuthToken(["admin"]), 
  * }
  */
 router.patch('/:id/empleado/:empleadoId/montos',validateAuthToken(["admin"]), PlanillaSemanalController.actualizarMontos);
+
+/**
+ * POST /api/planillas/semanal/:id/cargar-ganancias-viajes-extra
+ * Recalcular y reescribir los montos de viajes extra para la planilla semanal
+ *
+ * Funcionalidad:
+ * - Busca los viajes operativos marcados como extra dentro del rango de la planilla
+ * - Reinicia los valores diarios de extraViaje
+ * - Escribe nuevamente el monto solo en los empleados que participaron y tuvieron extra esa semana
+ * - Recalcula los totales individuales y generales
+ */
+router.post('/:id/cargar-ganancias-viajes-extra', validateAuthToken(["admin"]), PlanillaSemanalController.cargarGananciasViajesExtra);
 
 /**
  * DELETE /api/planillas/semanal/:id/empleado/:empleadoId

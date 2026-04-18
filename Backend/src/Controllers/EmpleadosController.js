@@ -198,6 +198,11 @@ const normalizePlanillaTipo = (planillaTipo) => {
     return normalizeText(planillaTipo);
 };
 
+const normalizeCuentaDesactivada = (value, defaultValue = false) => {
+    if (value === undefined || value === null || value === "") return defaultValue;
+    return value === true || value === "true" || value === 1 || value === "1";
+};
+
 /**
  * Generar email automático para empleados basado en nombre y apellido
  * @param {string} name - Nombre del empleado
@@ -245,11 +250,13 @@ const generarEmail = async (name, lastName, excludeId = null) => {
  */
 empleadosCon.get = async (req, res) => {
     try {
+        const soloActivos = String(req.query.soloActivos ?? "").toLowerCase() === "true";
         // Agregar paginación opcional (desactivada por defecto para traer todo)
         const page = parseInt(req.query.page) || 1;
         const limitQuery = req.query.limit ? parseInt(req.query.limit) : null;
 
-        let empleadosQuery = empleadosModel.find().select('-password').sort({ createdAt: -1 });
+        const query = soloActivos ? { cuentaDesactivada: { $ne: true } } : {};
+        let empleadosQuery = empleadosModel.find(query).select('-password').sort({ createdAt: -1 });
 
         let limit = null;
         if (limitQuery !== null) {
@@ -339,7 +346,8 @@ empleadosCon.post = async (req, res) => {
             address, 
             salario, 
             rol,
-            planillaTipo  // ✅ Nuevo campo agregado
+            planillaTipo,  // ✅ Nuevo campo agregado
+            cuentaDesactivada
         } = req.body;
 
         /**
@@ -544,7 +552,8 @@ empleadosCon.post = async (req, res) => {
             salario: Number(salario),
             rol: rolNormalizado, // ✅ guardado ya normalizado
             planillaTipo: planillaTipoNormalizado,  // ✅ guardado ya normalizado
-            img: imgUrl
+            img: imgUrl,
+            cuentaDesactivada: normalizeCuentaDesactivada(cuentaDesactivada, false)
         });
 
         const empleadoGuardado = await newEmpleado.save();
@@ -640,7 +649,8 @@ empleadosCon.put = async (req, res) => {
             address, 
             salario, 
             rol,
-            planillaTipo  // ✅ Nuevo campo agregado
+            planillaTipo,  // ✅ Nuevo campo agregado
+            cuentaDesactivada
         } = req.body;
 
         // ✅ NUEVO: normalizar si vienen estos campos
@@ -774,6 +784,12 @@ empleadosCon.put = async (req, res) => {
         if (salario !== undefined) datosActualizados.salario = Number(salario);
         if (rolNormalizado !== undefined) datosActualizados.rol = rolNormalizado;
         if (planillaTipoNormalizado !== undefined) datosActualizados.planillaTipo = planillaTipoNormalizado;
+        if (cuentaDesactivada !== undefined) {
+            datosActualizados.cuentaDesactivada = normalizeCuentaDesactivada(
+                cuentaDesactivada,
+                empleadoExistente.cuentaDesactivada === true
+            );
+        }
 
         // ✅ Actualizar email si se proporciona
         if (email && email.trim() !== "") {

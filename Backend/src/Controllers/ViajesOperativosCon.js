@@ -90,6 +90,10 @@ ViajesOperativosController.crearViajeOperativo = async (req, res) => {
       // Monto
       montoAcordado,
       metodoPago,
+
+      // Planilla semanal (viaje extra)
+      esViajeExtra,
+      cantidadViajesExtra,
       
       // Otros
       condiciones,
@@ -203,6 +207,24 @@ ViajesOperativosController.crearViajeOperativo = async (req, res) => {
       });
     }
 
+    // Validar campos de viaje extra para planilla semanal
+    const esViajeExtraNormalizado =
+      esViajeExtra === true ||
+      esViajeExtra === "true" ||
+      esViajeExtra === 1 ||
+      esViajeExtra === "1";
+
+    const cantidadViajesExtraNum = Number(cantidadViajesExtra || 0);
+
+    if (esViajeExtraNormalizado) {
+      if (!Number.isFinite(cantidadViajesExtraNum) || cantidadViajesExtraNum <= 0) {
+        return res.status(400).json({
+          success: false,
+          message: "La cantidad extra por viaje debe ser mayor a 0 cuando el viaje es extra"
+        });
+      }
+    }
+
     // 📝 CREAR VIAJE OPERATIVO
     const ahora = new Date();
     const estadoInicial = salidaDate <= ahora ? 'en_curso' : 'pendiente';
@@ -265,6 +287,10 @@ ViajesOperativosController.crearViajeOperativo = async (req, res) => {
       // ✅ MONTO
       montoAcordado: montoAcordado || 0,
       metodoPago: metodoPago || 'credito',
+
+      // ✅ PLANILLA SEMANAL (VIAJE EXTRA)
+      esViajeExtra: esViajeExtraNormalizado,
+      cantidadViajesExtra: esViajeExtraNormalizado ? cantidadViajesExtraNum : 0,
       
       // Estado
       estado: {

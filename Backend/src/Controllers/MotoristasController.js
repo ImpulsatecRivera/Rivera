@@ -113,12 +113,19 @@ const buildDriverMatch = (motoristaOrId) => {
   ];
 };
 
+const normalizeCuentaDesactivada = (value, defaultValue = false) => {
+  if (value === undefined || value === null || value === "") return defaultValue;
+  return value === true || value === "true" || value === 1 || value === "1";
+};
+
 /* ====================== Rutas CRUD básicas ====================== */
 
 motoristasCon.get = async (req, res) => {
   try {
+    const soloActivos = String(req.query.soloActivos ?? "").toLowerCase() === "true";
     // Excluir contraseñas
-    const newMotorista = await motoristalModel.find().select('-password');
+    const filtro = soloActivos ? { cuentaDesactivada: { $ne: true } } : {};
+    const newMotorista = await motoristalModel.find(filtro).select('-password');
     res.status(200).json(newMotorista);
   } catch (error) {
     res.status(500).json({ message: "Error al obtener motoristas", error: error.message });
@@ -209,6 +216,7 @@ motoristasCon.post = async (req, res) => {
       salario, // ✅ Mantener
       salarioBase,
       rol, // 'motorista' | 'auxiliar'
+      cuentaDesactivada,
     } = req.body;
 
     // ✅ Debug temporal (quitalo cuando ya funcione)
@@ -285,6 +293,7 @@ motoristasCon.post = async (req, res) => {
       salarioBase: Number(salarioBase) || salarioNum, // opcional: usa salario si no viene
       rol: rolFinal,
       img: imgUrl,
+      cuentaDesactivada: normalizeCuentaDesactivada(cuentaDesactivada, false),
     });
 
     await newmotorista.save();
@@ -337,6 +346,7 @@ motoristasCon.put = async (req, res) => {
       salario, // ✅
       salarioBase,
       rol,
+      cuentaDesactivada,
     } = req.body;
 
     const motoristaExistente = await motoristalModel.findById(motoristaId);
@@ -385,6 +395,9 @@ motoristasCon.put = async (req, res) => {
       salarioBase: salarioBase !== undefined ? Number(salarioBase) || motoristaExistente.salarioBase : (motoristaExistente.salarioBase ?? salarioFinal),
       rol: (rol || motoristaExistente.rol || 'motorista').toLowerCase(),
       img: imgUrl?.trim() || motoristaExistente.img,
+      cuentaDesactivada: cuentaDesactivada !== undefined
+        ? normalizeCuentaDesactivada(cuentaDesactivada, motoristaExistente.cuentaDesactivada === true)
+        : motoristaExistente.cuentaDesactivada,
       email: motoristaExistente.email,
       id: motoristaExistente.id,
       birthDate: motoristaExistente.birthDate,

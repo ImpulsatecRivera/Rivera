@@ -211,6 +211,8 @@ const EmployeeDetailPanel = ({
     );
   }
 
+  const isDesactivado = selectedEmpleados?.cuentaDesactivada === true;
+
   return (
     <div className="w-96 bg-white rounded-2xl shadow-2xl relative overflow-hidden flex flex-col h-full">
       {/* Background Pattern */}
@@ -267,6 +269,18 @@ const EmployeeDetailPanel = ({
           <h3 className="font-bold text-xl mb-2 text-gray-900">
             {safeText(selectedEmpleados?.name, '')} {safeText(selectedEmpleados?.lastName, '')}
           </h3>
+
+          <div className="mb-3">
+            <span
+              className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold border ${
+                isDesactivado
+                  ? 'bg-red-100 text-red-700 border-red-200'
+                  : 'bg-emerald-100 text-emerald-700 border-emerald-200'
+              }`}
+            >
+              {isDesactivado ? 'Cuenta desactivada' : 'Cuenta activa'}
+            </span>
+          </div>
 
           <div className="flex justify-center space-x-3">
             <button

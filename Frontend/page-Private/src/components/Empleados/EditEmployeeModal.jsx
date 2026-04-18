@@ -14,6 +14,7 @@ const EditEmployeeModal = ({ isOpen, onClose, onSave, employee, uploading }) => 
     // ✅ NUEVOS CAMPOS
     rol: 'Operativo',
     planillaTipo: 'Semanal',
+    cuentaDesactivada: false,
   });
 
   const [showPassword, setShowPassword] = useState(false);
@@ -47,6 +48,7 @@ const EditEmployeeModal = ({ isOpen, onClose, onSave, employee, uploading }) => 
         // ✅ cargar nuevos campos con defaults válidos
         rol: employee.rol || 'Operativo',
         planillaTipo: employee.planillaTipo || 'Semanal',
+        cuentaDesactivada: employee.cuentaDesactivada === true,
       });
       
       setShowPassword(false);
@@ -83,6 +85,7 @@ const EditEmployeeModal = ({ isOpen, onClose, onSave, employee, uploading }) => 
         // ✅ nuevos campos
         rol: employee.rol || 'Operativo',
         planillaTipo: employee.planillaTipo || 'Semanal',
+        cuentaDesactivada: employee.cuentaDesactivada === true,
       });
       
       setImagePreview(employee.img || null);
@@ -190,6 +193,7 @@ const EditEmployeeModal = ({ isOpen, onClose, onSave, employee, uploading }) => 
       formDataToSend.append('planillaTipo', formData.planillaTipo.trim());
       console.log('✅ Agregando planillaTipo:', formData.planillaTipo.trim());
     }
+    formDataToSend.append('cuentaDesactivada', String(Boolean(formData.cuentaDesactivada)));
 
     // ✅ Email ahora es editable y se envía
     if (formData.email && formData.email.trim()) {
@@ -473,6 +477,27 @@ const EditEmployeeModal = ({ isOpen, onClose, onSave, employee, uploading }) => 
                   <option value="Quincenal">Quincenal</option>
                 </select>
               </div>
+            </div>
+
+            <div className="rounded-lg border-2 border-gray-200 bg-gray-50 px-4 py-3">
+              <label htmlFor="editCuentaDesactivada" className="flex items-center gap-3 cursor-pointer">
+                <input
+                  id="editCuentaDesactivada"
+                  type="checkbox"
+                  checked={formData.cuentaDesactivada}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      cuentaDesactivada: e.target.checked,
+                    }))
+                  }
+                  className="w-4 h-4 rounded border-gray-300 text-red-500 focus:ring-red-500"
+                />
+                <div>
+                  <p className="text-sm font-semibold text-gray-800">Cuenta desactivada</p>
+                  <p className="text-xs text-gray-500">Si se activa, este empleado no podrá iniciar sesión</p>
+                </div>
+              </label>
             </div>
 
             <div>

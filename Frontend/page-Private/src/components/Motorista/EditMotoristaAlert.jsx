@@ -14,6 +14,7 @@ const EditMotoristaAlert = ({ isOpen, onClose, onSave, motorista, uploading = fa
     // ✅ CAMPOS DEL MODEL
     planillaTipo: '',
     salario: '',
+    cuentaDesactivada: false,
     // imagen
     image: null,
   });
@@ -47,6 +48,7 @@ const EditMotoristaAlert = ({ isOpen, onClose, onSave, motorista, uploading = fa
           motorista.salario === 0 || motorista.salario
             ? String(motorista.salario)
             : '',
+        cuentaDesactivada: motorista.cuentaDesactivada === true,
         image: null,
       });
 
@@ -429,6 +431,27 @@ const EditMotoristaAlert = ({ isOpen, onClose, onSave, motorista, uploading = fa
                 />
               </div>
             </div>
+          </div>
+
+          <div className="rounded-lg border-2 border-gray-200 bg-gray-50 px-4 py-3">
+            <label htmlFor="editMotoristaCuentaDesactivada" className="flex items-center gap-3 cursor-pointer">
+              <input
+                id="editMotoristaCuentaDesactivada"
+                type="checkbox"
+                checked={formData.cuentaDesactivada}
+                onChange={(e) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    cuentaDesactivada: e.target.checked,
+                  }))
+                }
+                className="w-4 h-4 rounded border-gray-300 text-red-500 focus:ring-red-500"
+              />
+              <div>
+                <p className="text-sm font-semibold text-gray-800">Cuenta desactivada</p>
+                <p className="text-xs text-gray-500">Si se activa, este usuario no podrá iniciar sesión</p>
+              </div>
+            </label>
           </div>
 
           {/* Dirección */}
