@@ -31,6 +31,7 @@ export default function PlanillaSemanal() {
   const [valorTemp, setValorTemp] = useState('');
   const [guardando, setGuardando] = useState(false);
   const [empleadosDisponibles, setEmpleadosDisponibles] = useState([]);
+  const [personalPorId, setPersonalPorId] = useState({});
   const [busquedaEmpleados, setBusquedaEmpleados] = useState('');
   const [empleadoArrastrando, setEmpleadoArrastrando] = useState(null);
   const [isDraggingOver, setIsDraggingOver] = useState(false);
@@ -40,6 +41,8 @@ export default function PlanillaSemanal() {
     return guardado !== null ? JSON.parse(guardado) : true;
   });
   const inputRef = useRef(null);
+  const empleadosAgregandoRef = useRef(new Set());
+  const ultimoClickAgregarRef = useRef(new Map());
 
   const diasSemana = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado'];
   const diasLabels = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
@@ -70,6 +73,19 @@ export default function PlanillaSemanal() {
   useEffect(() => {
     localStorage.setItem('panelPlanillaSemanalAbierto', JSON.stringify(panelAbierto));
   }, [panelAbierto]);
+
+  useEffect(() => {
+    const handleAtajoPanel = (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'b') {
+        if (planilla?.estado === 'pagada') return;
+        e.preventDefault();
+        setPanelAbierto((prev) => !prev);
+      }
+    };
+
+    window.addEventListener('keydown', handleAtajoPanel);
+    return () => window.removeEventListener('keydown', handleAtajoPanel);
+  }, [planilla?.estado]);
 
   const cargarPlanilla = async () => {
     try {
@@ -135,6 +151,16 @@ export default function PlanillaSemanal() {
         }))
       ];
 
+      // Mantener un lookup por ID para colorear filas ya agregadas en la planilla
+      const mapaPersonal = todosPosibles.reduce((acc, persona) => {
+        acc[String(persona._id)] = {
+          tipo: persona.tipo,
+          rol: persona.rol
+        };
+        return acc;
+      }, {});
+      setPersonalPorId(mapaPersonal);
+
       // Obtener IDs de empleados ya en la planilla
       const empleadosEnPlanilla = planilla?.empleados?.map(e => e.empleadoId) || [];
 
@@ -145,6 +171,18 @@ export default function PlanillaSemanal() {
     } catch (error) {
       console.error('Error cargando empleados disponibles:', error);
     }
+  };
+
+  const getColorPuntoEmpleado = (empleado) => {
+    const infoPersonal = personalPorId[String(empleado.empleadoId)] || {};
+    const tipo = empleado.tipo || infoPersonal.tipo;
+    const rol = String(infoPersonal.rol || '').toLowerCase();
+
+    if (tipo === 'motorista') {
+      return rol === 'auxiliar' ? 'bg-amber-500' : 'bg-green-500';
+    }
+
+    return 'bg-blue-500';
   };
 
   const formatearMoneda = (cantidad) => {
@@ -160,10 +198,32 @@ export default function PlanillaSemanal() {
   };
 
   const handleAgregarEmpleado = async (empleado) => {
+    const empleadoId = String(empleado._id);
+    const ahora = Date.now();
+    const ultimoClick = ultimoClickAgregarRef.current.get(empleadoId) || 0;
+
+    // Evita múltiples solicitudes por doble/triple click en un lapso corto
+    if (ahora - ultimoClick < 1000 || empleadosAgregandoRef.current.has(empleadoId)) {
+      return;
+    }
+
+    ultimoClickAgregarRef.current.set(empleadoId, ahora);
+
+    // Si ya está en planilla, no intentar agregarlo de nuevo
+    const yaExisteEnPlanilla = planilla?.empleados?.some(
+      (e) => String(e.empleadoId) === empleadoId
+    );
+
+    if (yaExisteEnPlanilla) {
+      return;
+    }
+
+    empleadosAgregandoRef.current.add(empleadoId);
+
     try {
       const response = await api.post(
         `${config.api.API_URL}/planillas/semanal/${planilla._id}/empleado`,
-        { empleadoId: empleado._id }
+        { empleadoId }
       );
 
       const data = response.data;
@@ -193,6 +253,8 @@ export default function PlanillaSemanal() {
         title: 'Error',
         text: error.response?.data?.message || error.message || 'No se pudo agregar el empleado'
       });
+    } finally {
+      empleadosAgregandoRef.current.delete(empleadoId);
     }
   };
 
@@ -751,6 +813,31 @@ const data = response.data;
   const estadoConfig = getEstadoConfig(planilla.estado);
   const EstadoIcon = estadoConfig.icon;
   const estaEditable = planilla.estado !== 'pagada';
+  const textoBusqueda = busquedaEmpleados.toLowerCase();
+
+  const personalDisponibleOrdenado = [...empleadosDisponibles].sort((a, b) =>
+    (a.nombre || '').localeCompare((b.nombre || ''), 'es', { sensitivity: 'base' })
+  );
+
+  const empleadosDisponiblesFiltrados = personalDisponibleOrdenado.filter(e =>
+    e.nombre.toLowerCase().includes(textoBusqueda)
+  );
+
+  const empleadosDisponiblesSoloEmpleados = empleadosDisponiblesFiltrados.filter(
+    e => e.tipo !== 'motorista'
+  );
+
+  const empleadosDisponiblesSoloMotoristas = empleadosDisponiblesFiltrados.filter(
+    e => e.tipo === 'motorista'
+  );
+
+  const empleadosPlanillaOrdenados = [...(planilla?.empleados || [])].sort((a, b) =>
+    (a.nombreCompleto || '').localeCompare((b.nombreCompleto || ''), 'es', { sensitivity: 'base' })
+  );
+
+  const totalEmpleadosDisponibles = empleadosDisponibles.filter(e => e.tipo !== 'motorista').length;
+  const totalAuxiliaresDisponibles = empleadosDisponibles.filter(e => e.tipo === 'motorista' && String(e.rol || '').toLowerCase() === 'auxiliar').length;
+  const totalMotoristasDisponibles = empleadosDisponibles.filter(e => e.tipo === 'motorista' && String(e.rol || '').toLowerCase() !== 'auxiliar').length;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-indigo-50 p-6">
@@ -942,14 +1029,27 @@ const data = response.data;
                 </div>
 
                 {/* Badges de conteo */}
-                <div className="flex items-center gap-2 mb-4">
-                  <div className="flex items-center gap-1.5 bg-blue-50 text-blue-700 px-3 py-1.5 rounded-lg text-xs font-medium">
-                    <Users size={14} />
-                    <span>{empleadosDisponibles.filter(e => e.tipo !== 'motorista').length} Empleados</span>
+                <div className="grid grid-cols-3 gap-2 mb-4 p-2 bg-gray-50 border border-gray-200 rounded-xl">
+                  <div className="rounded-lg bg-blue-50 border border-blue-200 px-2 py-2 text-center">
+                    <div className="flex items-center justify-center gap-1 text-blue-700">
+                      <Users size={12} />
+                      <span className="text-sm font-bold leading-none">{totalEmpleadosDisponibles}</span>
+                    </div>
+                    <p className="mt-1 text-[10px] font-semibold text-blue-700 leading-none">Empleados</p>
                   </div>
-                  <div className="flex items-center gap-1.5 bg-green-50 text-green-700 px-3 py-1.5 rounded-lg text-xs font-medium">
-                    <Users size={14} />
-                    <span>{empleadosDisponibles.filter(e => e.tipo === 'motorista').length} Motoristas</span>
+                  <div className="rounded-lg bg-green-50 border border-green-200 px-2 py-2 text-center">
+                    <div className="flex items-center justify-center gap-1 text-green-700">
+                      <Users size={12} />
+                      <span className="text-sm font-bold leading-none">{totalMotoristasDisponibles}</span>
+                    </div>
+                    <p className="mt-1 text-[10px] font-semibold text-green-700 leading-none">Motoristas</p>
+                  </div>
+                  <div className="rounded-lg bg-amber-50 border border-amber-200 px-2 py-2 text-center">
+                    <div className="flex items-center justify-center gap-1 text-amber-700">
+                      <Users size={12} />
+                      <span className="text-sm font-bold leading-none">{totalAuxiliaresDisponibles}</span>
+                    </div>
+                    <p className="mt-1 text-[10px] font-semibold text-amber-700 leading-none">Auxiliares</p>
                   </div>
                 </div>
 
@@ -967,16 +1067,15 @@ const data = response.data;
                 {/* Lista de empleados disponibles */}
                 <div className="space-y-3 max-h-[500px] overflow-y-auto pr-2">
                   {/* EMPLEADOS */}
-                  {empleadosDisponibles.filter(e => e.tipo !== 'motorista' && e.nombre.toLowerCase().includes(busquedaEmpleados.toLowerCase())).length > 0 && (
+                  {empleadosDisponiblesSoloEmpleados.length > 0 && (
                     <div>
                       <div className="bg-blue-50 text-blue-700 px-3 py-1.5 rounded-lg mb-2">
                         <span className="text-xs font-bold uppercase">
-                          EMPLEADOS ({empleadosDisponibles.filter(e => e.tipo !== 'motorista' && e.nombre.toLowerCase().includes(busquedaEmpleados.toLowerCase())).length})
+                          EMPLEADOS ({empleadosDisponiblesSoloEmpleados.length})
                         </span>
                       </div>
                       <div className="space-y-2">
-                        {empleadosDisponibles
-                          .filter(e => e.tipo !== 'motorista' && e.nombre.toLowerCase().includes(busquedaEmpleados.toLowerCase()))
+                        {empleadosDisponiblesSoloEmpleados
                           .map((empleado) => (
                             <div
                               key={empleado._id}
@@ -1002,16 +1101,15 @@ const data = response.data;
                   )}
 
                   {/* MOTORISTAS Y AUXILIARES */}
-                  {empleadosDisponibles.filter(e => e.tipo === 'motorista' && e.nombre.toLowerCase().includes(busquedaEmpleados.toLowerCase())).length > 0 && (
+                  {empleadosDisponiblesSoloMotoristas.length > 0 && (
                     <div>
                       <div className="bg-green-50 text-green-700 px-3 py-1.5 rounded-lg mb-2">
                         <span className="text-xs font-bold uppercase">
-                          MOTORISTAS & AUXILIARES ({empleadosDisponibles.filter(e => e.tipo === 'motorista' && e.nombre.toLowerCase().includes(busquedaEmpleados.toLowerCase())).length})
+                          MOTORISTAS & AUXILIARES ({empleadosDisponiblesSoloMotoristas.length})
                         </span>
                       </div>
                       <div className="space-y-2">
-                        {empleadosDisponibles
-                          .filter(e => e.tipo === 'motorista' && e.nombre.toLowerCase().includes(busquedaEmpleados.toLowerCase()))
+                        {empleadosDisponiblesSoloMotoristas
                           .map((empleado) => {
                             const esAuxiliar = empleado.rol === 'auxiliar'; // ✅ DETECTAR AUXILIAR
                             return (
@@ -1048,7 +1146,7 @@ const data = response.data;
                   )}
 
                   {/* Sin resultados */}
-                  {empleadosDisponibles.filter(e => e.nombre.toLowerCase().includes(busquedaEmpleados.toLowerCase())).length === 0 && (
+                  {empleadosDisponiblesFiltrados.length === 0 && (
                     <div className="text-center py-8">
                       <Users className="mx-auto text-gray-300 mb-2" size={32} />
                       <p className="text-sm text-gray-500 font-medium">
@@ -1166,7 +1264,7 @@ const data = response.data;
               </thead>
 
               <tbody>
-                {planilla.empleados?.map((empleado, empIdx) => (
+                {empleadosPlanillaOrdenados.map((empleado) => (
                   <tr 
                     key={empleado.empleadoId}
                     className="border-b border-gray-300 hover:bg-blue-50/30 transition-colors"
@@ -1174,9 +1272,7 @@ const data = response.data;
                     {/* NOMBRE (FIJO) */}
                     <td className="sticky left-0 z-10 bg-white px-2 py-1 text-[10px] font-semibold text-gray-900 border-r border-gray-400">
                       <div className="flex items-center gap-1">
-                        <div className={`w-1.5 h-1.5 rounded-full ${
-                          empleado.planillaTipo === 'Semanal' ? 'bg-green-500' : 'bg-blue-500'
-                        }`}></div>
+                        <div className={`w-1.5 h-1.5 rounded-full ${getColorPuntoEmpleado(empleado)}`}></div>
                         {empleado.nombreCompleto}
                       </div>
                     </td>
