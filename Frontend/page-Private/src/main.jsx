@@ -4,9 +4,13 @@ import App from './App.jsx';
 import { BrowserRouter } from 'react-router-dom';
 import { AuthProvider } from './Context/authContext.jsx'; 
 import axios from 'axios';
+import { config } from './config';
+import { initOfflineQueue } from './services/OfflineQueueService';
 
 // Ensure cookies are included on all axios requests by default
 axios.defaults.withCredentials = true;
+axios.defaults.baseURL = config.api.API_URL;
+initOfflineQueue(axios);
 
 if (import.meta.env.PROD) {
   // Disable console.log in production builds.

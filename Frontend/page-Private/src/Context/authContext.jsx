@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect } from "react";
 import axios from "axios";
 import { toast } from "react-toastify";
 import { config } from "../config";
+import { initOfflineQueue } from "../services/OfflineQueueService";
 
 const API_URL = config.api.API_URL;
 
@@ -9,6 +10,8 @@ export const api = axios.create({
   baseURL: API_URL,
   withCredentials: true
 });
+
+initOfflineQueue(api);
 
 // ✅ INTERCEPTOR REQUEST MEJORADO
 api.interceptors.request.use(
