@@ -151,7 +151,7 @@ const resEmpleados = await api.get(`/empleados?limit=1000`);
         }
         
         const empleadosQuincenales = empleadosArray.filter(
-          emp => emp.planillaTipo === 'Quincenal'
+          emp => emp.planillaTipo === 'Quincenal' && emp.cuentaDesactivada !== true
         );
         setEmpleados(empleadosQuincenales);
       } catch (error) {
@@ -175,7 +175,7 @@ const resEmpleados = await api.get(`/empleados?limit=1000`);
         }
         
         const motoristasQuincenales = motoristasArray.filter(
-          mot => mot.planillaTipo === 'Quincenal'
+          mot => mot.planillaTipo === 'Quincenal' && mot.cuentaDesactivada !== true
         );
         setMotoristas(motoristasQuincenales);
       } catch (error) {

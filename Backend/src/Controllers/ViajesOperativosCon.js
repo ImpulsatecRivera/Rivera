@@ -94,6 +94,7 @@ ViajesOperativosController.crearViajeOperativo = async (req, res) => {
       // Planilla semanal (viaje extra)
       esViajeExtra,
       cantidadViajesExtra,
+      montosExtraPersonal,
       
       // Otros
       condiciones,
@@ -215,13 +216,54 @@ ViajesOperativosController.crearViajeOperativo = async (req, res) => {
       esViajeExtra === "1";
 
     const cantidadViajesExtraNum = Number(cantidadViajesExtra || 0);
+    const participantesViaje = [
+      String(conductorId),
+      ...(Array.isArray(auxiliares) ? auxiliares.map((aux) => String(aux?.auxiliarId || "")).filter(Boolean) : [])
+    ];
+    const participantesUnicos = [...new Set(participantesViaje)];
+
+    let montosExtraPersonalNormalizado = [];
 
     if (esViajeExtraNormalizado) {
-      if (!Number.isFinite(cantidadViajesExtraNum) || cantidadViajesExtraNum <= 0) {
-        return res.status(400).json({
-          success: false,
-          message: "La cantidad extra por viaje debe ser mayor a 0 cuando el viaje es extra"
-        });
+      if (Array.isArray(montosExtraPersonal) && montosExtraPersonal.length > 0) {
+        const mapaMontos = new Map();
+
+        for (const item of montosExtraPersonal) {
+          const empleadoId = String(item?.empleadoId || "");
+          const monto = Number(item?.monto || 0);
+
+          if (!empleadoId || !participantesUnicos.includes(empleadoId)) {
+            return res.status(400).json({
+              success: false,
+              message: "Todos los montos extra deben corresponder al conductor o auxiliares del viaje"
+            });
+          }
+
+          mapaMontos.set(empleadoId, Number.isFinite(monto) && monto > 0 ? monto : 0);
+        }
+
+        for (const participanteId of participantesUnicos) {
+          if (!mapaMontos.has(participanteId)) {
+            mapaMontos.set(participanteId, 0);
+          }
+        }
+
+        montosExtraPersonalNormalizado = participantesUnicos.map((empleadoId) => ({
+          empleadoId,
+          monto: mapaMontos.get(empleadoId) || 0
+        }));
+      } else {
+        if (!Number.isFinite(cantidadViajesExtraNum) || cantidadViajesExtraNum <= 0) {
+          return res.status(400).json({
+            success: false,
+            message: "La cantidad extra por viaje debe ser mayor a 0 cuando el viaje es extra"
+          });
+        }
+
+        montosExtraPersonalNormalizado = participantesUnicos.map((empleadoId) => ({
+          empleadoId,
+          monto: cantidadViajesExtraNum
+        }));
       }
     }
 
@@ -291,6 +333,7 @@ ViajesOperativosController.crearViajeOperativo = async (req, res) => {
       // ✅ PLANILLA SEMANAL (VIAJE EXTRA)
       esViajeExtra: esViajeExtraNormalizado,
       cantidadViajesExtra: esViajeExtraNormalizado ? cantidadViajesExtraNum : 0,
+      montosExtraPersonal: esViajeExtraNormalizado ? montosExtraPersonalNormalizado : [],
       
       // Estado
       estado: {

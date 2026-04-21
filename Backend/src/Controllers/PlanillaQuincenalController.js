@@ -598,6 +598,13 @@ PlanillaQuincenalController.agregarEmpleado = async (req, res) => {
             });
         }
 
+        if (empleadoData.cuentaDesactivada === true) {
+            return res.status(400).json({
+                success: false,
+                message: "No se puede agregar un empleado desactivado a la planilla quincenal"
+            });
+        }
+
         const nombreCompleto = `${empleadoData.name} ${empleadoData.lastName || ''}`.trim();
 
         const salarioMensual = obtenerSalarioValido(empleadoData, nombreCompleto, tipoEmpleado);

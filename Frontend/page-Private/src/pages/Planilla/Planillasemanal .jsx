@@ -112,8 +112,8 @@ export default function PlanillaSemanal() {
 
   const cargarEmpleadosDisponibles = async () => {
     try {
-      const resEmpleados = await api.get(`${config.api.API_URL}/empleados?limit=1000`);
-      const resMotoristas = await api.get(`${config.api.API_URL}/motoristas`);
+      const resEmpleados = await api.get(`${config.api.API_URL}/empleados?limit=1000&soloActivos=true`);
+      const resMotoristas = await api.get(`${config.api.API_URL}/motoristas?soloActivos=true`);
 
       const dataEmpleados = resEmpleados.data;
       const dataMotoristas = resMotoristas.data;
@@ -138,6 +138,7 @@ export default function PlanillaSemanal() {
           nombre: `${e.name || e.nombre || ''} ${e.lastName || e.apellido || ''}`.trim(),
           tipo: 'empleado',
           rol: e.rol, // ✅ INCLUIR ROL
+          cuentaDesactivada: e.cuentaDesactivada === true,
           planillaTipo: e.planillaTipo || 'N/A',
           salario: e.salary || e.salario || 0
         })),
@@ -146,10 +147,11 @@ export default function PlanillaSemanal() {
           nombre: `${m.name || m.nombre || ''} ${m.lastName || m.apellido || ''}`.trim(),
           tipo: 'motorista',
           rol: m.rol, // ✅ INCLUIR ROL (motorista o auxiliar)
+          cuentaDesactivada: m.cuentaDesactivada === true,
           planillaTipo: m.planillaTipo || 'N/A',
           salario: m.salary || m.salario || 0
         }))
-      ];
+      ].filter((persona) => persona.cuentaDesactivada !== true);
 
       // Mantener un lookup por ID para colorear filas ya agregadas en la planilla
       const mapaPersonal = todosPosibles.reduce((acc, persona) => {
@@ -1004,7 +1006,7 @@ const data = response.data;
           </div>
 
           {/* INFO CARDS */}
-          <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-4 border border-blue-200">
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-white rounded-lg">
@@ -1040,20 +1042,6 @@ const data = response.data;
                   <p className="text-xs text-purple-700 font-medium">Total Viáticos</p>
                   <p className="text-xl font-bold text-purple-900">
                     {formatearMoneda(planilla.totales?.totalViaticos || 0)}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-gradient-to-br from-amber-50 to-amber-100 rounded-xl p-4 border border-amber-200">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-white rounded-lg">
-                  <Zap className="text-amber-600" size={24} />
-                </div>
-                <div>
-                  <p className="text-xs text-amber-700 font-medium">Total Extra Viaje</p>
-                  <p className="text-xl font-bold text-amber-900">
-                    {formatearMoneda(planilla.totales?.totalExtraViaje || 0)}
                   </p>
                 </div>
               </div>
@@ -1287,22 +1275,22 @@ const data = response.data;
                   <th rowSpan={2} className="sticky left-0 z-20 bg-gray-200 px-2 py-2 text-left text-[10px] font-bold text-gray-800 uppercase border-r border-gray-400 min-w-[180px]">
                     Nombre
                   </th>
-                  <th colSpan={3} className="px-2 py-1 text-center text-[10px] font-bold text-gray-800 uppercase border-r border-gray-400">
+                  <th colSpan={2} className="px-2 py-1 text-center text-[10px] font-bold text-gray-800 uppercase border-r border-gray-400">
                     Lunes
                   </th>
-                  <th colSpan={3} className="px-2 py-1 text-center text-[10px] font-bold text-gray-800 uppercase border-r border-gray-400">
+                  <th colSpan={2} className="px-2 py-1 text-center text-[10px] font-bold text-gray-800 uppercase border-r border-gray-400">
                     Martes
                   </th>
-                  <th colSpan={3} className="px-2 py-1 text-center text-[10px] font-bold text-gray-800 uppercase border-r border-gray-400">
+                  <th colSpan={2} className="px-2 py-1 text-center text-[10px] font-bold text-gray-800 uppercase border-r border-gray-400">
                     Miércoles
                   </th>
-                  <th colSpan={3} className="px-2 py-1 text-center text-[10px] font-bold text-gray-800 uppercase border-r border-gray-400">
+                  <th colSpan={2} className="px-2 py-1 text-center text-[10px] font-bold text-gray-800 uppercase border-r border-gray-400">
                     Jueves
                   </th>
-                  <th colSpan={3} className="px-2 py-1 text-center text-[10px] font-bold text-gray-800 uppercase border-r border-gray-400">
+                  <th colSpan={2} className="px-2 py-1 text-center text-[10px] font-bold text-gray-800 uppercase border-r border-gray-400">
                     Viernes
                   </th>
-                  <th colSpan={3} className="px-2 py-1 text-center text-[10px] font-bold text-gray-800 uppercase border-r-2 border-gray-500">
+                  <th colSpan={2} className="px-2 py-1 text-center text-[10px] font-bold text-gray-800 uppercase border-r-2 border-gray-500">
                     Sábado
                   </th>
                   <th rowSpan={2} className="px-2 py-2 text-center text-[10px] font-bold text-gray-800 uppercase border-r border-gray-400 min-w-[70px]">
@@ -1317,13 +1305,12 @@ const data = response.data;
                   {estaEditable && <th rowSpan={2} className="px-2 py-2 text-center text-[10px] font-bold text-red-800 uppercase min-w-[60px]">Eliminar</th>}
                 </tr>
 
-                {/* FILA 2: Sub-encabezados (Base/Viático/Extra) */}
+                {/* FILA 2: Sub-encabezados (Base/Viático) */}
                 <tr className="bg-gray-200 border-b-2 border-gray-500">
                   {diasSemana.map((dia) => (
                     <React.Fragment key={dia}>
                       <th className="px-2 py-1 text-center text-[9px] font-semibold text-gray-700 border-r border-gray-300 min-w-[50px]">Base</th>
                       <th className="px-2 py-1 text-center text-[9px] font-semibold text-gray-700 border-r border-gray-400 min-w-[50px]">Viático</th>
-                      <th className="px-2 py-1 text-center text-[9px] font-semibold text-gray-700 border-r border-gray-300 min-w-[50px]">Extra</th>
                     </React.Fragment>
                   ))}
                 </tr>
@@ -1346,7 +1333,7 @@ const data = response.data;
                     {/* DÍAS DE LA SEMANA */}
                     {diasSemana.map((dia) => {
                       const diaData = empleado.dias?.find(d => d.dia === dia);
-                      const esEditando = editandoCelda?.empleadoId === empleado.empleadoId && 
+                      const esEditandoViaticos = editandoCelda?.empleadoId === empleado.empleadoId && 
                                         editandoCelda?.dia === dia && 
                                         editandoCelda?.campo === 'viaticos';
                       const tieneFalta = diaData?.faltaInjustificada;
@@ -1390,27 +1377,34 @@ const data = response.data;
                               }
                             }}
                           >
-                            {esEditando ? (
+                            {esEditandoViaticos ? (
                               <div className="flex items-center gap-0.5">
                                 <input
                                   ref={inputRef}
                                   type="number"
                                   value={valorTemp}
                                   onChange={(e) => setValorTemp(e.target.value)}
+                                  onClick={(e) => e.stopPropagation()}
                                   onKeyDown={handleKeyDown}
                                   className="w-12 px-1 py-0.5 border border-blue-500 rounded text-center text-[10px] font-semibold focus:outline-none"
                                   disabled={guardando}
                                   step="0.01"
                                 />
                                 <button
-                                  onClick={handleGuardarCelda}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleGuardarCelda();
+                                  }}
                                   disabled={guardando}
                                   className="p-0.5 bg-green-500 text-white rounded hover:bg-green-600 disabled:opacity-50"
                                 >
                                   <Check size={10} />
                                 </button>
                                 <button
-                                  onClick={handleCancelarEdicion}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleCancelarEdicion();
+                                  }}
                                   disabled={guardando}
                                   className="p-0.5 bg-red-500 text-white rounded hover:bg-red-600 disabled:opacity-50"
                                 >
@@ -1424,23 +1418,13 @@ const data = response.data;
                                 ${(diaData?.viaticos || 0).toFixed(2)}
                               </span>
                             )}
-                            {tieneFalta && !esEditando && (
+                            {tieneFalta && !esEditandoViaticos && (
                               <div className="text-[8px] text-red-600 font-bold">
                                 FALTA
                               </div>
                             )}
                           </td>
 
-                          {/* EXTRA */}
-                          <td className={`px-1 py-1 text-center text-[10px] border-r border-gray-300 ${
-                            diaData?.extraViaje ? 'bg-emerald-50' : 'bg-white'
-                          }`}>
-                            <span className={`font-medium ${
-                              (diaData?.extraViaje || 0) > 0 ? 'text-emerald-700' : 'text-gray-400'
-                            }`}>
-                              ${(diaData?.extraViaje || 0).toFixed(2)}
-                            </span>
-                          </td>
                         </React.Fragment>
                       );
                     })}
@@ -1466,20 +1450,27 @@ const data = response.data;
                             type="number"
                             value={valorTemp}
                             onChange={(e) => setValorTemp(e.target.value)}
+                            onClick={(e) => e.stopPropagation()}
                             onKeyDown={handleKeyDown}
                             className="w-14 px-1 py-0.5 border border-amber-500 rounded text-center text-[10px] font-semibold focus:outline-none"
                             disabled={guardando}
                             step="0.01"
                           />
                           <button
-                            onClick={handleGuardarCelda}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleGuardarCelda();
+                            }}
                             disabled={guardando}
                             className="p-0.5 bg-green-500 text-white rounded hover:bg-green-600 disabled:opacity-50"
                           >
                             <Check size={10} />
                           </button>
                           <button
-                            onClick={handleCancelarEdicion}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleCancelarEdicion();
+                            }}
                             disabled={guardando}
                             className="p-0.5 bg-red-500 text-white rounded hover:bg-red-600 disabled:opacity-50"
                           >
@@ -1520,12 +1511,9 @@ const data = response.data;
                   <td className="sticky left-0 z-10 bg-indigo-100 px-2 py-2 text-gray-900 border-r border-gray-400 text-[11px]">
                     TOTAL
                   </td>
-                  <td colSpan={18} className="border-r border-gray-400"></td>
+                  <td colSpan={12} className="border-r border-gray-400"></td>
                   <td className="px-1 py-2 text-center text-purple-800 border-r border-gray-400 text-[11px]">
                     ${(planilla.totales?.totalViaticos || 0).toFixed(2)}
-                  </td>
-                  <td className="px-1 py-2 text-center text-emerald-800 border-r border-gray-400 text-[11px]">
-                    ${(planilla.totales?.totalExtraViaje || 0).toFixed(2)}
                   </td>
                   <td className="px-1 py-2 text-center text-amber-800 border-r border-gray-400 text-[11px]">
                     ${(planilla.totales?.totalAnticipos || 0).toFixed(2)}
@@ -1553,10 +1541,6 @@ const data = response.data;
                 <div className="flex items-center gap-2">
                   <div className="w-3 h-3 rounded bg-amber-50 border border-amber-300"></div>
                   <span className="text-gray-600">Anticipos (Click para editar)</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded bg-emerald-50 border border-emerald-300"></div>
-                  <span className="text-gray-600">Extra de viaje</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="w-3 h-3 rounded bg-red-50 border border-red-300"></div>
