@@ -974,21 +974,32 @@ ReportesViajesDirecto.generarPDFResumenMensualV2 = async (req, res) => {
 
     console.log(`📊 Generando PDF Resumen Mensual V2 (semanas Tue-Sun): ${obtenerNombreMes(mesNum)} ${anoNum}`);
 
-    // Encontrar primer martes del mes
-    const firstOfMonth = new Date(anoNum, mesNum - 1, 1);
+    // Encontrar el primer día y el último día del mes
+    const firstOfMonth = new Date(anoNum, mesNum - 1, 1, 0, 0, 0, 0);
+    const lastDayOfMonthDate = new Date(anoNum, mesNum, 0, 23, 59, 59, 999);
+
+    // Encontrar el primer martes del mes
     let firstTuesday = new Date(firstOfMonth);
     let attempts = 0;
-    while (firstTuesday.getDay() !== 2 && attempts < 10) {
+    while (firstTuesday.getDay() !== 2 && attempts < 14) {
       firstTuesday.setDate(firstTuesday.getDate() + 1);
       attempts++;
     }
-    if (firstTuesday.getDay() !== 2) return res.status(500).json({ success: false, message: 'No se pudo determinar el primer martes del mes' });
+    if (firstTuesday.getDay() !== 2) {
+      return res.status(500).json({ success: false, message: 'No se pudo determinar el primer martes del mes' });
+    }
 
-    // Último día del mes (límite en la hora final)
-    const lastDayOfMonthDate = new Date(anoNum, mesNum - 1, new Date(anoNum, mesNum, 0).getDate(), 23, 59, 59, 999);
-
-    // Construir semanas (Tuesday -> Sunday). Incluir semanas cuya fecha de inicio (martes) esté dentro del mes
     const weeks = [];
+
+    // Agregar el tramo inicial parcial del mes si el primer martes no es el primer día
+    if (firstTuesday > firstOfMonth) {
+      const initialEnd = new Date(firstTuesday);
+      initialEnd.setDate(firstTuesday.getDate() - 1);
+      initialEnd.setHours(23, 59, 59, 999);
+      weeks.push({ start: new Date(firstOfMonth), end: new Date(initialEnd) });
+    }
+
+    // Construir semanas completas (martes -> domingo) desde el primer martes
     let start = new Date(firstTuesday);
     while (start <= lastDayOfMonthDate) {
       const end = new Date(start);
@@ -1002,11 +1013,10 @@ ReportesViajesDirecto.generarPDFResumenMensualV2 = async (req, res) => {
       return res.status(404).json({ success: false, message: 'No se pudieron construir las semanas para el mes indicado' });
     }
 
-    // Rango total a consultar: desde inicio del primer martes (00:00) hasta fin del último domingo (23:59:59.999)
-    const overallStart = new Date(weeks[0].start);
+    // Rango total a consultar: todo el mes
+    const overallStart = new Date(firstOfMonth);
     overallStart.setHours(0, 0, 0, 0);
-    const overallEnd = new Date(weeks[weeks.length - 1].end);
-    overallEnd.setHours(23, 59, 59, 999);
+    const overallEnd = new Date(lastDayOfMonthDate);
 
     // Obtener viajes en el rango completo
     const viajes = await ViajesModel.find({

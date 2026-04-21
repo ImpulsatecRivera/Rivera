@@ -237,8 +237,8 @@ router.patch('/:id/empleado/:empleadoId/montos',validateAuthToken(["admin"]), Pl
  *
  * Funcionalidad:
  * - Busca los viajes operativos marcados como extra dentro del rango de la planilla
- * - Reinicia los valores diarios de extraViaje
- * - Escribe nuevamente el monto solo en los empleados que participaron y tuvieron extra esa semana
+ * - Reinicia los valores diarios de viaticos
+ * - Escribe nuevamente el monto solo en los empleados que participaron y tuvieron extra esa semana, usando viaticos
  * - Recalcula los totales individuales y generales
  */
 router.post('/:id/cargar-ganancias-viajes-extra', validateAuthToken(["admin"]), PlanillaSemanalController.cargarGananciasViajesExtra);

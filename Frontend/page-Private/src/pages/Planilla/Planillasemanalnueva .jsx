@@ -109,8 +109,8 @@ export default function PlanillaSemanalNueva() {
   const cargarEmpleadosDisponibles = async () => {
     setLoadingEmpleados(true);
     try {
-      const resEmpleados = await api.get(`${config.api.API_URL}/empleados?limit=1000`);
-      const resMotoristas = await api.get(`${config.api.API_URL}/motoristas`);
+      const resEmpleados = await api.get(`${config.api.API_URL}/empleados?limit=1000&soloActivos=true`);
+      const resMotoristas = await api.get(`${config.api.API_URL}/motoristas?soloActivos=true`);
 
       const dataEmpleados = resEmpleados.data;
       const dataMotoristas = resMotoristas.data;
@@ -134,6 +134,7 @@ export default function PlanillaSemanalNueva() {
           nombre: `${e.name || e.nombre || ''} ${e.lastName || e.apellido || ''}`.trim(),
           tipo: 'empleado',
           rol: e.rol, // ✅ INCLUIR ROL
+          cuentaDesactivada: e.cuentaDesactivada === true,
           planillaTipo: e.planillaTipo || 'N/A',
           salario: e.salary || e.salario || 0
         })),
@@ -142,10 +143,11 @@ export default function PlanillaSemanalNueva() {
           nombre: `${m.name || m.nombre || ''} ${m.lastName || m.apellido || ''}`.trim(),
           tipo: 'motorista',
           rol: m.rol, // ✅ INCLUIR ROL (motorista o auxiliar)
+          cuentaDesactivada: m.cuentaDesactivada === true,
           planillaTipo: m.planillaTipo || 'N/A',
           salario: m.salary || m.salario || 0
         }))
-      ];
+      ].filter((persona) => persona.cuentaDesactivada !== true);
 
       setEmpleadosDisponibles(todosPosibles);
     } catch (error) {

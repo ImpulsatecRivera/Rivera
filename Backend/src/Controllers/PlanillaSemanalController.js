@@ -116,20 +116,15 @@ const extraerParticipantesViaje = (viaje) => {
     return [...new Set(ids)];
 };
 
-const reiniciarExtrasPlanilla = (planilla) => {
+const reiniciarViaticosPlanilla = (planilla) => {
     if (!planilla?.empleados) return;
 
     planilla.empleados.forEach((empleado) => {
         if (!Array.isArray(empleado.dias)) return;
         empleado.dias.forEach((dia) => {
-            dia.extraViaje = 0;
+            dia.viaticos = 0;
         });
-        empleado.totalExtraViaje = 0;
     });
-
-    if (planilla.totales) {
-        planilla.totales.totalExtraViaje = 0;
-    }
 };
 
 const recalcularTotalesPlanilla = (planilla) => {
@@ -139,12 +134,40 @@ const recalcularTotalesPlanilla = (planilla) => {
         const totales = calcularTotalesEmpleado(empleado);
         empleado.totalBase = totales.totalBase;
         empleado.totalViaticos = totales.totalViaticos;
-        empleado.totalExtraViaje = totales.totalExtraViaje;
         empleado.totalDescuentos = totales.totalDescuentos;
         empleado.totalAPagar = totales.totalAPagar;
     });
 
     planilla.totales = calcularTotalesGenerales(planilla.empleados);
+};
+
+const obtenerMontosExtraPorParticipante = (viaje, participantes) => {
+    const montos = new Map();
+
+    if (Array.isArray(viaje?.montosExtraPersonal) && viaje.montosExtraPersonal.length > 0) {
+        viaje.montosExtraPersonal.forEach((item) => {
+            const empleadoId = String(item?.empleadoId || '');
+            const monto = Number(item?.monto || 0);
+            if (!empleadoId || !Number.isFinite(monto) || monto <= 0) return;
+            montos.set(empleadoId, monto);
+        });
+    }
+
+    if (montos.size === 0) {
+        const montoComun = Number(viaje?.cantidadViajesExtra || 0);
+        if (Number.isFinite(montoComun) && montoComun > 0) {
+            participantes.forEach((empleadoId) => {
+                montos.set(String(empleadoId), montoComun);
+            });
+        }
+    }
+
+    return montos;
+};
+
+const esEstadoCompletado = (estado) => {
+    const estadoNormalizado = String(estado || '').trim().toLowerCase();
+    return estadoNormalizado === 'completado';
 };
 
 const cargarGananciasViajesExtraEnPlanilla = async (planilla) => {
@@ -154,25 +177,26 @@ const cargarGananciasViajesExtraEnPlanilla = async (planilla) => {
         tipoViaje: 'operativo',
         esViajeExtra: true,
         departureTime: { $gte: inicio, $lte: fin },
-    }).select('departureTime conductorId auxiliares cantidadViajesExtra estado');
+    }).select('departureTime conductorId auxiliares cantidadViajesExtra montosExtraPersonal estado');
 
     const planillaEmpleadoIds = new Set((planilla.empleados || []).map((empleado) => String(empleado.empleadoId)));
 
-    reiniciarExtrasPlanilla(planilla);
+    reiniciarViaticosPlanilla(planilla);
 
     viajesExtra.forEach((viaje) => {
-        const estadoActual = String(viaje?.estado?.actual || '').toLowerCase();
-        if (estadoActual !== 'completado') return;
-
-        const montoExtra = Number(viaje?.cantidadViajesExtra || 0);
-        if (!Number.isFinite(montoExtra) || montoExtra <= 0) return;
+        const estadoActual = viaje?.estado?.actual ?? viaje?.estado;
+        if (!esEstadoCompletado(estadoActual)) return;
 
         const diaSemana = obtenerDiaSemanaUTC(viaje.departureTime);
         if (!diaSemana || diaSemana === 'domingo') return;
 
         const participantes = extraerParticipantesViaje(viaje).filter((id) => planillaEmpleadoIds.has(id));
+        const montosPorParticipante = obtenerMontosExtraPorParticipante(viaje, participantes);
 
         participantes.forEach((empleadoId) => {
+            const montoExtra = Number(montosPorParticipante.get(String(empleadoId)) || 0);
+            if (!Number.isFinite(montoExtra) || montoExtra <= 0) return;
+
             const empleado = planilla.empleados.find((item) => String(item.empleadoId) === String(empleadoId));
             if (!empleado) return;
 
@@ -182,7 +206,7 @@ const cargarGananciasViajesExtraEnPlanilla = async (planilla) => {
 
             if (!diaEmpleado) return;
 
-            diaEmpleado.extraViaje = redondearDinero((diaEmpleado.extraViaje || 0) + montoExtra);
+            diaEmpleado.viaticos = redondearDinero((diaEmpleado.viaticos || 0) + montoExtra);
         });
     });
 
@@ -250,7 +274,6 @@ const generarDiasSemana = (fechaInicio) => {
             fecha: new Date(fecha),
             base: 0,
             viaticos: 0,
-            extraViaje: 0,
             faltaInjustificada: false,
             descuentoFalta: 0
         });
@@ -266,7 +289,6 @@ const generarDiasSemana = (fechaInicio) => {
 const calcularTotalesEmpleado = (empleado) => {
     const totalBase = empleado.dias.reduce((sum, d) => sum + (d.base || 0), 0);
     const totalViaticos = empleado.dias.reduce((sum, d) => sum + (d.viaticos || 0), 0);
-    const totalExtraViaje = empleado.dias.reduce((sum, d) => sum + (d.extraViaje || 0), 0);
     
     // Sumar todos los descuentos de faltas injustificadas
     const totalDescuentosFaltas = empleado.dias.reduce((sum, d) => sum + (d.descuentoFalta || 0), 0);
@@ -280,16 +302,15 @@ const calcularTotalesEmpleado = (empleado) => {
     let totalAPagar;
     if (empleado.planillaTipo === 'Semanal') {
         // Empleados semanales: restar anticipos
-        totalAPagar = totalBase + totalViaticos + totalExtraViaje - (empleado.anticipos || 0) - totalDescuentos;
+        totalAPagar = totalBase + totalViaticos - (empleado.anticipos || 0) - totalDescuentos;
     } else {
         // Empleados quincenales/mensuales: sumar anticipos
-        totalAPagar = totalBase + totalViaticos + totalExtraViaje + (empleado.anticipos || 0) - totalDescuentos;
+        totalAPagar = totalBase + totalViaticos + (empleado.anticipos || 0) - totalDescuentos;
     }
 
     return {
         totalBase: redondearDinero(totalBase),
         totalViaticos: redondearDinero(totalViaticos),
-        totalExtraViaje: redondearDinero(totalExtraViaje),
         totalDescuentos: redondearDinero(totalDescuentos),
         totalAPagar: redondearDinero(totalAPagar)
     };
@@ -302,7 +323,6 @@ const calcularTotalesGenerales = (empleados) => {
     const totales = {
         totalBase: 0,
         totalViaticos: 0,
-        totalExtraViaje: 0,
         totalAnticipos: 0,
         totalDescuentos: 0,
         totalAPagar: 0
@@ -311,7 +331,6 @@ const calcularTotalesGenerales = (empleados) => {
     empleados.forEach(emp => {
         totales.totalBase += emp.totalBase || 0;
         totales.totalViaticos += emp.totalViaticos || 0;
-        totales.totalExtraViaje += emp.totalExtraViaje || 0;
         totales.totalAnticipos += emp.anticipos || 0;
         totales.totalDescuentos += emp.totalDescuentos || 0;
         totales.totalAPagar += emp.totalAPagar || 0;
@@ -601,7 +620,6 @@ PlanillaSemanalController.actualizarEmpleado = async (req, res) => {
         const totales = calcularTotalesEmpleado(planilla.empleados[empleadoIndex]);
         planilla.empleados[empleadoIndex].totalBase = totales.totalBase;
         planilla.empleados[empleadoIndex].totalViaticos = totales.totalViaticos;
-        planilla.empleados[empleadoIndex].totalExtraViaje = totales.totalExtraViaje;
         planilla.empleados[empleadoIndex].totalDescuentos = totales.totalDescuentos;
         planilla.empleados[empleadoIndex].totalAPagar = totales.totalAPagar;
 
@@ -685,6 +703,13 @@ PlanillaSemanalController.agregarEmpleado = async (req, res) => {
             });
         }
 
+        if (empleadoData.cuentaDesactivada === true) {
+            return res.status(400).json({
+                success: false,
+                message: 'No se puede agregar personal con cuenta desactivada'
+            });
+        }
+
         const nombreCompleto = `${empleadoData.name} ${empleadoData.lastName || ''}`.trim();
         const salarioMensual = obtenerSalarioValido(empleadoData, nombreCompleto, tipoEmpleado);
         const planillaTipo = empleadoData.planillaTipo || '';
@@ -711,7 +736,6 @@ PlanillaSemanalController.agregarEmpleado = async (req, res) => {
             dias,
             totalBase: 0,
             totalViaticos: 0,
-            totalExtraViaje: 0,
             anticipos: 0,
             totalAPagar: 0
         };
@@ -720,7 +744,6 @@ PlanillaSemanalController.agregarEmpleado = async (req, res) => {
         const totales = calcularTotalesEmpleado(nuevoEmpleado);
         nuevoEmpleado.totalBase = totales.totalBase;
         nuevoEmpleado.totalViaticos = totales.totalViaticos;
-        nuevoEmpleado.totalExtraViaje = totales.totalExtraViaje;
         nuevoEmpleado.totalDescuentos = totales.totalDescuentos;
         nuevoEmpleado.totalAPagar = totales.totalAPagar;
 
@@ -1087,6 +1110,7 @@ PlanillaSemanalController.actualizarDia = async (req, res) => {
     try {
         const { id, empleadoId, dia } = req.params;
         const { viaticos } = req.body;
+        const viaticosActualizados = viaticos;
 
         if (!isValidObjectId(id) || !isValidObjectId(empleadoId)) {
             return res.status(400).json({
@@ -1138,10 +1162,15 @@ PlanillaSemanalController.actualizarDia = async (req, res) => {
             });
         }
 
-        // Actualizar solo viáticos (base no se toca, se calculó al agregar)
-        if (viaticos !== undefined) {
-            planilla.empleados[empleadoIndex].dias[diaIndex].viaticos = parseFloat(viaticos) || 0;
+        if (viaticosActualizados === undefined) {
+            return res.status(400).json({
+                success: false,
+                message: 'Debes enviar viaticos para actualizar el día'
+            });
         }
+
+        // Actualizar valores editables (base no se toca, se calculó al agregar)
+        planilla.empleados[empleadoIndex].dias[diaIndex].viaticos = parseFloat(viaticosActualizados) || 0;
 
         // Recalcular totales del empleado
         const totales = calcularTotalesEmpleado(planilla.empleados[empleadoIndex]);
@@ -1226,7 +1255,6 @@ PlanillaSemanalController.actualizarMontos = async (req, res) => {
         const totales = calcularTotalesEmpleado(planilla.empleados[empleadoIndex]);
         planilla.empleados[empleadoIndex].totalBase = totales.totalBase;
         planilla.empleados[empleadoIndex].totalViaticos = totales.totalViaticos;
-        planilla.empleados[empleadoIndex].totalExtraViaje = totales.totalExtraViaje;
         planilla.empleados[empleadoIndex].totalDescuentos = totales.totalDescuentos;
         planilla.empleados[empleadoIndex].totalAPagar = totales.totalAPagar;
 
@@ -1571,6 +1599,12 @@ PlanillaSemanalController.copiarDatosAnteriores = async (req, res) => {
                     continue;
                 }
 
+                if (empleadoData.cuentaDesactivada === true) {
+                    errores.push(`Empleado ${empleadoId} omitido por cuenta desactivada`);
+                    empleadosOmitidos++;
+                    continue;
+                }
+
                 const nombreCompleto = `${empleadoData.name} ${empleadoData.lastName || ''}`.trim();
                 const salarioMensual = obtenerSalarioValido(empleadoData, nombreCompleto, tipoEmpleado);
                 const planillaTipo = empleadoData.planillaTipo || '';
@@ -1594,7 +1628,6 @@ PlanillaSemanalController.copiarDatosAnteriores = async (req, res) => {
                     dias,
                     totalBase: 0,
                     totalViaticos: 0,
-                    totalExtraViaje: 0,
                     anticipos: 0,
                     totalDescuentos: 0,
                     totalAPagar: 0
@@ -1604,7 +1637,6 @@ PlanillaSemanalController.copiarDatosAnteriores = async (req, res) => {
                 const totales = calcularTotalesEmpleado(nuevoEmpleado);
                 nuevoEmpleado.totalBase = totales.totalBase;
                 nuevoEmpleado.totalViaticos = totales.totalViaticos;
-                nuevoEmpleado.totalExtraViaje = totales.totalExtraViaje;
                 nuevoEmpleado.totalDescuentos = totales.totalDescuentos;
                 nuevoEmpleado.totalAPagar = totales.totalAPagar;
 
