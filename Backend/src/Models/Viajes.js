@@ -21,6 +21,17 @@ const viajeSchema = new Schema({
   // Para agregar cuanto dinero extra se le abonará al empleado, esto se tomará en cuenta en planilla semanal
   // Este campo se actualizaría manualmente al crear un viaje operativo que se considere extra, o mediante lógica adicional en el backend
   cantidadViajesExtra: { type: Number, default: 0 },
+  montosExtraPersonal: [{
+    empleadoId: {
+      type: Schema.Types.ObjectId,
+      ref: 'Motorista'
+    },
+    monto: {
+      type: Number,
+      default: 0,
+      min: 0
+    }
+  }],
   truckId: {
     type: Schema.Types.ObjectId,
     ref: 'Camiones',

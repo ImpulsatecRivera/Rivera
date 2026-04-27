@@ -170,6 +170,7 @@ export default function AgregarViajeOperativo() {
     metodoPago: "credito",
     esViajeExtra: false,
     cantidadViajesExtra: "",
+    montosExtraPersonal: {},
     condiciones: {
       clima: "normal",
       trafico: "normal",
@@ -192,6 +193,33 @@ export default function AgregarViajeOperativo() {
       }));
     }
   }, [formData.rutaOrigen, formData.rutaDestino]);
+
+  useEffect(() => {
+    if (!formData.esViajeExtra) return;
+
+    const participantes = [formData.conductorId, ...(formData.auxiliares || [])]
+      .filter(Boolean)
+      .map(String);
+    const participantesUnicos = [...new Set(participantes)];
+
+    setFormData((prev) => {
+      const actual = prev.montosExtraPersonal || {};
+      const siguiente = {};
+
+      participantesUnicos.forEach((id) => {
+        siguiente[id] = actual[id] ?? "";
+      });
+
+      const actualJson = JSON.stringify(actual);
+      const siguienteJson = JSON.stringify(siguiente);
+      if (actualJson === siguienteJson) return prev;
+
+      return {
+        ...prev,
+        montosExtraPersonal: siguiente,
+      };
+    });
+  }, [formData.esViajeExtra, formData.conductorId, formData.auxiliares]);
 
   const fetchClientes = async () => {
     try {
@@ -409,9 +437,13 @@ export default function AgregarViajeOperativo() {
     if (!formData.montoAcordado || Number(formData.montoAcordado) <= 0)
       return "Ingresa un monto válido";
     if (formData.esViajeExtra) {
-      const montoExtra = Number(formData.cantidadViajesExtra);
-      if (!Number.isFinite(montoExtra) || montoExtra <= 0) {
-        return "Ingresa un monto extra por empleado válido";
+      const participantes = [formData.conductorId, ...(formData.auxiliares || [])]
+        .filter(Boolean)
+        .map(String);
+      const participantesUnicos = [...new Set(participantes)];
+
+      if (participantesUnicos.length === 0) {
+        return "Debes seleccionar conductor o auxiliares para asignar extra";
       }
     }
     return null;
@@ -432,6 +464,42 @@ export default function AgregarViajeOperativo() {
       return;
     }
 
+    const participantesExtra = [formData.conductorId, ...(formData.auxiliares || [])]
+      .filter(Boolean)
+      .map(String);
+    const participantesExtraUnicos = [...new Set(participantesExtra)];
+
+    if (formData.esViajeExtra && participantesExtraUnicos.length > 0) {
+      const participantesSinMonto = participantesExtraUnicos.filter((empleadoId) => {
+        const montoExtra = Number(formData.montosExtraPersonal?.[empleadoId]);
+        return !Number.isFinite(montoExtra) || montoExtra <= 0;
+      });
+
+      if (participantesSinMonto.length > 0) {
+        const nombresSinMonto = participantesSinMonto
+          .map((empleadoId) => {
+            const motorista = (motoristas || []).find((m) => String(m._id) === String(empleadoId));
+            return getMotoristaNombre(motorista) || `Empleado ${String(empleadoId).slice(-6)}`;
+          })
+          .join(', ');
+
+        const confirmacion = await Swal.fire({
+          icon: 'warning',
+          title: 'Faltan montos extra',
+          html: `Estás seguro de dejar a <strong>${nombresSinMonto}</strong> sin monto extra asignado?`,
+          showCancelButton: true,
+          confirmButtonText: 'Sí, continuar',
+          cancelButtonText: 'Cancelar',
+          confirmButtonColor: '#5F8EAD',
+          cancelButtonColor: '#6b7280'
+        });
+
+        if (!confirmacion.isConfirmed) {
+          return;
+        }
+      }
+    }
+
     submitLockRef.current = true;
 
     try {
@@ -445,6 +513,18 @@ export default function AgregarViajeOperativo() {
       // Calcular arrivalTime automáticamente (1 día después de departureTime, misma hora)
       const arrivalDate = new Date(departureDate);
       arrivalDate.setDate(arrivalDate.getDate() + 1);
+
+      const montosExtraPersonal = formData.esViajeExtra
+        ? participantesExtraUnicos.map((empleadoId) => ({
+            empleadoId,
+            monto: Number(formData.montosExtraPersonal?.[empleadoId] || 0) || 0,
+          }))
+        : [];
+
+      const totalMontoExtra = montosExtraPersonal.reduce(
+        (sum, item) => sum + (Number(item?.monto) || 0),
+        0
+      );
 
       const dataToSend = {
         clienteId: formData.clienteId,
@@ -467,9 +547,8 @@ export default function AgregarViajeOperativo() {
         montoAcordado: Number(formData.montoAcordado),
         metodoPago: formData.metodoPago,
         esViajeExtra: Boolean(formData.esViajeExtra),
-        cantidadViajesExtra: formData.esViajeExtra
-          ? Number(formData.cantidadViajesExtra || 0)
-          : 0,
+        cantidadViajesExtra: formData.esViajeExtra ? totalMontoExtra : 0,
+        montosExtraPersonal,
         condiciones: formData.condiciones,
         observaciones: formData.observaciones || "",
       };
@@ -916,7 +995,8 @@ export default function AgregarViajeOperativo() {
                       setFormData((p) => ({
                         ...p,
                         esViajeExtra: checked,
-                        cantidadViajesExtra: checked ? p.cantidadViajesExtra : "",
+                          cantidadViajesExtra: checked ? p.cantidadViajesExtra : "",
+                          montosExtraPersonal: checked ? p.montosExtraPersonal : {},
                       }));
                     }}
                     className="w-5 h-5 text-[#5D9646] border-gray-300 rounded focus:ring-[#5D9646]"
@@ -932,34 +1012,65 @@ export default function AgregarViajeOperativo() {
                 </div>
               </div>
 
-              <div className="relative">
-                <p id="cantidadViajesExtraLabel" className="block text-sm font-semibold text-[#34353A] mb-2">
+              <div>
+                <p className="block text-sm font-semibold text-[#34353A] mb-2">
                   Monto extra por empleado
                 </p>
-                <DollarSign className="absolute left-4 top-11 text-gray-400" size={18} />
-                <input
-                  id="cantidadViajesExtra"
-                  type="number"
-                  aria-labelledby="cantidadViajesExtraLabel"
-                  min="0"
-                  step="0.01"
-                  value={formData.cantidadViajesExtra}
-                  disabled={!formData.esViajeExtra}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    const partes = val.split(".");
-                    if (val === "" || (Number(val) >= 0 && partes[0].length <= 6)) {
-                      setFormData((p) => ({ ...p, cantidadViajesExtra: val }));
-                    }
-                  }}
-                  placeholder={
-                    formData.esViajeExtra
-                      ? "Ej: 15.00"
-                      : "Marca la casilla para habilitar"
-                  }
-                  max="999999.99"
-                  className="w-full pl-12 pr-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#5F8EAD] focus:border-[#5F8EAD] disabled:bg-gray-100 disabled:text-gray-500"
-                />
+                {!formData.esViajeExtra && (
+                  <div className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl bg-gray-100 text-gray-500 text-sm">
+                    Marca la casilla para habilitar
+                  </div>
+                )}
+
+                {formData.esViajeExtra && (
+                  <div className="space-y-2 max-h-44 overflow-y-auto pr-1">
+                    {[formData.conductorId, ...formData.auxiliares]
+                      .filter(Boolean)
+                      .map(String)
+                      .filter((id, index, arr) => arr.indexOf(id) === index)
+                      .map((empleadoId) => {
+                        const persona = (motoristasActivos || []).find((m) => String(m._id) === empleadoId);
+                        const nombre = getMotoristaNombre(persona);
+
+                        return (
+                          <div key={empleadoId} className="relative">
+                            <p className="block text-xs text-gray-600 mb-1">
+                              {nombre}
+                            </p>
+                            <DollarSign className="absolute left-3 top-8 text-gray-400" size={16} />
+                            <input
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              value={formData.montosExtraPersonal?.[empleadoId] || ""}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                const partes = val.split(".");
+                                if (val === "" || (Number(val) >= 0 && partes[0].length <= 6)) {
+                                  setFormData((p) => ({
+                                    ...p,
+                                    montosExtraPersonal: {
+                                      ...p.montosExtraPersonal,
+                                      [empleadoId]: val,
+                                    },
+                                  }));
+                                }
+                              }}
+                              placeholder="Ej: 15.00"
+                              max="999999.99"
+                              className="w-full pl-10 pr-4 py-2.5 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#5F8EAD] focus:border-[#5F8EAD]"
+                            />
+                          </div>
+                        );
+                      })}
+
+                    {[formData.conductorId, ...formData.auxiliares].filter(Boolean).length === 0 && (
+                      <div className="w-full px-4 py-3 border-2 border-amber-200 rounded-xl bg-amber-50 text-amber-700 text-sm">
+                        Selecciona conductor y/o auxiliares para asignarles el extra.
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           </div>

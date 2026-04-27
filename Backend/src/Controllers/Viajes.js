@@ -1733,6 +1733,7 @@ ViajesController.getTripDetails = async (req, res) => {
       .populate('truckId', 'brand model licensePlate name marca modelo placa nombre')
       .populate('conductorId', 'name nombre phone telefono')
       .populate('auxiliares.auxiliarId', 'name nombre lastName apellido')
+      .populate('montosExtraPersonal.empleadoId', 'name nombre lastName apellido')
       .populate({
         path: 'quoteId',
         select: 'quoteName quoteDescription price ruta horarios clientId',

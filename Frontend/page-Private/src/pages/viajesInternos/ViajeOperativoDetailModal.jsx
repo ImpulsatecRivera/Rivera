@@ -89,7 +89,48 @@ const ViajeOperativoDetailModal = ({ viajeId, isOpen, onClose }) => {
   const metodoPago =
     viaje?.metodoPago || viaje?.facturacion?.metodoPago || "N/A";
   const esViajeExtra = viaje?.esViajeExtra === true;
-  const montoExtraViaje = Number(viaje?.cantidadViajesExtra || 0);
+  const montosExtraPersonal = Array.isArray(viaje?.montosExtraPersonal)
+    ? viaje.montosExtraPersonal
+    : [];
+  const participantesExtras = montosExtraPersonal.map((item) => {
+    const empleadoRaw = item?.empleadoId;
+    const empleadoId = String(empleadoRaw?._id || empleadoRaw?.id || empleadoRaw || "");
+    if (!empleadoId) return null;
+
+    let nombre = empleadoRaw?.name || empleadoRaw?.nombre || `Empleado ${empleadoId.slice(-6)}`;
+
+    if (viaje?.conductorId && String(viaje.conductorId._id || viaje.conductorId.id || viaje.conductorId) === empleadoId) {
+      nombre = `${viaje.conductorId.name || viaje.conductorId.nombre || ""} ${viaje.conductorId.lastName || viaje.conductorId.apellido || ""}`.trim() || "Motorista";
+    } else if (Array.isArray(viaje?.auxiliares)) {
+      const auxiliarEncontrado = viaje.auxiliares.find((aux) => {
+        const auxId = aux?.auxiliarId;
+        return auxId && String(auxId._id || auxId.id || auxId) === empleadoId;
+      });
+
+      if (auxiliarEncontrado?.auxiliarId) {
+        const auxId = auxiliarEncontrado.auxiliarId;
+        nombre = `${auxId.name || auxId.nombre || ""} ${auxId.lastName || auxId.apellido || ""}`.trim() || "Auxiliar";
+      }
+    }
+
+    const monto = Number(item?.monto || 0);
+
+    return {
+      id: empleadoId,
+      nombre,
+      monto,
+      asignado: monto > 0,
+    };
+  }).filter(Boolean);
+  let resumenMontoExtra = 'Este viaje no fue marcado como extra';
+  if (esViajeExtra) {
+    resumenMontoExtra = montosExtraPersonal.length > 0
+      ? `Total extra distribuido en ${montosExtraPersonal.length} empleado(s)`
+      : 'Monto seleccionado para planilla semanal';
+  }
+  const montoExtraViaje = montosExtraPersonal.length > 0
+    ? montosExtraPersonal.reduce((sum, item) => sum + Number(item?.monto || 0), 0)
+    : Number(viaje?.cantidadViajesExtra || 0);
   const camion =
     viaje?.truckId?.licensePlate ||
     viaje?.truckId?.placa ||
@@ -146,11 +187,14 @@ const ViajeOperativoDetailModal = ({ viajeId, isOpen, onClose }) => {
                     <div className="flex items-center gap-2 mb-2">
                       <FileText className="text-[#5F8EAD]" size={20} />
                       <p className="text-xs font-semibold uppercase text-gray-500">
-                        Código
+                        ID de Viaje
                       </p>
                     </div>
                     <p className="text-lg font-bold text-[#34353A]">
-                      {viaje?.codigoProgramacion || viaje?.numeroViajeGlobal || "N/A"}
+                      {viaje?._id || "N/A"}
+                    </p>
+                    <p className="text-sm text-gray-600 mt-1">
+                      Referencia: {viaje?.numeroViajeGlobal || viaje?.codigoProgramacion || "N/A"}
                     </p>
                   </div>
 
@@ -241,10 +285,43 @@ const ViajeOperativoDetailModal = ({ viajeId, isOpen, onClose }) => {
                       {esViajeExtra ? formatearMoneda(montoExtraViaje) : 'N/A'}
                     </p>
                     <p className="text-sm text-gray-600">
-                      {esViajeExtra ? 'Monto seleccionado para planilla semanal' : 'Este viaje no fue marcado como extra'}
+                      {resumenMontoExtra}
                     </p>
                   </div>
                 </div>
+
+                {esViajeExtra && (
+                  <div className="bg-white rounded-2xl p-5 border-2 border-emerald-500">
+                    <div className="flex items-center gap-2 mb-4">
+                      <DollarSign className="text-emerald-600" size={20} />
+                      <p className="text-xs font-semibold uppercase text-gray-500">
+                        Distribución por trabajador
+                      </p>
+                    </div>
+
+                    {participantesExtras.length > 0 ? (
+                      <div className="space-y-3">
+                        {participantesExtras.map((persona) => (
+                          <div key={persona.id} className="flex items-center justify-between gap-4 rounded-xl border border-gray-200 px-4 py-3">
+                            <div>
+                              <p className="font-semibold text-[#34353A]">{persona.nombre}</p>
+                              <p className="text-xs text-gray-500">
+                                {persona.asignado ? 'Monto asignado' : 'Sin monto extra asignado'}
+                              </p>
+                            </div>
+                            <div className={`text-right font-bold ${persona.asignado ? 'text-emerald-700' : 'text-amber-600'}`}>
+                              {formatearMoneda(persona.monto)}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-gray-600">
+                        No hay montos extra individuales registrados para este viaje.
+                      </p>
+                    )}
+                  </div>
+                )}
 
                 <div className="grid md:grid-cols-2 gap-4">
                   <div className="bg-white rounded-2xl p-5 border-2 border-[#5F8EAD]">
