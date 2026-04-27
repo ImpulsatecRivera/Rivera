@@ -37,33 +37,51 @@ const convertirImagenABase64 = (rutaImagen) => {
 // Detectar entorno de ejecución
 const IS_CLOUD_RUN = process.env.K_SERVICE !== undefined;
 const IS_PRODUCTION = process.env.NODE_ENV === 'production';
+const IS_RENDER = process.env.RENDER === 'true';
+
 // Ruta al logo
-const RUTA_LOGO = path.join(process.cwd(), 'src', 'imagenes', 'imagen_15.png');
+const RUTA_LOGO = path.join(__dirname, '..', 'imagenes', 'imagen_15.png');
+
+// Cargar logo una vez
+const logoBase64 = convertirImagenABase64(RUTA_LOGO);
+
 const PUPPETEER_CONFIG = () => {
-    if (IS_PRODUCTION || IS_CLOUD_RUN) {
-        // Configuración para Cloud Run
-        return {
-            headless: 'new',
-            executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/chromium',
-            args: [
-                '--no-sandbox',
-                '--disable-setuid-sandbox',
-                '--disable-dev-shm-usage',
-                '--disable-gpu',
-                '--single-process',
-                '--no-zygote'
-            ]
-        };
-    } else {
-        // Configuración para desarrollo local
-        return {
-            headless: 'new',
-            args: [
-                '--no-sandbox',
-                '--disable-setuid-sandbox'
-            ]
-        };
+    const config = {
+        headless: 'new',
+        args: [
+            '--no-sandbox',
+            '--disable-setuid-sandbox',
+            '--disable-dev-shm-usage',
+            '--disable-gpu'
+        ]
+    };
+
+    const configuredPath = process.env.PUPPETEER_EXECUTABLE_PATH || process.env.CHROME_BIN;
+    if (configuredPath) {
+        if (fs.existsSync(configuredPath)) {
+            config.executablePath = configuredPath;
+            return config;
+        }
+        console.warn(`⚠️ PUPPETEER_EXECUTABLE_PATH/CHROME_BIN no existe: ${configuredPath}`);
     }
+
+    if (IS_PRODUCTION || IS_CLOUD_RUN || IS_RENDER) {
+        const systemCandidates = [
+            '/usr/bin/chromium',
+            '/usr/bin/chromium-browser',
+            '/usr/bin/google-chrome-stable',
+            '/opt/google/chrome/chrome'
+        ];
+
+        const detectedPath = systemCandidates.find((candidate) => fs.existsSync(candidate));
+        if (detectedPath) {
+            config.executablePath = detectedPath;
+        } else {
+            console.warn('⚠️ No se encontró Chrome del sistema. Se usará el navegador incluido por Puppeteer.');
+        }
+    }
+
+    return config;
 };
 
 const launchBrowserSafe = async () => {
@@ -99,8 +117,6 @@ ReportesRoutes.generarPDFIndividual = async (req, res) => {
                 message: 'Resumen no encontrado'
             });
         }
-
-        const logoBase64 = convertirImagenABase64(RUTA_LOGO);
 
         const costoPorGalon = (resumen.Total / resumen.Galones).toFixed(2);
 
@@ -401,8 +417,6 @@ ReportesRoutes.generarPDFMensualSimple = async (req, res) => {
             });
         }
 
-        const logoBase64 = convertirImagenABase64(RUTA_LOGO);
-
         // Preparar todos los registros individuales
         const datosTabla = registros.map(r => ({
             placa: r.CicurlationCard.licensePlate,
@@ -637,7 +651,6 @@ ReportesRoutes.generarPDFMensualDetallado = async (req, res) => {
             });
         }
 
-        const logoBase64 = convertirImagenABase64(RUTA_LOGO);
         const totalGalones = registros.reduce((sum, r) => sum + r.Galones, 0);
         const totalMonto = registros.reduce((sum, r) => sum + r.Total, 0);
 
@@ -897,8 +910,6 @@ ReportesRoutes.generarPDFMultiplesMeses = async (req, res) => {
                 message: 'No hay registros para los meses seleccionados'
             });
         }
-
-        const logoBase64 = convertirImagenABase64(RUTA_LOGO);
 
         // Obtener todas las placas únicas
         const placasSet = new Set();
@@ -1211,7 +1222,6 @@ ReportesRoutes.generarPDFAnual = async (req, res) => {
             .sort({ mes: 1, fecha: 1 });
 
         // ✅ Permitir generar PDF aunque no haya registros
-        const logoBase64 = convertirImagenABase64(RUTA_LOGO);
 
         // ✅ SIEMPRE 12 MESES
         const mesesValidos = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
@@ -1639,8 +1649,6 @@ ReportesRoutes.generarPDFSemanal = async (req, res) => {
             }
             return res.status(200).end();
         }
-
-        const logoBase64 = convertirImagenABase64(RUTA_LOGO);
 
         // Obtener todas las placas únicas
         const placasSet = new Set();
