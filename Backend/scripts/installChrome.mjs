@@ -9,7 +9,12 @@ if (shouldSkip) {
   process.exit(0);
 }
 
-const cacheDir = path.resolve(process.cwd(), '.cache', 'puppeteer');
+// En Render, el cache está en /opt/render/.cache/puppeteer
+const RENDER_CACHE_DIR = '/opt/render/.cache/puppeteer';
+const LOCAL_CACHE_DIR = path.resolve(process.cwd(), '.cache', 'puppeteer');
+
+// Usar el directorio correcto según el entorno
+const cacheDir = fs.existsSync('/opt/render') ? RENDER_CACHE_DIR : LOCAL_CACHE_DIR;
 fs.mkdirSync(cacheDir, { recursive: true });
 
 console.log(`📦 Installing Chrome for Puppeteer into: ${cacheDir}`);
@@ -18,7 +23,8 @@ execSync('npx puppeteer browsers install chrome', {
   stdio: 'inherit',
   env: {
     ...process.env,
-    PUPPETEER_CACHE_DIR: cacheDir
+    PUPPETEER_CACHE_DIR: cacheDir,
+    CHROME_BIN: path.join(cacheDir, 'chrome', 'linux64', 'chrome-linux64', 'chrome')
   }
 });
 

@@ -1,9 +1,16 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-const PROJECT_PUPPETEER_CACHE = path.resolve(process.cwd(), '.cache', 'puppeteer');
+// En Render, el cache está en /opt/render/.cache/puppeteer
+// En desarrollo local, está en .cache/puppeteer
+const RENDER_PUPPETEER_CACHE = '/opt/render/.cache/puppeteer';
+const PROJECT_PUPPETEER_CACHE = process.env.PUPPETEER_CACHE_DIR || path.resolve(process.cwd(), '.cache', 'puppeteer');
+
+// Usar el cache de Render si existe, si no el local
+const PUPPETEER_CACHE = fs.existsSync(RENDER_PUPPETEER_CACHE) ? RENDER_PUPPETEER_CACHE : PROJECT_PUPPETEER_CACHE;
+
 if (!process.env.PUPPETEER_CACHE_DIR) {
-  process.env.PUPPETEER_CACHE_DIR = PROJECT_PUPPETEER_CACHE;
+  process.env.PUPPETEER_CACHE_DIR = PUPPETEER_CACHE;
 }
 
 const DEFAULT_ARGS = [
@@ -27,6 +34,13 @@ const SYSTEM_CHROME_CANDIDATES = [
   '/usr/bin/chromium-browser',
   '/usr/bin/google-chrome-stable',
   '/opt/google/chrome/chrome'
+];
+
+// Rutas de Chrome instalado por Puppeteer
+const PUPPETEER_CHROME_PATHS = [
+  path.join(PUPPETEER_CACHE, 'chrome', 'linux64', 'chrome-linux64', 'chrome'),
+  path.join(PUPPETEER_CACHE, 'chrome', 'win64', 'chrome-win64', 'chrome.exe'),
+  path.join(PUPPETEER_CACHE, 'chrome', 'mac64', 'chrome-mac', 'Chromium.app', 'Contents', 'MacOS', 'Chromium')
 ];
 
 const unique = (values) => [...new Set(values.filter(Boolean))];
@@ -76,9 +90,12 @@ const getExecutableCandidates = (puppeteer) => {
   }
 
   const systemCandidates = process.platform === 'linux' ? SYSTEM_CHROME_CANDIDATES : [];
-  const cacheCandidates = findChromeExecutablesInDir(process.env.PUPPETEER_CACHE_DIR || PROJECT_PUPPETEER_CACHE);
+  const cacheCandidates = findChromeExecutablesInDir(PUPPETEER_CACHE);
+  
+  // Agregar rutas conocidas de Chrome instalado por Puppeteer
+  const puppeteerChromePaths = PUPPETEER_CHROME_PATHS.filter(exists);
 
-  return unique([...envCandidates, bundledPath, ...systemCandidates, ...cacheCandidates]).filter(exists);
+  return unique([...envCandidates, bundledPath, ...systemCandidates, ...cacheCandidates, ...puppeteerChromePaths]).filter(exists);
 };
 
 const buildLaunchAttempts = (primaryConfig, executableCandidates) => {
