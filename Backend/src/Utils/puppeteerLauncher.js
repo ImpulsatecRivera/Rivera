@@ -80,10 +80,11 @@ const getExecutableCandidates = (puppeteer) => {
     process.env.PUPPETEER_EXECUTABLE_PATH,
     process.env.CHROME_BIN,
     process.env.GOOGLE_CHROME_BIN
-  ];
+  ].filter(Boolean);
 
   let bundledPath;
   try {
+    // puppeteer-core no tiene bundled Chrome, esto puede fallar
     bundledPath = puppeteer.executablePath();
   } catch {
     bundledPath = undefined;
@@ -95,12 +96,17 @@ const getExecutableCandidates = (puppeteer) => {
   // Agregar rutas conocidas de Chrome instalado por Puppeteer
   const puppeteerChromePaths = PUPPETEER_CHROME_PATHS.filter(exists);
 
-  return unique([...envCandidates, bundledPath, ...systemCandidates, ...cacheCandidates, ...puppeteerChromePaths]).filter(exists);
+  const allCandidates = [...envCandidates, bundledPath, ...systemCandidates, ...cacheCandidates, ...puppeteerChromePaths].filter(Boolean);
+  
+  console.log('🔍 Candidatos de Chrome encontrados:', allCandidates.filter(exists));
+  
+  return unique(allCandidates).filter(exists);
 };
 
 const buildLaunchAttempts = (primaryConfig, executableCandidates) => {
   const attempts = [];
 
+  // Primero: intentar con la configuración primaria (puede tener executablePath específico)
   if (primaryConfig && typeof primaryConfig === 'object') {
     attempts.push({
       name: 'primary-config',
@@ -108,6 +114,7 @@ const buildLaunchAttempts = (primaryConfig, executableCandidates) => {
     });
   }
 
+  // Segundo: intentar sin executablePath (usa el Chrome bundled de puppeteer)
   const modes = ['new', true];
   const argProfiles = [DEFAULT_ARGS, CONSTRAINED_ARGS];
 
@@ -118,10 +125,16 @@ const buildLaunchAttempts = (primaryConfig, executableCandidates) => {
         options: {
           headless,
           args
+          // SIN executablePath - usa el Chrome bundled de puppeteer
         }
       });
+    }
+  }
 
-      for (const executablePath of executableCandidates) {
+  // Tercero: intentar con cada executablePath conocido
+  for (const executablePath of executableCandidates) {
+    for (const headless of modes) {
+      for (const args of argProfiles) {
         attempts.push({
           name: `headless-${String(headless)}-path-${executablePath}`,
           options: {
@@ -139,6 +152,9 @@ const buildLaunchAttempts = (primaryConfig, executableCandidates) => {
 
 export const launchUniversalBrowser = async (puppeteer, { serviceName = 'pdf', primaryConfig } = {}) => {
   const executableCandidates = getExecutableCandidates(puppeteer);
+  
+  console.log(`🔍 [${serviceName}] Buscando Chrome. Candidatos:`, executableCandidates);
+  
   const attempts = buildLaunchAttempts(primaryConfig, executableCandidates);
   const errors = [];
 
