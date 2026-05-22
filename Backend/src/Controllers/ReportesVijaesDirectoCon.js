@@ -1078,10 +1078,12 @@ ReportesViajesDirecto.generarPDFResumenMensualV2 = async (req, res) => {
           <td class="cell-numero">${idx}</td>
           <td class="cell-cliente">${cliente}</td>
           ${cols}
+          <td class="cell-total">${data.totalViajes}</td>
           <td class="cell-total">$ ${data.totalMonto.toFixed(2)}</td>
         </tr>
       `;
       idx++;
+      totalViajesGeneral += data.totalViajes;
     });
 
     const formatWeekLabel = (s, e) => {
@@ -1203,12 +1205,14 @@ ReportesViajesDirecto.generarPDFResumenMensualV2 = async (req, res) => {
           <th>#</th>
           <th>CLIENTE</th>
           ${weekHeadersTop}
-          <th>TOTAL</th>
+          <th>TOTAL VIAJES</th>
+          <th>TOTAL MONTO</th>
         </tr>
         <tr>
           <th></th>
           <th></th>
           ${weekHeadersBottom}
+          <th></th>
           <th></th>
         </tr>
       </thead>
@@ -1221,6 +1225,7 @@ ReportesViajesDirecto.generarPDFResumenMensualV2 = async (req, res) => {
       const totalM = [...clientesMap.values()].reduce((s, c) => s + (c.semanas[i]?.monto || 0), 0);
       return `<td style=\"text-align:center\">${totalV}</td><td style=\"text-align:right\">$${totalM.toFixed(2)}</td>`;
     }).join('')}
+          <td style=\"text-align:center\">${totalViajesGeneral}</td>
           <td style=\"text-align:right\">$ ${totalMontoGeneral.toFixed(2)}</td>
         </tr>
       </tbody>
