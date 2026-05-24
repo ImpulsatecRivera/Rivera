@@ -2,10 +2,16 @@ import React, { useState, useEffect, useRef } from 'react';
 import { 
   TrendingDown, Download, Search, FileText, Loader2, Plus, Settings, 
   Upload, X, ChevronDown, ChevronUp, Calendar, DollarSign, 
-  ArrowUpRight, ArrowDownRight, Eye, Check, AlertCircle, TrendingUp,
+  ArrowUpRight, ArrowDownRight, Eye, Check, AlertCircle, TrendingUp, Trash2,
   Filter, RefreshCw, Maximize2, Sparkles
 } from 'lucide-react';
 import Lottie from 'lottie-react';
+import lottieWeb from 'lottie-web';
+import loadingAnimation from '../../assets/lotties/Sandy Loading.json';
+import successAnimation from '../../assets/lotties/Success (1).json';
+import moneyAnimation from '../../assets/lotties/Coins blow effect.json';
+import warningAnimation from '../../assets/lotties/Alert Notification Character.json';
+import emptyBoxAnimation from '../../assets/lotties/empty.json';
 import { config } from '../../config';
 import Swal from 'sweetalert2';
 import './CajaChica.css';
@@ -16,132 +22,31 @@ import { api } from "../../Context/authContext";
 import { useTutorial } from '../../hooks/useTutorial';
 import '../../styles/tutorial-global.css';
 import { HelpCircle } from 'lucide-react';
-
-// 🎨 Importar animaciones Lottie
-import loadingAnimation from '../../assets/lotties/Sandy Loading.json';
-import emptyBoxAnimation from '../../assets/lotties/empty.json';
-import successAnimation from '../../assets/lotties/Thumbs up birdie.json';
-import warningAnimation from '../../assets/lotties/Alert Notification Character.json';
-import moneyAnimation from '../../assets/lotties/Piggy Bank - Coin In.json';
-
-const showLottieAlert = (type, title, text = '') => {
-  let lottieData;
-  let lottieSize = 150;
-  let confirmButtonColor = '#5F8EAD';
-
-  switch (type) {
-    case 'success':
-      lottieData = successAnimation;
-      lottieSize = 180;
-      confirmButtonColor = '#5D9646';
-      break;
-    case 'warning':
-      lottieData = warningAnimation;
-      lottieSize = 180;
-      confirmButtonColor = '#f59e0b';
-      break;
-    case 'error':
-      lottieData = warningAnimation;
-      lottieSize = 180;
-      confirmButtonColor = '#ef4444';
-      break;
-    case 'money':
-      lottieData = moneyAnimation;
-      lottieSize = 200;
-      confirmButtonColor = '#5D9646';
-      break;
-    default:
-      lottieData = successAnimation;
-  }
-
+const showLottieAlert = (type = 'info', title = '', message = '', duration = 3000) => {
+  const background = type === 'error' ? '#dc2626' : type === 'warning' ? '#b45309' : '#5F8EAD';
   Swal.fire({
-    title: title,
-    html: `
-      <div id="lottie-container" style="margin: 20px auto;"></div>
-      ${text ? `<p style="color: #64748b; font-size: 15px; margin-top: 15px; line-height: 1.5;">${text}</p>` : ''}
-    `,
-    showConfirmButton: true,
-    confirmButtonText: 'Entendido ✓',
-    confirmButtonColor: confirmButtonColor,
-    allowOutsideClick: false,
-    customClass: {
-      popup: 'rounded-3xl shadow-2xl',
-      title: 'text-2xl font-bold text-gray-800 mb-2',
-      confirmButton: 'px-8 py-3 rounded-xl font-semibold shadow-lg hover:scale-105 transition-all duration-200'
-    },
-    didOpen: () => {
-      const container = document.getElementById('lottie-container');
-      if (container) {
-        Lottie.loadAnimation({
-          container: container,
-          animationData: lottieData,
-          loop: type === 'success' ? false : true,
-          autoplay: true,
-          renderer: 'svg'
-        });
-        
-        container.style.width = `${lottieSize}px`;
-        container.style.height = `${lottieSize}px`;
-      }
-    }
-  });
-};
-
-const showLottieToast = (type, title, duration = 3000) => {
-  let lottieData;
-  let background = '#fff';
-  
-  switch (type) {
-    case 'success':
-      lottieData = successAnimation;
-      background = 'linear-gradient(135deg, #5D9646 0%, #5F8EAD 100%)';
-      break;
-    case 'error':
-      lottieData = warningAnimation;
-      background = 'linear-gradient(135deg, #ef4444 0%, #f59e0b 100%)';
-      break;
-    case 'warning':
-      lottieData = warningAnimation;
-      background = 'linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%)';
-      break;
-    case 'info':
-      lottieData = successAnimation;
-      background = 'linear-gradient(135deg, #5F8EAD 0%, #34353A 100%)';
-      break;
-    default:
-      lottieData = successAnimation;
-  }
-
-  Swal.fire({
-    title: title,
-    html: '<div id="toast-lottie-container" style="width: 80px; height: 80px; margin: 10px auto;"></div>',
+    title,
+    html: message ? `<div style="color:#fff; text-align:left;">${message}</div>` : '',
     toast: true,
     position: 'top-end',
     showConfirmButton: false,
     timer: duration,
     timerProgressBar: true,
-    background: background,
+    background,
     color: '#fff',
     customClass: {
       popup: 'rounded-2xl shadow-2xl',
       title: 'text-base font-bold'
-    },
-    didOpen: (toast) => {
-      const container = document.getElementById('toast-lottie-container');
-      if (container) {
-        Lottie.loadAnimation({
-          container: container,
-          animationData: lottieData,
-          loop: false,
-          autoplay: true,
-          renderer: 'svg'
-        });
-      }
-      
-      toast.addEventListener('mouseenter', Swal.stopTimer);
-      toast.addEventListener('mouseleave', Swal.resumeTimer);
     }
   });
+};
+
+const getTodayDateInput = () => {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 };
 
 export default function CajaChicaModern() {
@@ -152,6 +57,8 @@ export default function CajaChicaModern() {
   const [balance, setBalance] = useState(0);
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [blocking, setBlocking] = useState(false);
+  const [blockingMessage, setBlockingMessage] = useState('Procesando...');
   const [configuracion, setConfiguracion] = useState(null);
   const [estadoReintegro, setEstadoReintegro] = useState(null);
   
@@ -172,8 +79,11 @@ export default function CajaChicaModern() {
   const [tempMinimo, setTempMinimo] = useState(100);
   const [montoIngreso, setMontoIngreso] = useState('');
   const [descripcionIngreso, setDescripcionIngreso] = useState('');
+  const [fechaIngreso, setFechaIngreso] = useState(() => getTodayDateInput());
   const [montoEgreso, setMontoEgreso] = useState('');
   const [descripcionEgreso, setDescripcionEgreso] = useState('');
+  const [fechaEgreso, setFechaEgreso] = useState(() => getTodayDateInput());
+  const [registrarFechaAnteriorEgreso, setRegistrarFechaAnteriorEgreso] = useState(false);
   const [showReportesModal, setShowReportesModal] = useState(false);
 
   // Refs para Lottie
@@ -209,6 +119,15 @@ export default function CajaChicaModern() {
     }
   };
 
+  const startBlocking = (message = 'Procesando...') => {
+    setBlockingMessage(message);
+    setBlocking(true);
+  };
+
+  const stopBlocking = () => {
+    setBlocking(false);
+    setBlockingMessage('Procesando...');
+  };
   const obtenerMovimientos = async () => {
     try {
       const { data } = await api.get('/cajaChica');
@@ -340,92 +259,113 @@ export default function CajaChicaModern() {
   };
 
   const registrarIngreso = async () => {
-    if (!montoIngreso || !descripcionIngreso) {
+    if (!montoIngreso || !descripcionIngreso || !fechaIngreso) {
       showLottieAlert('warning', '⚠️ Campos Incompletos', 'Por favor completa todos los campos requeridos');
       return;
     }
-
-    const { value: password } = await Swal.fire({
-      title: '🔒 Confirmar Ingreso',
-      text: `Ingreso de ${formatearMoneda(parseFloat(montoIngreso))}`,
-      input: 'password',
-      inputPlaceholder: 'Código de seguridad',
-      showCancelButton: true,
-      confirmButtonText: 'Confirmar',
-      cancelButtonText: 'Cancelar',
-      confirmButtonColor: '#5D9646',
-      cancelButtonColor: '#64748b',
-      customClass: {
-        popup: 'rounded-2xl',
-        confirmButton: 'rounded-xl px-6 py-2.5 font-semibold',
-        cancelButton: 'rounded-xl px-6 py-2.5 font-semibold'
-      },
-      inputValidator: (value) => !value && 'Debes ingresar el código de seguridad'
-    });
-
-    if (!password) return;
-
     try {
+      const amount = Number.parseFloat(montoIngreso);
+      const finalBalance = balance + amount;
+      const previewHtml = `
+        <div style="text-align:left">
+          <p>Balance actual: <strong>${formatearMoneda(balance)}</strong></p>
+          <p>Balance final : <strong>${formatearMoneda(finalBalance)}</strong></p>
+          <p>¿Deseas aplicar este ingreso?</p>
+        </div>
+      `;
+
+      const { isConfirmed } = await Swal.fire({
+        icon: 'info',
+        title: 'Confirmar ingreso',
+        html: previewHtml,
+        showCancelButton: true,
+        confirmButtonText: 'Confirmar',
+        cancelButtonText: 'Cancelar',
+        confirmButtonColor: '#5D9646',
+        cancelButtonColor: '#64748b',
+        customClass: {
+          popup: 'rounded-2xl',
+          confirmButton: 'rounded-xl px-6 py-2.5 font-semibold',
+          cancelButton: 'rounded-xl px-6 py-2.5 font-semibold'
+        }
+      });
+      if (!isConfirmed) return;
+
+      startBlocking('Registrando ingreso...');
       const formDataToSend = new FormData();
       formDataToSend.append('amount', montoIngreso);
       formDataToSend.append('reason', descripcionIngreso);
-      formDataToSend.append('password', password);
+      formDataToSend.append('movementDate', fechaIngreso);
 
       await api.post('/cajaChica/ingreso', formDataToSend);
-      
-      // 🎨 Alert con Lottie de Money
-      showLottieAlert(
-        'money',
-        '¡Ingreso Registrado! 💰',
-        `Se agregaron ${formatearMoneda(parseFloat(montoIngreso))} a caja chica exitosamente`
-      );
-      
+
+      showLottieAlert('money', '¡Ingreso Registrado! 💰', `Se agregaron ${formatearMoneda(amount)} a caja chica exitosamente`);
       setShowIngresoForm(false);
       setMontoIngreso('');
       setDescripcionIngreso('');
+      setFechaIngreso(getTodayDateInput());
       await cargarDatos();
     } catch (error) {
-      showLottieAlert(
-        'error',
-        error.response?.status === 401 ? '🔒 Código Incorrecto' : '❌ Error',
-        error.response?.data?.message || 'No se pudo registrar el ingreso'
-      );
+      showLottieAlert('error', '❌ Error', error.response?.data?.message || 'No se pudo registrar el ingreso');
+    } finally {
+      stopBlocking();
     }
   };
 
   const registrarEgreso = async () => {
-    if (!montoEgreso || !descripcionEgreso) {
+    if (!montoEgreso || !descripcionEgreso || !fechaEgreso) {
       showLottieAlert('warning', '⚠️ Campos Incompletos', 'Por favor completa todos los campos requeridos');
       return;
     }
 
     try {
+      const amount = Number.parseFloat(montoEgreso);
+      const finalBalance = balance - amount;
+      const previewHtml = `
+        <div style="text-align:left">
+          <p>Balance actual: <strong>${formatearMoneda(balance)}</strong></p>
+          <p>Balance final : <strong>${formatearMoneda(finalBalance)}</strong></p>
+          <p>¿Deseas aplicar este egreso?</p>
+        </div>
+      `;
+
+      const { isConfirmed } = await Swal.fire({
+        icon: 'warning',
+        title: 'Confirmar egreso',
+        html: previewHtml,
+        showCancelButton: true,
+        confirmButtonText: 'Confirmar',
+        cancelButtonText: 'Cancelar',
+        confirmButtonColor: '#dc2626',
+        cancelButtonColor: '#64748b',
+        customClass: {
+          popup: 'rounded-2xl',
+          confirmButton: 'rounded-xl px-6 py-2.5 font-semibold',
+          cancelButton: 'rounded-xl px-6 py-2.5 font-semibold'
+        }
+      });
+      if (!isConfirmed) return;
+
+      startBlocking('Registrando egreso...');
       const formDataToSend = new FormData();
       formDataToSend.append('amount', montoEgreso);
       formDataToSend.append('reason', descripcionEgreso);
+      formDataToSend.append('movementDate', fechaEgreso);
 
       await api.post('/cajaChica/egreso', formDataToSend);
 
-      // 🎨 Alert con Lottie de Success
-      showLottieAlert(
-        'success',
-        '¡Egreso Registrado! ✅',
-        `Se registró el gasto de ${formatearMoneda(parseFloat(montoEgreso))} correctamente`
-      );
-      
+      showLottieAlert('success', '¡Egreso Registrado! ✅', `Se registró el gasto de ${formatearMoneda(amount)} correctamente`);
       setShowEgresoForm(false);
       setMontoEgreso('');
       setDescripcionEgreso('');
+      setFechaEgreso(getTodayDateInput());
       await cargarDatos();
     } catch (error) {
-      showLottieAlert(
-        'error',
-        '❌ Error al Registrar',
-        error.response?.data?.message || 'No se pudo registrar el egreso'
-      );
+      showLottieAlert('error', '❌ Error al Registrar', error.response?.data?.message || 'No se pudo registrar el egreso');
+    } finally {
+      stopBlocking();
     }
   };
-
   const registrarReintegro = async () => {
     if (!configuracion) {
       showLottieAlert('warning', '⚠️ Configuración Faltante', 'Debes configurar los límites de caja chica primero');
@@ -753,10 +693,77 @@ export default function CajaChicaModern() {
     }
   };
 
+  const eliminarMovimiento = async (transaccion) => {
+    try {
+      const isRetroactivo = !!getTrazabilidadFecha(transaccion);
+      const amount = Number.parseFloat(transaccion.amount || 0);
+      const isIncome = (transaccion.type === 'income' || transaccion.type === 'Ingreso' || transaccion.type === 'ingreso');
+      const finalBalance = isIncome ? balance - amount : balance + amount;
+
+      const previewHtml = `
+        <div style="text-align:left">
+          <p>Balance actual: <strong>${formatearMoneda(balance)}</strong></p>
+          <p>Balance final estimado: <strong>${formatearMoneda(finalBalance)}</strong></p>
+          <p style="margin-top:8px;"><strong>${transaccion.reason}</strong> (${formatearMoneda(transaccion.amount)})</p>
+          ${isRetroactivo ? '<p style="color:#b45309;font-size:13px;margin-top:8px;">Este movimiento es retroactivo. Al eliminarlo se recalcularan los balances historicos.</p>' : ''}
+        </div>
+      `;
+
+      const { isConfirmed } = await Swal.fire({
+        icon: 'warning',
+        title: 'Eliminar movimiento',
+        html: previewHtml,
+        showCancelButton: true,
+        confirmButtonText: 'Eliminar',
+        cancelButtonText: 'Cancelar',
+        confirmButtonColor: '#dc2626',
+        cancelButtonColor: '#64748b',
+        customClass: {
+          popup: 'rounded-2xl',
+          confirmButton: 'rounded-xl px-6 py-2.5 font-semibold',
+          cancelButton: 'rounded-xl px-6 py-2.5 font-semibold'
+        }
+      });
+
+      if (!isConfirmed) return;
+
+      startBlocking('Eliminando movimiento...');
+      await api.delete(`/cajaChica/movements/${transaccion._id}`);
+      showLottieAlert('success', 'Movimiento eliminado', 'Se eliminó el registro y se recalcularon los saldos.');
+      await cargarDatos();
+    } catch (error) {
+      showLottieAlert('error', error.response?.status === 401 ? '🔒 Código Incorrecto' : 'Error al eliminar', error.response?.data?.message || 'No se pudo eliminar el movimiento');
+    } finally {
+      stopBlocking();
+    }
+  };
+
   const formatearFecha = (fecha) => {
     return new Date(fecha).toLocaleDateString('es-ES', {
       day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
     });
+  };
+
+  const formatearFechaSolo = (fecha) => {
+    return new Date(fecha).toLocaleDateString('es-ES', {
+      day: 'numeric', month: 'short', year: 'numeric'
+    });
+  };
+
+  const getTrazabilidadFecha = (tx) => {
+    if (!tx?.date || !tx?.createdAt) return null;
+
+    const fechaContable = new Date(tx.date);
+    const fechaRegistro = new Date(tx.createdAt);
+    if (Number.isNaN(fechaContable.getTime()) || Number.isNaN(fechaRegistro.getTime())) return null;
+
+    const mismaFecha = fechaContable.getFullYear() === fechaRegistro.getFullYear()
+      && fechaContable.getMonth() === fechaRegistro.getMonth()
+      && fechaContable.getDate() === fechaRegistro.getDate();
+
+    if (mismaFecha) return null;
+
+    return `Registrado el ${formatearFechaSolo(fechaRegistro)} y aplicado al ${formatearFechaSolo(fechaContable)}`;
   };
 
   const formatearMoneda = (cantidad) => {
@@ -820,6 +827,22 @@ export default function CajaChicaModern() {
 
   return (
     <div className="min-h-screen bg-gray-50 relative">
+      {blocking && (
+        <div className="fixed inset-0 bg-black bg-opacity-40 z-50 flex items-center justify-center">
+          <div className="bg-white rounded-2xl p-6 w-96 text-center shadow-2xl">
+            <svg width="64" height="64" viewBox="0 0 50 50" className="mx-auto mb-4">
+              <g>
+                <circle cx="25" cy="25" r="20" stroke="#e5e7eb" strokeWidth="6" fill="none" />
+                <circle cx="25" cy="25" r="20" stroke="#5F8EAD" strokeWidth="6" strokeLinecap="round" strokeDasharray="31.4 94.2" fill="none">
+                  <animateTransform attributeName="transform" type="rotate" from="0 25 25" to="360 25 25" dur="1s" repeatCount="indefinite" />
+                </circle>
+              </g>
+            </svg>
+            <h3 className="text-lg font-semibold mb-1">{blockingMessage}</h3>
+            <p className="text-sm text-gray-600">Por favor espera...</p>
+          </div>
+        </div>
+      )}
       {/* Header Sticky */}
       <div className="sticky top-0 z-40 bg-white border-b border-gray-200 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 md:px-8 py-4">
@@ -1077,6 +1100,13 @@ export default function CajaChicaModern() {
                   className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-[#5D9646] focus:outline-none transition-colors"
                 />
                 <input
+                  type="date"
+                  value={fechaIngreso}
+                  max={getTodayDateInput()}
+                  onChange={(e) => setFechaIngreso(e.target.value)}
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-[#5D9646] focus:outline-none transition-colors"
+                />
+                <input
                   type="text"
                   placeholder="Descripción del ingreso"
                   value={descripcionIngreso}
@@ -1089,6 +1119,7 @@ export default function CajaChicaModern() {
                       setShowIngresoForm(false);
                       setMontoIngreso('');
                       setDescripcionIngreso('');
+                      setFechaIngreso(getTodayDateInput());
                     }}
                     className="flex-1 px-4 py-3 border-2 border-gray-300 text-gray-700 rounded-xl font-medium hover:bg-gray-50 transition-colors"
                   >
@@ -1151,6 +1182,29 @@ export default function CajaChicaModern() {
                   onChange={(e) => setMontoEgreso(e.target.value)}
                   className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-red-500 focus:outline-none transition-colors"
                 />
+                <div className="flex items-center gap-3">
+                  <label className="flex items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={registrarFechaAnteriorEgreso}
+                      onChange={(e) => {
+                        const checked = e.target.checked;
+                        setRegistrarFechaAnteriorEgreso(checked);
+                        if (!checked) setFechaEgreso(getTodayDateInput());
+                      }}
+                      className="w-4 h-4"
+                    />
+                    <span>Registrar fecha anterior</span>
+                  </label>
+                  <input
+                    type="date"
+                    value={fechaEgreso}
+                    max={getTodayDateInput()}
+                    onChange={(e) => setFechaEgreso(e.target.value)}
+                    disabled={!registrarFechaAnteriorEgreso}
+                    className={`flex-1 px-4 py-3 border-2 rounded-xl transition-colors ${registrarFechaAnteriorEgreso ? 'border-gray-200 focus:border-red-500 focus:outline-none' : 'border-gray-100 bg-gray-50 text-gray-500'}`}
+                  />
+                </div>
                 <input
                   type="text"
                   placeholder="Descripción del egreso"
@@ -1164,6 +1218,7 @@ export default function CajaChicaModern() {
                       setShowEgresoForm(false);
                       setMontoEgreso('');
                       setDescripcionEgreso('');
+                      setFechaEgreso(getTodayDateInput());
                     }}
                     className="flex-1 px-4 py-3 border-2 border-gray-300 text-gray-700 rounded-xl font-medium hover:bg-gray-50 transition-colors"
                   >
@@ -1265,7 +1320,10 @@ export default function CajaChicaModern() {
                       <div className="flex items-start justify-between gap-2">
                         <div>
                           <p className="font-semibold text-[#34353A]">{tx.reason}</p>
-                          <p className="text-sm text-gray-500">{formatearFecha(tx.date)}</p>
+                          <p className="text-sm text-gray-500">{formatearFechaSolo(tx.date)}</p>
+                          {getTrazabilidadFecha(tx) && (
+                            <p className="text-xs text-amber-700 font-medium mt-1">{getTrazabilidadFecha(tx)}</p>
+                          )}
                         </div>
                         <div className="text-right">
                           <p className={`text-lg font-bold ${
@@ -1353,6 +1411,16 @@ export default function CajaChicaModern() {
                           <Download size={16} />
                           Descargar reporte
                         </button>
+
+                        {canDelete && (
+                          <button
+                            onClick={() => eliminarMovimiento(tx)}
+                            className="flex items-center gap-2 px-4 py-2 bg-red-50 text-red-700 rounded-lg hover:bg-red-100 transition-all font-medium hover:scale-105"
+                          >
+                            <Trash2 size={16} />
+                            Eliminar
+                          </button>
+                        )}
                       </div>
                     </div>
                   )}

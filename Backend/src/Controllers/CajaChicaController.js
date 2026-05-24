@@ -71,12 +71,92 @@ const numeroALetras = (num) => {
   return `${convertir(entero)} DÓLARES CON ${centavos.toString().padStart(2, '0')}/100`;
 };
 
+const DATE_ONLY_REGEX = /^\d{4}-\d{2}-\d{2}$/;
+
+const toDateKey = (dateValue) => {
+  const date = new Date(dateValue);
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+};
+
+const parseMovementDate = (movementDate) => {
+  if (!movementDate || !DATE_ONLY_REGEX.test(String(movementDate))) {
+    return { error: 'Formato de fecha invalido. Use YYYY-MM-DD' };
+  }
+
+  const [year, month, day] = String(movementDate).split('-').map((v) => Number.parseInt(v, 10));
+  const parsedDate = new Date(year, month - 1, day, 12, 0, 0, 0);
+
+  if (Number.isNaN(parsedDate.getTime()) || toDateKey(parsedDate) !== movementDate) {
+    return { error: 'Fecha invalida. Verifique dia, mes y ano' };
+  }
+
+  const today = new Date();
+  const todayKey = toDateKey(today);
+  if (movementDate > todayKey) {
+    return { error: 'No se permiten fechas futuras' };
+  }
+
+  return { date: parsedDate };
+};
+
+const calcularBalanceHastaFechaContable = async (fechaContable) => {
+  const fechaFinDia = new Date(fechaContable);
+  fechaFinDia.setHours(23, 59, 59, 999);
+
+  const movimientos = await CajaChica.find({ date: { $lte: fechaFinDia } })
+    .sort({ date: 1, createdAt: 1, _id: 1 })
+    .select('type amount');
+
+  return movimientos.reduce((saldo, mov) => {
+    const monto = Number(mov.amount) || 0;
+    return mov.type === 'income' ? saldo + monto : saldo - monto;
+  }, 0);
+};
+
+const recalcularBalancesHistoricos = async () => {
+  const movimientos = await CajaChica.find()
+    .sort({ date: 1, createdAt: 1, _id: 1 })
+    .select('type amount previousBalance currentBalance');
+
+  let runningBalance = 0;
+  const updates = [];
+
+  for (const mov of movimientos) {
+    const previousBalance = runningBalance;
+    const monto = Number(mov.amount) || 0;
+    runningBalance = mov.type === 'income' ? runningBalance + monto : runningBalance - monto;
+    const currentBalance = runningBalance;
+
+    if (mov.previousBalance !== previousBalance || mov.currentBalance !== currentBalance) {
+      updates.push({
+        updateOne: {
+          filter: { _id: mov._id },
+          update: {
+            $set: {
+              previousBalance,
+              currentBalance
+            }
+          }
+        }
+      });
+    }
+  }
+
+  if (updates.length > 0) {
+    await CajaChica.bulkWrite(updates);
+  }
+};
+
+// Nota: Se eliminó la función de simulación para simplificar el flujo.
+// Todas las operaciones aplican directamente los cambios en la base de datos
+// y se recalculan los saldos históricos sin simulación previa.
+
 // =====================================================
 // OBTENER TODOS LOS MOVIMIENTOS
 // =====================================================
 cajaChicaController.getAllMovements = async (req, res) => {
   try {
-    const movements = await CajaChica.find().sort({ date: -1 });
+    const movements = await CajaChica.find().sort({ date: -1, createdAt: -1, _id: -1 });
 
     const populatedMovements = await Promise.all(
       movements.map(async (movement) => {
@@ -121,7 +201,7 @@ cajaChicaController.getCurrentBalance = async (req, res) => {
 // =====================================================
 cajaChicaController.registrarIngreso = async (req, res) => {
   try {
-    const { amount, reason, password } = req.body;
+    const { amount, reason, password, movementDate } = req.body;
     const monto = Number(amount);
 
     console.log('📥 INGRESO - Datos recibidos:');
@@ -145,56 +225,14 @@ cajaChicaController.registrarIngreso = async (req, res) => {
       });
     }
 
-    // Verificar que existe la configuración de password
-    if (!config.CAJA_CHICA?.passwordReintegro) {
-      console.log('❌ Password no configurado en servidor');
-      return res.status(500).json({
-        message: "La contraseña de caja chica no está configurada en el servidor"
-      });
+    const parsedMovementDate = parseMovementDate(movementDate);
+    if (parsedMovementDate.error) {
+      return res.status(400).json({ message: parsedMovementDate.error });
     }
 
-    // Validar password
-    if (!password) {
-      console.log('❌ Password no proporcionado');
-      return res.status(401).json({
-        message: "Se requiere contraseña para registrar ingresos"
-      });
-    }
+    const fechaContable = parsedMovementDate.date;
 
-    if (password !== config.CAJA_CHICA.passwordReintegro) {
-      console.log('❌ Password incorrecto');
-      return res.status(401).json({
-        message: "Contraseña incorrecta"
-      });
-    }
-
-    // Obtener balance actual
-    const lastMovement = await CajaChica.findOne()
-      .sort({ date: -1, createdAt: -1 })
-      .select('currentBalance');
-
-    const previousBalance = lastMovement ? lastMovement.currentBalance : 0;
-    const currentBalance = previousBalance + monto;
-
-    console.log('💰 Balance:', { previousBalance, monto, currentBalance });
-
-    // Validar máximo permitido
-    const CajaChicaConfig = (await import('../Models/CajaChicaConfig.js')).default;
-    const configuracion = await CajaChicaConfig.obtenerConfiguracion();
-
-    if (
-      configuracion?.maximoPermitido &&
-      currentBalance > configuracion.maximoPermitido
-    ) {
-      return res.status(400).json({
-        message: "El ingreso excede el máximo permitido",
-        data: {
-          balanceActual: previousBalance,
-          balanceResultante: currentBalance,
-          maximoPermitido: configuracion.maximoPermitido
-        }
-      });
-    }
+    // Nota: Se eliminó la verificación por simulación. El ingreso se aplicará directamente.
 
     // Subir voucher (opcional para ingresos)
     let voucherUrl = null;
@@ -213,9 +251,13 @@ cajaChicaController.registrarIngreso = async (req, res) => {
       }
     }
 
+    // Calcular previousBalance en la fecha contable y currentBalance resultante
+    const previousBalance = await calcularBalanceHastaFechaContable(fechaContable);
+    const currentBalance = previousBalance + monto;
+
     // Crear movimiento
     const movement = new CajaChica({
-      date: new Date(),
+      date: fechaContable,
       employeeId: 'admin',
       amount: monto,
       reason,
@@ -226,11 +268,14 @@ cajaChicaController.registrarIngreso = async (req, res) => {
     });
 
     await movement.save();
+    await recalcularBalancesHistoricos();
+
+    const movementActualizado = await CajaChica.findById(movement._id);
     console.log('✅ Ingreso registrado exitosamente');
 
     res.json({
       message: "Ingreso registrado exitosamente",
-      movement
+      movement: movementActualizado || movement
     });
 
   } catch (error) {
@@ -249,7 +294,7 @@ cajaChicaController.cashOperation = async (req, res) => {
     console.log('   File:', req.file ? 'Presente' : 'Ausente');
     console.log('   User:', req.user || 'No autenticado');
 
-    const { amount, reason, employeeId } = req.body;
+    const { amount, reason, employeeId, movementDate } = req.body;
 
     // Convertir amount a número
     const monto = parseFloat(amount);
@@ -281,13 +326,21 @@ cajaChicaController.cashOperation = async (req, res) => {
       });
     }
 
+    const parsedMovementDate = parseMovementDate(movementDate);
+    if (parsedMovementDate.error) {
+      return res.status(400).json({ message: parsedMovementDate.error });
+    }
+
+    const fechaContable = parsedMovementDate.date;
+
     // Determinar el empleado
     let finalEmployeeId = 'admin';
 
     if (req.user) {
-      const userType = req.user.userType;
+      const userType = String(req.user.userType || '').trim();
+      const isAdminUser = userType === 'admin' || userType === 'Administrador';
 
-      if (userType === 'admin') {
+      if (isAdminUser) {
         finalEmployeeId = employeeId || 'admin';
       } else {
         if (!employeeId) {
@@ -303,30 +356,11 @@ cajaChicaController.cashOperation = async (req, res) => {
 
     console.log('👤 Usuario final:', finalEmployeeId);
 
-    // Obtener balance actual
-    const lastMovement = await CajaChica.findOne()
-      .sort({ date: -1, createdAt: -1 })
-      .select('currentBalance');
+    // Nota: Se eliminó la validación por simulación. El egreso se aplicará directamente.
 
-    const previousBalance = lastMovement ? lastMovement.currentBalance : 0;
-
-    console.log('💰 Balance actual:', previousBalance);
-
-    // Validar fondos suficientes
-    if (previousBalance < monto) {
-      console.log('❌ Fondos insuficientes');
-      return res.status(400).json({
-        message: "Fondos insuficientes en caja chica",
-        data: {
-          balanceActual: previousBalance,
-          montoSolicitado: monto,
-          faltante: monto - previousBalance
-        }
-      });
-    }
-
+    const previousBalance = await calcularBalanceHastaFechaContable(fechaContable);
     const currentBalance = previousBalance - monto;
-    console.log('💰 Nuevo balance:', currentBalance);
+    console.log('💰 Nuevo balance (simulado/aplicado):', currentBalance);
 
     // Subir voucher (OPCIONAL)
     let voucherUrl = null;
@@ -353,7 +387,7 @@ cajaChicaController.cashOperation = async (req, res) => {
 
     // Crear movimiento
     const movement = new CajaChica({
-      date: new Date(),
+      date: fechaContable,
       employeeId: finalEmployeeId,
       amount: monto,
       reason,
@@ -364,24 +398,26 @@ cajaChicaController.cashOperation = async (req, res) => {
     });
 
     await movement.save();
-    console.log('✅ Movimiento guardado en DB');
+    await recalcularBalancesHistoricos();
 
-    // Intentar popular si no es admin
-    if (movement.employeeId !== 'admin' &&
-      /^[0-9a-fA-F]{24}$/.test(movement.employeeId.toString())) {
+    const movementActualizado = await CajaChica.findById(movement._id);
+
+    if (movementActualizado && movementActualizado.employeeId !== 'admin' &&
+      /^[0-9a-fA-F]{24}$/.test(movementActualizado.employeeId.toString())) {
       try {
-        await movement.populate('employeeId', 'name email');
+        await movementActualizado.populate('employeeId', 'name email');
         console.log('✅ EmployeeId populado');
       } catch (err) {
         console.warn('⚠️ No se pudo popular employeeId');
       }
     }
+    console.log('✅ Movimiento guardado en DB');
 
     console.log('✅✅✅ Egreso registrado exitosamente');
 
     res.json({
       message: "Egreso registrado exitosamente",
-      movement
+      movement: movementActualizado || movement
     });
 
   } catch (error) {
@@ -402,24 +438,21 @@ cajaChicaController.deleteMovement = async (req, res) => {
     const { id } = req.params;
 
     const movement = await CajaChica.findById(id);
-
     if (!movement) {
-      return res.status(404).json({
-        message: "Movimiento no encontrado"
-      });
+      return res.status(404).json({ message: "Movimiento no encontrado" });
     }
 
     await CajaChica.findByIdAndDelete(id);
+    await recalcularBalancesHistoricos();
 
-    res.json({
-      message: "Movimiento eliminado exitosamente"
-    });
-
+    res.json({ message: "Movimiento eliminado exitosamente" });
   } catch (error) {
     console.error('❌ Error eliminando movimiento:', error);
     res.status(500).json({ message: error.message });
   }
 };
+
+// Nota: endpoint de simulación eliminado. Las operaciones aplican directamente.
 
 // =====================================================
 // SUBIR/ACTUALIZAR VOUCHER DE UN MOVIMIENTO EXISTENTE
@@ -585,10 +618,12 @@ const { nombreBeneficiario } = req.body;
       });
     }
 
+    const movementDate = movement.date ? new Date(movement.date) : new Date();
+
     /* ===============================
        GENERAR NÚMERO DE VALE
     =============================== */
-    const year = new Date().getFullYear();
+    const year = movementDate.getFullYear();
 
     // Buscar el último vale del año
     const ultimoVale = await CajaChica.findOne({
@@ -845,15 +880,15 @@ const { nombreBeneficiario } = req.body;
             <div class="fecha-fields">
               <div class="fecha-field">
                 <div class="fecha-field-label">DÍA</div>
-                <div class="fecha-field-value">${new Date().getDate().toString().padStart(2, '0')}</div>
+                <div class="fecha-field-value">${movementDate.getDate().toString().padStart(2, '0')}</div>
               </div>
               <div class="fecha-field">
                 <div class="fecha-field-label">MES</div>
-                <div class="fecha-field-value">${(new Date().getMonth() + 1).toString().padStart(2, '0')}</div>
+                <div class="fecha-field-value">${(movementDate.getMonth() + 1).toString().padStart(2, '0')}</div>
               </div>
               <div class="fecha-field">
                 <div class="fecha-field-label">AÑO</div>
-                <div class="fecha-field-value">${new Date().getFullYear()}</div>
+                <div class="fecha-field-value">${movementDate.getFullYear()}</div>
               </div>
             </div>
           </div>

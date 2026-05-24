@@ -19,12 +19,20 @@ router.post("/ingreso", validateAuthToken(["admin","Operativo","Supervisor","Coo
 // REGISTRAR EGRESO - Admin, Supervisor, Operativo
 router.post("/egreso", validateAuthToken(["admin","Operativo","Supervisor","Coordinador"]), upload.single("voucher"), cajaChicaController.cashOperation);
 
+
 // UPLOAD VOUCHER - Admin, Supervisor
 router.patch(
   '/movements/:id/voucher', 
   validateAuthToken(["admin","Operativo","Supervisor"]),
   upload.single('voucher'), 
   cajaChicaController.uploadVoucher
+);
+
+// ELIMINAR MOVIMIENTO - Solo roles con privilegios altos
+router.delete(
+  '/movements/:id',
+  validateAuthToken(["admin", "Supervisor", "Coordinador"]),
+  cajaChicaController.deleteMovement
 );
 
 // GENERAR VALE - Admin, Supervisor

@@ -47,6 +47,7 @@ export default function PlanillaSemanal() {
   const diasSemana = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado'];
   const diasLabels = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
   const { startTutorial } = useTutorial('planillaSemanal');
+  const showGananciasViajesExtraButton = false;
 
   useEffect(() => {
     if (id) {
@@ -949,7 +950,7 @@ const data = response.data;
                 </button>
               )}
 
-              {planilla.estado !== 'pagada' && (
+              {showGananciasViajesExtraButton && planilla.estado !== 'pagada' && (
                 <button
                   onClick={handleCargarGananciasViajesExtra}
                   className="flex items-center gap-2 px-5 py-2.5 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 font-semibold transition-all shadow-lg hover:shadow-xl"

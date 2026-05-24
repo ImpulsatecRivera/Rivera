@@ -24,6 +24,8 @@ const TIPO_CARGA = [
   { value: "otro", label: "Otro" },
 ];
 
+const SHOW_VIAJES_EXTRA_CONTROLS = false;
+
 const getMotoristaNombre = (m) => {
   if (!m) return "Sin motorista";
   
@@ -982,6 +984,7 @@ export default function AgregarViajeOperativo() {
               </div>
             </div>
 
+            {SHOW_VIAJES_EXTRA_CONTROLS && (
             <div className="mt-4 grid grid-cols-1 lg:grid-cols-2 gap-4">
               <div className="bg-gray-50 border border-gray-200 rounded-xl p-4">
                 <div className="flex items-center gap-3">
@@ -1073,6 +1076,7 @@ export default function AgregarViajeOperativo() {
                 )}
               </div>
             </div>
+            )}
           </div>
 
           {/* Conductor y Vehículo */}
