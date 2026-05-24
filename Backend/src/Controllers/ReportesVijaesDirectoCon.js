@@ -1004,7 +1004,11 @@ ReportesViajesDirecto.generarPDFResumenMensualV2 = async (req, res) => {
     while (start <= lastDayOfMonthDate) {
       const end = new Date(start);
       end.setDate(start.getDate() + 5); // Tue..Sun
-      weeks.push({ start: new Date(start), end: new Date(end) });
+
+      // Si la semana cruza al siguiente mes, recortar al ultimo dia del mes actual.
+      const weekEnd = end > lastDayOfMonthDate ? new Date(lastDayOfMonthDate) : new Date(end);
+      weeks.push({ start: new Date(start), end: weekEnd });
+
       start = new Date(start);
       start.setDate(start.getDate() + 7);
     }
