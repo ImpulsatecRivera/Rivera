@@ -46,14 +46,37 @@ const convertirImagenABase64 = (rutaImagen) => {
     }
 };
 // Detectar entorno de ejecución
+const IS_RENDER = process.env.RENDER === 'true';
 const IS_CLOUD_RUN = process.env.K_SERVICE !== undefined;
 const IS_PRODUCTION = process.env.NODE_ENV === 'production';
+
 // OPCIÓN 1: Desde la raíz del proyecto (RECOMENDADO)
 // Asumiendo que ejecutas el servidor desde C:\Users\djpoc\Desktop\Rivera\Backend
 const RUTA_LOGO = path.join(process.cwd(), 'src', 'imagenes', 'imagen_15.png');
+
 const PUPPETEER_CONFIG = () => {
-    if (IS_PRODUCTION || IS_CLOUD_RUN) {
+    if (IS_RENDER) {
+        // Configuración para Render - dejar que Puppeteer use su caché
+        console.log('🚀 Usando configuración de Render (caché de Puppeteer)');
+        return {
+            headless: 'new',
+            // NO especificar executablePath - dejar que Puppeteer lo encuentre
+            args: [
+                '--no-sandbox',
+                '--disable-setuid-sandbox',
+                '--disable-dev-shm-usage',
+                '--disable-gpu',
+                '--disable-extensions',
+                '--disable-web-resources'
+            ],
+            env: {
+                ...process.env,
+                PUPPETEER_CACHE_DIR: '/opt/render/.cache/puppeteer'
+            }
+        };
+    } else if (IS_CLOUD_RUN) {
         // Configuración para Cloud Run
+        console.log('🚀 Usando configuración de Cloud Run');
         return {
             headless: 'new',
             executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/chromium',
@@ -68,6 +91,7 @@ const PUPPETEER_CONFIG = () => {
         };
     } else {
         // Configuración para desarrollo local
+        console.log('🚀 Usando configuración de desarrollo local');
         return {
             headless: 'new',
             args: [
