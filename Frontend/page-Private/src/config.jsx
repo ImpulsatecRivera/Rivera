@@ -1,7 +1,7 @@
 export const config = {
     //Creé este archivo para facilitar el cambio de url backend.
     api: {
-        API_URL: "http://localhost:4000/api",
+        API_URL: "https://rivera-test.onrender.com/api",
         //Acá cambiar solamente lo que está antes de /api, NO dejar espacios al final.
         //la /api es necesaria
     },
