@@ -599,9 +599,8 @@ const PantallaPrincipalDiesel = () => {
                           <ProtectedAction action="delete">
                             <button
                               onClick={() => handleDelete(row)}
-                              className="p-2 rounded-lg bg-red-100 hover:bg-red-200 text-red-600 transition-all hover:scale-110 disabled:opacity-50 disabled:cursor-not-allowed"
+                              className="p-2 rounded-lg bg-red-100 hover:bg-red-200 text-red-600 transition-all hover:scale-110"
                               title="Eliminar"
-                              disabled={isCompletado}
                             >
                               <Trash2 size={18} />
                             </button>
