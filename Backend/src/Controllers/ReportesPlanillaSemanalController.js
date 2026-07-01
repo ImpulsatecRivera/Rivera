@@ -55,12 +55,12 @@ const IS_PRODUCTION = process.env.NODE_ENV === 'production';
 const RUTA_LOGO = path.join(process.cwd(), 'src', 'imagenes', 'imagen_15.png');
 
 const PUPPETEER_CONFIG = () => {
-    if (IS_RENDER) {
-        // Configuración para Render - dejar que Puppeteer use su caché
-        console.log('🚀 Usando configuración de Render (caché de Puppeteer)');
+    if (IS_RENDER || IS_CLOUD_RUN) {
+        // Configuración para producción - dejar que Puppeteer encuentre Chrome automáticamente
+        console.log('🚀 Usando configuración de producción (auto-detect Chrome)');
         return {
             headless: 'new',
-            // NO especificar executablePath - dejar que Puppeteer lo encuentre
+            // NO especificar executablePath - Puppeteer lo buscará automáticamente
             args: [
                 '--no-sandbox',
                 '--disable-setuid-sandbox',
@@ -68,25 +68,6 @@ const PUPPETEER_CONFIG = () => {
                 '--disable-gpu',
                 '--disable-extensions',
                 '--disable-web-resources'
-            ],
-            env: {
-                ...process.env,
-                PUPPETEER_CACHE_DIR: '/opt/render/.cache/puppeteer'
-            }
-        };
-    } else if (IS_CLOUD_RUN) {
-        // Configuración para Cloud Run
-        console.log('🚀 Usando configuración de Cloud Run');
-        return {
-            headless: 'new',
-            executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/chromium',
-            args: [
-                '--no-sandbox',
-                '--disable-setuid-sandbox',
-                '--disable-dev-shm-usage',
-                '--disable-gpu',
-                '--single-process',
-                '--no-zygote'
             ]
         };
     } else {
