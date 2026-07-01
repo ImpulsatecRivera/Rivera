@@ -7,7 +7,8 @@ import {config} from "./src/config.js";
 // import autoUpdateService from './src/services/autoUpdateService.js';
 
 const URI = config.db.URI;
-
+console.log("URI:", URI);
+console.log("DB_URI:", process.env.DB_URI);
 mongoose.connect(URI);
 
 const connection = mongoose.connection;

@@ -133,23 +133,6 @@ const formatearRangoFechas = (inicio, fin) => {
 ReportesPlanillaSemanalController.generarPDFSemanalDetallado = async (req, res) => {
     let browser;
     try {
-        // DEBUG: Imprime información útil
-        console.log('=== DEBUG RUTAS ===');
-        console.log('process.cwd():', process.cwd());
-        console.log('__dirname:', __dirname);
-        console.log('Ruta del logo:', RUTA_LOGO);
-        console.log('¿Existe el archivo?:', fs.existsSync(RUTA_LOGO));
-        
-        // Listar archivos en el directorio de imágenes
-        const dirImagenes = path.join(process.cwd(), 'src', 'imagenes');
-        console.log('Contenido de src/imagenes:');
-        if (fs.existsSync(dirImagenes)) {
-            console.log(fs.readdirSync(dirImagenes));
-        } else {
-            console.log('El directorio no existe');
-        }
-        console.log('==================');
-        
         const { id } = req.params;
 
         if (!isValidObjectId(id)) {
@@ -168,10 +151,25 @@ ReportesPlanillaSemanalController.generarPDFSemanalDetallado = async (req, res) 
             });
         }
 
+        // Validar que la planilla tenga los datos necesarios
+        if (!planilla.empleados || !Array.isArray(planilla.empleados) || planilla.empleados.length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'La planilla no tiene empleados'
+            });
+        }
+
+        if (!planilla.totales) {
+            return res.status(400).json({
+                success: false,
+                message: 'La planilla no tiene datos de totales'
+            });
+        }
+
         const logoBase64 = convertirImagenABase64(RUTA_LOGO);
         const html = generarHTMLSemanalDetallado(planilla, logoBase64);
 
-        browser = await puppeteer.launch(PUPPETEER_CONFIG());
+        browser = await launchBrowserSafe();
 
         const page = await browser.newPage();
         await page.setContent(html, { waitUntil: 'networkidle0' });
@@ -200,7 +198,8 @@ ReportesPlanillaSemanalController.generarPDFSemanalDetallado = async (req, res) 
         res.status(500).json({
             success: false,
             message: 'Error al generar el reporte',
-            error: error.message
+            error: error.message,
+            details: process.env.NODE_ENV === 'development' ? error.stack : undefined
         });
     }
 };
@@ -237,7 +236,7 @@ ReportesPlanillaSemanalController.generarPDFMensual = async (req, res) => {
         const logoBase64 = convertirImagenABase64(RUTA_LOGO);
         const html = generarHTMLMensual(planillas, mesNum, anoNum, logoBase64);
 
-        browser = await puppeteer.launch(PUPPETEER_CONFIG());
+        browser = await launchBrowserSafe();
 
         const page = await browser.newPage();
         await page.setContent(html, { waitUntil: 'networkidle0' });
@@ -307,7 +306,7 @@ ReportesPlanillaSemanalController.generarPDFMensualViaticos = async (req, res) =
         const logoBase64 = convertirImagenABase64(RUTA_LOGO);
         const html = generarHTMLMensualViaticos(planillas, mesNum, anoNum, logoBase64);
 
-        browser = await puppeteer.launch(PUPPETEER_CONFIG());
+        browser = await launchBrowserSafe();
 
         const page = await browser.newPage();
         await page.setContent(html, { waitUntil: 'networkidle0' });
@@ -390,7 +389,7 @@ ReportesPlanillaSemanalController.generarPDFMultiMesViaticos = async (req, res) 
         const logoBase64 = convertirImagenABase64(RUTA_LOGO);
         const html = generarHTMLMultiMesViaticos(planillasPorMes, anoNum, logoBase64);
 
-        browser = await puppeteer.launch(PUPPETEER_CONFIG());
+        browser = await launchBrowserSafe();
         const page = await browser.newPage();
         await page.setContent(html, { waitUntil: 'networkidle0' });
 
@@ -454,7 +453,7 @@ ReportesPlanillaSemanalController.generarPDFAnualViaticos = async (req, res) => 
         const logoBase64 = convertirImagenABase64(RUTA_LOGO);
         const html = generarHTMLMultiMesViaticos(planillasPorMes, anoNum, logoBase64, true);
 
-        browser = await puppeteer.launch(PUPPETEER_CONFIG());
+        browser = await launchBrowserSafe();
         const page = await browser.newPage();
         await page.setContent(html, { waitUntil: 'networkidle0' });
 
@@ -536,7 +535,7 @@ ReportesPlanillaSemanalController.generarPDFMultiMes = async (req, res) => {
         const logoBase64 = convertirImagenABase64(RUTA_LOGO);
         const html = generarHTMLMultiMes(planillasPorMes, anoNum, logoBase64);
 
-        browser = await puppeteer.launch(PUPPETEER_CONFIG());
+        browser = await launchBrowserSafe();
 
         const page = await browser.newPage();
         await page.setContent(html, { waitUntil: 'networkidle0' });
@@ -608,7 +607,7 @@ ReportesPlanillaSemanalController.generarPDFAnual = async (req, res) => {
         const logoBase64 = convertirImagenABase64(RUTA_LOGO);
         const html = generarHTMLAnual(planillasPorMes, anoNum, logoBase64);
 
-        browser = await puppeteer.launch(PUPPETEER_CONFIG());
+        browser = await launchBrowserSafe();
 
         const page = await browser.newPage();
         await page.setContent(html, { waitUntil: 'networkidle0' });
@@ -643,201 +642,223 @@ ReportesPlanillaSemanalController.generarPDFAnual = async (req, res) => {
 };
 
 function generarHTMLSemanalDetallado(planilla, logoBase64) {
-    const titulo = `PLANILLA SEMANAL, VIÁTICOS Y ANTICIPO ${formatearRangoFechas(planilla.fechaInicio, planilla.fechaFin)}`;
-    
-    const diasFechas = {};
-    if (planilla.empleados.length > 0 && planilla.empleados[0].dias.length > 0) {
-        planilla.empleados[0].dias.forEach(d => {
-            const fecha = new Date(d.fecha);
-            diasFechas[d.dia] = fecha.getDate();
-        });
-    }
+    try {
+        // Validaciones de datos
+        if (!planilla.empleados || !Array.isArray(planilla.empleados)) {
+            throw new Error('Datos de empleados no válidos');
+        }
 
-    let filasEmpleados = '';
-    let numeroEmpleado = 1;
+        if (!planilla.totales) {
+            throw new Error('Datos de totales no válidos');
+        }
 
-    planilla.empleados.forEach(emp => {
-        const dias = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado'];
+        const titulo = `PLANILLA SEMANAL, VIÁTICOS Y ANTICIPO ${formatearRangoFechas(planilla.fechaInicio, planilla.fechaFin)}`;
         
-        const datosDias = {};
-        emp.dias.forEach(d => {
-            datosDias[d.dia] = d;
-        });
+        const diasFechas = {};
+        if (planilla.empleados.length > 0 && planilla.empleados[0].dias && Array.isArray(planilla.empleados[0].dias) && planilla.empleados[0].dias.length > 0) {
+            planilla.empleados[0].dias.forEach(d => {
+                const fecha = new Date(d.fecha);
+                diasFechas[d.dia] = fecha.getDate();
+            });
+        }
 
-        filasEmpleados += `
-            <tr>
-                <td>${numeroEmpleado}</td>
-                <td style="text-align: left;">${emp.nombreCompleto}</td>
-        `;
+        let filasEmpleados = '';
+        let numeroEmpleado = 1;
 
-        dias.forEach(dia => {
-            const dato = datosDias[dia] || { base: 0, viaticos: 0 };
-            const base = dato.base || 0;
-            const viaticos = dato.viaticos || 0;
+        planilla.empleados.forEach(emp => {
+            const dias = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado'];
+            
+            const datosDias = {};
+            if (emp.dias && Array.isArray(emp.dias)) {
+                emp.dias.forEach(d => {
+                    datosDias[d.dia] = d;
+                });
+            }
+
+            const totalBase = emp.totalBase || 0;
+            const totalViaticos = emp.totalViaticos || 0;
+            const anticipos = emp.anticipos || 0;
+            const totalDescuentos = emp.totalDescuentos || 0;
+            const totalAPagar = emp.totalAPagar || 0;
 
             filasEmpleados += `
-                <td>$ ${base > 0 ? base.toFixed(2) : '-'}</td>
-                <td>$ ${viaticos > 0 ? viaticos.toFixed(2) : '-'}</td>
+                <tr>
+                    <td>${numeroEmpleado}</td>
+                    <td style="text-align: left;">${emp.nombreCompleto || 'N/A'}</td>
             `;
+
+            dias.forEach(dia => {
+                const dato = datosDias[dia] || { base: 0, viaticos: 0 };
+                const base = dato.base || 0;
+                const viaticos = dato.viaticos || 0;
+
+                filasEmpleados += `
+                    <td>$ ${base > 0 ? base.toFixed(2) : '-'}</td>
+                    <td>$ ${viaticos > 0 ? viaticos.toFixed(2) : '-'}</td>
+                `;
+            });
+
+            filasEmpleados += `
+                    <td style="background-color: #e8f4e8;">$ ${totalBase.toFixed(2)}</td>
+                    <td style="background-color: #e8f4e8;">$ ${totalViaticos.toFixed(2)}</td>
+                    <td>$ ${anticipos > 0 ? anticipos.toFixed(2) : '-'}</td>
+                    <td>$ ${totalDescuentos > 0 ? totalDescuentos.toFixed(2) : '-'}</td>
+                    <td style="background-color: #e8f4e8; font-weight: bold;">$ ${totalAPagar.toFixed(2)}</td>
+                </tr>
+            `;
+
+            numeroEmpleado++;
         });
 
-        filasEmpleados += `
-                <td style="background-color: #e8f4e8;">$ ${emp.totalBase.toFixed(2)}</td>
-                <td style="background-color: #e8f4e8;">$ ${emp.totalViaticos.toFixed(2)}</td>
-                <td>$ ${emp.anticipos > 0 ? emp.anticipos.toFixed(2) : '-'}</td>
-                <td>$ ${emp.totalDescuentos > 0 ? emp.totalDescuentos.toFixed(2) : '-'}</td>
-                <td style="background-color: #e8f4e8; font-weight: bold;">$ ${emp.totalAPagar.toFixed(2)}</td>
+        const totales = planilla.totales;
+        const filaTotales = `
+            <tr style="font-weight: bold; background-color: #5D9646; color: white;">
+                <td colspan="2">TOTAL</td>
+                <td colspan="12"></td>
+                <td>$ ${(totales.totalBase || 0).toFixed(2)}</td>
+                <td>$ ${(totales.totalViaticos || 0).toFixed(2)}</td>
+                <td>$ ${(totales.totalAnticipos || 0).toFixed(2)}</td>
+                <td>$ ${(totales.totalDescuentos || 0).toFixed(2)}</td>
+                <td>$ ${(totales.totalAPagar || 0).toFixed(2)}</td>
             </tr>
         `;
 
-        numeroEmpleado++;
-    });
-
-    const totales = planilla.totales;
-    const filaTotales = `
-        <tr style="font-weight: bold; background-color: #5D9646; color: white;">
-            <td colspan="2">TOTAL</td>
-            <td colspan="12"></td>
-            <td>$ ${totales.totalBase.toFixed(2)}</td>
-            <td>$ ${totales.totalViaticos.toFixed(2)}</td>
-            <td>$ ${totales.totalAnticipos.toFixed(2)}</td>
-            <td>$ ${totales.totalDescuentos.toFixed(2)}</td>
-            <td>$ ${totales.totalAPagar.toFixed(2)}</td>
-        </tr>
-    `;
-
-    return `
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <meta charset="UTF-8">
-            <style>
-                * {
-                    margin: 0;
-                    padding: 0;
-                    box-sizing: border-box;
-                }
-                
-                body {
-                    font-family: Arial, sans-serif;
-                    font-size: 9px;
-                    padding: 10px;
-                    color: #34353A;
-                }
-                
-                .header {
-                    text-align: center;
-                    margin-bottom: 15px;
-                    padding-bottom: 10px;
-                    border-bottom: 3px solid #5F8EAD;
-                }
-                
-                .header .logo-container {
-                    margin-bottom: 10px;
-                }
-                
-                .header .logo-container img {
-                    max-width: 200px;
-                    height: auto;
-                }
-                
-                h1 {
-                    font-size: 11px;
-                    margin-bottom: 5px;
-                    font-weight: bold;
-                    color: #34353A;
-                }
-                
-                table {
-                    width: 100%;
-                    border-collapse: collapse;
-                    margin-bottom: 20px;
-                }
-                
-                th, td {
-                    border: 1px solid #5F8EAD;
-                    padding: 4px 2px;
-                    text-align: center;
-                    font-size: 8px;
-                }
-                
-                th {
-                    background-color: #34353A;
-                    color: white;
-                    font-weight: bold;
-                    font-size: 7px;
-                }
-                
-                .header-dia {
-                    background-color: #5F8EAD;
-                    color: white;
-                    font-size: 7px;
-                    font-weight: bold;
-                }
-                
-                .footer {
-                    margin-top: 20px;
-                    font-size: 8px;
-                    text-align: center;
-                    color: #5F8EAD;
-                    border-top: 2px solid #5D9646;
-                    padding-top: 10px;
-                }
-            </style>
-        </head>
-        <body>
-            <div class="header">
-                <div class="logo-container">
-                    ${logoBase64 ? `<img src="${logoBase64}" alt="Rivera Logo" />` : '<p>RIVERA - Distribuidora y Transportes</p>'}
+        return `
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="UTF-8">
+                <style>
+                    * {
+                        margin: 0;
+                        padding: 0;
+                        box-sizing: border-box;
+                    }
+                    
+                    body {
+                        font-family: Arial, sans-serif;
+                        font-size: 9px;
+                        padding: 10px;
+                        color: #34353A;
+                    }
+                    
+                    .header {
+                        text-align: center;
+                        margin-bottom: 15px;
+                        padding-bottom: 10px;
+                        border-bottom: 3px solid #5F8EAD;
+                    }
+                    
+                    .header .logo-container {
+                        margin-bottom: 10px;
+                    }
+                    
+                    .header .logo-container img {
+                        max-width: 200px;
+                        height: auto;
+                    }
+                    
+                    h1 {
+                        font-size: 11px;
+                        margin-bottom: 5px;
+                        font-weight: bold;
+                        color: #34353A;
+                    }
+                    
+                    table {
+                        width: 100%;
+                        border-collapse: collapse;
+                        margin-bottom: 20px;
+                    }
+                    
+                    th, td {
+                        border: 1px solid #5F8EAD;
+                        padding: 4px 2px;
+                        text-align: center;
+                        font-size: 8px;
+                    }
+                    
+                    th {
+                        background-color: #34353A;
+                        color: white;
+                        font-weight: bold;
+                        font-size: 7px;
+                    }
+                    
+                    .header-dia {
+                        background-color: #5F8EAD;
+                        color: white;
+                        font-size: 7px;
+                        font-weight: bold;
+                    }
+                    
+                    .footer {
+                        margin-top: 20px;
+                        font-size: 8px;
+                        text-align: center;
+                        color: #5F8EAD;
+                        border-top: 2px solid #5D9646;
+                        padding-top: 10px;
+                    }
+                </style>
+            </head>
+            <body>
+                <div class="header">
+                    <div class="logo-container">
+                        ${logoBase64 ? `<img src="${logoBase64}" alt="Rivera Logo" />` : '<p>RIVERA - Distribuidora y Transportes</p>'}
+                    </div>
+                    <h1>${titulo}</h1>
                 </div>
-                <h1>${titulo}</h1>
-            </div>
-            
-            <table>
-                <thead>
-                    <tr>
-                        <th rowspan="2">#</th>
-                        <th rowspan="2">NOMBRE</th>
-                        <th colspan="2" class="header-dia">LUNES ${diasFechas['lunes'] || ''}</th>
-                        <th colspan="2" class="header-dia">MARTES ${diasFechas['martes'] || ''}</th>
-                        <th colspan="2" class="header-dia">MIÉRCOLES ${diasFechas['miercoles'] || ''}</th>
-                        <th colspan="2" class="header-dia">JUEVES ${diasFechas['jueves'] || ''}</th>
-                        <th colspan="2" class="header-dia">VIERNES ${diasFechas['viernes'] || ''}</th>
-                        <th colspan="2" class="header-dia">SÁBADO ${diasFechas['sabado'] || ''}</th>
-                        <th rowspan="2" style="background-color: #5D9646;">BASE</th>
-                        <th rowspan="2" style="background-color: #5D9646;">VIÁTICOS</th>
-                        <th rowspan="2">ANTICIPO</th>
-                        <th rowspan="2">DESCUENTO-<br/>FALTAS</th>
-                        <th rowspan="2" style="background-color: #5D9646;">TOTAL A PAGAR</th>
-                    </tr>
-                    <tr>
-                        <th>BASE</th>
-                        <th>VIÁTICOS</th>
-                        <th>BASE</th>
-                        <th>VIÁTICOS</th>
-                        <th>BASE</th>
-                        <th>VIÁTICOS</th>
-                        <th>BASE</th>
-                        <th>VIÁTICOS</th>
-                        <th>BASE</th>
-                        <th>VIÁTICOS</th>
-                        <th>BASE</th>
-                        <th>VIÁTICOS</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${filasEmpleados}
-                    ${filaTotales}
-                </tbody>
-            </table>
-            
-            <div class="footer">
-                <p>Documento generado el ${new Date().toLocaleDateString('es-ES')} a las ${new Date().toLocaleTimeString('es-ES')}</p>
-                <p><strong>Rivera Distribuidora y Transportes</strong> - Sistema de Gestión © ${new Date().getFullYear()}</p>
-            </div>
-        </body>
-        </html>
-    `;
+                
+                <table>
+                    <thead>
+                        <tr>
+                            <th rowspan="2">#</th>
+                            <th rowspan="2">NOMBRE</th>
+                            <th colspan="2" class="header-dia">LUNES ${diasFechas['lunes'] || ''}</th>
+                            <th colspan="2" class="header-dia">MARTES ${diasFechas['martes'] || ''}</th>
+                            <th colspan="2" class="header-dia">MIÉRCOLES ${diasFechas['miercoles'] || ''}</th>
+                            <th colspan="2" class="header-dia">JUEVES ${diasFechas['jueves'] || ''}</th>
+                            <th colspan="2" class="header-dia">VIERNES ${diasFechas['viernes'] || ''}</th>
+                            <th colspan="2" class="header-dia">SÁBADO ${diasFechas['sabado'] || ''}</th>
+                            <th rowspan="2" style="background-color: #5D9646;">BASE</th>
+                            <th rowspan="2" style="background-color: #5D9646;">VIÁTICOS</th>
+                            <th rowspan="2">ANTICIPO</th>
+                            <th rowspan="2">DESCUENTO-<br/>FALTAS</th>
+                            <th rowspan="2" style="background-color: #5D9646;">TOTAL A PAGAR</th>
+                        </tr>
+                        <tr>
+                            <th>BASE</th>
+                            <th>VIÁTICOS</th>
+                            <th>BASE</th>
+                            <th>VIÁTICOS</th>
+                            <th>BASE</th>
+                            <th>VIÁTICOS</th>
+                            <th>BASE</th>
+                            <th>VIÁTICOS</th>
+                            <th>BASE</th>
+                            <th>VIÁTICOS</th>
+                            <th>BASE</th>
+                            <th>VIÁTICOS</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${filasEmpleados}
+                        ${filaTotales}
+                    </tbody>
+                </table>
+                
+                <div class="footer">
+                    <p>Documento generado el ${new Date().toLocaleDateString('es-ES')} a las ${new Date().toLocaleTimeString('es-ES')}</p>
+                    <p><strong>Rivera Distribuidora y Transportes</strong> - Sistema de Gestión © ${new Date().getFullYear()}</p>
+                </div>
+            </body>
+            </html>
+        `;
+    } catch (error) {
+        console.error('Error en generarHTMLSemanalDetallado:', error);
+        throw error;
+    }
 }
 
 function generarHTMLMensual(planillas, mes, ano, logoBase64) {
