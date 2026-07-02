@@ -1069,6 +1069,7 @@ function generarHTMLMensualViaticos(planillas, mes, ano, logoBase64) {
 
     const rangosSemanas = planillas.map(planilla => formatearRangoFechas(planilla.fechaInicio, planilla.fechaFin));
     const empleadosMap = new Map();
+    const nombresDuplicados = new Map();
 
     console.log(`generarHTMLMensualViaticos: construyendo reporte para mes=${mes} año=${ano}. Planillas=${planillas.length}`);
     planillas.forEach((planilla, planillaIndex) => {
@@ -1076,12 +1077,18 @@ function generarHTMLMensualViaticos(planillas, mes, ano, logoBase64) {
         console.log(`  planilla[${planillaIndex}] rango=${rango} empleados=${(planilla.empleados || []).length}`);
         planilla.empleados.forEach(emp => {
             const empleadoId = emp.empleadoId ? emp.empleadoId.toString() : 'sin-id';
-            const nombre = String(emp.nombreCompleto || 'SIN NOMBRE').trim();
-            const key = `${empleadoId}|${nombre}`;
+            const nombreOriginal = String(emp.nombreCompleto || 'SIN NOMBRE').trim();
+            const nombreNormalizado = nombreOriginal.toUpperCase().replace(/\s+/g, ' ');
+            const key = nombreNormalizado;
+
+            if (!nombresDuplicados.has(nombreNormalizado)) {
+                nombresDuplicados.set(nombreNormalizado, new Set());
+            }
+            nombresDuplicados.get(nombreNormalizado).add(empleadoId);
 
             if (!empleadosMap.has(key)) {
                 empleadosMap.set(key, {
-                    nombreCompleto: nombre,
+                    nombreCompleto: nombreOriginal,
                     totalesPorSemana: new Map()
                 });
             }
@@ -1090,8 +1097,14 @@ function generarHTMLMensualViaticos(planillas, mes, ano, logoBase64) {
             const montoActual = empleadoData.totalesPorSemana.get(rango) || 0;
             const nuevoMonto = montoActual + (emp.totalViaticos || 0);
             empleadoData.totalesPorSemana.set(rango, nuevoMonto);
-            console.log(`    empleado=${nombre} id=${empleadoId} semana=${rango} monto=${emp.totalViaticos || 0} acumulado=${nuevoMonto}`);
+            console.log(`    empleado=${nombreOriginal} id=${empleadoId} semana=${rango} monto=${emp.totalViaticos || 0} acumulado=${nuevoMonto}`);
         });
+    });
+
+    nombresDuplicados.forEach((ids, nombre) => {
+        if (ids.size > 1) {
+            console.log(`  [DUPLICADO] nombre='${nombre}' tiene ${ids.size} IDs distintos: ${Array.from(ids).join(', ')}`);
+        }
     });
 
     let filasEmpleados = '';
@@ -1399,16 +1412,24 @@ function generarHTMLMultiMesViaticos(planillasPorMes, ano, logoBase64, esAnual =
 
     const empleadosMap = new Map();
 
+    const nombresDuplicados = new Map();
+
     planillasPorMes.forEach(({ mes, planillas }) => {
         planillas.forEach(planilla => {
             planilla.empleados.forEach(emp => {
                 const empleadoId = emp.empleadoId ? emp.empleadoId.toString() : 'sin-id';
-                const nombre = String(emp.nombreCompleto || 'SIN NOMBRE').trim();
-                const key = `${empleadoId}|${nombre}`;
+                const nombreOriginal = String(emp.nombreCompleto || 'SIN NOMBRE').trim();
+                const nombreNormalizado = nombreOriginal.toUpperCase().replace(/\s+/g, ' ');
+                const key = nombreNormalizado;
+
+                if (!nombresDuplicados.has(nombreNormalizado)) {
+                    nombresDuplicados.set(nombreNormalizado, new Set());
+                }
+                nombresDuplicados.get(nombreNormalizado).add(empleadoId);
 
                 if (!empleadosMap.has(key)) {
                     empleadosMap.set(key, {
-                        nombreCompleto: nombre,
+                        nombreCompleto: nombreOriginal,
                         meses: new Map()
                     });
                 }
@@ -1418,9 +1439,16 @@ function generarHTMLMultiMesViaticos(planillasPorMes, ano, logoBase64, esAnual =
                     empleadoData.meses.set(mes, 0);
                 }
 
-                empleadoData.meses.set(mes, empleadoData.meses.get(mes) + (emp.totalViaticos || 0));
+                const montoActual = empleadoData.meses.get(mes);
+                empleadoData.meses.set(mes, montoActual + (emp.totalViaticos || 0));
             });
         });
+    });
+
+    nombresDuplicados.forEach((ids, nombre) => {
+        if (ids.size > 1) {
+            console.log(`  [DUPLICADO] nombre='${nombre}' tiene ${ids.size} IDs distintos: ${Array.from(ids).join(', ')}`);
+        }
     });
 
     let filasEmpleados = '';
