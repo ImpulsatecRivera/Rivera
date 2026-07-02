@@ -301,6 +301,11 @@ ReportesPlanillaSemanalController.generarPDFMensualViaticos = async (req, res) =
             }
         }).sort({ fechaInicio: 1 });
 
+        console.log(`Reporte mensual viáticos: mes=${mesNum} año=${anoNum}. Planillas encontradas: ${planillas.length}`);
+        planillas.forEach((p, index) => {
+            console.log(`  Planilla ${index + 1}: id=${p._id}, fechaInicio=${p.fechaInicio?.toISOString() || 'n/a'}, empleados=${(p.empleados || []).length}`);
+        });
+
         if (!planillas || planillas.length === 0) {
             return res.status(404).json({
                 success: false,
@@ -1065,8 +1070,10 @@ function generarHTMLMensualViaticos(planillas, mes, ano, logoBase64) {
     const rangosSemanas = planillas.map(planilla => formatearRangoFechas(planilla.fechaInicio, planilla.fechaFin));
     const empleadosMap = new Map();
 
-    planillas.forEach(planilla => {
+    console.log(`generarHTMLMensualViaticos: construyendo reporte para mes=${mes} año=${ano}. Planillas=${planillas.length}`);
+    planillas.forEach((planilla, planillaIndex) => {
         const rango = formatearRangoFechas(planilla.fechaInicio, planilla.fechaFin);
+        console.log(`  planilla[${planillaIndex}] rango=${rango} empleados=${(planilla.empleados || []).length}`);
         planilla.empleados.forEach(emp => {
             const empleadoId = emp.empleadoId ? emp.empleadoId.toString() : 'sin-id';
             const nombre = String(emp.nombreCompleto || 'SIN NOMBRE').trim();
@@ -1081,7 +1088,9 @@ function generarHTMLMensualViaticos(planillas, mes, ano, logoBase64) {
 
             const empleadoData = empleadosMap.get(key);
             const montoActual = empleadoData.totalesPorSemana.get(rango) || 0;
-            empleadoData.totalesPorSemana.set(rango, montoActual + (emp.totalViaticos || 0));
+            const nuevoMonto = montoActual + (emp.totalViaticos || 0);
+            empleadoData.totalesPorSemana.set(rango, nuevoMonto);
+            console.log(`    empleado=${nombre} id=${empleadoId} semana=${rango} monto=${emp.totalViaticos || 0} acumulado=${nuevoMonto}`);
         });
     });
 
