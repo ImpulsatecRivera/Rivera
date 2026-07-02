@@ -1062,42 +1062,41 @@ function generarHTMLMensualViaticos(planillas, mes, ano, logoBase64) {
                    'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
     const titulo = `VIÁTICOS DE EXTRA ${meses[mes - 1]} ${ano}`;
 
+    const rangosSemanas = planillas.map(planilla => formatearRangoFechas(planilla.fechaInicio, planilla.fechaFin));
     const empleadosMap = new Map();
 
     planillas.forEach(planilla => {
+        const rango = formatearRangoFechas(planilla.fechaInicio, planilla.fechaFin);
         planilla.empleados.forEach(emp => {
-            const key = emp.empleadoId.toString();
+            const empleadoId = emp.empleadoId ? emp.empleadoId.toString() : 'sin-id';
+            const nombre = String(emp.nombreCompleto || 'SIN NOMBRE').trim();
+            const key = `${empleadoId}|${nombre}`;
+
             if (!empleadosMap.has(key)) {
                 empleadosMap.set(key, {
-                    nombreCompleto: emp.nombreCompleto,
-                    semanas: []
+                    nombreCompleto: nombre,
+                    totalesPorSemana: new Map()
                 });
             }
 
-            empleadosMap.get(key).semanas.push({
-                rango: formatearRangoFechas(planilla.fechaInicio, planilla.fechaFin),
-                total: emp.totalViaticos || 0
-            });
+            const empleadoData = empleadosMap.get(key);
+            const montoActual = empleadoData.totalesPorSemana.get(rango) || 0;
+            empleadoData.totalesPorSemana.set(rango, montoActual + (emp.totalViaticos || 0));
         });
     });
 
     let filasEmpleados = '';
     let numeroEmpleado = 1;
-    const maxSemanas = planillas.length;
 
     empleadosMap.forEach((data) => {
         let totalEmpleado = 0;
         let columnasSemanales = '';
 
-        for (let i = 0; i < maxSemanas; i++) {
-            if (i < data.semanas.length) {
-                const monto = data.semanas[i].total;
-                totalEmpleado += monto;
-                columnasSemanales += `<td>$ ${monto.toFixed(2)}</td>`;
-            } else {
-                columnasSemanales += `<td>$ -</td>`;
-            }
-        }
+        rangosSemanas.forEach((rango) => {
+            const monto = data.totalesPorSemana.get(rango) || 0;
+            totalEmpleado += monto;
+            columnasSemanales += `<td>${monto > 0 ? `$ ${monto.toFixed(2)}` : '$ -'}</td>`;
+        });
 
         filasEmpleados += `
             <tr>
@@ -1114,21 +1113,19 @@ function generarHTMLMensualViaticos(planillas, mes, ano, logoBase64) {
     let totalesPorSemana = '';
     let totalGeneral = 0;
 
-    for (let i = 0; i < maxSemanas; i++) {
+    rangosSemanas.forEach((rango) => {
         let totalSemana = 0;
         empleadosMap.forEach((data) => {
-            if (i < data.semanas.length) {
-                totalSemana += data.semanas[i].total;
-            }
+            totalSemana += data.totalesPorSemana.get(rango) || 0;
         });
 
         totalGeneral += totalSemana;
         totalesPorSemana += `<td style="font-weight: bold;">$ ${totalSemana.toFixed(2)}</td>`;
-    }
+    });
 
     let headersSemanales = '';
-    planillas.forEach((planilla) => {
-        headersSemanales += `<th style="background-color: #5F8EAD; color: white;">${formatearRangoFechas(planilla.fechaInicio, planilla.fechaFin)}</th>`;
+    rangosSemanas.forEach((rango) => {
+        headersSemanales += `<th style="background-color: #5F8EAD; color: white;">${rango}</th>`;
     });
 
     const filaTotales = `
@@ -1396,11 +1393,13 @@ function generarHTMLMultiMesViaticos(planillasPorMes, ano, logoBase64, esAnual =
     planillasPorMes.forEach(({ mes, planillas }) => {
         planillas.forEach(planilla => {
             planilla.empleados.forEach(emp => {
-                const key = emp.empleadoId.toString();
+                const empleadoId = emp.empleadoId ? emp.empleadoId.toString() : 'sin-id';
+                const nombre = String(emp.nombreCompleto || 'SIN NOMBRE').trim();
+                const key = `${empleadoId}|${nombre}`;
 
                 if (!empleadosMap.has(key)) {
                     empleadosMap.set(key, {
-                        nombreCompleto: emp.nombreCompleto,
+                        nombreCompleto: nombre,
                         meses: new Map()
                     });
                 }
