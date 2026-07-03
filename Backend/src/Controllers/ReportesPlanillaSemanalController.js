@@ -1105,26 +1105,52 @@ function generarHTMLMensualViaticos(planillas, mes, ano, logoBase64) {
                 });
             }
 
-            // Determinar monto de viáticos para esta planilla/empleado
+            // Determinar monto de viáticos para esta planilla/empleado con múltiples fallbacks
             let viaticosEmpleado = 0;
+            let fuenteViaticos = 'ninguna';
             try {
-                // Preferir campo totalViaticos si existe y es numérico
                 if (emp && typeof emp.totalViaticos !== 'undefined' && emp.totalViaticos !== null) {
                     viaticosEmpleado = Number(emp.totalViaticos) || 0;
-                } else if (Array.isArray(emp.dias)) {
-                    // Sumar viáticos diarios como fallback
-                    viaticosEmpleado = emp.dias.reduce((s, d) => s + (Number(d.viaticos || 0)), 0);
+                    fuenteViaticos = 'totalViaticos';
+                } else if (emp && typeof emp.viaticos !== 'undefined' && emp.viaticos !== null) {
+                    viaticosEmpleado = Number(emp.viaticos) || 0;
+                    fuenteViaticos = 'viaticos';
+                } else if (emp && typeof emp.viatico !== 'undefined' && emp.viatico !== null) {
+                    viaticosEmpleado = Number(emp.viatico) || 0;
+                    fuenteViaticos = 'viatico';
+                } else if (Array.isArray(emp.dias) && emp.dias.length > 0) {
+                    // Sumar variantes de viáticos en cada día
+                    viaticosEmpleado = emp.dias.reduce((s, d) => {
+                        const v = Number(d.viaticos ?? d.viatico ?? d.viaticoDiario ?? 0) || 0;
+                        return s + v;
+                    }, 0);
+                    fuenteViaticos = 'dias';
+                }
+
+                // Si aún es 0, buscar cualquier campo con 'viatic' en el nombre
+                if ((!viaticosEmpleado || viaticosEmpleado === 0) && emp && typeof emp === 'object') {
+                    for (const k of Object.keys(emp)) {
+                        if (/viatic/i.test(k)) {
+                            const val = Number(emp[k]);
+                            if (!isNaN(val) && val !== 0) {
+                                viaticosEmpleado = val;
+                                fuenteViaticos = `campo:${k}`;
+                                break;
+                            }
+                        }
+                    }
                 }
             } catch (err) {
                 console.warn(`No se pudo calcular viáticos para empleado ${nombreOriginal}:`, err.message || err);
                 viaticosEmpleado = 0;
+                fuenteViaticos = 'error';
             }
 
             const empleadoData = empleadosMap.get(key);
             const montoActual = empleadoData.totalesPorSemana.get(rango) || 0;
             const nuevoMonto = montoActual + viaticosEmpleado;
             empleadoData.totalesPorSemana.set(rango, nuevoMonto);
-            console.log(`    empleado=${nombreOriginal} id=${empleadoId} semana=${rango} monto=${viaticosEmpleado} acumulado=${nuevoMonto}`);
+            console.log(`    empleado=${nombreOriginal} id=${empleadoId} semana=${rango} monto=${viaticosEmpleado} acumulado=${nuevoMonto} (fuente=${fuenteViaticos})`);
         });
     });
 
@@ -1134,15 +1160,44 @@ function generarHTMLMensualViaticos(planillas, mes, ano, logoBase64) {
         }
     });
 
+    // Fusionar empleados que comparten el mismo nombre normalizado (sumar totales por semana)
+    const empleadosFusionados = new Map();
+    empleadosMap.forEach((data, key) => {
+        const nombreNorm = normalizarTexto(data.nombreCompleto || '');
+        if (!empleadosFusionados.has(nombreNorm)) {
+            empleadosFusionados.set(nombreNorm, {
+                nombreCompleto: data.nombreCompleto,
+                empleadoIds: new Set(),
+                totalesPorSemana: new Map()
+            });
+        }
+
+        const target = empleadosFusionados.get(nombreNorm);
+        if (data.empleadoId) target.empleadoIds.add(data.empleadoId);
+
+        data.totalesPorSemana.forEach((monto, rango) => {
+            const existente = target.totalesPorSemana.get(rango) || 0;
+            target.totalesPorSemana.set(rango, existente + monto);
+        });
+    });
+
+    // Log resumen de fusión cuando se detectaron múltiples IDs por nombre
+    empleadosFusionados.forEach((v, nombre) => {
+        if (v.empleadoIds.size > 1) {
+            console.log(`  [FUSIONADO] nombre='${nombre}' IDs: ${Array.from(v.empleadoIds).join(', ')} -> fila única`);
+        }
+    });
+
     let filasEmpleados = '';
     let numeroEmpleado = 1;
 
-    empleadosMap.forEach((data) => {
+    // Ahora iterar sobre empleados ya fusionados por nombre
+    empleadosFusionados.forEach((data) => {
         let totalEmpleado = 0;
         let columnasSemanales = '';
 
         rangosSemanas.forEach((rango) => {
-            const monto = data.totalesPorSemana.get(rango) || 0;
+                const monto = data.totalesPorSemana.get(rango) || 0;
             totalEmpleado += monto;
             columnasSemanales += `<td>${monto > 0 ? `$ ${monto.toFixed(2)}` : '$ -'}</td>`;
         });
