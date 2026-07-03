@@ -106,6 +106,29 @@ const formatearFecha = (fecha) => {
     });
 };
 
+// Parsear valores monetarios tolerantes a formatos: numbers, strings con '$', comas, espacios
+const parseCurrency = (val) => {
+    if (val === null || typeof val === 'undefined') return 0;
+    if (typeof val === 'number' && !isNaN(val)) return val;
+    try {
+        let s = String(val).trim();
+        s = s.replace(/[^0-9,.-]+/g, '');
+        const commaCount = (s.match(/,/g) || []).length;
+        const dotCount = (s.match(/\./g) || []).length;
+        if (commaCount > 0 && dotCount === 0) {
+            s = s.replace(/,/g, '.');
+        } else if (commaCount > 0 && dotCount > 0 && s.indexOf(',') > s.indexOf('.')) {
+            s = s.replace(/\./g, '').replace(/,/g, '.');
+        } else {
+            s = s.replace(/,/g, '');
+        }
+        const n = Number(s);
+        return isNaN(n) ? 0 : n;
+    } catch (e) {
+        return 0;
+    }
+};
+
 /**
  * Generar PDF de una planilla quincenal específica
  * GET /api/reportes/planilla/quincenal/:id
@@ -280,15 +303,15 @@ ReportesPlanillasController.generarPDFQuincenal = async (req, res) => {
                 </thead>
                 <tbody>
                         ${(planilla.empleados || []).map((emp, index) => {
-                    const salarioQuincenal = Number(emp.salarioQuincenal) || 0;
-                    const viaticos = Number(emp.viaticos) || 0;
-                    const trabajoSabadoDomingo = Number(emp.trabajoSabadoDomingo) || 0;
-                    // Fallback: si no existe totalSalarioMasViaticos, calcularlo
-                    let totalSalarioMasViaticos = Number(emp.totalSalarioMasViaticos);
-                    if (!totalSalarioMasViaticos || isNaN(totalSalarioMasViaticos)) {
+                const salarioQuincenal = parseCurrency(emp.salarioQuincenal || emp.salario || 0);
+                const viaticos = parseCurrency(emp.viaticos || emp.totalViaticos || 0);
+                const trabajoSabadoDomingo = parseCurrency(emp.trabajoSabadoDomingo || 0);
+                // Fallback: si no existe totalSalarioMasViaticos, calcularlo
+                let totalSalarioMasViaticos = parseCurrency(emp.totalSalarioMasViaticos);
+                if (!totalSalarioMasViaticos || isNaN(totalSalarioMasViaticos)) {
                     totalSalarioMasViaticos = salarioQuincenal + viaticos + trabajoSabadoDomingo;
                     console.log(`Fallback totalSalarioMasViaticos para ${emp.nombreCompleto || 'sin nombre'}: ${totalSalarioMasViaticos}`);
-                    }
+                }
             const isss = emp.descuentosLey?.isss?.monto || 0;
             const afp = emp.descuentosLey?.afp?.monto || 0;
             const renta = emp.descuentosLey?.renta?.monto || 0;

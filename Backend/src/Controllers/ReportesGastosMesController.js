@@ -69,6 +69,29 @@ const formatMoney = (n) => {
   return new Intl.NumberFormat('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n || 0);
 };
 
+// Parsear valores monetarios tolerantes a formatos: numbers, strings con '$', comas, espacios
+const parseCurrency = (val) => {
+  if (val === null || typeof val === 'undefined') return 0;
+  if (typeof val === 'number' && !isNaN(val)) return val;
+  try {
+    let s = String(val).trim();
+    s = s.replace(/[^0-9,.-]+/g, '');
+    const commaCount = (s.match(/,/g) || []).length;
+    const dotCount = (s.match(/\./g) || []).length;
+    if (commaCount > 0 && dotCount === 0) {
+      s = s.replace(/,/g, '.');
+    } else if (commaCount > 0 && dotCount > 0 && s.indexOf(',') > s.indexOf('.')) {
+      s = s.replace(/\./g, '').replace(/,/g, '.');
+    } else {
+      s = s.replace(/,/g, '');
+    }
+    const n = Number(s);
+    return isNaN(n) ? 0 : n;
+  } catch (e) {
+    return 0;
+  }
+};
+
 const getMonthRange = (mes, ano) => {
   const firstDay = new Date(ano, mes - 1, 1, 0, 0, 0, 0);
   const lastDay = new Date(ano, mes, 0, 23, 59, 59, 999);
@@ -133,7 +156,7 @@ ReportesGastosMesController.generarPDFMensualConsolidado = async (req, res) => {
       const fullyInside = (start.getTime() >= firstDay.getTime()) && (end.getTime() <= lastDay.getTime());
 
       if (fullyInside && p.totales && typeof p.totales.totalAPagar !== 'undefined') {
-        totalSemana = Number(p.totales.totalAPagar || 0);
+        totalSemana = parseCurrency(p.totales.totalAPagar || 0);
       } else {
         // compute total for days inside [visibleStart, visibleEnd]
         (p.empleados || []).forEach(emp => {
@@ -142,9 +165,9 @@ ReportesGastosMesController.generarPDFMensualConsolidado = async (req, res) => {
           (emp.dias || []).forEach(dia => {
             const fechaDia = new Date(dia.fecha);
             if (fechaDia >= visibleStart && fechaDia <= visibleEnd) {
-              const base = Number(dia.base || 0);
-              const viaticos = Number(dia.viaticos || 0);
-              const descuento = Number(dia.descuentoFalta || 0) || 0;
+              const base = parseCurrency(dia.base || 0);
+              const viaticos = parseCurrency(dia.viaticos || 0);
+              const descuento = parseCurrency(dia.descuentoFalta || 0) || 0;
               const falta = dia.faltaInjustificada ? descuento : 0;
               empTotal += (base + viaticos - falta);
             }
@@ -177,8 +200,8 @@ ReportesGastosMesController.generarPDFMensualConsolidado = async (req, res) => {
     const planillasQuincenales = await PlanillaQuincenal.find({ mes: mes, año: ano }).sort({ quincena: 1 }).lean();
 
     // 4) PRESTACIONES - ISSS, AFP desde quincenas (sumar totales de quincenas del mes)
-    const totalISSS = planillasQuincenales.reduce((s, q) => s + Number(q.totales?.totalISSS || 0), 0);
-    const totalAFP = planillasQuincenales.reduce((s, q) => s + Number(q.totales?.totalAFP || 0), 0);
+    const totalISSS = planillasQuincenales.reduce((s, q) => s + parseCurrency(q.totales?.totalISSS || 0), 0);
+    const totalAFP = planillasQuincenales.reduce((s, q) => s + parseCurrency(q.totales?.totalAFP || 0), 0);
 
     // 5) DIÉSEL - sumar ResumenDiesel.Total por mes/ano
     const resumenDiesel = await ResumenDiesel.find({ mes: mes, ano: ano }).lean();

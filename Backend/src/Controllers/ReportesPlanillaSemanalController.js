@@ -145,6 +145,34 @@ const normalizarTexto = (texto) => {
         .toUpperCase();
 };
 
+// Parsear valores monetarios tolerantes a formatos: numbers, strings con '$', comas, espacios
+const parseCurrency = (val) => {
+    if (val === null || typeof val === 'undefined') return 0;
+    if (typeof val === 'number' && !isNaN(val)) return val;
+    try {
+        let s = String(val).trim();
+        // eliminar signos de moneda y espacios
+        s = s.replace(/[^0-9,.-]+/g, '');
+        // si usa coma como separador decimal (ej "25,00"), convertir a punto
+        const commaCount = (s.match(/,/g) || []).length;
+        const dotCount = (s.match(/\./g) || []).length;
+        if (commaCount > 0 && dotCount === 0) {
+            s = s.replace(/,/g, '.');
+        } else if (commaCount > 0 && dotCount > 0 && s.indexOf(',') > s.indexOf('.')) {
+            // caso "1.234,56" -> eliminar puntos de miles y cambiar coma por punto
+            s = s.replace(/\./g, '').replace(/,/g, '.');
+        } else {
+            // eliminar comas sobrantes
+            s = s.replace(/,/g, '');
+        }
+
+        const n = Number(s);
+        return isNaN(n) ? 0 : n;
+    } catch (e) {
+        return 0;
+    }
+};
+
 ReportesPlanillaSemanalController.generarPDFSemanalDetallado = async (req, res) => {
     let browser;
     try {
@@ -695,11 +723,11 @@ function generarHTMLSemanalDetallado(planilla, logoBase64) {
                 });
             }
 
-            const totalBase = emp.totalBase || 0;
-            const totalViaticos = emp.totalViaticos || 0;
-            const anticipos = emp.anticipos || 0;
-            const totalDescuentos = emp.totalDescuentos || 0;
-            const totalAPagar = emp.totalAPagar || 0;
+            const totalBase = parseCurrency(emp.totalBase || 0);
+            const totalViaticos = parseCurrency(emp.totalViaticos || emp.viaticos || 0);
+            const anticipos = parseCurrency(emp.anticipos || 0);
+            const totalDescuentos = parseCurrency(emp.totalDescuentos || 0);
+            const totalAPagar = parseCurrency(emp.totalAPagar || 0);
 
             filasEmpleados += `
                 <tr>
@@ -902,7 +930,7 @@ function generarHTMLMensual(planillas, mes, ano, logoBase64) {
 
             empleadosMap.get(key).semanas.push({
                 rango: formatearRangoFechas(planilla.fechaInicio, planilla.fechaFin),
-                total: emp.totalAPagar
+                total: parseCurrency(emp.totalAPagar || emp.totalSalarioMasViaticos || 0)
             });
         });
     });
@@ -1110,18 +1138,18 @@ function generarHTMLMensualViaticos(planillas, mes, ano, logoBase64) {
             let fuenteViaticos = 'ninguna';
             try {
                 if (emp && typeof emp.totalViaticos !== 'undefined' && emp.totalViaticos !== null) {
-                    viaticosEmpleado = Number(emp.totalViaticos) || 0;
+                    viaticosEmpleado = parseCurrency(emp.totalViaticos);
                     fuenteViaticos = 'totalViaticos';
                 } else if (emp && typeof emp.viaticos !== 'undefined' && emp.viaticos !== null) {
-                    viaticosEmpleado = Number(emp.viaticos) || 0;
+                    viaticosEmpleado = parseCurrency(emp.viaticos);
                     fuenteViaticos = 'viaticos';
                 } else if (emp && typeof emp.viatico !== 'undefined' && emp.viatico !== null) {
-                    viaticosEmpleado = Number(emp.viatico) || 0;
+                    viaticosEmpleado = parseCurrency(emp.viatico);
                     fuenteViaticos = 'viatico';
                 } else if (Array.isArray(emp.dias) && emp.dias.length > 0) {
                     // Sumar variantes de viáticos en cada día
                     viaticosEmpleado = emp.dias.reduce((s, d) => {
-                        const v = Number(d.viaticos ?? d.viatico ?? d.viaticoDiario ?? 0) || 0;
+                        const v = parseCurrency(d.viaticos ?? d.viatico ?? d.viaticoDiario ?? 0);
                         return s + v;
                     }, 0);
                     fuenteViaticos = 'dias';
@@ -1131,8 +1159,8 @@ function generarHTMLMensualViaticos(planillas, mes, ano, logoBase64) {
                 if ((!viaticosEmpleado || viaticosEmpleado === 0) && emp && typeof emp === 'object') {
                     for (const k of Object.keys(emp)) {
                         if (/viatic/i.test(k)) {
-                            const val = Number(emp[k]);
-                            if (!isNaN(val) && val !== 0) {
+                            const val = parseCurrency(emp[k]);
+                            if (val !== 0) {
                                 viaticosEmpleado = val;
                                 fuenteViaticos = `campo:${k}`;
                                 break;
@@ -1316,7 +1344,7 @@ function generarHTMLMultiMes(planillasPorMes, ano, logoBase64) {
                     empleadoData.meses.set(mes, 0);
                 }
 
-                empleadoData.meses.set(mes, empleadoData.meses.get(mes) + emp.totalAPagar);
+                empleadoData.meses.set(mes, empleadoData.meses.get(mes) + parseCurrency(emp.totalAPagar || emp.totalSalarioMasViaticos || 0));
             });
         });
     });
