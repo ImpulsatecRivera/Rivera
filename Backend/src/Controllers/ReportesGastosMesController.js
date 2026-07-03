@@ -7,6 +7,7 @@ import PlanillaSemanal from '../Models/PlanillaSemanal.js';
 import PlanillaQuincenal from '../Models/PlanillaQuincenal.js';
 import ResumenDiesel from '../Models/ResumenDiesel.js';
 import { launchUniversalBrowser } from '../Utils/puppeteerLauncher.js';
+import { generatePdfFromHtml } from '../Utils/pdfGenerator.js';
 
 // Obtener __dirname en ES modules
 const __filename = fileURLToPath(import.meta.url);
@@ -316,12 +317,14 @@ ReportesGastosMesController.generarPDFMensualConsolidado = async (req, res) => {
       </html>
     `;
 
-    // Generar PDF con puppeteer
-    const browser = await puppeteer.launch(PUPPETEER_CONFIG());
-    const page = await browser.newPage();
-    await page.setContent(html, { waitUntil: 'networkidle0' });
-    const pdfBuffer = await page.pdf({ format: 'A4', printBackground: true });
-    await browser.close();
+    // Generar PDF con Puppeteer usando lanzador seguro
+    const pdfBuffer = await generatePdfFromHtml(html, {
+      serviceName: 'reportes-gastos-mes',
+      pdfOptions: { format: 'A4', printBackground: true },
+      timeoutMs: 45000,
+      retries: 2,
+      waitUntil: 'networkidle2'
+    });
 
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename=Consolidado-Gastos-${mes}-${ano}.pdf`);

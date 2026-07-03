@@ -12,6 +12,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import { launchUniversalBrowser } from '../Utils/puppeteerLauncher.js';
+import { generatePdfFromHtml } from '../Utils/pdfGenerator.js';
 
 const ReportesPlanillasController = {};
 
@@ -337,19 +338,13 @@ ReportesPlanillasController.generarPDFQuincenal = async (req, res) => {
         </html>
         `;
 
-        browser = await puppeteer.launch(PUPPETEER_CONFIG());
-
-        const page = await browser.newPage();
-        await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
-
-        const pdfBuffer = await page.pdf({
-            format: 'A4',
-            landscape: true,
-            printBackground: true,
-            margin: { top: '15px', right: '15px', bottom: '15px', left: '15px' }
+        const pdfBuffer = await generatePdfFromHtml(htmlContent, {
+            serviceName: 'reportes-planilla-quincenal',
+            pdfOptions: { format: 'A4', landscape: true, printBackground: true, margin: { top: '15px', right: '15px', bottom: '15px', left: '15px' } },
+            timeoutMs: 45000,
+            retries: 2,
+            waitUntil: 'networkidle2'
         });
-
-        await browser.close();
 
         res.setHeader('Content-Type', 'application/pdf');
         res.setHeader('Content-Disposition', `attachment; filename=planilla-quincenal-${planilla.quincena}-${planilla.mes}-${planilla.año}.pdf`);
@@ -584,7 +579,7 @@ ReportesPlanillasController.generarPDFMensual = async (req, res) => {
         </html>
         `;
 
-        browser = await puppeteer.launch(PUPPETEER_CONFIG());
+        browser = await launchBrowserSafe();
 
         const page = await browser.newPage();
         await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
@@ -853,7 +848,7 @@ ReportesPlanillasController.generarPDFMultiMes = async (req, res) => {
         </html>
         `;
 
-        browser = await puppeteer.launch(PUPPETEER_CONFIG());
+        browser = await launchBrowserSafe();
 
         const page = await browser.newPage();
         await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
@@ -1234,7 +1229,7 @@ ReportesPlanillasController.generarPDFAnual = async (req, res) => {
         </html>
         `;
 
-        browser = await puppeteer.launch(PUPPETEER_CONFIG());
+        browser = await launchBrowserSafe();
 
         const page = await browser.newPage();
         await page.setContent(htmlContent, { waitUntil: 'networkidle0' });

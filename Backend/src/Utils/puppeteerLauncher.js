@@ -96,11 +96,60 @@ const getExecutableCandidates = (puppeteer) => {
   // Agregar rutas conocidas de Chrome instalado por Puppeteer
   const puppeteerChromePaths = PUPPETEER_CHROME_PATHS.filter(exists);
 
-  const allCandidates = [...envCandidates, bundledPath, ...systemCandidates, ...cacheCandidates, ...puppeteerChromePaths].filter(Boolean);
-  
-  console.log('🔍 Candidatos de Chrome encontrados:', allCandidates.filter(exists));
-  
-  return unique(allCandidates).filter(exists);
+  const allCandidates = unique([...envCandidates, bundledPath, ...systemCandidates, ...cacheCandidates, ...puppeteerChromePaths].filter(Boolean));
+
+  // Helpers: comprobar si es archivo ejecutable
+  const isExecutableFile = (p) => {
+    try {
+      if (!exists(p)) return false;
+      const stat = fs.statSync(p);
+      if (!stat.isFile()) return false;
+      if (process.platform === 'win32') return true; // .exe is OK
+      // Verificar bit de ejecución
+      fs.accessSync(p, fs.constants.X_OK);
+      return true;
+    } catch (err) {
+      return false;
+    }
+  };
+
+  const resolved = [];
+
+  for (const candidate of allCandidates) {
+    try {
+      if (isExecutableFile(candidate)) {
+        resolved.push(candidate);
+        continue;
+      }
+
+      // Si es un directorio, buscar ejecutables dentro
+      if (exists(candidate) && fs.statSync(candidate).isDirectory()) {
+        const found = findChromeExecutablesInDir(candidate, 4).filter(isExecutableFile);
+        resolved.push(...found);
+        continue;
+      }
+
+      // Si existe pero no es ejecutable archivo, intentar fijar permisos (POSIX)
+      if (exists(candidate) && process.platform !== 'win32') {
+        try {
+          // Intentar otorgar permiso ejecutable
+          fs.chmodSync(candidate, 0o755);
+          if (isExecutableFile(candidate)) {
+            resolved.push(candidate);
+            continue;
+          }
+        } catch (chmodErr) {
+          // No pudo cambiar permisos, seguir
+        }
+      }
+    } catch (err) {
+      // ignorar candidato con error
+    }
+  }
+
+  const final = unique(resolved).filter(isExecutableFile);
+  console.log('🔍 Candidatos de Chrome ejecutables encontrados:', final);
+  return final;
 };
 
 const buildLaunchAttempts = (primaryConfig, executableCandidates) => {

@@ -5,6 +5,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import { launchUniversalBrowser } from '../Utils/puppeteerLauncher.js';
+import { generatePdfFromHtml } from '../Utils/pdfGenerator.js';
 
 const ReportesRoutes = {};
 
@@ -521,23 +522,13 @@ ReportesRoutes.generarPDFIndividual = async (req, res) => {
         </html>
         `;
 
-        browser = await puppeteer.launch(PUPPETEER_CONFIG());
-
-        const page = await browser.newPage();
-        await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
-
-        const pdfBuffer = await page.pdf({
-            format: 'A4',
-            printBackground: true,
-            margin: {
-                top: '20px',
-                right: '20px',
-                bottom: '20px',
-                left: '20px'
-            }
+        const pdfBuffer = await generatePdfFromHtml(htmlContent, {
+            serviceName: 'reportes-mantenimiento',
+            pdfOptions: { format: 'A4', printBackground: true, margin: { top: '20px', right: '20px', bottom: '20px', left: '20px' } },
+            timeoutMs: 45000,
+            retries: 2,
+            waitUntil: 'networkidle2'
         });
-
-        await browser.close();
 
         res.setHeader('Content-Type', 'application/pdf');
         res.setHeader('Content-Disposition', `attachment; filename=mantenimiento-${manto.ciculatioCard.licensePlate}-${Date.now()}.pdf`);
@@ -788,7 +779,7 @@ ReportesRoutes.generarPDFAnual = async (req, res) => {
         </html>
         `;
 
-        browser = await puppeteer.launch(PUPPETEER_CONFIG());
+        browser = await launchBrowserSafe();
 
         const page = await browser.newPage();
         await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
@@ -1014,7 +1005,7 @@ ReportesRoutes.generarPDFMensualSimple = async (req, res) => {
         </html>
         `;
 
-        browser = await puppeteer.launch(PUPPETEER_CONFIG());
+        browser = await launchBrowserSafe();
 
         const page = await browser.newPage();
         await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
@@ -1344,7 +1335,7 @@ ReportesRoutes.generarPDFMultiplesMeses = async (req, res) => {
 </body>
 </html>`;
 
-        browser = await puppeteer.launch(PUPPETEER_CONFIG());
+        browser = await launchBrowserSafe();
 
         const page = await browser.newPage();
         await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
@@ -1711,7 +1702,7 @@ ReportesRoutes.generarPDFSemanal = async (req, res) => {
         </html>
         `;
 
-        browser = await puppeteer.launch(PUPPETEER_CONFIG());
+        browser = await launchBrowserSafe();
 
         const page = await browser.newPage();
         await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
@@ -2068,7 +2059,7 @@ ReportesRoutes.generarPDFRangoFechas = async (req, res) => {
         </html>
         `;
 
-        browser = await puppeteer.launch(PUPPETEER_CONFIG());
+        browser = await launchBrowserSafe();
 
         const page = await browser.newPage();
         await page.setContent(htmlContent, { waitUntil: 'networkidle0' });

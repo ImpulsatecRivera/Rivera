@@ -10,6 +10,7 @@ import Motorista from '../Models/Motorista.js';
 import fs from 'fs';
 import path from 'path';
 import { launchUniversalBrowser } from '../Utils/puppeteerLauncher.js';
+import { generatePdfFromHtml } from '../Utils/pdfGenerator.js';
 
 const ReporteConsolidadoController = {};
 
@@ -562,19 +563,13 @@ ReporteConsolidadoController.generarPDFMensual = async (req, res) => {
         </html>
         `;
 
-        browser = await puppeteer.launch(PUPPETEER_CONFIG());
-
-        const page = await browser.newPage();
-        await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
-
-        const pdfBuffer = await page.pdf({
-            format: 'Legal',
-            landscape: true,
-            printBackground: true,
-            margin: { top: '10mm', right: '10mm', bottom: '10mm', left: '10mm' }
+        const pdfBuffer = await generatePdfFromHtml(htmlContent, {
+            serviceName: 'reporte-consolidado',
+            pdfOptions: { format: 'Legal', landscape: true, printBackground: true, margin: { top: '10mm', right: '10mm', bottom: '10mm', left: '10mm' } },
+            timeoutMs: 60000,
+            retries: 2,
+            waitUntil: 'networkidle2'
         });
-
-        await browser.close();
 
         res.setHeader('Content-Type', 'application/pdf');
         res.setHeader('Content-Disposition', `attachment; filename=resumen-consolidado-${obtenerNombreMes(mesNum)}-${anoNum}.pdf`);
@@ -851,7 +846,7 @@ ReporteConsolidadoController.generarPDFMultiMes = async (req, res) => {
         </html>
         `;
 
-        browser = await puppeteer.launch(PUPPETEER_CONFIG());
+        browser = await launchBrowserSafe();
 
         const page = await browser.newPage();
         await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
@@ -1126,7 +1121,7 @@ ReporteConsolidadoController.generarPDFAnual = async (req, res) => {
         </html>
         `;
 
-        browser = await puppeteer.launch(PUPPETEER_CONFIG());
+        browser = await launchBrowserSafe();
 
         const page = await browser.newPage();
         await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
@@ -1819,7 +1814,7 @@ ReporteConsolidadoController.generarPDFRango = async (req, res) => {
         `;
 
         // Generar PDF con Puppeteer
-        browser = await puppeteer.launch(PUPPETEER_CONFIG());
+        browser = await launchBrowserSafe();
         const page = await browser.newPage();
         await page.setContent(html, { waitUntil: 'networkidle0' });
 

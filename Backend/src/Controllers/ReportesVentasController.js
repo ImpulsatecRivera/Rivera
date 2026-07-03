@@ -7,6 +7,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import { launchUniversalBrowser } from '../Utils/puppeteerLauncher.js';
+import { generatePdfFromHtml } from '../Utils/pdfGenerator.js';
 
 const ReportesVentasController = {};
 
@@ -312,18 +313,13 @@ ReportesVentasController.generarPDFInformeMensual = async (req, res) => {
 </html>
     `;
 
-        browser = await puppeteer.launch(PUPPETEER_CONFIG());
-        const page = await browser.newPage();
-        await page.setContent(html, { waitUntil: 'networkidle0' });
-
-        const pdfBuffer = await page.pdf({
-            format: 'Letter',
-            landscape: true,
-            printBackground: true,
-            margin: { top: '20px', right: '20px', bottom: '20px', left: '20px' }
+        const pdfBuffer = await generatePdfFromHtml(html, {
+          serviceName: 'reportes-ventas',
+          pdfOptions: { format: 'Letter', landscape: true, printBackground: true, margin: { top: '20px', right: '20px', bottom: '20px', left: '20px' } },
+          timeoutMs: 45000,
+          retries: 2,
+          waitUntil: 'networkidle2'
         });
-
-        await browser.close();
 
         res.setHeader('Content-Type', 'application/pdf');
         res.setHeader('Content-Disposition', `inline; filename=informe-ventas-${mes}-${ano}.pdf`);
@@ -576,7 +572,7 @@ ReportesVentasController.generarPDFResumenMensual = async (req, res) => {
 </html>
     `;
 
-        browser = await puppeteer.launch(PUPPETEER_CONFIG());
+        browser = await launchBrowserSafe();
         const page = await browser.newPage();
         await page.setContent(html, { waitUntil: 'networkidle0' });
 
@@ -855,7 +851,7 @@ ReportesVentasController.generarPDFComparativoAnual = async (req, res) => {
 </html>
     `;
 
-        browser = await puppeteer.launch(PUPPETEER_CONFIG());
+        browser = await launchBrowserSafe();
         const page = await browser.newPage();
         await page.setContent(html, { waitUntil: 'networkidle0' });
 
