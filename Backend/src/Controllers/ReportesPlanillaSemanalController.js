@@ -1137,28 +1137,40 @@ function generarHTMLMensualViaticos(planillas, mes, ano, logoBase64) {
             let viaticosEmpleado = 0;
             let fuenteViaticos = 'ninguna';
             try {
-                if (emp && typeof emp.totalViaticos !== 'undefined' && emp.totalViaticos !== null) {
-                    viaticosEmpleado = parseCurrency(emp.totalViaticos);
-                    fuenteViaticos = 'totalViaticos';
-                } else if (emp && typeof emp.viaticos !== 'undefined' && emp.viaticos !== null) {
-                    viaticosEmpleado = parseCurrency(emp.viaticos);
-                    fuenteViaticos = 'viaticos';
-                } else if (emp && typeof emp.viatico !== 'undefined' && emp.viatico !== null) {
-                    viaticosEmpleado = parseCurrency(emp.viatico);
-                    fuenteViaticos = 'viatico';
-                } else if (Array.isArray(emp.dias) && emp.dias.length > 0) {
-                    // Sumar variantes de viáticos en cada día
-                    viaticosEmpleado = emp.dias.reduce((s, d) => {
+                const totalViaticosRaw = (emp && typeof emp.totalViaticos !== 'undefined' && emp.totalViaticos !== null)
+                    ? parseCurrency(emp.totalViaticos)
+                    : null;
+                const viaticosRaw = (emp && typeof emp.viaticos !== 'undefined' && emp.viaticos !== null)
+                    ? parseCurrency(emp.viaticos)
+                    : null;
+                const viaticoRaw = (emp && typeof emp.viatico !== 'undefined' && emp.viatico !== null)
+                    ? parseCurrency(emp.viatico)
+                    : null;
+                const diasSum = Array.isArray(emp.dias)
+                    ? emp.dias.reduce((s, d) => {
                         const v = parseCurrency(d.viaticos ?? d.viatico ?? d.viaticoDiario ?? 0);
                         return s + v;
-                    }, 0);
-                    fuenteViaticos = 'dias';
+                    }, 0)
+                    : 0;
+
+                const fuentes = [
+                    { key: 'totalViaticos', value: totalViaticosRaw },
+                    { key: 'viaticos', value: viaticosRaw },
+                    { key: 'viatico', value: viaticoRaw },
+                    { key: 'dias', value: diasSum }
+                ];
+
+                for (const fuente of fuentes) {
+                    if (fuente.value !== null && fuente.value !== 0) {
+                        viaticosEmpleado = fuente.value;
+                        fuenteViaticos = fuente.key;
+                        break;
+                    }
                 }
 
-                // Si aún es 0, buscar cualquier campo con 'viatic' en el nombre
-                if ((!viaticosEmpleado || viaticosEmpleado === 0) && emp && typeof emp === 'object') {
+                if (viaticosEmpleado === 0 && emp && typeof emp === 'object') {
                     for (const k of Object.keys(emp)) {
-                        if (/viatic/i.test(k)) {
+                        if (/viatic/i.test(k) && !['totalViaticos', 'viaticos', 'viatico'].includes(k)) {
                             const val = parseCurrency(emp[k]);
                             if (val !== 0) {
                                 viaticosEmpleado = val;
@@ -1166,6 +1178,19 @@ function generarHTMLMensualViaticos(planillas, mes, ano, logoBase64) {
                                 break;
                             }
                         }
+                    }
+                }
+
+                if (viaticosEmpleado === 0) {
+                    if (totalViaticosRaw !== null) {
+                        viaticosEmpleado = totalViaticosRaw;
+                        fuenteViaticos = 'totalViaticos';
+                    } else if (viaticosRaw !== null) {
+                        viaticosEmpleado = viaticosRaw;
+                        fuenteViaticos = 'viaticos';
+                    } else if (viaticoRaw !== null) {
+                        viaticosEmpleado = viaticoRaw;
+                        fuenteViaticos = 'viatico';
                     }
                 }
             } catch (err) {
