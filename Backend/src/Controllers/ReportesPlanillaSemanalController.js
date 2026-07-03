@@ -1255,6 +1255,10 @@ function generarHTMLMensualViaticos(planillas, mes, ano, logoBase64) {
             columnasSemanales += `<td>${monto > 0 ? `$ ${monto.toFixed(2)}` : '$ -'}</td>`;
         });
 
+        if (totalEmpleado === 0) {
+            return;
+        }
+
         filasEmpleados += `
             <tr>
                 <td>${numeroEmpleado}</td>
