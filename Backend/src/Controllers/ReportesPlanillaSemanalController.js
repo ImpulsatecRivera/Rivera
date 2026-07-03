@@ -135,6 +135,16 @@ const formatearRangoFechas = (inicio, fin) => {
     return `DEL ${diaInicio} DE ${mesInicio} ${anioInicio} AL ${diaFin} DE ${mesFin} ${anioFin}`;
 };
 
+const normalizarTexto = (texto) => {
+    return String(texto || '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')          // eliminar acentos
+        .replace(/[^A-Za-z0-9 ]+/g, '')             // eliminar caracteres no alfanuméricos
+        .replace(/\s+/g, ' ')                      // normalizar espacios
+        .trim()
+        .toUpperCase();
+};
+
 ReportesPlanillaSemanalController.generarPDFSemanalDetallado = async (req, res) => {
     let browser;
     try {
@@ -1078,7 +1088,7 @@ function generarHTMLMensualViaticos(planillas, mes, ano, logoBase64) {
         planilla.empleados.forEach(emp => {
             const empleadoId = emp.empleadoId ? emp.empleadoId.toString() : 'sin-id';
             const nombreOriginal = String(emp.nombreCompleto || 'SIN NOMBRE').trim();
-            const nombreNormalizado = nombreOriginal.toUpperCase().replace(/\s+/g, ' ');
+            const nombreNormalizado = normalizarTexto(nombreOriginal);
             const key = nombreNormalizado;
 
             if (!nombresDuplicados.has(nombreNormalizado)) {
@@ -1419,7 +1429,7 @@ function generarHTMLMultiMesViaticos(planillasPorMes, ano, logoBase64, esAnual =
             planilla.empleados.forEach(emp => {
                 const empleadoId = emp.empleadoId ? emp.empleadoId.toString() : 'sin-id';
                 const nombreOriginal = String(emp.nombreCompleto || 'SIN NOMBRE').trim();
-                const nombreNormalizado = nombreOriginal.toUpperCase().replace(/\s+/g, ' ');
+                const nombreNormalizado = normalizarTexto(nombreOriginal);
                 const key = nombreNormalizado;
 
                 if (!nombresDuplicados.has(nombreNormalizado)) {

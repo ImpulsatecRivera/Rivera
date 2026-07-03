@@ -57,13 +57,13 @@ export default function PlanillaQuincenal() {
   const altasEnProcesoRef = React.useRef(new Set());
   const ultimoClickAltaRef = React.useRef(new Map());
 
-  // Inicializar infoPlanilla siempre con la primera quincena de enero del año actual
+  // Inicializar infoPlanilla: elegir quincena según el día actual (<=15 -> 1, >15 -> 2)
   const obtenerInfoPlanillaInicial = () => {
     const hoy = new Date();
     return {
       año: hoy.getFullYear(),
-      mes: 1,
-      quincena: 1
+      mes: hoy.getMonth() + 1,
+      quincena: hoy.getDate() <= 15 ? 1 : 2
     };
   };
 
@@ -272,12 +272,78 @@ const resEmpleados = await api.get(`/empleados?limit=1000`);
 
   const crearNuevaPlanilla = async () => {
     try {
-      const { año, mes, quincena } = infoPlanilla;
+      // Preguntar al usuario si desea usar el mes actual o elegir otro
+      const hoy = new Date();
+      const defaultAño = hoy.getFullYear();
+      const defaultMes = hoy.getMonth() + 1;
+      const defaultQuincena = hoy.getDate() <= 15 ? 1 : 2;
 
+      const elegirActual = await Swal.fire({
+        title: 'Crear planilla quincenal',
+        text: `¿Crear una planilla quincenal para ${getMesNombre(defaultMes)} ${defaultAño} (${defaultQuincena === 1 ? 'Primera' : 'Segunda'} quincena)?`,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'Sí, crear para mes actual',
+        cancelButtonText: 'Elegir otro mes'
+      });
+
+      let añoSeleccionado = defaultAño;
+      let mesSeleccionado = defaultMes;
+      let quincenaSeleccionada = defaultQuincena;
+
+      if (!elegirActual.isConfirmed) {
+        // Mostrar formulario para elegir mes/año/quincena
+        const meses = [
+          'Enero','Febrero','Marzo','Abril','Mayo','Junio',
+          'Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'
+        ];
+
+        const { value: formValues } = await Swal.fire({
+          title: 'Elegir mes y quincena',
+          html: `
+            <div style="display:flex;gap:8px;flex-direction:column;text-align:left">
+              <label style="font-weight:600">Mes</label>
+              <select id="swal-mes" class="swal2-input" style="width:100%">
+                ${meses.map((m, i) => `<option value="${i+1}" ${i+1===defaultMes? 'selected':''}>${m}</option>`).join('')}
+              </select>
+              <label style="font-weight:600">Año</label>
+              <input id="swal-ano" type="number" min="2000" class="swal2-input" value="${defaultAño}" />
+              <label style="font-weight:600">Quincena</label>
+              <select id="swal-quincena" class="swal2-input">
+                <option value="1" ${defaultQuincena===1? 'selected':''}>Primera</option>
+                <option value="2" ${defaultQuincena===2? 'selected':''}>Segunda</option>
+              </select>
+            </div>
+          `,
+          focusConfirm: false,
+          showCancelButton: true,
+          confirmButtonText: 'Crear',
+          preConfirm: () => {
+            const mes = Number(document.getElementById('swal-mes').value);
+            const año = Number(document.getElementById('swal-ano').value);
+            const quincena = Number(document.getElementById('swal-quincena').value);
+
+            if (!año || año < 2000) {
+              Swal.showValidationMessage('Ingresa un año válido');
+              return false;
+            }
+
+            return { año, mes, quincena };
+          }
+        });
+
+        if (!formValues) return; // usuario canceló
+
+        añoSeleccionado = formValues.año;
+        mesSeleccionado = formValues.mes;
+        quincenaSeleccionada = formValues.quincena;
+      }
+
+      // Llamar al API con los valores seleccionados
       const response = await api.post(`/planillas/quincenal`, {
-        año,
-        mes,
-        quincena,
+        año: añoSeleccionado,
+        mes: mesSeleccionado,
+        quincena: quincenaSeleccionada,
         empleados: []
       });
 
@@ -289,7 +355,7 @@ const resEmpleados = await api.get(`/empleados?limit=1000`);
           empleados: Array.isArray(data.data.empleados) ? data.data.empleados : []
         };
         setPlanilla(planillaData);
-        
+
         Swal.fire({
           icon: 'success',
           title: '¡Planilla creada!',
@@ -300,6 +366,11 @@ const resEmpleados = await api.get(`/empleados?limit=1000`);
       }
     } catch (error) {
       console.error('Error creando planilla:', error);
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: error.response?.data?.message || error.message || 'No se pudo crear la planilla'
+      });
     }
   };
 
@@ -1319,7 +1390,7 @@ const resEmpleados = await api.get(`/empleados?limit=1000`);
                   </h1>
                   <div className="flex flex-wrap items-center gap-2 lg:gap-4 mt-1">
                     <span className="text-xs lg:text-sm text-gray-600">
-                      {planilla?.descripcion || `${infoPlanilla.quincena === 1 ? 'Primera' : 'Segunda'} quincena - ${getMesNombre(infoPlanilla.mes)} ${infoPlanilla.año}`}
+                      {planilla?.descripcion || `${infoPlanilla.quincena === 1 ? 'Primera' : 'Segunda'} quincena de ${getMesNombre(infoPlanilla.mes)} ${infoPlanilla.año}`}
                     </span>
                     {getEstadoBadge(planilla?.estado)}
                   </div>

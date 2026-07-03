@@ -236,11 +236,11 @@ PlanillaQuincenalController.crear = async (req, res) => {
                     message: "Año, mes y quincena son requeridos"
                 });
             } else {
-                // Es la primera planilla - asignar automáticamente enero del año actual
+                // Es la primera planilla - asignar automáticamente el mes y quincena actuales
                 const ahora = new Date();
                 año = ahora.getFullYear();
-                mes = 1;
-                quincena = 1;
+                mes = ahora.getMonth() + 1;
+                quincena = ahora.getDate() <= 15 ? 1 : 2;
             }
         }
 
@@ -267,10 +267,11 @@ PlanillaQuincenalController.crear = async (req, res) => {
         }
 
         // Generar descripción automática
-        const meses = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
-            'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
-        const quincenaTexto = quincena === 1 ? 'Primera' : 'Segunda';
-        const descripcion = `${quincenaTexto} quincena de ${meses[mes - 1]} ${año}`;
+        const meses = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+            'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+        const quincenaNum = parseInt(quincena);
+        const quincenaTexto = quincenaNum === 1 ? 'Primera' : 'Segunda';
+        const descripcion = `${quincenaTexto} quincena de ${meses[parseInt(mes) - 1]} ${año}`;
 
         // Procesar empleados
         const empleadosProcesados = await Promise.all(

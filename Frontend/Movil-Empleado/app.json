@@ -27,12 +27,6 @@
     },
     "plugins": [
       "expo-asset"
-    ],
-    "owner": "gabcontreras",
-    "extra": {
-      "eas": {
-        "projectId": "93d85bb2-9632-46d8-8e9e-e134f07ca3d0"
-      }
-    }
+    ]
   }
 }
