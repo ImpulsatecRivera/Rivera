@@ -1089,7 +1089,8 @@ function generarHTMLMensualViaticos(planillas, mes, ano, logoBase64) {
             const empleadoId = emp.empleadoId ? emp.empleadoId.toString() : 'sin-id';
             const nombreOriginal = String(emp.nombreCompleto || 'SIN NOMBRE').trim();
             const nombreNormalizado = normalizarTexto(nombreOriginal);
-            const key = nombreNormalizado;
+            // Usar empleadoId como clave única cuando esté disponible, sino usar nombre normalizado
+            const key = empleadoId !== 'sin-id' ? empleadoId : nombreNormalizado;
 
             if (!nombresDuplicados.has(nombreNormalizado)) {
                 nombresDuplicados.set(nombreNormalizado, new Set());
@@ -1098,16 +1099,32 @@ function generarHTMLMensualViaticos(planillas, mes, ano, logoBase64) {
 
             if (!empleadosMap.has(key)) {
                 empleadosMap.set(key, {
+                    empleadoId,
                     nombreCompleto: nombreOriginal,
                     totalesPorSemana: new Map()
                 });
             }
 
+            // Determinar monto de viáticos para esta planilla/empleado
+            let viaticosEmpleado = 0;
+            try {
+                // Preferir campo totalViaticos si existe y es numérico
+                if (emp && typeof emp.totalViaticos !== 'undefined' && emp.totalViaticos !== null) {
+                    viaticosEmpleado = Number(emp.totalViaticos) || 0;
+                } else if (Array.isArray(emp.dias)) {
+                    // Sumar viáticos diarios como fallback
+                    viaticosEmpleado = emp.dias.reduce((s, d) => s + (Number(d.viaticos || 0)), 0);
+                }
+            } catch (err) {
+                console.warn(`No se pudo calcular viáticos para empleado ${nombreOriginal}:`, err.message || err);
+                viaticosEmpleado = 0;
+            }
+
             const empleadoData = empleadosMap.get(key);
             const montoActual = empleadoData.totalesPorSemana.get(rango) || 0;
-            const nuevoMonto = montoActual + (emp.totalViaticos || 0);
+            const nuevoMonto = montoActual + viaticosEmpleado;
             empleadoData.totalesPorSemana.set(rango, nuevoMonto);
-            console.log(`    empleado=${nombreOriginal} id=${empleadoId} semana=${rango} monto=${emp.totalViaticos || 0} acumulado=${nuevoMonto}`);
+            console.log(`    empleado=${nombreOriginal} id=${empleadoId} semana=${rango} monto=${viaticosEmpleado} acumulado=${nuevoMonto}`);
         });
     });
 

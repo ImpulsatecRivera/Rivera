@@ -279,11 +279,16 @@ ReportesPlanillasController.generarPDFQuincenal = async (req, res) => {
                     </tr>
                 </thead>
                 <tbody>
-                    ${(planilla.empleados || []).map((emp, index) => {
-            const salarioQuincenal = emp.salarioQuincenal || 0;
-            const viaticos = emp.viaticos || 0;
-            const trabajoSabadoDomingo = emp.trabajoSabadoDomingo || 0;
-            const totalSalarioMasViaticos = emp.totalSalarioMasViaticos || 0;
+                        ${(planilla.empleados || []).map((emp, index) => {
+                    const salarioQuincenal = Number(emp.salarioQuincenal) || 0;
+                    const viaticos = Number(emp.viaticos) || 0;
+                    const trabajoSabadoDomingo = Number(emp.trabajoSabadoDomingo) || 0;
+                    // Fallback: si no existe totalSalarioMasViaticos, calcularlo
+                    let totalSalarioMasViaticos = Number(emp.totalSalarioMasViaticos);
+                    if (!totalSalarioMasViaticos || isNaN(totalSalarioMasViaticos)) {
+                    totalSalarioMasViaticos = salarioQuincenal + viaticos + trabajoSabadoDomingo;
+                    console.log(`Fallback totalSalarioMasViaticos para ${emp.nombreCompleto || 'sin nombre'}: ${totalSalarioMasViaticos}`);
+                    }
             const isss = emp.descuentosLey?.isss?.monto || 0;
             const afp = emp.descuentosLey?.afp?.monto || 0;
             const renta = emp.descuentosLey?.renta?.monto || 0;
